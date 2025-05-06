@@ -182,24 +182,29 @@ export class DatabaseStorage implements IStorage {
     categoryId?: number, 
     search?: string
   ): Promise<Product[]> {
-    let query = db
-      .select()
-      .from(products)
-      .where(eq(products.isActive, true));
-    
-    // Add search condition if provided
-    if (search) {
-      query = query.where(
-        or(
-          like(products.name, `%${search}%`),
-          like(products.description || '', `%${search}%`)
-        )
-      );
-    }
+    // Create base query
+    let baseCondition = eq(products.isActive, true);
     
     // Add category filter if provided
     if (categoryId) {
-      query = query.where(eq(products.categoryId, categoryId));
+      baseCondition = and(baseCondition, eq(products.categoryId, categoryId));
+    }
+    
+    // Apply base conditions
+    let query = db
+      .select()
+      .from(products)
+      .where(baseCondition);
+    
+    // Add search condition if provided
+    if (search) {
+      const searchTerm = `%${search}%`;
+      query = query.where(
+        or(
+          like(products.name, searchTerm),
+          like(products.description || '', searchTerm)
+        )
+      );
     }
     
     return await query.limit(limit).offset(offset);

@@ -273,8 +273,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/products", handleErrors(async (req: Request, res: Response) => {
     const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
     const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
+    const categoryId = req.query.category ? parseInt(req.query.category as string) : undefined;
+    const search = req.query.search as string | undefined;
     
-    const products = await storage.getAllProducts(limit, offset);
+    const products = await storage.getAllProducts(limit, offset, categoryId, search);
     res.json(products);
   }));
 
