@@ -110,7 +110,7 @@ export default function CategoryAttributes() {
     mutationFn: async (data: AttributeFormData) => {
       const attributeData = {
         ...data,
-        category_id: parseInt(categoryId)
+        categoryId: parseInt(categoryId)
       };
       return await apiRequest('POST', '/api/category-attributes', attributeData);
     },
@@ -178,7 +178,7 @@ export default function CategoryAttributes() {
     mutationFn: async (data: OptionFormData) => {
       const optionData = {
         ...data,
-        attribute_id: currentAttribute?.id
+        attributeId: currentAttribute?.id
       };
       return await apiRequest('POST', '/api/category-attribute-options', optionData);
     },
@@ -190,8 +190,8 @@ export default function CategoryAttributes() {
       queryClient.invalidateQueries({ queryKey: ['/api/category-attributes', currentAttribute?.id, 'options'] });
       setNewOption({
         value: '',
-        display_value: '',
-        sort_order: (options?.length || 0) + 1
+        displayValue: '',
+        sortOrder: (options?.length || 0) + 1
       });
     },
     onError: (error: any) => {
@@ -273,11 +273,11 @@ export default function CategoryAttributes() {
     setCurrentAttribute(attribute);
     setAttributeForm({
       name: attribute.name,
-      display_name: attribute.display_name,
+      displayName: attribute.displayName,
       description: attribute.description,
-      attribute_type: attribute.attribute_type as "select" | "radio" | "color" | "text",
-      is_required: attribute.is_required,
-      sort_order: attribute.sort_order
+      attributeType: attribute.attributeType as "select" | "radio" | "color" | "text",
+      isRequired: attribute.isRequired,
+      sortOrder: attribute.sortOrder
     });
   };
   
@@ -301,11 +301,11 @@ export default function CategoryAttributes() {
   const resetAttributeForm = () => {
     setAttributeForm({
       name: '',
-      display_name: '',
+      displayName: '',
       description: null,
-      attribute_type: 'select',
-      is_required: false,
-      sort_order: attributes?.length || 0
+      attributeType: 'select',
+      isRequired: false,
+      sortOrder: attributes?.length || 0
     });
     setCurrentAttribute(null);
   };
@@ -315,7 +315,7 @@ export default function CategoryAttributes() {
     if (!currentAttribute && attributes?.length > 0) {
       setAttributeForm({
         ...attributeForm,
-        sort_order: attributes.length
+        sortOrder: attributes.length
       });
     }
   }, [attributes]);
@@ -325,12 +325,12 @@ export default function CategoryAttributes() {
     if (options?.length > 0) {
       setNewOption({
         ...newOption,
-        sort_order: options.length
+        sortOrder: options.length
       });
     } else {
       setNewOption({
         ...newOption,
-        sort_order: 0
+        sortOrder: 0
       });
     }
   }, [options]);
@@ -378,8 +378,8 @@ export default function CategoryAttributes() {
                         onClick={() => handleSelectAttribute(attribute)}
                       >
                         <div>
-                          <p className="font-medium">{attribute.display_name}</p>
-                          <p className="text-sm text-muted-foreground">{attribute.attribute_type}</p>
+                          <p className="font-medium">{attribute.displayName}</p>
+                          <p className="text-sm text-muted-foreground">{attribute.attributeType}</p>
                         </div>
                         <MoveVertical className="h-4 w-4 text-muted-foreground" />
                       </div>
@@ -405,7 +405,7 @@ export default function CategoryAttributes() {
                 <TabsTrigger value="details">Attribute Details</TabsTrigger>
                 <TabsTrigger 
                   value="options"
-                  disabled={!currentAttribute || currentAttribute.attribute_type === "text"}
+                  disabled={!currentAttribute || currentAttribute.attributeType === "text"}
                 >
                   Attribute Options
                 </TabsTrigger>
@@ -415,7 +415,7 @@ export default function CategoryAttributes() {
                 <Card>
                   <CardHeader>
                     <CardTitle>
-                      {currentAttribute ? `Edit ${currentAttribute.display_name}` : 'Create New Attribute'}
+                      {currentAttribute ? `Edit ${currentAttribute.displayName}` : 'Create New Attribute'}
                     </CardTitle>
                     <CardDescription>
                       {currentAttribute 
@@ -444,14 +444,14 @@ export default function CategoryAttributes() {
                         </div>
                         
                         <div className="space-y-2">
-                          <Label htmlFor="display_name">Display Name</Label>
+                          <Label htmlFor="displayName">Display Name</Label>
                           <Input 
-                            id="display_name"
+                            id="displayName"
                             placeholder="e.g. Size" 
-                            value={attributeForm.display_name}
+                            value={attributeForm.displayName}
                             onChange={(e) => setAttributeForm({
                               ...attributeForm,
-                              display_name: e.target.value
+                              displayName: e.target.value
                             })}
                           />
                           <p className="text-sm text-muted-foreground">
@@ -474,12 +474,12 @@ export default function CategoryAttributes() {
                       </div>
                       
                       <div className="space-y-2">
-                        <Label htmlFor="attribute_type">Attribute Type</Label>
+                        <Label htmlFor="attributeType">Attribute Type</Label>
                         <Select
-                          value={attributeForm.attribute_type}
+                          value={attributeForm.attributeType}
                           onValueChange={(value: "select" | "radio" | "color" | "text") => setAttributeForm({
                             ...attributeForm,
-                            attribute_type: value
+                            attributeType: value
                           })}
                         >
                           <SelectTrigger>
@@ -499,28 +499,28 @@ export default function CategoryAttributes() {
                       
                       <div className="flex items-center space-x-2">
                         <Checkbox
-                          id="is_required"
-                          checked={attributeForm.is_required}
+                          id="isRequired"
+                          checked={attributeForm.isRequired}
                           onCheckedChange={(checked) => setAttributeForm({
                             ...attributeForm,
-                            is_required: checked as boolean
+                            isRequired: checked as boolean
                           })}
                         />
-                        <Label htmlFor="is_required">Required</Label>
+                        <Label htmlFor="isRequired">Required</Label>
                         <p className="text-sm text-muted-foreground ml-2">
                           If checked, customers must select a value for this attribute
                         </p>
                       </div>
                       
                       <div className="space-y-2">
-                        <Label htmlFor="sort_order">Sort Order</Label>
+                        <Label htmlFor="sortOrder">Sort Order</Label>
                         <Input 
-                          id="sort_order"
+                          id="sortOrder"
                           type="number"
-                          value={attributeForm.sort_order.toString()}
+                          value={attributeForm.sortOrder.toString()}
                           onChange={(e) => setAttributeForm({
                             ...attributeForm,
-                            sort_order: parseInt(e.target.value) || 0
+                            sortOrder: parseInt(e.target.value) || 0
                           })}
                         />
                         <p className="text-sm text-muted-foreground">
@@ -565,7 +565,7 @@ export default function CategoryAttributes() {
                   <CardContent>
                     {!currentAttribute ? (
                       <p>Select an attribute to manage its options</p>
-                    ) : currentAttribute.attribute_type === "text" ? (
+                    ) : currentAttribute.attributeType === "text" ? (
                       <p>Text attributes don't have predefined options</p>
                     ) : optionsLoading ? (
                       <p>Loading options...</p>
