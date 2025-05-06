@@ -339,6 +339,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     res.status(201).json(product);
   }));
+
+  // PRODUCT ATTRIBUTE ROUTES
+  app.get("/api/products/:productId/attributes", handleErrors(async (req: Request, res: Response) => {
+    const productId = parseInt(req.params.productId);
+    const attributes = await storage.getProductAttributeValues(productId);
+    res.json(attributes);
+  }));
+
+  app.post("/api/product-attribute-values", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    // Check if user is admin
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can create product attributes" });
+    }
+    
+    const attributeValue = await storage.createProductAttributeValue(req.body);
+    res.status(201).json(attributeValue);
+  }));
+
+  app.put("/api/product-attribute-values/:id", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    // Check if user is admin
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can update product attributes" });
+    }
+    
+    const attributeValueId = parseInt(req.params.id);
+    const attributeValue = await storage.updateProductAttributeValue(attributeValueId, req.body);
+    if (!attributeValue) {
+      return res.status(404).json({ message: "Attribute value not found" });
+    }
+    res.json(attributeValue);
+  }));
+
+  app.delete("/api/product-attribute-values/:id", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    // Check if user is admin
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can delete product attributes" });
+    }
+    
+    const attributeValueId = parseInt(req.params.id);
+    const success = await storage.deleteProductAttributeValue(attributeValueId);
+    res.json({ success });
+  }));
+
+  // PRODUCT ATTRIBUTE COMBINATIONS ROUTES
+  app.get("/api/products/:productId/combinations", handleErrors(async (req: Request, res: Response) => {
+    const productId = parseInt(req.params.productId);
+    const combinations = await storage.getProductAttributeCombinations(productId);
+    res.json(combinations);
+  }));
+
+  app.post("/api/product-attribute-combinations", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    // Check if user is admin
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can create attribute combinations" });
+    }
+    
+    const combination = await storage.createProductAttributeCombination(req.body);
+    res.status(201).json(combination);
+  }));
+
+  app.put("/api/product-attribute-combinations/:id", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    // Check if user is admin
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can update attribute combinations" });
+    }
+    
+    const combinationId = parseInt(req.params.id);
+    const combination = await storage.updateProductAttributeCombination(combinationId, req.body);
+    if (!combination) {
+      return res.status(404).json({ message: "Attribute combination not found" });
+    }
+    res.json(combination);
+  }));
+
+  app.delete("/api/product-attribute-combinations/:id", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    // Check if user is admin
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can delete attribute combinations" });
+    }
+    
+    const combinationId = parseInt(req.params.id);
+    const success = await storage.deleteProductAttributeCombination(combinationId);
+    res.json({ success });
+  }));
   
   // PRODUCT IMAGE ROUTES
   
