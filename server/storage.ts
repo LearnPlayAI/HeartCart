@@ -7,7 +7,8 @@ import {
   orderItems, type OrderItem, type InsertOrderItem,
   productImages, type ProductImage, type InsertProductImage,
   aiRecommendations, type AiRecommendation, type InsertAiRecommendation,
-  pricing, type Pricing, type InsertPricing
+  pricing, type Pricing, type InsertPricing,
+  aiSettings, type AiSetting, type InsertAiSetting
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, like, and, desc, asc, sql, inArray } from "drizzle-orm";
@@ -68,6 +69,11 @@ export interface IStorage {
   createOrUpdatePricing(pricing: InsertPricing): Promise<Pricing>;
   deletePricing(id: number): Promise<boolean>;
   getDefaultMarkupPercentage(): Promise<number | null>; // Returns default markup or null if not set
+  
+  // AI Settings operations
+  getAiSetting(settingName: string): Promise<AiSetting | undefined>;
+  getAllAiSettings(): Promise<AiSetting[]>;
+  saveAiSetting(setting: InsertAiSetting): Promise<AiSetting>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -540,6 +546,50 @@ export class DatabaseStorage implements IStorage {
     
     // Return the markup percentage if found, or null if not found
     return defaultSetting?.markupPercentage || null;
+  }
+
+  // AI Settings operations
+  async getAiSetting(settingName: string): Promise<AiSetting | undefined> {
+    const [setting] = await db
+      .select()
+      .from(aiSettings)
+      .where(eq(aiSettings.settingName, settingName));
+    
+    return setting;
+  }
+  
+  async getAllAiSettings(): Promise<AiSetting[]> {
+    return await db
+      .select()
+      .from(aiSettings)
+      .orderBy(asc(aiSettings.settingName));
+  }
+  
+  async saveAiSetting(setting: InsertAiSetting): Promise<AiSetting> {
+    // Check if the setting already exists
+    const existingSetting = await this.getAiSetting(setting.settingName);
+    
+    if (existingSetting) {
+      // Update existing setting
+      const [updatedSetting] = await db
+        .update(aiSettings)
+        .set({
+          ...setting,
+          updatedAt: new Date()
+        })
+        .where(eq(aiSettings.settingName, setting.settingName))
+        .returning();
+      
+      return updatedSetting;
+    } else {
+      // Create new setting
+      const [newSetting] = await db
+        .insert(aiSettings)
+        .values(setting)
+        .returning();
+      
+      return newSetting;
+    }
   }
 }
 
