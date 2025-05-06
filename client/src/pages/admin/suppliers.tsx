@@ -38,7 +38,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { 
   Dialog, 
-  DialogContent, At a minimum, create placeholder components for the suppliers and catalogs pages. Then we'll update the App.tsx to include the new routes.
+  DialogContent, 
   DialogDescription, 
   DialogFooter, 
   DialogHeader, 

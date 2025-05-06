@@ -221,7 +221,7 @@ export default function AdminCatalogs() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem as={Link} href={`/admin/catalogs/${catalog.id}`}>
+                          <DropdownMenuItem onClick={() => window.location.href = `/admin/catalogs/${catalog.id}`}>
                             <Eye className="mr-2 h-4 w-4" />
                             View
                           </DropdownMenuItem>

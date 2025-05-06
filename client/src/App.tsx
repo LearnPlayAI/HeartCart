@@ -24,6 +24,8 @@ import AdminCategories from "@/pages/admin/categories";
 import AdminOrders from "@/pages/admin/orders";
 import AdminPricing from "@/pages/admin/pricing";
 import AdminAISettings from "@/pages/admin/ai-settings";
+import AdminSuppliers from "@/pages/admin/suppliers";
+import AdminCatalogs from "@/pages/admin/catalogs";
 import ProductEditPage from "@/pages/admin/product-edit";
 
 // Admin-specific protected route
@@ -88,6 +90,8 @@ function App() {
             <Switch>
               {/* Admin Routes - No header/footer */}
               <AdminProtectedRoute path="/admin" component={AdminDashboard} />
+              <AdminProtectedRoute path="/admin/suppliers" component={AdminSuppliers} />
+              <AdminProtectedRoute path="/admin/catalogs" component={AdminCatalogs} />
               <AdminProtectedRoute path="/admin/products" component={AdminProducts} />
               <AdminProtectedRoute path="/admin/products/new" component={ProductEditPage} />
               <AdminProtectedRoute path="/admin/products/:id/edit" component={ProductEditPage} />

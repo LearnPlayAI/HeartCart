@@ -40,9 +40,9 @@ This document outlines the implementation plan for enhancing TeeMeYou's product 
 ## Phase 2: Basic UI Development
 
 ### 2.1 Admin Navigation Updates
-- ⬜ Add Suppliers and Catalogs items to admin sidebar
-- ⬜ Update admin route configuration in App.tsx
-- ⬜ Create placeholder pages for new admin sections
+- ✅ Add Suppliers and Catalogs items to admin sidebar
+- ✅ Update admin route configuration in App.tsx
+- ✅ Create placeholder pages for new admin sections
 
 ### 2.2 Supplier Management UI
 - ⬜ Create supplier list page with filtering and sorting
