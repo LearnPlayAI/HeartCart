@@ -32,6 +32,10 @@ export function ReviewStep({ form, uploadedImages = [], categories: propCategori
   const categoryName = categories?.find(c => c.id === formValues.categoryId)?.name || "Unknown";
   
   // Format fields for display
+  const costPrice = typeof formValues.costPrice === 'number'
+    ? `R${formValues.costPrice.toFixed(2)}`
+    : 'Not set';
+    
   const price = typeof formValues.price === 'number' 
     ? `R${formValues.price.toFixed(2)}` 
     : 'Not set';
@@ -116,7 +120,12 @@ export function ReviewStep({ form, uploadedImages = [], categories: propCategori
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-1">
-              <p className="text-sm font-medium">Regular Price</p>
+              <p className="text-sm font-medium">Cost Price (Wholesale)</p>
+              <p className="text-sm">{costPrice}</p>
+            </div>
+            
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Regular Price (Retail)</p>
               <p className="text-sm font-medium">{price}</p>
             </div>
             
@@ -124,6 +133,25 @@ export function ReviewStep({ form, uploadedImages = [], categories: propCategori
               <p className="text-sm font-medium">Compare At Price</p>
               <p className="text-sm">{compareAtPrice}</p>
             </div>
+            
+            {/* Profit calculation */}
+            {typeof formValues.price === 'number' && typeof formValues.costPrice === 'number' && (
+              <div className="space-y-1 mt-2 pt-2 border-t">
+                <p className="text-sm font-medium">Profit Calculation</p>
+                <div className="bg-pink-50 dark:bg-pink-900/10 p-2 rounded-md">
+                  <p className="text-xs">
+                    <span className="font-medium">Profit:</span> {
+                      `R${(formValues.price - formValues.costPrice).toFixed(2)}`
+                    }
+                  </p>
+                  <p className="text-xs">
+                    <span className="font-medium">Margin:</span> {
+                      `${((formValues.price - formValues.costPrice) / formValues.price * 100).toFixed(1)}%`
+                    }
+                  </p>
+                </div>
+              </div>
+            )}
             
             <div className="space-y-1">
               <p className="text-sm font-medium">Discount</p>
