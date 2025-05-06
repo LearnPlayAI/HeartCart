@@ -6,7 +6,7 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
-import { Loader2, Save, ChevronLeft, CalendarIcon, Tags } from 'lucide-react';
+import { Loader2, Save, ChevronLeft, CalendarIcon, Tags, Wand2 } from 'lucide-react';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -48,6 +48,7 @@ import { Badge } from '@/components/ui/badge';
 import { Product, Category, insertProductSchema } from '@shared/schema';
 import ProductImageUploader from './product-image-uploader';
 import ProductImageManager from './product-image-manager';
+import { AiProductAnalyzer } from './ai-product-analyzer';
 
 // Extend the product schema with additional validation
 const productFormSchema = insertProductSchema
@@ -461,6 +462,70 @@ export default function ProductForm({ productId, onSuccess }: ProductFormProps) 
                     <Button type="button" variant="outline" onClick={addTag}>
                       Add
                     </Button>
+                    <Button 
+                      type="button" 
+                      variant="outline"
+                      className="gap-1 bg-pink-50 text-pink-600 hover:bg-pink-100 hover:text-pink-700 border-pink-200"
+                      onClick={async () => {
+                        const productName = form.getValues('name');
+                        const description = form.getValues('description') || '';
+                        
+                        if (!productName) {
+                          toast({
+                            title: "Missing information",
+                            description: "Please enter a product name first",
+                            variant: "destructive"
+                          });
+                          return;
+                        }
+                        
+                        try {
+                          toast({
+                            title: "Generating tags",
+                            description: "Using AI to generate product tags based on your product details..."
+                          });
+                          
+                          const response = await fetch('/api/ai/generate-tags', {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                              productName,
+                              productDescription: description,
+                              imageUrl: product?.imageUrl || ''
+                            })
+                          });
+                          
+                          if (!response.ok) {
+                            throw new Error("Failed to generate tags");
+                          }
+                          
+                          const data = await response.json();
+                          
+                          if (data.tags && data.tags.length > 0) {
+                            // Add new tags without duplicates
+                            const currentTags = form.getValues('tags') || [];
+                            const uniqueTags = [...new Set([...currentTags, ...data.tags])];
+                            form.setValue('tags', uniqueTags);
+                            
+                            toast({
+                              title: "Tags generated",
+                              description: `Successfully added ${data.tags.length} tags to your product.`
+                            });
+                          }
+                        } catch (error) {
+                          toast({
+                            title: "Tag generation failed",
+                            description: error instanceof Error ? error.message : "Unknown error occurred",
+                            variant: "destructive"
+                          });
+                        }
+                      }}
+                    >
+                      <Wand2 className="h-4 w-4" />
+                      AI Generate
+                    </Button>
                   </div>
                 </div>
               </TabsContent>
@@ -681,6 +746,44 @@ export default function ProductForm({ productId, onSuccess }: ProductFormProps) 
                         productId={productId}
                         onUploadComplete={() => {
                           queryClient.invalidateQueries({ queryKey: [`/api/products/${productId}/images`] });
+                        }}
+                      />
+                    </div>
+                    
+                    <div className="space-y-2 pt-6 border-t">
+                      <h3 className="text-lg font-medium">AI-Powered Product Analysis</h3>
+                      <p className="text-sm text-gray-500">
+                        Use AI to analyze your product image and automatically generate product details.
+                      </p>
+                      
+                      <AiProductAnalyzer
+                        imageUrl={product?.imageUrl || ''}
+                        onApplyChanges={(changes) => {
+                          if (changes.name) {
+                            form.setValue('name', changes.name);
+                            // Also update slug
+                            if (!productId) {
+                              generateSlug(changes.name);
+                            }
+                          }
+                          
+                          if (changes.description) {
+                            form.setValue('description', changes.description);
+                          }
+                          
+                          if (changes.brand) {
+                            form.setValue('brand', changes.brand);
+                          }
+                          
+                          if (changes.tags && changes.tags.length > 0) {
+                            form.setValue('tags', changes.tags);
+                          }
+                          
+                          // Show success message
+                          toast({
+                            title: 'Product details updated',
+                            description: 'AI-suggested details have been applied to the form',
+                          });
                         }}
                       />
                     </div>
