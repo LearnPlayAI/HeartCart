@@ -171,22 +171,22 @@ export function BasicInfoStep({ form, categories }: BasicInfoStepProps) {
         
         <FormField
           control={control}
-          name="stock"
+          name="costPrice"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Stock Quantity</FormLabel>
+              <FormLabel>Cost Price (ZAR)</FormLabel>
               <FormControl>
                 <Input 
                   type="number" 
                   min="0" 
-                  step="1"
-                  placeholder="0" 
+                  step="0.01"
+                  placeholder="0.00" 
                   {...field}
-                  onChange={(e) => field.onChange(parseInt(e.target.value) || '')}
+                  onChange={(e) => field.onChange(parseFloat(e.target.value) || '')}
                 />
               </FormControl>
               <FormDescription>
-                Number of items in stock
+                Cost price from suppliers (before markup)
               </FormDescription>
               <FormMessage />
             </FormItem>
