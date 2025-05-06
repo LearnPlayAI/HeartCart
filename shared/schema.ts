@@ -9,12 +9,17 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   email: text("email").notNull().unique(),
   fullName: text("full_name"),
+  profilePicture: text("profile_picture"),
   phoneNumber: text("phone_number"),
   address: text("address"),
   city: text("city"),
   postalCode: text("postal_code"),
   country: text("country").default("South Africa"),
+  isActive: boolean("is_active").default(true).notNull(),
+  role: text("role").default("user").notNull(), // 'user', 'admin', etc.
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  lastLogin: timestamp("last_login"),
 });
 
 // Categories table
@@ -96,6 +101,10 @@ export const aiRecommendations = pgTable("ai_recommendations", {
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   createdAt: true,
+  updatedAt: true,
+  lastLogin: true,
+  isActive: true,
+  role: true,
 });
 
 export const insertCategorySchema = createInsertSchema(categories).omit({
