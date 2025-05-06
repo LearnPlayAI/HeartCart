@@ -3,6 +3,8 @@ import { useLocation, Link } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet';
 import { Button } from '@/components/ui/button';
+import { useCart } from '@/hooks/use-cart';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Select, 
   SelectContent, 
@@ -54,6 +56,8 @@ type ViewMode = 'grid' | 'list';
 const ProductListing = () => {
   const [location, setLocation] = useLocation();
   const searchParams = new URLSearchParams(location.split('?')[1] || '');
+  const { addItem } = useCart();
+  const { toast } = useToast();
   
   // State for filters
   const [viewMode, setViewMode] = useState<ViewMode>('grid');

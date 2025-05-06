@@ -114,7 +114,7 @@ export default function ProductForm({ productId, onSuccess }: ProductFormProps) 
       categoryId: undefined,
       price: 0,
       salePrice: null,
-      stock: 0,
+
       isActive: true,
       isFeatured: false,
       isFlashDeal: false,
