@@ -31,6 +31,7 @@ import AddSupplier from "@/pages/admin/add-supplier";
 import EditSupplier from "@/pages/admin/edit-supplier";
 import AddCatalog from "@/pages/admin/add-catalog";
 import EditCatalog from "@/pages/admin/edit-catalog";
+import CategoryAttributes from "@/pages/admin/category-attributes";
 
 // Admin-specific protected route
 import { useAuth } from "@/hooks/use-auth";
@@ -104,6 +105,7 @@ function App() {
               <AdminProtectedRoute path="/admin/products/new" component={ProductEditPage} />
               <AdminProtectedRoute path="/admin/products/:id/edit" component={ProductEditPage} />
               <AdminProtectedRoute path="/admin/categories" component={AdminCategories} />
+              <AdminProtectedRoute path="/admin/categories/:categoryId/attributes" component={CategoryAttributes} />
               <AdminProtectedRoute path="/admin/pricing" component={AdminPricing} />
               <AdminProtectedRoute path="/admin/orders" component={AdminOrders} />
               <AdminProtectedRoute path="/admin/ai-settings" component={AdminAISettings} />

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useLocation } from 'wouter';
-import AdminLayout from '@/components/admin/layout';
+import { AdminLayout } from '@/components/admin/layout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,33 +19,33 @@ import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 // Form validation schema
 const attributeFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
-  display_name: z.string().min(2, "Display name must be at least 2 characters"),
+  displayName: z.string().min(2, "Display name must be at least 2 characters"),
   description: z.string().optional().nullable(),
-  attribute_type: z.enum(["select", "radio", "color", "text"]),
-  is_required: z.boolean().default(false),
-  sort_order: z.number().default(0)
+  attributeType: z.enum(["select", "radio", "color", "text"]),
+  isRequired: z.boolean().default(false),
+  sortOrder: z.number().default(0)
 });
 
 const optionFormSchema = z.object({
   value: z.string().min(1, "Value is required"),
-  display_value: z.string().min(1, "Display value is required"),
-  sort_order: z.number().default(0)
+  displayValue: z.string().min(1, "Display value is required"),
+  sortOrder: z.number().default(0)
 });
 
 // Interface for form data
 interface AttributeFormData {
   name: string;
-  display_name: string;
+  displayName: string;
   description: string | null;
-  attribute_type: "select" | "radio" | "color" | "text";
-  is_required: boolean;
-  sort_order: number;
+  attributeType: "select" | "radio" | "color" | "text";
+  isRequired: boolean;
+  sortOrder: number;
 }
 
 interface OptionFormData {
   value: string;
-  display_value: string;
-  sort_order: number;
+  displayValue: string;
+  sortOrder: number;
 }
 
 export default function CategoryAttributes() {
@@ -58,18 +58,18 @@ export default function CategoryAttributes() {
   const [currentAttribute, setCurrentAttribute] = useState<CategoryAttribute | null>(null);
   const [attributeForm, setAttributeForm] = useState<AttributeFormData>({
     name: '',
-    display_name: '',
+    displayName: '',
     description: null,
-    attribute_type: 'select',
-    is_required: false,
-    sort_order: 0
+    attributeType: 'select',
+    isRequired: false,
+    sortOrder: 0
   });
   
   // State for option management
   const [newOption, setNewOption] = useState<OptionFormData>({
     value: '',
-    display_value: '',
-    sort_order: 0
+    displayValue: '',
+    sortOrder: 0
   });
   
   // Fetch category data
