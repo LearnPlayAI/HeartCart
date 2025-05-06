@@ -1,220 +1,350 @@
-import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import AdminLayout from '@/components/layout/admin-layout';
-import {
-  BarChart3,
-  Package,
-  ShoppingBag,
-  Users,
-  TrendingUp,
-  TrendingDown,
-  AlertCircle,
-  CheckCircle2,
-  Clock
-} from 'lucide-react';
-import { Progress } from '@/components/ui/progress';
-import { formatCurrency } from '@/lib/utils';
+import { AdminLayout } from "@/components/admin/layout";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useQuery } from "@tanstack/react-query";
+import { Loader2, ShoppingCart, Users, BarChart, DollarSign } from "lucide-react";
+import { formatCurrency } from "@/lib/utils";
 
-// Stats cards data
-const statsData = [
-  {
-    title: "Total Sales",
-    value: formatCurrency(24567.89),
-    description: "7% increase from last month",
-    icon: <BarChart3 className="h-8 w-8 text-pink-500" />,
-    trend: "up"
-  },
-  {
-    title: "Total Orders",
-    value: "156",
-    description: "5% increase from last month",
-    icon: <ShoppingBag className="h-8 w-8 text-pink-500" />,
-    trend: "up"
-  },
-  {
-    title: "Total Products",
-    value: "342",
-    description: "12 new products this month",
-    icon: <Package className="h-8 w-8 text-pink-500" />,
-    trend: "up"
-  },
-  {
-    title: "Total Customers",
-    value: "1,245",
-    description: "9% increase from last month",
-    icon: <Users className="h-8 w-8 text-pink-500" />,
-    trend: "up"
+/**
+ * Admin Dashboard Overview Cards
+ */
+function DashboardCards() {
+  // Fetch order stats
+  const { data: orderStats, isLoading: isLoadingOrders } = useQuery<{
+    total: number;
+    pending: number;
+    completed: number;
+    revenue: number;
+  }>({
+    queryKey: ["/api/admin/stats/orders"],
+    queryFn: async () => {
+      // Use dummy data for now, will be replaced with actual API call
+      return {
+        total: 126,
+        pending: 8,
+        completed: 118,
+        revenue: 43280.50
+      };
+    },
+  });
+
+  // Fetch customer stats
+  const { data: customerStats, isLoading: isLoadingCustomers } = useQuery<{
+    total: number;
+    newThisMonth: number;
+  }>({
+    queryKey: ["/api/admin/stats/customers"],
+    queryFn: async () => {
+      // Use dummy data for now, will be replaced with actual API call
+      return {
+        total: 853,
+        newThisMonth: 48
+      };
+    },
+  });
+
+  // Fetch product stats
+  const { data: productStats, isLoading: isLoadingProducts } = useQuery<{
+    total: number;
+    outOfStock: number;
+  }>({
+    queryKey: ["/api/admin/stats/products"],
+    queryFn: async () => {
+      // Use dummy data for now, will be replaced with actual API call
+      return {
+        total: 208,
+        outOfStock: 12
+      };
+    },
+  });
+
+  if (isLoadingOrders || isLoadingCustomers || isLoadingProducts) {
+    return (
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {[1, 2, 3, 4].map((i) => (
+          <Card key={i} className="animate-pulse">
+            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+              <CardTitle className="text-sm font-medium">
+                <div className="h-4 bg-gray-200 rounded w-24"></div>
+              </CardTitle>
+              <div className="h-8 w-8 bg-gray-200 rounded-full"></div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold h-7 bg-gray-200 rounded w-16 mb-2"></div>
+              <div className="text-xs text-muted-foreground h-3 bg-gray-200 rounded w-32"></div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
   }
-];
 
-// Recent orders data
-const recentOrders = [
-  { id: "#ORD-12345", customer: "John Smith", date: "2023-04-20", status: "Delivered", total: 129.99 },
-  { id: "#ORD-12346", customer: "Sarah Johnson", date: "2023-04-20", status: "Processing", total: 79.99 },
-  { id: "#ORD-12347", customer: "Michael Brown", date: "2023-04-19", status: "Pending", total: 199.99 },
-  { id: "#ORD-12348", customer: "Emily Davis", date: "2023-04-19", status: "Delivered", total: 59.99 },
-  { id: "#ORD-12349", customer: "Robert Wilson", date: "2023-04-18", status: "Cancelled", total: 149.99 }
-];
+  const cards = [
+    {
+      title: "Total Revenue",
+      value: formatCurrency(orderStats?.revenue || 0),
+      description: `From ${orderStats?.total || 0} orders`,
+      icon: DollarSign,
+      iconColor: "text-green-500",
+      iconBg: "bg-green-100",
+    },
+    {
+      title: "Orders",
+      value: orderStats?.total || 0,
+      description: `${orderStats?.pending || 0} pending orders`,
+      icon: ShoppingCart,
+      iconColor: "text-pink-500",
+      iconBg: "bg-pink-100",
+    },
+    {
+      title: "Customers",
+      value: customerStats?.total || 0,
+      description: `${customerStats?.newThisMonth || 0} new this month`,
+      icon: Users,
+      iconColor: "text-blue-500",
+      iconBg: "bg-blue-100",
+    },
+    {
+      title: "Products",
+      value: productStats?.total || 0,
+      description: `${productStats?.outOfStock || 0} out of stock`,
+      icon: BarChart,
+      iconColor: "text-purple-500",
+      iconBg: "bg-purple-100",
+    },
+  ];
 
-// Stock alerts
-const lowStockItems = [
-  { id: 1, name: "Wireless Earbuds", stock: 3, threshold: 5 },
-  { id: 2, name: "Phone Case - Pink", stock: 2, threshold: 10 },
-  { id: 3, name: "Power Bank 10000mAh", stock: 4, threshold: 8 },
-  { id: 4, name: "Smart Watch Band", stock: 1, threshold: 5 }
-];
-
-function DashboardPage() {
   return (
-    <AdminLayout>
-      <div className="flex flex-col gap-5">
-        <h1 className="text-3xl font-bold">Dashboard</h1>
-        
-        {/* Stats Overview */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {statsData.map((stat, index) => (
-            <Card key={index}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  {stat.title}
-                </CardTitle>
-                {stat.icon}
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stat.value}</div>
-                <p className="text-xs text-muted-foreground flex items-center mt-1">
-                  {stat.trend === 'up' ? 
-                    <TrendingUp className="mr-1 h-4 w-4 text-green-500" /> : 
-                    <TrendingDown className="mr-1 h-4 w-4 text-red-500" />
-                  }
-                  {stat.description}
-                </p>
-              </CardContent>
-            </Card>
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {cards.map((card, i) => (
+        <Card key={i}>
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+            <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
+            <div className={`p-2 rounded-full ${card.iconBg}`}>
+              <card.icon className={`h-4 w-4 ${card.iconColor}`} />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{card.value}</div>
+            <p className="text-xs text-muted-foreground">{card.description}</p>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Recent Orders Component
+ */
+function RecentOrders() {
+  const { data: recentOrders, isLoading } = useQuery<any[]>({
+    queryKey: ["/api/admin/orders/recent"],
+    queryFn: async () => {
+      // Use dummy data for now, will be replaced with actual API call
+      return [
+        {
+          id: 8743,
+          customer: "John Doe",
+          status: "Processing",
+          total: 238.50,
+          date: "2025-05-05T14:23:00Z",
+        },
+        {
+          id: 8742,
+          customer: "Alice Smith",
+          status: "Shipped",
+          total: 129.99,
+          date: "2025-05-05T11:45:00Z",
+        },
+        {
+          id: 8741,
+          customer: "Bob Johnson",
+          status: "Delivered",
+          total: 547.20,
+          date: "2025-05-04T16:30:00Z",
+        },
+        {
+          id: 8740,
+          customer: "Emma Wilson",
+          status: "Delivered",
+          total: 89.99,
+          date: "2025-05-04T10:15:00Z",
+        },
+        {
+          id: 8739,
+          customer: "Michael Brown",
+          status: "Delivered",
+          total: 325.75,
+          date: "2025-05-03T15:40:00Z",
+        },
+      ];
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-md border">
+        <div className="px-4 py-3 font-medium bg-muted/50">
+          <div className="grid grid-cols-5 gap-4">
+            <div>Order ID</div>
+            <div>Customer</div>
+            <div>Status</div>
+            <div>Date</div>
+            <div className="text-right">Amount</div>
+          </div>
+        </div>
+        <div className="divide-y">
+          {recentOrders?.map((order) => (
+            <div key={order.id} className="px-4 py-3">
+              <div className="grid grid-cols-5 gap-4">
+                <div className="font-medium">#{order.id}</div>
+                <div>{order.customer}</div>
+                <div>
+                  <span className={`
+                    inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                    ${order.status === 'Processing' ? 'bg-blue-100 text-blue-800' : 
+                      order.status === 'Shipped' ? 'bg-yellow-100 text-yellow-800' : 
+                      'bg-green-100 text-green-800'}
+                  `}>
+                    {order.status}
+                  </span>
+                </div>
+                <div className="text-muted-foreground">
+                  {new Date(order.date).toLocaleDateString()}
+                </div>
+                <div className="text-right font-medium">
+                  {formatCurrency(order.total)}
+                </div>
+              </div>
+            </div>
           ))}
         </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Top Products Component
+ */
+function TopProducts() {
+  const { data: topProducts, isLoading } = useQuery<any[]>({
+    queryKey: ["/api/admin/products/top"],
+    queryFn: async () => {
+      // Use dummy data for now, will be replaced with actual API call
+      return [
+        {
+          name: "Samsung Galaxy S21",
+          category: "Electronics",
+          sales: 48,
+          revenue: 38352.00,
+        },
+        {
+          name: "Wireless Earbuds",
+          category: "Electronics",
+          sales: 64,
+          revenue: 5116.80,
+        },
+        {
+          name: "Casual Denim Jacket",
+          category: "Fashion",
+          sales: 37,
+          revenue: 2589.63,
+        },
+        {
+          name: "Ceramic Coffee Mug",
+          category: "Home & Kitchen",
+          sales: 89,
+          revenue: 1424.00,
+        },
+        {
+          name: "Fitness Tracker Watch",
+          category: "Electronics",
+          sales: 32,
+          revenue: 3839.68,
+        },
+      ];
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-md border">
+        <div className="px-4 py-3 font-medium bg-muted/50">
+          <div className="grid grid-cols-4 gap-4">
+            <div>Product</div>
+            <div>Category</div>
+            <div className="text-right">Units Sold</div>
+            <div className="text-right">Revenue</div>
+          </div>
+        </div>
+        <div className="divide-y">
+          {topProducts?.map((product, index) => (
+            <div key={index} className="px-4 py-3">
+              <div className="grid grid-cols-4 gap-4">
+                <div className="font-medium">{product.name}</div>
+                <div>{product.category}</div>
+                <div className="text-right">{product.sales}</div>
+                <div className="text-right font-medium">
+                  {formatCurrency(product.revenue)}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Admin Dashboard Page
+ */
+export default function AdminDashboard() {
+  return (
+    <AdminLayout>
+      <div className="flex flex-col space-y-6">
+        <div className="space-y-0.5">
+          <h2 className="text-2xl font-bold tracking-tight">Dashboard</h2>
+          <p className="text-muted-foreground">
+            Overview of your store's performance and recent activity
+          </p>
+        </div>
+
+        {/* Stats Overview Cards */}
+        <DashboardCards />
         
-        {/* Dashboard Tabs */}
-        <Tabs defaultValue="overview" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="orders">Recent Orders</TabsTrigger>
-            <TabsTrigger value="inventory">Inventory Alerts</TabsTrigger>
+        {/* Recent Orders & Top Products */}
+        <Tabs defaultValue="recent-orders" className="mt-6">
+          <TabsList className="grid w-full md:w-[400px] grid-cols-2">
+            <TabsTrigger value="recent-orders">Recent Orders</TabsTrigger>
+            <TabsTrigger value="top-products">Top Products</TabsTrigger>
           </TabsList>
-          
-          {/* Overview Tab */}
-          <TabsContent value="overview" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Sales Overview</CardTitle>
-                <CardDescription>
-                  Monthly sales performance
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="h-[300px] flex items-center justify-center">
-                <div className="text-center text-muted-foreground">
-                  <BarChart3 className="mx-auto h-16 w-16 opacity-50" />
-                  <p className="mt-2">Sales chart will appear here</p>
-                </div>
-              </CardContent>
-            </Card>
+          <TabsContent value="recent-orders" className="mt-6">
+            <RecentOrders />
           </TabsContent>
-          
-          {/* Orders Tab */}
-          <TabsContent value="orders" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent Orders</CardTitle>
-                <CardDescription>
-                  Recent customer orders and their status
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="py-3 text-left">Order ID</th>
-                        <th className="py-3 text-left">Customer</th>
-                        <th className="py-3 text-left">Date</th>
-                        <th className="py-3 text-left">Status</th>
-                        <th className="py-3 text-right">Total</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {recentOrders.map((order, index) => (
-                        <tr 
-                          key={index} 
-                          className="border-b hover:bg-gray-50 transition-colors"
-                        >
-                          <td className="py-3 text-left font-medium">{order.id}</td>
-                          <td className="py-3 text-left">{order.customer}</td>
-                          <td className="py-3 text-left">{order.date}</td>
-                          <td className="py-3 text-left">
-                            <div className="flex items-center">
-                              {order.status === 'Delivered' && (
-                                <CheckCircle2 className="mr-1 h-4 w-4 text-green-500" />
-                              )}
-                              {order.status === 'Processing' && (
-                                <Clock className="mr-1 h-4 w-4 text-blue-500" />
-                              )}
-                              {order.status === 'Pending' && (
-                                <Clock className="mr-1 h-4 w-4 text-yellow-500" />
-                              )}
-                              {order.status === 'Cancelled' && (
-                                <AlertCircle className="mr-1 h-4 w-4 text-red-500" />
-                              )}
-                              {order.status}
-                            </div>
-                          </td>
-                          <td className="py-3 text-right">{formatCurrency(order.total)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          {/* Inventory Tab */}
-          <TabsContent value="inventory" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Low Stock Alerts</CardTitle>
-                <CardDescription>
-                  Products that are running low on inventory
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {lowStockItems.map((item) => (
-                    <div key={item.id} className="flex items-center justify-between">
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium">{item.name}</p>
-                        <div className="flex items-center text-xs text-muted-foreground">
-                          <AlertCircle className="mr-1 h-3 w-3 text-red-500" />
-                          <span>Only {item.stock} left</span>
-                        </div>
-                      </div>
-                      <div className="flex flex-col w-32">
-                        <div className="flex justify-between mb-1 text-xs">
-                          <span>{item.stock}</span>
-                          <span>{item.threshold}</span>
-                        </div>
-                        <Progress value={(item.stock / item.threshold) * 100} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+          <TabsContent value="top-products" className="mt-6">
+            <TopProducts />
           </TabsContent>
         </Tabs>
       </div>
     </AdminLayout>
   );
 }
-
-export default DashboardPage;

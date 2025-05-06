@@ -212,10 +212,21 @@ export function setupAuth(app: Express): void {
     res.json(userData);
   });
 
-  // Middleware to protect routes
+  // Middleware to protect routes - requires authentication
   app.use("/api/protected/*", (req: Request, res: Response, next: NextFunction) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "Authentication required" });
+    }
+    next();
+  });
+
+  // Middleware to protect admin routes - requires admin role
+  app.use("/api/admin/*", (req: Request, res: Response, next: NextFunction) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json({ message: "Admin access required" });
     }
     next();
   });
