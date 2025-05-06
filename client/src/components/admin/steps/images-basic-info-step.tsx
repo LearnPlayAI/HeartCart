@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Grid2X2, ImagePlus, Loader2, Search, Wand2 } from "lucide-react";
+import { Grid2X2, ImagePlus, Info, Loader2, Search, Wand2 } from "lucide-react";
 import { Category } from "@shared/schema";
 import { UseFormReturn } from "react-hook-form";
 import { Badge } from "@/components/ui/badge";
@@ -364,7 +364,20 @@ export default function ImagesBasicInfoStep({
                   name="costPrice"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Cost Price (Wholesale)</FormLabel>
+                      <div className="flex items-center space-x-2">
+                        <FormLabel>Cost Price (Wholesale)</FormLabel>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <Info className="h-4 w-4 text-muted-foreground" />
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-[300px]">
+                              <p>The price you pay to acquire the product from suppliers.</p>
+                              <p className="mt-1">This is used as the base for calculating the selling price.</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
                       <FormControl>
                         <Input
                           type="number"
@@ -391,7 +404,22 @@ export default function ImagesBasicInfoStep({
                   name="price"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Selling Price (Retail)</FormLabel>
+                      <div className="flex items-center space-x-2">
+                        <FormLabel>Selling Price (Retail)</FormLabel>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <Info className="h-4 w-4 text-muted-foreground" />
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-[300px]">
+                              <p>Pricing is calculated based on your category-specific markup settings.</p>
+                              <p className="mt-1">• Category-specific: Uses markup % defined for the product's category</p>
+                              <p>• Default: Uses global markup % (usually 50%)</p>
+                              <p>• AI-suggested: Considers market factors</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
                       <FormControl>
                         <Input
                           type="number"
@@ -511,8 +539,12 @@ export default function ImagesBasicInfoStep({
                 AI Suggest Price
               </Button>
             </TooltipTrigger>
-            <TooltipContent>
-              <p>Get AI pricing based on South African market. Price will never be below cost price and defaults to cost price + 50% if needed.</p>
+            <TooltipContent className="max-w-[300px]">
+              <p>Get AI pricing based on South African market trends and your cost price.</p>
+              <p className="mt-1">• Uses category-specific markup if available</p>
+              <p>• Falls back to default markup (50%) if needed</p>
+              <p>• Considers market factors to balance competitiveness and profit</p>
+              <p>• Price will never be below cost price</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -634,9 +666,21 @@ export default function ImagesBasicInfoStep({
                     Apply
                   </Button>
                 </div>
-                <p className="text-sm p-2 bg-slate-50 dark:bg-slate-900 rounded border">
-                  R{aiSuggestions.suggestedPrice.toFixed(2)}
-                </p>
+                <div className="text-sm p-2 bg-slate-50 dark:bg-slate-900 rounded border space-y-1">
+                  <p className="font-medium">R{aiSuggestions.suggestedPrice.toFixed(2)}</p>
+                  {aiSuggestions.markupPercentage && (
+                    <p className="text-xs text-muted-foreground">
+                      <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium">
+                        {aiSuggestions.markupPercentage}% markup
+                      </span>
+                      {aiSuggestions.markupSource && (
+                        <span className="ml-2">
+                          Source: {aiSuggestions.markupSource}
+                        </span>
+                      )}
+                    </p>
+                  )}
+                </div>
               </div>
             )}
             
