@@ -44,8 +44,7 @@ import {
   DialogHeader, 
   DialogTitle 
 } from "@/components/ui/dialog";
-import { Link } from "wouter";
-import { SupplierForm } from "@/components/admin/supplier-form";
+import { Link, useLocation } from "wouter";
 
 // Placeholder supplier type until we connect to the backend
 type Supplier = {
@@ -62,7 +61,7 @@ type Supplier = {
 export default function AdminSuppliers() {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
-  const [showAddDialog, setShowAddDialog] = useState(false);
+  // No longer using modal dialog for adding suppliers
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
   
@@ -75,15 +74,15 @@ export default function AdminSuppliers() {
     },
   });
 
-  // Placeholder functions for CRUD operations
+  // CRUD operations
+  const [, navigate] = useLocation();
+  
   const handleAddSupplier = () => {
-    setShowAddDialog(true);
+    navigate("/admin/suppliers/new");
   };
 
   const handleEditSupplier = (supplier: Supplier) => {
-    // Navigate to edit page
-    // This will be implemented in the next step
-    console.log("Edit supplier:", supplier);
+    navigate(`/admin/suppliers/${supplier.id}/edit`);
   };
 
   const handleDeleteClick = (supplier: Supplier) => {
