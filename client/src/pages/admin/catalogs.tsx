@@ -131,7 +131,20 @@ export default function AdminCatalogs() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString();
+    // Check if the dateString is valid and not a 1970 date
+    const date = new Date(dateString);
+    
+    // If date is invalid or close to epoch (1/1/1970), it means the date is likely not set properly
+    if (isNaN(date.getTime()) || date.getFullYear() === 1970) {
+      return "Not set";
+    }
+    
+    // Format the date properly for display
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
   };
 
   return (
