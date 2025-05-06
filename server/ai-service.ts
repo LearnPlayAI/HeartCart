@@ -43,21 +43,27 @@ function bufferToBase64(buffer: Buffer, mimeType: string = 'image/png'): string 
  */
 export async function removeImageBackground(imageBase64: string): Promise<string> {
   try {
+    // Check if imageBase64 is valid
+    if (!imageBase64 || typeof imageBase64 !== 'string') {
+      throw new Error('Invalid image data provided');
+    }
+    
     // Extract content type and convert to buffer
     const imageBuffer = base64ToBuffer(imageBase64);
     
-    // Resize image to reduce processing time if needed
+    // Resize image and convert to PNG for consistency
     const resizedImageBuffer = await sharp(imageBuffer)
       .resize({ width: 1024, height: 1024, fit: 'inside' })
+      .png() // Convert to PNG format for consistency
       .toBuffer();
     
-    // Create prompt
-    const imageData = bufferToBase64(resizedImageBuffer);
+    // Create prompt with image data
+    const imageData = bufferToBase64(resizedImageBuffer, 'image/png');
     
     // Create the generation request
     const result = await geminiProVision.generateContent([
       "Please remove the background from this product image, preserving only the product with a transparent background. Return only the processed image without any text.",
-      { inlineData: { data: imageData, mimeType: 'image/jpeg' } }
+      { inlineData: { data: imageData, mimeType: 'image/png' } }
     ]);
     
     // Get the response
@@ -88,18 +94,76 @@ export async function generateProductTags(
   productDescription: string
 ): Promise<string[]> {
   try {
-    // Extract content type and convert to buffer
-    const imageBuffer = base64ToBuffer(imageBase64);
+    let imageData: string;
     
-    // Resize image to reduce processing time
-    const resizedImageBuffer = await sharp(imageBuffer)
-      .resize({ width: 512, height: 512, fit: 'inside' })
-      .toBuffer();
+    // Check if imageBase64 is a URL or a base64 string
+    if (imageBase64.startsWith('http')) {
+      // If it's a URL, we'll skip image processing and use text-only prompt
+      console.log("Image URL provided instead of base64, using text-only prompt");
+      
+      // Generate tags based only on text
+      const textOnlyResult = await genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+        .generateContent([
+          `Generate 5-7 relevant product tags for an e-commerce website based on this product information. 
+          Focus on features, use cases, materials, style, benefits, and relevant categories.
+          Return only the tags in a comma-separated list format, with each tag being 1-3 words maximum.
+          
+          Product Name: ${productName}
+          Product Description: ${productDescription}`
+        ]);
+      
+      const textResponse = await textOnlyResult.response;
+      const responseText = textResponse.text();
+      
+      // Parse comma-separated tags
+      const tags = responseText
+        .split(',')
+        .map(tag => tag.trim())
+        .filter(tag => tag && tag.length > 0);
+      
+      return tags;
+    }
     
-    // Create prompt
-    const imageData = bufferToBase64(resizedImageBuffer);
+    // Process image if we have a base64 string
+    try {
+      // Extract content type and convert to buffer
+      const imageBuffer = base64ToBuffer(imageBase64);
+      
+      // Resize image to reduce processing time
+      const resizedImageBuffer = await sharp(imageBuffer)
+        .resize({ width: 512, height: 512, fit: 'inside' })
+        .png() // Convert to PNG format for consistency
+        .toBuffer();
+      
+      // Create prompt with image
+      imageData = bufferToBase64(resizedImageBuffer, 'image/png');
+    } catch (imageError) {
+      console.warn('Image processing failed, falling back to text-only:', imageError);
+      
+      // Generate tags based only on text as fallback
+      const textOnlyResult = await genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+        .generateContent([
+          `Generate 5-7 relevant product tags for an e-commerce website based on this product information. 
+          Focus on features, use cases, materials, style, benefits, and relevant categories.
+          Return only the tags in a comma-separated list format, with each tag being 1-3 words maximum.
+          
+          Product Name: ${productName}
+          Product Description: ${productDescription}`
+        ]);
+      
+      const textResponse = await textOnlyResult.response;
+      const responseText = textResponse.text();
+      
+      // Parse comma-separated tags
+      const tags = responseText
+        .split(',')
+        .map(tag => tag.trim())
+        .filter(tag => tag && tag.length > 0);
+      
+      return tags;
+    }
     
-    // Create the generation request
+    // Create the generation request with image
     const result = await geminiProVision.generateContent([
       `Generate 5-7 relevant product tags for an e-commerce website based on this product image, name, and description. 
       Focus on features, use cases, materials, style, benefits, and relevant categories.
@@ -107,7 +171,7 @@ export async function generateProductTags(
       
       Product Name: ${productName}
       Product Description: ${productDescription}`,
-      { inlineData: { data: imageData, mimeType: 'image/jpeg' } }
+      { inlineData: { data: imageData, mimeType: 'image/png' } }
     ]);
     
     // Get the response
@@ -138,16 +202,45 @@ export async function analyzeProductImage(imageBase64: string): Promise<{
   suggestedTags?: string[];
 }> {
   try {
-    // Extract content type and convert to buffer
-    const imageBuffer = base64ToBuffer(imageBase64);
+    let imageData: string;
     
-    // Resize image to reduce processing time
-    const resizedImageBuffer = await sharp(imageBuffer)
-      .resize({ width: 512, height: 512, fit: 'inside' })
-      .toBuffer();
+    // Check if imageBase64 is a URL or a base64 string
+    if (imageBase64.startsWith('http')) {
+      // If it's a URL but we can't process it directly in Gemini
+      // We'll need to use text-only prompt and fetch image some other way
+      // For now, return a simple object
+      console.log("Image URL provided instead of base64, skipping analysis");
+      return {
+        suggestedName: "",
+        suggestedDescription: "",
+        suggestedCategory: "",
+        suggestedBrand: "",
+        suggestedTags: []
+      };
+    }
     
-    // Create prompt
-    const imageData = bufferToBase64(resizedImageBuffer);
+    try {
+      // Extract content type and convert to buffer
+      const imageBuffer = base64ToBuffer(imageBase64);
+      
+      // Resize image to reduce processing time and convert to PNG format
+      const resizedImageBuffer = await sharp(imageBuffer)
+        .resize({ width: 512, height: 512, fit: 'inside' })
+        .png() // Convert to PNG format for consistency
+        .toBuffer();
+      
+      // Create prompt
+      imageData = bufferToBase64(resizedImageBuffer, 'image/png');
+    } catch (imageError) {
+      console.warn('Image processing failed:', imageError);
+      return {
+        suggestedName: "",
+        suggestedDescription: "",
+        suggestedCategory: "",
+        suggestedBrand: "",
+        suggestedTags: []
+      };
+    }
     
     // Create the generation request
     const result = await geminiProVision.generateContent([
@@ -159,7 +252,7 @@ export async function analyzeProductImage(imageBase64: string): Promise<{
       5. "tags": An array of 5-7 relevant tags (each 1-3 words)
       
       Format the response as valid JSON only, with no additional text.`,
-      { inlineData: { data: imageData, mimeType: 'image/jpeg' } }
+      { inlineData: { data: imageData, mimeType: 'image/png' } }
     ]);
     
     // Get the response
@@ -192,9 +285,11 @@ export async function analyzeProductImage(imageBase64: string): Promise<{
             suggestedTags: extractedJson.tags
           };
         } catch (extractError) {
+          console.error('Failed to parse extracted JSON:', extractError);
           throw new Error('Failed to parse extracted JSON');
         }
       } else {
+        console.error('No valid JSON found in response');
         throw new Error('No valid JSON found in response');
       }
     }

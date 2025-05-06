@@ -506,7 +506,16 @@ export default function ProductForm({ productId, onSuccess }: ProductFormProps) 
                           if (data.tags && data.tags.length > 0) {
                             // Add new tags without duplicates
                             const currentTags = form.getValues('tags') || [];
-                            const uniqueTags = [...new Set([...currentTags, ...data.tags])];
+                            // Use filter to remove duplicates instead of Set
+                            const uniqueTags = [...currentTags];
+                            
+                            // Add only tags that don't already exist
+                            data.tags.forEach(tag => {
+                              if (!uniqueTags.includes(tag)) {
+                                uniqueTags.push(tag);
+                              }
+                            });
+                            
                             form.setValue('tags', uniqueTags);
                             
                             toast({
