@@ -408,7 +408,7 @@ export default function ProductAttributes() {
       productId: value.productId,
       attributeId: value.attributeId,
       value: value.value,
-      priceAdjustment: value.priceAdjustment.toString()
+      priceAdjustment: value.priceAdjustment ? value.priceAdjustment.toString() : '0'
     });
   };
   
@@ -418,7 +418,7 @@ export default function ProductAttributes() {
     setCombinationForm({
       productId: combination.productId,
       combinationHash: combination.combinationHash,
-      priceAdjustment: combination.priceAdjustment.toString()
+      priceAdjustment: combination.priceAdjustment ? combination.priceAdjustment.toString() : '0'
     });
     
     // Parse the combination hash to set selected values
@@ -507,9 +507,9 @@ export default function ProductAttributes() {
                           >
                             <div className="flex justify-between">
                               <p className="font-medium">{value.attributeDisplayName}</p>
-                              {value.priceAdjustment !== '0' && (
-                                <Badge variant={parseFloat(value.priceAdjustment.toString()) > 0 ? "default" : "destructive"}>
-                                  {parseFloat(value.priceAdjustment.toString()) > 0 ? '+' : ''}{value.priceAdjustment}
+                              {value.priceAdjustment && value.priceAdjustment !== 0 && value.priceAdjustment !== '0' && (
+                                <Badge variant={parseFloat(String(value.priceAdjustment || 0)) > 0 ? "default" : "destructive"}>
+                                  {parseFloat(String(value.priceAdjustment || 0)) > 0 ? '+' : ''}{value.priceAdjustment || 0}
                                 </Badge>
                               )}
                             </div>
@@ -660,8 +660,8 @@ export default function ProductAttributes() {
                           >
                             <div className="flex justify-between">
                               <p className="font-medium">Combination {combination.id}</p>
-                              <Badge variant={parseFloat(combination.priceAdjustment.toString()) > 0 ? "default" : "destructive"}>
-                                {parseFloat(combination.priceAdjustment.toString()) > 0 ? '+' : ''}{combination.priceAdjustment}
+                              <Badge variant={parseFloat(String(combination.priceAdjustment || 0)) > 0 ? "default" : "destructive"}>
+                                {parseFloat(String(combination.priceAdjustment || 0)) > 0 ? '+' : ''}{combination.priceAdjustment || 0}
                               </Badge>
                             </div>
                             <p className="text-xs text-muted-foreground truncate">{combination.combinationHash}</p>
