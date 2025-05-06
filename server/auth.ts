@@ -7,7 +7,6 @@ import { promisify } from "util";
 import { storage } from "./storage";
 import { User as SchemaUser } from "@shared/schema";
 import { rateLimit } from "express-rate-limit";
-import csrf from "csurf";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
 
@@ -59,8 +58,7 @@ const loginLimiter = rateLimit({
   message: "Too many login attempts, please try again after 15 minutes",
 });
 
-// CSRF protection
-const csrfProtection = csrf({ cookie: true });
+// No longer using CSRF protection
 
 function getSessionSecret(): string {
   // In production, this should be an environment variable
@@ -231,8 +229,8 @@ export function setupAuth(app: Express): void {
     next();
   });
 
-  // Provide CSRF token
-  app.get("/api/csrf-token", csrfProtection, (req: Request, res: Response) => {
-    res.json({ csrfToken: req.csrfToken() });
+  // No longer using CSRF protection
+  app.get("/api/csrf-token", (req: Request, res: Response) => {
+    res.json({ message: "CSRF protection disabled" });
   });
 }
