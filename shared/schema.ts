@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, doublePrecision, jsonb, varchar, unique } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, doublePrecision, jsonb, varchar, unique, decimal } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -178,6 +178,65 @@ export const catalogs = pgTable("catalogs", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Category Attributes - for defining which attributes a category has
+export const categoryAttributes = pgTable("category_attributes", {
+  id: serial("id").primaryKey(),
+  categoryId: integer("category_id").notNull().references(() => categories.id),
+  name: varchar("name", { length: 100 }).notNull(),
+  displayName: varchar("display_name", { length: 100 }).notNull(),
+  description: text("description"),
+  attributeType: varchar("attribute_type", { length: 50 }).notNull(), // 'select', 'color', 'text', etc.
+  isRequired: boolean("is_required").default(false),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    categoryAttrUnique: unique().on(table.categoryId, table.name),
+  };
+});
+
+// Category Attribute Options - for storing predefined options for select-type attributes
+export const categoryAttributeOptions = pgTable("category_attribute_options", {
+  id: serial("id").primaryKey(),
+  attributeId: integer("attribute_id").notNull().references(() => categoryAttributes.id),
+  value: varchar("value", { length: 255 }).notNull(),
+  displayValue: varchar("display_value", { length: 255 }).notNull(),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Product Attribute Values - for storing the actual values of attributes for each product
+export const productAttributeValues = pgTable("product_attribute_values", {
+  id: serial("id").primaryKey(),
+  productId: integer("product_id").notNull().references(() => products.id),
+  attributeId: integer("attribute_id").notNull().references(() => categoryAttributes.id),
+  value: text("value").notNull(), // Could be an option ID, color hex code, text, etc.
+  priceAdjustment: decimal("price_adjustment", { precision: 10, scale: 2 }).default("0"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    productAttrUnique: unique().on(table.productId, table.attributeId),
+  };
+});
+
+// Product Attribute Combinations - for storing different combinations and their prices
+export const productAttributeCombinations = pgTable("product_attribute_combinations", {
+  id: serial("id").primaryKey(),
+  productId: integer("product_id").notNull().references(() => products.id),
+  combinationHash: varchar("combination_hash", { length: 64 }).notNull(), // Hash of the attribute values
+  priceAdjustment: decimal("price_adjustment", { precision: 10, scale: 2 }).default("0"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    productCombinationUnique: unique().on(table.productId, table.combinationHash),
+  };
+});
+
 // Create insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -255,6 +314,35 @@ export const insertCatalogSchema = createInsertSchema(catalogs).omit({
   endDate: z.string().or(z.date()).nullable().optional(),
 });
 
+// Category Attributes insert schema
+export const insertCategoryAttributeSchema = createInsertSchema(categoryAttributes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Category Attribute Options insert schema
+export const insertCategoryAttributeOptionSchema = createInsertSchema(categoryAttributeOptions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Product Attribute Values insert schema
+export const insertProductAttributeValueSchema = createInsertSchema(productAttributeValues).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Product Attribute Combinations insert schema
+export const insertProductAttributeCombinationSchema = createInsertSchema(productAttributeCombinations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  isActive: true,
+});
+
 // Export types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -291,3 +379,15 @@ export type InsertSupplier = z.infer<typeof insertSupplierSchema>;
 
 export type Catalog = typeof catalogs.$inferSelect;
 export type InsertCatalog = z.infer<typeof insertCatalogSchema>;
+
+export type CategoryAttribute = typeof categoryAttributes.$inferSelect;
+export type InsertCategoryAttribute = z.infer<typeof insertCategoryAttributeSchema>;
+
+export type CategoryAttributeOption = typeof categoryAttributeOptions.$inferSelect;
+export type InsertCategoryAttributeOption = z.infer<typeof insertCategoryAttributeOptionSchema>;
+
+export type ProductAttributeValue = typeof productAttributeValues.$inferSelect;
+export type InsertProductAttributeValue = z.infer<typeof insertProductAttributeValueSchema>;
+
+export type ProductAttributeCombination = typeof productAttributeCombinations.$inferSelect;
+export type InsertProductAttributeCombination = z.infer<typeof insertProductAttributeCombinationSchema>;
