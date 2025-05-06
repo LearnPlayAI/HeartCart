@@ -38,7 +38,7 @@ export default function PricingPage() {
   const queryClient = useQueryClient();
   const [newMarkup, setNewMarkup] = useState<string>("");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
-  const [defaultMarkup, setDefaultMarkup] = useState<number>(50); // Default is 50%
+  const [defaultMarkup, setDefaultMarkup] = useState<number | null>(null); // No default
 
   // Fetch all categories
   const { data: categories, isLoading: categoriesLoading } = useQuery<Category[]>({
@@ -51,13 +51,13 @@ export default function PricingPage() {
   });
 
   // Fetch default markup percentage
-  const { data: defaultMarkupData } = useQuery<{ markupPercentage: number }>({
+  const { data: defaultMarkupData } = useQuery<{ markupPercentage: number | null, isSet: boolean }>({
     queryKey: ["/api/pricing/default-markup"]
   });
   
   // Update default markup when data is loaded
   useEffect(() => {
-    if (defaultMarkupData && defaultMarkupData.markupPercentage) {
+    if (defaultMarkupData) {
       setDefaultMarkup(defaultMarkupData.markupPercentage);
     }
   }, [defaultMarkupData]);
@@ -148,7 +148,7 @@ export default function PricingPage() {
   };
 
   const handleDelete = (id: number) => {
-    if (confirm("Are you sure you want to remove this category markup? It will revert to using the default markup.")) {
+    if (confirm("Are you sure you want to remove this category markup? Products in this category will use AI-based pricing suggestions instead.")) {
       deleteMutation.mutate(id);
     }
   };
@@ -253,7 +253,7 @@ export default function PricingPage() {
                       <strong>Category-specific markup</strong>: If a category has a set markup percentage, all products in that category use this percentage
                     </li>
                     <li>
-                      <strong>Default markup</strong>: If no category-specific markup exists, products use the default markup ({defaultMarkup}%)
+                      <strong>AI pricing</strong>: If no category-specific markup exists, AI will suggest a suitable price based on product and market data
                     </li>
                     <li>
                       <strong>Manual override</strong>: Any manually set selling price takes precedence
@@ -287,12 +287,12 @@ export default function PricingPage() {
             ) : pricingWithNames.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 <p>No category-specific markup settings defined yet.</p>
-                <p className="text-sm mt-2">All products will use the default markup of {defaultMarkup}%</p>
+                <p className="text-sm mt-2">Products without category markup will use AI pricing suggestions</p>
               </div>
             ) : (
               <Table>
                 <TableCaption>
-                  Category markup settings override the default {defaultMarkup}% markup
+                  Category markup settings define specific pricing rules for each product category
                 </TableCaption>
                 <TableHeader>
                   <TableRow>

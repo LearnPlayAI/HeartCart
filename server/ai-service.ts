@@ -349,26 +349,35 @@ export async function suggestPrice(
           markupSource: 'ai_suggestion_extracted' 
         };
       } else {
-        // If no valid price found, use the category markup
-        const suggestedPrice = costPrice * (1 + markupPercentage / 100);
-        console.log(`No valid AI price found. Using ${markupSource} markup: ${suggestedPrice.toFixed(2)}`);
-        
-        return { 
-          suggestedPrice, 
-          markupPercentage, 
-          markupSource 
-        };
+        // If no valid price found and we have a markup, use it
+        if (markupPercentage !== null) {
+          const suggestedPrice = costPrice * (1 + markupPercentage / 100);
+          console.log(`No valid AI price found. Using ${markupSource} markup: ${suggestedPrice.toFixed(2)}`);
+          
+          return { 
+            suggestedPrice, 
+            markupPercentage, 
+            markupSource 
+          };
+        } else {
+          // If no markup and no AI price, just use cost price
+          console.log(`No valid AI price found and no markup set. Using cost price: ${costPrice.toFixed(2)}`);
+          return {
+            suggestedPrice: costPrice,
+            markupPercentage: 0,
+            markupSource: 'cost_price_only'
+          };
+        }
       }
     }
   } catch (error) {
     console.error('Price suggestion failed:', error);
     
-    // Even on error, provide a fallback price using default markup
-    const fallbackPrice = costPrice * 1.5; // 50% markup
+    // Even on error, return cost price as minimum
     return { 
-      suggestedPrice: fallbackPrice, 
-      markupPercentage: 50, 
-      markupSource: 'fallback_on_error' 
+      suggestedPrice: costPrice, 
+      markupPercentage: 0, 
+      markupSource: 'cost_price_fallback_on_error' 
     };
   }
 }
