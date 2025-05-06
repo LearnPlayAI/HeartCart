@@ -36,7 +36,15 @@ export default function EditCatalog() {
   // Update catalog mutation
   const { mutate: updateCatalog, isPending } = useMutation({
     mutationFn: async (data: any) => {
-      const response = await apiRequest("PUT", `/api/catalogs/${catalogId}`, data);
+      // Pre-process the data to ensure dates are properly formatted
+      const processedData = {
+        ...data,
+        // Format dates as ISO strings or null
+        startDate: data.startDate ? new Date(data.startDate).toISOString() : null,
+        endDate: data.endDate ? new Date(data.endDate).toISOString() : null
+      };
+      
+      const response = await apiRequest("PUT", `/api/catalogs/${catalogId}`, processedData);
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || "Failed to update catalog");

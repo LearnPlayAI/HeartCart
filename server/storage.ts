@@ -851,7 +851,10 @@ export class DatabaseStorage implements IStorage {
     const updateValues = {
       ...catalogData,
       startDate: catalogData.startDate ? new Date(catalogData.startDate) : undefined,
-      endDate: catalogData.endDate ? new Date(catalogData.endDate) : undefined
+      // Handle null explicitly to allow clearing the endDate
+      endDate: catalogData.endDate === null 
+        ? null 
+        : (catalogData.endDate ? new Date(catalogData.endDate) : undefined)
     };
     
     // Remove createdAt and updatedAt from the payload since these are handled by Drizzle

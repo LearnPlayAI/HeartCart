@@ -16,7 +16,15 @@ export default function AddCatalog() {
   // Create catalog mutation
   const { mutate: createCatalog, isPending } = useMutation({
     mutationFn: async (data: any) => {
-      const response = await apiRequest("POST", "/api/catalogs", data);
+      // Pre-process the data to ensure dates are properly formatted
+      const processedData = {
+        ...data,
+        // Format dates as ISO strings or null
+        startDate: data.startDate ? new Date(data.startDate).toISOString() : null,
+        endDate: data.endDate ? new Date(data.endDate).toISOString() : null
+      };
+      
+      const response = await apiRequest("POST", "/api/catalogs", processedData);
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || "Failed to create catalog");

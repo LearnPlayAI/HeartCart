@@ -252,7 +252,7 @@ export const insertCatalogSchema = createInsertSchema(catalogs).omit({
   isActive: true,
 }).extend({
   startDate: z.string().or(z.date()).optional(),
-  endDate: z.string().or(z.date()).optional(),
+  endDate: z.string().or(z.date()).nullable().optional(),
 });
 
 // Export types

@@ -37,7 +37,7 @@ const catalogFormSchema = z.object({
   description: z.string().min(10, "Description must be at least 10 characters").max(500, "Description cannot exceed 500 characters"),
   isActive: z.boolean().default(true),
   startDate: z.date(),
-  endDate: z.date().nullable().optional(),
+  endDate: z.date().nullable().optional(), // Allow null
   defaultMarkupPercentage: z.coerce.number().min(0).default(0), // Changed from markupPercentage to defaultMarkupPercentage
   freeShipping: z.boolean().default(false),
 });
