@@ -80,8 +80,21 @@ const CartDrawer = () => {
                   <div className="ml-3 flex-1">
                     <h4 className="font-medium text-sm text-gray-800 mb-1">{item.product.name}</h4>
                     <div className="text-[#FF69B4] font-bold text-sm">
-                      {formatCurrency(item.product.salePrice || item.product.price)}
+                      {formatCurrency((item.product.salePrice || item.product.price) + (item.priceAdjustment || 0))}
                     </div>
+                    
+                    {/* Selected attributes */}
+                    {item.selectedAttributes && Object.keys(item.selectedAttributes).length > 0 && (
+                      <div className="mt-1 mb-2">
+                        {Object.entries(item.selectedAttributes as Record<string, string>).map(([key, value], index) => (
+                          <div key={index} className="flex text-xs text-gray-600">
+                            <span className="font-medium mr-1">{key}:</span>
+                            <span>{value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
                     <div className="flex items-center mt-2">
                       <Button 
                         variant="outline" 
