@@ -9,6 +9,10 @@ type CartItem = {
   productId: number;
   quantity: number;
   product: Product;
+  combinationId?: number | null;
+  combinationHash?: string | null;
+  selectedAttributes?: Record<string, string> | null;
+  priceAdjustment?: number | null;
 };
 
 type CartContextType = {
@@ -143,8 +147,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   
   const calculateSubtotal = () => {
     return cartItems.reduce((total, item) => {
-      const price = item.product.salePrice || item.product.price;
-      return total + price * item.quantity;
+      const basePrice = item.product.salePrice || item.product.price;
+      const priceWithAdjustment = basePrice + (item.priceAdjustment || 0);
+      return total + priceWithAdjustment * item.quantity;
     }, 0);
   };
   

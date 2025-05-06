@@ -172,7 +172,12 @@ const CheckoutPage = () => {
         items: cartItems.map(item => ({
           productId: item.productId,
           quantity: item.quantity,
-          price: item.product.salePrice || item.product.price,
+          price: (item.product.salePrice || item.product.price) + (item.priceAdjustment || 0),
+          // Include attribute information for the order item
+          combinationId: item.combinationId || null,
+          combinationHash: item.combinationHash || null,
+          selectedAttributes: item.selectedAttributes || {},
+          priceAdjustment: item.priceAdjustment || 0,
         })),
       };
       
@@ -547,16 +552,29 @@ const CheckoutPage = () => {
                       />
                       <div className="ml-3 flex-1">
                         <h4 className="text-sm font-medium">{item.product.name}</h4>
+                        
+                        {/* Selected attributes */}
+                        {item.selectedAttributes && Object.keys(item.selectedAttributes).length > 0 && (
+                          <div className="mt-1 mb-1">
+                            {Object.entries(item.selectedAttributes as Record<string, string>).map(([key, value], index) => (
+                              <div key={index} className="flex text-xs text-gray-600">
+                                <span className="font-medium mr-1">{key}:</span>
+                                <span>{value}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        
                         <div className="flex items-center mt-1">
                           <span className="text-sm text-[#FF69B4] font-medium">
-                            {formatCurrency(item.product.salePrice || item.product.price)}
+                            {formatCurrency((item.product.salePrice || item.product.price) + (item.priceAdjustment || 0))}
                           </span>
                           <span className="text-xs text-gray-500 mx-2">×</span>
                           <span className="text-sm">{item.quantity}</span>
                         </div>
                       </div>
                       <div className="font-medium">
-                        {formatCurrency((item.product.salePrice || item.product.price) * item.quantity)}
+                        {formatCurrency(((item.product.salePrice || item.product.price) + (item.priceAdjustment || 0)) * item.quantity)}
                       </div>
                     </div>
                   ))}
