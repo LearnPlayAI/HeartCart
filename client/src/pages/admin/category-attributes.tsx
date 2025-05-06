@@ -408,39 +408,39 @@ export default function CategoryAttributes() {
   
   return (
     <AdminLayout>
-      <div className="container mx-auto py-6">
-        <div className="flex items-center mb-6">
-          <Button 
-            variant="ghost" 
-            className="mr-2"
-            onClick={() => setLocation('/admin/categories')}
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Categories
-          </Button>
-          <h1 className="text-2xl font-bold">
-            Attributes for {category?.name || 'Category'}
-          </h1>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Attributes List */}
-          <div className="md:col-span-1">
-            <Card>
-              <CardHeader>
-                <CardTitle>Attributes</CardTitle>
-                <CardDescription>
-                  Manage product attributes for this category
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {attributesLoading ? (
-                  <p>Loading attributes...</p>
-                ) : attributes?.length === 0 ? (
-                  <p>No attributes found. Create your first attribute.</p>
-                ) : (
-                  <DragDropContext onDragEnd={handleDragEnd}>
-                    <Droppable droppableId="attributes-list">
+      <DragDropContext onDragEnd={handleDragEnd}>
+        <div className="container mx-auto py-6">
+          <div className="flex items-center mb-6">
+            <Button 
+              variant="ghost" 
+              className="mr-2"
+              onClick={() => setLocation('/admin/categories')}
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Categories
+            </Button>
+            <h1 className="text-2xl font-bold">
+              Attributes for {category?.name || 'Category'}
+            </h1>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Attributes List */}
+            <div className="md:col-span-1">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Attributes</CardTitle>
+                  <CardDescription>
+                    Manage product attributes for this category
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {attributesLoading ? (
+                    <p>Loading attributes...</p>
+                  ) : attributes?.length === 0 ? (
+                    <p>No attributes found. Create your first attribute.</p>
+                  ) : (
+                    <Droppable droppableId="attributes-list" type="attributes">
                       {(provided) => (
                         <div 
                           className="space-y-2"
@@ -480,8 +480,7 @@ export default function CategoryAttributes() {
                         </div>
                       )}
                     </Droppable>
-                  </DragDropContext>
-                )}
+                  )}
                 
                 <Button
                   className="w-full mt-4"
@@ -669,41 +668,72 @@ export default function CategoryAttributes() {
                       <div className="space-y-6">
                         {/* Options List */}
                         <div className="border rounded-md overflow-hidden">
-                          <table className="w-full">
-                            <thead className="bg-muted">
-                              <tr>
-                                <th className="text-left p-3">Option Value</th>
-                                <th className="text-left p-3">Display Value</th>
-                                <th className="text-left p-3">Order</th>
-                                <th className="text-right p-3">Action</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {options?.length === 0 ? (
-                                <tr>
-                                  <td colSpan={4} className="p-4 text-center">No options defined yet</td>
-                                </tr>
-                              ) : (
-                                options?.map((option: CategoryAttributeOption) => (
-                                  <tr key={option.id} className="border-t">
-                                    <td className="p-3">{option.value}</td>
-                                    <td className="p-3">{option.displayValue}</td>
-                                    <td className="p-3">{option.sortOrder}</td>
-                                    <td className="p-3 text-right">
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="text-destructive"
-                                        onClick={() => handleDeleteOption(option.id)}
-                                      >
-                                        <Trash2 className="h-4 w-4" />
-                                      </Button>
-                                    </td>
-                                  </tr>
-                                ))
+                          {options?.length === 0 ? (
+                            <div className="p-4 text-center">No options defined yet</div>
+                          ) : (
+                            <Droppable droppableId="options-list" type="options">
+                              {(provided) => (
+                                <div 
+                                  {...provided.droppableProps}
+                                  ref={provided.innerRef}
+                                  className="options-list"
+                                >
+                                  <table className="w-full">
+                                    <thead className="bg-muted">
+                                      <tr>
+                                        <th className="text-left p-3">Option Value</th>
+                                        <th className="text-left p-3">Display Value</th>
+                                        <th className="text-left p-3">Order</th>
+                                        <th className="text-right p-3">Action</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {options?.map((option: CategoryAttributeOption, index) => (
+                                        <Draggable 
+                                          key={option.id.toString()} 
+                                          draggableId={option.id.toString()} 
+                                          index={index}
+                                        >
+                                          {(provided) => (
+                                            <tr 
+                                              ref={provided.innerRef}
+                                              {...provided.draggableProps}
+                                              className="border-t"
+                                            >
+                                              <td className="p-3">{option.value}</td>
+                                              <td className="p-3">{option.displayValue}</td>
+                                              <td className="p-3">
+                                                <div className="flex items-center">
+                                                  <span className="mr-2">{option.sortOrder}</span>
+                                                  <div
+                                                    {...provided.dragHandleProps}
+                                                    className="cursor-move"
+                                                  >
+                                                    <MoveVertical className="h-4 w-4 text-muted-foreground" />
+                                                  </div>
+                                                </div>
+                                              </td>
+                                              <td className="p-3 text-right">
+                                                <Button
+                                                  variant="ghost"
+                                                  size="sm"
+                                                  className="text-destructive"
+                                                  onClick={() => handleDeleteOption(option.id)}
+                                                >
+                                                  <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                              </td>
+                                            </tr>
+                                          )}
+                                        </Draggable>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                  {provided.placeholder}
+                                </div>
                               )}
-                            </tbody>
-                          </table>
+                            </Droppable>
+                          )}
                         </div>
                         
                         {/* Add New Option */}
@@ -765,6 +795,7 @@ export default function CategoryAttributes() {
           </div>
         </div>
       </div>
+      </DragDropContext>
     </AdminLayout>
   );
 }
