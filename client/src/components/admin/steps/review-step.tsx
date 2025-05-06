@@ -40,15 +40,15 @@ export function ReviewStep({ form, uploadedImages = [], categories: propCategori
     ? `R${formValues.price.toFixed(2)}` 
     : 'Not set';
   
-  const compareAtPrice = typeof formValues.compareAtPrice === 'number' && formValues.compareAtPrice > 0
-    ? `R${formValues.compareAtPrice.toFixed(2)}`
+  const salePrice = typeof formValues.salePrice === 'number' && formValues.salePrice > 0
+    ? `R${formValues.salePrice.toFixed(2)}`
     : 'None';
   
   const discount = formValues.discount && formValues.discount > 0
-    ? `${formValues.discountType === 'percentage' ? formValues.discount + '%' : 'R' + formValues.discount}`
+    ? `${formValues.discount}%`
     : 'None';
   
-  const flashDealEnd = formValues.flashDealEnd && formValues.inFlashDeal
+  const flashDealEnd = formValues.flashDealEnd && formValues.isFlashDeal
     ? format(new Date(formValues.flashDealEnd), 'PPP')
     : 'N/A';
   
@@ -107,10 +107,7 @@ export function ReviewStep({ form, uploadedImages = [], categories: propCategori
               )}
             </div>
 
-            <div className="space-y-1">
-              <p className="text-sm font-medium">SKU</p>
-              <p className="text-sm font-mono">{formValues.sku || "Not set"}</p>
-            </div>
+            {/* SKU field removed as it's not in our schema */}
           </CardContent>
         </Card>
 
@@ -130,8 +127,8 @@ export function ReviewStep({ form, uploadedImages = [], categories: propCategori
             </div>
             
             <div className="space-y-1">
-              <p className="text-sm font-medium">Compare At Price</p>
-              <p className="text-sm">{compareAtPrice}</p>
+              <p className="text-sm font-medium">Sale Price</p>
+              <p className="text-sm">{salePrice}</p>
             </div>
             
             {/* Profit calculation */}
@@ -160,7 +157,7 @@ export function ReviewStep({ form, uploadedImages = [], categories: propCategori
             
             <div className="space-y-1">
               <p className="text-sm font-medium">Flash Deal</p>
-              {formValues.inFlashDeal ? (
+              {formValues.isFlashDeal ? (
                 <div>
                   <Badge variant="outline" className="bg-amber-100">Active</Badge>
                   <p className="text-xs mt-1">Ends on: {flashDealEnd}</p>
@@ -177,21 +174,6 @@ export function ReviewStep({ form, uploadedImages = [], categories: propCategori
               <div className="flex flex-col gap-1">
                 <div className="flex items-center">
                   <span className="text-sm">{formValues.freeShipping ? "Free shipping" : "Standard shipping rates"}</span>
-                </div>
-                <span className="text-sm">Class: {formValues.shippingClass || "Standard"}</span>
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <p className="text-sm font-medium">Physical Properties</p>
-              <div className="grid grid-cols-2 gap-x-2">
-                <div>
-                  <p className="text-xs text-muted-foreground">Weight</p>
-                  <p className="text-sm">{formValues.weight ? `${formValues.weight}g` : "Not set"}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Dimensions</p>
-                  <p className="text-sm">{formValues.dimensions || "Not set"}</p>
                 </div>
               </div>
             </div>
