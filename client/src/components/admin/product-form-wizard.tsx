@@ -345,25 +345,8 @@ export default function ProductFormWizard({ productId, onSuccess }: ProductFormW
     }
   };
 
-  // Initialize the price suggestion hook
-  const { suggestPrice } = useProductAnalysis({
-    onSuccess: (data) => {
-      if (data.suggestedPrice) {
-        form.setValue('price', data.suggestedPrice);
-        toast({
-          title: "Price Suggested",
-          description: `AI suggested a selling price of R${data.suggestedPrice.toFixed(2)}`,
-        });
-      }
-    },
-    onError: (error) => {
-      toast({
-        title: "Price Suggestion Failed",
-        description: error.message || "Failed to suggest a price",
-        variant: "destructive"
-      });
-    }
-  });
+  // Initialize the product analysis hooks
+  const { suggestPrice } = useProductAnalysis();
 
   // AI suggest price based on cost price and product info
   const suggestPriceWithAI = async () => {
@@ -371,17 +354,28 @@ export default function ProductFormWizard({ productId, onSuccess }: ProductFormW
       setPriceLoading(true);
       const costPrice = form.getValues('costPrice');
       const productName = form.getValues('name');
+      const categoryId = form.getValues('categoryId');
       
       if (!costPrice || !productName) {
         throw new Error('Please provide the product name and cost price before requesting a price suggestion');
       }
       
       // Use the hook to suggest price
-      await suggestPrice({
+      const priceSuggestion = await suggestPrice({
         costPrice,
         productName,
-        categoryName: categories?.find(cat => cat.id === form.getValues('categoryId'))?.name
+        categoryId,
+        categoryName: categories?.find(cat => cat.id === categoryId)?.name
       });
+      
+      if (priceSuggestion) {
+        form.setValue('price', priceSuggestion.suggestedPrice);
+        toast({
+          title: "Price Suggested",
+          description: `AI suggested a selling price of R${priceSuggestion.suggestedPrice.toFixed(2)} 
+          (${priceSuggestion.markupPercentage}% markup from ${priceSuggestion.markupSource})`,
+        });
+      }
     } catch (error: any) {
       toast({
         title: "Price Suggestion Failed",
