@@ -116,7 +116,7 @@ export default function AdminProducts() {
           <div>
             <h2 className="text-2xl font-bold tracking-tight">Products</h2>
             <p className="text-muted-foreground">
-              Manage your product inventory and catalog
+              Manage your product catalog and listings
             </p>
           </div>
           <Button 

@@ -303,7 +303,7 @@ export default function ProductForm({ productId, onSuccess }: ProductFormProps) 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid grid-cols-3 mb-6">
             <TabsTrigger value="details">Basic Details</TabsTrigger>
-            <TabsTrigger value="pricing">Pricing & Inventory</TabsTrigger>
+            <TabsTrigger value="pricing">Pricing</TabsTrigger>
             <TabsTrigger 
               value="images" 
               disabled={!productId}

@@ -116,7 +116,7 @@ export function ReviewStep({ form, uploadedImages = [], categories: propCategori
 
         <Card>
           <CardHeader>
-            <CardTitle>Pricing & Inventory</CardTitle>
+            <CardTitle>Pricing Information</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-1">

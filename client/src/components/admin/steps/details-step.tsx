@@ -180,7 +180,7 @@ export function DetailsStep({ form }: DetailsStepProps) {
             name="sku"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>SKU (Stock Keeping Unit)</FormLabel>
+                <FormLabel>Product Code</FormLabel>
                 <FormControl>
                   <Input placeholder="Unique product identifier" {...field} />
                 </FormControl>
