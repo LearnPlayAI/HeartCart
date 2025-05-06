@@ -8,6 +8,12 @@ export interface ProductAnalysisData {
   suggestedCategory?: string;
   suggestedBrand?: string;
   suggestedTags?: string[];
+  suggestedCostPrice?: number;
+  suggestedPrice?: number;
+}
+
+export interface PriceSuggestionData {
+  suggestedPrice: number;
 }
 
 interface UseProductAnalysisOptions {
@@ -129,10 +135,45 @@ export function useProductAnalysis({ onSuccess, onError }: UseProductAnalysisOpt
     }
   };
 
+  const suggestPrice = async ({ costPrice, productName, categoryName }: { costPrice: number; productName: string; categoryName?: string }) => {
+    try {
+      setIsProcessing(true);
+      setError(null);
+
+      const response = await apiRequest('POST', '/api/ai/suggest-price', { costPrice, productName, categoryName });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to suggest price');
+      }
+
+      const data = await response.json();
+      return data.suggestedPrice as number;
+    } catch (err: any) {
+      const error = err instanceof Error ? err : new Error(err?.message || 'Unknown error');
+      setError(error);
+      
+      toast({
+        title: 'Price Suggestion Failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+      
+      if (onError) {
+        onError(error);
+      }
+      
+      return null;
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   return {
     analyzeProduct,
     removeBackground,
     generateTags,
+    suggestPrice,
     isProcessing,
     error,
     productAnalysisData,

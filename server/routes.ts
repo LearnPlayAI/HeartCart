@@ -2,7 +2,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { ZodError } from "zod";
-import { removeImageBackground, generateProductTags, analyzeProductImage } from "./ai-service";
+import { removeImageBackground, generateProductTags, analyzeProductImage, suggestPrice } from "./ai-service";
 import { 
   insertCartItemSchema, 
   insertOrderSchema, 
