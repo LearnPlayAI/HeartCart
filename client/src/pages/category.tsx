@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRoute, Link } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet';
@@ -19,9 +19,10 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { Slider } from '@/components/ui/slider';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
 import { Filter, SlidersHorizontal, X } from 'lucide-react';
 import ProductCard from '@/components/product/product-card';
-import type { Product, Category } from '@shared/schema';
+import type { Product, Category, CategoryAttribute, CategoryAttributeOption } from '@shared/schema';
 
 const CategoryPage = () => {
   const [match, params] = useRoute('/category/:slug');
@@ -33,6 +34,9 @@ const CategoryPage = () => {
     onSale: false,
     freeShipping: false,
   });
+  
+  // State for attribute filters
+  const [attributeFilters, setAttributeFilters] = useState<Record<string, string[]>>({});
   
   const { data: category, isLoading: isLoadingCategory } = useQuery<Category>({
     queryKey: [`/api/categories/${slug}`],
@@ -47,6 +51,12 @@ const CategoryPage = () => {
   // Fetch all categories for the sidebar
   const { data: categories } = useQuery<Category[]>({
     queryKey: ['/api/categories'],
+  });
+  
+  // Fetch category attributes for filtering
+  const { data: categoryAttributes } = useQuery<CategoryAttribute[]>({
+    queryKey: [`/api/categories/${category?.id}/attributes`],
+    enabled: !!category?.id,
   });
   
   const toggleFilter = () => {
@@ -65,6 +75,37 @@ const CategoryPage = () => {
     setPriceRange(values);
   };
   
+  // Handle attribute filter selection
+  const handleAttributeFilterChange = (attributeName: string, optionValue: string) => {
+    setAttributeFilters(prev => {
+      const currentValues = prev[attributeName] || [];
+      
+      // If already selected, remove it; otherwise add it
+      if (currentValues.includes(optionValue)) {
+        return {
+          ...prev,
+          [attributeName]: currentValues.filter(v => v !== optionValue)
+        };
+      } else {
+        return {
+          ...prev,
+          [attributeName]: [...currentValues, optionValue]
+        };
+      }
+    });
+  };
+  
+  // Check if an attribute option is selected
+  const isAttributeOptionSelected = (attributeName: string, optionValue: string): boolean => {
+    return (attributeFilters[attributeName] || []).includes(optionValue);
+  };
+  
+  // Query for product attributes to enable attribute filtering
+  const { data: productAttributes } = useQuery<{ productId: number, attributes: Record<string, string[]> }[]>({
+    queryKey: [`/api/products/attributes-for-category/${category?.id}`],
+    enabled: !!category?.id && Object.keys(attributeFilters).length > 0,
+  });
+  
   // Apply filters and sorting to products
   const filteredProducts = products ? products
     .filter(product => {
@@ -75,7 +116,27 @@ const CategoryPage = () => {
       // Apply sale filter
       if (filters.onSale && !product.salePrice) return false;
       
-      // All products are available from suppliers
+      // Apply attribute filters
+      if (Object.keys(attributeFilters).length > 0 && productAttributes) {
+        // Find attributes for this product
+        const productAttrData = productAttributes.find(pa => pa.productId === product.id);
+        
+        // If product has no attribute data but we have filters, exclude it
+        if (!productAttrData) return false;
+        
+        // Check each attribute filter
+        for (const [attrName, selectedValues] of Object.entries(attributeFilters)) {
+          // Skip if no values selected for this attribute
+          if (selectedValues.length === 0) continue;
+          
+          // Get values for this attribute on this product
+          const productValues = productAttrData.attributes[attrName] || [];
+          
+          // Product should have at least one of the selected values
+          const hasMatchingValue = selectedValues.some(val => productValues.includes(val));
+          if (!hasMatchingValue) return false;
+        }
+      }
       
       return true;
     })
@@ -208,6 +269,38 @@ const CategoryPage = () => {
                   </div>
                 </AccordionContent>
               </AccordionItem>
+              
+              {/* Dynamic Attribute Filters */}
+              {categoryAttributes?.map(attribute => (
+                <AccordionItem key={attribute.id} value={`attribute-${attribute.id}`}>
+                  <AccordionTrigger>{attribute.name}</AccordionTrigger>
+                  <AccordionContent>
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {attribute.options?.map(option => (
+                        <div key={option.id} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`attr-${attribute.id}-${option.id}`}
+                            checked={isAttributeOptionSelected(attribute.name, option.value)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                handleAttributeFilterChange(attribute.name, option.value);
+                              } else {
+                                handleAttributeFilterChange(attribute.name, option.value);
+                              }
+                            }}
+                          />
+                          <label
+                            htmlFor={`attr-${attribute.id}-${option.id}`}
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                          >
+                            {option.value}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
               
               <AccordionItem value="filters">
                 <AccordionTrigger>More Filters</AccordionTrigger>

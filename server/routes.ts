@@ -310,6 +310,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const products = await storage.getProductsByCategory(categoryId, limit, offset);
     res.json(products);
   }));
+  
+  app.get("/api/products/attributes-for-category/:categoryId", handleErrors(async (req: Request, res: Response) => {
+    const categoryId = parseInt(req.params.categoryId);
+    
+    // Get all products in this category
+    const products = await storage.getProductsByCategory(categoryId);
+    
+    // Get all attributes for these products
+    const result = [];
+    
+    for (const product of products) {
+      // Get product attribute values
+      const attributeValues = await storage.getProductAttributeValues(product.id);
+      
+      // Format attribute values by attribute name
+      const attributesByName: Record<string, string[]> = {};
+      
+      for (const attrValue of attributeValues) {
+        const attribute = await storage.getCategoryAttribute(attrValue.attributeId);
+        if (attribute) {
+          if (!attributesByName[attribute.name]) {
+            attributesByName[attribute.name] = [];
+          }
+          attributesByName[attribute.name].push(attrValue.value);
+        }
+      }
+      
+      result.push({
+        productId: product.id,
+        attributes: attributesByName
+      });
+    }
+    
+    res.json(result);
+  }));
 
   app.get("/api/featured-products", handleErrors(async (req: Request, res: Response) => {
     const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
