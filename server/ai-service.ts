@@ -192,8 +192,66 @@ export async function generateProductTags(
 }
 
 /**
- * Analyze product image to suggest product details
+ * Suggest selling price for a product based on cost price and product info
  */
+export async function suggestPrice(
+  costPrice: number,
+  productName: string,
+  categoryName?: string
+): Promise<{ suggestedPrice: number }> {
+  try {
+    // Create the prompt
+    const prompt = `
+    As a retail pricing expert in South Africa, suggest a competitive retail price in ZAR for the following product:
+    
+    Product: ${productName}
+    Category: ${categoryName || 'Unknown'}
+    Cost Price: ${costPrice} ZAR
+    
+    Consider these South African market factors:
+    1. The average monthly income in South Africa is around 25,000 ZAR
+    2. Standard retail markups range from 40-100% depending on product category
+    3. Electronics generally have 30-50% markup
+    4. Fashion items typically have 50-100% markup
+    5. Luxury goods can have 200%+ markup
+    6. Market competition from sites like Takealot
+    
+    Provide only a single number representing the suggested retail price in ZAR. 
+    Format response as valid JSON with a single key "suggestedPrice" with a numeric value.
+    `;
+
+    // Create the generation request
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const result = await model.generateContent(prompt);
+    
+    // Get the response
+    const response = await result.response;
+    const responseText = response.text();
+    
+    // Parse JSON response
+    try {
+      // First, try to parse the response as-is
+      const jsonResponse = JSON.parse(responseText);
+      return {
+        suggestedPrice: Number(jsonResponse.suggestedPrice)
+      };
+    } catch (jsonError) {
+      // If direct parsing fails, try to extract just the number
+      const priceMatch = responseText.match(/\d+(\.\d+)?/);
+      if (priceMatch) {
+        return {
+          suggestedPrice: Number(priceMatch[0])
+        };
+      } else {
+        throw new Error('No valid price found in response');
+      }
+    }
+  } catch (error) {
+    console.error('Price suggestion failed:', error);
+    throw new Error('Failed to suggest price: ' + (error instanceof Error ? error.message : 'Unknown error'));
+  }
+}
+
 export async function analyzeProductImage(imageBase64: string): Promise<{
   suggestedName?: string;
   suggestedDescription?: string;

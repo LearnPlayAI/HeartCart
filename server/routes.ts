@@ -451,6 +451,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }));
 
+  // AI price suggestion endpoint
+  app.post("/api/ai/suggest-price", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can use AI features" });
+    }
+    
+    const { costPrice, productName, categoryName } = req.body;
+    
+    if (!costPrice || !productName) {
+      return res.status(400).json({ message: "Cost price and product name are required" });
+    }
+    
+    // Validate cost price is a number
+    const costPriceNum = Number(costPrice);
+    if (isNaN(costPriceNum)) {
+      return res.status(400).json({ message: "Cost price must be a valid number" });
+    }
+    
+    try {
+      const suggestion = await suggestPrice(costPriceNum, productName, categoryName);
+      res.json({ success: true, ...suggestion });
+    } catch (error) {
+      console.error('Price suggestion error:', error);
+      res.status(500).json({ 
+        message: "Failed to suggest price", 
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }));
+
   // CART ROUTES
   app.get("/api/cart", handleErrors(async (req: Request, res: Response) => {
     if (!req.isAuthenticated()) {
