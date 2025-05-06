@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, doublePrecision, jsonb, unique } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, doublePrecision, jsonb, varchar, unique } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -40,6 +40,7 @@ export const products = pgTable("products", {
   slug: text("slug").notNull().unique(),
   description: text("description"),
   categoryId: integer("category_id").references(() => categories.id),
+  catalogId: integer("catalog_id").references(() => catalogs.id),
   price: doublePrecision("price").notNull(),
   costPrice: doublePrecision("cost_price").notNull(),
   salePrice: doublePrecision("sale_price"),
@@ -143,6 +144,38 @@ export const aiSettings = pgTable("ai_settings", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Suppliers table
+export const suppliers = pgTable("suppliers", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  contactName: varchar("contact_name", { length: 255 }),
+  email: varchar("email", { length: 255 }),
+  phone: varchar("phone", { length: 50 }),
+  address: text("address"),
+  city: varchar("city", { length: 100 }),
+  country: varchar("country", { length: 100 }).default("South Africa"),
+  notes: text("notes"),
+  logo: text("logo"),
+  website: varchar("website", { length: 255 }),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Catalogs table
+export const catalogs = pgTable("catalogs", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  supplierId: integer("supplier_id").references(() => suppliers.id),
+  defaultMarkupPercentage: integer("default_markup_percentage").default(50),
+  isActive: boolean("is_active").default(true).notNull(),
+  coverImage: text("cover_image"),
+  tags: text("tags").array(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Create insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -201,6 +234,20 @@ export const insertAiSettingsSchema = createInsertSchema(aiSettings).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+});
+
+export const insertSupplierSchema = createInsertSchema(suppliers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  isActive: true,
+});
+
+export const insertCatalogSchema = createInsertSchema(catalogs).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  isActive: true,
 });
 
 // Export types
