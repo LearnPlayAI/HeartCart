@@ -45,16 +45,16 @@ This document outlines the implementation plan for enhancing TeeMeYou's product 
 - ✅ Create placeholder pages for new admin sections
 
 ### 2.2 Supplier Management UI
-- ⬜ Create supplier list page with filtering and sorting
-- ⬜ Implement supplier creation form
+- ✅ Create supplier list page with filtering and sorting
+- ✅ Implement supplier creation form
 - ⬜ Build supplier details/edit page
-- ⬜ Add supplier deletion with confirmation
+- ✅ Add supplier deletion with confirmation
 
 ### 2.3 Catalog Management UI
-- ⬜ Create catalog list page with filtering and sorting
-- ⬜ Implement catalog creation form with supplier selection
+- ✅ Create catalog list page with filtering and sorting
+- ✅ Implement catalog creation form with supplier selection
 - ⬜ Build catalog details/edit page
-- ⬜ Add catalog deletion with confirmation
+- ✅ Add catalog deletion with confirmation
 
 ### 2.4 Product-Catalog Association UI
 - ⬜ Modify product creation form to include catalog selection

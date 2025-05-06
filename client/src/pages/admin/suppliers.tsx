@@ -45,6 +45,7 @@ import {
   DialogTitle 
 } from "@/components/ui/dialog";
 import { Link } from "wouter";
+import { SupplierForm } from "@/components/admin/supplier-form";
 
 // Placeholder supplier type until we connect to the backend
 type Supplier = {
@@ -234,9 +235,9 @@ export default function AdminSuppliers() {
         </CardContent>
       </Card>
 
-      {/* Add Supplier Dialog - This will be replaced with a proper form */}
+      {/* Add Supplier Dialog with Form */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[650px]">
           <DialogHeader>
             <DialogTitle>Add New Supplier</DialogTitle>
             <DialogDescription>
@@ -244,18 +245,18 @@ export default function AdminSuppliers() {
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <p className="text-center text-muted-foreground">
-              This is a placeholder dialog. A full supplier form will be implemented in the next step.
-            </p>
+            <SupplierForm 
+              onSubmit={(data) => {
+                // This will be implemented with an actual API call
+                console.log("Submitting supplier data:", data);
+                toast({
+                  title: "Supplier created",
+                  description: `${data.name} has been added as a supplier.`,
+                });
+                setShowAddDialog(false);
+              }}
+            />
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={() => setShowAddDialog(false)}>
-              Add Supplier
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 

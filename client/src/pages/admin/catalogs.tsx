@@ -51,6 +51,7 @@ import {
 } from "@/components/ui/dialog";
 import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
+import { CatalogForm } from "@/components/admin/catalog-form";
 
 // Placeholder catalog type
 type Catalog = {
@@ -268,9 +269,9 @@ export default function AdminCatalogs() {
         </CardContent>
       </Card>
 
-      {/* Add Catalog Dialog - This will be replaced with a proper form */}
+      {/* Add Catalog Dialog with Form */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[650px]">
           <DialogHeader>
             <DialogTitle>Add New Catalog</DialogTitle>
             <DialogDescription>
@@ -278,18 +279,18 @@ export default function AdminCatalogs() {
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <p className="text-center text-muted-foreground">
-              This is a placeholder dialog. A full catalog form will be implemented in the next step.
-            </p>
+            <CatalogForm 
+              onSubmit={(data) => {
+                // This will be implemented with an actual API call
+                console.log("Submitting catalog data:", data);
+                toast({
+                  title: "Catalog created",
+                  description: `${data.name} has been added as a catalog.`,
+                });
+                setShowAddDialog(false);
+              }}
+            />
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={() => setShowAddDialog(false)}>
-              Add Catalog
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
