@@ -909,6 +909,177 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ success: true });
   }));
 
+  // SUPPLIER ROUTES
+  app.get("/api/suppliers", handleErrors(async (req: Request, res: Response) => {
+    const activeOnly = req.query.activeOnly !== 'false'; // Default to true if not specified
+    const suppliers = await storage.getAllSuppliers(activeOnly);
+    res.json(suppliers);
+  }));
+
+  app.get("/api/suppliers/:id", handleErrors(async (req: Request, res: Response) => {
+    const id = parseInt(req.params.id);
+    const supplier = await storage.getSupplierById(id);
+    
+    if (!supplier) {
+      res.status(404).json({ message: "Supplier not found" });
+      return;
+    }
+    
+    res.json(supplier);
+  }));
+
+  app.post("/api/suppliers", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can manage suppliers" });
+    }
+    
+    const supplierData = insertSupplierSchema.parse(req.body);
+    const supplier = await storage.createSupplier(supplierData);
+    
+    res.status(201).json(supplier);
+  }));
+
+  app.put("/api/suppliers/:id", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can manage suppliers" });
+    }
+    
+    const id = parseInt(req.params.id);
+    const supplierData = insertSupplierSchema.partial().parse(req.body);
+    const supplier = await storage.updateSupplier(id, supplierData);
+    
+    if (!supplier) {
+      res.status(404).json({ message: "Supplier not found" });
+      return;
+    }
+    
+    res.json(supplier);
+  }));
+
+  app.delete("/api/suppliers/:id", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can manage suppliers" });
+    }
+    
+    const id = parseInt(req.params.id);
+    const success = await storage.deleteSupplier(id);
+    
+    if (success) {
+      res.json({ success: true });
+    } else {
+      res.status(404).json({ message: "Supplier not found" });
+    }
+  }));
+
+  // CATALOG ROUTES
+  app.get("/api/catalogs", handleErrors(async (req: Request, res: Response) => {
+    const activeOnly = req.query.activeOnly !== 'false'; // Default to true if not specified
+    const catalogs = await storage.getAllCatalogs(activeOnly);
+    res.json(catalogs);
+  }));
+
+  app.get("/api/catalogs/:id", handleErrors(async (req: Request, res: Response) => {
+    const id = parseInt(req.params.id);
+    const catalog = await storage.getCatalogById(id);
+    
+    if (!catalog) {
+      res.status(404).json({ message: "Catalog not found" });
+      return;
+    }
+    
+    res.json(catalog);
+  }));
+
+  app.get("/api/suppliers/:supplierId/catalogs", handleErrors(async (req: Request, res: Response) => {
+    const supplierId = parseInt(req.params.supplierId);
+    const activeOnly = req.query.activeOnly !== 'false'; // Default to true if not specified
+    const catalogs = await storage.getCatalogsBySupplierId(supplierId, activeOnly);
+    res.json(catalogs);
+  }));
+
+  app.post("/api/catalogs", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can manage catalogs" });
+    }
+    
+    const catalogData = insertCatalogSchema.parse(req.body);
+    const catalog = await storage.createCatalog(catalogData);
+    
+    res.status(201).json(catalog);
+  }));
+
+  app.put("/api/catalogs/:id", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can manage catalogs" });
+    }
+    
+    const id = parseInt(req.params.id);
+    const catalogData = insertCatalogSchema.partial().parse(req.body);
+    const catalog = await storage.updateCatalog(id, catalogData);
+    
+    if (!catalog) {
+      res.status(404).json({ message: "Catalog not found" });
+      return;
+    }
+    
+    res.json(catalog);
+  }));
+
+  app.delete("/api/catalogs/:id", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can manage catalogs" });
+    }
+    
+    const id = parseInt(req.params.id);
+    const success = await storage.deleteCatalog(id);
+    
+    if (success) {
+      res.json({ success: true });
+    } else {
+      res.status(404).json({ message: "Catalog not found" });
+    }
+  }));
+
+  app.get("/api/catalogs/:catalogId/products", handleErrors(async (req: Request, res: Response) => {
+    const catalogId = parseInt(req.params.catalogId);
+    const activeOnly = req.query.activeOnly !== 'false'; // Default to true if not specified
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
+    const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
+    
+    const products = await storage.getProductsByCatalogId(catalogId, activeOnly, limit, offset);
+    res.json(products);
+  }));
+
+  app.put("/api/catalogs/:catalogId/products/bulk", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can manage catalog products" });
+    }
+    
+    const catalogId = parseInt(req.params.catalogId);
+    const updateData = insertProductSchema.partial().parse(req.body);
+    
+    const count = await storage.bulkUpdateCatalogProducts(catalogId, updateData);
+    res.json({ 
+      success: true, 
+      message: `Updated ${count} products in catalog`,
+      count 
+    });
+  }));
+
   const httpServer = createServer(app);
   return httpServer;
 }
