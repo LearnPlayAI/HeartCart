@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
-import { Search, User, ShoppingCart, LogIn, UserPlus, LogOut, ChevronDown } from 'lucide-react';
+import { Search, User, ShoppingCart, LogIn, UserPlus, LogOut, ChevronDown, LayoutDashboard } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { 
@@ -111,6 +111,20 @@ const Header = () => {
                         My Orders
                       </Link>
                     </DropdownMenuItem>
+                    
+                    {/* Admin Dashboard access for admin users */}
+                    {user.role === 'admin' && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem asChild>
+                          <Link href="/admin/dashboard" className="cursor-pointer text-[#FF69B4] font-medium flex items-center">
+                            <LayoutDashboard className="h-4 w-4 mr-2" />
+                            Admin Dashboard
+                          </Link>
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                    
                     <DropdownMenuSeparator />
                     <DropdownMenuItem 
                       onClick={handleLogout} 
@@ -188,6 +202,17 @@ const Header = () => {
           <Link href="/products" className="px-4 py-1 font-medium text-sm hover:bg-white hover:text-[#FF69B4] rounded-full mx-1 transition-colors duration-200">
             All Products
           </Link>
+          
+          {/* Admin Dashboard direct link in main navigation */}
+          {user?.role === 'admin' && (
+            <Link 
+              href="/admin/dashboard" 
+              className="px-4 py-1 font-medium text-sm bg-white text-[#FF69B4] rounded-full mx-1 transition-colors duration-200 flex items-center"
+            >
+              <LayoutDashboard className="h-3 w-3 mr-1" />
+              Admin
+            </Link>
+          )}
           
           {categories?.map((category) => (
             <Link key={category.id} href={`/category/${category.slug}`} className="px-4 py-1 font-medium text-sm hover:bg-white hover:text-[#FF69B4] rounded-full mx-1 transition-colors duration-200">
