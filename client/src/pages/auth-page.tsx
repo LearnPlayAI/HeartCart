@@ -76,7 +76,8 @@ export default function AuthPage() {
           title: "Login successful!",
           description: "Welcome back to TemuSA.",
         });
-        navigate("/");
+        // Force a full page reload to ensure authentication state is reflected in the UI
+        window.location.href = '/';
       },
       onError: (error: Error) => {
         toast({
@@ -99,7 +100,8 @@ export default function AuthPage() {
           title: "Registration successful!",
           description: "Your account has been created successfully.",
         });
-        navigate("/");
+        // Force a full page reload to ensure authentication state is reflected in the UI
+        window.location.href = '/';
       },
       onError: (error: Error) => {
         toast({

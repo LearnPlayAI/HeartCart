@@ -37,7 +37,8 @@ const Header = () => {
           description: "You have been logged out of your account",
           duration: 3000,
         });
-        navigate('/');
+        // Force a full page reload to ensure authentication state is reflected in the UI
+        window.location.href = '/';
       }
     });
   };
