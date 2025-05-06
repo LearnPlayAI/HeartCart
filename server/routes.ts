@@ -125,7 +125,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }));
 
   // CART ROUTES
-  app.get("/api/cart", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+  app.get("/api/cart", handleErrors(async (req: Request, res: Response) => {
+    if (!req.isAuthenticated()) {
+      // For non-authenticated users, return empty cart
+      return res.json([]);
+    }
     const user = req.user as any;
     const cartItems = await storage.getCartItemsWithProducts(user.id);
     res.json(cartItems);
@@ -211,28 +215,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(order);
   }));
 
-  // AI RECOMMENDATION ROUTES
-  app.get("/api/recommendations", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
-    const user = req.user as any;
-    const recommendations = await storage.getRecommendationsForUser(user.id);
+  // AI RECOMMENDATION ROUTES - Available to all users (logged in or not)
+  app.get("/api/recommendations", handleErrors(async (req: Request, res: Response) => {
+    // Check if user is authenticated
+    const user = req.isAuthenticated() ? req.user as any : null;
     
-    if (!recommendations || !recommendations.productIds) {
-      return res.json({ products: [], reason: null, timestamp: new Date() });
-    }
-    
-    // Get product details for recommended products
-    const products = [];
-    for (const productId of recommendations.productIds) {
-      const product = await storage.getProductById(productId);
-      if (product) {
-        products.push(product);
+    if (user) {
+      // Get personalized recommendations for authenticated users
+      const recommendations = await storage.getRecommendationsForUser(user.id);
+      
+      if (recommendations && recommendations.productIds) {
+        // Get product details for recommended products
+        const products = [];
+        for (const productId of recommendations.productIds) {
+          const product = await storage.getProductById(productId);
+          if (product) {
+            products.push(product);
+          }
+        }
+        
+        return res.json({
+          products,
+          reason: recommendations.reason,
+          timestamp: recommendations.createdAt
+        });
       }
     }
     
-    res.json({
+    // For non-authenticated users or users without recommendations
+    // Return popular/featured products as a fallback
+    const products = await storage.getFeaturedProducts(10);
+    
+    return res.json({
       products,
-      reason: recommendations.reason,
-      timestamp: recommendations.createdAt
+      reason: "Popular products you might like",
+      timestamp: new Date()
     });
   }));
 

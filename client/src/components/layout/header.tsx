@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
-import { Search, User, ShoppingCart } from 'lucide-react';
+import { Search, User, ShoppingCart, LogIn, UserPlus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import Logo from '@/components/ui/logo';
 import { useCart } from '@/hooks/use-cart';
+import { useAuth } from '@/hooks/use-auth';
 
 type Category = {
   id: number;
@@ -17,6 +18,7 @@ const Header = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [, navigate] = useLocation();
   const { cartItems, openCart } = useCart();
+  const { user } = useAuth();
   
   const { data: categories } = useQuery<Category[]>({
     queryKey: ['/api/categories'],
@@ -62,24 +64,45 @@ const Header = () => {
           
           {/* Navigation Icons */}
           <div className="flex items-center space-x-4">
-            <Button variant="ghost" size="icon" asChild>
-              <Link href="/profile">
-                <User className="h-5 w-5 text-gray-700 hover:text-[#FF69B4]" />
-              </Link>
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="relative"
-              onClick={openCart}
-            >
-              <ShoppingCart className="h-5 w-5 text-gray-700 hover:text-[#FF69B4]" />
-              {cartItems.length > 0 && (
-                <span className="absolute -top-2 -right-2 bg-[#FF69B4] text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                  {cartItems.length}
-                </span>
-              )}
-            </Button>
+            {user ? (
+              // Authenticated user - show profile and cart
+              <>
+                <Button variant="ghost" size="icon" asChild>
+                  <Link href="/profile">
+                    <User className="h-5 w-5 text-gray-700 hover:text-[#FF69B4]" />
+                  </Link>
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="relative"
+                  onClick={openCart}
+                >
+                  <ShoppingCart className="h-5 w-5 text-gray-700 hover:text-[#FF69B4]" />
+                  {cartItems.length > 0 && (
+                    <span className="absolute -top-2 -right-2 bg-[#FF69B4] text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                      {cartItems.length}
+                    </span>
+                  )}
+                </Button>
+              </>
+            ) : (
+              // Non-authenticated user - show login and register buttons
+              <>
+                <Button variant="ghost" className="flex items-center space-x-1 text-gray-700 hover:text-[#FF69B4]" asChild>
+                  <Link href="/auth">
+                    <LogIn className="h-4 w-4 mr-1" />
+                    <span>Login</span>
+                  </Link>
+                </Button>
+                <Button variant="outline" className="flex items-center space-x-1 border-[#FF69B4] text-[#FF69B4] hover:bg-[#FF69B4] hover:text-white" asChild>
+                  <Link href="/auth?tab=register">
+                    <UserPlus className="h-4 w-4 mr-1" />
+                    <span>Register</span>
+                  </Link>
+                </Button>
+              </>
+            )}
           </div>
         </div>
         

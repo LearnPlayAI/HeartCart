@@ -196,7 +196,10 @@ export function setupAuth(app: Express): void {
   // Get current user endpoint
   app.get("/api/user", (req: Request, res: Response) => {
     if (!req.isAuthenticated()) {
-      return res.status(401).json({ message: "Not authenticated" });
+      // Return null instead of error for non-authenticated users
+      // This allows the client to handle both authenticated and non-authenticated states 
+      // without throwing errors
+      return res.json(null);
     }
     // Return user data (excluding password)
     const { password, ...userData } = req.user as Express.User;

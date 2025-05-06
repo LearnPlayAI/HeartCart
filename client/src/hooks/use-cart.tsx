@@ -3,6 +3,7 @@ import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Product } from '@shared/schema';
+import { useAuth } from '@/hooks/use-auth';
 
 type CartItem = {
   id: number;
@@ -41,10 +42,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   
   // Get cart items from server
-  const { data } = useQuery({
-    queryKey: ['/api/cart']
+  const { data, error } = useQuery<CartItem[]>({
+    queryKey: ['/api/cart'],
+    retry: false,
+    // If there's an error (like 401 for non-authenticated users), we'll handle it by showing an empty cart
+    enabled: !!user
   });
   
   // Safe type casting with fallback to empty array
