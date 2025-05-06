@@ -4,6 +4,21 @@
 
 This document outlines the implementation approach for the TEE ME YOU e-commerce platform admin dashboard, focusing on product management, financial tracking, shipping integration, and role-based access.
 
+## Development Principles
+
+### Guiding Principles
+- **Open Source First**: Prefer open source solutions over proprietary technologies
+- **Minimize Custom Code**: Leverage existing libraries and frameworks wherever possible
+- **Single Source of Truth**: Follow best practices for state management and data flow
+- **Code Reusability**: Design components and services for maximum reuse
+- **API Standardization**: Create standardized interfaces for external services
+
+### Technical Approach
+- Create reusable service layers for Replit Object Store and Google Gemini API
+- Abstract third-party dependencies behind interfaces for easier maintenance
+- Implement shared utilities for common operations
+- Document code thoroughly to facilitate maintenance
+
 ## Core Features & Implementation Approach
 
 ### 1. Admin Dashboard - Product Catalog Management
@@ -18,8 +33,10 @@ This document outlines the implementation approach for the TEE ME YOU e-commerce
   - Background removal using Google Gemini API 1.5 flash (requires API key)
 - **Implementation Details**:
   - Maximum 5 images per product enforced in both UI and backend
-  - Direct integration with Replit Object Store APIs for storage and retrieval
-  - Client-side image processing with server validation
+  - Integration with Replit Object Store following official API documentation
+  - Reusable Object Store service module to standardize all storage operations
+  - Open source solution [react-image-crop](https://github.com/DominicTobias/react-image-crop) for image editing
+  - Reusable Google Gemini API service for background removal and other AI features
 
 #### Category & Tag Management
 - **Admin Controls**:
@@ -30,6 +47,8 @@ This document outlines the implementation approach for the TEE ME YOU e-commerce
   - Categories stored in dedicated database table with hierarchy support
   - Tags implemented with many-to-many relationship to products
   - Card-based UI for managing categories and tags
+  - Use open source [shadcn/ui tags input](https://ui.shadcn.com/docs/components/tags-input) component
+  - Reuse category/tag components across admin and user interfaces
 
 #### Product Promotions & Specials
 - **Features**:
@@ -39,8 +58,9 @@ This document outlines the implementation approach for the TEE ME YOU e-commerce
   - Flash deals for rapid sales
 - **Implementation Details**:
   - Promotion start/end timestamps in product database
-  - Scheduled tasks to activate/deactivate promotions
-  - Visual indicators for products on promotion
+  - Use open source [date-fns](https://date-fns.org/) for date manipulation
+  - Scheduled tasks to activate/deactivate promotions using existing libraries
+  - Visual indicators for products on promotion with reusable badge components
 
 ### 2. Financial Tracking
 
@@ -50,9 +70,10 @@ This document outlines the implementation approach for the TEE ME YOU e-commerce
   - Design modular payment processor that can be easily switched to real PayFast
   - Store transaction references compatible with PayFast's system
 - **Implementation Details**:
+  - Use [PayJS](https://github.com/paypal/payjs) open source library as a base for payment UI
   - Mock PayFast payment screens and callbacks
   - Configuration file for payment settings to simplify real integration
-  - Separate payment service layer in codebase
+  - Separate payment service layer with adapter pattern for easy switching
 
 #### Revenue & Financial Reporting
 - **Features**:
