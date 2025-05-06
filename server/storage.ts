@@ -8,7 +8,9 @@ import {
   productImages, type ProductImage, type InsertProductImage,
   aiRecommendations, type AiRecommendation, type InsertAiRecommendation,
   pricing, type Pricing, type InsertPricing,
-  aiSettings, type AiSetting, type InsertAiSetting
+  aiSettings, type AiSetting, type InsertAiSetting,
+  suppliers, type Supplier, type InsertSupplier,
+  catalogs, type Catalog, type InsertCatalog
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, like, and, desc, asc, sql, inArray } from "drizzle-orm";
@@ -74,6 +76,23 @@ export interface IStorage {
   getAiSetting(settingName: string): Promise<AiSetting | undefined>;
   getAllAiSettings(): Promise<AiSetting[]>;
   saveAiSetting(setting: InsertAiSetting): Promise<AiSetting>;
+  
+  // Supplier operations
+  getAllSuppliers(activeOnly?: boolean): Promise<Supplier[]>;
+  getSupplierById(id: number): Promise<Supplier | undefined>;
+  createSupplier(supplier: InsertSupplier): Promise<Supplier>;
+  updateSupplier(id: number, supplierData: Partial<InsertSupplier>): Promise<Supplier | undefined>;
+  deleteSupplier(id: number): Promise<boolean>;
+  
+  // Catalog operations
+  getAllCatalogs(activeOnly?: boolean): Promise<Catalog[]>;
+  getCatalogsBySupplierId(supplierId: number, activeOnly?: boolean): Promise<Catalog[]>;
+  getCatalogById(id: number): Promise<Catalog | undefined>;
+  createCatalog(catalog: InsertCatalog): Promise<Catalog>;
+  updateCatalog(id: number, catalogData: Partial<InsertCatalog>): Promise<Catalog | undefined>;
+  deleteCatalog(id: number): Promise<boolean>;
+  getProductsByCatalogId(catalogId: number, activeOnly?: boolean, limit?: number, offset?: number): Promise<Product[]>;
+  bulkUpdateCatalogProducts(catalogId: number, updateData: Partial<InsertProduct>): Promise<number>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -590,6 +609,186 @@ export class DatabaseStorage implements IStorage {
       
       return newSetting;
     }
+  }
+
+  // Supplier operations
+  async getAllSuppliers(activeOnly = true): Promise<Supplier[]> {
+    if (activeOnly) {
+      return await db
+        .select()
+        .from(suppliers)
+        .where(eq(suppliers.isActive, true))
+        .orderBy(asc(suppliers.name));
+    } else {
+      return await db
+        .select()
+        .from(suppliers)
+        .orderBy(asc(suppliers.name));
+    }
+  }
+
+  async getSupplierById(id: number): Promise<Supplier | undefined> {
+    const [supplier] = await db
+      .select()
+      .from(suppliers)
+      .where(eq(suppliers.id, id));
+    return supplier;
+  }
+
+  async createSupplier(supplier: InsertSupplier): Promise<Supplier> {
+    const now = new Date();
+    const [newSupplier] = await db
+      .insert(suppliers)
+      .values({
+        ...supplier,
+        createdAt: now,
+        updatedAt: now
+      })
+      .returning();
+    return newSupplier;
+  }
+
+  async updateSupplier(id: number, supplierData: Partial<InsertSupplier>): Promise<Supplier | undefined> {
+    const [updatedSupplier] = await db
+      .update(suppliers)
+      .set({
+        ...supplierData,
+        updatedAt: new Date()
+      })
+      .where(eq(suppliers.id, id))
+      .returning();
+    return updatedSupplier;
+  }
+
+  async deleteSupplier(id: number): Promise<boolean> {
+    // We use soft deletion by setting isActive to false
+    const [updatedSupplier] = await db
+      .update(suppliers)
+      .set({ 
+        isActive: false,
+        updatedAt: new Date()
+      })
+      .where(eq(suppliers.id, id))
+      .returning();
+    return !!updatedSupplier;
+  }
+
+  // Catalog operations
+  async getAllCatalogs(activeOnly = true): Promise<Catalog[]> {
+    if (activeOnly) {
+      return await db
+        .select()
+        .from(catalogs)
+        .where(eq(catalogs.isActive, true))
+        .orderBy(asc(catalogs.name));
+    } else {
+      return await db
+        .select()
+        .from(catalogs)
+        .orderBy(asc(catalogs.name));
+    }
+  }
+
+  async getCatalogsBySupplierId(supplierId: number, activeOnly = true): Promise<Catalog[]> {
+    if (activeOnly) {
+      return await db
+        .select()
+        .from(catalogs)
+        .where(
+          and(
+            eq(catalogs.supplierId, supplierId),
+            eq(catalogs.isActive, true)
+          )
+        )
+        .orderBy(asc(catalogs.name));
+    } else {
+      return await db
+        .select()
+        .from(catalogs)
+        .where(eq(catalogs.supplierId, supplierId))
+        .orderBy(asc(catalogs.name));
+    }
+  }
+
+  async getCatalogById(id: number): Promise<Catalog | undefined> {
+    const [catalog] = await db
+      .select()
+      .from(catalogs)
+      .where(eq(catalogs.id, id));
+    return catalog;
+  }
+
+  async createCatalog(catalog: InsertCatalog): Promise<Catalog> {
+    const now = new Date();
+    const [newCatalog] = await db
+      .insert(catalogs)
+      .values({
+        ...catalog,
+        createdAt: now,
+        updatedAt: now
+      })
+      .returning();
+    return newCatalog;
+  }
+
+  async updateCatalog(id: number, catalogData: Partial<InsertCatalog>): Promise<Catalog | undefined> {
+    const [updatedCatalog] = await db
+      .update(catalogs)
+      .set({
+        ...catalogData,
+        updatedAt: new Date()
+      })
+      .where(eq(catalogs.id, id))
+      .returning();
+    return updatedCatalog;
+  }
+
+  async deleteCatalog(id: number): Promise<boolean> {
+    // We use soft deletion by setting isActive to false
+    const [updatedCatalog] = await db
+      .update(catalogs)
+      .set({ 
+        isActive: false,
+        updatedAt: new Date()
+      })
+      .where(eq(catalogs.id, id))
+      .returning();
+    return !!updatedCatalog;
+  }
+
+  async getProductsByCatalogId(catalogId: number, activeOnly = true, limit = 20, offset = 0): Promise<Product[]> {
+    if (activeOnly) {
+      return await db
+        .select()
+        .from(products)
+        .where(
+          and(
+            eq(products.catalogId, catalogId),
+            eq(products.isActive, true)
+          )
+        )
+        .limit(limit)
+        .offset(offset);
+    } else {
+      return await db
+        .select()
+        .from(products)
+        .where(eq(products.catalogId, catalogId))
+        .limit(limit)
+        .offset(offset);
+    }
+  }
+
+  async bulkUpdateCatalogProducts(catalogId: number, updateData: Partial<InsertProduct>): Promise<number> {
+    // Update all products in a catalog with the provided data
+    // Returns number of products updated
+    const result = await db
+      .update(products)
+      .set(updateData)
+      .where(eq(products.catalogId, catalogId))
+      .returning({ id: products.id });
+    
+    return result.length;
   }
 }
 

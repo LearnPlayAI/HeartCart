@@ -10,7 +10,9 @@ import {
   insertCategorySchema,
   insertProductSchema,
   insertProductImageSchema,
-  insertPricingSchema
+  insertPricingSchema,
+  insertSupplierSchema,
+  insertCatalogSchema
 } from "@shared/schema";
 import { Client as ObjectStorageClient } from "@replit/object-storage";
 import { setupAuth } from "./auth";
