@@ -164,6 +164,13 @@ function ProductsPage() {
     queryKey: ['/api/products'],
   });
   
+  // Get a category name by id
+  const getCategoryName = (categoryId: number | null) => {
+    if (!categoryId) return "Uncategorized";
+    const category = categories.find(cat => cat.id === categoryId);
+    return category ? category.name : "Unknown Category";
+  };
+  
   // Create product mutation
   const createProductMutation = useMutation({
     mutationFn: async (data: Omit<InsertProduct, 'id'>) => {
@@ -497,63 +504,108 @@ function ProductsPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="py-3 text-left">Name</th>
-                        <th className="py-3 text-left">Category</th>
-                        <th className="py-3 text-right">Price</th>
-                        <th className="py-3 text-right">Stock</th>
-                        <th className="py-3 text-left">Status</th>
-                        <th className="py-3 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {products.map((product) => (
-                        <tr 
-                          key={product.id} 
-                          className="border-b hover:bg-gray-50 transition-colors"
-                        >
-                          <td className="py-3 text-left font-medium">{product.name}</td>
-                          <td className="py-3 text-left">{product.category}</td>
-                          <td className="py-3 text-right">{formatCurrency(product.price)}</td>
-                          <td className="py-3 text-right">{product.stock}</td>
-                          <td className="py-3 text-left">
-                            <Badge variant={product.status === "Active" ? "default" : "destructive"}>
-                              {product.status}
-                            </Badge>
-                          </td>
-                          <td className="py-3 text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                <DropdownMenuItem>
-                                  <Eye className="mr-2 h-4 w-4" />
-                                  <span>View</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                  <Edit className="mr-2 h-4 w-4" />
-                                  <span>Edit</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem className="text-red-600">
-                                  <Trash className="mr-2 h-4 w-4" />
-                                  <span>Delete</span>
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </td>
+                {isLoadingProducts ? (
+                  <div className="flex justify-center py-10">
+                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-pink-500" />
+                  </div>
+                ) : realProducts.length === 0 ? (
+                  <div className="text-center py-10 text-gray-500">
+                    <Package className="h-12 w-12 mx-auto opacity-50" />
+                    <p className="mt-2">No products found. Create your first product to get started.</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="py-3 text-left">Name</th>
+                          <th className="py-3 text-left">Category</th>
+                          <th className="py-3 text-right">Price</th>
+                          <th className="py-3 text-right">Stock</th>
+                          <th className="py-3 text-left">Status</th>
+                          <th className="py-3 text-right">Actions</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {realProducts.map((product) => (
+                          <tr 
+                            key={product.id} 
+                            className="border-b hover:bg-gray-50 transition-colors"
+                          >
+                            <td className="py-3 text-left font-medium">
+                              <div className="flex items-center">
+                                {product.imageUrl && (
+                                  <div className="h-8 w-8 mr-3 rounded bg-gray-100 overflow-hidden">
+                                    <img 
+                                      src={product.imageUrl} 
+                                      alt={product.name} 
+                                      className="h-full w-full object-cover"
+                                      onError={(e) => { 
+                                        (e.target as HTMLImageElement).src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>';
+                                      }}
+                                    />
+                                  </div>
+                                )}
+                                <span>{product.name}</span>
+                              </div>
+                            </td>
+                            <td className="py-3 text-left">{getCategoryName(product.categoryId)}</td>
+                            <td className="py-3 text-right">
+                              {product.salePrice ? (
+                                <div>
+                                  <span className="line-through text-gray-400 mr-2">
+                                    {formatCurrency(product.price)}
+                                  </span>
+                                  <span className="text-green-600 font-medium">
+                                    {formatCurrency(product.salePrice)}
+                                  </span>
+                                </div>
+                              ) : (
+                                formatCurrency(product.price)
+                              )}
+                            </td>
+                            <td className="py-3 text-right">{product.stock}</td>
+                            <td className="py-3 text-left">
+                              <Badge 
+                                variant={product.stock > 0 ? "default" : "destructive"}
+                                className={product.stock > 0 ? "bg-green-500 hover:bg-green-600" : ""}
+                              >
+                                {product.stock > 0 ? "In Stock" : "Out of Stock"}
+                              </Badge>
+                            </td>
+                            <td className="py-3 text-right">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" className="h-8 w-8 p-0">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                  <DropdownMenuItem>
+                                    <a href={`/product/${product.slug}`} target="_blank" className="flex items-center w-full">
+                                      <Eye className="mr-2 h-4 w-4" />
+                                      <span>View</span>
+                                    </a>
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem>
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    <span>Edit</span>
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem className="text-red-600">
+                                    <Trash className="mr-2 h-4 w-4" />
+                                    <span>Delete</span>
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

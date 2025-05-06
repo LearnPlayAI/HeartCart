@@ -246,6 +246,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     res.json(order);
   }));
+  
+  // Admin-only route to get all orders (must be above the /api/orders/:id route due to route matching order)
+  app.get("/api/admin/orders", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    // Check if user is admin
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Access denied" });
+    }
+    
+    // Get all orders
+    const orders = await storage.getOrdersByUser(null); // Simplified approach using existing method
+    
+    res.json(orders);
+  }));
 
   // AI RECOMMENDATION ROUTES - Available to all users (logged in or not)
   app.get("/api/recommendations", handleErrors(async (req: Request, res: Response) => {
