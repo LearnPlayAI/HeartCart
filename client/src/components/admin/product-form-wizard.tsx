@@ -237,11 +237,34 @@ export default function ProductFormWizard({ productId, onSuccess }: ProductFormW
   
   // Handle form submission
   const onSubmitProduct = (data: ProductFormValues) => {
+    console.log("Form submission attempt with data:", data);
     if (productId) {
       updateMutation.mutate(data);
     } else {
+      console.log("Creating new product with data:", data);
       createMutation.mutate(data);
     }
+  }
+  
+  // Debug form submission errors (log errors on failed validation)
+  const handleFormSubmit = () => {
+    console.log("Preparing to submit form...");
+    
+    // Check for form validation errors
+    const errors = form.formState.errors;
+    if (Object.keys(errors).length > 0) {
+      console.error("Form validation errors:", errors);
+      // Show validation errors in UI
+      toast({
+        title: "Validation Errors",
+        description: "Please fix the form errors before submitting",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // If no errors, proceed with submission
+    form.handleSubmit(onSubmitProduct)();
   };
   
   // Handle navigation between steps
@@ -622,7 +645,7 @@ export default function ProductFormWizard({ productId, onSuccess }: ProductFormW
           <Button 
             type="button" 
             disabled={isLoading}
-            onClick={form.handleSubmit(onSubmitProduct)}
+            onClick={handleFormSubmit}
             className="bg-pink-600 hover:bg-pink-700"
           >
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
