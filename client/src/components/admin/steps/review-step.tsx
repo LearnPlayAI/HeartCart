@@ -1,253 +1,194 @@
-import { UseFormReturn } from 'react-hook-form';
-import { Check, X } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Category } from '@shared/schema';
+import { UseFormReturn } from "react-hook-form";
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardHeader, 
+  CardTitle 
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Category } from "@shared/schema";
+import { useQuery } from "@tanstack/react-query";
+import { format } from "date-fns";
+import { CheckCircle2, AlertCircle, Tag } from "lucide-react";
 
 interface ReviewStepProps {
   form: UseFormReturn<any>;
-  uploadedImages: any[];
-  categories: Category[];
 }
 
-export function ReviewStep({ form, uploadedImages, categories }: ReviewStepProps) {
+export function ReviewStep({ form }: ReviewStepProps) {
   const formValues = form.getValues();
   
-  // Find category name from ID
-  const categoryName = categories.find(c => c.id === formValues.categoryId)?.name || 'Unknown';
+  // Fetch category info
+  const { data: categories } = useQuery<Category[]>({
+    queryKey: ["/api/categories"],
+  });
   
-  const formatDate = (date: Date | null) => {
-    if (!date) return 'Not set';
-    return new Intl.DateTimeFormat('en-ZA', {
-      dateStyle: 'medium',
-      timeStyle: 'short'
-    }).format(new Date(date));
-  };
+  const categoryName = categories?.find(c => c.id === formValues.categoryId)?.name || "Unknown";
   
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-ZA', {
-      style: 'currency',
-      currency: 'ZAR'
-    }).format(amount);
-  };
-
+  // Format fields for display
+  const price = typeof formValues.price === 'number' 
+    ? `R${formValues.price.toFixed(2)}` 
+    : 'Not set';
+  
+  const compareAtPrice = typeof formValues.compareAtPrice === 'number' && formValues.compareAtPrice > 0
+    ? `R${formValues.compareAtPrice.toFixed(2)}`
+    : 'None';
+  
+  const discount = formValues.discount && formValues.discount > 0
+    ? `${formValues.discountType === 'percentage' ? formValues.discount + '%' : 'R' + formValues.discount}`
+    : 'None';
+  
+  const flashDealEnd = formValues.flashDealEnd && formValues.inFlashDeal
+    ? format(new Date(formValues.flashDealEnd), 'PPP')
+    : 'N/A';
+  
   return (
     <div className="space-y-6">
-      <div className="bg-pink-50 dark:bg-pink-900/10 p-4 rounded-lg border border-pink-100 dark:border-pink-900/30 mb-6">
-        <h3 className="text-lg font-medium text-pink-800 dark:text-pink-300 mb-2">Review Your Product</h3>
-        <p className="text-sm text-pink-700 dark:text-pink-400">
-          Please review all the product information before submitting. You can go back to previous steps to make changes if needed.
+      <div>
+        <h3 className="text-lg font-medium">Review Your Product</h3>
+        <p className="text-sm text-muted-foreground">
+          Verify all the details before publishing your product.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left column - Basic details */}
-        <div className="space-y-6">
-          <div className="border rounded-md overflow-hidden">
-            <div className="bg-slate-100 dark:bg-slate-800 px-4 py-2 font-medium">
-              Basic Information
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Basic Information</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Name</p>
+              <p className="text-sm">{formValues.name || "Not set"}</p>
             </div>
-            <div className="p-4 space-y-4">
-              <div>
-                <h4 className="text-sm font-medium text-slate-500 dark:text-slate-400">Product Name</h4>
-                <p className="mt-1">{formValues.name}</p>
-              </div>
-              
-              <div>
-                <h4 className="text-sm font-medium text-slate-500 dark:text-slate-400">URL Slug</h4>
-                <p className="mt-1">{formValues.slug}</p>
-              </div>
-              
-              <div>
-                <h4 className="text-sm font-medium text-slate-500 dark:text-slate-400">Category</h4>
-                <p className="mt-1">{categoryName}</p>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <h4 className="text-sm font-medium text-slate-500 dark:text-slate-400">Price</h4>
-                  <p className="mt-1">{formatCurrency(formValues.price)}</p>
-                </div>
-                
-                <div>
-                  <h4 className="text-sm font-medium text-slate-500 dark:text-slate-400">Stock</h4>
-                  <p className="mt-1">{formValues.stock} units</p>
-                </div>
-              </div>
+            
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Category</p>
+              <p className="text-sm">{categoryName}</p>
             </div>
-          </div>
-          
-          <div className="border rounded-md overflow-hidden">
-            <div className="bg-slate-100 dark:bg-slate-800 px-4 py-2 font-medium">
-              Description & Details
+            
+            <div className="space-y-1">
+              <p className="text-sm font-medium">URL Slug</p>
+              <p className="text-sm font-mono">{formValues.slug || "Not set"}</p>
             </div>
-            <div className="p-4 space-y-4">
-              <div>
-                <h4 className="text-sm font-medium text-slate-500 dark:text-slate-400">Description</h4>
-                <p className="mt-1 text-sm whitespace-pre-wrap">{formValues.description || 'No description provided'}</p>
-              </div>
-              
-              <div>
-                <h4 className="text-sm font-medium text-slate-500 dark:text-slate-400">Brand</h4>
-                <p className="mt-1">{formValues.brand || 'Not specified'}</p>
-              </div>
-              
-              <div>
-                <h4 className="text-sm font-medium text-slate-500 dark:text-slate-400">Tags</h4>
-                <div className="mt-1 flex flex-wrap gap-1">
-                  {formValues.tags && formValues.tags.length > 0 ? (
-                    formValues.tags.map((tag: string) => (
-                      <Badge key={tag} variant="secondary">
-                        {tag}
-                      </Badge>
-                    ))
-                  ) : (
-                    <span className="text-sm text-slate-400">No tags</span>
-                  )}
-                </div>
-              </div>
+            
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Brand</p>
+              <p className="text-sm">{formValues.brand || "Not set"}</p>
             </div>
-          </div>
-        </div>
-        
-        {/* Right column - Pricing and flags */}
-        <div className="space-y-6">
-          <div className="border rounded-md overflow-hidden">
-            <div className="bg-slate-100 dark:bg-slate-800 px-4 py-2 font-medium">
-              Pricing & Discounts
+            
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Description</p>
+              <p className="text-sm line-clamp-3">{formValues.description || "Not set"}</p>
             </div>
-            <div className="p-4 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <h4 className="text-sm font-medium text-slate-500 dark:text-slate-400">Regular Price</h4>
-                  <p className="mt-1">{formatCurrency(formValues.price)}</p>
-                </div>
-                
-                <div>
-                  <h4 className="text-sm font-medium text-slate-500 dark:text-slate-400">Sale Price</h4>
-                  <p className="mt-1">
-                    {formValues.salePrice ? formatCurrency(formValues.salePrice) : 'Not set'}
-                  </p>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <h4 className="text-sm font-medium text-slate-500 dark:text-slate-400">Discount</h4>
-                  <p className="mt-1">{formValues.discount}%</p>
-                </div>
-                
-                <div>
-                  <h4 className="text-sm font-medium text-slate-500 dark:text-slate-400">Free Shipping</h4>
-                  <p className="mt-1 flex items-center">
-                    {formValues.freeShipping ? (
-                      <>
-                        <Check className="h-4 w-4 text-green-500 mr-1" />
-                        <span>Yes</span>
-                      </>
-                    ) : (
-                      <>
-                        <X className="h-4 w-4 text-red-500 mr-1" />
-                        <span>No</span>
-                      </>
-                    )}
-                  </p>
-                </div>
-              </div>
-              
-              <div>
-                <h4 className="text-sm font-medium text-slate-500 dark:text-slate-400">Flash Deal</h4>
-                {formValues.isFlashDeal ? (
-                  <div className="mt-1">
-                    <p className="flex items-center">
-                      <Check className="h-4 w-4 text-green-500 mr-1" />
-                      <span>Yes, ends at:</span>
-                    </p>
-                    <p className="text-sm text-pink-600 font-medium mt-1">
-                      {formatDate(formValues.flashDealEnd)}
-                    </p>
-                  </div>
-                ) : (
-                  <p className="mt-1 flex items-center">
-                    <X className="h-4 w-4 text-red-500 mr-1" />
-                    <span>No</span>
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-          
-          <div className="border rounded-md overflow-hidden">
-            <div className="bg-slate-100 dark:bg-slate-800 px-4 py-2 font-medium">
-              Product Status
-            </div>
-            <div className="p-4 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <h4 className="text-sm font-medium text-slate-500 dark:text-slate-400">Active</h4>
-                  <p className="mt-1 flex items-center">
-                    {formValues.isActive ? (
-                      <>
-                        <Check className="h-4 w-4 text-green-500 mr-1" />
-                        <span>Visible to customers</span>
-                      </>
-                    ) : (
-                      <>
-                        <X className="h-4 w-4 text-red-500 mr-1" />
-                        <span>Hidden</span>
-                      </>
-                    )}
-                  </p>
-                </div>
-                
-                <div>
-                  <h4 className="text-sm font-medium text-slate-500 dark:text-slate-400">Featured</h4>
-                  <p className="mt-1 flex items-center">
-                    {formValues.isFeatured ? (
-                      <>
-                        <Check className="h-4 w-4 text-green-500 mr-1" />
-                        <span>Shows on homepage</span>
-                      </>
-                    ) : (
-                      <>
-                        <X className="h-4 w-4 text-red-500 mr-1" />
-                        <span>Not featured</span>
-                      </>
-                    )}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="border rounded-md overflow-hidden">
-            <div className="bg-slate-100 dark:bg-slate-800 px-4 py-2 font-medium">
-              Images
-            </div>
-            <div className="p-4">
-              {uploadedImages && uploadedImages.length > 0 ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {uploadedImages.map((image, index) => (
-                    <div key={index} className="relative border rounded-md overflow-hidden aspect-square">
-                      <img 
-                        src={image.bgRemovedUrl || image.url} 
-                        alt={`Product image ${index + 1}`}
-                        className="absolute inset-0 w-full h-full object-cover"
-                      />
-                      {image.isMain && (
-                        <div className="absolute top-1 left-1 bg-pink-600 text-white text-xs px-1.5 py-0.5 rounded">
-                          Main
-                        </div>
-                      )}
-                    </div>
-                  ))}
+            
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Status</p>
+              {formValues.isActive ? (
+                <div className="flex items-center">
+                  <CheckCircle2 className="h-4 w-4 text-green-500 mr-1" />
+                  <span className="text-sm">Active</span>
                 </div>
               ) : (
-                <p className="text-sm text-slate-400">No images uploaded yet</p>
+                <div className="flex items-center">
+                  <AlertCircle className="h-4 w-4 text-amber-500 mr-1" />
+                  <span className="text-sm">Draft</span>
+                </div>
               )}
             </div>
-          </div>
-        </div>
+
+            <div className="space-y-1">
+              <p className="text-sm font-medium">SKU</p>
+              <p className="text-sm font-mono">{formValues.sku || "Not set"}</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Pricing & Inventory</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Regular Price</p>
+              <p className="text-sm font-medium">{price}</p>
+            </div>
+            
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Compare At Price</p>
+              <p className="text-sm">{compareAtPrice}</p>
+            </div>
+            
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Discount</p>
+              <p className="text-sm">{discount}</p>
+            </div>
+            
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Flash Deal</p>
+              {formValues.inFlashDeal ? (
+                <div>
+                  <Badge variant="outline" className="bg-amber-100">Active</Badge>
+                  <p className="text-xs mt-1">Ends on: {flashDealEnd}</p>
+                </div>
+              ) : (
+                <p className="text-sm">Not active</p>
+              )}
+            </div>
+            
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Stock Quantity</p>
+              <p className="text-sm">{formValues.stock || 0}</p>
+            </div>
+
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Shipping</p>
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center">
+                  <span className="text-sm">{formValues.freeShipping ? "Free shipping" : "Standard shipping rates"}</span>
+                </div>
+                <span className="text-sm">Class: {formValues.shippingClass || "Standard"}</span>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Physical Properties</p>
+              <div className="grid grid-cols-2 gap-x-2">
+                <div>
+                  <p className="text-xs text-muted-foreground">Weight</p>
+                  <p className="text-sm">{formValues.weight ? `${formValues.weight}g` : "Not set"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Dimensions</p>
+                  <p className="text-sm">{formValues.dimensions || "Not set"}</p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Tags</CardTitle>
+          <CardDescription>Keywords for searchability</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {formValues.tags && formValues.tags.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {formValues.tags.map((tag: string, index: number) => (
+                <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                  <Tag className="h-3 w-3" />
+                  {tag}
+                </Badge>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">No tags added</p>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

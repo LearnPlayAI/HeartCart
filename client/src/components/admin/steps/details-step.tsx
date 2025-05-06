@@ -1,157 +1,112 @@
-import { UseFormReturn } from 'react-hook-form';
-import { useState } from 'react';
-import DatePicker from 'react-datepicker';
-import "react-datepicker/dist/react-datepicker.css";
-import { X, Plus, Calendar } from 'lucide-react';
-import {
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-  FormDescription
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { useState, useEffect } from "react";
+import { UseFormReturn } from "react-hook-form";
+import { 
+  FormField, 
+  FormItem, 
+  FormLabel, 
+  FormControl, 
+  FormMessage, 
+  FormDescription 
+} from "@/components/ui/form";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { PlusIcon, XIcon } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DatePicker } from "@/components/ui/date-picker";
 
 interface DetailsStepProps {
   form: UseFormReturn<any>;
 }
 
 export function DetailsStep({ form }: DetailsStepProps) {
-  const [tagInput, setTagInput] = useState('');
-
-  const handleAddTag = () => {
-    if (tagInput.trim()) {
-      const currentTags = form.getValues('tags') || [];
-      if (!currentTags.includes(tagInput.trim())) {
-        form.setValue('tags', [...currentTags, tagInput.trim()]);
+  const { control, setValue, watch, getValues } = form;
+  const [newTag, setNewTag] = useState<string>("");
+  const tags = watch("tags") || [];
+  const inFlashDeal = watch("inFlashDeal") || false;
+  const flashDealEnd = watch("flashDealEnd");
+  const discount = watch("discount") || 0;
+  const discountType = watch("discountType") || "percentage";
+  const price = watch("price") || 0;
+  
+  // Calculate final price based on discount
+  const [calculatedPrice, setCalculatedPrice] = useState<number>(price);
+  
+  useEffect(() => {
+    if (price && discount > 0) {
+      if (discountType === "percentage") {
+        setCalculatedPrice(price * (1 - discount / 100));
+      } else { // fixed amount
+        setCalculatedPrice(Math.max(0, price - discount));
       }
-      setTagInput('');
+    } else {
+      setCalculatedPrice(price);
+    }
+  }, [price, discount, discountType]);
+
+  // Handle adding a new tag
+  const handleAddTag = () => {
+    if (newTag.trim() && !tags.includes(newTag.trim())) {
+      setValue("tags", [...tags, newTag.trim()]);
+      setNewTag("");
     }
   };
-  
-  const handleRemoveTag = (tag: string) => {
-    const currentTags = form.getValues('tags') || [];
-    form.setValue('tags', currentTags.filter(t => t !== tag));
+
+  // Handle removing a tag
+  const handleRemoveTag = (tagToRemove: string) => {
+    setValue("tags", tags.filter((t: string) => t !== tagToRemove));
+  };
+
+  // Handle keydown for tag input (enter key)
+  const handleTagKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleAddTag();
+    }
   };
 
   return (
     <div className="space-y-6">
-      <div className="bg-pink-50 dark:bg-pink-900/10 p-4 rounded-lg border border-pink-100 dark:border-pink-900/30 mb-6">
-        <h3 className="text-lg font-medium text-pink-800 dark:text-pink-300 mb-2">Additional Product Details</h3>
-        <p className="text-sm text-pink-700 dark:text-pink-400">
-          Add more information to help customers make informed decisions. Complete descriptions and accurate details improve your product's visibility.
+      <div>
+        <h3 className="text-lg font-medium">Product Details</h3>
+        <p className="text-sm text-muted-foreground">
+          Add comprehensive details to help customers understand your product.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-6">
-        <FormField
-          control={form.control}
-          name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Product Description</FormLabel>
-              <FormControl>
-                <Textarea 
-                  {...field} 
-                  placeholder="Describe your product in detail..."
-                  value={field.value || ''}
-                  className="min-h-[150px]"
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="brand"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Brand</FormLabel>
-              <FormControl>
-                <Input 
-                  {...field} 
-                  placeholder="Enter brand name"
-                  value={field.value || ''}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <div className="space-y-2">
-          <FormLabel>Product Tags</FormLabel>
-          <div className="flex flex-wrap gap-2 mb-2">
-            {(form.getValues('tags') || []).map((tag: string) => (
-              <Badge key={tag} variant="secondary" className="gap-1">
-                {tag}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-4 w-4 p-0"
-                  onClick={() => handleRemoveTag(tag)}
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              </Badge>
-            ))}
-          </div>
-          
-          <div className="flex">
-            <Input
-              value={tagInput}
-              onChange={(e) => setTagInput(e.target.value)}
-              placeholder="Enter tags and press Add or Enter"
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  handleAddTag();
-                }
-              }}
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="ml-2"
-              onClick={handleAddTag}
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
-          </div>
-          <FormDescription>
-            Add tags to help customers find this product. Press Enter after each tag.
-          </FormDescription>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <Tabs defaultValue="basic">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="basic">Basic Details</TabsTrigger>
+          <TabsTrigger value="pricing">Pricing</TabsTrigger>
+          <TabsTrigger value="tags">Tags</TabsTrigger>
+          <TabsTrigger value="shipping">Shipping</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="basic" className="space-y-4 pt-4">
           <FormField
-            control={form.control}
-            name="salePrice"
+            control={control}
+            name="brand"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Sale Price (ZAR)</FormLabel>
+                <FormLabel>Brand</FormLabel>
                 <FormControl>
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="0.00"
+                  <Input 
+                    placeholder="Brand name" 
                     {...field}
                     value={field.value || ''}
-                    onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : null)}
                   />
                 </FormControl>
                 <FormDescription>
-                  Leave empty to use regular price
+                  The manufacturer or brand of the product
                 </FormDescription>
                 <FormMessage />
               </FormItem>
@@ -159,57 +114,304 @@ export function DetailsStep({ form }: DetailsStepProps) {
           />
 
           <FormField
-            control={form.control}
-            name="discount"
+            control={control}
+            name="description"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Discount Percentage (%)</FormLabel>
+                <FormLabel>Description</FormLabel>
                 <FormControl>
-                  <Input
-                    type="number"
-                    min="0"
-                    max="100"
-                    placeholder="0"
+                  <Textarea 
+                    placeholder="Detailed product description" 
+                    className="min-h-[200px]"
                     {...field}
-                    value={field.value || 0}
-                    onChange={(e) => field.onChange(parseInt(e.target.value))}
+                    value={field.value || ''}
                   />
                 </FormControl>
+                <FormDescription>
+                  Rich description of the product with key features and benefits
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
           />
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FormField
+              control={control}
+              name="weight"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Weight (g)</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="number" 
+                      placeholder="Weight in grams" 
+                      min="0"
+                      {...field}
+                      onChange={(e) => field.onChange(parseFloat(e.target.value) || '')}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={control}
+              name="dimensions"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Dimensions (LxWxH cm)</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="e.g. 10x5x2" 
+                      {...field}
+                      value={field.value || ''}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
           <FormField
-            control={form.control}
-            name="isFlashDeal"
+            control={control}
+            name="sku"
             render={({ field }) => (
-              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                <div className="space-y-0.5">
-                  <FormLabel className="text-base">Flash Deal</FormLabel>
-                  <FormDescription>
-                    Mark this product as a limited time offer
-                  </FormDescription>
-                </div>
+              <FormItem>
+                <FormLabel>SKU (Stock Keeping Unit)</FormLabel>
                 <FormControl>
-                  <Switch
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
+                  <Input placeholder="Unique product identifier" {...field} />
                 </FormControl>
+                <FormDescription>
+                  A unique identifier for your product
+                </FormDescription>
+                <FormMessage />
               </FormItem>
             )}
           />
+        </TabsContent>
 
+        <TabsContent value="pricing" className="space-y-4 pt-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FormField
+              control={control}
+              name="price"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Base Price (ZAR)</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="number" 
+                      placeholder="0.00" 
+                      min="0" 
+                      step="0.01"
+                      {...field}
+                      onChange={(e) => field.onChange(parseFloat(e.target.value) || '')}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Regular price before any discounts
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={control}
+              name="compareAtPrice"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Compare At Price (ZAR)</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="number" 
+                      placeholder="0.00" 
+                      min="0" 
+                      step="0.01"
+                      {...field}
+                      onChange={(e) => field.onChange(parseFloat(e.target.value) || '')}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Original price to show as crossed out
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <div className="border rounded-md p-4 space-y-4">
+            <FormField
+              control={control}
+              name="inFlashDeal"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between">
+                  <div>
+                    <FormLabel>Flash Deal</FormLabel>
+                    <FormDescription>
+                      Set this product as a limited-time flash deal
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            {inFlashDeal && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField
+                  control={control}
+                  name="flashDealEnd"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>End Date</FormLabel>
+                      <FormControl>
+                        <DatePicker
+                          date={field.value ? new Date(field.value) : undefined}
+                          onSelect={(date) => field.onChange(date)}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        When the flash deal ends
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <FormField
+                      control={control}
+                      name="discount"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Discount</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              placeholder="0" 
+                              min="0"
+                              {...field}
+                              onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={control}
+                      name="discountType"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Type</FormLabel>
+                          <Select 
+                            onValueChange={field.onChange} 
+                            value={field.value}
+                            defaultValue="percentage"
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select type" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="percentage">Percentage (%)</SelectItem>
+                              <SelectItem value="fixed">Fixed Amount (ZAR)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  {discount > 0 && (
+                    <div className="mt-2 p-2 bg-muted rounded-md">
+                      <p className="text-sm font-medium">Final Price: R{calculatedPrice.toFixed(2)}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {discountType === 'percentage' 
+                          ? `${discount}% off` 
+                          : `R${discount} off`}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="tags" className="space-y-4 pt-4">
+          <div className="flex items-end gap-2">
+            <FormItem className="flex-1">
+              <FormLabel>Add Tags</FormLabel>
+              <FormControl>
+                <Input 
+                  placeholder="Enter tag and press Enter" 
+                  value={newTag} 
+                  onChange={(e) => setNewTag(e.target.value)}
+                  onKeyDown={handleTagKeyDown}
+                />
+              </FormControl>
+              <FormDescription>
+                Tags help with search and categorization
+              </FormDescription>
+            </FormItem>
+            <Button 
+              type="button" 
+              variant="outline" 
+              size="sm"
+              onClick={handleAddTag}
+              className="mb-0.5"
+            >
+              <PlusIcon className="h-4 w-4 mr-1" />
+              Add
+            </Button>
+          </div>
+
+          <div className="border rounded-md p-4">
+            <FormLabel>Current Tags</FormLabel>
+            <div className="flex flex-wrap gap-2 mt-2">
+              {tags.length > 0 ? (
+                tags.map((tag: string, index: number) => (
+                  <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                    {tag}
+                    <button 
+                      type="button" 
+                      onClick={() => handleRemoveTag(tag)} 
+                      className="text-xs rounded-full hover:bg-primary/20 p-0.5"
+                    >
+                      <XIcon className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground">No tags added yet</p>
+              )}
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="shipping" className="space-y-4 pt-4">
           <FormField
-            control={form.control}
+            control={control}
             name="freeShipping"
             render={({ field }) => (
-              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                <div className="space-y-0.5">
-                  <FormLabel className="text-base">Free Shipping</FormLabel>
+              <FormItem className="flex flex-row items-center justify-between">
+                <div>
+                  <FormLabel>Free Shipping</FormLabel>
                   <FormDescription>
                     Offer free shipping for this product
                   </FormDescription>
@@ -223,87 +425,38 @@ export function DetailsStep({ form }: DetailsStepProps) {
               </FormItem>
             )}
           />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="isFeatured"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                <div className="space-y-0.5">
-                  <FormLabel className="text-base">Featured Product</FormLabel>
-                  <FormDescription>
-                    Display this product on the homepage
-                  </FormDescription>
-                </div>
-                <FormControl>
-                  <Switch
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-              </FormItem>
-            )}
-          />
 
           <FormField
-            control={form.control}
-            name="isActive"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                <div className="space-y-0.5">
-                  <FormLabel className="text-base">Active Status</FormLabel>
-                  <FormDescription>
-                    Make this product visible to customers
-                  </FormDescription>
-                </div>
-                <FormControl>
-                  <Switch
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-              </FormItem>
-            )}
-          />
-        </div>
-
-        {form.watch('isFlashDeal') && (
-          <FormField
-            control={form.control}
-            name="flashDealEnd"
+            control={control}
+            name="shippingClass"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Flash Deal End Date & Time</FormLabel>
-                <FormControl>
-                  <div className="relative">
-                    <DatePicker
-                      selected={field.value ? new Date(field.value) : null}
-                      onChange={(date) => field.onChange(date)}
-                      showTimeSelect
-                      timeFormat="HH:mm"
-                      timeIntervals={15}
-                      dateFormat="MMMM d, yyyy h:mm aa"
-                      minDate={new Date()}
-                      placeholderText="Select date and time"
-                      className={cn(
-                        "w-full rounded-md border border-input bg-background px-3 py-2",
-                        "focus:outline-none focus:ring-2 focus:ring-ring focus:border-input"
-                      )}
-                    />
-                    <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4 pointer-events-none" />
-                  </div>
-                </FormControl>
+                <FormLabel>Shipping Class</FormLabel>
+                <Select 
+                  onValueChange={field.onChange} 
+                  value={field.value || "standard"}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select shipping class" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="standard">Standard</SelectItem>
+                    <SelectItem value="express">Express</SelectItem>
+                    <SelectItem value="bulky">Bulky</SelectItem>
+                    <SelectItem value="digital">Digital/Download</SelectItem>
+                  </SelectContent>
+                </Select>
                 <FormDescription>
-                  When the flash deal will end
+                  Determines shipping rates and methods
                 </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
           />
-        )}
-      </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

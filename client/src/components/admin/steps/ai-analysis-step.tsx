@@ -1,180 +1,263 @@
-import { UseFormReturn } from 'react-hook-form';
-import { Loader2, Wand2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { AiProductAnalyzer } from '../ai-product-analyzer';
+import { useState } from "react";
+import { UseFormReturn } from "react-hook-form";
+import { 
+  FormField, 
+  FormItem, 
+  FormLabel, 
+  FormControl,
+  FormDescription 
+} from "@/components/ui/form";
+import { useQuery } from "@tanstack/react-query";
+import { ProductImage } from "@shared/schema";
+import { Loader2, BookOpen, Tag, Wand2 } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { useProductAnalysis } from "@/hooks/use-ai";
 
 interface AiAnalysisStepProps {
-  uploadedImages: any[];
-  analyzeImagesWithAI: () => void;
-  aiAnalysisLoading: boolean;
-  aiSuggestions: any;
-  applyAISuggestion: (key: string, value: any) => void;
-  applyAllAISuggestions: () => void;
   form: UseFormReturn<any>;
+  productId: number;
 }
 
-export function AiAnalysisStep({
-  uploadedImages,
-  analyzeImagesWithAI,
-  aiAnalysisLoading,
-  aiSuggestions,
-  applyAISuggestion,
-  applyAllAISuggestions,
-  form
-}: AiAnalysisStepProps) {
-  const imageUrl = uploadedImages.length > 0 ? uploadedImages[0].url : '';
+export function AiAnalysisStep({ form, productId }: AiAnalysisStepProps) {
+  const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
+  const { control, setValue, getValues } = form;
+  
+  // Fetch existing product images
+  const {
+    data: productImages,
+    isLoading: imagesLoading,
+  } = useQuery<ProductImage[]>({
+    queryKey: [`/api/products/${productId}/images`],
+    enabled: !!productId && productId > 0,
+  });
 
-  const handleApplyChanges = (changes: any) => {
-    if (changes.name) {
-      form.setValue('name', changes.name);
-      // Also generate a slug from name if it's different
-      form.setValue('slug', changes.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''));
+  const hasImages = productImages && productImages.length > 0;
+  const mainImage = productImages?.find(img => img.isMain);
+  
+  // If no image is selected, use the main image
+  if (!selectedImageUrl && mainImage) {
+    setSelectedImageUrl(mainImage.url);
+  }
+
+  // Setup AI product analysis hook
+  const { 
+    generateTags, 
+    analyzeProduct, 
+    isProcessing: isAiProcessing 
+  } = useProductAnalysis({
+    onSuccess: (data) => {
+      // This will be handled by the specific AI function callbacks
     }
+  });
+
+  // Handle generating tags with AI
+  const handleGenerateTags = async () => {
+    if (!selectedImageUrl) return;
     
-    if (changes.description) {
-      form.setValue('description', changes.description);
+    const currentName = getValues("name") || "";
+    const currentDescription = getValues("description") || "";
+    
+    try {
+      const suggestedTags = await generateTags({
+        imageUrl: selectedImageUrl,
+        productName: currentName,
+        productDescription: currentDescription
+      });
+      
+      if (suggestedTags && suggestedTags.length > 0) {
+        setValue("tags", suggestedTags);
+      }
+    } catch (error) {
+      console.error("Error generating tags:", error);
     }
+  };
+
+  // Handle analyzing product with AI
+  const handleAnalyzeProduct = async () => {
+    if (!selectedImageUrl) return;
     
-    if (changes.brand) {
-      form.setValue('brand', changes.brand);
-    }
-    
-    if (changes.tags) {
-      form.setValue('tags', changes.tags);
+    try {
+      const analysis = await analyzeProduct({
+        imageUrl: selectedImageUrl
+      });
+      
+      if (analysis) {
+        if (analysis.suggestedName && !getValues("name")) {
+          setValue("name", analysis.suggestedName);
+        }
+        
+        if (analysis.suggestedDescription && !getValues("description")) {
+          setValue("description", analysis.suggestedDescription);
+        }
+        
+        if (analysis.suggestedPrice && !getValues("price")) {
+          setValue("price", analysis.suggestedPrice);
+        }
+        
+        if (analysis.suggestedBrand && !getValues("brand")) {
+          setValue("brand", analysis.suggestedBrand);
+        }
+      }
+    } catch (error) {
+      console.error("Error analyzing product:", error);
     }
   };
 
   return (
     <div className="space-y-6">
-      <div className="bg-pink-50 dark:bg-pink-900/10 p-4 rounded-lg border border-pink-100 dark:border-pink-900/30 mb-6">
-        <h3 className="text-lg font-medium text-pink-800 dark:text-pink-300 mb-2">AI-Powered Product Analysis</h3>
-        <p className="text-sm text-pink-700 dark:text-pink-400">
-          Leverage AI to automatically analyze your product images and get suggestions for product details, descriptions, and tags.
+      <div>
+        <h3 className="text-lg font-medium">AI-Powered Analysis</h3>
+        <p className="text-sm text-muted-foreground">
+          Let AI analyze your product images to suggest details and tags.
         </p>
       </div>
 
-      {uploadedImages.length === 0 ? (
-        <div className="border rounded-md p-6 bg-zinc-50 dark:bg-zinc-900 text-center">
-          <Wand2 className="h-8 w-8 mb-2 mx-auto text-zinc-400" />
-          <h3 className="text-lg font-medium mb-2">No Images Available</h3>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4 max-w-md mx-auto">
-            Upload product images in the previous step to use AI analysis features
-          </p>
-        </div>
+      {!productId || productId <= 0 || !hasImages ? (
+        <Alert>
+          <AlertTitle>Upload images first</AlertTitle>
+          <AlertDescription>
+            You need to save basic information and upload product images before using AI analysis.
+          </AlertDescription>
+        </Alert>
       ) : (
-        <>
-          {aiSuggestions ? (
-            <Card className="border-pink-200 dark:border-pink-900/40 shadow-sm">
-              <CardHeader className="bg-pink-50 dark:bg-pink-900/10 border-b border-pink-100 dark:border-pink-900/20">
-                <CardTitle className="flex items-center text-lg">
-                  <Wand2 className="h-5 w-5 mr-2 text-pink-600" />
-                  AI Analysis Results
-                </CardTitle>
-                <CardDescription>
-                  Review AI-generated suggestions for your product
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-4 space-y-4">
-                {aiSuggestions.suggestedName && (
-                  <div className="space-y-2">
-                    <h4 className="font-medium text-sm">Suggested Name</h4>
-                    <p className="text-sm p-2 rounded-md bg-pink-50 dark:bg-pink-900/10 border border-pink-100 dark:border-pink-900/20">
-                      {aiSuggestions.suggestedName}
-                    </p>
-                  </div>
-                )}
-
-                {aiSuggestions.suggestedDescription && (
-                  <div className="space-y-2">
-                    <h4 className="font-medium text-sm">Suggested Description</h4>
-                    <div className="text-sm p-2 rounded-md bg-pink-50 dark:bg-pink-900/10 border border-pink-100 dark:border-pink-900/20">
-                      {aiSuggestions.suggestedDescription}
-                    </div>
-                  </div>
-                )}
-
-                {aiSuggestions.suggestedCategory && (
-                  <div className="space-y-2">
-                    <h4 className="font-medium text-sm">Suggested Category</h4>
-                    <p className="text-sm p-2 rounded-md bg-pink-50 dark:bg-pink-900/10 border border-pink-100 dark:border-pink-900/20">
-                      {aiSuggestions.suggestedCategory}
-                    </p>
-                  </div>
-                )}
-
-                {aiSuggestions.suggestedBrand && (
-                  <div className="space-y-2">
-                    <h4 className="font-medium text-sm">Suggested Brand</h4>
-                    <p className="text-sm p-2 rounded-md bg-pink-50 dark:bg-pink-900/10 border border-pink-100 dark:border-pink-900/20">
-                      {aiSuggestions.suggestedBrand}
-                    </p>
-                  </div>
-                )}
-
-                {aiSuggestions.suggestedTags && aiSuggestions.suggestedTags.length > 0 && (
-                  <div className="space-y-2">
-                    <h4 className="font-medium text-sm">Suggested Tags</h4>
-                    <div className="flex flex-wrap gap-2 p-2 rounded-md bg-pink-50 dark:bg-pink-900/10 border border-pink-100 dark:border-pink-900/20">
-                      {aiSuggestions.suggestedTags.map((tag: string, index: number) => (
-                        <Badge 
-                          key={index} 
-                          variant="secondary"
-                          className="bg-pink-100 text-pink-800 hover:bg-pink-200 dark:bg-pink-900/30 dark:text-pink-300"
-                        >
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-              <CardFooter className="flex justify-between bg-zinc-50 dark:bg-zinc-900 border-t p-4">
-                <Button 
-                  variant="outline" 
-                  onClick={() => analyzeImagesWithAI()}
-                >
-                  Analyze Again
-                </Button>
-                <Button 
-                  onClick={applyAllAISuggestions}
-                  className="bg-pink-600 hover:bg-pink-700"
-                >
-                  Apply All Suggestions
-                </Button>
-              </CardFooter>
-            </Card>
-          ) : (
-            <div className="flex flex-col items-center justify-center gap-4 p-6 border rounded-lg bg-zinc-50 dark:bg-zinc-900 text-center">
-              <div className="flex flex-col items-center">
-                <Wand2 className="h-8 w-8 mb-2 text-pink-600" />
-                <h3 className="text-lg font-medium mb-1">AI Product Analysis</h3>
-                <p className="text-zinc-500 dark:text-zinc-400 mb-4 max-w-md">
-                  Use AI to analyze your product image and get suggestions for name, description, category, and tags
-                </p>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <FormLabel>Select an image to analyze</FormLabel>
+            {imagesLoading ? (
+              <div className="flex justify-center p-4 border rounded-md">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
-              
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {productImages?.map((image) => (
+                  <div 
+                    key={image.id}
+                    className={`cursor-pointer border rounded-md overflow-hidden ${
+                      selectedImageUrl === image.url ? 'ring-2 ring-primary' : ''
+                    }`}
+                    onClick={() => setSelectedImageUrl(image.url)}
+                  >
+                    <div className="aspect-square">
+                      <img 
+                        src={image.url} 
+                        alt="Product"
+                        className="w-full h-full object-cover" 
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="flex flex-col sm:flex-row gap-3 mt-4">
               <Button
-                onClick={analyzeImagesWithAI}
-                disabled={aiAnalysisLoading}
-                className="bg-pink-600 hover:bg-pink-700"
+                type="button"
+                variant="outline"
+                className="flex-1 gap-2"
+                disabled={!selectedImageUrl || isAiProcessing}
+                onClick={handleGenerateTags}
               >
-                {aiAnalysisLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Analyzing...
-                  </>
+                {isAiProcessing ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  <>
-                    <Wand2 className="mr-2 h-4 w-4" />
-                    Analyze Product Image
-                  </>
+                  <Tag className="h-4 w-4" />
                 )}
+                Generate Tags
+              </Button>
+              <Button
+                type="button"
+                className="flex-1 gap-2"
+                disabled={!selectedImageUrl || isAiProcessing}
+                onClick={handleAnalyzeProduct}
+              >
+                {isAiProcessing ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Wand2 className="h-4 w-4" />
+                )}
+                Analyze Product
               </Button>
             </div>
-          )}
-        </>
+          </div>
+
+          <div className="space-y-4">
+            <FormLabel>AI Results</FormLabel>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle>Product Details</CardTitle>
+                <CardDescription>
+                  Review and apply AI suggestions
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <FormField
+                  control={control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Name</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Product name" />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          {...field} 
+                          value={field.value || ''} 
+                          placeholder="Product description"
+                          className="min-h-[100px]" 
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={control}
+                  name="tags"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tags</FormLabel>
+                      <FormControl>
+                        <div className="border rounded-md p-3 flex flex-wrap gap-2">
+                          {field.value && field.value.length > 0 ? (
+                            field.value.map((tag: string, index: number) => (
+                              <Badge key={index} variant="secondary">
+                                {tag}
+                              </Badge>
+                            ))
+                          ) : (
+                            <div className="text-muted-foreground text-sm w-full text-center py-2">
+                              No tags generated yet
+                            </div>
+                          )}
+                        </div>
+                      </FormControl>
+                      <FormDescription>
+                        Use the "Generate Tags" button to get AI suggested tags
+                      </FormDescription>
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       )}
     </div>
   );

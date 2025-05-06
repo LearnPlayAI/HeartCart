@@ -1,85 +1,121 @@
-import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { queryClient } from '@/lib/queryClient';
-import ProductImageUploader from '../product-image-uploader';
-import ProductImageManager from '../product-image-manager';
+import { UseFormReturn } from "react-hook-form";
+import { 
+  FormField, 
+  FormItem, 
+  FormLabel, 
+  FormControl, 
+  FormMessage, 
+  FormDescription 
+} from "@/components/ui/form";
+import { useQuery } from "@tanstack/react-query";
+import { ProductImage } from "@shared/schema";
+import { Loader2, ImagePlus } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import ProductImageUploader from "@/components/admin/product-image-uploader";
+import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 interface ImagesStepProps {
-  productId?: number;
-  uploadedImages: any[];
-  setUploadedImages: (images: any[]) => void;
+  form: UseFormReturn<any>;
+  productId: number;
 }
 
-export function ImagesStep({ 
-  productId, 
-  uploadedImages, 
-  setUploadedImages 
-}: ImagesStepProps) {
-  const [imageLoaded, setImageLoaded] = useState(false);
+export function ImagesStep({ form, productId }: ImagesStepProps) {
+  // Fetch existing product images
+  const {
+    data: productImages,
+    isLoading: imagesLoading,
+    refetch: refetchImages
+  } = useQuery<ProductImage[]>({
+    queryKey: [`/api/products/${productId}/images`],
+    // Don't fetch if this is a new product (no ID yet)
+    enabled: !!productId && productId > 0,
+  });
 
-  // Fetch product images if editing
-  useEffect(() => {
-    const fetchProductImages = async () => {
-      if (!productId) return;
-      
-      try {
-        const res = await fetch(`/api/products/${productId}/images`);
-        if (!res.ok) throw new Error('Failed to fetch product images');
-        const images = await res.json();
-        setUploadedImages(images);
-        setImageLoaded(true);
-      } catch (error) {
-        console.error('Error fetching product images:', error);
-      }
-    };
-    
-    if (productId && !imageLoaded) {
-      fetchProductImages();
-    }
-  }, [productId, setUploadedImages, imageLoaded]);
+  const hasImages = productImages && productImages.length > 0;
+  const mainImage = productImages?.find(img => img.isMain);
+
+  // Update the form with the main image URL
+  if (mainImage && !form.getValues("imageUrl")) {
+    form.setValue("imageUrl", mainImage.url);
+  }
 
   return (
     <div className="space-y-6">
-      <div className="bg-pink-50 dark:bg-pink-900/10 p-4 rounded-lg border border-pink-100 dark:border-pink-900/30 mb-6">
-        <h3 className="text-lg font-medium text-pink-800 dark:text-pink-300 mb-2">Product Images</h3>
-        <p className="text-sm text-pink-700 dark:text-pink-400">
-          Upload high-quality images of your product. You can add multiple images, remove backgrounds, and set a main product image.
+      <div>
+        <h3 className="text-lg font-medium">Product Images</h3>
+        <p className="text-sm text-muted-foreground">
+          Upload high-quality images of your product. The first image will be used as the main display image.
         </p>
       </div>
 
-      {productId ? (
-        <>
-          <div className="space-y-2">
-            <h3 className="text-lg font-medium">Current Images</h3>
-            <p className="text-sm text-gray-500">Manage your product images</p>
-            <ProductImageManager productId={productId} />
-          </div>
-          
-          <div className="space-y-2 pt-6 border-t">
-            <h3 className="text-lg font-medium">Upload New Images</h3>
-            <p className="text-sm text-gray-500">Add more images to your product</p>
-            <ProductImageUploader 
-              productId={productId}
-              onUploadComplete={() => {
-                queryClient.invalidateQueries({ queryKey: [`/api/products/${productId}/images`] });
-              }}
-            />
-          </div>
-        </>
+      {!productId || productId <= 0 ? (
+        <Alert>
+          <AlertTitle>Save product first</AlertTitle>
+          <AlertDescription>
+            You need to save the basic product information before adding images.
+          </AlertDescription>
+        </Alert>
       ) : (
-        <div className="space-y-4">
-          <div className="border rounded-md p-4 bg-zinc-50 dark:bg-zinc-900">
-            <h3 className="text-md font-medium mb-2">Image Upload</h3>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4">
-              After saving the basic product information, you'll be able to upload and manage product images.
-            </p>
-            <div className="bg-zinc-200 dark:bg-zinc-800 rounded-md p-10 flex items-center justify-center">
-              <p className="text-zinc-500 dark:text-zinc-400 text-center">
-                Please save the product first to upload images
-              </p>
-            </div>
+        <>
+          <div className="space-y-4">
+            <FormLabel>Current Images</FormLabel>
+            {imagesLoading ? (
+              <div className="flex justify-center p-4 border rounded-md">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : !hasImages ? (
+              <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-md text-muted-foreground">
+                <ImagePlus size={48} className="mb-2" />
+                <p>No images uploaded yet</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                {productImages.map((image) => (
+                  <Card 
+                    key={image.id} 
+                    className={cn(
+                      "overflow-hidden",
+                      image.isMain && "ring-2 ring-primary"
+                    )}
+                  >
+                    <CardContent className="p-0">
+                      <div className="relative aspect-square">
+                        <img 
+                          src={image.url} 
+                          alt="Product" 
+                          className="w-full h-full object-cover"
+                        />
+                        {image.isMain && (
+                          <div className="absolute top-2 right-2 bg-primary text-white text-xs px-2 py-1 rounded-full">
+                            Main
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </div>
-        </div>
+
+          <ProductImageUploader
+            productId={productId}
+            onUploadComplete={() => refetchImages()}
+          />
+
+          <FormField
+            control={form.control}
+            name="imageUrl"
+            render={({ field }) => (
+              <FormItem className="hidden">
+                <FormControl>
+                  <input {...field} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+        </>
       )}
     </div>
   );

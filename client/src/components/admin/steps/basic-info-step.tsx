@@ -1,101 +1,106 @@
-import { UseFormReturn } from 'react-hook-form';
-import {
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Category } from '@shared/schema';
+import { useEffect } from "react";
+import { UseFormReturn } from "react-hook-form";
+import { 
+  FormField, 
+  FormItem, 
+  FormLabel, 
+  FormControl, 
+  FormMessage, 
+  FormDescription 
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useQuery } from "@tanstack/react-query";
+import { Category } from "@shared/schema";
+import { Loader2 } from "lucide-react";
+import slugify from "@/lib/slugify";
 
 interface BasicInfoStepProps {
   form: UseFormReturn<any>;
-  categories: Category[];
 }
 
-export function BasicInfoStep({ form, categories }: BasicInfoStepProps) {
-  // Helper to generate slug from name
-  const generateSlug = (name: string) => {
-    return name
-      .toLowerCase()
-      .replace(/\s+/g, '-')
-      .replace(/[^a-z0-9-]/g, '');
-  };
+export function BasicInfoStep({ form }: BasicInfoStepProps) {
+  const { control, watch, setValue } = form;
+  const name = watch("name");
+
+  // Auto-generate slug when name changes
+  useEffect(() => {
+    if (name) {
+      setValue("slug", slugify(name));
+    }
+  }, [name, setValue]);
+
+  // Fetch categories
+  const { data: categories, isLoading: categoriesLoading } = useQuery<Category[]>({
+    queryKey: ["/api/categories"],
+  });
 
   return (
     <div className="space-y-6">
-      <div className="bg-pink-50 dark:bg-pink-900/10 p-4 rounded-lg border border-pink-100 dark:border-pink-900/30 mb-6">
-        <h3 className="text-lg font-medium text-pink-800 dark:text-pink-300 mb-2">Basic Product Information</h3>
-        <p className="text-sm text-pink-700 dark:text-pink-400">
-          Start by entering the essential details about your product. These details help customers find and understand your product.
+      <div>
+        <h3 className="text-lg font-medium">Basic Information</h3>
+        <p className="text-sm text-muted-foreground">
+          Start by filling in the essential details about your product.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-6">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <FormField
-          control={form.control}
+          control={control}
           name="name"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Product Name</FormLabel>
               <FormControl>
-                <Input 
-                  placeholder="Enter product name" 
-                  {...field} 
-                  onChange={(e) => {
-                    field.onChange(e);
-                    
-                    // Only auto-generate slug if it's empty or matches previous auto-generation
-                    const currentSlug = form.getValues('slug');
-                    const previousName = field.value;
-                    const previousSlug = generateSlug(previousName);
-                    
-                    if (!currentSlug || currentSlug === previousSlug) {
-                      form.setValue('slug', generateSlug(e.target.value));
-                    }
-                  }}
-                />
+                <Input placeholder="Enter product name" {...field} />
               </FormControl>
+              <FormDescription>
+                A clear, descriptive name for your product
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
 
         <FormField
-          control={form.control}
+          control={control}
           name="slug"
           render={({ field }) => (
             <FormItem>
               <FormLabel>URL Slug</FormLabel>
               <FormControl>
                 <Input 
-                  placeholder="enter-url-slug" 
+                  placeholder="product-url-slug" 
                   {...field} 
+                  className="font-mono text-sm"
                 />
               </FormControl>
+              <FormDescription>
+                Auto-generated from the product name
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
+      </div>
 
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <FormField
-          control={form.control}
+          control={control}
           name="categoryId"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Category</FormLabel>
-              <Select
-                onValueChange={(value) => field.onChange(parseInt(value))}
-                defaultValue={field.value?.toString()}
-                value={field.value?.toString()}
+              <Select 
+                onValueChange={(value) => field.onChange(parseInt(value))} 
+                value={field.value?.toString() || ""}
               >
                 <FormControl>
                   <SelectTrigger>
@@ -103,61 +108,97 @@ export function BasicInfoStep({ form, categories }: BasicInfoStepProps) {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {categories.map((category) => (
-                    <SelectItem key={category.id} value={category.id.toString()}>
-                      {category.name}
-                    </SelectItem>
-                  ))}
+                  {categoriesLoading ? (
+                    <div className="flex items-center justify-center p-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    </div>
+                  ) : (
+                    categories?.map((category) => (
+                      <SelectItem key={category.id} value={category.id.toString()}>
+                        {category.name}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
+              <FormDescription>
+                Choose the most appropriate category for your product
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="price"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Price (ZAR)</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="0.00"
-                    {...field}
-                    onChange={(e) => field.onChange(parseFloat(e.target.value))}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+        <FormField
+          control={control}
+          name="price"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Price (ZAR)</FormLabel>
+              <FormControl>
+                <Input 
+                  type="number" 
+                  min="0" 
+                  step="0.01"
+                  placeholder="0.00" 
+                  {...field}
+                  onChange={(e) => field.onChange(parseFloat(e.target.value) || '')}
+                />
+              </FormControl>
+              <FormDescription>
+                Regular selling price in South African Rand
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
 
-          <FormField
-            control={form.control}
-            name="stock"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Stock Quantity</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    min="0"
-                    step="1"
-                    placeholder="0"
-                    {...field}
-                    onChange={(e) => field.onChange(parseInt(e.target.value))}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <FormField
+          control={control}
+          name="stock"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Stock Quantity</FormLabel>
+              <FormControl>
+                <Input 
+                  type="number" 
+                  min="0" 
+                  step="1"
+                  placeholder="0" 
+                  {...field}
+                  onChange={(e) => field.onChange(parseInt(e.target.value) || '')}
+                />
+              </FormControl>
+              <FormDescription>
+                Number of items in stock
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={control}
+          name="isActive"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+              <FormControl>
+                <Checkbox
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+              <div className="space-y-1 leading-none">
+                <FormLabel>Active Product</FormLabel>
+                <FormDescription>
+                  Make this product visible to customers
+                </FormDescription>
+              </div>
+            </FormItem>
+          )}
+        />
       </div>
     </div>
   );
