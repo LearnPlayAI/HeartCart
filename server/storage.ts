@@ -44,7 +44,7 @@ export interface IStorage {
   
   // Order operations
   createOrder(order: InsertOrder, items: InsertOrderItem[]): Promise<Order>;
-  getOrdersByUser(userId: number): Promise<Order[]>;
+  getOrdersByUser(userId: number | null): Promise<Order[]>; // null means get all orders (admin only)
   getOrderById(id: number): Promise<(Order & { items: (OrderItem & { product: Product })[] }) | undefined>;
   
   // AI Recommendation operations
@@ -291,7 +291,16 @@ export class DatabaseStorage implements IStorage {
     return newOrder;
   }
 
-  async getOrdersByUser(userId: number): Promise<Order[]> {
+  async getOrdersByUser(userId: number | null): Promise<Order[]> {
+    // If userId is null, return all orders (admin function)
+    if (userId === null) {
+      return await db
+        .select()
+        .from(orders)
+        .orderBy(desc(orders.createdAt));
+    }
+    
+    // Return orders for specific user
     return await db
       .select()
       .from(orders)

@@ -86,16 +86,20 @@ function OrdersPage() {
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
 
   // Fetch orders from API
-  const { data: orders = [], isLoading } = useQuery<any[]>({
-    queryKey: ['/api/orders/admin'],
-    onError: (error: Error) => {
+  const { data: orders = [], isLoading, error } = useQuery<any[]>({
+    queryKey: ['/api/admin/orders'],
+  });
+  
+  // Handle error
+  React.useEffect(() => {
+    if (error) {
       toast({
         title: 'Failed to load orders',
-        description: error.message,
+        description: (error as Error).message,
         variant: 'destructive',
       });
-    },
-  });
+    }
+  }, [error, toast]);
 
   // Function to view order details
   const viewOrderDetails = (order: any) => {
