@@ -379,7 +379,7 @@ const ProductListing = () => {
               <SlidersHorizontal className="h-5 w-5 text-gray-500" />
             </div>
             
-            <Accordion type="multiple" defaultValue={['categories', 'price', 'stock', 'rating', 'more']}>
+            <Accordion type="multiple" defaultValue={['categories', 'price', 'availability', 'rating', 'more']}>
               <AccordionItem value="categories">
                 <AccordionTrigger>Categories</AccordionTrigger>
                 <AccordionContent>
