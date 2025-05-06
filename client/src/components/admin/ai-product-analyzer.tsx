@@ -251,6 +251,19 @@ export function AiProductAnalyzer({ imageUrl, productName, onApplyChanges }: AiP
               </div>
             </div>
           )}
+          
+          {productAnalysisData.marketResearch && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h4 className="font-medium text-sm">Market Research (South Africa)</h4>
+              </div>
+              <div className="p-3 rounded-md bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/20">
+                <p className="text-sm text-blue-800 dark:text-blue-300">
+                  {productAnalysisData.marketResearch}
+                </p>
+              </div>
+            </div>
+          )}
         </CardContent>
         <CardFooter className="flex justify-between bg-zinc-50 dark:bg-zinc-900 border-t p-4">
           <Button variant="outline" onClick={() => setShowAnalysis(false)}>

@@ -716,7 +716,8 @@ export async function analyzeProductImage(imageBase64: string, productName: stri
         suggestedBrand: jsonResponse.brand,
         suggestedTags: jsonResponse.tags,
         suggestedCostPrice: jsonResponse.costPrice ? Number(jsonResponse.costPrice) : undefined,
-        suggestedPrice: jsonResponse.price ? Number(jsonResponse.price) : undefined
+        suggestedPrice: jsonResponse.price ? Number(jsonResponse.price) : undefined,
+        marketResearch: jsonResponse.marketResearch
       };
     } catch (jsonError) {
       // If direct parsing fails, try to extract JSON from the text
@@ -732,7 +733,8 @@ export async function analyzeProductImage(imageBase64: string, productName: stri
             suggestedBrand: extractedJson.brand,
             suggestedTags: extractedJson.tags,
             suggestedCostPrice: extractedJson.costPrice ? Number(extractedJson.costPrice) : undefined,
-            suggestedPrice: extractedJson.price ? Number(extractedJson.price) : undefined
+            suggestedPrice: extractedJson.price ? Number(extractedJson.price) : undefined,
+            marketResearch: extractedJson.marketResearch
           };
         } catch (extractError) {
           console.error('Failed to parse extracted JSON:', extractError);

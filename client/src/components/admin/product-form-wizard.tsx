@@ -356,6 +356,14 @@ export default function ProductFormWizard({ productId, onSuccess }: ProductFormW
           }
         }
         break;
+      // Display market research data in a toast notification
+      case 'marketResearch':
+        toast({
+          title: "Market Research",
+          description: value,
+          duration: 10000, // Show for 10 seconds
+        });
+        break;
     }
   };
 

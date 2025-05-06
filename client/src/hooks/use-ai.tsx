@@ -10,6 +10,7 @@ export interface ProductAnalysisData {
   suggestedTags?: string[];
   suggestedCostPrice?: number;
   suggestedPrice?: number;
+  marketResearch?: string;
 }
 
 export interface PriceSuggestionData {
