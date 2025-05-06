@@ -66,8 +66,10 @@ export function AiAnalysisStep({ form, productId }: AiAnalysisStepProps) {
     try {
       const suggestedTags = await generateTags({
         imageUrl: selectedImageUrl,
-        productName: currentName,
-        productDescription: currentDescription
+        productInfo: {
+          name: currentName,
+          description: currentDescription
+        }
       });
       
       if (suggestedTags && suggestedTags.length > 0) {
