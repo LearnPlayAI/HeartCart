@@ -151,10 +151,15 @@ export const insertOrderItemSchema = createInsertSchema(orderItems).omit({
   id: true,
 });
 
-export const insertProductImageSchema = createInsertSchema(productImages).omit({
-  id: true,
-  createdAt: true,
-});
+export const insertProductImageSchema = createInsertSchema(productImages)
+  .omit({
+    id: true,
+    createdAt: true,
+  })
+  .extend({
+    objectKey: z.string().optional(),
+    bgRemovedObjectKey: z.string().optional(),
+  });
 
 export const insertAiRecommendationSchema = createInsertSchema(aiRecommendations).omit({
   id: true,

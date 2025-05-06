@@ -216,19 +216,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     const productId = parseInt(req.params.productId);
-    const imageData = {
-      ...req.body,
-      productId
-    };
-    
-    // Validate image data
-    const validatedImageData = insertProductImageSchema.parse(imageData);
     
     // If the image has a base64 data URL, store it in object storage
-    if (validatedImageData.url && validatedImageData.url.startsWith('data:')) {
+    if (req.body.url && req.body.url.startsWith('data:')) {
       try {
         // Extract the base64 data and content type
-        const matches = validatedImageData.url.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+        const matches = req.body.url.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
         if (!matches || matches.length !== 3) {
           return res.status(400).json({ message: "Invalid base64 image format" });
         }
@@ -247,26 +240,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await objectStore.uploadFromBytes(objectKey, buffer);
         
         // Generate public URL - since Replit Object Store has predictable URLs
-        const publicUrl = `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co/object-storage/${objectKey}`;
+        const publicUrl = `/object-storage/${objectKey}`;
         
-        // Update the image data with the object store URL
-        validatedImageData.url = publicUrl;
-        validatedImageData.objectKey = objectKey;
+        // Prepare the image data
+        const imageData = {
+          productId,
+          url: publicUrl,
+          objectKey: objectKey,
+          isMain: req.body.isMain || false,
+          alt: req.body.alt || '',
+          bgRemovedUrl: publicUrl,
+          bgRemovedObjectKey: objectKey
+        };
         
-        // If background removed URL is not set, use the original URL
-        if (!validatedImageData.bgRemovedUrl) {
-          validatedImageData.bgRemovedUrl = publicUrl;
-          validatedImageData.bgRemovedObjectKey = objectKey;
-        }
+        // Create the product image record
+        const image = await storage.createProductImage(imageData);
+        return res.status(201).json(image);
       } catch (error) {
         console.error('Error uploading image to object storage:', error);
         return res.status(500).json({ message: "Failed to upload image" });
       }
     }
     
-    // Create the product image record
-    const image = await storage.createProductImage(validatedImageData);
-    res.status(201).json(image);
+    // Handle case where we didn't get a base64 image URL
+    return res.status(400).json({ 
+      message: "Invalid image data", 
+      details: "Please provide an image as a base64 data URL"
+    });
   }));
   
   app.put("/api/products/images/:imageId", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
