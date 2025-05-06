@@ -46,14 +46,14 @@ function DashboardCards() {
   // Fetch product stats
   const { data: productStats, isLoading: isLoadingProducts } = useQuery<{
     total: number;
-    outOfStock: number;
+    availableToOrder: number;
   }>({
     queryKey: ["/api/admin/stats/products"],
     queryFn: async () => {
       // Use dummy data for now, will be replaced with actual API call
       return {
         total: 208,
-        outOfStock: 12
+        availableToOrder: 208
       };
     },
   });
@@ -107,7 +107,7 @@ function DashboardCards() {
     {
       title: "Products",
       value: productStats?.total || 0,
-      description: `${productStats?.outOfStock || 0} out of stock`,
+      description: `${productStats?.availableToOrder || 0} available to order`,
       icon: BarChart,
       iconColor: "text-purple-500",
       iconBg: "bg-purple-100",
