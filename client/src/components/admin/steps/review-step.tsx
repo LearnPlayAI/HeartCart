@@ -14,15 +14,20 @@ import { CheckCircle2, AlertCircle, Tag } from "lucide-react";
 
 interface ReviewStepProps {
   form: UseFormReturn<any>;
+  uploadedImages?: any[];
+  categories?: Category[];
 }
 
-export function ReviewStep({ form }: ReviewStepProps) {
+export function ReviewStep({ form, uploadedImages = [], categories: propCategories }: ReviewStepProps) {
   const formValues = form.getValues();
   
-  // Fetch category info
-  const { data: categories } = useQuery<Category[]>({
+  // Fetch category info if not provided as prop
+  const { data: fetchedCategories } = useQuery<Category[]>({
     queryKey: ["/api/categories"],
+    enabled: !propCategories || propCategories.length === 0
   });
+  
+  const categories = propCategories || fetchedCategories;
   
   const categoryName = categories?.find(c => c.id === formValues.categoryId)?.name || "Unknown";
   
@@ -186,6 +191,36 @@ export function ReviewStep({ form }: ReviewStepProps) {
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">No tags added</p>
+          )}
+        </CardContent>
+      </Card>
+      
+      {/* Product Images */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Product Images</CardTitle>
+          <CardDescription>Images that will be displayed on the product page</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {uploadedImages && uploadedImages.length > 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+              {uploadedImages.map((image: any, index: number) => (
+                <div key={index} className="relative group aspect-square rounded-md overflow-hidden border">
+                  <img 
+                    src={image.url} 
+                    alt={`Product image ${index + 1}`}
+                    className="h-full w-full object-cover transition-all"
+                  />
+                  {image.isMain && (
+                    <div className="absolute top-1.5 left-1.5">
+                      <Badge variant="default" className="bg-pink-500">Main</Badge>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">No images uploaded</p>
           )}
         </CardContent>
       </Card>

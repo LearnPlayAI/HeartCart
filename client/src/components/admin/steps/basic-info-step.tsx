@@ -20,7 +20,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useQuery } from "@tanstack/react-query";
 import { Category } from "@shared/schema";
 import { Loader2 } from "lucide-react";
-import slugify from "@/lib/slugify";
+import { slugify } from "@/lib/slugify";
 
 interface BasicInfoStepProps {
   form: UseFormReturn<any>;

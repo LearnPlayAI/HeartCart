@@ -15,7 +15,7 @@ import { AtSign, KeyRound, User, ShoppingBag } from "lucide-react";
 
 // Define the login form schema
 const loginSchema = z.object({
-  email: z.string().email("Please enter a valid email address"),
+  username: z.string().min(3, "Username must be at least 3 characters"),
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
@@ -52,7 +52,7 @@ export default function AuthPage() {
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: "",
+      username: "",
       password: "",
     },
   });
@@ -148,18 +148,17 @@ export default function AuthPage() {
                     >
                       <FormField
                         control={loginForm.control}
-                        name="email"
+                        name="username"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Email</FormLabel>
+                            <FormLabel>Username</FormLabel>
                             <FormControl>
                               <div className="relative">
                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                                  <AtSign size={16} />
+                                  <User size={16} />
                                 </span>
                                 <Input
-                                  type="email"
-                                  placeholder="Enter your email address"
+                                  placeholder="Enter your username"
                                   className="pl-10"
                                   {...field}
                                 />
