@@ -9,8 +9,12 @@ import type { Product } from '@shared/schema';
 
 const FlashDealsSection = () => {
   // Set end time for the flash deals - 5 hours from now
-  const endTime = new Date();
-  endTime.setHours(endTime.getHours() + 5);
+  // Using React.useMemo to prevent creating a new date on every render
+  const endTime = React.useMemo(() => {
+    const date = new Date();
+    date.setHours(date.getHours() + 5);
+    return date;
+  }, []);
   
   const { timeRemaining, formattedTime } = useCountdown(endTime);
   
@@ -46,14 +50,22 @@ const FlashDealsSection = () => {
               </Card>
             ))
           ) : (
-            flashDeals?.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                isFlashDeal={true}
-                soldPercentage={Math.floor(Math.random() * 100)} // This would come from the product data in a real app
-              />
-            ))
+            flashDeals?.map((product) => {
+              // Using product ID for deterministic soldPercentage to avoid re-renders 
+              const soldPercentage = React.useMemo(() => {
+                // Using product.id to generate a consistent sold percentage for a product
+                return Math.floor((product.id * 17) % 100);
+              }, [product.id]);
+              
+              return (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  isFlashDeal={true}
+                  soldPercentage={soldPercentage}
+                />
+              );
+            })
           )}
         </div>
       </div>
