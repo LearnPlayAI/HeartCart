@@ -12,7 +12,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 type Catalog = {
   id: number;
   name: string;
-  supplierId: string;
+  supplierId: number; // Changed from string to number to match form schema
   description: string;
   isActive: boolean;
   startDate: Date;

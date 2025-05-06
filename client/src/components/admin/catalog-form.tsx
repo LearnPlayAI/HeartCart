@@ -122,8 +122,8 @@ export function CatalogForm({
               <FormItem>
                 <FormLabel>Supplier *</FormLabel>
                 <Select 
-                  onValueChange={field.onChange} 
-                  defaultValue={field.value}
+                  onValueChange={(value) => field.onChange(parseInt(value, 10))}
+                  defaultValue={field.value ? field.value.toString() : undefined}
                   disabled={isSuppliersLoading}
                 >
                   <FormControl>
