@@ -84,10 +84,31 @@ export default function ImagesBasicInfoStep({
       
       const data = await res.json();
       
-      if (Array.isArray(data)) {
+      if (!productId && data.success && data.file) {
+        // Handle temp file upload response
+        const tempImage = {
+          id: Date.now(), // Temporary ID until we create the product
+          url: data.file.path,
+          alt: '',
+          isMain: false,
+          isTemp: true,
+          file: data.file
+        };
+        setUploadedImages(prev => [...prev, tempImage]);
+      } else if (Array.isArray(data)) {
+        // Handle multiple images from existing product
         setUploadedImages(prev => [...prev, ...data]);
-      } else {
+      } else if (data.id) {
+        // Handle single image from existing product
         setUploadedImages(prev => [...prev, data]);
+      } else {
+        // Fallback for unexpected response
+        console.error('Unexpected image upload response:', data);
+        toast({
+          title: "Upload Response Issue",
+          description: "Received unexpected response format from server",
+          variant: "destructive",
+        });
       }
     } catch (error: any) {
       toast({

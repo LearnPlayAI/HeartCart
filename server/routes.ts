@@ -14,10 +14,39 @@ import {
 } from "@shared/schema";
 import { Client as ObjectStorageClient } from "@replit/object-storage";
 import { setupAuth } from "./auth";
+import multer from "multer";
+import path from "path";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize object store for file uploads
   const objectStore = new ObjectStorageClient();
+  
+  // Set up multer storage for temporary file uploads
+  const tempStorage = multer.diskStorage({
+    destination: function (req, file, cb) {
+      cb(null, path.join(process.cwd(), 'temp'));
+    },
+    filename: function (req, file, cb) {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      const ext = path.extname(file.originalname);
+      cb(null, file.fieldname + '-' + uniqueSuffix + ext);
+    }
+  });
+  
+  const upload = multer({ 
+    storage: tempStorage,
+    limits: {
+      fileSize: 5 * 1024 * 1024, // 5MB limit
+    },
+    fileFilter: (req, file, cb) => {
+      // Accept only images
+      if (file.mimetype.startsWith('image/')) {
+        cb(null, true);
+      } else {
+        cb(null, false);
+      }
+    }
+  });
   
   // Set up authentication with our new auth module
   setupAuth(app);
@@ -203,6 +232,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }));
   
   // PRODUCT IMAGE ROUTES
+  
+  // Temporary image upload endpoint for product creation
+  app.post('/api/products/images/temp', isAuthenticated, upload.single('image'), (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can upload images" });
+    }
+    
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+    
+    // Return information about the uploaded file
+    return res.status(200).json({
+      success: true,
+      file: {
+        filename: req.file.filename,
+        originalname: req.file.originalname,
+        mimetype: req.file.mimetype,
+        size: req.file.size,
+        path: `/temp/${req.file.filename}` // Path to access the file
+      }
+    });
+  });
+  
+  // Serve temporary files
+  app.get('/temp/:filename', (req: Request, res: Response) => {
+    const filename = req.params.filename;
+    const filePath = path.join(process.cwd(), 'temp', filename);
+    
+    // Send the file
+    res.sendFile(filePath, (err) => {
+      if (err) {
+        console.error('Error serving temp file:', err);
+        res.status(404).send('File not found');
+      }
+    });
+  });
+  
   app.get("/api/products/:productId/images", handleErrors(async (req: Request, res: Response) => {
     const productId = parseInt(req.params.productId);
     const images = await storage.getProductImages(productId);
