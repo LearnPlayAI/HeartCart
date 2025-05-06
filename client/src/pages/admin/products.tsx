@@ -283,7 +283,7 @@ export default function AdminProducts() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {categories?.map((category) => (
+                                {categories?.map((category: { id: number; name: string }) => (
                                   <SelectItem key={category.id} value={category.id.toString()}>
                                     {category.name}
                                   </SelectItem>
@@ -368,7 +368,7 @@ export default function AdminProducts() {
                             <FormItem>
                               <FormLabel>Brand</FormLabel>
                               <FormControl>
-                                <Input placeholder="Brand name" {...field} />
+                                <Input placeholder="Brand name" {...field} value={field.value || ''} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -551,7 +551,7 @@ export default function AdminProducts() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Categories</SelectItem>
-              {categories?.map((category) => (
+              {categories?.map((category: { id: number; name: string }) => (
                 <SelectItem key={category.id} value={category.id.toString()}>
                   {category.name}
                 </SelectItem>
