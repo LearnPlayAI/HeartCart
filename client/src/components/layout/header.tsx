@@ -117,7 +117,7 @@ const Header = () => {
                       <>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem asChild>
-                          <Link href="/admin/dashboard" className="cursor-pointer text-[#FF69B4] font-medium flex items-center">
+                          <Link href="/admin" className="cursor-pointer text-[#FF69B4] font-medium flex items-center">
                             <LayoutDashboard className="h-4 w-4 mr-2" />
                             Admin Dashboard
                           </Link>
@@ -206,7 +206,7 @@ const Header = () => {
           {/* Admin Dashboard direct link in main navigation */}
           {user?.role === 'admin' && (
             <Link 
-              href="/admin/dashboard" 
+              href="/admin" 
               className="px-4 py-1 font-medium text-sm bg-white text-[#FF69B4] rounded-full mx-1 transition-colors duration-200 flex items-center"
             >
               <LayoutDashboard className="h-3 w-3 mr-1" />
