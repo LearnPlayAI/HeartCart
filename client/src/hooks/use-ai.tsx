@@ -29,12 +29,16 @@ export function useProductAnalysis({ onSuccess, onError }: UseProductAnalysisOpt
   const [error, setError] = useState<Error | null>(null);
   const [productAnalysisData, setProductAnalysisData] = useState<ProductAnalysisData | null>(null);
 
-  const analyzeProduct = async ({ imageUrl }: { imageUrl: string }) => {
+  const analyzeProduct = async ({ imageUrl, productName }: { imageUrl: string; productName: string }) => {
     try {
       setIsProcessing(true);
       setError(null);
 
-      const response = await apiRequest('POST', '/api/ai/analyze-product', { imageUrl });
+      if (!productName) {
+        throw new Error('Product name is required for analysis');
+      }
+
+      const response = await apiRequest('POST', '/api/ai/analyze-product', { imageUrl, productName });
       
       if (!response.ok) {
         const errorData = await response.json();

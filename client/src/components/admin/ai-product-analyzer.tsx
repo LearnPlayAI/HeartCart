@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 
 interface AiProductAnalyzerProps {
   imageUrl: string;
+  productName: string;
   onApplyChanges: (changes: {
     name?: string;
     description?: string;
@@ -17,7 +18,7 @@ interface AiProductAnalyzerProps {
   }) => void;
 }
 
-export function AiProductAnalyzer({ imageUrl, onApplyChanges }: AiProductAnalyzerProps) {
+export function AiProductAnalyzer({ imageUrl, productName, onApplyChanges }: AiProductAnalyzerProps) {
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [selectedFields, setSelectedFields] = useState<{
     name: boolean;
@@ -44,8 +45,8 @@ export function AiProductAnalyzer({ imageUrl, onApplyChanges }: AiProductAnalyze
   });
 
   const handleAnalyze = () => {
-    if (imageUrl) {
-      analyzeProduct({ imageUrl });
+    if (imageUrl && productName) {
+      analyzeProduct({ imageUrl, productName });
     }
   };
 
@@ -89,6 +90,14 @@ export function AiProductAnalyzer({ imageUrl, onApplyChanges }: AiProductAnalyze
     return (
       <div className="text-center p-4 border border-zinc-200 dark:border-zinc-800 rounded-lg bg-zinc-50 dark:bg-zinc-900">
         <p className="text-zinc-500 dark:text-zinc-400">Upload an image first to use AI features</p>
+      </div>
+    );
+  }
+  
+  if (!productName) {
+    return (
+      <div className="text-center p-4 border border-zinc-200 dark:border-zinc-800 rounded-lg bg-zinc-50 dark:bg-zinc-900">
+        <p className="text-zinc-500 dark:text-zinc-400">Enter a product name first to use AI features</p>
       </div>
     );
   }

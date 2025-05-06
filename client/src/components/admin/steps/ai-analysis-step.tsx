@@ -82,9 +82,20 @@ export function AiAnalysisStep({ form, productId }: AiAnalysisStepProps) {
   const handleAnalyzeProduct = async () => {
     if (!selectedImageUrl) return;
     
+    // Get the current product name from the form
+    const currentName = getValues("name");
+    
+    // Check if product name exists
+    if (!currentName) {
+      // Show an error or alert that product name is required
+      alert("Please enter a product name before analyzing with AI");
+      return;
+    }
+    
     try {
       const analysis = await analyzeProduct({
-        imageUrl: selectedImageUrl
+        imageUrl: selectedImageUrl,
+        productName: currentName
       });
       
       if (analysis) {
