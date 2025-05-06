@@ -40,7 +40,7 @@ import { Product } from "@shared/schema";
 
 export default function AdminProducts() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
 
@@ -62,7 +62,7 @@ export default function AdminProducts() {
       const params = new URLSearchParams();
       
       if (searchTerm) params.append("search", searchTerm);
-      if (categoryFilter) params.append("category", categoryFilter);
+      if (categoryFilter && categoryFilter !== "all") params.append("category", categoryFilter);
       
       if (params.toString()) url += `?${params.toString()}`;
       
@@ -137,7 +137,7 @@ export default function AdminProducts() {
               <SelectValue placeholder="All Categories" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Categories</SelectItem>
+              <SelectItem value="all">All Categories</SelectItem>
               {categories?.map((category) => (
                 <SelectItem key={category.id} value={category.id.toString()}>
                   {category.name}
