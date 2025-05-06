@@ -47,15 +47,15 @@ import {
 import { Link, useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
-// Placeholder supplier type until we connect to the backend
+// Supplier type definition
 type Supplier = {
   id: number;
   name: string;
   email: string;
   phone: string;
-  contactPerson: string;
+  contactName: string; // Changed from contactPerson to match database schema
   isActive: boolean;
-  productsCount: number;
+  productsCount?: number; // Optional since database doesn't store this directly
   createdAt: string;
 };
 
@@ -184,7 +184,7 @@ export default function AdminSuppliers() {
                         {supplier.name}
                       </div>
                     </TableCell>
-                    <TableCell>{supplier.contactPerson}</TableCell>
+                    <TableCell>{supplier.contactName}</TableCell>
                     <TableCell>{supplier.email}</TableCell>
                     <TableCell>{supplier.phone}</TableCell>
                     <TableCell>{supplier.productsCount}</TableCell>

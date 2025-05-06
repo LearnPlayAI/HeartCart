@@ -14,9 +14,9 @@ type Supplier = {
   name: string;
   email: string;
   phone: string;
-  contactPerson: string;
+  contactName: string; // Changed from contactPerson to match database schema
   address?: string;
-  description?: string;
+  notes?: string; // Changed from description to match database schema
   website?: string;
   isActive: boolean;
 };
