@@ -99,11 +99,12 @@ export const productImages = pgTable("product_images", {
   id: serial("id").primaryKey(),
   productId: integer("product_id").references(() => products.id),
   url: text("url").notNull(),
-  objectKey: text("object_key").notNull(),
+  objectKey: text("object_key"),  // Make nullable for temporary uploads
   isMain: boolean("is_main").default(false),
   hasBgRemoved: boolean("has_bg_removed").default(false),
   bgRemovedUrl: text("bg_removed_url"),
   bgRemovedObjectKey: text("bg_removed_object_key"),
+  alt: text("alt"),
   sortOrder: integer("sort_order").default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
