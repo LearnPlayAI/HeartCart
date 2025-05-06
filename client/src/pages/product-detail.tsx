@@ -135,8 +135,8 @@ const ProductDetail = () => {
       if (matchingCombination) {
         // Calculate adjusted price
         const basePrice = product.salePrice || product.price;
-        const priceAdjustment = matchingCombination.priceAdjustment || 0;
-        const adjustedPrice = basePrice + priceAdjustment;
+        const priceAdjustment = matchingCombination.priceAdjustment ? Number(matchingCombination.priceAdjustment) : 0;
+        const adjustedPrice = Number(basePrice) + priceAdjustment;
         
         setCurrentPrice(adjustedPrice);
         setSelectedCombination(matchingCombination);
@@ -309,7 +309,7 @@ const ProductDetail = () => {
                       <SelectContent>
                         {productAttributes[attribute.id]?.map(option => (
                           <SelectItem key={option.id} value={option.value}>
-                            {option.label || option.value}
+                            {option.displayValue || option.value}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -324,9 +324,9 @@ const ProductDetail = () => {
                       <span className="font-bold text-green-700">{formatCurrency(currentPrice)}</span>
                     </div>
                     
-                    {selectedCombination && selectedCombination.priceAdjustment > 0 && (
+                    {selectedCombination && typeof selectedCombination.priceAdjustment === 'number' && selectedCombination.priceAdjustment > 0 && (
                       <p className="text-xs text-green-600 mt-1">
-                        Includes {formatCurrency(selectedCombination.priceAdjustment)} for selected options
+                        Includes {formatCurrency(Number(selectedCombination.priceAdjustment))} for selected options
                       </p>
                     )}
                   </div>
