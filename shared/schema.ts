@@ -54,6 +54,10 @@ export const products = pgTable("products", {
   flashDealEnd: timestamp("flash_deal_end"),
   soldCount: integer("sold_count").default(0),
   supplier: text("supplier"),
+  freeShipping: boolean("free_shipping").default(false),
+  weight: doublePrecision("weight"), // in kg
+  dimensions: text("dimensions"), // format: "LxWxH" in cm
+  brand: text("brand"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

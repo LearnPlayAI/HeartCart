@@ -182,7 +182,11 @@ const Header = () => {
       <nav className="bg-[#FF69B4] text-white overflow-x-auto scrollbar-none">
         <div className="container mx-auto flex whitespace-nowrap py-2 px-4">
           <Link href="/" className="px-4 py-1 font-medium text-sm hover:bg-white hover:text-[#FF69B4] rounded-full mx-1 transition-colors duration-200">
-            All
+            Home
+          </Link>
+          
+          <Link href="/products" className="px-4 py-1 font-medium text-sm hover:bg-white hover:text-[#FF69B4] rounded-full mx-1 transition-colors duration-200">
+            All Products
           </Link>
           
           {categories?.map((category) => (

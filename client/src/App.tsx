@@ -9,6 +9,7 @@ import Footer from "@/components/layout/footer";
 import Home from "@/pages/home";
 import ProductDetail from "@/pages/product-detail";
 import Category from "@/pages/category";
+import ProductListing from "@/pages/product-listing";
 import Checkout from "@/pages/checkout";
 import SearchResults from "@/pages/search-results";
 import Profile from "@/pages/profile-fix";
@@ -97,6 +98,7 @@ function App() {
                       <Route path="/"><Home /></Route>
                       <Route path="/product/:slug"><ProductDetail /></Route>
                       <Route path="/category/:slug"><Category /></Route>
+                      <Route path="/products"><ProductListing /></Route>
                       <ProtectedRoute path="/checkout" component={Checkout} />
                       <Route path="/search"><SearchResults /></Route>
                       <ProtectedRoute path="/profile" component={Profile} />

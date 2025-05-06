@@ -1,0 +1,39 @@
+Continue building our South African Temu.com clone (TeeMeYou) by implementing the following features:
+
+1. PAYMENT GATEWAY INTEGRATION:
+   - Implement a PayFast payment gateway integration for South African customers
+   - Create payment processing workflow with checkout, confirmation, and success/failure pages
+   - Handle payment notifications and order status updates
+   - Implement basic payment security measures (CSRF protection, payment validation)
+
+2. PRODUCT LISTING & FILTERING:
+   - Create responsive product listing pages with card-based layouts
+   - Implement sorting options (price, popularity, newest)
+   - Add filtering by category, price range, rating, and availability
+   - Include "Add to Cart" functionality directly from listings
+
+3. USER PROFILE & ORDER HISTORY:
+   - Enhance user profile page with order history, saved addresses
+   - Allow users to track order status with visual progress indicators
+   - Enable order cancellation (before shipping)
+   - Implement address management (add, edit, delete shipping addresses)
+
+4. WISHLIST & FAVORITES:
+   - Create wishlist functionality with add/remove capabilities
+   - Implement persistent storage of wishlist items for logged-in users
+   - Add notifications for price drops on wishlist items
+   - Enable sharing wishlist via social media or link
+
+5. SEARCH OPTIMIZATION:
+   - Implement advanced search with auto-suggestions
+   - Add fuzzy search capabilities to handle spelling mistakes
+   - Create search filters (category, price range, availability)
+   - Implement search analytics to track popular search terms
+
+6. LOCALIZATION FOR SOUTH AFRICA:
+   - Add support for South African currency (ZAR)
+   - Implement South African shipping options (TheCourierGuy, PUDO)
+   - Create content relevant to South African shoppers
+   - Add localized product recommendations
+
+Ensure all features follow our established patterns: mobile-first responsive design, hot pink (#FF69B4) primary color, card-based layouts instead of tables, and appropriate security measures. The application should maintain PWA capabilities and optimize performance for South African users on mobile networks.
