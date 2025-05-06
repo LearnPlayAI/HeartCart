@@ -86,9 +86,16 @@ export function CatalogForm({
 
   useEffect(() => {
     if (initialData) {
+      // Convert ISO string dates to Date objects when setting form values
       Object.entries(initialData).forEach(([key, value]) => {
         if (value !== undefined) {
-          form.setValue(key as keyof CatalogFormValues, value as any);
+          // Handle date fields specifically
+          if (key === 'startDate' || key === 'endDate') {
+            const dateValue = value ? new Date(value as string) : (key === 'startDate' ? new Date() : null);
+            form.setValue(key as keyof CatalogFormValues, dateValue as any);
+          } else {
+            form.setValue(key as keyof CatalogFormValues, value as any);
+          }
         }
       });
     }
