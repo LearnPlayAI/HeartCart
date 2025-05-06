@@ -559,7 +559,7 @@ export default function CategoryAttributes() {
                   <CardHeader>
                     <CardTitle>Attribute Options</CardTitle>
                     <CardDescription>
-                      Manage options for {currentAttribute?.display_name || 'this attribute'}
+                      Manage options for {currentAttribute?.displayName || 'this attribute'}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -591,8 +591,8 @@ export default function CategoryAttributes() {
                                 options?.map((option: CategoryAttributeOption) => (
                                   <tr key={option.id} className="border-t">
                                     <td className="p-3">{option.value}</td>
-                                    <td className="p-3">{option.display_value}</td>
-                                    <td className="p-3">{option.sort_order}</td>
+                                    <td className="p-3">{option.displayValue}</td>
+                                    <td className="p-3">{option.sortOrder}</td>
                                     <td className="p-3 text-right">
                                       <Button
                                         variant="ghost"
@@ -631,10 +631,10 @@ export default function CategoryAttributes() {
                               <Input 
                                 id="option_display"
                                 placeholder="Customer-facing value"
-                                value={newOption.display_value}
+                                value={newOption.displayValue}
                                 onChange={(e) => setNewOption({
                                   ...newOption,
-                                  display_value: e.target.value
+                                  displayValue: e.target.value
                                 })}
                               />
                             </div>
@@ -643,10 +643,10 @@ export default function CategoryAttributes() {
                               <Input 
                                 id="option_order"
                                 type="number"
-                                value={newOption.sort_order.toString()}
+                                value={newOption.sortOrder.toString()}
                                 onChange={(e) => setNewOption({
                                   ...newOption,
-                                  sort_order: parseInt(e.target.value) || 0
+                                  sortOrder: parseInt(e.target.value) || 0
                                 })}
                               />
                             </div>
