@@ -31,7 +31,7 @@ const CategoryPage = () => {
   const [priceRange, setPriceRange] = useState([0, 2000]);
   const [filters, setFilters] = useState({
     onSale: false,
-    inStock: false,
+    freeShipping: false,
   });
   
   const { data: category, isLoading: isLoadingCategory } = useQuery<Category>({
@@ -75,8 +75,7 @@ const CategoryPage = () => {
       // Apply sale filter
       if (filters.onSale && !product.salePrice) return false;
       
-      // Apply stock filter
-      if (filters.inStock && (!product.stock || product.stock <= 0)) return false;
+      // All products are available from suppliers
       
       return true;
     })
@@ -232,17 +231,17 @@ const CategoryPage = () => {
                     
                     <div className="flex items-center space-x-2">
                       <Checkbox 
-                        id="inStock" 
-                        checked={filters.inStock}
+                        id="freeShipping" 
+                        checked={filters.freeShipping}
                         onCheckedChange={checked => 
-                          handleFilterChange('inStock', checked as boolean)
+                          handleFilterChange('freeShipping', checked as boolean)
                         }
                       />
                       <label 
-                        htmlFor="inStock"
+                        htmlFor="freeShipping"
                         className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                       >
-                        In Stock
+                        Free Shipping
                       </label>
                     </div>
                   </div>
