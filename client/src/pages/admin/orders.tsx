@@ -311,7 +311,7 @@ function OrderDetails({ order }: { order: OrderWithItems }) {
  */
 export default function AdminOrders() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [selectedOrder, setSelectedOrder] = useState<OrderWithItems | null>(null);
@@ -334,7 +334,7 @@ export default function AdminOrders() {
       (order.user?.username || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       (order.user?.email || "").toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesStatus = statusFilter === "" || order.status === statusFilter;
+    const matchesStatus = statusFilter === "all" || order.status === statusFilter;
     
     return matchesSearch && matchesStatus;
   });
@@ -381,7 +381,7 @@ export default function AdminOrders() {
               <SelectValue placeholder="All Statuses" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Statuses</SelectItem>
+              <SelectItem value="all">All Statuses</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>
               <SelectItem value="processing">Processing</SelectItem>
               <SelectItem value="shipped">Shipped</SelectItem>
