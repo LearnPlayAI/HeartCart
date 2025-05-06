@@ -1,35 +1,49 @@
--- Create suppliers table
-CREATE TABLE IF NOT EXISTS suppliers (
-  id SERIAL PRIMARY KEY,
-  name VARCHAR(255) NOT NULL,
-  contact_name VARCHAR(255),
-  email VARCHAR(255),
-  phone VARCHAR(50),
-  address TEXT,
-  city VARCHAR(100),
-  country VARCHAR(100) DEFAULT 'South Africa',
-  notes TEXT,
-  logo TEXT,
-  website VARCHAR(255),
-  is_active BOOLEAN DEFAULT TRUE NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+-- Create category_attributes table
+CREATE TABLE IF NOT EXISTS "category_attributes" (
+  "id" SERIAL PRIMARY KEY,
+  "category_id" INTEGER NOT NULL REFERENCES "categories"("id"),
+  "name" VARCHAR(100) NOT NULL,
+  "display_name" VARCHAR(100) NOT NULL,
+  "description" TEXT,
+  "attribute_type" VARCHAR(50) NOT NULL,
+  "is_required" BOOLEAN DEFAULT FALSE,
+  "sort_order" INTEGER DEFAULT 0,
+  "created_at" TIMESTAMP DEFAULT NOW() NOT NULL,
+  "updated_at" TIMESTAMP DEFAULT NOW() NOT NULL,
+  UNIQUE ("category_id", "name")
 );
 
--- Create catalogs table
-CREATE TABLE IF NOT EXISTS catalogs (
-  id SERIAL PRIMARY KEY,
-  name VARCHAR(255) NOT NULL,
-  description TEXT,
-  supplier_id INTEGER REFERENCES suppliers(id),
-  default_markup_percentage INTEGER DEFAULT 50,
-  is_active BOOLEAN DEFAULT TRUE NOT NULL,
-  cover_image TEXT,
-  tags TEXT[],
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+-- Create category_attribute_options table
+CREATE TABLE IF NOT EXISTS "category_attribute_options" (
+  "id" SERIAL PRIMARY KEY,
+  "attribute_id" INTEGER NOT NULL REFERENCES "category_attributes"("id"),
+  "value" VARCHAR(255) NOT NULL,
+  "display_value" VARCHAR(255) NOT NULL,
+  "sort_order" INTEGER DEFAULT 0,
+  "created_at" TIMESTAMP DEFAULT NOW() NOT NULL,
+  "updated_at" TIMESTAMP DEFAULT NOW() NOT NULL
 );
 
--- Add catalog_id to products table
-ALTER TABLE products 
-ADD COLUMN IF NOT EXISTS catalog_id INTEGER REFERENCES catalogs(id);
+-- Create product_attribute_values table
+CREATE TABLE IF NOT EXISTS "product_attribute_values" (
+  "id" SERIAL PRIMARY KEY,
+  "product_id" INTEGER NOT NULL REFERENCES "products"("id"),
+  "attribute_id" INTEGER NOT NULL REFERENCES "category_attributes"("id"),
+  "value" TEXT NOT NULL,
+  "price_adjustment" DECIMAL(10, 2) DEFAULT 0,
+  "created_at" TIMESTAMP DEFAULT NOW() NOT NULL,
+  "updated_at" TIMESTAMP DEFAULT NOW() NOT NULL,
+  UNIQUE ("product_id", "attribute_id")
+);
+
+-- Create product_attribute_combinations table
+CREATE TABLE IF NOT EXISTS "product_attribute_combinations" (
+  "id" SERIAL PRIMARY KEY,
+  "product_id" INTEGER NOT NULL REFERENCES "products"("id"),
+  "combination_hash" VARCHAR(64) NOT NULL,
+  "price_adjustment" DECIMAL(10, 2) DEFAULT 0,
+  "is_active" BOOLEAN DEFAULT TRUE,
+  "created_at" TIMESTAMP DEFAULT NOW() NOT NULL,
+  "updated_at" TIMESTAMP DEFAULT NOW() NOT NULL,
+  UNIQUE ("product_id", "combination_hash")
+);
