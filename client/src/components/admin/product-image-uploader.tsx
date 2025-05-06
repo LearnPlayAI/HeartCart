@@ -7,7 +7,7 @@ import { queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { ImageCropModal } from './image-crop-modal';
-import { useImageBackgroundRemoval } from '@/hooks/use-ai';
+import { useProductAnalysis } from '@/hooks/use-ai';
 
 type ProductImageUploaderProps = {
   productId: number;
@@ -30,45 +30,9 @@ const ProductImageUploader = ({ productId, onUploadComplete }: ProductImageUploa
   const [cropModalOpen, setCropModalOpen] = useState(false);
   const [selectedFileIndex, setSelectedFileIndex] = useState<number | null>(null);
   const { toast } = useToast();
-  const { removeBackground, isProcessing: isRemovingBackground } = useImageBackgroundRemoval({
-    onSuccess: (data) => {
-      if (selectedFileIndex === null) return;
-      
-      // Convert the base64 data to a blob
-      const base64Data = data.imageUrl.split(',')[1];
-      const binaryData = atob(base64Data);
-      const array = new Uint8Array(binaryData.length);
-      for (let i = 0; i < binaryData.length; i++) {
-        array[i] = binaryData.charCodeAt(i);
-      }
-      const blob = new Blob([array], { type: 'image/png' });
-      
-      // Create a new file with the processed image
-      const newFile = new File(
-        [blob],
-        files[selectedFileIndex].file.name,
-        { type: 'image/png' }
-      );
-      
-      // Create a new URL for the preview
-      const newPreview = URL.createObjectURL(blob);
-      
-      // Update the file in the list
-      setFiles(prev => {
-        const newFiles = [...prev];
-        // Revoke the old preview URL to avoid memory leaks
-        URL.revokeObjectURL(newFiles[selectedFileIndex].preview);
-        
-        newFiles[selectedFileIndex] = {
-          ...newFiles[selectedFileIndex],
-          file: newFile,
-          preview: newPreview,
-        };
-        return newFiles;
-      });
-      
-      // Clear the selected file index
-      setSelectedFileIndex(null);
+  const { removeBackground, isProcessing: isRemovingBackground } = useProductAnalysis({
+    onSuccess: () => {
+      // We'll handle success in the actual removeBackground call
     }
   });
   
@@ -333,7 +297,46 @@ const ProductImageUploader = ({ productId, onUploadComplete }: ProductImageUploa
                         const reader = new FileReader();
                         reader.onload = () => {
                           if (reader.result) {
-                            removeBackground({ imageUrl: reader.result.toString() });
+                            removeBackground({ imageUrl: reader.result.toString() })
+                              .then(processedImageUrl => {
+                                if (processedImageUrl && selectedFileIndex !== null) {
+                                  // Convert the base64 data to a blob
+                                  const base64Data = processedImageUrl.split(',')[1];
+                                  const binaryData = atob(base64Data);
+                                  const array = new Uint8Array(binaryData.length);
+                                  for (let i = 0; i < binaryData.length; i++) {
+                                    array[i] = binaryData.charCodeAt(i);
+                                  }
+                                  const blob = new Blob([array], { type: 'image/png' });
+                                  
+                                  // Create a new file with the processed image
+                                  const newFile = new File(
+                                    [blob],
+                                    files[selectedFileIndex].file.name,
+                                    { type: 'image/png' }
+                                  );
+                                  
+                                  // Create a new URL for the preview
+                                  const newPreview = URL.createObjectURL(blob);
+                                  
+                                  // Update the file in the list
+                                  setFiles(prev => {
+                                    const newFiles = [...prev];
+                                    // Revoke the old preview URL to avoid memory leaks
+                                    URL.revokeObjectURL(newFiles[selectedFileIndex].preview);
+                                    
+                                    newFiles[selectedFileIndex] = {
+                                      ...newFiles[selectedFileIndex],
+                                      file: newFile,
+                                      preview: newPreview,
+                                    };
+                                    return newFiles;
+                                  });
+                                  
+                                  // Clear the selected file index
+                                  setSelectedFileIndex(null);
+                                }
+                              });
                           }
                         };
                         reader.readAsDataURL(file.file);

@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useRoute, useLocation } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
-import { Loader2, ChevronLeft } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { AdminLayout } from '@/components/admin/layout';
-import ProductForm from '@/components/admin/product-form';
-import { Button } from '@/components/ui/button';
+import ProductFormWizard from '@/components/admin/product-form-wizard';
 import { Product } from '@shared/schema';
 
 export default function ProductEditPage() {
@@ -22,7 +21,7 @@ export default function ProductEditPage() {
   // Fetch product data if editing
   const productId = params?.id && !isNewProduct ? parseInt(params.id, 10) : undefined;
   
-  const { data: product, isLoading } = useQuery<Product>({
+  const { data: product, isLoading } = useQuery({
     queryKey: ['/api/products', productId],
     queryFn: async () => {
       if (!productId) return null;
@@ -46,23 +45,11 @@ export default function ProductEditPage() {
   return (
     <AdminLayout>
       <div className="flex flex-col space-y-6">
-        <div className="flex items-center">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate('/admin/products')}
-            className="mr-4"
-          >
-            <ChevronLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
-          
-          <h2 className="text-2xl font-bold tracking-tight">
-            {isNewProduct ? 'Add Product' : `Edit Product: ${product?.name}`}
-          </h2>
-        </div>
+        <h2 className="text-2xl font-bold tracking-tight">
+          {isNewProduct ? 'Create New Product' : `Edit Product: ${product?.name}`}
+        </h2>
         
-        <ProductForm 
+        <ProductFormWizard 
           productId={productId} 
           onSuccess={() => navigate('/admin/products')}
         />

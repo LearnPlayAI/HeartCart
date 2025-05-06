@@ -1,185 +1,140 @@
 import { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useToast } from './use-toast';
 import { apiRequest } from '@/lib/queryClient';
-import { useToast } from '@/hooks/use-toast';
 
-type UseAIOptions = {
-  onSuccess?: (data: any) => void;
+export interface ProductAnalysisData {
+  suggestedName?: string;
+  suggestedDescription?: string;
+  suggestedCategory?: string;
+  suggestedBrand?: string;
+  suggestedTags?: string[];
+}
+
+interface UseProductAnalysisOptions {
+  onSuccess?: (data: ProductAnalysisData) => void;
   onError?: (error: Error) => void;
 }
 
-export function useImageBackgroundRemoval(options: UseAIOptions = {}) {
+export function useProductAnalysis({ onSuccess, onError }: UseProductAnalysisOptions = {}) {
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
-  
-  const backgroundRemovalMutation = useMutation({
-    mutationFn: async ({
-      imageUrl,
-      productImageId
-    }: {
-      imageUrl: string;
-      productImageId?: number;
-    }) => {
+  const [error, setError] = useState<Error | null>(null);
+  const [productAnalysisData, setProductAnalysisData] = useState<ProductAnalysisData | null>(null);
+
+  const analyzeProduct = async ({ imageUrl }: { imageUrl: string }) => {
+    try {
       setIsProcessing(true);
-      const response = await apiRequest('POST', '/api/ai/remove-background', {
-        imageUrl,
-        productImageId
-      });
-      
-      const data = await response.json();
+      setError(null);
+
+      const response = await apiRequest('POST', '/api/ai/analyze-product', { imageUrl });
       
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to remove background');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to analyze product');
       }
+
+      const data = await response.json();
+      setProductAnalysisData(data);
       
+      if (onSuccess) {
+        onSuccess(data);
+      }
+
       return data;
-    },
-    onSuccess: (data) => {
-      setIsProcessing(false);
-      toast({
-        title: 'Background removed',
-        description: 'Image processed successfully',
-      });
+    } catch (err: any) {
+      const error = err instanceof Error ? err : new Error(err?.message || 'Unknown error');
+      setError(error);
       
-      if (options.onSuccess) {
-        options.onSuccess(data);
-      }
-    },
-    onError: (error: Error) => {
-      setIsProcessing(false);
       toast({
-        title: 'Error',
+        title: 'AI Analysis Failed',
         description: error.message,
         variant: 'destructive',
       });
       
-      if (options.onError) {
-        options.onError(error);
+      if (onError) {
+        onError(error);
       }
-    },
-  });
-
-  return {
-    removeBackground: backgroundRemovalMutation.mutate,
-    isProcessing: isProcessing || backgroundRemovalMutation.isPending,
-    backgroundRemovalError: backgroundRemovalMutation.error,
+      
+      return null;
+    } finally {
+      setIsProcessing(false);
+    }
   };
-}
 
-export function useProductTagGeneration(options: UseAIOptions = {}) {
-  const { toast } = useToast();
-  const [isProcessing, setIsProcessing] = useState(false);
-  
-  const tagGenerationMutation = useMutation({
-    mutationFn: async ({
-      imageUrl,
-      productName,
-      productDescription = ''
-    }: {
-      imageUrl: string;
-      productName: string;
-      productDescription?: string;
-    }) => {
+  const removeBackground = async ({ imageUrl }: { imageUrl: string }) => {
+    try {
       setIsProcessing(true);
-      const response = await apiRequest('POST', '/api/ai/generate-tags', {
-        imageUrl,
-        productName,
-        productDescription
-      });
-      
-      const data = await response.json();
+      setError(null);
+
+      const response = await apiRequest('POST', '/api/ai/remove-background', { imageUrl });
       
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to generate tags');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to remove background');
       }
+
+      const data = await response.json();
+      return data.processedImageUrl;
+    } catch (err: any) {
+      const error = err instanceof Error ? err : new Error(err?.message || 'Unknown error');
+      setError(error);
       
-      return data;
-    },
-    onSuccess: (data) => {
-      setIsProcessing(false);
       toast({
-        title: 'Tags generated',
-        description: `${data.tags.length} tags generated successfully`,
-      });
-      
-      if (options.onSuccess) {
-        options.onSuccess(data);
-      }
-    },
-    onError: (error: Error) => {
-      setIsProcessing(false);
-      toast({
-        title: 'Error',
+        title: 'Background Removal Failed',
         description: error.message,
         variant: 'destructive',
       });
       
-      if (options.onError) {
-        options.onError(error);
+      if (onError) {
+        onError(error);
       }
-    },
-  });
-
-  return {
-    generateTags: tagGenerationMutation.mutate,
-    isProcessing: isProcessing || tagGenerationMutation.isPending,
-    tagGenerationError: tagGenerationMutation.error,
-    tagGenerationData: tagGenerationMutation.data,
+      
+      return null;
+    } finally {
+      setIsProcessing(false);
+    }
   };
-}
 
-export function useProductAnalysis(options: UseAIOptions = {}) {
-  const { toast } = useToast();
-  const [isProcessing, setIsProcessing] = useState(false);
-  
-  const productAnalysisMutation = useMutation({
-    mutationFn: async ({
-      imageUrl,
-    }: {
-      imageUrl: string;
-    }) => {
+  const generateTags = async ({ imageUrl, productInfo }: { imageUrl: string; productInfo?: { name: string; description: string } }) => {
+    try {
       setIsProcessing(true);
-      const response = await apiRequest('POST', '/api/ai/analyze-product', {
-        imageUrl,
-      });
-      
-      const data = await response.json();
+      setError(null);
+
+      const response = await apiRequest('POST', '/api/ai/generate-tags', { imageUrl, productInfo });
       
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to analyze product');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to generate tags');
       }
+
+      const data = await response.json();
+      return data.tags;
+    } catch (err: any) {
+      const error = err instanceof Error ? err : new Error(err?.message || 'Unknown error');
+      setError(error);
       
-      return data;
-    },
-    onSuccess: (data) => {
-      setIsProcessing(false);
       toast({
-        title: 'Product analyzed',
-        description: 'Product details extracted successfully',
-      });
-      
-      if (options.onSuccess) {
-        options.onSuccess(data);
-      }
-    },
-    onError: (error: Error) => {
-      setIsProcessing(false);
-      toast({
-        title: 'Error',
+        title: 'Tag Generation Failed',
         description: error.message,
         variant: 'destructive',
       });
       
-      if (options.onError) {
-        options.onError(error);
+      if (onError) {
+        onError(error);
       }
-    },
-  });
+      
+      return [];
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   return {
-    analyzeProduct: productAnalysisMutation.mutate,
-    isProcessing: isProcessing || productAnalysisMutation.isPending,
-    productAnalysisError: productAnalysisMutation.error,
-    productAnalysisData: productAnalysisMutation.data,
+    analyzeProduct,
+    removeBackground,
+    generateTags,
+    isProcessing,
+    error,
+    productAnalysisData,
   };
 }
