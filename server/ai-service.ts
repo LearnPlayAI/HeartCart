@@ -200,6 +200,8 @@ export async function analyzeProductImage(imageBase64: string): Promise<{
   suggestedCategory?: string;
   suggestedBrand?: string;
   suggestedTags?: string[];
+  suggestedCostPrice?: number; 
+  suggestedPrice?: number;
 }> {
   try {
     let imageData: string;
@@ -244,13 +246,16 @@ export async function analyzeProductImage(imageBase64: string): Promise<{
     
     // Create the generation request
     const result = await geminiProVision.generateContent([
-      `Analyze this product image and provide the following details formatted as JSON:
+      `Analyze this product image and provide the following details formatted as JSON for a South African e-commerce store:
       1. "name": A concise product name (max 10 words)
       2. "description": A detailed product description (max 100 words)
       3. "category": A single likely product category (e.g., Electronics, Clothing, Home Decor, etc.)
       4. "brand": A likely brand name if visible (otherwise leave blank)
       5. "tags": An array of 5-7 relevant tags (each 1-3 words)
+      6. "costPrice": Estimated wholesale/cost price in South African Rand (ZAR)
+      7. "price": Suggested retail price in South African Rand (ZAR) with appropriate markup for the South African market
       
+      Note: For pricing, be realistic for the South African market where the average monthly income is around 25,000 ZAR.
       Format the response as valid JSON only, with no additional text.`,
       { inlineData: { data: imageData, mimeType: 'image/png' } }
     ]);
@@ -268,7 +273,9 @@ export async function analyzeProductImage(imageBase64: string): Promise<{
         suggestedDescription: jsonResponse.description,
         suggestedCategory: jsonResponse.category,
         suggestedBrand: jsonResponse.brand,
-        suggestedTags: jsonResponse.tags
+        suggestedTags: jsonResponse.tags,
+        suggestedCostPrice: jsonResponse.costPrice ? Number(jsonResponse.costPrice) : undefined,
+        suggestedPrice: jsonResponse.price ? Number(jsonResponse.price) : undefined
       };
     } catch (jsonError) {
       // If direct parsing fails, try to extract JSON from the text
@@ -282,7 +289,9 @@ export async function analyzeProductImage(imageBase64: string): Promise<{
             suggestedDescription: extractedJson.description,
             suggestedCategory: extractedJson.category,
             suggestedBrand: extractedJson.brand,
-            suggestedTags: extractedJson.tags
+            suggestedTags: extractedJson.tags,
+            suggestedCostPrice: extractedJson.costPrice ? Number(extractedJson.costPrice) : undefined,
+            suggestedPrice: extractedJson.price ? Number(extractedJson.price) : undefined
           };
         } catch (extractError) {
           console.error('Failed to parse extracted JSON:', extractError);

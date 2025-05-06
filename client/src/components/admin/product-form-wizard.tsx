@@ -259,7 +259,7 @@ export default function ProductFormWizard({ productId, onSuccess }: ProductFormW
     if (!result) return;
     
     // For the images step, validate that at least one image is uploaded
-    if (currentStep === 1 && !productId && uploadedImages.length === 0) {
+    if (currentStep === 0 && !productId && uploadedImages.length === 0) {
       toast({
         title: "Image Required",
         description: "Please upload at least one product image",
@@ -326,6 +326,12 @@ export default function ProductFormWizard({ productId, onSuccess }: ProductFormW
         break;
       case 'suggestedTags':
         form.setValue('tags', value);
+        break;
+      case 'suggestedCostPrice':
+        form.setValue('costPrice', value);
+        break;
+      case 'suggestedPrice':
+        form.setValue('price', value);
         break;
       // Handle category matching
       case 'suggestedCategory':
@@ -437,10 +443,6 @@ export default function ProductFormWizard({ productId, onSuccess }: ProductFormW
             {/* Step content */}
             <div className="mb-6">
               {currentStep === 0 && (
-                <BasicInfoStep form={form} categories={categories || []} />
-              )}
-              
-              {currentStep === 1 && (
                 <ImagesStep 
                   productId={productId}
                   uploadedImages={uploadedImages}
@@ -448,7 +450,7 @@ export default function ProductFormWizard({ productId, onSuccess }: ProductFormW
                 />
               )}
               
-              {currentStep === 2 && (
+              {currentStep === 1 && (
                 <AiAnalysisStep 
                   uploadedImages={uploadedImages}
                   analyzeImagesWithAI={analyzeImagesWithAI}
@@ -458,6 +460,10 @@ export default function ProductFormWizard({ productId, onSuccess }: ProductFormW
                   applyAllAISuggestions={applyAllAISuggestions}
                   form={form}
                 />
+              )}
+              
+              {currentStep === 2 && (
+                <BasicInfoStep form={form} categories={categories || []} />
               )}
               
               {currentStep === 3 && (
