@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { Loader2, Star, StarOff, Trash2, ImageOff, MagicWand } from 'lucide-react';
+import { Loader2, Star, StarOff, Trash2, ImageOff, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ProductImage } from '@shared/schema';
 import { queryClient, apiRequest } from '@/lib/queryClient';
@@ -240,7 +240,7 @@ const ProductImageManager = ({ productId, onBackgroundRemoved }: ProductImageMan
                 {removeBackgroundMutation.isPending ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 ) : (
-                  <MagicWand className="h-4 w-4 mr-2" />
+                  <Sparkles className="h-4 w-4 mr-2" />
                 )}
                 Remove Background
               </Button>

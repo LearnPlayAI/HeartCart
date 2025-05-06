@@ -22,6 +22,7 @@ import AdminDashboard from "@/pages/admin/dashboard";
 import AdminProducts from "@/pages/admin/products";
 import AdminCategories from "@/pages/admin/categories";
 import AdminOrders from "@/pages/admin/orders";
+import ProductEditPage from "@/pages/admin/product-edit";
 
 // Admin-specific protected route
 import { useAuth } from "@/hooks/use-auth";
@@ -86,6 +87,8 @@ function App() {
               {/* Admin Routes - No header/footer */}
               <AdminProtectedRoute path="/admin" component={AdminDashboard} />
               <AdminProtectedRoute path="/admin/products" component={AdminProducts} />
+              <AdminProtectedRoute path="/admin/products/new" component={ProductEditPage} />
+              <AdminProtectedRoute path="/admin/products/:id/edit" component={ProductEditPage} />
               <AdminProtectedRoute path="/admin/categories" component={AdminCategories} />
               <AdminProtectedRoute path="/admin/orders" component={AdminOrders} />
               
