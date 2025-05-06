@@ -1,0 +1,528 @@
+import { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { useLocation } from 'wouter';
+import { Loader2, ChevronLeft, ChevronRight, Save, Check } from 'lucide-react';
+import { queryClient, apiRequest } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
+import { Form } from '@/components/ui/form';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { cn } from '@/lib/utils';
+import { Product, Category, insertProductSchema } from '@shared/schema';
+
+// Import the step components
+import { BasicInfoStep } from './steps/basic-info-step';
+import { ImagesStep } from './steps/images-step';
+import { AiAnalysisStep } from './steps/ai-analysis-step';
+import { DetailsStep } from './steps/details-step';
+import { ReviewStep } from './steps/review-step';
+
+// Define product form schema for validation
+const productFormSchema = z.object({
+  name: z.string().min(1, "Product name is required"),
+  slug: z.string()
+    .min(1, "Slug is required")
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Slug must be lowercase, numbers, and hyphens only"),
+  description: z.string().nullable().optional(),
+  categoryId: z.number({
+    required_error: "Category is required",
+    invalid_type_error: "Please select a category",
+  }),
+  price: z.number().min(0.01, "Price must be greater than 0"),
+  salePrice: z.number().nullable().optional(),
+  stock: z.number().min(0, "Stock cannot be negative"),
+  isActive: z.boolean().default(true),
+  isFeatured: z.boolean().default(false),
+  isFlashDeal: z.boolean().default(false),
+  flashDealEnd: z.date().nullable().optional().refine(
+    (date) => !date || date > new Date(),
+    { message: "Flash deal end time must be in the future" }
+  ),
+  discount: z.number().min(0).max(100).default(0),
+  tags: z.array(z.string()).default([]),
+  freeShipping: z.boolean().default(false),
+  brand: z.string().nullable().optional(),
+  newTag: z.string().optional(), // For handling tag input in the UI
+});
+
+type ProductFormValues = z.infer<typeof productFormSchema>;
+
+type ProductFormWizardProps = {
+  productId?: number;
+  onSuccess?: () => void;
+};
+
+export default function ProductFormWizard({ productId, onSuccess }: ProductFormWizardProps) {
+  const { toast } = useToast();
+  const [, navigate] = useLocation();
+  const [uploadedImages, setUploadedImages] = useState<any[]>([]);
+  const [aiSuggestions, setAiSuggestions] = useState<any | null>(null);
+  const [aiAnalysisLoading, setAiAnalysisLoading] = useState(false);
+
+  // Define the form steps
+  const steps = [
+    { id: 'basic-info', label: 'Basic Info' },
+    { id: 'images', label: 'Images' },
+    { id: 'ai-analysis', label: 'AI Analysis' },
+    { id: 'details', label: 'Additional Details' },
+    { id: 'review', label: 'Review & Submit' }
+  ];
+  
+  const [currentStep, setCurrentStep] = useState(0);
+  
+  // Fetch categories for the dropdown
+  const { data: categories, isLoading: isLoadingCategories } = useQuery({
+    queryKey: ['/api/categories'],
+    queryFn: async () => {
+      const res = await fetch('/api/categories');
+      if (!res.ok) throw new Error('Failed to fetch categories');
+      return res.json() as Promise<Category[]>;
+    }
+  });
+  
+  // Fetch product data if editing
+  const { data: product, isLoading: isLoadingProduct } = useQuery({
+    queryKey: ['/api/products', productId],
+    queryFn: async () => {
+      if (!productId) return null;
+      const res = await fetch(`/api/products/${productId}`);
+      if (!res.ok) throw new Error('Failed to fetch product');
+      return res.json() as Promise<Product>;
+    },
+    enabled: !!productId,
+  });
+  
+  // Form setup
+  const form = useForm<ProductFormValues>({
+    resolver: zodResolver(productFormSchema),
+    defaultValues: {
+      name: '',
+      slug: '',
+      description: '',
+      categoryId: undefined,
+      price: 0,
+      salePrice: null,
+      stock: 0,
+      isActive: true,
+      isFeatured: false,
+      isFlashDeal: false,
+      flashDealEnd: null,
+      discount: 0,
+      tags: [],
+      freeShipping: false,
+      brand: '',
+    },
+  });
+  
+  // Update form values when product data is loaded
+  useEffect(() => {
+    if (product) {
+      form.reset({
+        ...product,
+        // Ensure flashDealEnd is a Date object
+        flashDealEnd: product.flashDealEnd ? new Date(product.flashDealEnd) : null,
+        // Default tags to empty array if undefined
+        tags: product.tags || [],
+      });
+
+      // Skip to the details step for existing products
+      setCurrentStep(3);
+    }
+  }, [product, form]);
+  
+  // Fetch product images if editing
+  useEffect(() => {
+    const fetchProductImages = async () => {
+      if (!productId) return;
+      
+      try {
+        const res = await fetch(`/api/products/${productId}/images`);
+        if (!res.ok) throw new Error('Failed to fetch product images');
+        const images = await res.json();
+        setUploadedImages(images);
+      } catch (error) {
+        console.error('Error fetching product images:', error);
+      }
+    };
+    
+    if (productId) {
+      fetchProductImages();
+    }
+  }, [productId]);
+  
+  // Create product mutation
+  const createMutation = useMutation({
+    mutationFn: async (data: ProductFormValues) => {
+      // Convert flashDealEnd to ISO string if it exists
+      const formattedData = {
+        ...data,
+        flashDealEnd: data.flashDealEnd ? new Date(data.flashDealEnd).toISOString() : null,
+      };
+      
+      delete formattedData.newTag;
+      
+      const res = await apiRequest('POST', '/api/products', formattedData);
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || 'Failed to create product');
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: 'Product created',
+        description: 'The product has been created successfully',
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/products'] });
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        navigate(`/admin/products/${data.id}/edit`);
+      }
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Failed to create product',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  });
+  
+  // Update product mutation
+  const updateMutation = useMutation({
+    mutationFn: async (data: ProductFormValues) => {
+      const formattedData = {
+        ...data,
+        flashDealEnd: data.flashDealEnd ? new Date(data.flashDealEnd).toISOString() : null,
+      };
+      
+      delete formattedData.newTag;
+      
+      const res = await apiRequest('PUT', `/api/products/${productId}`, formattedData);
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || 'Failed to update product');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Product updated',
+        description: 'The product has been updated successfully',
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/products'] });
+      if (onSuccess) {
+        onSuccess();
+      }
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Failed to update product',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  });
+  
+  // Handle form submission
+  const onSubmitProduct = (data: ProductFormValues) => {
+    if (productId) {
+      updateMutation.mutate(data);
+    } else {
+      createMutation.mutate(data);
+    }
+  };
+  
+  // Handle navigation between steps
+  const goToNextStep = async () => {
+    // Validate current step
+    const fieldsToValidate = {
+      0: ['name', 'slug', 'categoryId', 'price', 'stock'],
+      1: [], // Images step doesn't require validation
+      2: [], // AI analysis step doesn't require validation
+      3: ['description'],
+      4: []  // Review step doesn't require validation
+    }[currentStep];
+    
+    const result = await form.trigger(fieldsToValidate as Array<keyof ProductFormValues>);
+    if (!result) return;
+    
+    // For the images step, validate that at least one image is uploaded
+    if (currentStep === 1 && !productId && uploadedImages.length === 0) {
+      toast({
+        title: "Image Required",
+        description: "Please upload at least one product image",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setCurrentStep(prev => Math.min(prev + 1, steps.length - 1));
+  };
+  
+  const goToPreviousStep = () => {
+    setCurrentStep(prev => Math.max(prev - 1, 0));
+  };
+
+  // Handle AI analysis of product images
+  const analyzeImagesWithAI = async () => {
+    if (uploadedImages.length === 0) {
+      toast({
+        title: "No Images Found",
+        description: "Please upload at least one image for AI analysis",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setAiAnalysisLoading(true);
+      // Use the first image for analysis
+      const imageUrl = uploadedImages[0].url;
+      
+      const res = await apiRequest('POST', '/api/ai/analyze-product', { imageUrl });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || 'Failed to analyze product');
+      }
+      
+      const analysis = await res.json();
+      setAiSuggestions(analysis);
+    } catch (error: any) {
+      toast({
+        title: "AI Analysis Failed",
+        description: error.message || "Failed to analyze product images",
+        variant: "destructive"
+      });
+    } finally {
+      setAiAnalysisLoading(false);
+    }
+  };
+
+  // Apply AI suggestions to the form
+  const applyAISuggestion = (key: string, value: any) => {
+    switch (key) {
+      case 'suggestedName':
+        form.setValue('name', value);
+        // Also generate a slug from name
+        form.setValue('slug', value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''));
+        break;
+      case 'suggestedDescription':
+        form.setValue('description', value);
+        break;
+      case 'suggestedBrand':
+        form.setValue('brand', value);
+        break;
+      case 'suggestedTags':
+        form.setValue('tags', value);
+        break;
+      // Handle category matching
+      case 'suggestedCategory':
+        if (categories) {
+          const matchedCategory = categories.find(
+            cat => cat.name.toLowerCase() === value.toLowerCase()
+          );
+          if (matchedCategory) {
+            form.setValue('categoryId', matchedCategory.id);
+          }
+        }
+        break;
+    }
+  };
+
+  const applyAllAISuggestions = () => {
+    if (!aiSuggestions) return;
+    
+    if (aiSuggestions.suggestedName) {
+      applyAISuggestion('suggestedName', aiSuggestions.suggestedName);
+    }
+    if (aiSuggestions.suggestedDescription) {
+      applyAISuggestion('suggestedDescription', aiSuggestions.suggestedDescription);
+    }
+    if (aiSuggestions.suggestedBrand) {
+      applyAISuggestion('suggestedBrand', aiSuggestions.suggestedBrand);
+    }
+    if (aiSuggestions.suggestedCategory) {
+      applyAISuggestion('suggestedCategory', aiSuggestions.suggestedCategory);
+    }
+    if (aiSuggestions.suggestedTags) {
+      applyAISuggestion('suggestedTags', aiSuggestions.suggestedTags);
+    }
+
+    toast({
+      title: "Applied AI Suggestions",
+      description: "All AI suggestions have been applied to the form",
+    });
+  };
+
+  // Loading state
+  const isLoading = isLoadingCategories || isLoadingProduct || 
+                    createMutation.isPending || updateMutation.isPending;
+  
+  return (
+    <Card className="w-full">
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle>{productId ? 'Edit Product' : 'Create New Product'}</CardTitle>
+            <CardDescription>
+              {productId
+                ? 'Update product information and manage images'
+                : 'Add a new product to your store'}
+            </CardDescription>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/admin/products')}
+          >
+            <ChevronLeft className="h-4 w-4 mr-2" />
+            Back to Products
+          </Button>
+        </div>
+      </CardHeader>
+      
+      <CardContent>
+        {/* Step navigation bar */}
+        <nav aria-label="Progress" className="mb-6">
+          <ol role="list" className="flex space-x-2">
+            {steps.map((step, index) => (
+              <li key={step.id} className="flex-1">
+                <div
+                  className={cn(
+                    "group flex flex-col border rounded-md p-2 cursor-pointer",
+                    currentStep === index
+                      ? "border-pink-500 bg-pink-50 dark:bg-pink-900/10"
+                      : index < currentStep
+                      ? "border-green-500/30 bg-green-50 dark:bg-green-900/10"
+                      : "border-gray-200 dark:border-gray-800"
+                  )}
+                  onClick={() => {
+                    // Only allow going back or to completed steps
+                    if (index <= currentStep) {
+                      setCurrentStep(index);
+                    }
+                  }}
+                >
+                  <span className="text-xs font-medium">
+                    Step {index + 1}
+                  </span>
+                  <span className={cn(
+                    "text-sm",
+                    currentStep === index 
+                      ? "text-pink-600 dark:text-pink-400 font-medium" 
+                      : "text-muted-foreground"
+                  )}>
+                    {step.label}
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </nav>
+        
+        <Form {...form}>
+          <form id="product-form">
+            {/* Step content */}
+            <div className="mb-6">
+              {currentStep === 0 && (
+                <BasicInfoStep form={form} categories={categories || []} />
+              )}
+              
+              {currentStep === 1 && (
+                <ImagesStep 
+                  productId={productId}
+                  uploadedImages={uploadedImages}
+                  setUploadedImages={setUploadedImages}
+                />
+              )}
+              
+              {currentStep === 2 && (
+                <AiAnalysisStep 
+                  uploadedImages={uploadedImages}
+                  analyzeImagesWithAI={analyzeImagesWithAI}
+                  aiAnalysisLoading={aiAnalysisLoading}
+                  aiSuggestions={aiSuggestions}
+                  applyAISuggestion={applyAISuggestion}
+                  applyAllAISuggestions={applyAllAISuggestions}
+                  form={form}
+                />
+              )}
+              
+              {currentStep === 3 && (
+                <DetailsStep form={form} />
+              )}
+              
+              {currentStep === 4 && (
+                <ReviewStep 
+                  form={form} 
+                  uploadedImages={uploadedImages}
+                  categories={categories || []}
+                />
+              )}
+            </div>
+          </form>
+        </Form>
+      </CardContent>
+      
+      <CardFooter className="flex justify-between border-t p-4 bg-slate-50 dark:bg-slate-900">
+        {currentStep > 0 && (
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={goToPreviousStep}
+            disabled={isLoading}
+          >
+            <ChevronLeft className="mr-2 h-4 w-4" />
+            Previous
+          </Button>
+        )}
+        
+        {currentStep === 0 && (
+          <Button
+            variant="outline"
+            onClick={() => navigate('/admin/products')}
+          >
+            Cancel
+          </Button>
+        )}
+        
+        <div className="flex-1" />
+        
+        {currentStep < steps.length - 1 ? (
+          <Button 
+            type="button" 
+            onClick={goToNextStep}
+            disabled={isLoading}
+            className="bg-pink-600 hover:bg-pink-700"
+          >
+            Continue
+            <ChevronRight className="ml-2 h-4 w-4" />
+          </Button>
+        ) : (
+          <Button 
+            type="button" 
+            disabled={isLoading}
+            onClick={form.handleSubmit(onSubmitProduct)}
+            className="bg-pink-600 hover:bg-pink-700"
+          >
+            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {productId ? 'Update Product' : 'Create Product'}
+            {!isLoading && <Check className="ml-2 h-4 w-4" />}
+          </Button>
+        )}
+      </CardFooter>
+    </Card>
+  );
+}
