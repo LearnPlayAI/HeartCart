@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
 import sharp from 'sharp';
 import { storage } from './storage';
+import { InsertAiSetting } from '@shared/schema';
 
 // Environment variable validation
 if (!process.env.GEMINI_API_KEY) {
@@ -11,13 +12,54 @@ if (!process.env.GEMINI_API_KEY) {
 // Initialize the Google Generative AI API
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
+// Define available Gemini AI models
+const AVAILABLE_GEMINI_MODELS = [
+  'gemini-1.5-flash',     // Default - fast, cost-effective
+  'gemini-1.5-pro',       // Better quality, more expensive
+  'gemini-pro-vision',    // Legacy model
+  'gemini-pro'            // Text-only model
+];
+
+// Key for storing the current model in database
+const AI_MODEL_SETTING_KEY = 'current_ai_model';
+
+// Get current model setting or use default
+async function getCurrentAiModel(): Promise<string> {
+  try {
+    const modelSetting = await storage.getAiSetting(AI_MODEL_SETTING_KEY);
+    if (modelSetting && AVAILABLE_GEMINI_MODELS.includes(modelSetting.settingValue)) {
+      return modelSetting.settingValue;
+    }
+    return 'gemini-1.5-flash'; // Default model
+  } catch (error) {
+    console.warn('Error fetching AI model setting, using default:', error);
+    return 'gemini-1.5-flash'; // Default model on error
+  }
+}
+
 // Initialize the Gemini Pro Vision model for image tasks
 let geminiProVision: GenerativeModel;
-try {
-  geminiProVision = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-} catch (error) {
-  console.error('Failed to initialize Gemini Pro Vision model:', error);
-  throw error;
+
+// Default initialization with fallback model
+geminiProVision = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+
+// Initialize with the saved model (will be updated in the initialize function)
+initializeGeminiModel().catch(err => {
+  console.error('Error initializing Gemini model:', err);
+});
+
+// Function to initialize the model based on saved settings
+async function initializeGeminiModel() {
+  try {
+    // Get the current model from DB or default to gemini-1.5-flash
+    const currentModel = await getCurrentAiModel();
+    geminiProVision = genAI.getGenerativeModel({ model: currentModel });
+    console.log(`Initialized Gemini AI with model: ${currentModel}`);
+  } catch (error) {
+    console.error('Failed to initialize Gemini model:', error);
+    // We already have the fallback model initialized above
+    console.log('Using default gemini-1.5-flash model');
+  }
 }
 
 /**
@@ -379,6 +421,63 @@ export async function suggestPrice(
       markupPercentage: 0, 
       markupSource: 'cost_price_fallback_on_error' 
     };
+  }
+}
+
+/**
+ * Get a list of all available Gemini AI models
+ */
+export function getAvailableAiModels(): string[] {
+  return [...AVAILABLE_GEMINI_MODELS];
+}
+
+/**
+ * Get currently selected Gemini AI model
+ */
+export async function getCurrentAiModelSetting(): Promise<{ modelName: string, isDefault: boolean }> {
+  const modelName = await getCurrentAiModel();
+  const modelSetting = await storage.getAiSetting(AI_MODEL_SETTING_KEY);
+  
+  return {
+    modelName,
+    isDefault: !modelSetting // If no setting exists, we're using the default
+  };
+}
+
+/**
+ * Update the current AI model and reinitialize services
+ */
+export async function updateAiModel(modelName: string): Promise<boolean> {
+  try {
+    // Verify the model is valid
+    if (!AVAILABLE_GEMINI_MODELS.includes(modelName)) {
+      throw new Error(`Invalid model name: ${modelName}. Available models: ${AVAILABLE_GEMINI_MODELS.join(', ')}`);
+    }
+    
+    // Save to database
+    await storage.saveAiSetting({
+      settingName: AI_MODEL_SETTING_KEY,
+      settingValue: modelName,
+      description: `AI model selected for TeeMeYou AI operations. Selected at ${new Date().toISOString()}`
+    });
+    
+    // Update the current model instance
+    try {
+      geminiProVision = genAI.getGenerativeModel({ model: modelName });
+      console.log(`Successfully updated AI model to: ${modelName}`);
+      return true;
+    } catch (modelError) {
+      console.error(`Error initializing model ${modelName}:`, modelError);
+      
+      // Fallback to default model if the requested model fails
+      geminiProVision = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+      
+      // Still save the requested model to DB - we'll try it again on next restart
+      return false;
+    }
+  } catch (error) {
+    console.error('Failed to update AI model:', error);
+    throw new Error('Failed to update AI model: ' + (error instanceof Error ? error.message : 'Unknown error'));
   }
 }
 
