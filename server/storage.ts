@@ -674,48 +674,132 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Catalog operations
-  async getAllCatalogs(activeOnly = true): Promise<Catalog[]> {
-    if (activeOnly) {
-      return await db
-        .select()
-        .from(catalogs)
-        .where(eq(catalogs.isActive, true))
-        .orderBy(asc(catalogs.name));
-    } else {
-      return await db
-        .select()
-        .from(catalogs)
-        .orderBy(asc(catalogs.name));
-    }
+  async getAllCatalogs(activeOnly = true): Promise<any[]> {
+    // Get catalogs with supplier information
+    const query = activeOnly
+      ? db
+          .select({
+            id: catalogs.id,
+            name: catalogs.name,
+            description: catalogs.description,
+            supplierId: catalogs.supplierId,
+            supplierName: suppliers.name,
+            isActive: catalogs.isActive,
+            defaultMarkupPercentage: catalogs.defaultMarkupPercentage,
+            startDate: catalogs.createdAt,
+            endDate: catalogs.coverImage, // Temporarily using coverImage field for endDate
+            createdAt: catalogs.createdAt
+          })
+          .from(catalogs)
+          .leftJoin(suppliers, eq(catalogs.supplierId, suppliers.id))
+          .where(eq(catalogs.isActive, true))
+          .orderBy(asc(catalogs.name))
+      : db
+          .select({
+            id: catalogs.id,
+            name: catalogs.name,
+            description: catalogs.description,
+            supplierId: catalogs.supplierId,
+            supplierName: suppliers.name,
+            isActive: catalogs.isActive,
+            defaultMarkupPercentage: catalogs.defaultMarkupPercentage,
+            startDate: catalogs.createdAt,
+            endDate: catalogs.coverImage, // Temporarily using coverImage field for endDate
+            createdAt: catalogs.createdAt
+          })
+          .from(catalogs)
+          .leftJoin(suppliers, eq(catalogs.supplierId, suppliers.id))
+          .orderBy(asc(catalogs.name));
+    
+    const catalogData = await query;
+    
+    // Add a placeholder for products count (would need a separate query to get actual count)
+    return catalogData.map(catalog => ({
+      ...catalog,
+      productsCount: 0 // Default to 0 until we implement product count functionality
+    }));
   }
 
-  async getCatalogsBySupplierId(supplierId: number, activeOnly = true): Promise<Catalog[]> {
-    if (activeOnly) {
-      return await db
-        .select()
-        .from(catalogs)
-        .where(
-          and(
-            eq(catalogs.supplierId, supplierId),
-            eq(catalogs.isActive, true)
+  async getCatalogsBySupplierId(supplierId: number, activeOnly = true): Promise<any[]> {
+    // Get catalogs with supplier information
+    const query = activeOnly
+      ? db
+          .select({
+            id: catalogs.id,
+            name: catalogs.name,
+            description: catalogs.description,
+            supplierId: catalogs.supplierId,
+            supplierName: suppliers.name,
+            isActive: catalogs.isActive,
+            defaultMarkupPercentage: catalogs.defaultMarkupPercentage,
+            startDate: catalogs.createdAt,
+            endDate: catalogs.coverImage, // Temporarily using coverImage field for endDate
+            createdAt: catalogs.createdAt
+          })
+          .from(catalogs)
+          .leftJoin(suppliers, eq(catalogs.supplierId, suppliers.id))
+          .where(
+            and(
+              eq(catalogs.supplierId, supplierId),
+              eq(catalogs.isActive, true)
+            )
           )
-        )
-        .orderBy(asc(catalogs.name));
-    } else {
-      return await db
-        .select()
-        .from(catalogs)
-        .where(eq(catalogs.supplierId, supplierId))
-        .orderBy(asc(catalogs.name));
-    }
+          .orderBy(asc(catalogs.name))
+      : db
+          .select({
+            id: catalogs.id,
+            name: catalogs.name,
+            description: catalogs.description,
+            supplierId: catalogs.supplierId,
+            supplierName: suppliers.name,
+            isActive: catalogs.isActive,
+            defaultMarkupPercentage: catalogs.defaultMarkupPercentage,
+            startDate: catalogs.createdAt,
+            endDate: catalogs.coverImage, // Temporarily using coverImage field for endDate
+            createdAt: catalogs.createdAt
+          })
+          .from(catalogs)
+          .leftJoin(suppliers, eq(catalogs.supplierId, suppliers.id))
+          .where(eq(catalogs.supplierId, supplierId))
+          .orderBy(asc(catalogs.name));
+    
+    const catalogData = await query;
+    
+    // Add a placeholder for products count (would need a separate query to get actual count)
+    return catalogData.map(catalog => ({
+      ...catalog,
+      productsCount: 0 // Default to 0 until we implement product count functionality
+    }));
   }
 
-  async getCatalogById(id: number): Promise<Catalog | undefined> {
+  async getCatalogById(id: number): Promise<any | undefined> {
+    // Get catalog with supplier information
     const [catalog] = await db
-      .select()
+      .select({
+        id: catalogs.id,
+        name: catalogs.name,
+        description: catalogs.description,
+        supplierId: catalogs.supplierId,
+        supplierName: suppliers.name,
+        isActive: catalogs.isActive,
+        defaultMarkupPercentage: catalogs.defaultMarkupPercentage,
+        startDate: catalogs.createdAt,
+        endDate: catalogs.coverImage,
+        freeShipping: false, // Placeholder for freeShipping
+        createdAt: catalogs.createdAt,
+        updatedAt: catalogs.updatedAt
+      })
       .from(catalogs)
+      .leftJoin(suppliers, eq(catalogs.supplierId, suppliers.id))
       .where(eq(catalogs.id, id));
-    return catalog;
+
+    if (!catalog) return undefined;
+    
+    // For edit form compatibility, add placeholders for any missing fields
+    return {
+      ...catalog,
+      freeShipping: catalog.freeShipping || false
+    };
   }
 
   async createCatalog(catalog: InsertCatalog): Promise<Catalog> {
