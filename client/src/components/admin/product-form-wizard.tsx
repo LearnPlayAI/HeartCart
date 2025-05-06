@@ -49,7 +49,7 @@ const productFormSchema = z.object({
     { message: "Flash deal end time must be in the future" }
   ),
   discount: z.number().min(0).max(100).default(0),
-  tags: z.array(z.string()).default([]),
+  tags: z.array(z.string()).default([]).optional(),
   freeShipping: z.boolean().default(false),
   brand: z.string().nullable().optional(),
   newTag: z.string().optional(), // For handling tag input in the UI

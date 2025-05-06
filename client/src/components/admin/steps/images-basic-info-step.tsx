@@ -342,10 +342,50 @@ export default function ImagesBasicInfoStep({
                     <FormItem>
                       <FormLabel>Product Name</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter product name" {...field} />
+                        <Input 
+                          placeholder="Enter product name" 
+                          {...field} 
+                          onChange={(e) => {
+                            field.onChange(e);
+                            // Auto-generate slug from product name
+                            const slug = e.target.value
+                              .toLowerCase()
+                              .replace(/\s+/g, '-')
+                              .replace(/[^a-z0-9-]/g, '');
+                            form.setValue('slug', slug);
+                          }}
+                        />
                       </FormControl>
                       <FormDescription>
                         Name should be clear and descriptive
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="slug"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>URL Slug</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="product-url-slug" 
+                          {...field}
+                          onChange={(e) => {
+                            // Ensure slug follows the pattern rules
+                            const value = e.target.value
+                              .toLowerCase()
+                              .replace(/\s+/g, '-')
+                              .replace(/[^a-z0-9-]/g, '');
+                            field.onChange({ ...e, target: { ...e.target, value } });
+                          }}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Used in the product URL (automatically generated from name)
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -494,32 +534,85 @@ export default function ImagesBasicInfoStep({
                 
                 <FormField
                   control={form.control}
+                  name="brand"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Brand</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter product brand" {...field} value={field.value || ''} />
+                      </FormControl>
+                      <FormDescription>
+                        Brand or manufacturer name
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
                   name="tags"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Tags</FormLabel>
                       <FormControl>
-                        <div className="flex flex-wrap gap-2 p-2 border rounded-md bg-background">
-                          {field.value && field.value.length > 0 ? (
-                            field.value.map((tag: string, index: number) => (
-                              <Badge key={index} variant="secondary" className="flex items-center gap-1">
-                                {tag}
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const newTags = [...field.value];
-                                    newTags.splice(index, 1);
+                        <div className="flex flex-col gap-2">
+                          <div className="flex">
+                            <Input
+                              placeholder="Add a tag and press Enter"
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  const target = e.target as HTMLInputElement;
+                                  const value = target.value.trim();
+                                  if (value && (!field.value || !field.value.includes(value))) {
+                                    const newTags = [...(field.value || []), value];
                                     field.onChange(newTags);
-                                  }}
-                                  className="text-xs ml-1"
-                                >
-                                  ×
-                                </button>
-                              </Badge>
-                            ))
-                          ) : (
-                            <div className="text-sm text-muted-foreground">No tags added</div>
-                          )}
+                                    target.value = '';
+                                  }
+                                }
+                              }}
+                              className="flex-1"
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="ml-2"
+                              onClick={() => {
+                                const input = document.querySelector('input[placeholder="Add a tag and press Enter"]') as HTMLInputElement;
+                                const value = input?.value.trim();
+                                if (value && (!field.value || !field.value.includes(value))) {
+                                  const newTags = [...(field.value || []), value];
+                                  field.onChange(newTags);
+                                  if (input) input.value = '';
+                                }
+                              }}
+                            >
+                              Add
+                            </Button>
+                          </div>
+                          <div className="flex flex-wrap gap-2 p-2 border rounded-md bg-background min-h-[40px]">
+                            {field.value && field.value.length > 0 ? (
+                              field.value.map((tag: string, index: number) => (
+                                <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                                  {tag}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const newTags = [...field.value];
+                                      newTags.splice(index, 1);
+                                      field.onChange(newTags);
+                                    }}
+                                    className="text-xs ml-1"
+                                  >
+                                    ×
+                                  </button>
+                                </Badge>
+                              ))
+                            ) : (
+                              <div className="text-sm text-muted-foreground">No tags added</div>
+                            )}
+                          </div>
                         </div>
                       </FormControl>
                       <FormDescription>
