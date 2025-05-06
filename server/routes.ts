@@ -234,27 +234,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // PRODUCT IMAGE ROUTES
   
   // Temporary image upload endpoint for product creation
-  app.post('/api/products/images/temp', isAuthenticated, upload.single('image'), (req: Request, res: Response) => {
+  app.post('/api/products/images/temp', isAuthenticated, upload.array('images'), (req: Request, res: Response) => {
     const user = req.user as any;
     
     if (user.role !== 'admin') {
       return res.status(403).json({ message: "Only administrators can upload images" });
     }
     
-    if (!req.file) {
-      return res.status(400).json({ message: 'No file uploaded' });
+    if (!req.files || !Array.isArray(req.files) || req.files.length === 0) {
+      return res.status(400).json({ message: 'No files uploaded' });
     }
     
-    // Return information about the uploaded file
+    // Return information about the uploaded files
+    const uploadedFiles = Array.isArray(req.files) ? req.files.map(file => ({
+      filename: file.filename,
+      originalname: file.originalname,
+      mimetype: file.mimetype,
+      size: file.size,
+      path: `/temp/${file.filename}` // Path to access the file
+    })) : [];
+    
     return res.status(200).json({
       success: true,
-      file: {
-        filename: req.file.filename,
-        originalname: req.file.originalname,
-        mimetype: req.file.mimetype,
-        size: req.file.size,
-        path: `/temp/${req.file.filename}` // Path to access the file
-      }
+      files: uploadedFiles
     });
   });
   
