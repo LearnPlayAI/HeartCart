@@ -753,6 +753,7 @@ export default function ProductForm({ productId, onSuccess }: ProductFormProps) 
                       
                       <AiProductAnalyzer
                         imageUrl={product?.imageUrl || ''}
+                        productName={form.getValues('name') || ''}
                         onApplyChanges={(changes) => {
                           if (changes.name) {
                             form.setValue('name', changes.name);
