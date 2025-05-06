@@ -7,6 +7,7 @@ import { useLocation } from 'wouter';
 import { Loader2, ChevronLeft, ChevronRight, Save, Check } from 'lucide-react';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { useProductAnalysis } from '@/hooks/use-ai';
 import { Button } from '@/components/ui/button';
 import { Form } from '@/components/ui/form';
 import {
@@ -344,6 +345,26 @@ export default function ProductFormWizard({ productId, onSuccess }: ProductFormW
     }
   };
 
+  // Initialize the price suggestion hook
+  const { suggestPrice } = useProductAnalysis({
+    onSuccess: (data) => {
+      if (data.suggestedPrice) {
+        form.setValue('price', data.suggestedPrice);
+        toast({
+          title: "Price Suggested",
+          description: `AI suggested a selling price of R${data.suggestedPrice.toFixed(2)}`,
+        });
+      }
+    },
+    onError: (error) => {
+      toast({
+        title: "Price Suggestion Failed",
+        description: error.message || "Failed to suggest a price",
+        variant: "destructive"
+      });
+    }
+  });
+
   // AI suggest price based on cost price and product info
   const suggestPriceWithAI = async () => {
     try {
@@ -355,26 +376,12 @@ export default function ProductFormWizard({ productId, onSuccess }: ProductFormW
         throw new Error('Please provide the product name and cost price before requesting a price suggestion');
       }
       
-      const res = await apiRequest('POST', '/api/ai/suggest-price', { 
+      // Use the hook to suggest price
+      await suggestPrice({
         costPrice,
         productName,
         categoryName: categories?.find(cat => cat.id === form.getValues('categoryId'))?.name
       });
-      
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || 'Failed to get price suggestion');
-      }
-      
-      const suggestion = await res.json();
-      
-      if (suggestion.suggestedPrice) {
-        form.setValue('price', suggestion.suggestedPrice);
-        toast({
-          title: "Price Suggested",
-          description: `AI suggested a selling price of R${suggestion.suggestedPrice.toFixed(2)}`,
-        });
-      }
     } catch (error: any) {
       toast({
         title: "Price Suggestion Failed",
