@@ -686,8 +686,6 @@ export class DatabaseStorage implements IStorage {
             supplierName: suppliers.name,
             isActive: catalogs.isActive,
             defaultMarkupPercentage: catalogs.defaultMarkupPercentage,
-            startDate: catalogs.createdAt,
-            endDate: catalogs.coverImage, // Temporarily using coverImage field for endDate
             createdAt: catalogs.createdAt
           })
           .from(catalogs)
@@ -703,8 +701,6 @@ export class DatabaseStorage implements IStorage {
             supplierName: suppliers.name,
             isActive: catalogs.isActive,
             defaultMarkupPercentage: catalogs.defaultMarkupPercentage,
-            startDate: catalogs.createdAt,
-            endDate: catalogs.coverImage, // Temporarily using coverImage field for endDate
             createdAt: catalogs.createdAt
           })
           .from(catalogs)
@@ -713,11 +709,19 @@ export class DatabaseStorage implements IStorage {
     
     const catalogData = await query;
     
-    // Add a placeholder for products count (would need a separate query to get actual count)
-    return catalogData.map(catalog => ({
-      ...catalog,
-      productsCount: 0 // Default to 0 until we implement product count functionality
-    }));
+    // Add a placeholder for products count and proper date formatting
+    return catalogData.map(catalog => {
+      // Format the date as an ISO string
+      const createdDate = catalog.createdAt ? new Date(catalog.createdAt) : new Date();
+      
+      return {
+        ...catalog,
+        startDate: createdDate.toISOString().split('T')[0], // Get YYYY-MM-DD
+        endDate: null, // No end date for now
+        productsCount: 0, // Default to 0 until we implement product count functionality
+        createdAt: createdDate.toISOString() // Ensure correct ISO format
+      };
+    });
   }
 
   async getCatalogsBySupplierId(supplierId: number, activeOnly = true): Promise<any[]> {
@@ -732,8 +736,6 @@ export class DatabaseStorage implements IStorage {
             supplierName: suppliers.name,
             isActive: catalogs.isActive,
             defaultMarkupPercentage: catalogs.defaultMarkupPercentage,
-            startDate: catalogs.createdAt,
-            endDate: catalogs.coverImage, // Temporarily using coverImage field for endDate
             createdAt: catalogs.createdAt
           })
           .from(catalogs)
@@ -754,8 +756,6 @@ export class DatabaseStorage implements IStorage {
             supplierName: suppliers.name,
             isActive: catalogs.isActive,
             defaultMarkupPercentage: catalogs.defaultMarkupPercentage,
-            startDate: catalogs.createdAt,
-            endDate: catalogs.coverImage, // Temporarily using coverImage field for endDate
             createdAt: catalogs.createdAt
           })
           .from(catalogs)
@@ -765,16 +765,24 @@ export class DatabaseStorage implements IStorage {
     
     const catalogData = await query;
     
-    // Add a placeholder for products count (would need a separate query to get actual count)
-    return catalogData.map(catalog => ({
-      ...catalog,
-      productsCount: 0 // Default to 0 until we implement product count functionality
-    }));
+    // Add a placeholder for products count and proper date formatting
+    return catalogData.map(catalog => {
+      // Format the date as an ISO string
+      const createdDate = catalog.createdAt ? new Date(catalog.createdAt) : new Date();
+      
+      return {
+        ...catalog,
+        startDate: createdDate.toISOString().split('T')[0], // Get YYYY-MM-DD
+        endDate: null, // No end date for now
+        productsCount: 0, // Default to 0 until we implement product count functionality
+        createdAt: createdDate.toISOString() // Ensure correct ISO format
+      };
+    });
   }
 
   async getCatalogById(id: number): Promise<any | undefined> {
     // Get catalog with supplier information
-    const [catalog] = await db
+    const [catalogData] = await db
       .select({
         id: catalogs.id,
         name: catalogs.name,
@@ -783,9 +791,6 @@ export class DatabaseStorage implements IStorage {
         supplierName: suppliers.name,
         isActive: catalogs.isActive,
         defaultMarkupPercentage: catalogs.defaultMarkupPercentage,
-        startDate: catalogs.createdAt,
-        endDate: catalogs.coverImage,
-        freeShipping: false, // Placeholder for freeShipping
         createdAt: catalogs.createdAt,
         updatedAt: catalogs.updatedAt
       })
@@ -793,13 +798,23 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(suppliers, eq(catalogs.supplierId, suppliers.id))
       .where(eq(catalogs.id, id));
 
-    if (!catalog) return undefined;
+    if (!catalogData) return undefined;
     
-    // For edit form compatibility, add placeholders for any missing fields
-    return {
-      ...catalog,
-      freeShipping: catalog.freeShipping || false
+    // Format the createdAt date for startDate
+    const createdDate = catalogData.createdAt ? new Date(catalogData.createdAt) : new Date();
+    
+    // For edit form compatibility, add placeholders and format dates properly
+    const catalog = {
+      ...catalogData,
+      startDate: createdDate.toISOString().split('T')[0], // YYYY-MM-DD
+      endDate: null, // No end date for now
+      freeShipping: false, // Placeholder for freeShipping
+      productsCount: 0, // Default product count
+      createdAt: createdDate.toISOString(),
+      updatedAt: catalogData.updatedAt ? new Date(catalogData.updatedAt).toISOString() : null
     };
+    
+    return catalog;
   }
 
   async createCatalog(catalog: InsertCatalog): Promise<Catalog> {
