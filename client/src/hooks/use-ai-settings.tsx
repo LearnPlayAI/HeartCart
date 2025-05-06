@@ -44,13 +44,13 @@ export function useUpdateAIModel() {
         toast({
           title: "Success",
           description: data.message,
-          variant: "success",
+          variant: "default",
         });
       } else {
         toast({
           title: "Warning",
           description: data.message,
-          variant: "warning",
+          variant: "destructive",
         });
       }
       
