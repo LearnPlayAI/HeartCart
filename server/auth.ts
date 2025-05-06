@@ -5,7 +5,7 @@ import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
-import { User as UserType } from "@shared/schema";
+import { User as SchemaUser } from "@shared/schema";
 import { rateLimit } from "express-rate-limit";
 import csrf from "csurf";
 import connectPg from "connect-pg-simple";
@@ -21,18 +21,18 @@ declare global {
       username: string;
       email: string;
       password: string;
-      fullName?: string;
-      profilePicture?: string;
-      phoneNumber?: string;
-      address?: string;
-      city?: string;
-      postalCode?: string;
-      country?: string;
+      fullName: string | null;
+      profilePicture: string | null;
+      phoneNumber: string | null;
+      address: string | null;
+      city: string | null;
+      postalCode: string | null;
+      country: string | null;
       isActive: boolean;
       role: string;
       createdAt: Date;
       updatedAt: Date;
-      lastLogin?: Date;
+      lastLogin: Date | null;
     }
   }
 }
@@ -102,7 +102,7 @@ export function setupAuth(app: Express): void {
           return done(null, false, { message: "Invalid username or password" });
         }
 
-        return done(null, user);
+        return done(null, user as Express.User);
       } catch (error) {
         return done(error);
       }
@@ -119,7 +119,7 @@ export function setupAuth(app: Express): void {
       if (!user) {
         return done(null, false);
       }
-      done(null, user);
+      done(null, user as Express.User);
     } catch (error) {
       done(error);
     }
@@ -150,7 +150,7 @@ export function setupAuth(app: Express): void {
       });
 
       // Auto-login after registration
-      req.login(user, (err) => {
+      req.login(user as Express.User, (err) => {
         if (err) {
           return next(err);
         }
