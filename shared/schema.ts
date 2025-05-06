@@ -172,6 +172,8 @@ export const catalogs = pgTable("catalogs", {
   isActive: boolean("is_active").default(true).notNull(),
   coverImage: text("cover_image"),
   tags: text("tags").array(),
+  startDate: timestamp("start_date"),
+  endDate: timestamp("end_date"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -248,6 +250,9 @@ export const insertCatalogSchema = createInsertSchema(catalogs).omit({
   createdAt: true,
   updatedAt: true,
   isActive: true,
+}).extend({
+  startDate: z.string().or(z.date()).optional(),
+  endDate: z.string().or(z.date()).optional(),
 });
 
 // Export types

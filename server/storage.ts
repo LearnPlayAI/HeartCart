@@ -686,6 +686,8 @@ export class DatabaseStorage implements IStorage {
             supplierName: suppliers.name,
             isActive: catalogs.isActive,
             defaultMarkupPercentage: catalogs.defaultMarkupPercentage,
+            startDate: catalogs.startDate,
+            endDate: catalogs.endDate,
             createdAt: catalogs.createdAt
           })
           .from(catalogs)
@@ -701,6 +703,8 @@ export class DatabaseStorage implements IStorage {
             supplierName: suppliers.name,
             isActive: catalogs.isActive,
             defaultMarkupPercentage: catalogs.defaultMarkupPercentage,
+            startDate: catalogs.startDate,
+            endDate: catalogs.endDate,
             createdAt: catalogs.createdAt
           })
           .from(catalogs)
@@ -709,18 +713,18 @@ export class DatabaseStorage implements IStorage {
     
     const catalogData = await query;
     
-    // Add a placeholder for products count and proper date formatting
+    // Add product count and format dates properly
     return catalogData.map(catalog => {
-      // Format the date as an ISO string
-      const createdDate = catalog.createdAt ? new Date(catalog.createdAt) : new Date();
-      
-      return {
+      // Format all dates as ISO strings
+      const formattedCatalog = {
         ...catalog,
-        startDate: createdDate.toISOString().split('T')[0], // Get YYYY-MM-DD
-        endDate: null, // No end date for now
-        productsCount: 0, // Default to 0 until we implement product count functionality
-        createdAt: createdDate.toISOString() // Ensure correct ISO format
+        startDate: catalog.startDate ? new Date(catalog.startDate).toISOString() : null,
+        endDate: catalog.endDate ? new Date(catalog.endDate).toISOString() : null,
+        createdAt: catalog.createdAt ? new Date(catalog.createdAt).toISOString() : null,
+        productsCount: 0 // Default to 0 until we implement product count functionality
       };
+      
+      return formattedCatalog;
     });
   }
 
