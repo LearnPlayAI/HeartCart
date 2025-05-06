@@ -214,6 +214,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const options = await storage.getCategoryAttributeOptions(attributeId);
     res.json(options);
   }));
+  
+  // Debug route for testing camelCase naming standardization
+  app.get("/api/debug/attribute-naming", handleErrors(async (req: Request, res: Response) => {
+    const attributes = await db
+      .select()
+      .from(categoryAttributes)
+      .limit(1);
+      
+    const options = attributes.length > 0 ? 
+      await db
+        .select()
+        .from(categoryAttributeOptions)
+        .where(eq(categoryAttributeOptions.attributeId, attributes[0].id))
+        .limit(3) : [];
+    
+    res.json({
+      attributeExample: attributes[0] || null,
+      optionsExample: options || []
+    });
+  }));
 
   app.post("/api/category-attribute-options", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
     const user = req.user as any;
