@@ -70,7 +70,7 @@ const ProductDetail = () => {
     : 0;
   
   const handleQuantityChange = (newQuantity: number) => {
-    if (newQuantity > 0 && newQuantity <= (product.stock || 10)) {
+    if (newQuantity > 0 && newQuantity <= 10) {
       setQuantity(newQuantity);
     }
   };
@@ -203,14 +203,14 @@ const ProductDetail = () => {
                   variant="ghost" 
                   size="icon" 
                   onClick={() => handleQuantityChange(quantity + 1)}
-                  disabled={quantity >= (product.stock || 10)}
+                  disabled={quantity >= 10}
                   className="h-10 w-10"
                 >
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>
               <span className="ml-4 text-sm text-gray-500">
-                {product.stock ? `${product.stock} available` : 'In stock'}
+                Available upon order
               </span>
             </div>
             
@@ -274,8 +274,8 @@ const ProductDetail = () => {
                     <span>Category Name</span>
                   </div>
                   <div className="flex justify-between py-2 border-b">
-                    <span className="font-medium">Stock</span>
-                    <span>{product.stock || 'Available'}</span>
+                    <span className="font-medium">Availability</span>
+                    <span>Made to order</span>
                   </div>
                 </div>
               </div>

@@ -223,13 +223,7 @@ export default function AdminProducts() {
                         </div>
                       )}
                     </div>
-                    <div className="text-sm">
-                      {product.stock > 0 ? (
-                        <span className="text-green-600">{product.stock} in stock</span>
-                      ) : (
-                        <span className="text-red-600">Out of stock</span>
-                      )}
-                    </div>
+
                   </div>
                   <div className="flex flex-wrap gap-1 mt-2">
                     {product.isFeatured && (
