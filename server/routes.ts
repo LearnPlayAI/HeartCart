@@ -20,6 +20,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication with our new auth module
   setupAuth(app);
   
+  // Setup a route to serve files from Object Storage
+  app.get('/object-storage/:folder/:subfolder/:filename', async (req: Request, res: Response) => {
+    try {
+      const { folder, subfolder, filename } = req.params;
+      const objectKey = `${folder}/${subfolder}/${filename}`;
+      
+      // Check if the file exists
+      const exists = await objectStore.exists(objectKey);
+      if (!exists) {
+        return res.status(404).send('File not found');
+      }
+      
+      // Get the file mime type based on extension
+      const extension = filename.split('.').pop()?.toLowerCase() || '';
+      const mimeTypes: Record<string, string> = {
+        'jpg': 'image/jpeg',
+        'jpeg': 'image/jpeg',
+        'png': 'image/png',
+        'gif': 'image/gif',
+        'webp': 'image/webp',
+        'svg': 'image/svg+xml',
+      };
+      const contentType = mimeTypes[extension] || 'application/octet-stream';
+      
+      // Set the appropriate content type header
+      res.setHeader('Content-Type', contentType);
+      
+      // Set caching headers
+      res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache for 1 day
+      
+      // Stream the file to the response
+      const fileStream = await objectStore.downloadAsStream(objectKey);
+      fileStream.pipe(res);
+    } catch (error) {
+      console.error('Error serving file from Object Storage:', error);
+      res.status(500).send('Error serving file');
+    }
+  });
+  
   // Error handling middleware
   const handleErrors = (fn: Function) => async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -185,10 +224,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const validatedImageData = insertProductImageSchema.parse(imageData);
     
     // If the image has a base64 data URL, store it in object storage
-    if (validatedImageData.originalUrl && validatedImageData.originalUrl.startsWith('data:')) {
+    if (validatedImageData.url && validatedImageData.url.startsWith('data:')) {
       try {
         // Extract the base64 data and content type
-        const matches = validatedImageData.originalUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+        const matches = validatedImageData.url.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
         if (!matches || matches.length !== 3) {
           return res.status(400).json({ message: "Invalid base64 image format" });
         }
@@ -204,17 +243,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const objectKey = `products/${productId}/${filename}`;
         
         // Upload to object storage
-        await objectStore.put(objectKey, buffer, { contentType });
+        await objectStore.uploadFromBytes(objectKey, buffer);
         
-        // Get the public URL
-        const publicUrl = await objectStore.getPublicUrl(objectKey);
+        // Generate public URL - since Replit Object Store has predictable URLs
+        const publicUrl = `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co/object-storage/${objectKey}`;
         
         // Update the image data with the object store URL
-        validatedImageData.originalUrl = publicUrl;
+        validatedImageData.url = publicUrl;
+        validatedImageData.objectKey = objectKey;
         
-        // If processed URL is not set, use the original URL
-        if (!validatedImageData.processedUrl) {
-          validatedImageData.processedUrl = publicUrl;
+        // If background removed URL is not set, use the original URL
+        if (!validatedImageData.bgRemovedUrl) {
+          validatedImageData.bgRemovedUrl = publicUrl;
+          validatedImageData.bgRemovedObjectKey = objectKey;
         }
       } catch (error) {
         console.error('Error uploading image to object storage:', error);
