@@ -1,12 +1,20 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
-import { Search, User, ShoppingCart, LogIn, UserPlus } from 'lucide-react';
+import { Search, User, ShoppingCart, LogIn, UserPlus, LogOut, ChevronDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
 import Logo from '@/components/ui/logo';
 import { useCart } from '@/hooks/use-cart';
 import { useAuth } from '@/hooks/use-auth';
+import { useToast } from '@/hooks/use-toast';
 
 type Category = {
   id: number;
@@ -18,7 +26,21 @@ const Header = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [, navigate] = useLocation();
   const { cartItems, openCart } = useCart();
-  const { user } = useAuth();
+  const { user, logoutMutation } = useAuth();
+  const { toast } = useToast();
+  
+  const handleLogout = () => {
+    logoutMutation.mutate(undefined, {
+      onSuccess: () => {
+        toast({
+          title: "Logged out successfully",
+          description: "You have been logged out of your account",
+          duration: 3000,
+        });
+        navigate('/');
+      }
+    });
+  };
   
   const { data: categories } = useQuery<Category[]>({
     queryKey: ['/api/categories'],
@@ -65,13 +87,40 @@ const Header = () => {
           {/* Navigation Icons */}
           <div className="flex items-center space-x-4">
             {user ? (
-              // Authenticated user - show profile and cart
+              // Authenticated user - show profile dropdown, cart and logout
               <>
-                <Button variant="ghost" size="icon" asChild>
-                  <Link href="/profile">
-                    <User className="h-5 w-5 text-gray-700 hover:text-[#FF69B4]" />
-                  </Link>
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="relative">
+                      <User className="h-5 w-5 text-gray-700 hover:text-[#FF69B4]" />
+                      <ChevronDown className="h-3 w-3 ml-1 text-gray-500" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-52">
+                    <div className="p-2 text-sm font-medium border-b">
+                      {user.username}
+                    </div>
+                    <DropdownMenuItem asChild>
+                      <Link href="/profile" className="cursor-pointer">
+                        My Profile
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/profile" className="cursor-pointer">
+                        My Orders
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      onClick={handleLogout} 
+                      className="text-red-500 cursor-pointer flex items-center"
+                    >
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Logout
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                
                 <Button 
                   variant="ghost" 
                   size="icon" 
