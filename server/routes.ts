@@ -460,7 +460,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(403).json({ message: "Only administrators can use AI features" });
     }
     
-    const { costPrice, productName, categoryName } = req.body;
+    const { costPrice, productName, categoryName, categoryId } = req.body;
     
     if (!costPrice || !productName) {
       return res.status(400).json({ message: "Cost price and product name are required" });
@@ -472,8 +472,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(400).json({ message: "Cost price must be a valid number" });
     }
     
+    // Validate categoryId if provided
+    let categoryIdNum: number | undefined = undefined;
+    if (categoryId) {
+      categoryIdNum = Number(categoryId);
+      if (isNaN(categoryIdNum)) {
+        return res.status(400).json({ message: "Category ID must be a valid number" });
+      }
+    }
+    
     try {
-      const suggestion = await suggestPrice(costPriceNum, productName, categoryName);
+      const suggestion = await suggestPrice(costPriceNum, productName, categoryName, categoryIdNum);
       res.json({ success: true, ...suggestion });
     } catch (error) {
       console.error('Price suggestion error:', error);

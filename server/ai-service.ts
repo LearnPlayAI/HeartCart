@@ -198,10 +198,37 @@ export async function generateProductTags(
 export async function suggestPrice(
   costPrice: number,
   productName: string,
-  categoryName?: string
-): Promise<{ suggestedPrice: number }> {
+  categoryName?: string,
+  categoryId?: number
+): Promise<{ suggestedPrice: number; markupPercentage: number; markupSource: string }> {
   try {
-    // Create the prompt
+    // First, try to get category-specific markup if we have a categoryId
+    let markupPercentage = 50; // Default fallback markup of 50%
+    let markupSource = 'default';
+    
+    if (categoryId) {
+      try {
+        // Get category-specific pricing settings
+        const categorySetting = await storage.getPricingByCategoryId(categoryId);
+        
+        if (categorySetting) {
+          markupPercentage = categorySetting.markupPercentage;
+          markupSource = `category_${categoryId}`;
+          console.log(`Using category-specific markup of ${markupPercentage}% for category #${categoryId}`);
+        } else {
+          // No category-specific setting, use global default
+          markupPercentage = await storage.getDefaultMarkupPercentage();
+          markupSource = 'global_default';
+          console.log(`Using global default markup of ${markupPercentage}%`);
+        }
+      } catch (dbError) {
+        console.error('Error fetching markup settings:', dbError);
+        // Continue with default markup if DB access fails
+      }
+    }
+    
+    // Create the prompt with category context (even if we already have a markup)
+    // The AI might provide industry-specific insights
     const prompt = `
     As a retail pricing expert in South Africa, suggest a competitive retail price in ZAR for the following product:
     
@@ -234,38 +261,89 @@ export async function suggestPrice(
       // First, try to parse the response as-is
       const jsonResponse = JSON.parse(responseText);
       let suggestedPrice = Number(jsonResponse.suggestedPrice);
+      let useAiSuggestion = true;
       
       // Apply business rule: Suggested price should never be lower than cost price
-      // If it is, default to cost price + 50%
       if (suggestedPrice < costPrice) {
-        suggestedPrice = costPrice * 1.5; // Default to cost price + 50%
-        console.log(`AI suggested price (${jsonResponse.suggestedPrice}) was below cost price. Using default markup: ${suggestedPrice.toFixed(2)}`);
+        // If AI suggestion is below cost price, use our category markup
+        suggestedPrice = costPrice * (1 + markupPercentage / 100);
+        useAiSuggestion = false;
+        console.log(`AI suggested price (${jsonResponse.suggestedPrice}) was below cost price. Using ${markupSource} markup: ${suggestedPrice.toFixed(2)}`);
       }
       
-      return { suggestedPrice };
+      // If AI suggestion seems reasonable, we'll use it
+      // Otherwise fall back to our category markup calculation
+      if (!useAiSuggestion) {
+        return { 
+          suggestedPrice, 
+          markupPercentage, 
+          markupSource 
+        };
+      }
+      
+      // AI suggestion is used, but still provide markup info
+      // Calculate the implied markup percentage from the AI suggestion
+      const impliedMarkup = Math.round(((suggestedPrice / costPrice) - 1) * 100);
+      return { 
+        suggestedPrice, 
+        markupPercentage: impliedMarkup, 
+        markupSource: 'ai_suggestion' 
+      };
     } catch (jsonError) {
       // If direct parsing fails, try to extract just the number
       const priceMatch = responseText.match(/\d+(\.\d+)?/);
       if (priceMatch) {
         let suggestedPrice = Number(priceMatch[0]);
+        let useAiSuggestion = true;
         
-        // Apply same business rule for extracted numbers
+        // Apply business rule: Suggested price should never be lower than cost price
         if (suggestedPrice < costPrice) {
-          suggestedPrice = costPrice * 1.5; // Default to cost price + 50%
-          console.log(`AI suggested price (${priceMatch[0]}) was below cost price. Using default markup: ${suggestedPrice.toFixed(2)}`);
+          // If AI suggestion is below cost price, use our category markup
+          suggestedPrice = costPrice * (1 + markupPercentage / 100);
+          useAiSuggestion = false;
+          console.log(`AI suggested price (${priceMatch[0]}) was below cost price. Using ${markupSource} markup: ${suggestedPrice.toFixed(2)}`);
         }
         
-        return { suggestedPrice };
+        // If AI suggestion seems reasonable, we'll use it
+        // Otherwise fall back to our category markup calculation
+        if (!useAiSuggestion) {
+          return { 
+            suggestedPrice, 
+            markupPercentage, 
+            markupSource 
+          };
+        }
+        
+        // AI suggestion is used, but still provide markup info
+        // Calculate the implied markup percentage from the AI suggestion
+        const impliedMarkup = Math.round(((suggestedPrice / costPrice) - 1) * 100);
+        return { 
+          suggestedPrice, 
+          markupPercentage: impliedMarkup, 
+          markupSource: 'ai_suggestion_extracted' 
+        };
       } else {
-        // If no valid price found, default to cost price + 50%
-        const defaultPrice = costPrice * 1.5;
-        console.log(`No valid price found in response. Using default markup: ${defaultPrice.toFixed(2)}`);
-        return { suggestedPrice: defaultPrice };
+        // If no valid price found, use the category markup
+        const suggestedPrice = costPrice * (1 + markupPercentage / 100);
+        console.log(`No valid AI price found. Using ${markupSource} markup: ${suggestedPrice.toFixed(2)}`);
+        
+        return { 
+          suggestedPrice, 
+          markupPercentage, 
+          markupSource 
+        };
       }
     }
   } catch (error) {
     console.error('Price suggestion failed:', error);
-    throw new Error('Failed to suggest price: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    
+    // Even on error, provide a fallback price using default markup
+    const fallbackPrice = costPrice * 1.5; // 50% markup
+    return { 
+      suggestedPrice: fallbackPrice, 
+      markupPercentage: 50, 
+      markupSource: 'fallback_on_error' 
+    };
   }
 }
 
