@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, doublePrecision, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, doublePrecision, jsonb, unique } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -119,6 +119,20 @@ export const aiRecommendations = pgTable("ai_recommendations", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Pricing settings table for category-specific markup percentages
+export const pricing = pgTable("pricing", {
+  id: serial("id").primaryKey(),
+  categoryId: integer("category_id").references(() => categories.id),
+  markupPercentage: integer("markup_percentage").notNull().default(50),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    categoryUnique: unique().on(table.categoryId),
+  };
+});
+
 // Create insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -167,6 +181,12 @@ export const insertAiRecommendationSchema = createInsertSchema(aiRecommendations
   createdAt: true,
 });
 
+export const insertPricingSchema = createInsertSchema(pricing).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Export types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -191,3 +211,6 @@ export type InsertProductImage = z.infer<typeof insertProductImageSchema>;
 
 export type AiRecommendation = typeof aiRecommendations.$inferSelect;
 export type InsertAiRecommendation = z.infer<typeof insertAiRecommendationSchema>;
+
+export type Pricing = typeof pricing.$inferSelect;
+export type InsertPricing = z.infer<typeof insertPricingSchema>;

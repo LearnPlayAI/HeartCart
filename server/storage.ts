@@ -6,7 +6,8 @@ import {
   orders, type Order, type InsertOrder,
   orderItems, type OrderItem, type InsertOrderItem,
   productImages, type ProductImage, type InsertProductImage,
-  aiRecommendations, type AiRecommendation, type InsertAiRecommendation
+  aiRecommendations, type AiRecommendation, type InsertAiRecommendation,
+  pricing, type Pricing, type InsertPricing
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, like, and, desc, asc, sql, inArray } from "drizzle-orm";
