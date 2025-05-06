@@ -38,7 +38,7 @@ const catalogFormSchema = z.object({
   isActive: z.boolean().default(true),
   startDate: z.date(),
   endDate: z.date().nullable().optional(),
-  markupPercentage: z.coerce.number().min(0).default(0),
+  defaultMarkupPercentage: z.coerce.number().min(0).default(0), // Changed from markupPercentage to defaultMarkupPercentage
   freeShipping: z.boolean().default(false),
 });
 
@@ -72,7 +72,7 @@ export function CatalogForm({
       isActive: true,
       startDate: new Date(),
       endDate: null,
-      markupPercentage: 0,
+      defaultMarkupPercentage: 0, // Changed from markupPercentage to defaultMarkupPercentage
       freeShipping: false,
       ...initialData,
     },
@@ -256,7 +256,7 @@ export function CatalogForm({
 
           <FormField
             control={form.control}
-            name="markupPercentage"
+            name="defaultMarkupPercentage"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Markup Percentage</FormLabel>

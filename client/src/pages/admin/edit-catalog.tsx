@@ -17,7 +17,7 @@ type Catalog = {
   isActive: boolean;
   startDate: Date;
   endDate: Date | null;
-  markupPercentage: number;
+  defaultMarkupPercentage: number; // Changed from markupPercentage to defaultMarkupPercentage
   freeShipping: boolean;
 };
 

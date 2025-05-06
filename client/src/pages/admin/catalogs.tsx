@@ -54,7 +54,7 @@ import { Link, useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { CatalogForm } from "@/components/admin/catalog-form";
 
-// Placeholder catalog type
+// Catalog type
 type Catalog = {
   id: number;
   name: string;
@@ -66,6 +66,7 @@ type Catalog = {
   startDate: string;
   endDate: string | null;
   createdAt: string;
+  defaultMarkupPercentage?: number; // Added to match schema
 };
 
 export default function AdminCatalogs() {
