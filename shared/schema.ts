@@ -280,3 +280,9 @@ export type InsertPricing = z.infer<typeof insertPricingSchema>;
 
 export type AiSetting = typeof aiSettings.$inferSelect;
 export type InsertAiSetting = z.infer<typeof insertAiSettingsSchema>;
+
+export type Supplier = typeof suppliers.$inferSelect;
+export type InsertSupplier = z.infer<typeof insertSupplierSchema>;
+
+export type Catalog = typeof catalogs.$inferSelect;
+export type InsertCatalog = z.infer<typeof insertCatalogSchema>;
