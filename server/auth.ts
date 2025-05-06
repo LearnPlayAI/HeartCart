@@ -5,18 +5,34 @@ import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
-import { User } from "@shared/schema";
+import { User as UserType } from "@shared/schema";
 import { rateLimit } from "express-rate-limit";
 import csrf from "csurf";
+import connectPg from "connect-pg-simple";
+import { pool } from "./db";
+
+const PostgresSessionStore = connectPg(session);
 
 declare global {
   namespace Express {
+    // Extend the User interface with our User type
     interface User {
       id: number;
       username: string;
       email: string;
       password: string;
-      // Include other fields as needed, but at minimum these are required
+      fullName?: string;
+      profilePicture?: string;
+      phoneNumber?: string;
+      address?: string;
+      city?: string;
+      postalCode?: string;
+      country?: string;
+      isActive: boolean;
+      role: string;
+      createdAt: Date;
+      updatedAt: Date;
+      lastLogin?: Date;
     }
   }
 }
@@ -60,7 +76,12 @@ export function setupAuth(app: Express): void {
       secure: process.env.NODE_ENV === "production",
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    }
+    },
+    store: new PostgresSessionStore({
+      pool,
+      tableName: 'session',
+      createTableIfMissing: true
+    })
   };
 
   app.set("trust proxy", 1);
@@ -88,7 +109,7 @@ export function setupAuth(app: Express): void {
     })
   );
 
-  passport.serializeUser((user, done) => {
+  passport.serializeUser((user: Express.User, done) => {
     done(null, user.id);
   });
 
@@ -144,7 +165,7 @@ export function setupAuth(app: Express): void {
 
   // Login endpoint
   app.post("/api/login", loginLimiter, (req: Request, res: Response, next: NextFunction) => {
-    passport.authenticate("local", (err: Error, user: Express.User, info: any) => {
+    passport.authenticate("local", (err: Error, user: Express.User | false | null, info: any) => {
       if (err) {
         return next(err);
       }
@@ -178,7 +199,7 @@ export function setupAuth(app: Express): void {
       return res.status(401).json({ message: "Not authenticated" });
     }
     // Return user data (excluding password)
-    const { password, ...userData } = req.user as User;
+    const { password, ...userData } = req.user as Express.User;
     res.json(userData);
   });
 
