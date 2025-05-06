@@ -32,7 +32,7 @@ export function DetailsStep({ form }: DetailsStepProps) {
   const { control, setValue, watch, getValues } = form;
   const [newTag, setNewTag] = useState<string>("");
   const tags = watch("tags") || [];
-  const inFlashDeal = watch("inFlashDeal") || false;
+  const isFlashDeal = watch("isFlashDeal") || false;
   const flashDealEnd = watch("flashDealEnd");
   const discount = watch("discount") || 0;
   const discountType = watch("discountType") || "percentage";
@@ -247,7 +247,7 @@ export function DetailsStep({ form }: DetailsStepProps) {
           <div className="border rounded-md p-4 space-y-4">
             <FormField
               control={control}
-              name="inFlashDeal"
+              name="isFlashDeal"
               render={({ field }) => (
                 <FormItem className="flex flex-row items-center justify-between">
                   <div>
@@ -266,7 +266,7 @@ export function DetailsStep({ form }: DetailsStepProps) {
               )}
             />
 
-            {inFlashDeal && (
+            {isFlashDeal && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
                   control={control}
@@ -276,8 +276,10 @@ export function DetailsStep({ form }: DetailsStepProps) {
                       <FormLabel>End Date</FormLabel>
                       <FormControl>
                         <DatePicker
-                          date={field.value ? new Date(field.value) : undefined}
-                          onSelect={(date) => field.onChange(date)}
+                          value={field.value ? new Date(field.value) : undefined}
+                          onChange={field.onChange}
+                          showTimeSelect={true}
+                          placeholderText="Select flash deal end date and time"
                         />
                       </FormControl>
                       <FormDescription>
