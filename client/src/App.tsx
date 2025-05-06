@@ -19,6 +19,7 @@ import CartDrawer from "@/components/cart/cart-drawer";
 // Admin Pages
 import AdminDashboard from "@/pages/admin/dashboard";
 import AdminProducts from "@/pages/admin/products";
+import AdminCategories from "@/pages/admin/categories";
 
 // Admin-specific protected route
 import { useAuth } from "@/hooks/use-auth";
@@ -83,6 +84,7 @@ function App() {
               {/* Admin Routes - No header/footer */}
               <AdminProtectedRoute path="/admin" component={AdminDashboard} />
               <AdminProtectedRoute path="/admin/products" component={AdminProducts} />
+              <AdminProtectedRoute path="/admin/categories" component={AdminCategories} />
               
               {/* Regular Routes - With header/footer */}
               <Route path="*">

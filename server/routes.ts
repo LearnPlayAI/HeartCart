@@ -5,7 +5,9 @@ import { ZodError } from "zod";
 import { 
   insertCartItemSchema, 
   insertOrderSchema, 
-  insertOrderItemSchema
+  insertOrderItemSchema,
+  insertCategorySchema,
+  insertProductSchema
 } from "@shared/schema";
 import { setupAuth } from "./auth";
 
@@ -54,6 +56,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     res.json(category);
+  }));
+
+  app.post("/api/categories", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    // Check if user is admin
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can create categories" });
+    }
+    
+    const categoryData = insertCategorySchema.parse(req.body);
+    const category = await storage.createCategory(categoryData);
+    
+    res.status(201).json(category);
   }));
 
   // PRODUCT ROUTES
@@ -122,6 +138,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     const products = await storage.searchProducts(query, limit, offset);
     res.json(products);
+  }));
+  
+  app.post("/api/products", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    // Check if user is admin
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can create products" });
+    }
+    
+    const productData = insertProductSchema.parse(req.body);
+    
+    // Create the product
+    const product = await storage.createProduct(productData);
+    
+    res.status(201).json(product);
   }));
 
   // CART ROUTES

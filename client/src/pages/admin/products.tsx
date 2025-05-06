@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import AdminLayout from '@/components/layout/admin-layout';
 import { Button } from '@/components/ui/button';
 import {
@@ -22,6 +22,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { 
   Package, 
   Plus, 
@@ -31,11 +40,25 @@ import {
   Trash, 
   Eye,
   Tag,
-  ArrowUpDown
+  ArrowUpDown,
+  Image
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, slugify } from '@/lib/utils';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { apiRequest, queryClient } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
+import { Category, Product, InsertProduct } from '@shared/schema';
 
 // Example product data
 const products = [
@@ -105,15 +128,337 @@ const products = [
   }
 ];
 
+// Product creation/edit form type
+interface ProductFormData {
+  name: string;
+  description: string;
+  categoryId: number | undefined;
+  price: number | string;
+  salePrice?: number | string;
+  stock: number | string;
+  imageUrl?: string;
+  additionalImages?: string[];
+  isFeatured?: boolean;
+  isFlashDeal?: boolean;
+}
+
 function ProductsPage() {
+  const { toast } = useToast();
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [formData, setFormData] = useState<ProductFormData>({
+    name: '',
+    description: '',
+    categoryId: undefined,
+    price: '',
+    salePrice: '',
+    stock: '0',
+  });
+  
+  // Fetch categories for the dropdown
+  const { data: categories = [] } = useQuery<Category[]>({
+    queryKey: ['/api/categories'],
+  });
+  
+  // Fetch real products from API
+  const { data: realProducts = [], isLoading: isLoadingProducts } = useQuery<Product[]>({
+    queryKey: ['/api/products'],
+  });
+  
+  // Create product mutation
+  const createProductMutation = useMutation({
+    mutationFn: async (data: Omit<InsertProduct, 'id'>) => {
+      const res = await apiRequest('POST', '/api/products', data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/products'] });
+      setIsCreateDialogOpen(false);
+      clearForm();
+      toast({
+        title: 'Product created',
+        description: 'The product has been created successfully.',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Failed to create product',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Clear form data
+  const clearForm = () => {
+    setFormData({
+      name: '',
+      description: '',
+      categoryId: undefined,
+      price: '',
+      salePrice: '',
+      stock: '0',
+    });
+  };
+  
+  // Handle form submission
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.name.trim()) {
+      toast({
+        title: 'Validation error',
+        description: 'Product name is required',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    if (!formData.categoryId) {
+      toast({
+        title: 'Validation error',
+        description: 'Please select a category',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    const price = parseFloat(formData.price.toString());
+    if (isNaN(price) || price <= 0) {
+      toast({
+        title: 'Validation error',
+        description: 'Price must be a positive number',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    // Prepare product data
+    const productData: Omit<InsertProduct, 'id'> = {
+      name: formData.name,
+      slug: slugify(formData.name),
+      description: formData.description,
+      categoryId: formData.categoryId,
+      price: parseFloat(formData.price.toString()),
+      stock: parseInt(formData.stock.toString()),
+      imageUrl: formData.imageUrl || null,
+      additionalImages: formData.additionalImages || null,
+      isFeatured: formData.isFeatured || false,
+      isFlashDeal: formData.isFlashDeal || false,
+    };
+    
+    // Add sale price if provided
+    if (formData.salePrice && parseFloat(formData.salePrice.toString()) > 0) {
+      productData.salePrice = parseFloat(formData.salePrice.toString());
+      
+      // Calculate discount percentage
+      if (productData.price > 0 && productData.salePrice < productData.price) {
+        const discount = Math.round(((productData.price - productData.salePrice) / productData.price) * 100);
+        productData.discount = discount;
+      }
+    }
+    
+    createProductMutation.mutate(productData);
+  };
+  
+  // Handle input changes
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+  
+  // Handle number input changes
+  const handleNumberInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    // Allow empty string for optional fields
+    if (value === '' && (name === 'salePrice')) {
+      setFormData((prev) => ({ ...prev, [name]: '' }));
+      return;
+    }
+    
+    // Validate that value is a number
+    const numValue = parseFloat(value);
+    if (!isNaN(numValue)) {
+      setFormData((prev) => ({ ...prev, [name]: numValue }));
+    }
+  };
+  
+  // Handle checkbox changes
+  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, checked } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: checked }));
+  };
+  
+  // Handle category selection
+  const handleCategoryChange = (value: string) => {
+    setFormData((prev) => ({ ...prev, categoryId: parseInt(value) }));
+  };
+  
   return (
     <AdminLayout>
       <div className="flex flex-col gap-5">
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold">Products</h1>
-          <Button className="bg-pink-500 hover:bg-pink-600">
-            <Plus className="mr-2 h-4 w-4" /> Add Product
-          </Button>
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-pink-500 hover:bg-pink-600">
+                <Plus className="mr-2 h-4 w-4" /> Add Product
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[600px]">
+              <DialogHeader>
+                <DialogTitle>Create New Product</DialogTitle>
+                <DialogDescription>
+                  Add a new product to your inventory. Fill in the product details below.
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleSubmit}>
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="name">Product Name</Label>
+                    <Input
+                      id="name"
+                      name="name"
+                      placeholder="Product name"
+                      value={formData.name}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  
+                  <div className="grid gap-2">
+                    <Label htmlFor="categoryId">Category</Label>
+                    <Select 
+                      value={formData.categoryId?.toString()} 
+                      onValueChange={handleCategoryChange}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.map((category) => (
+                          <SelectItem key={category.id} value={category.id.toString()}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="grid gap-2">
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea
+                      id="description"
+                      name="description"
+                      placeholder="Product description"
+                      value={formData.description}
+                      onChange={handleInputChange}
+                      rows={3}
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="price">Price (R)</Label>
+                      <Input
+                        id="price"
+                        name="price"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00"
+                        value={formData.price}
+                        onChange={handleNumberInput}
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="salePrice">Sale Price (R) (Optional)</Label>
+                      <Input
+                        id="salePrice"
+                        name="salePrice"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00"
+                        value={formData.salePrice}
+                        onChange={handleNumberInput}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="stock">Stock Quantity</Label>
+                      <Input
+                        id="stock"
+                        name="stock"
+                        type="number"
+                        step="1"
+                        min="0"
+                        placeholder="0"
+                        value={formData.stock}
+                        onChange={handleNumberInput}
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="imageUrl">Main Image URL (Optional)</Label>
+                      <Input
+                        id="imageUrl"
+                        name="imageUrl"
+                        placeholder="https://example.com/image.jpg"
+                        value={formData.imageUrl || ''}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-col sm:flex-row gap-4 mt-2">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="isFeatured"
+                        name="isFeatured"
+                        checked={formData.isFeatured || false}
+                        onChange={handleCheckboxChange}
+                        className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500"
+                      />
+                      <Label htmlFor="isFeatured" className="text-sm font-medium">
+                        Featured product
+                      </Label>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="isFlashDeal"
+                        name="isFlashDeal"
+                        checked={formData.isFlashDeal || false}
+                        onChange={handleCheckboxChange}
+                        className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500"
+                      />
+                      <Label htmlFor="isFlashDeal" className="text-sm font-medium">
+                        Flash deal
+                      </Label>
+                    </div>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsCreateDialogOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={createProductMutation.isPending}
+                    className="bg-pink-500 hover:bg-pink-600"
+                  >
+                    {createProductMutation.isPending ? 'Creating...' : 'Create Product'}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
         
         <div className="flex items-center space-x-2">
