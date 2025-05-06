@@ -92,7 +92,7 @@ const ProfilePage = () => {
     isError: isErrorUser, 
     refetch: refetchUser 
   } = useQuery({
-    queryKey: ['/api/auth/user'],
+    queryKey: ['/api/user'],
   });
   
   // Get orders if logged in
@@ -162,7 +162,7 @@ const ProfilePage = () => {
   // Login mutation
   const loginMutation = useMutation({
     mutationFn: async (data: LoginFormValues) => {
-      await apiRequest('POST', '/api/auth/login', data);
+      await apiRequest('POST', '/api/login', data);
     },
     onSuccess: () => {
       toast({
@@ -184,7 +184,7 @@ const ProfilePage = () => {
   // Register mutation
   const registerMutation = useMutation({
     mutationFn: async (data: RegisterFormValues) => {
-      await apiRequest('POST', '/api/auth/register', data);
+      await apiRequest('POST', '/api/register', data);
     },
     onSuccess: () => {
       toast({
@@ -206,7 +206,7 @@ const ProfilePage = () => {
   // Logout mutation
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      await apiRequest('POST', '/api/auth/logout', {});
+      await apiRequest('POST', '/api/logout', {});
     },
     onSuccess: () => {
       toast({
