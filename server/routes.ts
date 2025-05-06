@@ -1,78 +1,20 @@
-import type { Express, Request, Response } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { ZodError } from "zod";
 import { 
-  insertUserSchema, 
   insertCartItemSchema, 
   insertOrderSchema, 
-  insertOrderItemSchema,
-  insertProductSchema
+  insertOrderItemSchema
 } from "@shared/schema";
-import session from "express-session";
-import MemoryStore from "memorystore";
-import passport from "passport";
-import { Strategy as LocalStrategy } from "passport-local";
-import bcrypt from "bcryptjs";
-
-const SessionStore = MemoryStore(session);
+import { setupAuth } from "./auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Set up session middleware
-  app.use(
-    session({
-      secret: process.env.SESSION_SECRET || "tee-me-you-secret",
-      resave: false,
-      saveUninitialized: false,
-      cookie: { secure: process.env.NODE_ENV === "production", maxAge: 7 * 24 * 60 * 60 * 1000 }, // 7 days
-      store: new SessionStore({
-        checkPeriod: 86400000, // prune expired entries every 24h
-      }),
-    })
-  );
-
-  // Set up passport middleware
-  app.use(passport.initialize());
-  app.use(passport.session());
-
-  // Configure passport local strategy
-  passport.use(
-    new LocalStrategy(async (username, password, done) => {
-      try {
-        const user = await storage.getUserByUsername(username);
-        if (!user || !bcrypt.compareSync(password, user.password)) {
-          return done(null, false, { message: "Invalid username or password" });
-        }
-        return done(null, user);
-      } catch (error) {
-        return done(error);
-      }
-    })
-  );
-
-  passport.serializeUser((user: any, done) => {
-    done(null, user.id);
-  });
-
-  passport.deserializeUser(async (id: number, done) => {
-    try {
-      const user = await storage.getUser(id);
-      done(null, user);
-    } catch (error) {
-      done(error);
-    }
-  });
-
-  // Authentication middleware
-  const isAuthenticated = (req: Request, res: Response, next: any) => {
-    if (req.isAuthenticated()) {
-      return next();
-    }
-    res.status(401).json({ message: "Unauthorized" });
-  };
-
+  // Set up authentication with our new auth module
+  setupAuth(app);
+  
   // Error handling middleware
-  const handleErrors = (fn: Function) => async (req: Request, res: Response, next: any) => {
+  const handleErrors = (fn: Function) => async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       await fn(req, res, next);
     } catch (error) {
@@ -86,68 +28,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   };
 
-  // API Routes
-  // AUTH ROUTES
-  app.post("/api/auth/register", handleErrors(async (req: Request, res: Response) => {
-    const userData = insertUserSchema.parse(req.body);
-    
-    // Check if user already exists
-    const existingUser = await storage.getUserByUsername(userData.username);
-    if (existingUser) {
-      return res.status(400).json({ message: "Username already exists" });
+  // Authentication middleware
+  const isAuthenticated = (req: Request, res: Response, next: NextFunction): void => {
+    if (req.isAuthenticated()) {
+      return next();
     }
-    
-    const existingEmail = await storage.getUserByEmail(userData.email);
-    if (existingEmail) {
-      return res.status(400).json({ message: "Email already exists" });
-    }
-    
-    // Hash password
-    const hashedPassword = bcrypt.hashSync(userData.password, 10);
-    
-    // Create user
-    const user = await storage.createUser({
-      ...userData,
-      password: hashedPassword,
-    });
-    
-    // Remove password from response
-    const { password, ...userWithoutPassword } = user;
-    
-    res.status(201).json(userWithoutPassword);
-  }));
-
-  app.post("/api/auth/login", (req: Request, res: Response, next: any) => {
-    passport.authenticate("local", (err: any, user: any, info: any) => {
-      if (err) {
-        return next(err);
-      }
-      if (!user) {
-        return res.status(401).json({ message: info.message || "Invalid credentials" });
-      }
-      req.logIn(user, (err) => {
-        if (err) {
-          return next(err);
-        }
-        const { password, ...userWithoutPassword } = user;
-        return res.json(userWithoutPassword);
-      });
-    })(req, res, next);
-  });
-
-  app.post("/api/auth/logout", (req: Request, res: Response) => {
-    req.logout(() => {
-      res.status(200).json({ message: "Logged out successfully" });
-    });
-  });
-
-  app.get("/api/auth/user", (req: Request, res: Response) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ message: "Not authenticated" });
-    }
-    const { password, ...userWithoutPassword } = req.user as any;
-    res.json(userWithoutPassword);
-  });
+    res.status(401).json({ message: "Unauthorized" });
+  };
 
   // CATEGORY ROUTES
   app.get("/api/categories", handleErrors(async (req: Request, res: Response) => {
@@ -323,8 +210,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const user = req.user as any;
     const recommendations = await storage.getRecommendationsForUser(user.id);
     
-    if (!recommendations) {
-      return res.json([]);
+    if (!recommendations || !recommendations.productIds) {
+      return res.json({ products: [], reason: null, timestamp: new Date() });
     }
     
     // Get product details for recommended products

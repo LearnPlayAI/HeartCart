@@ -5,13 +5,16 @@ import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { db } from "./db";
-import { users, User } from "@shared/schema";
+import { users } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import connectPgSimple from "connect-pg-simple";
 import { pool } from "./db";
 import helmet from "helmet";
 import { rateLimit } from "express-rate-limit";
 import csurf from "csurf";
+
+// Import type only for passport user
+import type { User } from "@shared/schema";
 
 // Extend Express.User type declaration
 declare global {
