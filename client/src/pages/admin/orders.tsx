@@ -14,6 +14,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from '@/components/ui/dialog';
 import {
   DropdownMenu,
@@ -37,13 +38,24 @@ import {
   Truck,
   XCircle,
   Package,
+  RefreshCw,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { 
+  Select, 
+  SelectContent, 
+  SelectGroup, 
+  SelectItem, 
+  SelectLabel, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
 import { useQuery } from '@tanstack/react-query';
 import { formatCurrency } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { queryClient } from '@/lib/queryClient';
 
 // Order status type
 type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
@@ -103,33 +115,89 @@ function OrdersPage() {
 
   // Function to view order details
   const viewOrderDetails = (order: any) => {
-    // In a real application, we would fetch detailed order information here
-    // For now, we'll use mock data
-    
-    // Construct order details from the order data
-    const orderDetail: OrderDetail = {
-      id: order.id,
-      orderId: order.id,
-      userId: order.userId,
-      username: order.user?.username || 'Unknown',
-      email: order.user?.email || 'Unknown',
-      orderNumber: `ORD-${order.id.toString().padStart(6, '0')}`,
-      orderDate: new Date(order.createdAt).toLocaleDateString(),
-      status: order.status || 'pending',
-      paymentMethod: order.paymentMethod || 'Credit Card',
-      paymentStatus: order.paymentStatus || 'paid',
-      shippingMethod: order.shippingMethod || 'Standard Shipping',
-      shippingStatus: order.shippingStatus || 'Processing',
-      shippingAddress: order.shippingAddress || 'Customer address',
-      subtotal: order.subtotal || 0,
-      shippingCost: order.shippingCost || 0,
-      tax: order.tax || 0,
-      total: order.total || 0,
-      items: order.items || [],
-    };
-    
-    setSelectedOrder(orderDetail);
-    setIsDetailsDialogOpen(true);
+    // Fetch detailed order information from the API
+    fetch(`/api/orders/${order.id}`)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Failed to fetch order details');
+        }
+        return response.json();
+      })
+      .then(orderData => {
+        // Construct order details from the order data
+        const orderDetail: OrderDetail = {
+          id: orderData.id,
+          orderId: orderData.id,
+          userId: orderData.userId,
+          username: orderData.user?.username || 'Unknown',
+          email: orderData.user?.email || 'Unknown',
+          orderNumber: `ORD-${orderData.id.toString().padStart(6, '0')}`,
+          orderDate: new Date(orderData.createdAt).toLocaleDateString(),
+          status: orderData.status || 'pending',
+          paymentMethod: orderData.paymentMethod || 'Credit Card',
+          paymentStatus: orderData.paymentStatus || 'paid',
+          shippingMethod: orderData.shippingMethod || 'Standard Shipping',
+          shippingStatus: orderData.shippingStatus || 'Processing',
+          shippingAddress: orderData.shippingAddress || 'Customer address',
+          subtotal: orderData.subtotal || 0,
+          shippingCost: orderData.shippingCost || 0,
+          tax: orderData.tax || 0,
+          total: orderData.total || 0,
+          items: orderData.items || [],
+        };
+        
+        setSelectedOrder(orderDetail);
+        setIsDetailsDialogOpen(true);
+      })
+      .catch(err => {
+        toast({
+          title: "Error fetching order details",
+          description: err.message,
+          variant: "destructive",
+        });
+      });
+  };
+  
+  // Function to update order status
+  const updateOrderStatus = (orderId: number, newStatus: OrderStatus) => {
+    fetch(`/api/orders/${orderId}/status`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ status: newStatus }),
+    })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Failed to update order status');
+        }
+        return response.json();
+      })
+      .then(() => {
+        // Update the local state to reflect the change
+        if (selectedOrder && selectedOrder.id === orderId) {
+          setSelectedOrder({
+            ...selectedOrder,
+            status: newStatus,
+          });
+        }
+        
+        // Refresh the orders list
+        queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
+        
+        toast({
+          title: "Status updated",
+          description: `Order #${orderId} status changed to ${newStatus}`,
+          variant: "default",
+        });
+      })
+      .catch(err => {
+        toast({
+          title: "Error updating status",
+          description: err.message,
+          variant: "destructive",
+        });
+      });
   };
   
   // Get status badge
@@ -339,12 +407,29 @@ function OrdersPage() {
                           <span>Date Placed:</span>
                           <span>{selectedOrder.orderDate}</span>
                         </div>
-                        <div className="flex justify-between text-sm">
+                        <div className="flex justify-between text-sm items-center">
                           <span>Status:</span>
-                          <span className="flex items-center">
+                          <div className="flex items-center">
                             {getStatusIcon(selectedOrder.status)}
-                            <span className="ml-1">{selectedOrder.status}</span>
-                          </span>
+                            <Select 
+                              defaultValue={selectedOrder.status}
+                              onValueChange={(value) => updateOrderStatus(selectedOrder.id, value as OrderStatus)}
+                            >
+                              <SelectTrigger className="ml-2 w-36 h-8">
+                                <SelectValue placeholder="Update status" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectGroup>
+                                  <SelectLabel>Change Status</SelectLabel>
+                                  <SelectItem value="pending">Pending</SelectItem>
+                                  <SelectItem value="processing">Processing</SelectItem>
+                                  <SelectItem value="shipped">Shipped</SelectItem>
+                                  <SelectItem value="delivered">Delivered</SelectItem>
+                                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                                </SelectGroup>
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
                       </div>
                     </div>

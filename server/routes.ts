@@ -238,13 +238,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(404).json({ message: "Order not found" });
     }
     
-    // Check if the order belongs to the authenticated user
+    // Check if the order belongs to the authenticated user or user is admin
     const user = req.user as any;
-    if (order.userId !== user.id) {
+    if (order.userId !== user.id && user.role !== 'admin') {
       return res.status(403).json({ message: "Forbidden" });
     }
     
     res.json(order);
+  }));
+  
+  // Update order status (admin-only)
+  app.patch("/api/orders/:id/status", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const id = parseInt(req.params.id);
+    const { status } = req.body;
+    
+    // Validate status
+    const validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ message: "Invalid status value" });
+    }
+    
+    // Check if user is admin
+    const user = req.user as any;
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only admins can update order status" });
+    }
+    
+    // Get the order
+    const order = await storage.getOrderById(id);
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+    
+    // Update the status
+    const updatedOrder = await storage.updateOrderStatus(id, status);
+    if (!updatedOrder) {
+      return res.status(500).json({ message: "Failed to update order status" });
+    }
+    
+    res.json(updatedOrder);
   }));
   
   // Admin-only route to get all orders (must be above the /api/orders/:id route due to route matching order)

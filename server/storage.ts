@@ -46,6 +46,7 @@ export interface IStorage {
   createOrder(order: InsertOrder, items: InsertOrderItem[]): Promise<Order>;
   getOrdersByUser(userId: number | null): Promise<Order[]>; // null means get all orders (admin only)
   getOrderById(id: number): Promise<(Order & { items: (OrderItem & { product: Product })[] }) | undefined>;
+  updateOrderStatus(id: number, status: string): Promise<Order | undefined>;
   
   // AI Recommendation operations
   saveRecommendation(recommendation: InsertAiRecommendation): Promise<AiRecommendation>;
@@ -316,14 +317,14 @@ export class DatabaseStorage implements IStorage {
     
     if (!order) return undefined;
     
-    const orderItems = await db
+    const orderItemsList = await db
       .select()
       .from(orderItems)
       .where(eq(orderItems.orderId, id));
     
     const items: (OrderItem & { product: Product })[] = [];
     
-    for (const item of orderItems) {
+    for (const item of orderItemsList) {
       const [product] = await db
         .select()
         .from(products)
@@ -341,6 +342,22 @@ export class DatabaseStorage implements IStorage {
       ...order,
       items
     };
+  }
+  
+  async updateOrderStatus(id: number, status: string): Promise<Order | undefined> {
+    const now = new Date();
+    
+    // Update the order with the new status and updatedAt timestamp
+    const [updatedOrder] = await db
+      .update(orders)
+      .set({ 
+        status, 
+        updatedAt: now 
+      })
+      .where(eq(orders.id, id))
+      .returning();
+    
+    return updatedOrder;
   }
 
   // AI Recommendation operations
