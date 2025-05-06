@@ -90,23 +90,29 @@ export function setupAuth(app: Express): void {
   app.use(passport.session());
 
   passport.use(
-    new LocalStrategy(async (username, password, done) => {
-      try {
-        const user = await storage.getUserByUsername(username);
-        if (!user) {
-          return done(null, false, { message: "Invalid username or password" });
-        }
+    new LocalStrategy(
+      {
+        usernameField: 'email',
+        passwordField: 'password'
+      },
+      async (email, password, done) => {
+        try {
+          const user = await storage.getUserByEmail(email);
+          if (!user) {
+            return done(null, false, { message: "Invalid email or password" });
+          }
 
-        const isValid = await comparePasswords(password, user.password);
-        if (!isValid) {
-          return done(null, false, { message: "Invalid username or password" });
-        }
+          const isValid = await comparePasswords(password, user.password);
+          if (!isValid) {
+            return done(null, false, { message: "Invalid email or password" });
+          }
 
-        return done(null, user as Express.User);
-      } catch (error) {
-        return done(error);
+          return done(null, user as Express.User);
+        } catch (error) {
+          return done(error);
+        }
       }
-    })
+    )
   );
 
   passport.serializeUser((user: Express.User, done) => {
