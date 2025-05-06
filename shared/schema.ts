@@ -58,6 +58,9 @@ export const products = pgTable("products", {
   weight: doublePrecision("weight"), // in kg
   dimensions: text("dimensions"), // format: "LxWxH" in cm
   brand: text("brand"),
+  tags: text("tags").array(),
+  hasBackgroundRemoved: boolean("has_background_removed").default(false),
+  originalImageObjectKey: text("original_image_object_key"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -89,6 +92,20 @@ export const orderItems = pgTable("order_items", {
   productId: integer("product_id").references(() => products.id),
   quantity: integer("quantity").notNull(),
   price: doublePrecision("price").notNull(),
+});
+
+// Product Images table
+export const productImages = pgTable("product_images", {
+  id: serial("id").primaryKey(),
+  productId: integer("product_id").references(() => products.id),
+  url: text("url").notNull(),
+  objectKey: text("object_key").notNull(),
+  isMain: boolean("is_main").default(false),
+  hasBgRemoved: boolean("has_bg_removed").default(false),
+  bgRemovedUrl: text("bg_removed_url"),
+  bgRemovedObjectKey: text("bg_removed_object_key"),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // AI Recommendations table
@@ -134,6 +151,11 @@ export const insertOrderItemSchema = createInsertSchema(orderItems).omit({
   id: true,
 });
 
+export const insertProductImageSchema = createInsertSchema(productImages).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertAiRecommendationSchema = createInsertSchema(aiRecommendations).omit({
   id: true,
   createdAt: true,
@@ -157,6 +179,9 @@ export type InsertOrder = z.infer<typeof insertOrderSchema>;
 
 export type OrderItem = typeof orderItems.$inferSelect;
 export type InsertOrderItem = z.infer<typeof insertOrderItemSchema>;
+
+export type ProductImage = typeof productImages.$inferSelect;
+export type InsertProductImage = z.infer<typeof insertProductImageSchema>;
 
 export type AiRecommendation = typeof aiRecommendations.$inferSelect;
 export type InsertAiRecommendation = z.infer<typeof insertAiRecommendationSchema>;
