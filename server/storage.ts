@@ -5,6 +5,7 @@ import {
   cartItems, type CartItem, type InsertCartItem,
   orders, type Order, type InsertOrder,
   orderItems, type OrderItem, type InsertOrderItem,
+  productImages, type ProductImage, type InsertProductImage,
   aiRecommendations, type AiRecommendation, type InsertAiRecommendation
 } from "@shared/schema";
 import { db } from "./db";
@@ -33,6 +34,14 @@ export interface IStorage {
   searchProducts(query: string, limit?: number, offset?: number): Promise<Product[]>;
   createProduct(product: InsertProduct): Promise<Product>;
   updateProduct(id: number, productData: Partial<InsertProduct>): Promise<Product | undefined>;
+  
+  // Product Image operations
+  getProductImages(productId: number): Promise<ProductImage[]>;
+  getProductImagesWithBgRemoved(productId: number): Promise<ProductImage[]>;
+  createProductImage(image: InsertProductImage): Promise<ProductImage>;
+  updateProductImage(id: number, imageData: Partial<InsertProductImage>): Promise<ProductImage | undefined>;
+  setMainProductImage(productId: number, imageId: number): Promise<boolean>;
+  deleteProductImage(id: number): Promise<boolean>;
   
   // Cart operations
   getCartItems(userId: number): Promise<CartItem[]>;
@@ -358,6 +367,97 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     return updatedOrder;
+  }
+  
+  // Product Image operations
+  async getProductImages(productId: number): Promise<ProductImage[]> {
+    return await db
+      .select()
+      .from(productImages)
+      .where(eq(productImages.productId, productId))
+      .orderBy(asc(productImages.sortOrder));
+  }
+
+  async getProductImagesWithBgRemoved(productId: number): Promise<ProductImage[]> {
+    return await db
+      .select()
+      .from(productImages)
+      .where(
+        and(
+          eq(productImages.productId, productId),
+          eq(productImages.hasBgRemoved, true)
+        )
+      )
+      .orderBy(asc(productImages.sortOrder));
+  }
+
+  async createProductImage(image: InsertProductImage): Promise<ProductImage> {
+    // If this is marked as main image, unset any existing main image
+    if (image.isMain && image.productId) {
+      await db
+        .update(productImages)
+        .set({ isMain: false })
+        .where(
+          and(
+            eq(productImages.productId, image.productId),
+            eq(productImages.isMain, true)
+          )
+        );
+    }
+    
+    const [newImage] = await db.insert(productImages).values(image).returning();
+    return newImage;
+  }
+
+  async updateProductImage(id: number, imageData: Partial<InsertProductImage>): Promise<ProductImage | undefined> {
+    // If this is marked as main image, unset any existing main images
+    if (imageData.isMain && imageData.productId) {
+      await db
+        .update(productImages)
+        .set({ isMain: false })
+        .where(
+          and(
+            eq(productImages.productId, imageData.productId),
+            eq(productImages.isMain, true),
+            sql`${productImages.id} != ${id}`
+          )
+        );
+    }
+    
+    const [updatedImage] = await db
+      .update(productImages)
+      .set(imageData)
+      .where(eq(productImages.id, id))
+      .returning();
+    
+    return updatedImage;
+  }
+
+  async setMainProductImage(productId: number, imageId: number): Promise<boolean> {
+    // Unset existing main image
+    await db
+      .update(productImages)
+      .set({ isMain: false })
+      .where(
+        and(
+          eq(productImages.productId, productId),
+          eq(productImages.isMain, true)
+        )
+      );
+    
+    // Set new main image
+    const [updatedImage] = await db
+      .update(productImages)
+      .set({ isMain: true })
+      .where(eq(productImages.id, imageId))
+      .returning();
+    
+    return !!updatedImage;
+  }
+
+  async deleteProductImage(id: number): Promise<boolean> {
+    const result = await db.delete(productImages).where(eq(productImages.id, id));
+    return true;
   }
 
   // AI Recommendation operations
