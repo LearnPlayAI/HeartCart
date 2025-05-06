@@ -44,10 +44,11 @@ const ProductCard: React.FC<ProductCardProps> = ({
     });
   };
   
-  const renderStars = (rating: number = 0) => {
+  const renderStars = (rating: number | null = 0) => {
     const stars = [];
-    const fullStars = Math.floor(rating);
-    const hasHalfStar = rating % 1 >= 0.5;
+    const actualRating = rating || 0;
+    const fullStars = Math.floor(actualRating);
+    const hasHalfStar = actualRating % 1 >= 0.5;
     
     for (let i = 0; i < fullStars; i++) {
       stars.push(<Star key={`star-${i}`} className="fill-yellow-400 text-yellow-400 w-3 h-3" />);
@@ -69,8 +70,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
     return (
       <Link href={`/product/${product.slug}`} className="product-card bg-white rounded-lg border border-gray-200 overflow-hidden block">
           <img 
-            src={product.imageUrl} 
-            alt={product.name} 
+            src={product.imageUrl || ''} 
+            alt={product.name || 'Product image'} 
             className="w-full h-36 object-cover"
           />
           <div className="p-2">
@@ -114,8 +115,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
     <div className="product-card bg-white rounded-lg shadow-md overflow-hidden">
       <Link href={`/product/${product.slug}`} className="block">
         <img 
-          src={product.imageUrl} 
-          alt={product.name} 
+          src={product.imageUrl || ''} 
+          alt={product.name || 'Product image'} 
           className="w-full h-48 object-cover"
         />
         <div className="p-3">

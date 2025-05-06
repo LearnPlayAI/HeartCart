@@ -43,26 +43,22 @@ const CategoriesShowcase = () => {
           ))
         ) : (
           categories?.map((category) => (
-            <Link key={category.id} href={`/category/${category.slug}`}>
-              <a className="category-pill flex flex-col items-center p-3 rounded-lg hover:bg-gray-50 transition-colors duration-200">
-                <div className="w-14 h-14 rounded-full bg-[#FFC0CB] flex items-center justify-center mb-2">
-                  {categoryIcons[category.name] || <MoreHorizontal className="text-[#FF69B4] text-xl" />}
-                </div>
-                <span className="text-sm text-center font-medium">{category.name}</span>
-              </a>
+            <Link key={category.id} href={`/category/${category.slug}`} className="category-pill flex flex-col items-center p-3 rounded-lg hover:bg-gray-50 transition-colors duration-200">
+              <div className="w-14 h-14 rounded-full bg-[#FFC0CB] flex items-center justify-center mb-2">
+                {categoryIcons[category.name] || <MoreHorizontal className="text-[#FF69B4] text-xl" />}
+              </div>
+              <span className="text-sm text-center font-medium">{category.name}</span>
             </Link>
           ))
         )}
         
         {/* Fallback "More" category if no data */}
         {!isLoading && (!categories || categories.length === 0) && (
-          <Link href="/categories">
-            <a className="category-pill flex flex-col items-center p-3 rounded-lg hover:bg-gray-50 transition-colors duration-200">
-              <div className="w-14 h-14 rounded-full bg-[#FFC0CB] flex items-center justify-center mb-2">
-                <MoreHorizontal className="text-[#FF69B4] text-xl" />
-              </div>
-              <span className="text-sm text-center font-medium">All Categories</span>
-            </a>
+          <Link href="/categories" className="category-pill flex flex-col items-center p-3 rounded-lg hover:bg-gray-50 transition-colors duration-200">
+            <div className="w-14 h-14 rounded-full bg-[#FFC0CB] flex items-center justify-center mb-2">
+              <MoreHorizontal className="text-[#FF69B4] text-xl" />
+            </div>
+            <span className="text-sm text-center font-medium">All Categories</span>
           </Link>
         )}
       </div>
