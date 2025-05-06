@@ -22,9 +22,9 @@ const supplierFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Please enter a valid email address"),
   phone: z.string().min(10, "Phone number must be at least 10 digits"),
-  contactPerson: z.string().min(2, "Contact person name must be at least 2 characters"),
+  contactName: z.string().min(2, "Contact person name must be at least 2 characters"),
   address: z.string().optional(),
-  description: z.string().optional(),
+  notes: z.string().optional(), // Changed from description to notes to match database schema
   website: z.string().url("Please enter a valid URL").optional().or(z.literal("")),
   isActive: z.boolean().default(true),
 });
