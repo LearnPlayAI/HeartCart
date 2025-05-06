@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useRoute, useLocation } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
-import { Loader2 } from 'lucide-react';
+import { Loader2, TagsIcon } from 'lucide-react';
 import { AdminLayout } from '@/components/admin/layout';
 import ProductFormWizard from '@/components/admin/product-form-wizard';
 import { Product } from '@shared/schema';
+import { Button } from '@/components/ui/button';
 
 export default function ProductEditPage() {
   const [match, params] = useRoute('/admin/products/:id/edit');
@@ -45,9 +46,22 @@ export default function ProductEditPage() {
   return (
     <AdminLayout>
       <div className="flex flex-col space-y-6">
-        <h2 className="text-2xl font-bold tracking-tight">
-          {isNewProduct ? 'Create New Product' : `Edit Product: ${product?.name}`}
-        </h2>
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-bold tracking-tight">
+            {isNewProduct ? 'Create New Product' : `Edit Product: ${product?.name}`}
+          </h2>
+          
+          {!isNewProduct && productId && (
+            <Button 
+              variant="outline"
+              onClick={() => navigate(`/admin/products/${productId}/attributes`)}
+              disabled={!productId}
+            >
+              <TagsIcon className="mr-2 h-4 w-4" />
+              Manage Attributes
+            </Button>
+          )}
+        </div>
         
         <ProductFormWizard 
           productId={productId} 
