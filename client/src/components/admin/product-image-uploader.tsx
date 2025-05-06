@@ -1,11 +1,12 @@
 import { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { ImagePlus, X, Loader2 } from 'lucide-react';
+import { ImagePlus, X, Loader2, Crop, Scissors } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
+import { ImageCropModal } from './image-crop-modal';
 
 type ProductImageUploaderProps = {
   productId: number;
@@ -20,10 +21,13 @@ type FileWithPreview = {
   status: UploadStatus;
   progress: number;
   error?: string;
+  cropped?: boolean;
 };
 
 const ProductImageUploader = ({ productId, onUploadComplete }: ProductImageUploaderProps) => {
   const [files, setFiles] = useState<FileWithPreview[]>([]);
+  const [cropModalOpen, setCropModalOpen] = useState(false);
+  const [selectedFileIndex, setSelectedFileIndex] = useState<number | null>(null);
   const { toast } = useToast();
   
   const onDrop = useCallback((acceptedFiles: File[]) => {
@@ -57,6 +61,49 @@ const ProductImageUploader = ({ productId, onUploadComplete }: ProductImageUploa
       URL.revokeObjectURL(newFiles[index].preview);
       newFiles.splice(index, 1);
       return newFiles;
+    });
+  };
+  
+  const openCropModal = (index: number) => {
+    setSelectedFileIndex(index);
+    setCropModalOpen(true);
+  };
+  
+  const handleCropComplete = (croppedImageBlob: Blob) => {
+    if (selectedFileIndex === null) return;
+    
+    // Create a new file with the cropped image
+    const newFile = new File(
+      [croppedImageBlob],
+      files[selectedFileIndex].file.name,
+      { type: croppedImageBlob.type }
+    );
+    
+    // Create a new URL for the preview
+    const newPreview = URL.createObjectURL(croppedImageBlob);
+    
+    // Update the file in the list
+    setFiles(prev => {
+      const newFiles = [...prev];
+      // Revoke the old preview URL to avoid memory leaks
+      URL.revokeObjectURL(newFiles[selectedFileIndex].preview);
+      
+      newFiles[selectedFileIndex] = {
+        ...newFiles[selectedFileIndex],
+        file: newFile,
+        preview: newPreview,
+        cropped: true
+      };
+      return newFiles;
+    });
+    
+    // Close the modal
+    setCropModalOpen(false);
+    setSelectedFileIndex(null);
+    
+    toast({
+      title: 'Image cropped',
+      description: 'The image has been cropped successfully',
     });
   };
   
@@ -170,6 +217,17 @@ const ProductImageUploader = ({ productId, onUploadComplete }: ProductImageUploa
   
   return (
     <div className="space-y-4">
+      {/* Crop Modal */}
+      {selectedFileIndex !== null && files[selectedFileIndex] && (
+        <ImageCropModal
+          open={cropModalOpen}
+          onOpenChange={setCropModalOpen}
+          imageUrl={files[selectedFileIndex].preview}
+          onCropComplete={handleCropComplete}
+          aspectRatio={1}
+        />
+      )}
+      
       <div 
         {...getRootProps()} 
         className={cn(
@@ -211,12 +269,22 @@ const ProductImageUploader = ({ productId, onUploadComplete }: ProductImageUploa
                 />
                 
                 {file.status === 'idle' && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); removeFile(index); }}
-                    className="absolute top-1 right-1 bg-zinc-900/70 hover:bg-zinc-900 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition"
-                  >
-                    <X size={16} />
-                  </button>
+                  <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); openCropModal(index); }}
+                      className="bg-zinc-900/70 hover:bg-zinc-900 text-white rounded-full p-1"
+                      title="Crop image"
+                    >
+                      <Crop size={16} />
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); removeFile(index); }}
+                      className="bg-zinc-900/70 hover:bg-zinc-900 text-white rounded-full p-1"
+                      title="Remove image"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
                 )}
                 
                 {file.status === 'uploading' && (
