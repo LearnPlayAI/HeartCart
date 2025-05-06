@@ -296,16 +296,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async addToCart(cartItem: InsertCartItem): Promise<CartItem> {
-    // Check if the item is already in the cart
+    // Check if the item with same combination is already in the cart
+    const query = and(
+      eq(cartItems.userId, cartItem.userId),
+      eq(cartItems.productId, cartItem.productId)
+    );
+    
+    // Add combination check if a combination is selected
+    const fullQuery = cartItem.combinationHash 
+      ? and(query, eq(cartItems.combinationHash, cartItem.combinationHash))
+      : query;
+    
     const [existingItem] = await db
       .select()
       .from(cartItems)
-      .where(
-        and(
-          eq(cartItems.userId, cartItem.userId),
-          eq(cartItems.productId, cartItem.productId)
-        )
-      );
+      .where(fullQuery);
     
     if (existingItem) {
       // Update quantity
