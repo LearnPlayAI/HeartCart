@@ -7,11 +7,16 @@ import {
   insertOrderSchema, 
   insertOrderItemSchema,
   insertCategorySchema,
-  insertProductSchema
+  insertProductSchema,
+  insertProductImageSchema
 } from "@shared/schema";
+import { Client as ObjectStorageClient } from "@replit/object-storage";
 import { setupAuth } from "./auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Initialize object store for file uploads
+  const objectStore = new ObjectStorageClient();
+  
   // Set up authentication with our new auth module
   setupAuth(app);
   
@@ -154,6 +159,121 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const product = await storage.createProduct(productData);
     
     res.status(201).json(product);
+  }));
+  
+  // PRODUCT IMAGE ROUTES
+  app.get("/api/products/:productId/images", handleErrors(async (req: Request, res: Response) => {
+    const productId = parseInt(req.params.productId);
+    const images = await storage.getProductImages(productId);
+    res.json(images);
+  }));
+  
+  app.post("/api/products/:productId/images", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can manage product images" });
+    }
+    
+    const productId = parseInt(req.params.productId);
+    const imageData = {
+      ...req.body,
+      productId
+    };
+    
+    // Validate image data
+    const validatedImageData = insertProductImageSchema.parse(imageData);
+    
+    // If the image has a base64 data URL, store it in object storage
+    if (validatedImageData.originalUrl && validatedImageData.originalUrl.startsWith('data:')) {
+      try {
+        // Extract the base64 data and content type
+        const matches = validatedImageData.originalUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+        if (!matches || matches.length !== 3) {
+          return res.status(400).json({ message: "Invalid base64 image format" });
+        }
+        
+        const contentType = matches[1];
+        const base64Data = matches[2];
+        const buffer = Buffer.from(base64Data, 'base64');
+        
+        // Generate a unique filename
+        const timestamp = Date.now();
+        const extension = contentType.split('/')[1] || 'jpg';
+        const filename = `${timestamp}_${productId}.${extension}`;
+        const objectKey = `products/${productId}/${filename}`;
+        
+        // Upload to object storage
+        await objectStore.put(objectKey, buffer, { contentType });
+        
+        // Get the public URL
+        const publicUrl = await objectStore.getPublicUrl(objectKey);
+        
+        // Update the image data with the object store URL
+        validatedImageData.originalUrl = publicUrl;
+        
+        // If processed URL is not set, use the original URL
+        if (!validatedImageData.processedUrl) {
+          validatedImageData.processedUrl = publicUrl;
+        }
+      } catch (error) {
+        console.error('Error uploading image to object storage:', error);
+        return res.status(500).json({ message: "Failed to upload image" });
+      }
+    }
+    
+    // Create the product image record
+    const image = await storage.createProductImage(validatedImageData);
+    res.status(201).json(image);
+  }));
+  
+  app.put("/api/products/images/:imageId", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can manage product images" });
+    }
+    
+    const imageId = parseInt(req.params.imageId);
+    const updatedImage = await storage.updateProductImage(imageId, req.body);
+    
+    if (!updatedImage) {
+      return res.status(404).json({ message: "Image not found" });
+    }
+    
+    res.json(updatedImage);
+  }));
+  
+  app.delete("/api/products/images/:imageId", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can manage product images" });
+    }
+    
+    const imageId = parseInt(req.params.imageId);
+    const result = await storage.deleteProductImage(imageId);
+    
+    res.json({ success: result });
+  }));
+  
+  app.put("/api/products/:productId/images/:imageId/main", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can manage product images" });
+    }
+    
+    const productId = parseInt(req.params.productId);
+    const imageId = parseInt(req.params.imageId);
+    
+    const result = await storage.setMainProductImage(productId, imageId);
+    
+    if (!result) {
+      return res.status(404).json({ message: "Failed to set main image" });
+    }
+    
+    res.json({ success: true });
   }));
 
   // CART ROUTES
