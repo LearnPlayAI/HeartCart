@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { AdminLayout } from "@/components/admin/layout";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { 
   Table, 
   TableBody, 
@@ -45,6 +45,7 @@ import {
   DialogTitle 
 } from "@/components/ui/dialog";
 import { Link, useLocation } from "wouter";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 // Placeholder supplier type until we connect to the backend
 type Supplier = {
@@ -65,13 +66,9 @@ export default function AdminSuppliers() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
   
-  // Query suppliers - This will be replaced with actual API call
+  // Query suppliers from API
   const { data: suppliers, isLoading } = useQuery<Supplier[]>({
     queryKey: ["/api/suppliers", searchQuery],
-    queryFn: async () => {
-      // This is placeholder data
-      return [];
-    },
   });
 
   // CRUD operations
@@ -90,14 +87,37 @@ export default function AdminSuppliers() {
     setShowDeleteDialog(true);
   };
 
+  const { mutate: deleteSupplier, isPending: isDeleting } = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await apiRequest("DELETE", `/api/suppliers/${id}`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to delete supplier");
+      }
+      return await response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Supplier deleted",
+        description: `${selectedSupplier?.name} has been deleted.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/suppliers"] });
+      setShowDeleteDialog(false);
+      setSelectedSupplier(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete supplier",
+        variant: "destructive",
+      });
+    },
+  });
+  
   const confirmDelete = () => {
-    // Will be implemented with API call
-    toast({
-      title: "Supplier deleted",
-      description: `${selectedSupplier?.name} has been deleted.`,
-    });
-    setShowDeleteDialog(false);
-    setSelectedSupplier(null);
+    if (selectedSupplier) {
+      deleteSupplier(selectedSupplier.id);
+    }
   };
 
   return (
@@ -256,8 +276,15 @@ export default function AdminSuppliers() {
             <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={confirmDelete}>
-              Delete
+            <Button variant="destructive" onClick={confirmDelete} disabled={isDeleting}>
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

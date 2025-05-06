@@ -30,38 +30,18 @@ export default function EditSupplier() {
   // Fetch supplier details
   const { data: supplier, isLoading } = useQuery<Supplier>({
     queryKey: [`/api/suppliers/${supplierId}`],
-    queryFn: async () => {
-      // This will be replaced with actual API call
-      return await new Promise((resolve) => {
-        setTimeout(() => {
-          // Placeholder data
-          resolve({
-            id: parseInt(supplierId),
-            name: "Example Supplier",
-            email: "example@supplier.com",
-            phone: "+27 12 345 6789",
-            contactPerson: "John Doe",
-            address: "123 Main Street, Cape Town",
-            description: "This is a placeholder description.",
-            website: "https://example.com",
-            isActive: true,
-          });
-        }, 500);
-      });
-    },
     enabled: !!supplierId,
   });
 
   // Update supplier mutation
   const { mutate: updateSupplier, isPending } = useMutation({
     mutationFn: async (data: any) => {
-      // This will be replaced with actual API call
-      return await new Promise((resolve) => {
-        setTimeout(() => {
-          console.log("Updating supplier:", data);
-          resolve({ id: parseInt(supplierId), ...data });
-        }, 500);
-      });
+      const response = await apiRequest("PUT", `/api/suppliers/${supplierId}`, data);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to update supplier");
+      }
+      return await response.json();
     },
     onSuccess: () => {
       toast({
