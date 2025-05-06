@@ -1,9 +1,9 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { XCircle, ShoppingBag, Plus, Minus, Trash2 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { useCart } from '../../hooks/use-cart';
+import { useCart } from '@/hooks/use-cart';
 import { formatCurrency } from '@/lib/utils';
 import { Link } from 'wouter';
 
@@ -73,8 +73,8 @@ const CartDrawer = () => {
               {cartItems.map((item) => (
                 <div key={item.id} className="flex py-4 border-b border-gray-200">
                   <img 
-                    src={item.product.imageUrl}
-                    alt={item.product.name}
+                    src={item.product.imageUrl as string || '/placeholder-product.jpg'}
+                    alt={item.product.name || 'Product'}
                     className="w-20 h-20 object-cover rounded-md"
                   />
                   <div className="ml-3 flex-1">
