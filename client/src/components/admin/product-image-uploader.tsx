@@ -1,12 +1,13 @@
 import { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { ImagePlus, X, Loader2, Crop, Scissors } from 'lucide-react';
+import { ImagePlus, X, Loader2, Crop, Wand2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { ImageCropModal } from './image-crop-modal';
+import { useImageBackgroundRemoval } from '@/hooks/use-ai';
 
 type ProductImageUploaderProps = {
   productId: number;
@@ -29,6 +30,47 @@ const ProductImageUploader = ({ productId, onUploadComplete }: ProductImageUploa
   const [cropModalOpen, setCropModalOpen] = useState(false);
   const [selectedFileIndex, setSelectedFileIndex] = useState<number | null>(null);
   const { toast } = useToast();
+  const { removeBackground, isProcessing: isRemovingBackground } = useImageBackgroundRemoval({
+    onSuccess: (data) => {
+      if (selectedFileIndex === null) return;
+      
+      // Convert the base64 data to a blob
+      const base64Data = data.imageUrl.split(',')[1];
+      const binaryData = atob(base64Data);
+      const array = new Uint8Array(binaryData.length);
+      for (let i = 0; i < binaryData.length; i++) {
+        array[i] = binaryData.charCodeAt(i);
+      }
+      const blob = new Blob([array], { type: 'image/png' });
+      
+      // Create a new file with the processed image
+      const newFile = new File(
+        [blob],
+        files[selectedFileIndex].file.name,
+        { type: 'image/png' }
+      );
+      
+      // Create a new URL for the preview
+      const newPreview = URL.createObjectURL(blob);
+      
+      // Update the file in the list
+      setFiles(prev => {
+        const newFiles = [...prev];
+        // Revoke the old preview URL to avoid memory leaks
+        URL.revokeObjectURL(newFiles[selectedFileIndex].preview);
+        
+        newFiles[selectedFileIndex] = {
+          ...newFiles[selectedFileIndex],
+          file: newFile,
+          preview: newPreview,
+        };
+        return newFiles;
+      });
+      
+      // Clear the selected file index
+      setSelectedFileIndex(null);
+    }
+  });
   
   const onDrop = useCallback((acceptedFiles: File[]) => {
     // Create previews for the dropped files
@@ -217,6 +259,19 @@ const ProductImageUploader = ({ productId, onUploadComplete }: ProductImageUploa
   
   return (
     <div className="space-y-4">
+      {/* Background Removal Loading Overlay */}
+      {isRemovingBackground && selectedFileIndex !== null && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex flex-col items-center justify-center">
+          <div className="bg-white dark:bg-zinc-900 p-6 rounded-lg shadow-lg max-w-md text-center">
+            <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-pink-600" />
+            <h3 className="text-lg font-semibold mb-2">AI Processing</h3>
+            <p className="text-zinc-600 dark:text-zinc-400">
+              Removing background from your image using AI...
+            </p>
+          </div>
+        </div>
+      )}
+      
       {/* Crop Modal */}
       {selectedFileIndex !== null && files[selectedFileIndex] && (
         <ImageCropModal
@@ -270,6 +325,25 @@ const ProductImageUploader = ({ productId, onUploadComplete }: ProductImageUploa
                 
                 {file.status === 'idle' && (
                   <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition">
+                    <button
+                      onClick={(e) => { 
+                        e.stopPropagation(); 
+                        setSelectedFileIndex(index);
+                        // Convert the file to a base64 data URL for AI processing
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                          if (reader.result) {
+                            removeBackground({ imageUrl: reader.result.toString() });
+                          }
+                        };
+                        reader.readAsDataURL(file.file);
+                      }}
+                      className="bg-pink-600/80 hover:bg-pink-600 text-white rounded-full p-1"
+                      title="Remove background (AI)"
+                      disabled={isRemovingBackground}
+                    >
+                      <Wand2 size={16} />
+                    </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); openCropModal(index); }}
                       className="bg-zinc-900/70 hover:bg-zinc-900 text-white rounded-full p-1"

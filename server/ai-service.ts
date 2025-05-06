@@ -64,7 +64,7 @@ export async function removeImageBackground(imageBase64: string): Promise<string
     const response = await result.response;
     
     // Check if we got image parts in the response
-    if (response.candidates[0]?.content?.parts) {
+    if (response.candidates && response.candidates[0]?.content?.parts) {
       for (const part of response.candidates[0].content.parts) {
         if (part.inlineData?.data) {
           return part.inlineData.data;

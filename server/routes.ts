@@ -2,6 +2,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { ZodError } from "zod";
+import { removeImageBackground, generateProductTags, analyzeProductImage } from "./ai-service";
 import { 
   insertCartItemSchema, 
   insertOrderSchema, 
@@ -315,6 +316,139 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     res.json({ success: true });
+  }));
+  
+  // AI SERVICE ROUTES
+  
+  // Remove image background using Gemini AI
+  app.post("/api/ai/remove-background", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can use AI features" });
+    }
+    
+    const { imageUrl } = req.body;
+    
+    if (!imageUrl || typeof imageUrl !== 'string') {
+      return res.status(400).json({ message: "Image URL is required" });
+    }
+    
+    try {
+      const resultImageBase64 = await removeImageBackground(imageUrl);
+      
+      // If this is for a specific product image, update it
+      if (req.body.productImageId) {
+        const imageId = parseInt(req.body.productImageId);
+        
+        // Extract the base64 data and content type
+        const matches = resultImageBase64.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+        if (!matches || matches.length !== 3) {
+          return res.status(400).json({ message: "Invalid base64 image format from AI service" });
+        }
+        
+        const contentType = matches[1];
+        const base64Data = matches[2];
+        const buffer = Buffer.from(base64Data, 'base64');
+        
+        // Generate a unique filename
+        const timestamp = Date.now();
+        const extension = contentType.split('/')[1] || 'png';
+        const filename = `${timestamp}_${imageId}_bg_removed.${extension}`;
+        const objectKey = `products/bg_removed/${filename}`;
+        
+        // Upload to object storage
+        await objectStore.uploadFromBytes(objectKey, buffer);
+        
+        // Generate public URL
+        const publicUrl = `/object-storage/${objectKey}`;
+        
+        // Update the product image with background removed URL
+        await storage.updateProductImage(imageId, {
+          bgRemovedUrl: publicUrl,
+          bgRemovedObjectKey: objectKey
+        });
+        
+        return res.json({ 
+          success: true, 
+          imageUrl: resultImageBase64,
+          publicUrl
+        });
+      }
+      
+      // If not for a specific image, just return the processed image
+      res.json({ 
+        success: true, 
+        imageUrl: resultImageBase64 
+      });
+    } catch (error) {
+      console.error('Background removal error:', error);
+      res.status(500).json({ 
+        message: "Failed to remove background", 
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }));
+  
+  // Generate product tags using AI
+  app.post("/api/ai/generate-tags", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can use AI features" });
+    }
+    
+    const { imageUrl, productName, productDescription } = req.body;
+    
+    if (!imageUrl || typeof imageUrl !== 'string') {
+      return res.status(400).json({ message: "Image URL is required" });
+    }
+    
+    if (!productName || typeof productName !== 'string') {
+      return res.status(400).json({ message: "Product name is required" });
+    }
+    
+    try {
+      const tags = await generateProductTags(
+        imageUrl, 
+        productName, 
+        productDescription || ''
+      );
+      
+      res.json({ success: true, tags });
+    } catch (error) {
+      console.error('Tag generation error:', error);
+      res.status(500).json({ 
+        message: "Failed to generate tags", 
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }));
+  
+  // Analyze product image for auto-fill suggestions
+  app.post("/api/ai/analyze-product", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can use AI features" });
+    }
+    
+    const { imageUrl } = req.body;
+    
+    if (!imageUrl || typeof imageUrl !== 'string') {
+      return res.status(400).json({ message: "Image URL is required" });
+    }
+    
+    try {
+      const analysis = await analyzeProductImage(imageUrl);
+      res.json({ success: true, ...analysis });
+    } catch (error) {
+      console.error('Product analysis error:', error);
+      res.status(500).json({ 
+        message: "Failed to analyze product", 
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
   }));
 
   // CART ROUTES
