@@ -5,6 +5,7 @@ import { Helmet } from 'react-helmet';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import type { User as UserType, Order as OrderType } from '@shared/schema';
 import { 
   Form, 
   FormControl, 
@@ -84,6 +85,7 @@ const ProfilePage = () => {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [authTab, setAuthTab] = useState<'login' | 'register'>('login');
+  const [activeTab, setActiveTab] = useState<'orders' | 'profile'>('orders');
   
   // Get user profile if logged in
   const { 
@@ -108,12 +110,12 @@ const ProfilePage = () => {
   const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      fullName: user?.fullName || '',
-      email: user?.email || '',
-      phoneNumber: user?.phoneNumber || '',
-      address: user?.address || '',
-      city: user?.city || '',
-      postalCode: user?.postalCode || '',
+      fullName: user ? user.fullName || '' : '',
+      email: user ? user.email || '' : '',
+      phoneNumber: user ? user.phoneNumber || '' : '',
+      address: user ? user.address || '' : '',
+      city: user ? user.city || '' : '',
+      postalCode: user ? user.postalCode || '' : '',
     },
   });
   
@@ -426,7 +428,7 @@ const ProfilePage = () => {
                   <p className="text-sm text-gray-500">{user.email}</p>
                 </div>
                 
-                <Tabs defaultValue="orders" className="w-full">
+                <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'orders' | 'profile')} className="w-full">
                   <TabsList className="grid w-full grid-cols-1 h-auto">
                     <TabsTrigger value="orders" className="flex items-center justify-start px-4 py-2">
                       <ShoppingBag className="mr-2 h-4 w-4" />
@@ -453,7 +455,7 @@ const ProfilePage = () => {
           
           {/* Main Content */}
           <div className="flex-1">
-            <Tabs defaultValue="orders">
+            <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'orders' | 'profile')}>
               <TabsContent value="orders">
                 <Card>
                   <CardHeader>
