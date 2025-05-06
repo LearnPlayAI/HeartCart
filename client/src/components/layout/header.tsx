@@ -108,17 +108,13 @@ const Header = () => {
       {/* Categories navigation */}
       <nav className="bg-[#FF69B4] text-white overflow-x-auto scrollbar-none">
         <div className="container mx-auto flex whitespace-nowrap py-2 px-4">
-          <Link href="/">
-            <a className="px-4 py-1 font-medium text-sm hover:bg-white hover:text-[#FF69B4] rounded-full mx-1 transition-colors duration-200">
-              All
-            </a>
+          <Link href="/" className="px-4 py-1 font-medium text-sm hover:bg-white hover:text-[#FF69B4] rounded-full mx-1 transition-colors duration-200">
+            All
           </Link>
           
           {categories?.map((category) => (
-            <Link key={category.id} href={`/category/${category.slug}`}>
-              <a className="px-4 py-1 font-medium text-sm hover:bg-white hover:text-[#FF69B4] rounded-full mx-1 transition-colors duration-200">
-                {category.name}
-              </a>
+            <Link key={category.id} href={`/category/${category.slug}`} className="px-4 py-1 font-medium text-sm hover:bg-white hover:text-[#FF69B4] rounded-full mx-1 transition-colors duration-200">
+              {category.name}
             </Link>
           ))}
         </div>

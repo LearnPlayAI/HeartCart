@@ -18,30 +18,30 @@ const Footer = () => {
           <div>
             <h3 className="font-bold text-gray-800 mb-3">Shop</h3>
             <ul className="space-y-2 text-sm">
-              <li><Link href="/"><a className="text-gray-600 hover:text-[#FF69B4]">All Categories</a></Link></li>
-              <li><Link href="/"><a className="text-gray-600 hover:text-[#FF69B4]">Flash Deals</a></Link></li>
-              <li><Link href="/"><a className="text-gray-600 hover:text-[#FF69B4]">Best Sellers</a></Link></li>
-              <li><Link href="/"><a className="text-gray-600 hover:text-[#FF69B4]">New Arrivals</a></Link></li>
+              <li><Link href="/" className="text-gray-600 hover:text-[#FF69B4]">All Categories</Link></li>
+              <li><Link href="/" className="text-gray-600 hover:text-[#FF69B4]">Flash Deals</Link></li>
+              <li><Link href="/" className="text-gray-600 hover:text-[#FF69B4]">Best Sellers</Link></li>
+              <li><Link href="/" className="text-gray-600 hover:text-[#FF69B4]">New Arrivals</Link></li>
             </ul>
           </div>
           
           <div>
             <h3 className="font-bold text-gray-800 mb-3">Customer Service</h3>
             <ul className="space-y-2 text-sm">
-              <li><Link href="/"><a className="text-gray-600 hover:text-[#FF69B4]">Contact Us</a></Link></li>
-              <li><Link href="/"><a className="text-gray-600 hover:text-[#FF69B4]">FAQs</a></Link></li>
-              <li><Link href="/"><a className="text-gray-600 hover:text-[#FF69B4]">Shipping Policy</a></Link></li>
-              <li><Link href="/"><a className="text-gray-600 hover:text-[#FF69B4]">Returns & Refunds</a></Link></li>
+              <li><Link href="/" className="text-gray-600 hover:text-[#FF69B4]">Contact Us</Link></li>
+              <li><Link href="/" className="text-gray-600 hover:text-[#FF69B4]">FAQs</Link></li>
+              <li><Link href="/" className="text-gray-600 hover:text-[#FF69B4]">Shipping Policy</Link></li>
+              <li><Link href="/" className="text-gray-600 hover:text-[#FF69B4]">Returns & Refunds</Link></li>
             </ul>
           </div>
           
           <div>
             <h3 className="font-bold text-gray-800 mb-3">About Us</h3>
             <ul className="space-y-2 text-sm">
-              <li><Link href="/"><a className="text-gray-600 hover:text-[#FF69B4]">Our Story</a></Link></li>
-              <li><Link href="/"><a className="text-gray-600 hover:text-[#FF69B4]">Local Suppliers</a></Link></li>
-              <li><Link href="/"><a className="text-gray-600 hover:text-[#FF69B4]">Careers</a></Link></li>
-              <li><Link href="/"><a className="text-gray-600 hover:text-[#FF69B4]">Press</a></Link></li>
+              <li><Link href="/" className="text-gray-600 hover:text-[#FF69B4]">Our Story</Link></li>
+              <li><Link href="/" className="text-gray-600 hover:text-[#FF69B4]">Local Suppliers</Link></li>
+              <li><Link href="/" className="text-gray-600 hover:text-[#FF69B4]">Careers</Link></li>
+              <li><Link href="/" className="text-gray-600 hover:text-[#FF69B4]">Press</Link></li>
             </ul>
           </div>
           
@@ -85,9 +85,9 @@ const Footer = () => {
               &copy; {new Date().getFullYear()} TEE ME YOU. All rights reserved.
             </div>
             <div className="flex justify-center md:justify-end space-x-4 text-xs text-gray-500">
-              <Link href="/"><a className="hover:text-[#FF69B4]">Privacy Policy</a></Link>
-              <Link href="/"><a className="hover:text-[#FF69B4]">Terms of Service</a></Link>
-              <Link href="/"><a className="hover:text-[#FF69B4]">Cookies Settings</a></Link>
+              <Link href="/" className="hover:text-[#FF69B4]">Privacy Policy</Link>
+              <Link href="/" className="hover:text-[#FF69B4]">Terms of Service</Link>
+              <Link href="/" className="hover:text-[#FF69B4]">Cookies Settings</Link>
             </div>
           </div>
         </div>
