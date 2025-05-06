@@ -19,8 +19,8 @@ const HeroBanner = () => {
           asChild
           className="bg-white text-[#FF69B4] hover:bg-gray-100 transition-colors duration-200 w-max"
         >
-          <Link href="#featuredProducts">
-            <a>Shop Now</a>
+          <Link href="#featuredProducts" className="flex items-center">
+            Shop Now
           </Link>
         </Button>
       </div>

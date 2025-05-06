@@ -67,8 +67,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   
   if (isFlashDeal) {
     return (
-      <Link href={`/product/${product.slug}`}>
-        <a className="product-card bg-white rounded-lg border border-gray-200 overflow-hidden">
+      <Link href={`/product/${product.slug}`} className="product-card bg-white rounded-lg border border-gray-200 overflow-hidden block">
           <img 
             src={product.imageUrl} 
             alt={product.name} 
@@ -107,14 +106,13 @@ const ProductCard: React.FC<ProductCardProps> = ({
               </>
             )}
           </div>
-        </a>
       </Link>
     );
   }
   
   return (
-    <Link href={`/product/${product.slug}`}>
-      <a className="product-card bg-white rounded-lg shadow-md overflow-hidden">
+    <div className="product-card bg-white rounded-lg shadow-md overflow-hidden">
+      <Link href={`/product/${product.slug}`} className="block">
         <img 
           src={product.imageUrl} 
           alt={product.name} 
@@ -147,19 +145,19 @@ const ProductCard: React.FC<ProductCardProps> = ({
               </>
             )}
           </div>
-          {showAddToCart && (
-            <div className="mt-2">
-              <Button 
-                className="w-full bg-[#FF69B4] hover:bg-[#FF1493] text-white py-1.5 rounded-full text-sm font-medium transition-colors duration-200"
-                onClick={handleAddToCart}
-              >
-                Add to Cart
-              </Button>
-            </div>
-          )}
         </div>
-      </a>
-    </Link>
+      </Link>
+      {showAddToCart && (
+        <div className="px-3 pb-3 mt-2">
+          <Button 
+            className="w-full bg-[#FF69B4] hover:bg-[#FF1493] text-white py-1.5 rounded-full text-sm font-medium transition-colors duration-200"
+            onClick={handleAddToCart}
+          >
+            Add to Cart
+          </Button>
+        </div>
+      )}
+    </div>
   );
 };
 
