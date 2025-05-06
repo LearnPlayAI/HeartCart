@@ -170,10 +170,7 @@ export function ReviewStep({ form, uploadedImages = [], categories: propCategori
               )}
             </div>
             
-            <div className="space-y-1">
-              <p className="text-sm font-medium">Stock Quantity</p>
-              <p className="text-sm">{formValues.stock || 0}</p>
-            </div>
+            {/* Stock quantity removed as business doesn't keep inventory */}
 
             <div className="space-y-1">
               <p className="text-sm font-medium">Shipping</p>

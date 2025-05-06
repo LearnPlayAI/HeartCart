@@ -72,10 +72,8 @@ export default function ProductFormWizard({ productId, onSuccess }: ProductFormW
 
   // Define the form steps
   const steps = [
-    { id: 'images', label: 'Images' },
-    { id: 'ai-analysis', label: 'AI Analysis' },
-    { id: 'basic-info', label: 'Basic Info' },
-    { id: 'details', label: 'Additional Details' },
+    { id: 'images-basic-info', label: 'Images & Basic Info' },
+    { id: 'additional-info', label: 'Additional Info' },
     { id: 'review', label: 'Review & Submit' }
   ];
   
@@ -114,7 +112,6 @@ export default function ProductFormWizard({ productId, onSuccess }: ProductFormW
       price: 0,
       costPrice: 0,
       salePrice: null,
-      stock: 0,
       isActive: true,
       isFeatured: false,
       isFlashDeal: false,
@@ -250,11 +247,9 @@ export default function ProductFormWizard({ productId, onSuccess }: ProductFormW
   const goToNextStep = async () => {
     // Validate current step
     const fieldsToValidate = {
-      0: [], // Images step doesn't require validation
-      1: [], // AI analysis step doesn't require validation
-      2: ['name', 'slug', 'categoryId', 'price', 'stock'], // Basic info step
-      3: ['description'], // Details step
-      4: []  // Review step doesn't require validation
+      0: ['name', 'costPrice', 'categoryId', 'price'], // Images & Basic Info step
+      1: [], // Additional Info step
+      2: []  // Review step doesn't require validation
     }[currentStep];
     
     const result = await form.trigger(fieldsToValidate as Array<keyof ProductFormValues>);
