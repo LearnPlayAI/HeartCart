@@ -14,6 +14,8 @@ export interface ProductAnalysisData {
 
 export interface PriceSuggestionData {
   suggestedPrice: number;
+  markupPercentage: number;
+  markupSource: string;
 }
 
 interface UseProductAnalysisOptions {
@@ -135,12 +137,27 @@ export function useProductAnalysis({ onSuccess, onError }: UseProductAnalysisOpt
     }
   };
 
-  const suggestPrice = async ({ costPrice, productName, categoryName }: { costPrice: number; productName: string; categoryName?: string }) => {
+  const suggestPrice = async ({ 
+    costPrice, 
+    productName, 
+    categoryName, 
+    categoryId 
+  }: { 
+    costPrice: number; 
+    productName: string; 
+    categoryName?: string; 
+    categoryId?: number 
+  }) => {
     try {
       setIsProcessing(true);
       setError(null);
 
-      const response = await apiRequest('POST', '/api/ai/suggest-price', { costPrice, productName, categoryName });
+      const response = await apiRequest('POST', '/api/ai/suggest-price', { 
+        costPrice, 
+        productName, 
+        categoryName, 
+        categoryId 
+      });
       
       if (!response.ok) {
         const errorData = await response.json();
@@ -148,7 +165,13 @@ export function useProductAnalysis({ onSuccess, onError }: UseProductAnalysisOpt
       }
 
       const data = await response.json();
-      return data.suggestedPrice as number;
+      
+      // Return the entire price suggestion data instead of just the price
+      return {
+        suggestedPrice: data.suggestedPrice as number,
+        markupPercentage: data.markupPercentage as number,
+        markupSource: data.markupSource as string
+      };
     } catch (err: any) {
       const error = err instanceof Error ? err : new Error(err?.message || 'Unknown error');
       setError(error);
