@@ -133,6 +133,16 @@ export const pricing = pgTable("pricing", {
   };
 });
 
+// AI Settings table for configuring AI model usage
+export const aiSettings = pgTable("ai_settings", {
+  id: serial("id").primaryKey(),
+  settingName: text("setting_name").notNull().unique(),
+  settingValue: text("setting_value").notNull(),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Create insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -182,6 +192,12 @@ export const insertAiRecommendationSchema = createInsertSchema(aiRecommendations
 });
 
 export const insertPricingSchema = createInsertSchema(pricing).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertAiSettingsSchema = createInsertSchema(aiSettings).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
