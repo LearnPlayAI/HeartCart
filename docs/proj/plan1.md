@@ -83,8 +83,10 @@ This document outlines the implementation approach for the TEE ME YOU e-commerce
   - Sales performance by category and product
 - **Implementation Details**:
   - Aggregated financial data stored in reporting tables
-  - Card-based visualization using charts
-  - Exportable reports in CSV/PDF formats
+  - Card-based visualization using [Recharts](https://recharts.org/en-US/) (open source React charting library)
+  - Use [react-csv](https://github.com/react-csv/react-csv) for CSV exports
+  - [jspdf](https://github.com/parallax/jsPDF) for PDF generation
+  - Reusable report components for consistent UI across different reports
 
 ### 3. Shipping Management
 
@@ -94,13 +96,18 @@ This document outlines the implementation approach for the TEE ME YOU e-commerce
   - PUDO (https://pudo.co.za/)
 - **Implementation Approach**:
   - Create dummy shipping service modules that mimic real API structure
-  - Design modular shipping provider system that can be replaced with real APIs
+  - Design modular shipping provider system with adapter pattern for future real APIs
   - Simulate shipping rates, tracking, and delivery status
 - **Features**:
   - Shipping rate calculator
   - Tracking number generation and management
   - Delivery status updates
   - Printable shipping labels
+- **Implementation Details**:
+  - Use [axios](https://github.com/axios/axios) for API communication
+  - [React PDF](https://react-pdf.org/) for shipping label generation
+  - Common interface for multiple shipping providers to maintain code reusability
+  - Configuration-driven shipping provider selection
 
 ### 4. Role-Based Access
 
@@ -112,6 +119,10 @@ This document outlines the implementation approach for the TEE ME YOU e-commerce
   - Role information stored in user profile
   - UI rendering conditional on user role
   - Admin endpoints secured to require admin role
+- **Implementation Details**:
+  - Use existing authentication system with role-based extensions
+  - Implement [express-jwt](https://github.com/auth0/express-jwt) or similar for role verification
+  - Create reusable React hooks for role-based UI rendering
 
 #### Access Control Architecture
 - **Frontend**:
@@ -120,6 +131,10 @@ This document outlines the implementation approach for the TEE ME YOU e-commerce
 - **Backend**:
   - Admin API endpoints validate user role before processing
   - Security middleware to check role for all admin routes
+- **Implementation Details**:
+  - Create `useIsAdmin` custom hook based on existing `useAuth`
+  - Implement API middleware for admin route protection
+  - Use route prefixing (`/api/admin/*`) for admin-specific endpoints
 
 > **Important Note**: As specified, roles will primarily control visibility of content rather than being deeply integrated into application logic. However, all admin endpoints must still validate that the user has the admin role before allowing access.
 
@@ -133,6 +148,11 @@ This document outlines the implementation approach for the TEE ME YOU e-commerce
   - Fluid layouts that adapt to screen size
   - Responsive images and card layouts
   - Appropriate typography scaling
+- **Implementation Details**:
+  - Use existing [Tailwind CSS](https://tailwindcss.com/) configuration
+  - Utilize [shadcn/ui](https://ui.shadcn.com/) components for consistency
+  - Implement responsive grid with [CSS Grid Layout](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_grid_layout)
+  - Mobile-first media queries
 
 #### Interface Components
 - **Card-Based Layouts**:
@@ -143,6 +163,10 @@ This document outlines the implementation approach for the TEE ME YOU e-commerce
   - Advanced filter controls for all listings
   - Multiple sort options (date, price, popularity)
   - Saved filter preferences
+- **Implementation Details**:
+  - Use [SWR](https://swr.vercel.app/) or existing React Query for data fetching with filtering
+  - Implement [sonner](https://github.com/emilkowalski/sonner) for toast notifications
+  - Use [cmdk](https://github.com/pacocoursey/cmdk) for command palette filtering
 
 #### Visual Style
 - **Design Inspiration**: Temu.com UI/UX patterns
@@ -151,40 +175,88 @@ This document outlines the implementation approach for the TEE ME YOU e-commerce
   - Clean, high-contrast interfaces
   - Intuitive iconography
   - Visual hierarchy emphasizing primary actions
+- **Implementation Details**:
+  - Use [Lucide React](https://lucide.dev/guide/packages/lucide-react) for consistent iconography
+  - Ensure color contrast meets WCAG accessibility guidelines
+  - Implement [Framer Motion](https://www.framer.com/motion/) for subtle animations
 
 #### Admin Actions
 - **Batch Operations**:
   - Multi-select functionality for products, orders
   - Bulk actions: update status, apply tags, delete
   - Progress indicators for batch processes
+- **Implementation Details**:
+  - Use [React Context API](https://react.dev/reference/react/createContext) for selection state
+  - Implement [react-hot-toast](https://react-hot-toast.com/) for progress notifications
+  - Create reusable batch action components
 
-## Implementation Phases
+## Implementation Plan with Task Status
 
-### Phase 1: Admin Authentication & Dashboard Framework
-- Admin role implementation and authorization
-- Admin dashboard shell and navigation
-- Role-based menu display
+### Phase 1: Foundation & Admin Authentication
+1. **Create Admin Dashboard Layout** - ![Status](https://img.shields.io/badge/Not%20Started-red)
+   - Set up responsive admin layout structure
+   - Implement admin navigation with role-based visibility
+   - Create admin homepage with summary widgets
 
-### Phase 2: Product Management
-- Product CRUD operations
-- Category and tag management
-- Image upload with Replit Object Store integration
-- Basic image processing (resize, crop)
+2. **Role-Based Authentication** - ![Status](https://img.shields.io/badge/Not%20Started-red)
+   - Extend existing authentication system to support admin role
+   - Create middleware for admin API route protection
+   - Implement role-based UI rendering
+
+3. **Reusable Service Libraries** - ![Status](https://img.shields.io/badge/Not%20Started-red)
+   - Create Replit Object Store service for image storage
+   - Set up service structure for Google Gemini API
+   - Implement shared utilities for common operations
+
+### Phase 2: Product Catalog Management
+4. **Product CRUD Operations** - ![Status](https://img.shields.io/badge/Not%20Started-red)
+   - Implement product listing with card-based UI
+   - Create product editor with validation
+   - Build batch operations for products
+
+5. **Category & Tag Management** - ![Status](https://img.shields.io/badge/Not%20Started-red)
+   - Create category editor interface
+   - Implement tag management system
+   - Build relationship management between products and categories/tags
+
+6. **Basic Image Management** - ![Status](https://img.shields.io/badge/Not%20Started-red)
+   - Set up image upload with Replit Object Store
+   - Implement image resize and crop functionality
+   - Create image preview and management interface
 
 ### Phase 3: Advanced Product Features
-- Google Gemini integration for background removal
-- Product promotions and specials
-- Batch operations for products
+7. **Advanced Image Processing** - ![Status](https://img.shields.io/badge/Not%20Started-red)
+   - Integrate Google Gemini API for background removal
+   - Implement image enhancement options
+   - Create batch image processing capabilities
+
+8. **Product Promotions System** - ![Status](https://img.shields.io/badge/Not%20Started-red)
+   - Build time-limited promotions functionality
+   - Implement discount calculation system
+   - Create promotion management interface
 
 ### Phase 4: Order & Shipping Management
-- Order tracking interface
-- Dummy shipping integration for The Courier Guy and PUDO
-- Shipping label generation
+9. **Order Management System** - ![Status](https://img.shields.io/badge/Not%20Started-red)
+   - Implement order listing and details views
+   - Create order status update functionality
+   - Build order filtering and search capabilities
 
-### Phase 5: Financial Management
-- Dummy PayFast integration
-- Financial dashboard and reporting
-- Revenue and profit tracking
+10. **Shipping Integration Framework** - ![Status](https://img.shields.io/badge/Not%20Started-red)
+    - Design shipping provider adapter system
+    - Implement dummy integration for The Courier Guy
+    - Create PUDO integration module
+    - Build shipping label generation
+
+### Phase 5: Financial Tools
+11. **Payment Integration** - ![Status](https://img.shields.io/badge/Not%20Started-red)
+    - Implement dummy PayFast integration
+    - Create payment module with adapter pattern
+    - Build payment status tracking
+
+12. **Financial Reporting** - ![Status](https://img.shields.io/badge/Not%20Started-red)
+    - Create revenue dashboard with charts
+    - Implement sales analytics
+    - Build exportable financial reports
 
 ## Technical Specifications
 
@@ -205,6 +277,32 @@ This document outlines the implementation approach for the TEE ME YOU e-commerce
 - Secure handling of payment information
 - Data validation for all user inputs
 
-## Next Steps
+## Next Steps & Implementation Prioritization
 
-Upon approval of this plan, development will begin with Phase 1, establishing the admin authentication system and dashboard framework. Each subsequent phase will build upon the previous, delivering incremental functionality while maintaining a cohesive user experience.
+### Immediate First Steps (Week 1)
+1. Extend user schema to support admin role
+2. Create admin dashboard shell layout
+3. Implement basic role-based authorization middleware
+
+### Short-Term Goals (Weeks 2-3)
+1. Complete product management CRUD operations
+2. Implement basic category and tag functionality
+3. Set up initial image upload capabilities
+
+### Medium-Term Goals (Weeks 4-6)
+1. Create shipping integration framework
+2. Implement order management interface
+3. Set up promotion management system
+
+### Long-Term Goals (Weeks 7-8)
+1. Implement financial reporting
+2. Create advanced image processing with Gemini API
+3. Complete batch operations for inventory management
+
+### Success Metrics
+- Admin can fully manage product catalog without developer involvement
+- Order processing time reduced by at least 50%
+- Shipping integration provides accurate shipping estimates
+- Financial reporting provides actionable business insights
+
+This phased approach allows for incremental delivery of value while maintaining a cohesive user experience. Each phase builds upon the previous one, with continuous testing and refinement throughout the development process.
