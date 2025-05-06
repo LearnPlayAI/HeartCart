@@ -39,6 +39,7 @@ const productFormSchema = z.object({
     invalid_type_error: "Please select a category",
   }),
   price: z.number().min(0.01, "Price must be greater than 0"),
+  costPrice: z.number().min(0, "Cost price must be greater than or equal to 0").optional(),
   salePrice: z.number().nullable().optional(),
   stock: z.number().min(0, "Stock cannot be negative"),
   isActive: z.boolean().default(true),
@@ -111,6 +112,7 @@ export default function ProductFormWizard({ productId, onSuccess }: ProductFormW
       description: '',
       categoryId: undefined,
       price: 0,
+      costPrice: 0,
       salePrice: null,
       stock: 0,
       isActive: true,
@@ -364,6 +366,12 @@ export default function ProductFormWizard({ productId, onSuccess }: ProductFormW
     }
     if (aiSuggestions.suggestedTags) {
       applyAISuggestion('suggestedTags', aiSuggestions.suggestedTags);
+    }
+    if (aiSuggestions.suggestedCostPrice) {
+      applyAISuggestion('suggestedCostPrice', aiSuggestions.suggestedCostPrice);
+    }
+    if (aiSuggestions.suggestedPrice) {
+      applyAISuggestion('suggestedPrice', aiSuggestions.suggestedPrice);
     }
 
     toast({

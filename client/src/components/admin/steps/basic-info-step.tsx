@@ -24,9 +24,10 @@ import { slugify } from "@/lib/slugify";
 
 interface BasicInfoStepProps {
   form: UseFormReturn<any>;
+  categories: Category[];
 }
 
-export function BasicInfoStep({ form }: BasicInfoStepProps) {
+export function BasicInfoStep({ form, categories }: BasicInfoStepProps) {
   const { control, watch, setValue } = form;
   const name = watch("name");
 
@@ -36,11 +37,6 @@ export function BasicInfoStep({ form }: BasicInfoStepProps) {
       setValue("slug", slugify(name));
     }
   }, [name, setValue]);
-
-  // Fetch categories
-  const { data: categories, isLoading: categoriesLoading } = useQuery<Category[]>({
-    queryKey: ["/api/categories"],
-  });
 
   return (
     <div className="space-y-6">
@@ -108,17 +104,11 @@ export function BasicInfoStep({ form }: BasicInfoStepProps) {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {categoriesLoading ? (
-                    <div className="flex items-center justify-center p-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    </div>
-                  ) : (
-                    categories?.map((category) => (
-                      <SelectItem key={category.id} value={category.id.toString()}>
-                        {category.name}
-                      </SelectItem>
-                    ))
-                  )}
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id.toString()}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <FormDescription>
@@ -131,10 +121,36 @@ export function BasicInfoStep({ form }: BasicInfoStepProps) {
 
         <FormField
           control={control}
+          name="costPrice"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Cost Price (ZAR)</FormLabel>
+              <FormControl>
+                <Input 
+                  type="number" 
+                  min="0" 
+                  step="0.01"
+                  placeholder="0.00" 
+                  {...field}
+                  onChange={(e) => field.onChange(parseFloat(e.target.value) || '')}
+                />
+              </FormControl>
+              <FormDescription>
+                Wholesale price you pay to suppliers
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <FormField
+          control={control}
           name="price"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Price (ZAR)</FormLabel>
+              <FormLabel>Retail Price (ZAR)</FormLabel>
               <FormControl>
                 <Input 
                   type="number" 
@@ -152,9 +168,7 @@ export function BasicInfoStep({ form }: BasicInfoStepProps) {
             </FormItem>
           )}
         />
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        
         <FormField
           control={control}
           name="stock"
@@ -178,7 +192,9 @@ export function BasicInfoStep({ form }: BasicInfoStepProps) {
             </FormItem>
           )}
         />
-
+      </div>
+      
+      <div className="grid grid-cols-1 gap-4">
         <FormField
           control={control}
           name="isActive"
