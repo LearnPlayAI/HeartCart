@@ -35,12 +35,9 @@ import type { Product, Category } from '@shared/schema';
 import { Input } from '@/components/ui/input';
 import { formatCurrency } from '@/lib/utils';
 
-// Stock filter options
-const stockOptions = [
+// Availability filter options (replaced stock filter)
+const availabilityOptions = [
   { value: 'all', label: 'All Products' },
-  { value: 'in_stock', label: 'In Stock' },
-  { value: 'low_stock', label: 'Low Stock' },
-  { value: 'out_of_stock', label: 'Out of Stock' }
 ];
 
 // Rating filter options
@@ -64,7 +61,7 @@ const ProductListing = () => {
   const [sortBy, setSortBy] = useState(searchParams.get('sort') || 'default');
   const [priceRange, setPriceRange] = useState([0, 5000]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(searchParams.get('category'));
-  const [stockFilter, setStockFilter] = useState(searchParams.get('stock') || 'all');
+  const [availabilityFilter, setAvailabilityFilter] = useState('all');
   const [ratingFilter, setRatingFilter] = useState(searchParams.get('rating') || '');
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
@@ -94,7 +91,6 @@ const ProductListing = () => {
     
     if (sortBy !== 'default') params.set('sort', sortBy);
     if (selectedCategory) params.set('category', selectedCategory);
-    if (stockFilter !== 'all') params.set('stock', stockFilter);
     if (ratingFilter) params.set('rating', ratingFilter);
     if (searchQuery) params.set('q', searchQuery);
     if (filters.onSale) params.set('on_sale', 'true');
@@ -119,10 +115,6 @@ const ProductListing = () => {
     if (filters.onSale) newActiveFilters.push('On Sale');
     if (filters.freeShipping) newActiveFilters.push('Free Shipping');
     if (filters.newArrivals) newActiveFilters.push('New Arrivals');
-    if (stockFilter !== 'all') {
-      const stockOption = stockOptions.find(o => o.value === stockFilter);
-      if (stockOption) newActiveFilters.push(stockOption.label);
-    }
     if (ratingFilter) {
       const ratingOption = ratingOptions.find(o => o.value === ratingFilter);
       if (ratingOption) newActiveFilters.push(ratingOption.label);
@@ -132,7 +124,7 @@ const ProductListing = () => {
     }
     
     setActiveFilters(newActiveFilters);
-  }, [sortBy, selectedCategory, stockFilter, ratingFilter, searchQuery, filters, page, priceRange, categories, location, setLocation]);
+  }, [sortBy, selectedCategory, ratingFilter, searchQuery, filters, page, priceRange, categories, location, setLocation]);
   
   const toggleFilter = () => {
     setIsFilterOpen(!isFilterOpen);
@@ -145,11 +137,6 @@ const ProductListing = () => {
   
   const handleCategoryChange = (value: string) => {
     setSelectedCategory(value);
-    setPage(1);
-  };
-  
-  const handleStockFilterChange = (value: string) => {
-    setStockFilter(value);
     setPage(1);
   };
   
@@ -182,8 +169,6 @@ const ProductListing = () => {
       setFilters(prev => ({ ...prev, freeShipping: false }));
     } else if (filter === 'New Arrivals') {
       setFilters(prev => ({ ...prev, newArrivals: false }));
-    } else if (stockOptions.some(o => o.label === filter)) {
-      setStockFilter('all');
     } else if (ratingOptions.some(o => o.label === filter)) {
       setRatingFilter('');
     } else if (filter.startsWith('Price:')) {
@@ -193,7 +178,6 @@ const ProductListing = () => {
   
   const clearAllFilters = () => {
     setSelectedCategory(null);
-    setStockFilter('all');
     setRatingFilter('');
     setPriceRange([0, 5000]);
     setFilters({
@@ -219,10 +203,7 @@ const ProductListing = () => {
       // Apply sale filter
       if (filters.onSale && !product.salePrice) return false;
       
-      // Apply stock filter
-      if (stockFilter === 'in_stock' && (!product.stock || product.stock <= 0)) return false;
-      if (stockFilter === 'low_stock' && (!product.stock || product.stock > 10 || product.stock <= 0)) return false;
-      if (stockFilter === 'out_of_stock' && (product.stock && product.stock > 0)) return false;
+      // All products are available to order from our suppliers
       
       // Apply rating filter
       if (ratingFilter === '4_and_up' && (product.rating || 0) < 4) return false;
@@ -440,22 +421,12 @@ const ProductListing = () => {
                 </AccordionContent>
               </AccordionItem>
               
-              <AccordionItem value="stock">
+              <AccordionItem value="availability">
                 <AccordionTrigger>Availability</AccordionTrigger>
                 <AccordionContent>
-                  <RadioGroup 
-                    value={stockFilter} 
-                    onValueChange={handleStockFilterChange}
-                  >
-                    {stockOptions.map(option => (
-                      <div key={option.value} className="flex items-center space-x-2 mb-2">
-                        <RadioGroupItem id={`stock-${option.value}`} value={option.value} />
-                        <label htmlFor={`stock-${option.value}`} className="text-sm">
-                          {option.label}
-                        </label>
-                      </div>
-                    ))}
-                  </RadioGroup>
+                  <div className="text-sm text-gray-600 italic">
+                    All products are available to order from our local suppliers.
+                  </div>
                 </AccordionContent>
               </AccordionItem>
               
