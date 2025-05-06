@@ -14,24 +14,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
   
   // Error handling middleware
-  const handleErrors = (fn: Function) => async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const handleErrors = (fn: Function) => async (req: Request, res: Response, next: NextFunction) => {
     try {
       await fn(req, res, next);
     } catch (error) {
       if (error instanceof ZodError) {
-        return res.status(400).json({
+        res.status(400).json({
           message: "Validation error",
           errors: error.errors,
         });
+        return;
       }
       next(error);
     }
   };
 
   // Authentication middleware
-  const isAuthenticated = (req: Request, res: Response, next: NextFunction): void => {
+  const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
     if (req.isAuthenticated()) {
-      return next();
+      next();
+      return;
     }
     res.status(401).json({ message: "Unauthorized" });
   };
@@ -47,7 +49,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const category = await storage.getCategoryBySlug(slug);
     
     if (!category) {
-      return res.status(404).json({ message: "Category not found" });
+      res.status(404).json({ message: "Category not found" });
+      return;
     }
     
     res.json(category);
@@ -67,7 +70,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const product = await storage.getProductById(id);
     
     if (!product) {
-      return res.status(404).json({ message: "Product not found" });
+      res.status(404).json({ message: "Product not found" });
+      return;
     }
     
     res.json(product);
@@ -78,7 +82,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const product = await storage.getProductBySlug(slug);
     
     if (!product) {
-      return res.status(404).json({ message: "Product not found" });
+      res.status(404).json({ message: "Product not found" });
+      return;
     }
     
     res.json(product);
@@ -111,7 +116,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
     
     if (!query) {
-      return res.status(400).json({ message: "Search query is required" });
+      res.status(400).json({ message: "Search query is required" });
+      return;
     }
     
     const products = await storage.searchProducts(query, limit, offset);
