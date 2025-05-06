@@ -33,7 +33,7 @@ import { useQuery } from "@tanstack/react-query";
 // Form validation schema
 const catalogFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
-  supplierId: z.string().min(1, "Please select a supplier"),
+  supplierId: z.coerce.number().min(1, "Please select a supplier"), // Changed to number type with coercion
   description: z.string().min(10, "Description must be at least 10 characters").max(500, "Description cannot exceed 500 characters"),
   isActive: z.boolean().default(true),
   startDate: z.date(),
@@ -67,7 +67,7 @@ export function CatalogForm({
     resolver: zodResolver(catalogFormSchema),
     defaultValues: {
       name: "",
-      supplierId: "",
+      supplierId: 0, // Changed to a numeric default value
       description: "",
       isActive: true,
       startDate: new Date(),
