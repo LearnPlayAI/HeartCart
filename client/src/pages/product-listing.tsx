@@ -690,16 +690,25 @@ const ProductListing = () => {
                                   )}
                                 </div>
                                 <div className="text-sm text-gray-500 mt-1">
-                                  {product.stock && product.stock > 0 
-                                    ? product.stock < 5 
-                                      ? `Only ${product.stock} left!` 
-                                      : 'In Stock' 
-                                    : 'Out of Stock'}
+                                  Available from our suppliers
                                 </div>
                               </div>
                               <Button 
-                                className="bg-[#FF69B4] hover:bg-[#FF1493] text-white" 
-                                disabled={!product.stock || product.stock <= 0}
+                                className="bg-[#FF69B4] hover:bg-[#FF1493] text-white"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  addItem({
+                                    productId: product.id,
+                                    product,
+                                    quantity: 1
+                                  });
+                                  toast({
+                                    title: "Added to cart",
+                                    description: `${product.name} has been added to your cart.`,
+                                    duration: 2000,
+                                  });
+                                }}
                               >
                                 Add to Cart
                               </Button>
