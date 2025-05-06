@@ -3,7 +3,6 @@ import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Product } from '@shared/schema';
-import { useAuth } from '@/hooks/use-auth';
 
 type CartItem = {
   id: number;
@@ -42,14 +41,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
   
   // Get cart items from server
-  const { data, error } = useQuery<CartItem[]>({
+  const { data } = useQuery<CartItem[]>({
     queryKey: ['/api/cart'],
     retry: false,
-    // If there's an error (like 401 for non-authenticated users), we'll handle it by showing an empty cart
-    enabled: !!user
+    gcTime: 0,
+    staleTime: 0,
   });
   
   // Safe type casting with fallback to empty array
@@ -63,6 +61,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Please log in to add items to your cart",
+        variant: "destructive"
+      });
     }
   });
   
@@ -73,6 +78,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Please log in to update your cart",
+        variant: "destructive"
+      });
     }
   });
   
@@ -83,6 +95,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Please log in to modify your cart",
+        variant: "destructive"
+      });
     }
   });
   
@@ -93,6 +112,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Please log in to modify your cart",
+        variant: "destructive"
+      });
     }
   });
   
