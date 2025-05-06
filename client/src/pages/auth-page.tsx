@@ -42,10 +42,11 @@ export default function AuthPage() {
   const navigate = (path: string) => setLocation(path);
 
   // Redirect to home if already logged in
-  if (user) {
-    navigate("/");
-    return null;
-  }
+  React.useEffect(() => {
+    if (user) {
+      navigate("/");
+    }
+  }, [user]);
 
   // Login form
   const loginForm = useForm<LoginFormData>({
