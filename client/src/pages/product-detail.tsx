@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRoute, Link } from 'wouter';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet';
@@ -10,7 +10,26 @@ import { Star, StarHalf, Truck, Package, ShieldCheck, Heart, Share2, Minus, Plus
 import { useCart } from '@/hooks/use-cart';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency, calculateDiscount } from '@/lib/utils';
-import type { Product } from '@shared/schema';
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import type { 
+  Product, 
+  CategoryAttribute, 
+  CategoryAttributeOption, 
+  ProductAttributeCombination
+} from '@shared/schema';
 
 const ProductDetail = () => {
   const [match, params] = useRoute('/product/:slug');
@@ -19,6 +38,9 @@ const ProductDetail = () => {
   const { toast } = useToast();
   const { addItem } = useCart();
   const [quantity, setQuantity] = useState(1);
+  const [selectedAttributes, setSelectedAttributes] = useState<{[key: number]: string}>({});
+  const [currentPrice, setCurrentPrice] = useState<number | null>(null);
+  const [selectedCombination, setSelectedCombination] = useState<ProductAttributeCombination | null>(null);
   
   const { data: product, isLoading, error } = useQuery<Product>({
     queryKey: [`/api/products/slug/${slug}`],
@@ -29,6 +51,24 @@ const ProductDetail = () => {
   const { data: relatedProducts } = useQuery<Product[]>({
     queryKey: ['/api/products/category', product?.categoryId, { limit: 5 }],
     enabled: !!product?.categoryId,
+  });
+  
+  // Get category attributes
+  const { data: categoryAttributes } = useQuery<CategoryAttribute[]>({
+    queryKey: ['/api/category-attributes', product?.categoryId],
+    enabled: !!product?.categoryId,
+  });
+  
+  // Get attribute options for each attribute
+  const { data: productAttributes } = useQuery<{[key: number]: CategoryAttributeOption[]}>({
+    queryKey: ['/api/products', product?.id, 'attributes'],
+    enabled: !!product?.id,
+  });
+  
+  // Get product attribute combinations
+  const { data: combinations } = useQuery<ProductAttributeCombination[]>({
+    queryKey: ['/api/products', product?.id, 'combinations'],
+    enabled: !!product?.id,
   });
   
   if (isLoading) {
@@ -75,12 +115,60 @@ const ProductDetail = () => {
     }
   };
   
+  // Effect to update price when a valid attribute combination is selected
+  useEffect(() => {
+    if (!combinations || combinations.length === 0 || !product) return;
+    
+    // Check if all attributes have been selected
+    const allSelected = categoryAttributes?.every(attr => selectedAttributes[attr.id]) || false;
+    
+    if (allSelected && categoryAttributes && categoryAttributes.length > 0) {
+      // Create a combination hash from selected attributes
+      const combinationParts = Object.entries(selectedAttributes)
+        .map(([attrId, value]) => `${attrId}:${value}`)
+        .sort()
+        .join('|');
+      
+      // Find matching combination
+      const matchingCombination = combinations.find(c => c.combinationHash === combinationParts);
+      
+      if (matchingCombination) {
+        // Calculate adjusted price
+        const basePrice = product.salePrice || product.price;
+        const priceAdjustment = matchingCombination.priceAdjustment || 0;
+        const adjustedPrice = basePrice + priceAdjustment;
+        
+        setCurrentPrice(adjustedPrice);
+        setSelectedCombination(matchingCombination);
+      } else {
+        setCurrentPrice(null);
+        setSelectedCombination(null);
+      }
+    } else {
+      setCurrentPrice(null);
+      setSelectedCombination(null);
+    }
+  }, [selectedAttributes, combinations, product, categoryAttributes]);
+  
+  const handleAttributeChange = (attributeId: number, value: string) => {
+    setSelectedAttributes(prev => ({
+      ...prev,
+      [attributeId]: value
+    }));
+  };
+  
   const handleAddToCart = () => {
-    addItem({
+    const cartItem = {
       productId: product.id,
       product,
       quantity,
-    });
+      combinationId: selectedCombination?.id,
+      combinationHash: selectedCombination?.combinationHash,
+      selectedAttributes,
+      adjustedPrice: currentPrice || product.salePrice || product.price
+    };
+    
+    addItem(cartItem);
     
     toast({
       title: "Added to cart",
@@ -184,6 +272,67 @@ const ProductDetail = () => {
             )}
             
             <Separator className="my-4" />
+            
+            {/* Attribute Selection */}
+            {categoryAttributes && categoryAttributes.length > 0 && productAttributes && (
+              <div className="space-y-4 mb-6">
+                <h3 className="text-lg font-semibold">Options</h3>
+                
+                {categoryAttributes.map(attribute => (
+                  <div key={attribute.id} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="font-medium text-sm">{attribute.name}</label>
+                      
+                      {selectedAttributes[attribute.id] && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge variant="outline" className="ml-2">
+                                {selectedAttributes[attribute.id]}
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Selected value</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                    </div>
+                    
+                    <Select 
+                      value={selectedAttributes[attribute.id] || ''}
+                      onValueChange={value => handleAttributeChange(attribute.id, value)}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder={`Select ${attribute.name}`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {productAttributes[attribute.id]?.map(option => (
+                          <SelectItem key={option.id} value={option.value}>
+                            {option.label || option.value}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ))}
+                
+                {currentPrice !== null && currentPrice !== (product.salePrice || product.price) && (
+                  <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-md">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-green-800">Price with selected options:</span>
+                      <span className="font-bold text-green-700">{formatCurrency(currentPrice)}</span>
+                    </div>
+                    
+                    {selectedCombination && selectedCombination.priceAdjustment > 0 && (
+                      <p className="text-xs text-green-600 mt-1">
+                        Includes {formatCurrency(selectedCombination.priceAdjustment)} for selected options
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
             
             {/* Quantity Selector */}
             <div className="flex items-center">

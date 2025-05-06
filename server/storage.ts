@@ -356,12 +356,22 @@ export class DatabaseStorage implements IStorage {
     // Create the order
     const [newOrder] = await db.insert(orders).values(order).returning();
     
-    // Add order items
+    // Add order items with attribute combination data
     for (const item of items) {
       await db.insert(orderItems).values({
         ...item,
         orderId: newOrder.id
       });
+      
+      // If this item has a combination, update the product's sold count
+      if (item.productId) {
+        await db
+          .update(products)
+          .set({
+            soldCount: sql`${products.soldCount} + ${item.quantity}`
+          })
+          .where(eq(products.id, item.productId));
+      }
     }
     
     // Clear the cart
@@ -387,7 +397,7 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(orders.createdAt));
   }
 
-  async getOrderById(id: number): Promise<(Order & { items: (OrderItem & { product: Product })[] }) | undefined> {
+  async getOrderById(id: number): Promise<(Order & { items: (OrderItem & { product: Product; attributeDetails?: any })[] }) | undefined> {
     const [order] = await db
       .select()
       .from(orders)
@@ -400,7 +410,7 @@ export class DatabaseStorage implements IStorage {
       .from(orderItems)
       .where(eq(orderItems.orderId, id));
     
-    const items: (OrderItem & { product: Product })[] = [];
+    const items: (OrderItem & { product: Product; attributeDetails?: any })[] = [];
     
     for (const item of orderItemsList) {
       const [product] = await db
@@ -409,9 +419,31 @@ export class DatabaseStorage implements IStorage {
         .where(eq(products.id, item.productId));
       
       if (product) {
+        let attributeDetails = undefined;
+        
+        // If there's a combination, get more details
+        if (item.combinationId) {
+          const [combination] = await db
+            .select()
+            .from(productAttributeCombinations)
+            .where(eq(productAttributeCombinations.id, item.combinationId));
+            
+          if (combination) {
+            // Get category attributes
+            const categoryAttributes = await this.getCategoryAttributes(product.categoryId);
+            
+            attributeDetails = {
+              combination,
+              attributes: item.selectedAttributes,
+              categoryAttributes
+            };
+          }
+        }
+        
         items.push({
           ...item,
-          product
+          product,
+          attributeDetails
         });
       }
     }
