@@ -524,14 +524,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(403).json({ message: "Only administrators can use AI features" });
     }
     
-    const { imageUrl } = req.body;
+    const { imageUrl, productName } = req.body;
     
     if (!imageUrl || typeof imageUrl !== 'string') {
       return res.status(400).json({ message: "Image URL is required" });
     }
+
+    if (!productName || typeof productName !== 'string') {
+      return res.status(400).json({ message: "Product name is required" });
+    }
     
     try {
-      const analysis = await analyzeProductImage(imageUrl);
+      const analysis = await analyzeProductImage(imageUrl, productName);
       res.json({ success: true, ...analysis });
     } catch (error) {
       console.error('Product analysis error:', error);

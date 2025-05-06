@@ -284,12 +284,26 @@ export default function ProductFormWizard({ productId, onSuccess }: ProductFormW
       return;
     }
 
+    // Get the product name from the form
+    const productName = form.getValues('name');
+    if (!productName) {
+      toast({
+        title: "Product Name Required",
+        description: "Please enter a product name before running AI analysis",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
       setAiAnalysisLoading(true);
       // Use the first image for analysis
       const imageUrl = uploadedImages[0].url;
       
-      const res = await apiRequest('POST', '/api/ai/analyze-product', { imageUrl });
+      const res = await apiRequest('POST', '/api/ai/analyze-product', { 
+        imageUrl,
+        productName
+      });
       if (!res.ok) {
         const error = await res.json();
         throw new Error(error.message || 'Failed to analyze product');
