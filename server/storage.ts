@@ -61,6 +61,13 @@ export interface IStorage {
   // AI Recommendation operations
   saveRecommendation(recommendation: InsertAiRecommendation): Promise<AiRecommendation>;
   getRecommendationsForUser(userId: number): Promise<AiRecommendation | undefined>;
+
+  // Pricing operations
+  getPricingByCategoryId(categoryId: number): Promise<Pricing | undefined>;
+  getAllPricingSettings(): Promise<Pricing[]>;
+  createOrUpdatePricing(pricing: InsertPricing): Promise<Pricing>;
+  deletePricing(id: number): Promise<boolean>;
+  getDefaultMarkupPercentage(): Promise<number>; // Returns default markup (50% if no global default found)
 }
 
 export class DatabaseStorage implements IStorage {
@@ -479,6 +486,60 @@ export class DatabaseStorage implements IStorage {
       .limit(1);
     
     return recommendation;
+  }
+
+  // Pricing operations
+  async getPricingByCategoryId(categoryId: number): Promise<Pricing | undefined> {
+    const [pricingSetting] = await db
+      .select()
+      .from(pricing)
+      .where(eq(pricing.categoryId, categoryId));
+    
+    return pricingSetting;
+  }
+  
+  async getAllPricingSettings(): Promise<Pricing[]> {
+    return await db.select().from(pricing);
+  }
+  
+  async createOrUpdatePricing(pricingData: InsertPricing): Promise<Pricing> {
+    // Check if pricing for this category already exists
+    const existing = await this.getPricingByCategoryId(pricingData.categoryId);
+    
+    if (existing) {
+      // Update existing pricing
+      const [updated] = await db
+        .update(pricing)
+        .set({
+          markupPercentage: pricingData.markupPercentage,
+          description: pricingData.description,
+          updatedAt: new Date()
+        })
+        .where(eq(pricing.id, existing.id))
+        .returning();
+      
+      return updated;
+    } else {
+      // Create new pricing
+      const [newPricing] = await db.insert(pricing).values(pricingData).returning();
+      return newPricing;
+    }
+  }
+  
+  async deletePricing(id: number): Promise<boolean> {
+    await db.delete(pricing).where(eq(pricing.id, id));
+    return true;
+  }
+  
+  async getDefaultMarkupPercentage(): Promise<number> {
+    // Look for a special "global default" setting (categoryId = 0 or null)
+    const [defaultSetting] = await db
+      .select()
+      .from(pricing)
+      .where(eq(pricing.categoryId, 0));
+    
+    // Return the default markup (50% if no global default found)
+    return defaultSetting?.markupPercentage || 50;
   }
 }
 
