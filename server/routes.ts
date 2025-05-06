@@ -687,7 +687,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get default markup percentage
   app.get("/api/pricing/default-markup", handleErrors(async (req: Request, res: Response) => {
     const defaultMarkup = await storage.getDefaultMarkupPercentage();
-    res.json({ markupPercentage: defaultMarkup });
+    res.json({ markupPercentage: defaultMarkup, isSet: defaultMarkup !== null });
   }));
   
   // Get pricing for a specific category
@@ -700,7 +700,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.json({ 
         categoryId,
         markupPercentage: defaultMarkup,
-        description: "Default pricing (category-specific pricing not set)"
+        description: defaultMarkup === null 
+          ? "No pricing rule set for this category or globally" 
+          : "Default pricing (category-specific pricing not set)"
       });
     }
     

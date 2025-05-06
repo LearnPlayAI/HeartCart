@@ -203,8 +203,8 @@ export async function suggestPrice(
 ): Promise<{ suggestedPrice: number; markupPercentage: number; markupSource: string }> {
   try {
     // First, try to get category-specific markup if we have a categoryId
-    let markupPercentage = 50; // Default fallback markup of 50%
-    let markupSource = 'default';
+    let markupPercentage: number | null = null; // No default markup
+    let markupSource = 'ai_only'; // Default to AI-only
     
     if (categoryId) {
       try {
@@ -216,14 +216,18 @@ export async function suggestPrice(
           markupSource = `category_${categoryId}`;
           console.log(`Using category-specific markup of ${markupPercentage}% for category #${categoryId}`);
         } else {
-          // No category-specific setting, use global default
+          // No category-specific setting, try global default
           markupPercentage = await storage.getDefaultMarkupPercentage();
-          markupSource = 'global_default';
-          console.log(`Using global default markup of ${markupPercentage}%`);
+          if (markupPercentage !== null) {
+            markupSource = 'global_default';
+            console.log(`Using global default markup of ${markupPercentage}%`);
+          } else {
+            console.log('No markup percentage defined. Will rely solely on AI suggestion.');
+          }
         }
       } catch (dbError) {
         console.error('Error fetching markup settings:', dbError);
-        // Continue with default markup if DB access fails
+        // Continue with no markup if DB access fails
       }
     }
     
@@ -265,19 +269,30 @@ export async function suggestPrice(
       
       // Apply business rule: Suggested price should never be lower than cost price
       if (suggestedPrice < costPrice) {
-        // If AI suggestion is below cost price, use our category markup
-        suggestedPrice = costPrice * (1 + markupPercentage / 100);
-        useAiSuggestion = false;
-        console.log(`AI suggested price (${jsonResponse.suggestedPrice}) was below cost price. Using ${markupSource} markup: ${suggestedPrice.toFixed(2)}`);
+        if (markupPercentage !== null) {
+          // If AI suggestion is below cost price and we have a markup, use our markup
+          suggestedPrice = costPrice * (1 + markupPercentage / 100);
+          useAiSuggestion = false;
+          console.log(`AI suggested price (${jsonResponse.suggestedPrice}) was below cost price. Using ${markupSource} markup: ${suggestedPrice.toFixed(2)}`);
+        } else {
+          // If no markup is set, just use cost price as minimum
+          suggestedPrice = costPrice;
+          useAiSuggestion = false;
+          console.log(`AI suggested price (${jsonResponse.suggestedPrice}) was below cost price. No markup set, using cost price: ${suggestedPrice.toFixed(2)}`);
+        }
       }
       
       // If AI suggestion seems reasonable, we'll use it
-      // Otherwise fall back to our category markup calculation
+      // Otherwise fall back to our category markup calculation or cost price
       if (!useAiSuggestion) {
+        const actualMarkupPercent = markupPercentage !== null 
+          ? markupPercentage 
+          : Math.round(((suggestedPrice / costPrice) - 1) * 100);
+        
         return { 
           suggestedPrice, 
-          markupPercentage, 
-          markupSource 
+          markupPercentage: actualMarkupPercent, 
+          markupSource: markupPercentage !== null ? markupSource : 'cost_price_minimum'
         };
       }
       
@@ -298,19 +313,30 @@ export async function suggestPrice(
         
         // Apply business rule: Suggested price should never be lower than cost price
         if (suggestedPrice < costPrice) {
-          // If AI suggestion is below cost price, use our category markup
-          suggestedPrice = costPrice * (1 + markupPercentage / 100);
-          useAiSuggestion = false;
-          console.log(`AI suggested price (${priceMatch[0]}) was below cost price. Using ${markupSource} markup: ${suggestedPrice.toFixed(2)}`);
+          if (markupPercentage !== null) {
+            // If AI suggestion is below cost price and we have a markup, use our markup
+            suggestedPrice = costPrice * (1 + markupPercentage / 100);
+            useAiSuggestion = false;
+            console.log(`AI suggested price (${priceMatch[0]}) was below cost price. Using ${markupSource} markup: ${suggestedPrice.toFixed(2)}`);
+          } else {
+            // If no markup is set, just use cost price as minimum
+            suggestedPrice = costPrice;
+            useAiSuggestion = false;
+            console.log(`AI suggested price (${priceMatch[0]}) was below cost price. No markup set, using cost price: ${suggestedPrice.toFixed(2)}`);
+          }
         }
         
         // If AI suggestion seems reasonable, we'll use it
-        // Otherwise fall back to our category markup calculation
+        // Otherwise fall back to our category markup calculation or cost price
         if (!useAiSuggestion) {
+          const actualMarkupPercent = markupPercentage !== null 
+            ? markupPercentage 
+            : Math.round(((suggestedPrice / costPrice) - 1) * 100);
+          
           return { 
             suggestedPrice, 
-            markupPercentage, 
-            markupSource 
+            markupPercentage: actualMarkupPercent, 
+            markupSource: markupPercentage !== null ? markupSource : 'cost_price_minimum'
           };
         }
         

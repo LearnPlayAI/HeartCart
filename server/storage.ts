@@ -67,7 +67,7 @@ export interface IStorage {
   getAllPricingSettings(): Promise<Pricing[]>;
   createOrUpdatePricing(pricing: InsertPricing): Promise<Pricing>;
   deletePricing(id: number): Promise<boolean>;
-  getDefaultMarkupPercentage(): Promise<number>; // Returns default markup (50% if no global default found)
+  getDefaultMarkupPercentage(): Promise<number | null>; // Returns default markup or null if not set
 }
 
 export class DatabaseStorage implements IStorage {
@@ -531,15 +531,15 @@ export class DatabaseStorage implements IStorage {
     return true;
   }
   
-  async getDefaultMarkupPercentage(): Promise<number> {
+  async getDefaultMarkupPercentage(): Promise<number | null> {
     // Look for a special "global default" setting (categoryId = 0 or null)
     const [defaultSetting] = await db
       .select()
       .from(pricing)
       .where(eq(pricing.categoryId, 0));
     
-    // Return the default markup (50% if no global default found)
-    return defaultSetting?.markupPercentage || 50;
+    // Return the markup percentage if found, or null if not found
+    return defaultSetting?.markupPercentage || null;
   }
 }
 
