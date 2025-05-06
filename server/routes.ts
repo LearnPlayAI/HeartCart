@@ -317,6 +317,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Get all products in this category
     const products = await storage.getProductsByCategory(categoryId);
     
+    // Get all attributes for this category
+    const categoryAttributes = await storage.getCategoryAttributes(categoryId);
+    
+    // Create a lookup map for attribute names by ID
+    const attributeNamesById: Record<number, string> = {};
+    for (const attr of categoryAttributes) {
+      attributeNamesById[attr.id] = attr.name;
+    }
+    
     // Get all attributes for these products
     const result = [];
     
@@ -328,12 +337,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const attributesByName: Record<string, string[]> = {};
       
       for (const attrValue of attributeValues) {
-        const attribute = await storage.getCategoryAttribute(attrValue.attributeId);
-        if (attribute) {
-          if (!attributesByName[attribute.name]) {
-            attributesByName[attribute.name] = [];
+        const attributeName = attributeNamesById[attrValue.attributeId];
+        if (attributeName) {
+          if (!attributesByName[attributeName]) {
+            attributesByName[attributeName] = [];
           }
-          attributesByName[attribute.name].push(attrValue.value);
+          attributesByName[attributeName].push(attrValue.value);
         }
       }
       

@@ -59,6 +59,33 @@ const CategoryPage = () => {
     enabled: !!category?.id,
   });
   
+  // State to store attribute options
+  const [attributeOptions, setAttributeOptions] = useState<Record<number, CategoryAttributeOption[]>>({});
+  
+  // Fetch options for each attribute
+  useEffect(() => {
+    if (!categoryAttributes) return;
+    
+    const fetchOptions = async () => {
+      const options: Record<number, CategoryAttributeOption[]> = {};
+      
+      for (const attribute of categoryAttributes) {
+        try {
+          const response = await fetch(`/api/category-attributes/${attribute.id}/options`);
+          const data = await response.json();
+          options[attribute.id] = data;
+        } catch (error) {
+          console.error(`Error fetching options for attribute ${attribute.id}:`, error);
+          options[attribute.id] = [];
+        }
+      }
+      
+      setAttributeOptions(options);
+    };
+    
+    fetchOptions();
+  }, [categoryAttributes]);
+  
   const toggleFilter = () => {
     setIsFilterOpen(!isFilterOpen);
   };
@@ -273,10 +300,10 @@ const CategoryPage = () => {
               {/* Dynamic Attribute Filters */}
               {categoryAttributes?.map(attribute => (
                 <AccordionItem key={attribute.id} value={`attribute-${attribute.id}`}>
-                  <AccordionTrigger>{attribute.name}</AccordionTrigger>
+                  <AccordionTrigger>{attribute.displayName}</AccordionTrigger>
                   <AccordionContent>
                     <div className="space-y-2 max-h-48 overflow-y-auto">
-                      {attribute.options?.map(option => (
+                      {attributeOptions[attribute.id]?.map((option: CategoryAttributeOption) => (
                         <div key={option.id} className="flex items-center space-x-2">
                           <Checkbox
                             id={`attr-${attribute.id}-${option.id}`}
@@ -293,10 +320,13 @@ const CategoryPage = () => {
                             htmlFor={`attr-${attribute.id}-${option.id}`}
                             className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                           >
-                            {option.value}
+                            {option.displayValue}
                           </label>
                         </div>
                       ))}
+                      {attributeOptions[attribute.id]?.length === 0 && (
+                        <div className="text-sm text-gray-500">No options available</div>
+                      )}
                     </div>
                   </AccordionContent>
                 </AccordionItem>
