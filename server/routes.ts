@@ -2,7 +2,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { ZodError } from "zod";
-import { removeImageBackground, generateProductTags, analyzeProductImage, suggestPrice } from "./ai-service";
+import { removeImageBackground, generateProductTags, analyzeProductImage, suggestPrice, getAvailableAiModels, getCurrentAiModelSetting, updateAiModel } from "./ai-service";
 import { 
   insertCartItemSchema, 
   insertOrderSchema, 
@@ -585,6 +585,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error: error instanceof Error ? error.message : 'Unknown error'
       });
     }
+  }));
+  
+  // AI MODEL SETTINGS ROUTES
+  
+  // Get all available AI models
+  app.get("/api/admin/ai/models", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    // Check if user is admin
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can manage AI settings" });
+    }
+    
+    // Get all available models
+    const models = getAvailableAiModels();
+    
+    // Get current model
+    const currentModel = await getCurrentAiModelSetting();
+    
+    res.json({
+      available: models,
+      current: currentModel.modelName,
+      isDefault: currentModel.isDefault
+    });
+  }));
+  
+  // Update current AI model
+  app.post("/api/admin/ai/models", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    // Check if user is admin
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can manage AI settings" });
+    }
+    
+    const { modelName } = req.body;
+    
+    if (!modelName || typeof modelName !== 'string') {
+      return res.status(400).json({ message: "Model name is required" });
+    }
+    
+    try {
+      const success = await updateAiModel(modelName);
+      
+      if (success) {
+        res.json({ 
+          success: true, 
+          message: `Successfully updated AI model to: ${modelName}`
+        });
+      } else {
+        res.status(200).json({ 
+          success: false, 
+          message: `Model ${modelName} was saved but could not be initialized. Will try again on next server restart.`
+        });
+      }
+    } catch (error) {
+      console.error('Error updating AI model:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to update AI model",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }));
+  
+  // Get all AI settings
+  app.get("/api/admin/ai/settings", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    // Check if user is admin
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can manage AI settings" });
+    }
+    
+    const settings = await storage.getAllAiSettings();
+    res.json(settings);
   }));
 
   // CART ROUTES
