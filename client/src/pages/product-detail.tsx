@@ -89,10 +89,11 @@ const ProductDetail = () => {
     });
   };
   
-  const renderStars = (rating: number = 0) => {
+  const renderStars = (rating: number | null = 0) => {
     const stars = [];
-    const fullStars = Math.floor(rating);
-    const hasHalfStar = rating % 1 >= 0.5;
+    const actualRating = rating || 0;
+    const fullStars = Math.floor(actualRating);
+    const hasHalfStar = actualRating % 1 >= 0.5;
     
     for (let i = 0; i < fullStars; i++) {
       stars.push(<Star key={`star-${i}`} className="fill-yellow-400 text-yellow-400" />);
@@ -123,8 +124,8 @@ const ProductDetail = () => {
           <div>
             <div className="mb-4 bg-white rounded-lg overflow-hidden border border-gray-200">
               <img 
-                src={product.imageUrl} 
-                alt={product.name} 
+                src={product.imageUrl || ''} 
+                alt={product.name || 'Product image'} 
                 className="w-full h-auto object-contain aspect-square"
               />
             </div>
@@ -331,29 +332,31 @@ const ProductDetail = () => {
                 .filter(p => p.id !== product.id)
                 .slice(0, 5)
                 .map(relatedProduct => (
-                  <Link key={relatedProduct.id} href={`/product/${relatedProduct.slug}`}>
-                    <a className="product-card bg-white rounded-lg shadow-md overflow-hidden">
-                      <img 
-                        src={relatedProduct.imageUrl} 
-                        alt={relatedProduct.name} 
-                        className="w-full h-40 object-cover"
-                      />
-                      <div className="p-3">
-                        <h3 className="text-sm font-medium text-gray-800 mb-1 line-clamp-2">
-                          {relatedProduct.name}
-                        </h3>
-                        <div className="flex items-baseline">
-                          <span className="text-[#FF69B4] font-bold">
-                            {formatCurrency(relatedProduct.salePrice || relatedProduct.price)}
+                  <Link 
+                    key={relatedProduct.id} 
+                    href={`/product/${relatedProduct.slug}`}
+                    className="product-card bg-white rounded-lg shadow-md overflow-hidden"
+                  >
+                    <img 
+                      src={relatedProduct.imageUrl || ''} 
+                      alt={relatedProduct.name || 'Product image'} 
+                      className="w-full h-40 object-cover"
+                    />
+                    <div className="p-3">
+                      <h3 className="text-sm font-medium text-gray-800 mb-1 line-clamp-2">
+                        {relatedProduct.name}
+                      </h3>
+                      <div className="flex items-baseline">
+                        <span className="text-[#FF69B4] font-bold">
+                          {formatCurrency(relatedProduct.salePrice || relatedProduct.price)}
+                        </span>
+                        {relatedProduct.salePrice && (
+                          <span className="text-gray-500 text-xs ml-1 line-through">
+                            {formatCurrency(relatedProduct.price)}
                           </span>
-                          {relatedProduct.salePrice && (
-                            <span className="text-gray-500 text-xs ml-1 line-through">
-                              {formatCurrency(relatedProduct.price)}
-                            </span>
-                          )}
-                        </div>
+                        )}
                       </div>
-                    </a>
+                    </div>
                   </Link>
                 ))}
             </div>
