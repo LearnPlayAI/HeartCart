@@ -30,38 +30,18 @@ export default function EditCatalog() {
   // Fetch catalog details
   const { data: catalog, isLoading } = useQuery<Catalog>({
     queryKey: [`/api/catalogs/${catalogId}`],
-    queryFn: async () => {
-      // This will be replaced with actual API call
-      return await new Promise((resolve) => {
-        setTimeout(() => {
-          // Placeholder data
-          resolve({
-            id: parseInt(catalogId),
-            name: "Summer Collection 2024",
-            supplierId: "1",
-            description: "This is a placeholder description for the summer collection catalog.",
-            isActive: true,
-            startDate: new Date(),
-            endDate: new Date(new Date().setMonth(new Date().getMonth() + 3)),
-            markupPercentage: 20,
-            freeShipping: true,
-          });
-        }, 500);
-      });
-    },
     enabled: !!catalogId,
   });
 
   // Update catalog mutation
   const { mutate: updateCatalog, isPending } = useMutation({
     mutationFn: async (data: any) => {
-      // This will be replaced with actual API call
-      return await new Promise((resolve) => {
-        setTimeout(() => {
-          console.log("Updating catalog:", data);
-          resolve({ id: parseInt(catalogId), ...data });
-        }, 500);
-      });
+      const response = await apiRequest("PUT", `/api/catalogs/${catalogId}`, data);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to update catalog");
+      }
+      return await response.json();
     },
     onSuccess: () => {
       toast({

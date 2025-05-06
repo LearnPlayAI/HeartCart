@@ -16,13 +16,12 @@ export default function AddCatalog() {
   // Create catalog mutation
   const { mutate: createCatalog, isPending } = useMutation({
     mutationFn: async (data: any) => {
-      // This will be replaced with actual API call
-      return await new Promise((resolve) => {
-        setTimeout(() => {
-          console.log("Creating catalog:", data);
-          resolve({ id: Date.now(), ...data });
-        }, 500);
-      });
+      const response = await apiRequest("POST", "/api/catalogs", data);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to create catalog");
+      }
+      return await response.json();
     },
     onSuccess: () => {
       toast({

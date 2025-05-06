@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { AdminLayout } from "@/components/admin/layout";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
   Table,
   TableBody,
@@ -74,13 +75,9 @@ export default function AdminCatalogs() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedCatalog, setSelectedCatalog] = useState<Catalog | null>(null);
 
-  // Query catalogs - This will be replaced with actual API call
+  // Query catalogs from API
   const { data: catalogs, isLoading } = useQuery<Catalog[]>({
     queryKey: ["/api/catalogs", searchQuery],
-    queryFn: async () => {
-      // This is placeholder data
-      return [];
-    },
   });
 
   // CRUD operations
@@ -99,14 +96,37 @@ export default function AdminCatalogs() {
     setShowDeleteDialog(true);
   };
 
+  const { mutate: deleteCatalog, isPending: isDeleting } = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await apiRequest("DELETE", `/api/catalogs/${id}`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to delete catalog");
+      }
+      return await response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Catalog deleted",
+        description: `${selectedCatalog?.name} has been deleted.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/catalogs"] });
+      setShowDeleteDialog(false);
+      setSelectedCatalog(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete catalog",
+        variant: "destructive",
+      });
+    },
+  });
+  
   const confirmDelete = () => {
-    // Will be implemented with API call
-    toast({
-      title: "Catalog deleted",
-      description: `${selectedCatalog?.name} has been deleted.`,
-    });
-    setShowDeleteDialog(false);
-    setSelectedCatalog(null);
+    if (selectedCatalog) {
+      deleteCatalog(selectedCatalog.id);
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -291,8 +311,15 @@ export default function AdminCatalogs() {
             <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={confirmDelete}>
-              Delete
+            <Button variant="destructive" onClick={confirmDelete} disabled={isDeleting}>
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
