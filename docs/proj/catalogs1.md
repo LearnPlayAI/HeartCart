@@ -15,20 +15,24 @@ The goal is to enable category-specific product attributes (like size, color, ma
 
 ### Phase 1: Database Schema & Data Models
 
-- [ ] **1.1 Update Database Schema**
-  - [ ] Create `category_attributes` table to define attributes per category
-  - [ ] Create `product_attribute_values` table to store product-specific values
-  - [ ] Add necessary relations between existing tables and new tables
+- [✓] **1.1 Update Database Schema**
+  - [✓] Create `category_attributes` table to define attributes per category
+  - [✓] Create `category_attribute_options` table to store attribute options
+  - [✓] Create `product_attribute_values` table to store product-specific values
+  - [✓] Create `product_attribute_combinations` table for attribute combinations
+  - [✓] Add necessary relations between existing tables and new tables
   
-- [ ] **1.2 Update Drizzle ORM Models**
-  - [ ] Add new table definitions to shared/schema.ts
-  - [ ] Create insert schemas and types for new tables
-  - [ ] Set up proper relations between models
+- [✓] **1.2 Update Drizzle ORM Models**
+  - [✓] Add new table definitions to shared/schema.ts
+  - [✓] Create insert schemas and types for new tables
+  - [✓] Set up proper relations between models
 
-- [ ] **1.3 Add API Storage Methods**
-  - [ ] Add CRUD methods for category attributes
-  - [ ] Add CRUD methods for product attribute values
-  - [ ] Extend existing product queries to include attribute data
+- [✓] **1.3 Add API Storage Methods**
+  - [✓] Add CRUD methods for category attributes
+  - [✓] Add CRUD methods for attribute options
+  - [✓] Add CRUD methods for product attribute values
+  - [✓] Add CRUD methods for attribute combinations
+  - [✓] Extend existing product queries to include attribute data
 
 ### Phase 2: Category Attribute Management
 

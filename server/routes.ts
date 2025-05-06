@@ -151,6 +151,111 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.status(201).json(category);
   }));
 
+  // CATEGORY ATTRIBUTE ROUTES
+  app.get("/api/categories/:categoryId/attributes", handleErrors(async (req: Request, res: Response) => {
+    const categoryId = parseInt(req.params.categoryId);
+    const attributes = await storage.getCategoryAttributes(categoryId);
+    res.json(attributes);
+  }));
+
+  app.get("/api/category-attributes/:id", handleErrors(async (req: Request, res: Response) => {
+    const attributeId = parseInt(req.params.id);
+    const attribute = await storage.getCategoryAttributeById(attributeId);
+    if (!attribute) {
+      return res.status(404).json({ message: "Attribute not found" });
+    }
+    res.json(attribute);
+  }));
+
+  app.post("/api/category-attributes", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    // Check if user is admin
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can create category attributes" });
+    }
+    
+    const attribute = await storage.createCategoryAttribute(req.body);
+    res.status(201).json(attribute);
+  }));
+
+  app.put("/api/category-attributes/:id", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    // Check if user is admin
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can update category attributes" });
+    }
+    
+    const attributeId = parseInt(req.params.id);
+    const attribute = await storage.updateCategoryAttribute(attributeId, req.body);
+    if (!attribute) {
+      return res.status(404).json({ message: "Attribute not found" });
+    }
+    res.json(attribute);
+  }));
+
+  app.delete("/api/category-attributes/:id", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    // Check if user is admin
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can delete category attributes" });
+    }
+    
+    const attributeId = parseInt(req.params.id);
+    const success = await storage.deleteCategoryAttribute(attributeId);
+    res.json({ success });
+  }));
+
+  // CATEGORY ATTRIBUTE OPTIONS ROUTES
+  app.get("/api/category-attributes/:attributeId/options", handleErrors(async (req: Request, res: Response) => {
+    const attributeId = parseInt(req.params.attributeId);
+    const options = await storage.getCategoryAttributeOptions(attributeId);
+    res.json(options);
+  }));
+
+  app.post("/api/category-attribute-options", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    // Check if user is admin
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can create attribute options" });
+    }
+    
+    const option = await storage.createCategoryAttributeOption(req.body);
+    res.status(201).json(option);
+  }));
+
+  app.put("/api/category-attribute-options/:id", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    // Check if user is admin
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can update attribute options" });
+    }
+    
+    const optionId = parseInt(req.params.id);
+    const option = await storage.updateCategoryAttributeOption(optionId, req.body);
+    if (!option) {
+      return res.status(404).json({ message: "Option not found" });
+    }
+    res.json(option);
+  }));
+
+  app.delete("/api/category-attribute-options/:id", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    // Check if user is admin
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can delete attribute options" });
+    }
+    
+    const optionId = parseInt(req.params.id);
+    const success = await storage.deleteCategoryAttributeOption(optionId);
+    res.json({ success });
+  }));
+
   // PRODUCT ROUTES
   app.get("/api/products", handleErrors(async (req: Request, res: Response) => {
     const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
