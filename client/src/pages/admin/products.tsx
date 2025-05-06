@@ -157,9 +157,9 @@ export default function AdminProducts() {
             {currentItems.map((product) => (
               <Card key={product.id} className="overflow-hidden">
                 <div className="aspect-[4/3] relative bg-muted">
-                  {product.image ? (
+                  {product.imageUrl ? (
                     <img
-                      src={product.image}
+                      src={product.imageUrl}
                       alt={product.name}
                       className="object-cover w-full h-full"
                     />
