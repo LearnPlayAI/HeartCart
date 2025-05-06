@@ -1,0 +1,65 @@
+{
+  "name": "TEE ME YOU - South African Online Shopping",
+  "short_name": "TEE ME YOU",
+  "description": "Shop unique products from local South African suppliers at unbeatable prices",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#FF69B4",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/logo.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/logo.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Flash Deals",
+      "short_name": "Deals",
+      "description": "Check out today's best deals",
+      "url": "/flash-deals",
+      "icons": [
+        {
+          "src": "/logo.svg",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "My Cart",
+      "short_name": "Cart",
+      "description": "View your shopping cart",
+      "url": "/?openCart=true",
+      "icons": [
+        {
+          "src": "/logo.svg",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
+  "categories": ["shopping", "lifestyle", "e-commerce"],
+  "screenshots": [],
+  "related_applications": []
+}

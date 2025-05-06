@@ -1,0 +1,328 @@
+import React, { useState } from 'react';
+import { useRoute, Link } from 'wouter';
+import { useQuery } from '@tanstack/react-query';
+import { Helmet } from 'react-helmet';
+import { Button } from '@/components/ui/button';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
+import { 
+  Accordion, 
+  AccordionContent, 
+  AccordionItem, 
+  AccordionTrigger
+} from '@/components/ui/accordion';
+import { Separator } from '@/components/ui/separator';
+import { Slider } from '@/components/ui/slider';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Filter, SlidersHorizontal, X } from 'lucide-react';
+import ProductCard from '@/components/product/product-card';
+import type { Product, Category } from '@shared/schema';
+
+const CategoryPage = () => {
+  const [match, params] = useRoute('/category/:slug');
+  const slug = params?.slug;
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [sortBy, setSortBy] = useState('default');
+  const [priceRange, setPriceRange] = useState([0, 2000]);
+  const [filters, setFilters] = useState({
+    onSale: false,
+    inStock: false,
+  });
+  
+  const { data: category, isLoading: isLoadingCategory } = useQuery<Category>({
+    queryKey: [`/api/categories/${slug}`],
+    enabled: !!slug,
+  });
+  
+  const { data: products, isLoading: isLoadingProducts } = useQuery<Product[]>({
+    queryKey: [`/api/products/category/${category?.id}`],
+    enabled: !!category?.id,
+  });
+  
+  // Fetch all categories for the sidebar
+  const { data: categories } = useQuery<Category[]>({
+    queryKey: ['/api/categories'],
+  });
+  
+  const toggleFilter = () => {
+    setIsFilterOpen(!isFilterOpen);
+  };
+  
+  const handleSortChange = (value: string) => {
+    setSortBy(value);
+  };
+  
+  const handleFilterChange = (key: string, value: boolean) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+  };
+  
+  const handlePriceChange = (values: number[]) => {
+    setPriceRange(values);
+  };
+  
+  // Apply filters and sorting to products
+  const filteredProducts = products ? products
+    .filter(product => {
+      // Apply price filter
+      const price = product.salePrice || product.price;
+      if (price < priceRange[0] || price > priceRange[1]) return false;
+      
+      // Apply sale filter
+      if (filters.onSale && !product.salePrice) return false;
+      
+      // Apply stock filter
+      if (filters.inStock && (!product.stock || product.stock <= 0)) return false;
+      
+      return true;
+    })
+    .sort((a, b) => {
+      // Apply sorting
+      const priceA = a.salePrice || a.price;
+      const priceB = b.salePrice || b.price;
+      
+      switch (sortBy) {
+        case 'price-asc':
+          return priceA - priceB;
+        case 'price-desc':
+          return priceB - priceA;
+        case 'name-asc':
+          return a.name.localeCompare(b.name);
+        case 'name-desc':
+          return b.name.localeCompare(a.name);
+        case 'rating-desc':
+          return (b.rating || 0) - (a.rating || 0);
+        default:
+          return 0;
+      }
+    }) : [];
+  
+  return (
+    <>
+      <Helmet>
+        <title>{category?.name || 'Category'} - TEE ME YOU</title>
+        <meta name="description" content={`Shop ${category?.name || 'our products'} from local South African suppliers at unbeatable prices.`} />
+      </Helmet>
+      
+      <div className="container mx-auto px-4 py-6">
+        {/* Category Header */}
+        <div className="mb-6">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
+            {isLoadingCategory ? 'Loading...' : category?.name || 'All Products'}
+          </h1>
+          {category?.description && (
+            <p className="mt-2 text-gray-600">{category.description}</p>
+          )}
+        </div>
+        
+        {/* Filter Toggle & Sort (Mobile View) */}
+        <div className="flex justify-between items-center mb-4 md:hidden">
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={toggleFilter}
+            className="flex items-center"
+          >
+            <Filter className="mr-2 h-4 w-4" />
+            Filters
+          </Button>
+          
+          <Select value={sortBy} onValueChange={handleSortChange}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="Sort by" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="default">Default</SelectItem>
+              <SelectItem value="price-asc">Price: Low to High</SelectItem>
+              <SelectItem value="price-desc">Price: High to Low</SelectItem>
+              <SelectItem value="name-asc">Name: A to Z</SelectItem>
+              <SelectItem value="name-desc">Name: Z to A</SelectItem>
+              <SelectItem value="rating-desc">Highest Rated</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div className="flex flex-col md:flex-row gap-6">
+          {/* Filters Sidebar */}
+          <div 
+            className={`${
+              isFilterOpen ? 'fixed inset-0 z-40 bg-white p-4' : 'hidden'
+            } md:relative md:block md:w-64 md:flex-shrink-0`}
+          >
+            {isFilterOpen && (
+              <div className="flex justify-between items-center mb-4 md:hidden">
+                <h2 className="text-lg font-medium">Filters</h2>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={toggleFilter}
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+            )}
+            
+            <div className="hidden md:flex justify-between items-center mb-4">
+              <h2 className="text-lg font-medium">Filters</h2>
+              <SlidersHorizontal className="h-5 w-5 text-gray-500" />
+            </div>
+            
+            <Accordion type="multiple" defaultValue={['categories', 'price', 'filters']}>
+              <AccordionItem value="categories">
+                <AccordionTrigger>Categories</AccordionTrigger>
+                <AccordionContent>
+                  <div className="space-y-2">
+                    {categories?.map(cat => (
+                      <div key={cat.id} className="flex items-center">
+                        <Link href={`/category/${cat.slug}`}>
+                          <a className={`text-sm hover:text-[#FF69B4] ${
+                            cat.slug === slug ? 'text-[#FF69B4] font-medium' : 'text-gray-700'
+                          }`}>
+                            {cat.name}
+                          </a>
+                        </Link>
+                      </div>
+                    ))}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+              
+              <AccordionItem value="price">
+                <AccordionTrigger>Price Range</AccordionTrigger>
+                <AccordionContent>
+                  <div className="space-y-4">
+                    <Slider
+                      value={priceRange}
+                      min={0}
+                      max={2000}
+                      step={10}
+                      onValueChange={handlePriceChange}
+                    />
+                    <div className="flex justify-between">
+                      <span>R{priceRange[0]}</span>
+                      <span>R{priceRange[1]}</span>
+                    </div>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+              
+              <AccordionItem value="filters">
+                <AccordionTrigger>More Filters</AccordionTrigger>
+                <AccordionContent>
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="onSale" 
+                        checked={filters.onSale}
+                        onCheckedChange={checked => 
+                          handleFilterChange('onSale', checked as boolean)
+                        }
+                      />
+                      <label 
+                        htmlFor="onSale"
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
+                        On Sale
+                      </label>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="inStock" 
+                        checked={filters.inStock}
+                        onCheckedChange={checked => 
+                          handleFilterChange('inStock', checked as boolean)
+                        }
+                      />
+                      <label 
+                        htmlFor="inStock"
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
+                        In Stock
+                      </label>
+                    </div>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+            
+            {isFilterOpen && (
+              <div className="mt-6 md:hidden">
+                <Button 
+                  className="w-full bg-[#FF69B4] hover:bg-[#FF1493] text-white"
+                  onClick={toggleFilter}
+                >
+                  Apply Filters
+                </Button>
+              </div>
+            )}
+          </div>
+          
+          {/* Products Grid */}
+          <div className="flex-1">
+            {/* Sort (Desktop View) */}
+            <div className="hidden md:flex justify-end mb-4">
+              <Select value={sortBy} onValueChange={handleSortChange}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent align="end">
+                  <SelectItem value="default">Default</SelectItem>
+                  <SelectItem value="price-asc">Price: Low to High</SelectItem>
+                  <SelectItem value="price-desc">Price: High to Low</SelectItem>
+                  <SelectItem value="name-asc">Name: A to Z</SelectItem>
+                  <SelectItem value="name-desc">Name: Z to A</SelectItem>
+                  <SelectItem value="rating-desc">Highest Rated</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {isLoadingProducts ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {Array.from({ length: 8 }).map((_, index) => (
+                  <div key={index} className="bg-white rounded-lg shadow-md overflow-hidden animate-pulse">
+                    <div className="h-48 bg-gray-200"></div>
+                    <div className="p-3">
+                      <div className="h-3 bg-gray-200 rounded w-3/4 mb-2"></div>
+                      <div className="h-3 bg-gray-200 rounded w-1/2 mb-2"></div>
+                      <div className="h-6 bg-gray-200 rounded w-1/4 mb-2"></div>
+                      <div className="h-8 bg-gray-200 rounded w-full mt-2"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : filteredProducts.length > 0 ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {filteredProducts.map(product => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    showAddToCart={true}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="bg-white rounded-lg shadow-md p-8 text-center">
+                <h3 className="text-lg font-medium mb-2">No products found</h3>
+                <p className="text-gray-600 mb-4">
+                  Try adjusting your filters or browse other categories.
+                </p>
+                <Button asChild>
+                  <Link href="/">
+                    <a>Continue Shopping</a>
+                  </Link>
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+};
+
+export default CategoryPage;

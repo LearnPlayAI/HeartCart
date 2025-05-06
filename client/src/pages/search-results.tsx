@@ -1,0 +1,167 @@
+import React, { useState, useEffect } from 'react';
+import { useLocation, Link } from 'wouter';
+import { useQuery } from '@tanstack/react-query';
+import { Helmet } from 'react-helmet';
+import { Button } from '@/components/ui/button';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
+import { Card, CardContent } from '@/components/ui/card';
+import { Search as SearchIcon, Filter } from 'lucide-react';
+import ProductCard from '@/components/product/product-card';
+import type { Product } from '@shared/schema';
+
+const SearchResults = () => {
+  const [location] = useLocation();
+  const searchParams = new URLSearchParams(location.split('?')[1]);
+  const query = searchParams.get('q') || '';
+  const [sortBy, setSortBy] = useState('default');
+  const [page, setPage] = useState(1);
+  const limit = 20;
+  
+  const { data: products, isLoading, isFetching } = useQuery<Product[]>({
+    queryKey: [`/api/search?q=${query}`, { limit, offset: (page - 1) * limit }],
+    enabled: query.length > 0,
+  });
+  
+  // Reset page when query changes
+  useEffect(() => {
+    setPage(1);
+  }, [query]);
+  
+  const handleSortChange = (value: string) => {
+    setSortBy(value);
+  };
+  
+  const loadMore = () => {
+    setPage(prev => prev + 1);
+  };
+  
+  // Apply sorting to products
+  const sortedProducts = products ? [...products].sort((a, b) => {
+    const priceA = a.salePrice || a.price;
+    const priceB = b.salePrice || b.price;
+    
+    switch (sortBy) {
+      case 'price-asc':
+        return priceA - priceB;
+      case 'price-desc':
+        return priceB - priceA;
+      case 'name-asc':
+        return a.name.localeCompare(b.name);
+      case 'name-desc':
+        return b.name.localeCompare(a.name);
+      case 'rating-desc':
+        return (b.rating || 0) - (a.rating || 0);
+      default:
+        return 0;
+    }
+  }) : [];
+  
+  return (
+    <>
+      <Helmet>
+        <title>Search Results for "{query}" - TEE ME YOU</title>
+        <meta name="description" content={`Search results for "${query}". Find South African products at unbeatable prices.`} />
+      </Helmet>
+      
+      <div className="container mx-auto px-4 py-6">
+        {/* Search Header */}
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            Search Results for "{query}"
+          </h1>
+          <p className="text-gray-600">
+            {isLoading ? 'Searching...' : `Found ${products?.length || 0} results`}
+          </p>
+        </div>
+        
+        {/* Sort Options */}
+        <div className="flex justify-between items-center mb-6">
+          <div className="flex items-center">
+            <SearchIcon className="h-5 w-5 text-gray-500 mr-2" />
+            <span className="text-gray-500">Results for <span className="font-medium">"{query}"</span></span>
+          </div>
+          
+          <Select value={sortBy} onValueChange={handleSortChange}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Sort by" />
+            </SelectTrigger>
+            <SelectContent align="end">
+              <SelectItem value="default">Default</SelectItem>
+              <SelectItem value="price-asc">Price: Low to High</SelectItem>
+              <SelectItem value="price-desc">Price: High to Low</SelectItem>
+              <SelectItem value="name-asc">Name: A to Z</SelectItem>
+              <SelectItem value="name-desc">Name: Z to A</SelectItem>
+              <SelectItem value="rating-desc">Highest Rated</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        
+        {/* Search Results */}
+        {isLoading ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            {Array.from({ length: 10 }).map((_, index) => (
+              <div key={index} className="bg-white rounded-lg shadow-md overflow-hidden animate-pulse">
+                <div className="h-48 bg-gray-200"></div>
+                <div className="p-3">
+                  <div className="h-3 bg-gray-200 rounded w-3/4 mb-2"></div>
+                  <div className="h-3 bg-gray-200 rounded w-1/2 mb-2"></div>
+                  <div className="h-6 bg-gray-200 rounded w-1/4 mb-2"></div>
+                  <div className="h-8 bg-gray-200 rounded w-full mt-2"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : sortedProducts.length > 0 ? (
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              {sortedProducts.map(product => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  showAddToCart={true}
+                />
+              ))}
+            </div>
+            
+            {products && products.length >= limit && (
+              <div className="flex justify-center mt-8">
+                <Button 
+                  variant="outline"
+                  className="border-[#FF69B4] text-[#FF69B4] hover:bg-[#FF69B4] hover:text-white"
+                  onClick={loadMore}
+                  disabled={isFetching}
+                >
+                  {isFetching ? 'Loading...' : 'Load More Results'}
+                </Button>
+              </div>
+            )}
+          </>
+        ) : (
+          <Card>
+            <CardContent className="flex flex-col items-center py-8">
+              <SearchIcon className="h-12 w-12 text-gray-300 mb-4" />
+              <h2 className="text-xl font-medium mb-2">No results found</h2>
+              <p className="text-gray-600 mb-6 text-center">
+                We couldn't find any products matching "{query}".<br />
+                Try using different keywords or browse our categories.
+              </p>
+              <Button asChild>
+                <Link href="/">
+                  <a>Continue Shopping</a>
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </>
+  );
+};
+
+export default SearchResults;
