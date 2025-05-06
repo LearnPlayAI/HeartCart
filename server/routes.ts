@@ -9,7 +9,8 @@ import {
   insertOrderItemSchema,
   insertCategorySchema,
   insertProductSchema,
-  insertProductImageSchema
+  insertProductImageSchema,
+  insertPricingSchema
 } from "@shared/schema";
 import { Client as ObjectStorageClient } from "@replit/object-storage";
 import { setupAuth } from "./auth";
@@ -657,6 +658,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
       reason: "Popular products you might like",
       timestamp: new Date()
     });
+  }));
+
+  // PRICING MANAGEMENT ROUTES - For admin use only
+  
+  // Get all pricing settings
+  app.get("/api/admin/pricing", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    // Check if user is admin
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Access denied" });
+    }
+    
+    const pricingSettings = await storage.getAllPricingSettings();
+    res.json(pricingSettings);
+  }));
+  
+  // Get default markup percentage
+  app.get("/api/pricing/default-markup", handleErrors(async (req: Request, res: Response) => {
+    const defaultMarkup = await storage.getDefaultMarkupPercentage();
+    res.json({ markupPercentage: defaultMarkup });
+  }));
+  
+  // Get pricing for a specific category
+  app.get("/api/pricing/category/:categoryId", handleErrors(async (req: Request, res: Response) => {
+    const categoryId = parseInt(req.params.categoryId);
+    const pricing = await storage.getPricingByCategoryId(categoryId);
+    
+    if (!pricing) {
+      const defaultMarkup = await storage.getDefaultMarkupPercentage();
+      return res.json({ 
+        categoryId,
+        markupPercentage: defaultMarkup,
+        description: "Default pricing (category-specific pricing not set)"
+      });
+    }
+    
+    res.json(pricing);
+  }));
+  
+  // Create or update pricing for a category
+  app.post("/api/admin/pricing", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    // Check if user is admin
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Access denied" });
+    }
+    
+    const pricingData = insertPricingSchema.parse(req.body);
+    const result = await storage.createOrUpdatePricing(pricingData);
+    res.status(201).json(result);
+  }));
+  
+  // Delete pricing setting
+  app.delete("/api/admin/pricing/:id", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    // Check if user is admin
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Access denied" });
+    }
+    
+    const id = parseInt(req.params.id);
+    await storage.deletePricing(id);
+    res.json({ success: true });
   }));
 
   const httpServer = createServer(app);

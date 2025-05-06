@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
 import sharp from 'sharp';
+import { storage } from './storage';
 
 // Environment variable validation
 if (!process.env.GEMINI_API_KEY) {
