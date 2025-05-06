@@ -71,9 +71,9 @@ export default function ProductFormWizard({ productId, onSuccess }: ProductFormW
 
   // Define the form steps
   const steps = [
-    { id: 'basic-info', label: 'Basic Info' },
     { id: 'images', label: 'Images' },
     { id: 'ai-analysis', label: 'AI Analysis' },
+    { id: 'basic-info', label: 'Basic Info' },
     { id: 'details', label: 'Additional Details' },
     { id: 'review', label: 'Review & Submit' }
   ];
@@ -248,10 +248,10 @@ export default function ProductFormWizard({ productId, onSuccess }: ProductFormW
   const goToNextStep = async () => {
     // Validate current step
     const fieldsToValidate = {
-      0: ['name', 'slug', 'categoryId', 'price', 'stock'],
-      1: [], // Images step doesn't require validation
-      2: [], // AI analysis step doesn't require validation
-      3: ['description'],
+      0: [], // Images step doesn't require validation
+      1: [], // AI analysis step doesn't require validation
+      2: ['name', 'slug', 'categoryId', 'price', 'stock'], // Basic info step
+      3: ['description'], // Details step
       4: []  // Review step doesn't require validation
     }[currentStep];
     

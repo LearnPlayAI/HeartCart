@@ -41,6 +41,7 @@ export const products = pgTable("products", {
   description: text("description"),
   categoryId: integer("category_id").references(() => categories.id),
   price: doublePrecision("price").notNull(),
+  costPrice: doublePrecision("cost_price"),
   salePrice: doublePrecision("sale_price"),
   discount: integer("discount"),
   imageUrl: text("image_url"),
