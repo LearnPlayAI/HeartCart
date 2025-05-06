@@ -33,7 +33,7 @@ export interface IStorage {
   createCategory(category: InsertCategory): Promise<Category>;
   
   // Product operations
-  getAllProducts(limit?: number, offset?: number): Promise<Product[]>;
+  getAllProducts(limit?: number, offset?: number, categoryId?: number, search?: string): Promise<Product[]>;
   getProductById(id: number): Promise<Product | undefined>;
   getProductBySlug(slug: string): Promise<Product | undefined>;
   getProductsByCategory(categoryId: number, limit?: number, offset?: number): Promise<Product[]>;
@@ -176,13 +176,33 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Product operations
-  async getAllProducts(limit = 20, offset = 0): Promise<Product[]> {
-    return await db
+  async getAllProducts(
+    limit = 20, 
+    offset = 0, 
+    categoryId?: number, 
+    search?: string
+  ): Promise<Product[]> {
+    let query = db
       .select()
       .from(products)
-      .where(eq(products.isActive, true))
-      .limit(limit)
-      .offset(offset);
+      .where(eq(products.isActive, true));
+    
+    // Add search condition if provided
+    if (search) {
+      query = query.where(
+        or(
+          like(products.name, `%${search}%`),
+          like(products.description || '', `%${search}%`)
+        )
+      );
+    }
+    
+    // Add category filter if provided
+    if (categoryId) {
+      query = query.where(eq(products.categoryId, categoryId));
+    }
+    
+    return await query.limit(limit).offset(offset);
   }
 
   async getProductById(id: number): Promise<Product | undefined> {
