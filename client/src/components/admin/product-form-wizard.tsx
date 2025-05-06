@@ -21,10 +21,8 @@ import { cn } from '@/lib/utils';
 import { Product, Category, insertProductSchema } from '@shared/schema';
 
 // Import the step components
-import { BasicInfoStep } from './steps/basic-info-step';
-import { ImagesStep } from './steps/images-step';
-import { AiAnalysisStep } from './steps/ai-analysis-step';
-import { DetailsStep } from './steps/details-step';
+import ImagesBasicInfoStep from './steps/images-basic-info-step';
+import AdditionalInfoStep from './steps/additional-info-step';
 import { ReviewStep } from './steps/review-step';
 
 // Define product form schema for validation
@@ -41,7 +39,7 @@ const productFormSchema = z.object({
   price: z.number().min(0.01, "Price must be greater than 0"),
   costPrice: z.number().min(0, "Cost price must be greater than or equal to 0").optional(),
   salePrice: z.number().nullable().optional(),
-  stock: z.number().min(0, "Stock cannot be negative"),
+  // stock field removed as business doesn't keep inventory
   isActive: z.boolean().default(true),
   isFeatured: z.boolean().default(false),
   isFlashDeal: z.boolean().default(false),
@@ -69,6 +67,8 @@ export default function ProductFormWizard({ productId, onSuccess }: ProductFormW
   const [uploadedImages, setUploadedImages] = useState<any[]>([]);
   const [aiSuggestions, setAiSuggestions] = useState<any | null>(null);
   const [aiAnalysisLoading, setAiAnalysisLoading] = useState(false);
+  const [priceLoading, setPriceLoading] = useState(false);
+  const [tagsLoading, setTagsLoading] = useState(false);
 
   // Define the form steps
   const steps = [
@@ -344,6 +344,90 @@ export default function ProductFormWizard({ productId, onSuccess }: ProductFormW
     }
   };
 
+  // AI suggest price based on cost price and product info
+  const suggestPriceWithAI = async () => {
+    try {
+      setPriceLoading(true);
+      const costPrice = form.getValues('costPrice');
+      const productName = form.getValues('name');
+      
+      if (!costPrice || !productName) {
+        throw new Error('Please provide the product name and cost price before requesting a price suggestion');
+      }
+      
+      const res = await apiRequest('POST', '/api/ai/suggest-price', { 
+        costPrice,
+        productName,
+        categoryName: categories?.find(cat => cat.id === form.getValues('categoryId'))?.name
+      });
+      
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || 'Failed to get price suggestion');
+      }
+      
+      const suggestion = await res.json();
+      
+      if (suggestion.suggestedPrice) {
+        form.setValue('price', suggestion.suggestedPrice);
+        toast({
+          title: "Price Suggested",
+          description: `AI suggested a selling price of R${suggestion.suggestedPrice.toFixed(2)}`,
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Price Suggestion Failed",
+        description: error.message || "Failed to get AI price suggestion",
+        variant: "destructive"
+      });
+    } finally {
+      setPriceLoading(false);
+    }
+  };
+
+  // AI suggest tags based on product info
+  const suggestTagsWithAI = async () => {
+    try {
+      setTagsLoading(true);
+      const productName = form.getValues('name');
+      const description = form.getValues('description');
+      
+      if (!productName) {
+        throw new Error('Please provide at least the product name before requesting tag suggestions');
+      }
+      
+      const res = await apiRequest('POST', '/api/ai/generate-tags', { 
+        productName,
+        description: description || '',
+        categoryName: categories?.find(cat => cat.id === form.getValues('categoryId'))?.name
+      });
+      
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || 'Failed to generate tags');
+      }
+      
+      const suggestion = await res.json();
+      
+      if (suggestion.tags && suggestion.tags.length > 0) {
+        form.setValue('tags', suggestion.tags);
+        toast({
+          title: "Tags Generated",
+          description: `AI generated ${suggestion.tags.length} tags for your product`,
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Tag Generation Failed",
+        description: error.message || "Failed to generate AI tags",
+        variant: "destructive"
+      });
+    } finally {
+      setTagsLoading(false);
+    }
+  };
+
   const applyAllAISuggestions = () => {
     if (!aiSuggestions) return;
     
@@ -446,34 +530,26 @@ export default function ProductFormWizard({ productId, onSuccess }: ProductFormW
             {/* Step content */}
             <div className="mb-6">
               {currentStep === 0 && (
-                <ImagesStep 
-                  productId={productId}
+                <ImagesBasicInfoStep 
+                  form={form}
+                  categories={categories || []}
                   uploadedImages={uploadedImages}
                   setUploadedImages={setUploadedImages}
-                />
-              )}
-              
-              {currentStep === 1 && (
-                <AiAnalysisStep 
-                  uploadedImages={uploadedImages}
+                  productId={productId}
                   analyzeImagesWithAI={analyzeImagesWithAI}
                   aiAnalysisLoading={aiAnalysisLoading}
                   aiSuggestions={aiSuggestions}
                   applyAISuggestion={applyAISuggestion}
-                  applyAllAISuggestions={applyAllAISuggestions}
-                  form={form}
+                  suggestPriceWithAI={suggestPriceWithAI}
+                  suggestTagsWithAI={suggestTagsWithAI}
                 />
               )}
               
+              {currentStep === 1 && (
+                <AdditionalInfoStep form={form} />
+              )}
+              
               {currentStep === 2 && (
-                <BasicInfoStep form={form} categories={categories || []} />
-              )}
-              
-              {currentStep === 3 && (
-                <DetailsStep form={form} />
-              )}
-              
-              {currentStep === 4 && (
                 <ReviewStep 
                   form={form} 
                   uploadedImages={uploadedImages}
