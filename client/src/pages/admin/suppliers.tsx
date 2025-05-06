@@ -234,30 +234,7 @@ export default function AdminSuppliers() {
         </CardContent>
       </Card>
 
-      {/* Add Supplier Dialog with Form */}
-      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent className="sm:max-w-[650px]">
-          <DialogHeader>
-            <DialogTitle>Add New Supplier</DialogTitle>
-            <DialogDescription>
-              Enter the supplier details below to create a new supplier.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <SupplierForm 
-              onSubmit={(data) => {
-                // This will be implemented with an actual API call
-                console.log("Submitting supplier data:", data);
-                toast({
-                  title: "Supplier created",
-                  description: `${data.name} has been added as a supplier.`,
-                });
-                setShowAddDialog(false);
-              }}
-            />
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Supplier dialogs have been moved to dedicated pages */}
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>

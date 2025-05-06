@@ -49,7 +49,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { CatalogForm } from "@/components/admin/catalog-form";
 
@@ -70,7 +70,7 @@ type Catalog = {
 export default function AdminCatalogs() {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
-  const [showAddDialog, setShowAddDialog] = useState(false);
+  // No longer using modal dialog for adding catalogs
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedCatalog, setSelectedCatalog] = useState<Catalog | null>(null);
 
@@ -83,15 +83,15 @@ export default function AdminCatalogs() {
     },
   });
 
-  // Placeholder functions for CRUD operations
+  // CRUD operations
+  const [, navigate] = useLocation();
+  
   const handleAddCatalog = () => {
-    setShowAddDialog(true);
+    navigate("/admin/catalogs/new");
   };
 
   const handleEditCatalog = (catalog: Catalog) => {
-    // Navigate to edit page
-    // This will be implemented in the next step
-    console.log("Edit catalog:", catalog);
+    navigate(`/admin/catalogs/${catalog.id}/edit`);
   };
 
   const handleDeleteClick = (catalog: Catalog) => {
@@ -222,7 +222,7 @@ export default function AdminCatalogs() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={() => window.location.href = `/admin/catalogs/${catalog.id}`}>
+                          <DropdownMenuItem onClick={() => navigate(`/admin/catalogs/${catalog.id}`)}>
                             <Eye className="mr-2 h-4 w-4" />
                             View
                           </DropdownMenuItem>
@@ -269,30 +269,7 @@ export default function AdminCatalogs() {
         </CardContent>
       </Card>
 
-      {/* Add Catalog Dialog with Form */}
-      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent className="sm:max-w-[650px]">
-          <DialogHeader>
-            <DialogTitle>Add New Catalog</DialogTitle>
-            <DialogDescription>
-              Enter the catalog details below to create a new product catalog.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <CatalogForm 
-              onSubmit={(data) => {
-                // This will be implemented with an actual API call
-                console.log("Submitting catalog data:", data);
-                toast({
-                  title: "Catalog created",
-                  description: `${data.name} has been added as a catalog.`,
-                });
-                setShowAddDialog(false);
-              }}
-            />
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Catalog dialogs have been moved to dedicated pages */}
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
