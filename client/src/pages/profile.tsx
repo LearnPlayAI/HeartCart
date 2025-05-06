@@ -1,11 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import type { User as UserType, Order as OrderType } from '@shared/schema';
 import { 
   Form, 
   FormControl, 
@@ -110,14 +109,28 @@ const ProfilePage = () => {
   const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      fullName: user ? user.fullName || '' : '',
-      email: user ? user.email || '' : '',
-      phoneNumber: user ? user.phoneNumber || '' : '',
-      address: user ? user.address || '' : '',
-      city: user ? user.city || '' : '',
-      postalCode: user ? user.postalCode || '' : '',
+      fullName: '',
+      email: '',
+      phoneNumber: '',
+      address: '',
+      city: '',
+      postalCode: '',
     },
   });
+  
+  // Update form values when user data is loaded
+  useEffect(() => {
+    if (user) {
+      profileForm.reset({
+        fullName: user.fullName || '',
+        email: user.email || '',
+        phoneNumber: user.phoneNumber || '',
+        address: user.address || '',
+        city: user.city || '',
+        postalCode: user.postalCode || '',
+      });
+    }
+  }, [user, profileForm]);
   
   // Login form
   const loginForm = useForm<LoginFormValues>({
@@ -142,7 +155,11 @@ const ProfilePage = () => {
   // Update profile mutation
   const updateProfileMutation = useMutation({
     mutationFn: async (data: ProfileFormValues) => {
-      await apiRequest('PUT', `/api/users/${user.id}`, data);
+      if (user && user.id) {
+        await apiRequest('PUT', `/api/users/${user.id}`, data);
+      } else {
+        throw new Error('User not found');
+      }
     },
     onSuccess: () => {
       toast({
@@ -428,18 +445,24 @@ const ProfilePage = () => {
                   <p className="text-sm text-gray-500">{user.email}</p>
                 </div>
                 
-                <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'orders' | 'profile')} className="w-full">
-                  <TabsList className="grid w-full grid-cols-1 h-auto">
-                    <TabsTrigger value="orders" className="flex items-center justify-start px-4 py-2">
-                      <ShoppingBag className="mr-2 h-4 w-4" />
-                      My Orders
-                    </TabsTrigger>
-                    <TabsTrigger value="profile" className="flex items-center justify-start px-4 py-2">
-                      <User className="mr-2 h-4 w-4" />
-                      Profile Settings
-                    </TabsTrigger>
-                  </TabsList>
-                </Tabs>
+                <div className="mt-4">
+                  <Button
+                    variant={activeTab === 'orders' ? 'default' : 'ghost'}
+                    className="w-full justify-start mb-2 text-left"
+                    onClick={() => setActiveTab('orders')}
+                  >
+                    <ShoppingBag className="mr-2 h-4 w-4" />
+                    My Orders
+                  </Button>
+                  <Button
+                    variant={activeTab === 'profile' ? 'default' : 'ghost'}
+                    className="w-full justify-start mb-2 text-left"
+                    onClick={() => setActiveTab('profile')}
+                  >
+                    <User className="mr-2 h-4 w-4" />
+                    Profile Settings
+                  </Button>
+                </div>
                 
                 <Button 
                   variant="outline" 
@@ -455,19 +478,18 @@ const ProfilePage = () => {
           
           {/* Main Content */}
           <div className="flex-1">
-            <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'orders' | 'profile')}>
-              <TabsContent value="orders">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <Package className="mr-2 h-5 w-5" />
-                      My Orders
-                    </CardTitle>
-                    <CardDescription>
-                      View and track your order history.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
+            {activeTab === 'orders' && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Package className="mr-2 h-5 w-5" />
+                    My Orders
+                  </CardTitle>
+                  <CardDescription>
+                    View and track your order history.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
                     {isLoadingOrders ? (
                       <div className="animate-pulse space-y-4">
                         {[1, 2, 3].map((i) => (
@@ -533,20 +555,20 @@ const ProfilePage = () => {
                     )}
                   </CardContent>
                 </Card>
-              </TabsContent>
-              
-              <TabsContent value="profile">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <Settings className="mr-2 h-5 w-5" />
-                      Profile Settings
-                    </CardTitle>
-                    <CardDescription>
-                      Update your personal information and shipping details.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
+            )}
+            
+            {activeTab === 'profile' && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Settings className="mr-2 h-5 w-5" />
+                    Profile Settings
+                  </CardTitle>
+                  <CardDescription>
+                    Update your personal information and shipping details.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
                     <Form {...profileForm}>
                       <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-4">
                         <FormField
@@ -646,8 +668,7 @@ const ProfilePage = () => {
                     </Form>
                   </CardContent>
                 </Card>
-              </TabsContent>
-            </Tabs>
+            )}
           </div>
         </div>
       </div>

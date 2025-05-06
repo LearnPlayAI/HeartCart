@@ -11,7 +11,7 @@ import ProductDetail from "@/pages/product-detail";
 import Category from "@/pages/category";
 import Checkout from "@/pages/checkout";
 import SearchResults from "@/pages/search-results";
-import Profile from "@/pages/profile";
+import Profile from "@/pages/profile-fix";
 import AuthPage from "@/pages/auth-page";
 import NotFound from "@/pages/not-found";
 import CartDrawer from "@/components/cart/cart-drawer";
