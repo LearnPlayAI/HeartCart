@@ -49,9 +49,9 @@ export function SupplierForm({
       name: "",
       email: "",
       phone: "",
-      contactPerson: "",
+      contactName: "",
       address: "",
-      description: "",
+      notes: "",
       website: "",
       isActive: true,
       ...initialData,
@@ -91,7 +91,7 @@ export function SupplierForm({
 
           <FormField
             control={form.control}
-            name="contactPerson"
+            name="contactName"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Contact Person *</FormLabel>
@@ -177,13 +177,13 @@ export function SupplierForm({
           <div className="md:col-span-2">
             <FormField
               control={form.control}
-              name="description"
+              name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                  <FormLabel>Notes</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Enter a brief description of the supplier and their products"
+                      placeholder="Enter additional notes about the supplier and their products"
                       className="min-h-[120px]"
                       {...field}
                     />
