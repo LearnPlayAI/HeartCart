@@ -33,10 +33,16 @@ This document outlines the implementation approach for the TEE ME YOU e-commerce
   - Background removal using Google Gemini API 1.5 flash (requires API key)
 - **Implementation Details**:
   - Maximum 5 images per product enforced in both UI and backend
-  - Integration with Replit Object Store following official API documentation
-  - Reusable Object Store service module to standardize all storage operations
+  - Integration with Replit Object Store using `@replit/object-storage` package
+  - Reusable Object Store service module that abstracts all storage operations
   - Open source solution [react-image-crop](https://github.com/DominicTobias/react-image-crop) for image editing
   - Reusable Google Gemini API service for background removal and other AI features
+- **Replit Object Store Usage**:
+  - Upload images using `client.uploadFromBytes` for in-memory processing
+  - Download images using `client.downloadAsBytes` for editing operations
+  - List objects using `client.list()` for product image management
+  - Delete images using `client.delete()` for product image removal
+  - Handle error responses from all Object Store operations
 
 #### Category & Tag Management
 - **Admin Controls**:
@@ -205,6 +211,24 @@ This document outlines the implementation approach for the TEE ME YOU e-commerce
 
 3. **Reusable Service Libraries** - ![Status](https://img.shields.io/badge/Not%20Started-red)
    - Create Replit Object Store service for image storage
+     ```javascript
+     // Example service implementation
+     class ObjectStoreService {
+       constructor() {
+         const { Client } = require('@replit/object-storage');
+         this.client = new Client();
+       }
+       
+       async uploadImage(categorySlug, productId, imageNumber, imageBuffer) {
+         const path = `public-assets/${categorySlug}/${productId}/image${imageNumber}.jpg`;
+         const { ok, error } = await this.client.uploadFromBytes(path, imageBuffer);
+         if (!ok) throw new Error(`Failed to upload image: ${error}`);
+         return path;
+       }
+       
+       // Additional methods for download, list, delete operations
+     }
+     ```
    - Set up service structure for Google Gemini API
    - Implement shared utilities for common operations
 
@@ -220,9 +244,10 @@ This document outlines the implementation approach for the TEE ME YOU e-commerce
    - Build relationship management between products and categories/tags
 
 6. **Basic Image Management** - ![Status](https://img.shields.io/badge/Not%20Started-red)
-   - Set up image upload with Replit Object Store
-   - Implement image resize and crop functionality
+   - Set up image upload with Replit Object Store using `@replit/object-storage`
+   - Implement client-side image resize and crop functionality
    - Create image preview and management interface
+   - Implement service layer for Object Store operations
 
 ### Phase 3: Advanced Product Features
 7. **Advanced Image Processing** - ![Status](https://img.shields.io/badge/Not%20Started-red)
@@ -261,10 +286,57 @@ This document outlines the implementation approach for the TEE ME YOU e-commerce
 ## Technical Specifications
 
 ### Integration Points
-- **Replit Object Store**: Direct API integration for image storage
-- **Google Gemini API 1.5 Flash**: Integration for image background removal
-- **PayFast**: Modular design for future integration
-- **Shipping Services**: Modular design for future integration
+
+#### Replit Object Store Integration
+- **Package**: `@replit/object-storage`
+- **Client Initialization**: 
+  ```javascript
+  const { Client } = require('@replit/object-storage');
+  const client = new Client();
+  ```
+- **Key Operations**:
+  - **Upload Product Images**: 
+    ```javascript
+    const { ok, error } = await client.uploadFromBytes(
+      `public-assets/${categorySlug}/${productId}/image1.jpg`, 
+      imageBuffer
+    );
+    if (!ok) handleError(error);
+    ```
+  - **Retrieve Product Images**: 
+    ```javascript
+    const { ok, value, error } = await client.downloadAsBytes(
+      `public-assets/${categorySlug}/${productId}/image1.jpg`
+    );
+    if (!ok) handleError(error);
+    // Use 'value' as the image buffer
+    ```
+  - **List Product Images**: 
+    ```javascript
+    const { ok, value, error } = await client.list();
+    if (!ok) handleError(error);
+    // Filter 'value' to find product images with pattern matching
+    const productImages = value.filter(item => 
+      item.startsWith(`public-assets/${categorySlug}/${productId}/`)
+    );
+    ```
+  - **Delete Product Images**: 
+    ```javascript
+    const { ok, error } = await client.delete(
+      `public-assets/${categorySlug}/${productId}/image1.jpg`
+    );
+    if (!ok) handleError(error);
+    ```
+  - **Error Handling**: Consistent error handling for all operations with detailed logging
+
+#### Google Gemini API 1.5 Flash
+- Integration for image background removal
+
+#### PayFast
+- Modular design for future integration
+
+#### Shipping Services
+- Modular design for future integration
 
 ### Data Model Extensions
 - New tables for categories, tags, promotions
