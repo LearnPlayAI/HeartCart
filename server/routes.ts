@@ -217,21 +217,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Debug route for testing camelCase naming standardization
   app.get("/api/debug/attribute-naming", handleErrors(async (req: Request, res: Response) => {
-    const attributes = await db
-      .select()
-      .from(categoryAttributes)
-      .limit(1);
+    const attributes = await storage.getCategoryAttributes(1);
       
     const options = attributes.length > 0 ? 
-      await db
-        .select()
-        .from(categoryAttributeOptions)
-        .where(eq(categoryAttributeOptions.attributeId, attributes[0].id))
-        .limit(3) : [];
+      await storage.getCategoryAttributeOptions(attributes[0].id) : [];
     
     res.json({
       attributeExample: attributes[0] || null,
-      optionsExample: options || []
+      optionsExample: options.slice(0, 3) || []
     });
   }));
 

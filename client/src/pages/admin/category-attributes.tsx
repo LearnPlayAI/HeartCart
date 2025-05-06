@@ -310,6 +310,77 @@ export default function CategoryAttributes() {
     setCurrentAttribute(null);
   };
   
+  // Handle drag and drop reordering for attributes
+  const handleDragEnd = (result: any) => {
+    if (!result.destination) return;
+    
+    // Handle attribute reordering
+    if (result.type === 'attributes' || !result.type) {
+      if (!attributes) return;
+      
+      const items = Array.from(attributes);
+      const [reorderedItem] = items.splice(result.source.index, 1);
+      items.splice(result.destination.index, 0, reorderedItem);
+      
+      // Update sort orders
+      const updatedAttributes = items.map((item, index) => ({
+        ...item,
+        sortOrder: index
+      }));
+      
+      // Update all attributes with new sort orders
+      updatedAttributes.forEach(attr => {
+        updateAttributeMutation.mutate({
+          ...attr,
+          id: attr.id
+        });
+      });
+    }
+    
+    // Handle option reordering
+    if (result.type === 'options') {
+      if (!options) return;
+      
+      const items = Array.from(options);
+      const [reorderedItem] = items.splice(result.source.index, 1);
+      items.splice(result.destination.index, 0, reorderedItem);
+      
+      // Update sort orders
+      const updatedOptions = items.map((item, index) => ({
+        ...item,
+        sortOrder: index
+      }));
+      
+      // Update all options with new sort orders
+      updatedOptions.forEach(opt => {
+        updateOptionMutation.mutate({
+          value: opt.value,
+          displayValue: opt.displayValue,
+          sortOrder: opt.sortOrder,
+          id: opt.id
+        });
+      });
+    }
+  };
+  
+  // Handle option mutation
+  const updateOptionMutation = useMutation({
+    mutationFn: async (data: { value: string, displayValue: string, sortOrder: number, id: number }) => {
+      const { id, ...optionData } = data;
+      return await apiRequest('PUT', `/api/category-attribute-options/${id}`, optionData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/category-attributes', currentAttribute?.id, 'options'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to update option order",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
+  
   // Update form values when attributes are loaded
   useEffect(() => {
     if (!currentAttribute && attributes?.length > 0) {
@@ -368,23 +439,48 @@ export default function CategoryAttributes() {
                 ) : attributes?.length === 0 ? (
                   <p>No attributes found. Create your first attribute.</p>
                 ) : (
-                  <div className="space-y-2">
-                    {attributes?.map((attribute: CategoryAttribute) => (
-                      <div 
-                        key={attribute.id}
-                        className={`p-3 border rounded cursor-pointer flex justify-between items-center ${
-                          currentAttribute?.id === attribute.id ? 'bg-accent' : 'hover:bg-accent/50'
-                        }`}
-                        onClick={() => handleSelectAttribute(attribute)}
-                      >
-                        <div>
-                          <p className="font-medium">{attribute.displayName}</p>
-                          <p className="text-sm text-muted-foreground">{attribute.attributeType}</p>
+                  <DragDropContext onDragEnd={handleDragEnd}>
+                    <Droppable droppableId="attributes-list">
+                      {(provided) => (
+                        <div 
+                          className="space-y-2"
+                          ref={provided.innerRef}
+                          {...provided.droppableProps}
+                        >
+                          {attributes?.map((attribute: CategoryAttribute, index) => (
+                            <Draggable 
+                              key={attribute.id.toString()} 
+                              draggableId={attribute.id.toString()} 
+                              index={index}
+                            >
+                              {(provided) => (
+                                <div 
+                                  ref={provided.innerRef}
+                                  {...provided.draggableProps}
+                                  className={`p-3 border rounded cursor-pointer flex justify-between items-center ${
+                                    currentAttribute?.id === attribute.id ? 'bg-accent' : 'hover:bg-accent/50'
+                                  }`}
+                                  onClick={() => handleSelectAttribute(attribute)}
+                                >
+                                  <div>
+                                    <p className="font-medium">{attribute.displayName}</p>
+                                    <p className="text-sm text-muted-foreground">{attribute.attributeType}</p>
+                                  </div>
+                                  <div
+                                    {...provided.dragHandleProps}
+                                    className="cursor-move"
+                                  >
+                                    <MoveVertical className="h-4 w-4 text-muted-foreground" />
+                                  </div>
+                                </div>
+                              )}
+                            </Draggable>
+                          ))}
+                          {provided.placeholder}
                         </div>
-                        <MoveVertical className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                    ))}
-                  </div>
+                      )}
+                    </Droppable>
+                  </DragDropContext>
                 )}
                 
                 <Button
