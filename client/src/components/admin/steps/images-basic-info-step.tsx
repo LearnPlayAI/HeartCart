@@ -64,9 +64,17 @@ export default function ImagesBasicInfoStep({
     }
     
     // Append each file to the form data
-    Array.from(files).forEach(file => {
+    console.log('Files to upload:', files);
+    Array.from(files).forEach((file, index) => {
+      console.log(`Appending file ${index}:`, file.name);
       formData.append('images', file);
     });
+    
+    // Log the FormData entries (for debugging)
+    console.log('FormData entries:');
+    for (let pair of formData.entries()) {
+      console.log(pair[0], pair[1]);
+    }
     
     try {
       const endpoint = productId 

@@ -24,12 +24,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Set up multer storage for temporary file uploads
   const tempStorage = multer.diskStorage({
     destination: function (req, file, cb) {
+      console.log('Multer file received:', file.fieldname, file.originalname);
       cb(null, path.join(process.cwd(), 'temp'));
     },
     filename: function (req, file, cb) {
       const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
       const ext = path.extname(file.originalname);
-      cb(null, file.fieldname + '-' + uniqueSuffix + ext);
+      // Use a consistent field name for the filename prefix
+      cb(null, 'product-image-' + uniqueSuffix + ext);
     }
   });
   
@@ -234,29 +236,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // PRODUCT IMAGE ROUTES
   
   // Temporary image upload endpoint for product creation
-  app.post('/api/products/images/temp', isAuthenticated, upload.array('images'), (req: Request, res: Response) => {
-    const user = req.user as any;
+  app.post('/api/products/images/temp', isAuthenticated, (req: Request, res: Response, next: NextFunction) => {
+    console.log('Temp image upload - Request headers:', req.headers);
+    console.log('Temp image upload - Content-Type:', req.headers['content-type']);
     
-    if (user.role !== 'admin') {
-      return res.status(403).json({ message: "Only administrators can upload images" });
-    }
+    // Continue to multer middleware
+    upload.array('images')(req, res, (err) => {
+      if (err) {
+        console.error('Multer error:', err);
+        return res.status(400).json({ 
+          message: 'File upload error', 
+          error: err.message,
+          code: err.code
+        });
+      }
+      
+      const user = req.user as any;
+      
+      if (user.role !== 'admin') {
+        return res.status(403).json({ message: "Only administrators can upload images" });
+      }
+      
+      console.log('Received files:', req.files);
+      
+      if (!req.files || !Array.isArray(req.files) || req.files.length === 0) {
+        return res.status(400).json({ message: 'No files uploaded' });
+      }
     
-    if (!req.files || !Array.isArray(req.files) || req.files.length === 0) {
-      return res.status(400).json({ message: 'No files uploaded' });
-    }
-    
-    // Return information about the uploaded files
-    const uploadedFiles = Array.isArray(req.files) ? req.files.map(file => ({
-      filename: file.filename,
-      originalname: file.originalname,
-      mimetype: file.mimetype,
-      size: file.size,
-      path: `/temp/${file.filename}` // Path to access the file
-    })) : [];
-    
-    return res.status(200).json({
-      success: true,
-      files: uploadedFiles
+      // Return information about the uploaded files
+      const uploadedFiles = Array.isArray(req.files) ? req.files.map(file => ({
+        filename: file.filename,
+        originalname: file.originalname,
+        mimetype: file.mimetype,
+        size: file.size,
+        path: `/temp/${file.filename}` // Path to access the file
+      })) : [];
+      
+      return res.status(200).json({
+        success: true,
+        files: uploadedFiles
+      });
     });
   });
   
