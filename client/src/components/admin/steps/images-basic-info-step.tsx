@@ -12,6 +12,12 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Upload, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { 
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface ImagesBasicInfoStepProps {
   form: UseFormReturn<any>;
@@ -488,24 +494,28 @@ export default function ImagesBasicInfoStep({
           Analyze with AI
         </Button>
         
-        <Tooltip
-          content="Get AI-recommended pricing based on South African market. Price will never be below cost price and defaults to cost price + 50% if needed."
-          side="top"
-        >
-          <Button 
-            type="button" 
-            className="bg-gradient-to-r from-emerald-500 to-green-600 text-white flex-1"
-            onClick={handleSuggestPrice}
-            disabled={priceLoading || !form.getValues('name') || !form.getValues('costPrice')}
-          >
-            {priceLoading ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Search className="mr-2 h-4 w-4" />
-            )}
-            AI Suggest Price
-          </Button>
-        </Tooltip>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                type="button" 
+                className="bg-gradient-to-r from-emerald-500 to-green-600 text-white flex-1"
+                onClick={handleSuggestPrice}
+                disabled={priceLoading || !form.getValues('name') || !form.getValues('costPrice')}
+              >
+                {priceLoading ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Search className="mr-2 h-4 w-4" />
+                )}
+                AI Suggest Price
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Get AI pricing based on South African market. Price will never be below cost price and defaults to cost price + 50% if needed.</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
         
         <Button 
           type="button" 
