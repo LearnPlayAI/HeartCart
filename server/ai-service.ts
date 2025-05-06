@@ -382,7 +382,7 @@ export async function suggestPrice(
   }
 }
 
-export async function analyzeProductImage(imageBase64: string): Promise<{
+export async function analyzeProductImage(imageBase64: string, productName: string): Promise<{
   suggestedName?: string;
   suggestedDescription?: string;
   suggestedCategory?: string;
@@ -396,17 +396,49 @@ export async function analyzeProductImage(imageBase64: string): Promise<{
     
     // Check if imageBase64 is a URL or a base64 string
     if (imageBase64.startsWith('http')) {
-      // If it's a URL but we can't process it directly in Gemini
-      // We'll need to use text-only prompt and fetch image some other way
-      // For now, return a simple object
-      console.log("Image URL provided instead of base64, skipping analysis");
-      return {
-        suggestedName: "",
-        suggestedDescription: "",
-        suggestedCategory: "",
-        suggestedBrand: "",
-        suggestedTags: []
-      };
+      // If it's a URL but we can't process it directly with the image
+      // We'll use a text-only prompt with the product name
+      console.log("Image URL provided instead of base64, using text-only prompt with product name");
+      
+      // Create a text-only request with the product name
+      const textResult = await geminiProVision.generateContent([
+        `Analyze this product and provide the following details formatted as JSON for a South African e-commerce store:
+        1. "description": A detailed product description (max 100 words)
+        2. "category": A single likely product category (e.g., Electronics, Clothing, Home Decor, etc.)
+        3. "tags": An array of 5-7 relevant tags (each 1-3 words)
+        4. "costPrice": Estimated wholesale/cost price in South African Rand (ZAR)
+        5. "price": Suggested retail price in South African Rand (ZAR) with appropriate markup for the South African market
+        
+        The product name is: "${productName}"
+        
+        Note: For pricing, be realistic for the South African market where the average monthly income is around 25,000 ZAR.
+        Format the response as valid JSON only, with no additional text.`
+      ]);
+      
+      const textResponse = await textResult.response;
+      const responseText = textResponse.text();
+      
+      try {
+        const jsonResponse = JSON.parse(responseText);
+        return {
+          suggestedName: productName, // Use the provided product name
+          suggestedDescription: jsonResponse.description,
+          suggestedCategory: jsonResponse.category,
+          suggestedBrand: jsonResponse.brand,
+          suggestedTags: jsonResponse.tags,
+          suggestedCostPrice: jsonResponse.costPrice ? Number(jsonResponse.costPrice) : undefined,
+          suggestedPrice: jsonResponse.price ? Number(jsonResponse.price) : undefined
+        };
+      } catch (jsonError) {
+        console.error('Failed to parse text-only JSON response:', jsonError);
+        return {
+          suggestedName: productName,
+          suggestedDescription: "",
+          suggestedCategory: "",
+          suggestedBrand: "",
+          suggestedTags: []
+        };
+      }
     }
     
     try {
@@ -424,7 +456,7 @@ export async function analyzeProductImage(imageBase64: string): Promise<{
     } catch (imageError) {
       console.warn('Image processing failed:', imageError);
       return {
-        suggestedName: "",
+        suggestedName: productName, // Use the provided product name even on error
         suggestedDescription: "",
         suggestedCategory: "",
         suggestedBrand: "",
@@ -432,16 +464,18 @@ export async function analyzeProductImage(imageBase64: string): Promise<{
       };
     }
     
-    // Create the generation request
+    // Create the generation request - include product name for better accuracy
     const result = await geminiProVision.generateContent([
       `Analyze this product image and provide the following details formatted as JSON for a South African e-commerce store:
-      1. "name": A concise product name (max 10 words)
+      1. "name": A concise product name (max 10 words) - note that the user provided the name "${productName}"
       2. "description": A detailed product description (max 100 words)
       3. "category": A single likely product category (e.g., Electronics, Clothing, Home Decor, etc.)
       4. "brand": A likely brand name if visible (otherwise leave blank)
       5. "tags": An array of 5-7 relevant tags (each 1-3 words)
       6. "costPrice": Estimated wholesale/cost price in South African Rand (ZAR)
       7. "price": Suggested retail price in South African Rand (ZAR) with appropriate markup for the South African market
+      
+      The product name is: "${productName}"
       
       Note: For pricing, be realistic for the South African market where the average monthly income is around 25,000 ZAR.
       Format the response as valid JSON only, with no additional text.`,
