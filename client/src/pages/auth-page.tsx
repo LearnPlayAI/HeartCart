@@ -36,8 +36,10 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 export default function AuthPage() {
   const [activeTab, setActiveTab] = useState<string>("login");
   const { toast } = useToast();
-  const [, navigate] = useNavigate();
+  const [location, setLocation] = useLocation();
   const { user, loginMutation, registerMutation } = useAuth();
+  
+  const navigate = (path: string) => setLocation(path);
 
   // Redirect to home if already logged in
   if (user) {
@@ -75,7 +77,7 @@ export default function AuthPage() {
         });
         navigate("/");
       },
-      onError: (error) => {
+      onError: (error: Error) => {
         toast({
           title: "Login failed",
           description: error.message,
@@ -98,7 +100,7 @@ export default function AuthPage() {
         });
         navigate("/");
       },
-      onError: (error) => {
+      onError: (error: Error) => {
         toast({
           title: "Registration failed",
           description: error.message,
