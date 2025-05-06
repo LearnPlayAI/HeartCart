@@ -232,18 +232,34 @@ export async function suggestPrice(
     try {
       // First, try to parse the response as-is
       const jsonResponse = JSON.parse(responseText);
-      return {
-        suggestedPrice: Number(jsonResponse.suggestedPrice)
-      };
+      let suggestedPrice = Number(jsonResponse.suggestedPrice);
+      
+      // Apply business rule: Suggested price should never be lower than cost price
+      // If it is, default to cost price + 50%
+      if (suggestedPrice < costPrice) {
+        suggestedPrice = costPrice * 1.5; // Default to cost price + 50%
+        console.log(`AI suggested price (${jsonResponse.suggestedPrice}) was below cost price. Using default markup: ${suggestedPrice.toFixed(2)}`);
+      }
+      
+      return { suggestedPrice };
     } catch (jsonError) {
       // If direct parsing fails, try to extract just the number
       const priceMatch = responseText.match(/\d+(\.\d+)?/);
       if (priceMatch) {
-        return {
-          suggestedPrice: Number(priceMatch[0])
-        };
+        let suggestedPrice = Number(priceMatch[0]);
+        
+        // Apply same business rule for extracted numbers
+        if (suggestedPrice < costPrice) {
+          suggestedPrice = costPrice * 1.5; // Default to cost price + 50%
+          console.log(`AI suggested price (${priceMatch[0]}) was below cost price. Using default markup: ${suggestedPrice.toFixed(2)}`);
+        }
+        
+        return { suggestedPrice };
       } else {
-        throw new Error('No valid price found in response');
+        // If no valid price found, default to cost price + 50%
+        const defaultPrice = costPrice * 1.5;
+        console.log(`No valid price found in response. Using default markup: ${defaultPrice.toFixed(2)}`);
+        return { suggestedPrice: defaultPrice };
       }
     }
   } catch (error) {
