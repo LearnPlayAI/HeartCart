@@ -1973,7 +1973,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   }));
   
-  // Object storage file access endpoint - exclusively using Replit Object Store
+  // Object storage file access endpoint - using reliable buffer-based approach
   app.get('/api/files/:path(*)', async (req: Request, res: Response) => {
     try {
       const objectKey = req.params.path;
@@ -1985,49 +1985,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).send('File not found');
       }
       
-      // Determine the content type
-      let contentType: string;
-      
-      // Try to get metadata first for the most accurate content type
       try {
-        const metadata = await objectStorageService.getMetadata(objectKey);
-        if (metadata.contentType) {
-          contentType = metadata.contentType;
-          console.log(`Using content type from metadata for ${objectKey}: ${contentType}`);
-        } else {
-          // Fallback to detection based on file extension
-          contentType = objectStorageService.detectContentType(objectKey);
-          console.log(`Using detected content type for ${objectKey}: ${contentType}`);
-        }
-      } catch (err) {
-        // Fallback to detection based on file extension if metadata retrieval fails
-        contentType = objectStorageService.detectContentType(objectKey);
-        console.log(`Using detected content type after metadata error for ${objectKey}: ${contentType}`);
-      }
-      
-      // Set response headers before sending data
-      res.setHeader('Content-Type', contentType);
-      res.setHeader('Cache-Control', contentType.startsWith('image/') ? 'public, max-age=86400' : 'no-cache');
-      
-      try {
-        // Always use buffer approach for more reliable handling
-        // This is a proven approach based on the analysis shared
-        console.log(`Retrieving file ${objectKey} as buffer`);
+        // Use our new buffer-based method for reliable file handling
+        console.log(`Retrieving file ${objectKey} using buffer-based approach`);
         
-        // Apply a small delay if this is a file that was just uploaded
-        // This helps with race conditions between upload and immediate fetch
+        // Apply a small delay if this is a temp file to prevent race conditions
         if (objectKey.includes('/temp/')) {
           await new Promise(resolve => setTimeout(resolve, 100));
         }
         
-        const buffer = await objectStorageService.downloadAsBuffer(objectKey);
+        // Get the file data and content type in one operation
+        const { data, contentType } = await objectStorageService.getFileAsBuffer(objectKey);
         
-        if (!Buffer.isBuffer(buffer)) {
-          throw new Error('Invalid data type returned from object storage');
-        }
+        // Set appropriate headers
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Content-Length', data.length);
+        res.setHeader('Cache-Control', contentType.startsWith('image/') ? 'public, max-age=86400' : 'no-cache');
         
-        console.log(`Successfully retrieved file ${objectKey} from object storage: ${buffer.length} bytes`);
-        return res.end(buffer);
+        console.log(`Successfully retrieved file ${objectKey}: ${data.length} bytes, type: ${contentType}`);
+        
+        // Send the buffer directly (more reliable than streaming)
+        return res.end(data);
       } catch (downloadError: any) {
         console.error(`Error retrieving file ${objectKey}:`, downloadError);
         return res.status(500).send(`Error reading file: ${downloadError.message}`);
