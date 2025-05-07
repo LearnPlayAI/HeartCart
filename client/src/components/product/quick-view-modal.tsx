@@ -107,7 +107,7 @@ export default function QuickViewModal({ open, onOpenChange, productSlug }: Quic
   // Process product attributes
   useEffect(() => {
     if (productAttributesData && categoryAttributes) {
-      const attributesMap: Record<number, any[]> = {};
+      const attributesMap: Record<number, Array<{id: number, value: string}>> = {};
       
       categoryAttributes.forEach((catAttr: CategoryAttribute) => {
         // Find product attribute for this category attribute
@@ -190,7 +190,7 @@ export default function QuickViewModal({ open, onOpenChange, productSlug }: Quic
       if (missingRequiredAttributes.length > 0) {
         toast({
           title: "Please select options",
-          description: `Please select ${missingRequiredAttributes.map(a => a.name).join(', ')}`,
+          description: `Please select ${missingRequiredAttributes.map((a: CategoryAttribute) => a.name).join(', ')}`,
           variant: "destructive",
         });
         return;
@@ -199,6 +199,7 @@ export default function QuickViewModal({ open, onOpenChange, productSlug }: Quic
     
     addItem({
       productId: product.id,
+      product: product,
       quantity: quantity,
       combinationId: currentCombination?.id || null,
       selectedAttributes: selectedAttributes,

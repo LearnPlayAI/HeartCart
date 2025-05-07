@@ -24,6 +24,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
 }) => {
   const { addItem } = useCart();
   const { toast } = useToast();
+  const [quickViewOpen, setQuickViewOpen] = useState(false);
   
   const discount = product.salePrice
     ? calculateDiscount(product.price, product.salePrice)
@@ -70,7 +71,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
   
   if (isFlashDeal) {
     return (
-      <Link href={`/product/${product.slug}`} className="product-card bg-white rounded-lg border border-gray-200 overflow-hidden block">
+      <div className="product-card bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <Link href={`/product/${product.slug}`} className="block">
           <img 
             src={product.imageUrl || ''} 
             alt={product.name || 'Product image'} 
@@ -109,7 +111,31 @@ const ProductCard: React.FC<ProductCardProps> = ({
               </>
             )}
           </div>
-      </Link>
+        </Link>
+        
+        <div className="px-2 pb-2">
+          <Button
+            variant="outline"
+            size="sm" 
+            className="w-full rounded-full text-xs py-1"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setQuickViewOpen(true);
+            }}
+          >
+            <Eye className="h-3 w-3 mr-1" />
+            Quick View
+          </Button>
+        </div>
+        
+        {/* Quick View Modal */}
+        <QuickViewModal
+          open={quickViewOpen}
+          onOpenChange={setQuickViewOpen}
+          productSlug={product.slug || ''}
+        />
+      </div>
     );
   }
   
@@ -150,16 +176,37 @@ const ProductCard: React.FC<ProductCardProps> = ({
           </div>
         </div>
       </Link>
-      {showAddToCart && (
-        <div className="px-3 pb-3 mt-2">
+      <div className="px-3 pb-3 mt-2 flex gap-2">
+        {showAddToCart && (
           <Button 
-            className="w-full bg-[#FF69B4] hover:bg-[#FF1493] text-white py-1.5 rounded-full text-sm font-medium transition-colors duration-200"
+            className="flex-1 bg-[#FF69B4] hover:bg-[#FF1493] text-white py-1.5 rounded-full text-sm font-medium transition-colors duration-200"
             onClick={handleAddToCart}
           >
+            <ShoppingCart className="h-4 w-4 mr-1" />
             Add to Cart
           </Button>
-        </div>
-      )}
+        )}
+        
+        <Button
+          variant="outline"
+          className="rounded-full flex-1"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setQuickViewOpen(true);
+          }}
+        >
+          <Eye className="h-4 w-4 mr-1" />
+          Quick View
+        </Button>
+      </div>
+      
+      {/* Quick View Modal */}
+      <QuickViewModal
+        open={quickViewOpen}
+        onOpenChange={setQuickViewOpen}
+        productSlug={product.slug || ''}
+      />
     </div>
   );
 };
