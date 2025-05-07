@@ -39,13 +39,12 @@ import {
   FolderTree, 
   Tag, 
   ChevronRight, 
-  Layers, 
-  ArrowUpDown 
+  Layers 
 } from "lucide-react";
 import { slugify } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { Category } from "@shared/schema";
-import { Link, useLocation } from "wouter";
+import { useLocation } from "wouter";
 
 export default function AdminCategories() {
   const queryClient = useQueryClient();
@@ -53,6 +52,9 @@ export default function AdminCategories() {
   const [, navigate] = useLocation();
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  
   const [newName, setNewName] = useState("");
   const [newSlug, setNewSlug] = useState("");
   const [newDescription, setNewDescription] = useState("");
@@ -119,6 +121,7 @@ export default function AdminCategories() {
       setNewParentId(null);
       setNewLevel(0);
       setNewDisplayOrder(0);
+      setIsCreateDialogOpen(false);
     },
     onError: (error) => {
       toast({
@@ -168,6 +171,7 @@ export default function AdminCategories() {
         title: "Category updated",
         description: "The category has been updated successfully",
       });
+      setIsEditDialogOpen(false);
     },
     onError: (error) => {
       toast({
@@ -308,6 +312,7 @@ export default function AdminCategories() {
     setNewParentId(category.parentId ? category.parentId.toString() : null);
     setNewLevel(category.level || 0);
     setNewDisplayOrder(category.displayOrder || 0);
+    setIsEditDialogOpen(true);
   };
 
   const handleUpdateCategory = () => {
@@ -351,6 +356,11 @@ export default function AdminCategories() {
     return parent ? parent.name : "Unknown";
   };
 
+  // Handle opening the attributes management page
+  const handleManageAttributes = (categoryId: number) => {
+    navigate(`/admin/category-attributes/${categoryId}`);
+  };
+
   return (
     <AdminLayout>
       <div className="flex flex-col space-y-6">
@@ -362,79 +372,61 @@ export default function AdminCategories() {
               Manage product categories and organization
             </p>
           </div>
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button className="space-x-2">
-                <Plus className="h-4 w-4" />
-                <span>Add Category</span>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <div className="flex space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex items-center space-x-2"
+                onClick={() => setCategoryView('grid')}
+                disabled={categoryView === 'grid'}
+              >
+                <Layers className="h-4 w-4" />
+                <span>Grid View</span>
               </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Create New Category</DialogTitle>
-                <DialogDescription>
-                  Add a new category to organize your products.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="name">Name</Label>
-                  <Input 
-                    id="name" 
-                    value={newName} 
-                    onChange={(e) => setNewName(e.target.value)} 
-                    placeholder="Category Name" 
-                  />
-                </div>
-                
-                <div className="grid gap-2">
-                  <Label htmlFor="slug">Slug</Label>
-                  <div className="flex gap-2">
-                    <Input 
-                      id="slug" 
-                      value={newSlug} 
-                      onChange={(e) => setNewSlug(e.target.value)} 
-                      placeholder={slugify(newName) || "category-slug"} 
-                    />
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      onClick={() => setNewSlug(slugify(newName))}
-                    >
-                      Generate
-                    </Button>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    The URL-friendly version of the name.
-                  </p>
-                </div>
-                
-                <div className="grid gap-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea 
-                    id="description"
-                    value={newDescription} 
-                    onChange={(e) => setNewDescription(e.target.value)} 
-                    placeholder="Category description" 
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button 
-                  onClick={handleCreateCategory} 
-                  disabled={createMutation.isPending}
-                >
-                  {createMutation.isPending && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  )}
-                  Create Category
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex items-center space-x-2"
+                onClick={() => setCategoryView('tree')}
+                disabled={categoryView === 'tree'}
+              >
+                <FolderTree className="h-4 w-4" />
+                <span>Tree View</span>
+              </Button>
+            </div>
+            
+            {categoryView === 'grid' && (
+              <Select value={filterLevel || ""} onValueChange={(value) => setFilterLevel(value || null)}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Filter by Level" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All Levels</SelectItem>
+                  <SelectItem value="0">Main Categories (Level 0)</SelectItem>
+                  <SelectItem value="1">Subcategories (Level 1)</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+            
+            <Button 
+              className="space-x-2"
+              onClick={() => {
+                setNewName("");
+                setNewSlug("");
+                setNewDescription("");
+                setNewParentId(null);
+                setNewLevel(0);
+                setIsCreateDialogOpen(true);
+              }}
+            >
+              <Plus className="h-4 w-4" />
+              <span>Add Category</span>
+            </Button>
+          </div>
         </div>
 
-        {/* Category Grid */}
+        {/* Category Display */}
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -442,80 +434,144 @@ export default function AdminCategories() {
         ) : !categories || categories.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12">
             <p className="text-muted-foreground mb-4">No categories found</p>
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create your first category
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Create New Category</DialogTitle>
-                  <DialogDescription>
-                    Add a new category to organize your products.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="name">Name</Label>
-                    <Input 
-                      id="name" 
-                      value={newName} 
-                      onChange={(e) => setNewName(e.target.value)} 
-                      placeholder="Category Name" 
-                    />
+            <Button 
+              onClick={() => {
+                setNewName("");
+                setNewSlug("");
+                setNewDescription("");
+                setNewParentId(null);
+                setNewLevel(0);
+                setIsCreateDialogOpen(true);
+              }}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Create your first category
+            </Button>
+          </div>
+        ) : categoryView === 'tree' ? (
+          // Tree View for hierarchical display
+          <div className="border rounded-md">
+            {hierarchicalCategories?.map((item) => (
+              <div key={item.category.id} className="border-b last:border-0">
+                <div className="p-4 bg-slate-50 flex justify-between items-center">
+                  <div className="flex items-center">
+                    <h3 className="font-medium">{item.category.name}</h3>
+                    <Badge variant="outline" className="ml-2">Level 0</Badge>
+                    <Badge 
+                      variant="secondary" 
+                      className="ml-2"
+                    >
+                      Display Order: {item.category.displayOrder || 0}
+                    </Badge>
                   </div>
-                  
-                  <div className="grid gap-2">
-                    <Label htmlFor="slug">Slug</Label>
-                    <div className="flex gap-2">
-                      <Input 
-                        id="slug" 
-                        value={newSlug} 
-                        onChange={(e) => setNewSlug(e.target.value)} 
-                        placeholder={slugify(newName) || "category-slug"} 
-                      />
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        onClick={() => setNewSlug(slugify(newName))}
-                      >
-                        Generate
-                      </Button>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      The URL-friendly version of the name.
-                    </p>
-                  </div>
-                  
-                  <div className="grid gap-2">
-                    <Label htmlFor="description">Description</Label>
-                    <Textarea 
-                      id="description"
-                      value={newDescription} 
-                      onChange={(e) => setNewDescription(e.target.value)} 
-                      placeholder="Category description" 
-                    />
+                  <div className="flex space-x-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleManageAttributes(item.category.id)}
+                    >
+                      <Tag className="h-4 w-4 mr-2" />
+                      Attributes
+                    </Button>
+                    
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreHorizontal className="h-4 w-4" />
+                          <span className="sr-only">Actions</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onSelect={(e) => {
+                          e.preventDefault();
+                          handleEditClick(item.category);
+                        }}>
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit
+                        </DropdownMenuItem>
+                        
+                        <DropdownMenuItem
+                          onSelect={(e) => {
+                            e.preventDefault();
+                            handleDeleteClick(item.category);
+                          }}
+                          className="text-red-600"
+                        >
+                          <Trash className="h-4 w-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
-                <DialogFooter>
-                  <Button 
-                    onClick={handleCreateCategory} 
-                    disabled={createMutation.isPending}
-                  >
-                    {createMutation.isPending && (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    )}
-                    Create Category
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+                
+                {item.children.length > 0 && (
+                  <div className="pl-8 pr-4 py-2">
+                    {item.children.map((child) => (
+                      <div key={child.id} className="border-b last:border-0 py-3 flex justify-between items-center">
+                        <div className="flex items-center">
+                          <ChevronRight className="h-4 w-4 mr-2 text-muted-foreground" />
+                          <span className="font-medium">{child.name}</span>
+                          <Badge variant="outline" className="ml-2">Level 1</Badge>
+                          <Badge 
+                            variant="secondary" 
+                            className="ml-2"
+                          >
+                            Display Order: {child.displayOrder || 0}
+                          </Badge>
+                        </div>
+                        <div className="flex space-x-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleManageAttributes(child.id)}
+                          >
+                            <Tag className="h-4 w-4 mr-2" />
+                            Attributes
+                          </Button>
+                          
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreHorizontal className="h-4 w-4" />
+                                <span className="sr-only">Actions</span>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onSelect={(e) => {
+                                e.preventDefault();
+                                handleEditClick(child);
+                              }}>
+                                <Edit className="h-4 w-4 mr-2" />
+                                Edit
+                              </DropdownMenuItem>
+                              
+                              <DropdownMenuItem
+                                onSelect={(e) => {
+                                  e.preventDefault();
+                                  handleDeleteClick(child);
+                                }}
+                                className="text-red-600"
+                              >
+                                <Trash className="h-4 w-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         ) : (
+          // Grid View
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {categories.map((category) => (
+            {categories
+              ?.filter(category => filterLevel === null || category.level?.toString() === filterLevel)
+              .map((category) => (
               <Card key={category.id} className="overflow-hidden">
                 <div className="h-32 bg-gradient-to-r from-pink-100 to-pink-50 flex items-center justify-center">
                   <h3 className="text-xl font-bold text-pink-800">{category.name}</h3>
@@ -523,16 +579,27 @@ export default function AdminCategories() {
                 <CardContent className="p-4">
                   <div className="flex justify-between items-start mb-3">
                     <div>
-                      <p className="text-sm text-muted-foreground">Slug: {category.slug}</p>
-                      {category.isActive ? (
-                        <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
-                          Active
-                        </span>
-                      ) : (
-                        <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full">
-                          Inactive
-                        </span>
-                      )}
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        <p className="text-sm text-muted-foreground">Slug: {category.slug}</p>
+                        <Badge variant="outline">Level {category.level || 0}</Badge>
+                        {category.isActive ? (
+                          <Badge className="bg-green-100 text-green-800 hover:bg-green-200">
+                            Active
+                          </Badge>
+                        ) : (
+                          <Badge variant="destructive">
+                            Inactive
+                          </Badge>
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">
+                          Parent: {getCategoryParentName(category)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Display Order: {category.displayOrder || 0}
+                        </p>
+                      </div>
                     </div>
                     <div>
                       <DropdownMenu>
@@ -543,79 +610,32 @@ export default function AdminCategories() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <DropdownMenuItem onSelect={(e) => {
-                                e.preventDefault();
-                                handleEditClick(category);
-                              }}>
-                                <Edit className="h-4 w-4 mr-2" />
-                                Edit
-                              </DropdownMenuItem>
-                            </DialogTrigger>
-                            <DialogContent>
-                              <DialogHeader>
-                                <DialogTitle>Edit Category</DialogTitle>
-                                <DialogDescription>
-                                  Update the category details
-                                </DialogDescription>
-                              </DialogHeader>
-                              <div className="grid gap-4 py-4">
-                                <div className="grid gap-2">
-                                  <Label htmlFor="edit-name">Name</Label>
-                                  <Input 
-                                    id="edit-name" 
-                                    value={newName} 
-                                    onChange={(e) => setNewName(e.target.value)} 
-                                  />
-                                </div>
-                                
-                                <div className="grid gap-2">
-                                  <Label htmlFor="edit-slug">Slug</Label>
-                                  <div className="flex gap-2">
-                                    <Input 
-                                      id="edit-slug" 
-                                      value={newSlug} 
-                                      onChange={(e) => setNewSlug(e.target.value)} 
-                                    />
-                                    <Button 
-                                      type="button" 
-                                      variant="outline" 
-                                      onClick={() => setNewSlug(slugify(newName))}
-                                    >
-                                      Generate
-                                    </Button>
-                                  </div>
-                                </div>
-                                
-                                <div className="grid gap-2">
-                                  <Label htmlFor="edit-description">Description</Label>
-                                  <Textarea 
-                                    id="edit-description"
-                                    value={newDescription} 
-                                    onChange={(e) => setNewDescription(e.target.value)} 
-                                  />
-                                </div>
-                              </div>
-                              <DialogFooter>
-                                <Button 
-                                  onClick={handleUpdateCategory} 
-                                  disabled={updateMutation.isPending}
-                                >
-                                  {updateMutation.isPending && (
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                  )}
-                                  Update Category
-                                </Button>
-                              </DialogFooter>
-                            </DialogContent>
-                          </Dialog>
                           <DropdownMenuItem 
-                            className="text-red-600"
+                            onSelect={(e) => {
+                              e.preventDefault();
+                              handleManageAttributes(category.id);
+                            }}
+                          >
+                            <Tag className="h-4 w-4 mr-2" />
+                            Manage Attributes
+                          </DropdownMenuItem>
+                          
+                          <DropdownMenuSeparator />
+                          
+                          <DropdownMenuItem onSelect={(e) => {
+                            e.preventDefault();
+                            handleEditClick(category);
+                          }}>
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          
+                          <DropdownMenuItem
                             onSelect={(e) => {
                               e.preventDefault();
                               handleDeleteClick(category);
                             }}
+                            className="text-red-600"
                           >
                             <Trash className="h-4 w-4 mr-2" />
                             Delete
@@ -624,49 +644,265 @@ export default function AdminCategories() {
                       </DropdownMenu>
                     </div>
                   </div>
-                  {category.description && (
-                    <p className="text-sm text-muted-foreground">
-                      {category.description.length > 100
-                        ? `${category.description.substring(0, 100)}...`
-                        : category.description}
-                    </p>
-                  )}
+                  
+                  <div className="space-y-2">
+                    {category.description && (
+                      <p className="text-sm line-clamp-3">{category.description}</p>
+                    )}
+                    
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full mt-3"
+                      onClick={() => handleManageAttributes(category.id)}
+                    >
+                      <Tag className="h-4 w-4 mr-2" />
+                      Manage Attributes
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}
           </div>
         )}
-      </div>
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm Deletion</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this category? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => setIsDeleteDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button 
-              variant="destructive" 
-              onClick={handleDeleteCategory}
-              disabled={deleteMutation.isPending}
-            >
-              {deleteMutation.isPending && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        
+        {/* Create Dialog */}
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Create New Category</DialogTitle>
+              <DialogDescription>
+                Add a new category to organize your products.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="name">Name*</Label>
+                <Input 
+                  id="name" 
+                  value={newName} 
+                  onChange={(e) => setNewName(e.target.value)} 
+                  placeholder="Category Name" 
+                />
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="parent">Parent Category</Label>
+                <Select value={newParentId || ""} onValueChange={(value) => setNewParentId(value || null)}>
+                  <SelectTrigger id="parent">
+                    <SelectValue placeholder="No Parent (Main Category)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">No Parent (Main Category)</SelectItem>
+                    {categories?.filter(cat => cat.level === 0).map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id.toString()}>
+                        {cat.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-muted-foreground">
+                  Current level: {newLevel} {newLevel === 0 ? "(Main Category)" : "(Subcategory)"}
+                </p>
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="slug">Slug</Label>
+                <div className="flex gap-2">
+                  <Input 
+                    id="slug" 
+                    value={newSlug} 
+                    onChange={(e) => setNewSlug(e.target.value)} 
+                    placeholder={slugify(newName) || "category-slug"} 
+                  />
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => setNewSlug(slugify(newName))}
+                  >
+                    Generate
+                  </Button>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  The URL-friendly version of the name.
+                </p>
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="displayOrder">Display Order</Label>
+                <Input 
+                  id="displayOrder" 
+                  type="number" 
+                  value={newDisplayOrder} 
+                  onChange={(e) => setNewDisplayOrder(parseInt(e.target.value))} 
+                />
+                <p className="text-sm text-muted-foreground">
+                  Controls the display order within the same level.
+                </p>
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea 
+                  id="description"
+                  value={newDescription} 
+                  onChange={(e) => setNewDescription(e.target.value)} 
+                  placeholder="Category description" 
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button 
+                onClick={handleCreateCategory} 
+                disabled={createMutation.isPending}
+              >
+                {createMutation.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Create Category
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        
+        {/* Edit Dialog */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Edit Category</DialogTitle>
+              <DialogDescription>
+                Update the category details
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="edit-name">Name*</Label>
+                <Input 
+                  id="edit-name" 
+                  value={newName} 
+                  onChange={(e) => setNewName(e.target.value)} 
+                />
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="edit-parent">Parent Category</Label>
+                <Select value={newParentId || ""} onValueChange={(value) => setNewParentId(value || null)}>
+                  <SelectTrigger id="edit-parent">
+                    <SelectValue placeholder="No Parent (Main Category)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">No Parent (Main Category)</SelectItem>
+                    {categories?.filter(cat => 
+                      cat.level === 0 && 
+                      cat.id !== selectedCategory?.id
+                    ).map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id.toString()}>
+                        {cat.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-muted-foreground">
+                  Current level: {newLevel} {newLevel === 0 ? "(Main Category)" : "(Subcategory)"}
+                </p>
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="edit-slug">Slug</Label>
+                <div className="flex gap-2">
+                  <Input 
+                    id="edit-slug" 
+                    value={newSlug} 
+                    onChange={(e) => setNewSlug(e.target.value)} 
+                  />
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => setNewSlug(slugify(newName))}
+                  >
+                    Generate
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="edit-displayOrder">Display Order</Label>
+                <Input 
+                  id="edit-displayOrder" 
+                  type="number" 
+                  value={newDisplayOrder} 
+                  onChange={(e) => setNewDisplayOrder(parseInt(e.target.value))} 
+                />
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="edit-description">Description</Label>
+                <Textarea 
+                  id="edit-description"
+                  value={newDescription} 
+                  onChange={(e) => setNewDescription(e.target.value)} 
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button 
+                onClick={handleUpdateCategory} 
+                disabled={updateMutation.isPending}
+              >
+                {updateMutation.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Save Changes
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        
+        {/* Delete Dialog */}
+        <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete Category</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete this category?
+                This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <p className="font-medium">{selectedCategory?.name}</p>
+              <p className="text-sm text-muted-foreground">
+                Slug: {selectedCategory?.slug}
+              </p>
+              {selectedCategory?.level === 0 && categories?.some(c => c.parentId === selectedCategory.id) && (
+                <div className="mt-2 p-3 bg-amber-50 text-amber-800 rounded border border-amber-300">
+                  <p className="font-medium">Warning</p>
+                  <p className="text-sm">This category has subcategories that will also be deleted.</p>
+                </div>
               )}
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setIsDeleteDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDeleteCategory}
+                disabled={deleteMutation.isPending}
+              >
+                {deleteMutation.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash className="mr-2 h-4 w-4" />
+                )}
+                Delete
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
     </AdminLayout>
   );
 }
