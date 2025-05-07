@@ -858,12 +858,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           success: true,
           files: processedFiles
         });
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error processing uploaded files:', error);
         return res.status(500).json({
           success: false,
           message: 'Error processing uploaded files',
-          error: error.message
+          error: error.message || 'Unknown error'
         });
       }
     });
@@ -915,9 +915,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // File not found in either location
       res.status(404).send('File not found');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error serving temporary file:', error);
-      res.status(500).send('Server error');
+      res.status(500).send(`Server error: ${error.message || 'Unknown error'}`);
     }
   });
   
@@ -975,9 +975,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Create the product image record
         const image = await storage.createProductImage(imageData);
         return res.status(201).json(image);
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error uploading image to object storage:', error);
-        return res.status(500).json({ message: "Failed to upload image" });
+        return res.status(500).json({ 
+          message: "Failed to upload image",
+          error: error.message || 'Unknown error'
+        });
       }
     }
     
@@ -1100,11 +1103,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: true, 
         imageUrl: resultImageBase64 
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Background removal error:', error);
       res.status(500).json({ 
         message: "Failed to remove background", 
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error.message || 'Unknown error'
       });
     }
   }));
@@ -1135,11 +1138,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       
       res.json({ success: true, tags });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Tag generation error:', error);
       res.status(500).json({ 
         message: "Failed to generate tags", 
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error.message || 'Unknown error'
       });
     }
   }));
@@ -1165,11 +1168,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const analysis = await analyzeProductImage(imageUrl, productName);
       res.json({ success: true, ...analysis });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Product analysis error:', error);
       res.status(500).json({ 
         message: "Failed to analyze product", 
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error.message || 'Unknown error'
       });
     }
   }));
@@ -1206,11 +1209,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const suggestion = await suggestPrice(costPriceNum, productName, categoryName, categoryIdNum);
       res.json({ success: true, ...suggestion });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Price suggestion error:', error);
       res.status(500).json({ 
         message: "Failed to suggest price", 
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error.message || 'Unknown error'
       });
     }
   }));
@@ -1268,12 +1271,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: `Model ${modelName} was saved but could not be initialized. Will try again on next server restart.`
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating AI model:', error);
       res.status(500).json({ 
         success: false, 
         message: "Failed to update AI model",
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error.message || 'Unknown error'
       });
     }
   }));
