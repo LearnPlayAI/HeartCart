@@ -136,47 +136,41 @@ export interface IStorage {
 
 export class DatabaseStorage implements IStorage {
   /**
-   * Helper method to enrich products with their main image URL
+   * Helper method to enrich products with their main image URL and additional images
    * @param productList The list of products to enrich
-   * @returns The enriched product list with imageUrl field
+   * @returns The enriched product list with imageUrl and additionalImages fields
    */
   private async enrichProductsWithMainImage(productList: Product[]): Promise<Product[]> {
     if (!productList.length) return productList;
     
-    // For each product, find its main image if any
+    // For each product, find its images
     const enrichedProducts = await Promise.all(productList.map(async (product) => {
-      const mainImages = await db
-        .select()
-        .from(productImages)
-        .where(and(
-          eq(productImages.productId, product.id),
-          eq(productImages.isMain, true)
-        ));
-        
-      // If there's a main image, add its URL to the product
-      if (mainImages.length > 0) {
-        return {
-          ...product,
-          imageUrl: mainImages[0].url
-        };
-      }
-      
-      // If no main image, check if there are any images at all
-      const anyImages = await db
+      // Get all images for this product
+      const allImages = await db
         .select()
         .from(productImages)
         .where(eq(productImages.productId, product.id))
-        .limit(1);
+        .orderBy(asc(productImages.sortOrder));
         
-      if (anyImages.length > 0) {
-        return {
-          ...product,
-          imageUrl: anyImages[0].url
-        };
+      if (allImages.length === 0) {
+        // No images at all, return product as is
+        return product;
       }
       
-      // If no images at all, return product as is
-      return product;
+      // Find the main image
+      const mainImage = allImages.find(img => img.isMain);
+      
+      // Get additional (non-main) images
+      const additionalImageUrls = allImages
+        .filter(img => !img.isMain)
+        .map(img => img.url);
+      
+      // Return enriched product
+      return {
+        ...product,
+        imageUrl: mainImage ? mainImage.url : allImages[0].url,
+        additionalImages: additionalImageUrls.length > 0 ? additionalImageUrls : null
+      };
     }));
     
     return enrichedProducts;
