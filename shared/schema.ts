@@ -193,6 +193,34 @@ export const catalogs = pgTable("catalogs", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Global Attributes - for defining attributes that can be used across any product
+export const globalAttributes = pgTable("global_attributes", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(),
+  displayName: varchar("display_name", { length: 100 }).notNull(),
+  description: text("description"),
+  attributeType: varchar("attribute_type", { length: 50 }).notNull(), // 'select', 'color', 'text', etc.
+  isRequired: boolean("is_required").default(false),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    nameUnique: unique().on(table.name),
+  };
+});
+
+// Global Attribute Options - predefined options for select-type global attributes
+export const globalAttributeOptions = pgTable("global_attribute_options", {
+  id: serial("id").primaryKey(),
+  attributeId: integer("attribute_id").notNull().references(() => globalAttributes.id),
+  value: varchar("value", { length: 255 }).notNull(),
+  displayValue: varchar("display_value", { length: 255 }).notNull(),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Category Attributes - for defining which attributes a category has
 export const categoryAttributes = pgTable("category_attributes", {
   id: serial("id").primaryKey(),
@@ -226,15 +254,13 @@ export const categoryAttributeOptions = pgTable("category_attribute_options", {
 export const productAttributeValues = pgTable("product_attribute_values", {
   id: serial("id").primaryKey(),
   productId: integer("product_id").notNull().references(() => products.id),
-  attributeId: integer("attribute_id").notNull().references(() => categoryAttributes.id),
+  attributeId: integer("attribute_id").references(() => categoryAttributes.id), // Can be null if using globalAttributeId
+  globalAttributeId: integer("global_attribute_id").references(() => globalAttributes.id), // Can be null if using attributeId
   value: text("value").notNull(), // Could be an option ID, color hex code, text, etc.
   priceAdjustment: decimal("price_adjustment", { precision: 10, scale: 2 }).default("0"),
+  isFromGlobalAttribute: boolean("is_from_global_attribute").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-}, (table) => {
-  return {
-    productAttrUnique: unique().on(table.productId, table.attributeId),
-  };
 });
 
 // Product Attribute Combinations - for storing different combinations and their prices
@@ -335,6 +361,20 @@ export const insertCatalogSchema = createInsertSchema(catalogs).omit({
   endDate: z.string().or(z.date()).nullable().optional(),
 });
 
+// Global Attributes insert schema
+export const insertGlobalAttributeSchema = createInsertSchema(globalAttributes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Global Attribute Options insert schema
+export const insertGlobalAttributeOptionSchema = createInsertSchema(globalAttributeOptions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Category Attributes insert schema
 export const insertCategoryAttributeSchema = createInsertSchema(categoryAttributes).omit({
   id: true,
@@ -400,6 +440,12 @@ export type InsertSupplier = z.infer<typeof insertSupplierSchema>;
 export type Catalog = typeof catalogs.$inferSelect;
 export type InsertCatalog = z.infer<typeof insertCatalogSchema>;
 
+export type GlobalAttribute = typeof globalAttributes.$inferSelect;
+export type InsertGlobalAttribute = z.infer<typeof insertGlobalAttributeSchema>;
+
+export type GlobalAttributeOption = typeof globalAttributeOptions.$inferSelect;
+export type InsertGlobalAttributeOption = z.infer<typeof insertGlobalAttributeOptionSchema>;
+
 export type CategoryAttribute = typeof categoryAttributes.$inferSelect;
 export type InsertCategoryAttribute = z.infer<typeof insertCategoryAttributeSchema>;
 
@@ -454,4 +500,30 @@ export const catalogsRelations = relations(catalogs, ({ one, many }) => ({
 
 export const suppliersRelations = relations(suppliers, ({ many }) => ({
   catalogs: many(catalogs)
+}));
+
+export const globalAttributesRelations = relations(globalAttributes, ({ many }) => ({
+  options: many(globalAttributeOptions)
+}));
+
+export const globalAttributeOptionsRelations = relations(globalAttributeOptions, ({ one }) => ({
+  attribute: one(globalAttributes, {
+    fields: [globalAttributeOptions.attributeId],
+    references: [globalAttributes.id]
+  })
+}));
+
+export const productAttributeValuesRelations = relations(productAttributeValues, ({ one }) => ({
+  product: one(products, {
+    fields: [productAttributeValues.productId],
+    references: [products.id]
+  }),
+  categoryAttribute: one(categoryAttributes, {
+    fields: [productAttributeValues.attributeId],
+    references: [categoryAttributes.id]
+  }),
+  globalAttribute: one(globalAttributes, {
+    fields: [productAttributeValues.globalAttributeId],
+    references: [globalAttributes.id]
+  })
 }));
