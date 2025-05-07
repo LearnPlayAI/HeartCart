@@ -849,7 +849,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             file.mimetype
           );
           
-          console.log(`Uploaded temp file to object storage: ${objectKey}, size: ${fileBuffer.length} bytes`);
+          // Add a delay after upload to ensure Replit Object Storage has propagated the file
+          // This is crucial for preventing issues with file not being available immediately
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // Verify the file exists in Object Storage before proceeding
+          const exists = await objectStorageService.exists(objectKey);
+          if (!exists) {
+            console.error(`File ${objectKey} was not found in Object Storage after upload`);
+            throw new Error('File upload to Object Storage failed - verification failed');
+          }
+          
+          console.log(`Successfully uploaded temp file to object storage: ${objectKey}, size: ${fileBuffer.length} bytes`);
           
           processedFiles.push({
             filename: path.basename(objectKey),
@@ -1999,28 +2010,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.setHeader('Cache-Control', contentType.startsWith('image/') ? 'public, max-age=86400' : 'no-cache');
       
       try {
-        // For small files or non-image files, use buffer for more reliable handling
-        const isImage = contentType.startsWith('image/');
-        const useBuffer = !isImage || objectKey.includes('/temp/');
+        // Always use buffer approach for more reliable handling
+        // This is a proven approach based on the analysis shared
+        console.log(`Retrieving file ${objectKey} as buffer`);
         
-        if (useBuffer) {
-          // Get file as buffer for more reliable handling (especially for smaller files)
-          console.log(`Retrieving file ${objectKey} as buffer`);
-          const buffer = await objectStorageService.downloadAsBuffer(objectKey);
-          
-          if (!Buffer.isBuffer(buffer)) {
-            throw new Error('Invalid data type returned from object storage');
-          }
-          
-          console.log(`Successfully retrieved file ${objectKey} from object storage: ${buffer.length} bytes`);
-          return res.end(buffer);
-        } else {
-          // For larger images, stream to improve performance
-          console.log(`Streaming file ${objectKey} from object storage`);
-          const stream = await objectStorageService.downloadAsStream(objectKey);
-          stream.pipe(res);
-          return;
+        // Apply a small delay if this is a file that was just uploaded
+        // This helps with race conditions between upload and immediate fetch
+        if (objectKey.includes('/temp/')) {
+          await new Promise(resolve => setTimeout(resolve, 100));
         }
+        
+        const buffer = await objectStorageService.downloadAsBuffer(objectKey);
+        
+        if (!Buffer.isBuffer(buffer)) {
+          throw new Error('Invalid data type returned from object storage');
+        }
+        
+        console.log(`Successfully retrieved file ${objectKey} from object storage: ${buffer.length} bytes`);
+        return res.end(buffer);
       } catch (downloadError: any) {
         console.error(`Error retrieving file ${objectKey}:`, downloadError);
         return res.status(500).send(`Error reading file: ${downloadError.message}`);

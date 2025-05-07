@@ -47,9 +47,52 @@ export interface ListResult {
 export class ObjectStorageService {
   // Using any type to avoid complex type checking issues with the Replit client
   private client: any;
+  private initialized: boolean = false;
   
   constructor() {
     this.client = new ObjectStorageClient();
+    this.initializeStorage();
+  }
+  
+  /**
+   * Initialize the Object Storage with test operations
+   * This helps ensure the service is ready before we try to use it
+   */
+  private async initializeStorage(): Promise<void> {
+    try {
+      const testKey = 'test-initialization';
+      const testData = Buffer.from('test-data');
+      
+      console.log('Initializing Replit Object Storage...');
+      
+      // Test write operation
+      const uploadResult = await this.client.uploadFromBytes(testKey, testData);
+      if ('err' in uploadResult) {
+        throw new Error(`Initialization write error: ${uploadResult.err.message}`);
+      }
+      
+      // Add a small delay to allow for any internal processing
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // Test read operation
+      const downloadResult = await this.client.downloadAsBytes(testKey);
+      if ('err' in downloadResult) {
+        throw new Error(`Initialization read error: ${downloadResult.err.message}`);
+      }
+      
+      // Test delete operation
+      const deleteResult = await this.client.delete(testKey);
+      if ('err' in deleteResult) {
+        console.warn(`Could not delete test key during initialization: ${deleteResult.err.message}`);
+      }
+      
+      this.initialized = true;
+      console.log('Replit Object Storage initialized successfully');
+    } catch (error: any) {
+      console.error('Error initializing Replit Object Storage:', error.message);
+      // We don't throw here to allow the application to continue,
+      // but operations may fail until storage is properly available
+    }
   }
   
   /**
@@ -710,7 +753,18 @@ export class ObjectStorageService {
         filename: originalFilename  // Store original filename in metadata
       });
       
-      console.log(`Successfully uploaded temp file to ${objectKey}`);
+      // Add a delay after upload to ensure Replit Object Storage has processed the file
+      // This is critical for avoiding race conditions where the file is reported as uploaded
+      // but not yet available for download
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // Verify the file exists in Object Storage
+      const exists = await this.exists(objectKey);
+      if (!exists) {
+        throw new Error(`File was not found in Object Storage after upload: ${objectKey}`);
+      }
+      
+      console.log(`Successfully uploaded and verified temp file in object storage: ${objectKey}`);
       
       return { 
         url: `/api/files/${objectKey}`,  // Use our file serving endpoint 
