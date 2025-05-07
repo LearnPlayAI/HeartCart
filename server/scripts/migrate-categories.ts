@@ -1,6 +1,6 @@
 import { db } from "../db";
-import { categories } from "@shared/schema";
-import { eq, isNull } from "drizzle-orm";
+import { categories } from "../../shared/schema";
+import { eq, isNull, not } from "drizzle-orm";
 
 /**
  * This script performs the migration of existing categories to the new hierarchical structure.
@@ -23,7 +23,7 @@ async function migrateCategoriesHierarchy() {
     const subCatResult = await db
       .update(categories)
       .set({ level: 1 })
-      .where(eq(categories.level, 0).not())
+      .where(not(isNull(categories.parentId)))
       .returning();
     
     console.log(`✅ Successfully identified ${subCatResult.length} subcategories and set to level 1`);
@@ -34,14 +34,12 @@ async function migrateCategoriesHierarchy() {
   }
 }
 
-// Execute the migration when this script is run directly
-if (require.main === module) {
-  migrateCategoriesHierarchy()
-    .then(() => process.exit(0))
-    .catch((err) => {
-      console.error("Migration failed:", err);
-      process.exit(1);
-    });
-}
+// Run the migration
+migrateCategoriesHierarchy()
+  .then(() => console.log("Migration script completed"))
+  .catch((err) => {
+    console.error("Migration failed:", err);
+    process.exit(1);
+  });
 
 export { migrateCategoriesHierarchy };
