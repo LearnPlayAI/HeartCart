@@ -132,6 +132,52 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  /**
+   * Helper method to enrich products with their main image URL
+   * @param productList The list of products to enrich
+   * @returns The enriched product list with imageUrl field
+   */
+  private async enrichProductsWithMainImage(productList: Product[]): Promise<Product[]> {
+    if (!productList.length) return productList;
+    
+    // For each product, find its main image if any
+    const enrichedProducts = await Promise.all(productList.map(async (product) => {
+      const mainImages = await db
+        .select()
+        .from(productImages)
+        .where(and(
+          eq(productImages.productId, product.id),
+          eq(productImages.isMain, true)
+        ));
+        
+      // If there's a main image, add its URL to the product
+      if (mainImages.length > 0) {
+        return {
+          ...product,
+          imageUrl: mainImages[0].url
+        };
+      }
+      
+      // If no main image, check if there are any images at all
+      const anyImages = await db
+        .select()
+        .from(productImages)
+        .where(eq(productImages.productId, product.id))
+        .limit(1);
+        
+      if (anyImages.length > 0) {
+        return {
+          ...product,
+          imageUrl: anyImages[0].url
+        };
+      }
+      
+      // If no images at all, return product as is
+      return product;
+    }));
+    
+    return enrichedProducts;
+  }
   // User operations
   async getUser(id: number): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
@@ -366,7 +412,10 @@ export class DatabaseStorage implements IStorage {
       }
       
       const result = await query.limit(limit).offset(offset);
-      return result.map(row => row.product);
+      const productList = result.map(row => row.product);
+      
+      // Enrich products with main image URLs
+      return await this.enrichProductsWithMainImage(productList);
     }
     
     // If we got here, we're either including products with inactive categories
@@ -392,7 +441,10 @@ export class DatabaseStorage implements IStorage {
       );
     }
     
-    return await query.limit(limit).offset(offset);
+    const productList = await query.limit(limit).offset(offset);
+    
+    // Enrich products with main image URLs
+    return await this.enrichProductsWithMainImage(productList);
   }
 
   async getProductById(id: number, options?: { includeInactive?: boolean, includeCategoryInactive?: boolean }): Promise<Product | undefined> {
@@ -505,6 +557,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getFeaturedProducts(limit = 10, options?: { includeInactive?: boolean, includeCategoryInactive?: boolean }): Promise<Product[]> {
+    let productList: Product[] = [];
+    
     if (!options?.includeCategoryInactive) {
       // For featured products, we need to join with categories to check if category is active
       const query = db.select({
@@ -520,10 +574,10 @@ export class DatabaseStorage implements IStorage {
       .limit(limit);
       
       const result = await query;
-      return result.map(row => row.product);
+      productList = result.map(row => row.product);
     } else {
       // If we don't need to check category visibility, use simpler query
-      return await db
+      productList = await db
         .select()
         .from(products)
         .where(and(
@@ -532,10 +586,14 @@ export class DatabaseStorage implements IStorage {
         ))
         .limit(limit);
     }
+    
+    // Enrich products with main image URLs
+    return await this.enrichProductsWithMainImage(productList);
   }
 
   async getFlashDeals(limit = 6, options?: { includeInactive?: boolean, includeCategoryInactive?: boolean }): Promise<Product[]> {
     const now = new Date();
+    let productList: Product[] = [];
     
     if (!options?.includeCategoryInactive) {
       // For flash deals, we need to join with categories to check if category is active
@@ -553,10 +611,10 @@ export class DatabaseStorage implements IStorage {
       .limit(limit);
       
       const result = await query;
-      return result.map(row => row.product);
+      productList = result.map(row => row.product);
     } else {
       // If we don't need to check category visibility, use simpler query
-      return await db
+      productList = await db
         .select()
         .from(products)
         .where(and(
@@ -566,10 +624,14 @@ export class DatabaseStorage implements IStorage {
         ))
         .limit(limit);
     }
+    
+    // Enrich products with main image URLs
+    return await this.enrichProductsWithMainImage(productList);
   }
 
   async searchProducts(query: string, limit = 20, offset = 0, options?: { includeInactive?: boolean, includeCategoryInactive?: boolean }): Promise<Product[]> {
     const searchTerm = `%${query}%`;
+    let productList: Product[] = [];
     
     if (!options?.includeCategoryInactive) {
       // For search, we need to join with categories to check if category is active
@@ -587,10 +649,10 @@ export class DatabaseStorage implements IStorage {
       .offset(offset);
       
       const result = await searchQuery;
-      return result.map(row => row.product);
+      productList = result.map(row => row.product);
     } else {
       // If we don't need to check category visibility, use simpler query
-      return await db
+      productList = await db
         .select()
         .from(products)
         .where(and(
@@ -600,6 +662,9 @@ export class DatabaseStorage implements IStorage {
         .limit(limit)
         .offset(offset);
     }
+    
+    // Enrich products with main image URLs
+    return await this.enrichProductsWithMainImage(productList);
   }
 
   async createProduct(product: InsertProduct): Promise<Product> {
