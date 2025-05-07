@@ -1,7 +1,7 @@
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, ShoppingBag, Package, CreditCard, Users, Settings, BarChart3, LogOut, DollarSign, BrainCircuit, Factory, BookOpen } from "lucide-react";
+import { LayoutDashboard, ShoppingBag, Package, CreditCard, Users, Settings, BarChart3, LogOut, DollarSign, BrainCircuit, Factory, BookOpen, Tags } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -27,6 +27,7 @@ function Navigation({ className }: { className?: string }) {
     { path: "/admin/products", label: "Products", icon: ShoppingBag },
     { path: "/admin/orders", label: "Orders", icon: Package },
     { path: "/admin/categories", label: "Categories", icon: BarChart3 },
+    { path: "/admin/global-attributes", label: "Global Attributes", icon: Tags },
     { path: "/admin/pricing", label: "Pricing", icon: DollarSign },
     { path: "/admin/ai-settings", label: "AI Settings", icon: BrainCircuit },
     { path: "/admin/customers", label: "Customers", icon: Users },
