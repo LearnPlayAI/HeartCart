@@ -283,11 +283,22 @@ export default function ImagesBasicInfoStep({
                         key={index}
                         className="relative group aspect-square rounded-md overflow-hidden border hover:border-pink-500 transition-all"
                       >
-                        <img
-                          src={image.url}
-                          alt={`Product image ${index + 1}`}
-                          className="h-full w-full object-cover"
-                        />
+                        {image.url ? (
+                          <img
+                            src={image.url}
+                            alt={`Product image ${index + 1}`}
+                            className="h-full w-full object-cover"
+                            onError={(e) => {
+                              console.error("Image load error:", image);
+                              (e.target as HTMLImageElement).src = "data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ff3040' stroke-width='2'%3E%3Crect width='20' height='20' x='2' y='2' rx='5' ry='5'/%3E%3Cpath d='M16 16l-4-4-4 4M16 8l-4 4-4-4'/%3E%3C/svg%3E";
+                              (e.target as HTMLImageElement).classList.add("bg-gray-100");
+                            }}
+                          />
+                        ) : (
+                          <div className="flex items-center justify-center h-full w-full bg-red-600 text-white text-sm p-2 text-center">
+                            Image does not show after upload
+                          </div>
+                        )}
                         <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
                           <div className="flex space-x-2">
                             <Button
