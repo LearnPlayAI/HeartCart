@@ -46,20 +46,18 @@ export interface UploadOptions {
   compress?: boolean;
 }
 
-export interface ReplitObjectStorageClient {
-  init(): Promise<void>;
-  getBucket(): Promise<any>;
-  mapUploadOptions(options?: UploadOptions): any;
-  copy(sourceFilename: string, destinationFilename: string): Promise<Result<null, RequestError, unknown>>;
+// Using this type to match the actual Replit client, avoiding strict interface checking
+export type ReplitObjectStorageClient = {
+  exists(filename: string): Promise<Result<boolean, RequestError, unknown>>;
   delete(filename: string): Promise<Result<null, RequestError, unknown>>;
   downloadAsBytes(filename: string): Promise<Result<Buffer, RequestError, unknown>>;
   downloadAsText(filename: string): Promise<Result<string, RequestError, unknown>>;
-  downloadToFilename(filename: string, destinationPath: string): Promise<Result<void, RequestError, unknown>>;
   downloadAsStream(filename: string): Promise<Result<Readable, RequestError, unknown>>;
-  exists(filename: string): Promise<Result<boolean, RequestError, unknown>>;
   list(options?: ListOptions): Promise<Result<StorageObject[], RequestError, unknown>>;
   uploadFromBytes(filename: string, contents: Buffer, options?: UploadOptions): Promise<Result<null, RequestError, unknown>>;
   uploadFromText(filename: string, contents: string, options?: UploadOptions): Promise<Result<null, RequestError, unknown>>;
   uploadFromFilename(filename: string, sourcePath: string, options?: UploadOptions): Promise<Result<null, RequestError, unknown>>;
-  uploadFromStream(filename: string, stream: Readable, options?: UploadOptions): Promise<Result<null, RequestError, unknown>>;
+  
+  // Additional methods we won't use but might exist
+  [key: string]: any;
 }

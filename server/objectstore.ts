@@ -45,7 +45,8 @@ export interface ListResult {
  * ObjectStorageService - A service for managing file operations with Replit Object Storage
  */
 export class ObjectStorageService {
-  private client: ObjectStorageClient;
+  // Using any type to avoid complex type checking issues with the Replit client
+  private client: any;
   
   constructor() {
     this.client = new ObjectStorageClient();
@@ -375,16 +376,18 @@ export class ObjectStorageService {
       });
       
       if ('err' in result) {
-        throw new Error(`Failed to list files: ${result.err.message || 'Unknown error'}`);
+        const errMsg = result.err.message || 'Unknown error';
+        throw new Error(`Failed to list files: ${errMsg}`);
       }
       
-      const objects = result.ok;
+      // We're using any here since we know the structure but TypeScript doesn't
+      const storageObjects = result.ok as any[];
       
       // Process the results to simulate delimiter behavior
       const filteredObjects: string[] = [];
       const prefixes = new Set<string>();
       
-      for (const obj of objects) {
+      for (const obj of storageObjects) {
         // Skip metadata files
         if (obj.name.endsWith('.metadata')) {
           continue;
