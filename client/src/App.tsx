@@ -11,6 +11,7 @@ import ProductDetail from "@/pages/product-detail";
 import Category from "@/pages/category";
 import ProductListing from "@/pages/product-listing";
 import Checkout from "@/pages/checkout";
+import OrderDetail from "@/pages/order-detail";
 import SearchResults from "@/pages/search-results";
 import Profile from "@/pages/profile-fix";
 import AuthPage from "@/pages/auth-page";
@@ -125,6 +126,7 @@ function App() {
                       <ProtectedRoute path="/checkout" component={Checkout} />
                       <Route path="/search"><SearchResults /></Route>
                       <ProtectedRoute path="/profile" component={Profile} />
+                      <ProtectedRoute path="/order/:id" component={OrderDetail} />
                       <Route path="/auth"><AuthPage /></Route>
                       <Route><NotFound /></Route>
                     </Switch>

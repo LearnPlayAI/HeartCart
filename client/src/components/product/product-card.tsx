@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'wouter';
-import { Star, StarHalf } from 'lucide-react';
+import { Star, StarHalf, Eye, ShoppingCart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/hooks/use-cart';
 import { formatCurrency, calculateDiscount } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import QuickViewModal from './quick-view-modal';
+import { Badge } from '@/components/ui/badge';
 import type { Product } from '@shared/schema';
 
 type ProductCardProps = {
