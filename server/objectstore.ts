@@ -261,10 +261,18 @@ export class ObjectStorageService {
    */
   async downloadAsBuffer(objectKey: string): Promise<Buffer> {
     try {
+      console.log(`Downloading file as buffer: ${objectKey}`);
       const result = await this.client.downloadAsBytes(objectKey);
       if ('err' in result) {
+        console.error(`Error in downloadAsBytes for ${objectKey}:`, result.err);
         throw new Error(`Failed to download file: ${result.err.message || 'Unknown error'}`);
       }
+      
+      if (!result.ok) {
+        throw new Error(`Failed to download file: No data returned from object storage`);
+      }
+      
+      console.log(`Successfully downloaded file: ${objectKey}, size: ${result.ok.length} bytes`);
       return result.ok;
     } catch (error: any) {
       console.error(`Error downloading file ${objectKey}:`, error);

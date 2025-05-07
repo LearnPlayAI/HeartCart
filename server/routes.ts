@@ -2021,12 +2021,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Set content type header
       res.setHeader('Content-Type', contentType);
+      res.setHeader('Cache-Control', 'public, max-age=86400');
       
       // Get file as buffer instead of stream for better compatibility
       const buffer = await objectStorageService.downloadAsBuffer(objectKey);
       
       // Send the buffer as response
-      res.send(buffer);
+      res.end(buffer);
     } catch (error: any) {
       console.error('Error serving file:', error);
       res.status(500).send(`Error serving file: ${error.message}`);
