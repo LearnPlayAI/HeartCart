@@ -1,15 +1,9 @@
-import { Client as ObjectStorageClient } from '@replit/object-storage';
+import { Client } from '@replit/object-storage';
 import { Readable } from 'stream';
 import path from 'path';
 import fs from 'fs';
 import { promisify } from 'util';
 import mime from 'mime-types';
-import { 
-  ReplitObjectStorageClient,
-  Result, 
-  RequestError, 
-  StorageObject 
-} from './types/objectStorage';
 
 // Convert fs.readFile to promise-based
 const readFile = promisify(fs.readFile);
@@ -45,13 +39,17 @@ export interface ListResult {
  * ObjectStorageService - A service for managing file operations with Replit Object Storage
  */
 export class ObjectStorageService {
-  // Using any type to avoid complex type checking issues with the Replit client
-  private client: any;
+  private client: Client;
   private initialized: boolean = false;
   
   constructor() {
-    this.client = new ObjectStorageClient();
-    this.initializeStorage();
+    try {
+      // Initialize the Replit Object Storage client
+      this.client = new Client();
+      this.initializeStorage();
+    } catch (error) {
+      console.error('Failed to initialize Replit Object Storage Client:', error);
+    }
   }
   
   /**
