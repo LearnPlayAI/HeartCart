@@ -74,12 +74,14 @@ class ObjectStoreService {
    */
   private async verifyAccess(): Promise<void> {
     try {
-      // Try a list operation with a small max parameter to see if we have access
-      const result = await this.objectStore.list("", { maxKeys: 1 });
+      // Try a simple list operation to verify access
+      const result = await this.objectStore.list("");
       
       // Check for error in the result
       if ('err' in result && result.err) {
-        throw new Error(`Object Store access error: ${result.err.message}`);
+        const errorMessage = typeof result.err === 'object' ? 
+          JSON.stringify(result.err) : String(result.err);
+        throw new Error(`Object Store access error: ${errorMessage}`);
       }
       
       console.log('Object Store access verified successfully');
@@ -110,9 +112,11 @@ class ObjectStoreService {
             contentDisposition: options.contentDisposition
           });
           
-          if ('err' in uploadResult) {
+          if ('err' in uploadResult && uploadResult.err) {
             console.error(`Error uploading buffer to ${objectKey}:`, uploadResult.err);
-            throw new Error(uploadResult.err.message);
+            const errorMessage = typeof uploadResult.err === 'object' ? 
+              JSON.stringify(uploadResult.err) : String(uploadResult.err);
+            throw new Error(`Upload error: ${errorMessage}`);
           }
           
           // Verify upload by checking that the file exists
@@ -243,9 +247,11 @@ class ObjectStoreService {
         async () => {
           const downloadResult = await this.objectStore.downloadAsBytes(objectKey);
           
-          if ('err' in downloadResult) {
+          if ('err' in downloadResult && downloadResult.err) {
             console.error(`Error downloading ${objectKey}:`, downloadResult.err);
-            throw new Error(downloadResult.err.message);
+            const errorMessage = typeof downloadResult.err === 'object' ? 
+              JSON.stringify(downloadResult.err) : String(downloadResult.err);
+            throw new Error(`Download error: ${errorMessage}`);
           }
           
           if (!downloadResult.value) {
@@ -267,16 +273,8 @@ class ObjectStoreService {
       // Determine content type
       let contentType: string | undefined;
       
-      try {
-        const headResult = await this.objectStore.head(objectKey);
-        if (!headResult.err && headResult.value) {
-          contentType = headResult.value.contentType;
-        }
-      } catch (headError) {
-        console.warn(`Could not retrieve metadata for ${objectKey}:`, headError);
-        // Fall back to detection based on filename
-        contentType = this.detectContentType(objectKey);
-      }
+      // Determine content type from file extension
+      contentType = this.detectContentType(objectKey);
       
       // Ensure we have a proper Buffer
       let data: Buffer;
@@ -338,22 +336,38 @@ class ObjectStoreService {
     await this.initialize();
     
     try {
-      // Try to use stat for metadata
-      const result = await this.objectStore.stat(objectKey);
+      // Fallback to using detection based on filename for content type
+      const contentType = this.detectContentType(objectKey);
       
-      if ('err' in result) {
-        console.error(`Error getting metadata for ${objectKey}:`, result.err);
-        throw new Error(`Failed to get metadata: ${result.err.message}`);
+      // Try to get object size if possible
+      let contentLength: number | undefined;
+      
+      try {
+        // Check if exists and try to get size information
+        const existsResult = await this.objectStore.exists(objectKey);
+        if ('value' in existsResult && existsResult.value) {
+          // For Replit object storage, we may not have direct size info
+          // But we can get file data and check its length
+          const downloadResult = await this.objectStore.downloadAsBytes(objectKey);
+          if (!('err' in downloadResult) && downloadResult.value) {
+            if (Buffer.isBuffer(downloadResult.value)) {
+              contentLength = downloadResult.value.length;
+            } else if (Array.isArray(downloadResult.value) && downloadResult.value[0]) {
+              contentLength = downloadResult.value[0].length;
+            }
+          }
+        }
+      } catch (sizeError) {
+        console.warn(`Could not determine size for ${objectKey}:`, sizeError);
+        // Continue without size info
       }
       
-      const metadata = result.value;
-      
       return {
-        contentType: metadata?.contentType,
-        contentLength: metadata?.size,
-        metadata: metadata?.metadata || {},
-        cacheControl: metadata?.cacheControl,
-        contentDisposition: metadata?.contentDisposition
+        contentType,
+        contentLength,
+        metadata: {}, // No way to get custom metadata with current API
+        cacheControl: 'public, max-age=31536000', // Default cache control
+        contentDisposition: `inline; filename="${path.basename(objectKey)}"`
       };
     } catch (error) {
       console.error(`Failed to get metadata for ${objectKey}:`, error);
@@ -383,9 +397,11 @@ class ObjectStoreService {
     try {
       const result = await this.objectStore.delete(objectKey);
       
-      if ('err' in result) {
+      if ('err' in result && result.err) {
         console.error(`Error deleting ${objectKey}:`, result.err);
-        throw new Error(`Failed to delete file: ${result.err.message}`);
+        const errorMessage = typeof result.err === 'object' ? 
+          JSON.stringify(result.err) : String(result.err);
+        throw new Error(`Failed to delete file: ${errorMessage}`);
       }
     } catch (error) {
       console.error(`Failed to delete ${objectKey}:`, error);
@@ -400,17 +416,14 @@ class ObjectStoreService {
     await this.initialize();
     
     try {
-      const listOptions = { 
-        prefix: prefix,
-        delimiter: recursive ? undefined : '/',
-        maxKeys: 1000 // Limit results to a reasonable number
-      };
+      // List all objects with the given prefix
+      const result = await this.objectStore.list(prefix);
       
-      const result = await this.objectStore.list(prefix, listOptions);
-      
-      if ('err' in result) {
+      if ('err' in result && result.err) {
         console.error(`Error listing files with prefix ${prefix}:`, result.err);
-        throw new Error(`Failed to list files: ${result.err.message}`);
+        const errorMessage = typeof result.err === 'object' ? 
+          JSON.stringify(result.err) : String(result.err);
+        throw new Error(`Failed to list files: ${errorMessage}`);
       }
       
       // Extract keys from the result objects
