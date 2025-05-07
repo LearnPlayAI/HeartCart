@@ -4,6 +4,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { AdminLayout } from "@/components/admin/layout";
+import { QuickEditProductForm } from "@/components/admin/quick-edit-product-form";
 import {
   Card,
   CardContent,
@@ -108,6 +109,7 @@ export default function CatalogProducts() {
   const [showInactiveProducts, setShowInactiveProducts] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showQuickEditDialog, setShowQuickEditDialog] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<number[]>([]);
 
   // Query for the catalog details
@@ -399,6 +401,13 @@ export default function CatalogProducts() {
                   <Edit className="mr-2 h-4 w-4" />
                   Edit
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => {
+                  setSelectedProduct(product);
+                  setShowQuickEditDialog(true);
+                }}>
+                  <Edit className="mr-2 h-4 w-4" />
+                  Quick Edit
+                </DropdownMenuItem>
                 {product.hasAttributes && (
                   <DropdownMenuItem onClick={() => navigate(`/admin/products/${product.id}/attributes`)}>
                     <Tag className="mr-2 h-4 w-4" />
@@ -646,6 +655,28 @@ export default function CatalogProducts() {
               )}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Quick Edit Dialog */}
+      <Dialog open={showQuickEditDialog} onOpenChange={setShowQuickEditDialog}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Quick Edit Product</DialogTitle>
+            <DialogDescription>
+              Make quick changes to the basic product information.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedProduct && (
+            <QuickEditProductForm 
+              product={selectedProduct}
+              onCancel={() => setShowQuickEditDialog(false)}
+              onSaved={() => {
+                setShowQuickEditDialog(false);
+                setSelectedProduct(null);
+              }}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </AdminLayout>
