@@ -1,22 +1,21 @@
--- Create category_attributes table
-CREATE TABLE IF NOT EXISTS "category_attributes" (
+-- Create Global Attributes table
+CREATE TABLE IF NOT EXISTS "global_attributes" (
   "id" SERIAL PRIMARY KEY,
-  "category_id" INTEGER NOT NULL REFERENCES "categories"("id"),
   "name" VARCHAR(100) NOT NULL,
   "display_name" VARCHAR(100) NOT NULL,
   "description" TEXT,
   "attribute_type" VARCHAR(50) NOT NULL,
-  "is_required" BOOLEAN DEFAULT FALSE,
+  "is_required" BOOLEAN DEFAULT false,
   "sort_order" INTEGER DEFAULT 0,
   "created_at" TIMESTAMP DEFAULT NOW() NOT NULL,
   "updated_at" TIMESTAMP DEFAULT NOW() NOT NULL,
-  UNIQUE ("category_id", "name")
+  CONSTRAINT "global_attributes_name_unique" UNIQUE ("name")
 );
 
--- Create category_attribute_options table
-CREATE TABLE IF NOT EXISTS "category_attribute_options" (
+-- Create Global Attribute Options table
+CREATE TABLE IF NOT EXISTS "global_attribute_options" (
   "id" SERIAL PRIMARY KEY,
-  "attribute_id" INTEGER NOT NULL REFERENCES "category_attributes"("id"),
+  "attribute_id" INTEGER NOT NULL REFERENCES "global_attributes"("id"),
   "value" VARCHAR(255) NOT NULL,
   "display_value" VARCHAR(255) NOT NULL,
   "sort_order" INTEGER DEFAULT 0,
@@ -24,26 +23,7 @@ CREATE TABLE IF NOT EXISTS "category_attribute_options" (
   "updated_at" TIMESTAMP DEFAULT NOW() NOT NULL
 );
 
--- Create product_attribute_values table
-CREATE TABLE IF NOT EXISTS "product_attribute_values" (
-  "id" SERIAL PRIMARY KEY,
-  "product_id" INTEGER NOT NULL REFERENCES "products"("id"),
-  "attribute_id" INTEGER NOT NULL REFERENCES "category_attributes"("id"),
-  "value" TEXT NOT NULL,
-  "price_adjustment" DECIMAL(10, 2) DEFAULT 0,
-  "created_at" TIMESTAMP DEFAULT NOW() NOT NULL,
-  "updated_at" TIMESTAMP DEFAULT NOW() NOT NULL,
-  UNIQUE ("product_id", "attribute_id")
-);
-
--- Create product_attribute_combinations table
-CREATE TABLE IF NOT EXISTS "product_attribute_combinations" (
-  "id" SERIAL PRIMARY KEY,
-  "product_id" INTEGER NOT NULL REFERENCES "products"("id"),
-  "combination_hash" VARCHAR(64) NOT NULL,
-  "price_adjustment" DECIMAL(10, 2) DEFAULT 0,
-  "is_active" BOOLEAN DEFAULT TRUE,
-  "created_at" TIMESTAMP DEFAULT NOW() NOT NULL,
-  "updated_at" TIMESTAMP DEFAULT NOW() NOT NULL,
-  UNIQUE ("product_id", "combination_hash")
-);
+-- Add global_attribute_id column to product_attribute_values if it doesn't exist
+ALTER TABLE "product_attribute_values" 
+ADD COLUMN IF NOT EXISTS "global_attribute_id" INTEGER REFERENCES "global_attributes"("id"),
+ADD COLUMN IF NOT EXISTS "is_from_global_attribute" BOOLEAN DEFAULT false;
