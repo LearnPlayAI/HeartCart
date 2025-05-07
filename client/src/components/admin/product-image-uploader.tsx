@@ -132,17 +132,14 @@ const ProductImageUploader = ({ productId, onUploadComplete }: ProductImageUploa
       )
     );
     
-    // Upload all files in parallel
-    const uploadPromises = filesToUpload.map(async (fileItem, index) => {
-      try {
-        // Convert the file to a base64 data URL
-        const reader = new FileReader();
-        const base64Promise = new Promise<string>((resolve, reject) => {
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = reject;
-        });
-        reader.readAsDataURL(fileItem.file);
-        const base64Data = await base64Promise;
+    try {
+      // Create a FormData object
+      const formData = new FormData();
+      
+      // Append each file to the FormData
+      filesToUpload.forEach((fileItem) => {
+        // Use 'images' as the field name to match server expectations
+        formData.append('images', fileItem.file);
         
         // Update progress
         setFiles(prev => {
@@ -153,50 +150,63 @@ const ProductImageUploader = ({ productId, onUploadComplete }: ProductImageUploa
           }
           return newFiles;
         });
-        
-        // Upload to the server
-        const response = await apiRequest('POST', `/api/products/${productId}/images`, {
-          url: base64Data,
-          isMain: index === 0, // Set the first image as main by default
-        });
-        
-        if (!response.ok) {
+      });
+      
+      // Upload all files at once using fetch directly (not apiRequest)
+      const response = await fetch(`/api/products/${productId}/images`, {
+        method: 'POST',
+        body: formData,
+        // No Content-Type header - browser sets it automatically with boundary
+      });
+      
+      if (!response.ok) {
+        let errorMessage = 'Upload failed';
+        try {
           const errorData = await response.json();
-          throw new Error(errorData.message || 'Upload failed');
+          errorMessage = errorData.message || errorMessage;
+        } catch (e) {
+          // If response is not JSON, use text
+          errorMessage = await response.text() || errorMessage;
         }
-        
-        // Update file status to success
-        setFiles(prev => {
-          const newFiles = [...prev];
-          const fileIndex = newFiles.findIndex(f => f.preview === fileItem.preview);
-          if (fileIndex !== -1) {
-            newFiles[fileIndex] = { ...newFiles[fileIndex], status: 'success', progress: 100 };
+        throw new Error(errorMessage);
+      }
+      
+      const data = await response.json();
+      
+      // Update all files to success
+      setFiles(prev => 
+        prev.map(file => {
+          if (file.status === 'uploading') {
+            return { ...file, status: 'success', progress: 100 };
           }
-          return newFiles;
-        });
-        
-        return true;
-      } catch (error) {
-        // Update file status to error
-        setFiles(prev => {
-          const newFiles = [...prev];
-          const fileIndex = newFiles.findIndex(f => f.preview === fileItem.preview);
-          if (fileIndex !== -1) {
-            newFiles[fileIndex] = { 
-              ...newFiles[fileIndex], 
+          return file;
+        })
+      );
+      
+      const successCount = filesToUpload.length;
+    } catch (error) {
+      // Update all uploading files to error status
+      setFiles(prev => 
+        prev.map(file => {
+          if (file.status === 'uploading') {
+            return { 
+              ...file, 
               status: 'error', 
               error: error instanceof Error ? error.message : 'Upload failed' 
             };
           }
-          return newFiles;
-        });
-        
-        return false;
-      }
-    });
-    
-    const results = await Promise.all(uploadPromises);
-    const successCount = results.filter(Boolean).length;
+          return file;
+        })
+      );
+      
+      // Show error toast
+      toast({
+        title: 'Upload failed',
+        description: error instanceof Error ? error.message : 'Failed to upload images',
+        variant: 'destructive',
+      });
+      
+      const successCount = 0;
     
     // Display toast with upload results
     if (successCount > 0) {
