@@ -282,6 +282,9 @@ const ProductDetailView = ({
     ? calculateDiscount(product.price, product.salePrice)
     : 0;
   
+  // Log product data for debugging
+  console.log('Product data:', product);
+  
   // Main render
   return (
     <>
