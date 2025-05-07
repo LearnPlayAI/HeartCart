@@ -154,6 +154,12 @@ export class ObjectStorageService {
    */
   async uploadFromBuffer(objectKey: string, buffer: Buffer, metadata?: FileMetadata): Promise<string> {
     try {
+      // Validate buffer before uploading
+      if (!Buffer.isBuffer(buffer)) {
+        console.error(`Invalid buffer type for ${objectKey}: ${typeof buffer}`);
+        throw new Error(`Invalid buffer type: ${typeof buffer}`);
+      }
+      
       // Store the content type and other metadata in a separate file if needed
       const metadataKey = `${objectKey}.metadata`;
       if (metadata) {
@@ -167,10 +173,17 @@ export class ObjectStorageService {
       }
       
       // Upload the actual file
-      await this.client.uploadFromBytes(objectKey, buffer, {
+      const uploadResult = await this.client.uploadFromBytes(objectKey, buffer, {
         compress: true // Enable compression for better storage efficiency
       });
       
+      // Check for errors in the result
+      if ('err' in uploadResult) {
+        console.error(`Upload failed for ${objectKey}:`, uploadResult.err);
+        throw new Error(`Upload failed: ${uploadResult.err.message || 'Unknown error'}`);
+      }
+      
+      console.log(`Successfully uploaded file to ${objectKey}`);
       return this.getPublicUrl(objectKey);
     } catch (error: any) {
       console.error(`Error uploading file to ${objectKey}:`, error);
@@ -270,6 +283,12 @@ export class ObjectStorageService {
       
       if (!result.ok) {
         throw new Error(`Failed to download file: No data returned from object storage`);
+      }
+      
+      // Check if result.ok is a buffer
+      if (!Buffer.isBuffer(result.ok)) {
+        console.error(`Invalid result type from downloadAsBytes: ${typeof result.ok}`);
+        throw new Error('Object storage returned an invalid data type, expected Buffer');
       }
       
       console.log(`Successfully downloaded file: ${objectKey}, size: ${result.ok.length} bytes`);

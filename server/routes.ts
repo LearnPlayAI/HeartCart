@@ -2019,18 +2019,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.warn(`Could not get metadata for ${objectKey}, using default content type`);
       }
       
-      // Set content type header
-      res.setHeader('Content-Type', contentType);
-      res.setHeader('Cache-Control', 'public, max-age=86400');
-      
-      // Get file as buffer instead of stream for better compatibility
-      const buffer = await objectStorageService.downloadAsBuffer(objectKey);
-      
-      // Send the buffer as response
-      res.end(buffer);
+      try {
+        // Get file as buffer instead of stream for better compatibility
+        const buffer = await objectStorageService.downloadAsBuffer(objectKey);
+        
+        // Validate that we have a proper buffer
+        if (!Buffer.isBuffer(buffer)) {
+          console.error(`Invalid buffer returned for ${objectKey}, type: ${typeof buffer}`);
+          return res.status(500).send('Invalid file data returned from storage');
+        }
+        
+        // Set content type and cache headers - do this right before sending the response
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        
+        // Send the buffer as response and end the response
+        return res.end(buffer);
+      } catch (bufferError: any) {
+        console.error(`Error getting file buffer for ${objectKey}:`, bufferError);
+        return res.status(500).send(`Error reading file: ${bufferError.message}`);
+      }
     } catch (error: any) {
       console.error('Error serving file:', error);
-      res.status(500).send(`Error serving file: ${error.message}`);
+      return res.status(500).send(`Error serving file: ${error.message}`);
     }
   });
 
