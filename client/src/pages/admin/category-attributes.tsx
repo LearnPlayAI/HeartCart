@@ -73,11 +73,18 @@ export default function CategoryAttributes() {
   });
   
   // Fetch category data
-  const { data: category } = useQuery({
+  const { data: category, isError: categoryError } = useQuery({
     queryKey: ['/api/categories', categoryId],
     queryFn: async () => {
       const res = await fetch(`/api/categories/${categoryId}`);
-      if (!res.ok) throw new Error("Failed to fetch category");
+      if (!res.ok) {
+        // If we get a 404, we'll still try to return a placeholder
+        if (res.status === 404) {
+          console.warn(`Category with ID ${categoryId} not found, using placeholder`);
+          return { id: parseInt(categoryId), name: `Category #${categoryId}`, slug: '', isVisible: true, parentId: null, displayOrder: 0 };
+        }
+        throw new Error("Failed to fetch category");
+      }
       return res.json();
     },
     enabled: !!categoryId
@@ -420,7 +427,7 @@ export default function CategoryAttributes() {
               Back to Categories
             </Button>
             <h1 className="text-2xl font-bold">
-              Attributes for {category?.name || 'Category'}
+              Attributes for <span className="text-pink-500">{category?.name || `Category #${categoryId}`}</span>
             </h1>
           </div>
           
