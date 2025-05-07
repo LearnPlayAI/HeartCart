@@ -36,6 +36,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -54,11 +60,14 @@ import {
   Scissors,
   Eye,
   Undo2,
-  GripVertical
+  GripVertical,
+  Save,
+  PlusSquare
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // Type definitions
 type Catalog = {
@@ -100,6 +109,382 @@ type Product = {
   displayOrder?: number;
 };
 
+type CategoryAttribute = {
+  id: number;
+  categoryId: number;
+  name: string;
+  displayName: string;
+  description: string | null;
+  required: boolean;
+  type: string;
+  displayOrder: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type ProductAttributeValue = {
+  id: number;
+  productId: number;
+  attributeId: number;
+  value: string;
+  priceAdjustment: number;
+  attributeDisplayName?: string;
+};
+
+type ProductAttributeCombination = {
+  id: number;
+  productId: number;
+  combinationHash: string;
+  priceAdjustment: number;
+  attributes: Record<string, string>;
+};
+
+// Component for editing product attributes
+function ProductAttributesDialog({ 
+  product, 
+  isOpen, 
+  onClose 
+}: { 
+  product: Product | null; 
+  isOpen: boolean; 
+  onClose: () => void; 
+}) {
+  const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState("values");
+  const [newAttributeValue, setNewAttributeValue] = useState({
+    attributeId: '',
+    value: '',
+    priceAdjustment: '0'
+  });
+  
+  // Query for category attributes
+  const { data: categoryAttributes, isLoading: attributesLoading } = useQuery({
+    queryKey: ['/api/categories', product?.categoryId, 'attributes'],
+    queryFn: async () => {
+      if (!product?.categoryId) return [];
+      const res = await fetch(`/api/categories/${product.categoryId}/attributes`);
+      if (!res.ok) throw new Error("Failed to fetch category attributes");
+      return res.json();
+    },
+    enabled: !!product?.categoryId && isOpen
+  });
+  
+  // Query for product attribute values
+  const { data: attributeValues, isLoading: valuesLoading, refetch: refetchValues } = useQuery({
+    queryKey: ['/api/products', product?.id, 'attributes'],
+    queryFn: async () => {
+      if (!product?.id) return [];
+      const res = await fetch(`/api/products/${product.id}/attributes`);
+      if (!res.ok) throw new Error("Failed to fetch attribute values");
+      return res.json();
+    },
+    enabled: !!product?.id && isOpen
+  });
+  
+  // Query for attribute combinations
+  const { data: combinations, isLoading: combinationsLoading, refetch: refetchCombinations } = useQuery({
+    queryKey: ['/api/products', product?.id, 'combinations'],
+    queryFn: async () => {
+      if (!product?.id) return [];
+      const res = await fetch(`/api/products/${product.id}/combinations`);
+      if (!res.ok) throw new Error("Failed to fetch combinations");
+      return res.json();
+    },
+    enabled: !!product?.id && isOpen
+  });
+  
+  // Add attribute value mutation
+  const { mutate: addAttributeValue, isPending: isAddingValue } = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest("POST", `/api/products/${product?.id}/attributes`, data);
+      return await response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Attribute value added",
+        description: "The attribute value has been added successfully."
+      });
+      refetchValues();
+      setNewAttributeValue({
+        attributeId: '',
+        value: '',
+        priceAdjustment: '0'
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add attribute value",
+        variant: "destructive"
+      });
+    }
+  });
+  
+  // Delete attribute value mutation
+  const { mutate: deleteAttributeValue, isPending: isDeletingValue } = useMutation({
+    mutationFn: async (valueId: number) => {
+      const response = await apiRequest("DELETE", `/api/products/${product?.id}/attributes/${valueId}`);
+      return await response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Attribute value deleted",
+        description: "The attribute value has been removed."
+      });
+      refetchValues();
+      refetchCombinations();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete attribute value",
+        variant: "destructive"
+      });
+    }
+  });
+  
+  const handleAddAttributeValue = () => {
+    if (!newAttributeValue.attributeId || !newAttributeValue.value) {
+      toast({
+        title: "Validation error",
+        description: "Please select an attribute and enter a value",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    addAttributeValue({
+      attributeId: parseInt(newAttributeValue.attributeId),
+      value: newAttributeValue.value,
+      priceAdjustment: parseFloat(newAttributeValue.priceAdjustment) || 0
+    });
+  };
+  
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[800px]">
+        <DialogHeader>
+          <DialogTitle>Product Attributes</DialogTitle>
+          <DialogDescription>
+            {product ? `Edit attributes for ${product.name}` : 'Loading product...'}
+          </DialogDescription>
+        </DialogHeader>
+        
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="values">Attribute Values</TabsTrigger>
+            <TabsTrigger value="combinations">Combinations & Pricing</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="values" className="space-y-4">
+            {/* Add new attribute value */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle>Add New Attribute</CardTitle>
+                <CardDescription>
+                  Assign a new attribute value to this product
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label htmlFor="attributeId">Attribute</Label>
+                    <Select
+                      value={newAttributeValue.attributeId}
+                      onValueChange={(value) => setNewAttributeValue({...newAttributeValue, attributeId: value})}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select an attribute" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {attributesLoading ? (
+                          <div className="p-2 text-center">Loading...</div>
+                        ) : categoryAttributes?.length === 0 ? (
+                          <div className="p-2 text-center">No attributes available</div>
+                        ) : (
+                          categoryAttributes?.map((attr: CategoryAttribute) => (
+                            <SelectItem key={attr.id} value={attr.id.toString()}>
+                              {attr.displayName}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="value">Value</Label>
+                    <Input
+                      id="value"
+                      placeholder="Enter value"
+                      value={newAttributeValue.value}
+                      onChange={(e) => setNewAttributeValue({...newAttributeValue, value: e.target.value})}
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="priceAdjustment">Price Adjustment (R)</Label>
+                    <Input
+                      id="priceAdjustment"
+                      type="number"
+                      placeholder="0.00"
+                      value={newAttributeValue.priceAdjustment}
+                      onChange={(e) => setNewAttributeValue({...newAttributeValue, priceAdjustment: e.target.value})}
+                    />
+                  </div>
+                </div>
+                
+                <div className="mt-4 flex justify-end">
+                  <Button
+                    onClick={handleAddAttributeValue}
+                    disabled={isAddingValue}
+                  >
+                    {isAddingValue ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Adding...
+                      </>
+                    ) : (
+                      <>
+                        <PlusSquare className="mr-2 h-4 w-4" />
+                        Add Value
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+            
+            {/* Current attribute values */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle>Current Values</CardTitle>
+                <CardDescription>
+                  Existing attribute values for this product
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {valuesLoading ? (
+                  <div className="py-4 text-center">
+                    <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                    <p className="mt-2">Loading attribute values...</p>
+                  </div>
+                ) : attributeValues?.length === 0 ? (
+                  <div className="py-4 text-center text-muted-foreground">
+                    <p>No attribute values assigned to this product yet.</p>
+                    <p className="text-sm mt-1">Add your first attribute value above.</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Attribute</TableHead>
+                        <TableHead>Value</TableHead>
+                        <TableHead>Price Adjustment</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {attributeValues?.map((value: ProductAttributeValue) => (
+                        <TableRow key={value.id}>
+                          <TableCell>{value.attributeDisplayName}</TableCell>
+                          <TableCell>{value.value}</TableCell>
+                          <TableCell>
+                            {value.priceAdjustment === 0 
+                              ? "—" 
+                              : `R${value.priceAdjustment.toFixed(2)}`
+                            }
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => deleteAttributeValue(value.id)}
+                              disabled={isDeletingValue}
+                            >
+                              <Trash className="h-4 w-4 text-red-500" />
+                              <span className="sr-only">Delete</span>
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="combinations" className="space-y-4">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle>Attribute Combinations</CardTitle>
+                <CardDescription>
+                  Manage price adjustments for different attribute combinations
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {combinationsLoading ? (
+                  <div className="py-4 text-center">
+                    <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                    <p className="mt-2">Loading combinations...</p>
+                  </div>
+                ) : combinations?.length === 0 ? (
+                  <div className="py-4 text-center text-muted-foreground">
+                    <p>No attribute combinations defined yet.</p>
+                    <p className="text-sm mt-1">Add multiple attribute values before creating combinations.</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Combination</TableHead>
+                        <TableHead>Price Adjustment</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {combinations?.map((combo: ProductAttributeCombination) => (
+                        <TableRow key={combo.id}>
+                          <TableCell>
+                            {Object.entries(combo.attributes).map(([attr, value]) => (
+                              <Badge key={attr} variant="outline" className="mr-1 mb-1">
+                                {attr}: {value}
+                              </Badge>
+                            ))}
+                          </TableCell>
+                          <TableCell>
+                            {combo.priceAdjustment === 0 
+                              ? "—" 
+                              : `R${combo.priceAdjustment.toFixed(2)}`
+                            }
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button variant="ghost" size="sm">
+                              <Edit className="h-4 w-4" />
+                              <span className="sr-only">Edit</span>
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+        
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function CatalogProducts() {
   const { id } = useParams<{ id: string }>();
   const catalogId = parseInt(id);
@@ -110,6 +495,7 @@ export default function CatalogProducts() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showQuickEditDialog, setShowQuickEditDialog] = useState(false);
+  const [showAttributesDialog, setShowAttributesDialog] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<number[]>([]);
 
   // Query for the catalog details
@@ -404,10 +790,19 @@ export default function CatalogProducts() {
                   Quick Edit
                 </DropdownMenuItem>
                 {product.hasAttributes && (
-                  <DropdownMenuItem onClick={() => navigate(`/admin/products/${product.id}/attributes`)}>
-                    <Tag className="mr-2 h-4 w-4" />
-                    Manage Attributes
-                  </DropdownMenuItem>
+                  <>
+                    <DropdownMenuItem onClick={() => navigate(`/admin/products/${product.id}/attributes`)}>
+                      <Tag className="mr-2 h-4 w-4" />
+                      Manage Attributes
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => {
+                      setSelectedProduct(product);
+                      setShowAttributesDialog(true);
+                    }}>
+                      <Tag className="mr-2 h-4 w-4" />
+                      Edit Attributes
+                    </DropdownMenuItem>
+                  </>
                 )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => handleBulkActivate(true)}>
@@ -674,6 +1069,18 @@ export default function CatalogProducts() {
           )}
         </DialogContent>
       </Dialog>
+      
+      {/* Product Attributes Dialog */}
+      <ProductAttributesDialog
+        product={selectedProduct}
+        isOpen={showAttributesDialog}
+        onClose={() => {
+          setShowAttributesDialog(false);
+          setSelectedProduct(null);
+          // Refresh the products list to update the hasAttributes flag if needed
+          refetchProducts();
+        }}
+      />
     </AdminLayout>
   );
 }
