@@ -1,4 +1,5 @@
 import { pgTable, text, serial, integer, boolean, timestamp, doublePrecision, jsonb, varchar, unique, decimal } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -31,7 +32,12 @@ export const categories = pgTable("categories", {
   icon: text("icon"),
   imageUrl: text("image_url"),
   isActive: boolean("is_active").default(true).notNull(),
+  parentId: integer("parent_id"),
+  level: integer("level").default(0).notNull(),
+  displayOrder: integer("display_order").default(0).notNull(),
 });
+
+// Relations will be defined after all tables are created
 
 // Products table
 export const products = pgTable("products", {
@@ -257,6 +263,12 @@ export const insertUserSchema = createInsertSchema(users).omit({
 
 export const insertCategorySchema = createInsertSchema(categories).omit({
   id: true,
+  level: true,
+  displayOrder: true,
+}).extend({
+  parentId: z.number().nullable().optional(),
+  level: z.number().default(0),
+  displayOrder: z.number().default(0),
 });
 
 export const insertProductSchema = createInsertSchema(products).omit({
@@ -399,3 +411,27 @@ export type InsertProductAttributeValue = z.infer<typeof insertProductAttributeV
 
 export type ProductAttributeCombination = typeof productAttributeCombinations.$inferSelect;
 export type InsertProductAttributeCombination = z.infer<typeof insertProductAttributeCombinationSchema>;
+
+// Define all table relations after all tables and types are defined
+export const categoriesRelations = relations(categories, ({ one, many }) => ({
+  parent: one(categories, {
+    fields: [categories.parentId],
+    references: [categories.id],
+    relationName: "parent"
+  }),
+  children: many(categories, {
+    relationName: "parent"
+  }),
+  products: many(products)
+}));
+
+export const productsRelations = relations(products, ({ one }) => ({
+  category: one(categories, {
+    fields: [products.categoryId],
+    references: [categories.id]
+  }),
+  catalog: one(catalogs, {
+    fields: [products.catalogId],
+    references: [catalogs.id]
+  })
+}));
