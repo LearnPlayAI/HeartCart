@@ -134,6 +134,22 @@ export interface IStorage {
   createProductAttributeCombination(combination: InsertProductAttributeCombination): Promise<ProductAttributeCombination>;
   updateProductAttributeCombination(id: number, combinationData: Partial<InsertProductAttributeCombination>): Promise<ProductAttributeCombination | undefined>;
   deleteProductAttributeCombination(id: number): Promise<boolean>;
+  
+  // Global Attribute operations
+  getAllGlobalAttributes(): Promise<GlobalAttribute[]>;
+  getGlobalAttributeById(id: number): Promise<GlobalAttribute | undefined>;
+  createGlobalAttribute(attribute: InsertGlobalAttribute): Promise<GlobalAttribute>;
+  updateGlobalAttribute(id: number, attributeData: Partial<InsertGlobalAttribute>): Promise<GlobalAttribute | undefined>;
+  deleteGlobalAttribute(id: number): Promise<boolean>;
+  
+  // Global Attribute Option operations
+  getGlobalAttributeOptions(attributeId: number): Promise<GlobalAttributeOption[]>;
+  createGlobalAttributeOption(option: InsertGlobalAttributeOption): Promise<GlobalAttributeOption>;
+  updateGlobalAttributeOption(id: number, optionData: Partial<InsertGlobalAttributeOption>): Promise<GlobalAttributeOption | undefined>;
+  deleteGlobalAttributeOption(id: number): Promise<boolean>;
+  
+  // Product Global Attribute operations
+  getProductGlobalAttributes(productId: number): Promise<(ProductAttributeValue & { globalAttribute: GlobalAttribute })[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1838,6 +1854,140 @@ export class DatabaseStorage implements IStorage {
       .delete(productAttributeCombinations)
       .where(eq(productAttributeCombinations.id, id));
     return true;
+  }
+  
+  // Global Attribute operations
+  async getAllGlobalAttributes(): Promise<GlobalAttribute[]> {
+    const attributes = await db
+      .select()
+      .from(globalAttributes)
+      .orderBy(asc(globalAttributes.name));
+    
+    return attributes;
+  }
+  
+  async getGlobalAttributeById(id: number): Promise<GlobalAttribute | undefined> {
+    const [attribute] = await db
+      .select()
+      .from(globalAttributes)
+      .where(eq(globalAttributes.id, id));
+      
+    return attribute;
+  }
+  
+  async createGlobalAttribute(attribute: InsertGlobalAttribute): Promise<GlobalAttribute> {
+    const [newAttribute] = await db
+      .insert(globalAttributes)
+      .values(attribute)
+      .returning();
+      
+    return newAttribute;
+  }
+  
+  async updateGlobalAttribute(id: number, attributeData: Partial<InsertGlobalAttribute>): Promise<GlobalAttribute | undefined> {
+    const [updatedAttribute] = await db
+      .update(globalAttributes)
+      .set(attributeData)
+      .where(eq(globalAttributes.id, id))
+      .returning();
+      
+    return updatedAttribute;
+  }
+  
+  async deleteGlobalAttribute(id: number): Promise<boolean> {
+    try {
+      // First check if there are any options for this attribute
+      const options = await this.getGlobalAttributeOptions(id);
+      
+      // Delete all options first if they exist
+      for (const option of options) {
+        await this.deleteGlobalAttributeOption(option.id);
+      }
+      
+      // Now delete the attribute
+      const [deletedAttribute] = await db
+        .delete(globalAttributes)
+        .where(eq(globalAttributes.id, id))
+        .returning();
+        
+      return !!deletedAttribute;
+    } catch (error) {
+      console.error('Error deleting global attribute:', error);
+      return false;
+    }
+  }
+  
+  // Global Attribute Option operations
+  async getGlobalAttributeOptions(attributeId: number): Promise<GlobalAttributeOption[]> {
+    const options = await db
+      .select()
+      .from(globalAttributeOptions)
+      .where(eq(globalAttributeOptions.attributeId, attributeId))
+      .orderBy(asc(globalAttributeOptions.sortOrder), asc(globalAttributeOptions.value));
+      
+    return options;
+  }
+  
+  async createGlobalAttributeOption(option: InsertGlobalAttributeOption): Promise<GlobalAttributeOption> {
+    const [newOption] = await db
+      .insert(globalAttributeOptions)
+      .values(option)
+      .returning();
+      
+    return newOption;
+  }
+  
+  async updateGlobalAttributeOption(id: number, optionData: Partial<InsertGlobalAttributeOption>): Promise<GlobalAttributeOption | undefined> {
+    const [updatedOption] = await db
+      .update(globalAttributeOptions)
+      .set(optionData)
+      .where(eq(globalAttributeOptions.id, id))
+      .returning();
+      
+    return updatedOption;
+  }
+  
+  async deleteGlobalAttributeOption(id: number): Promise<boolean> {
+    try {
+      // Delete the option
+      const [deletedOption] = await db
+        .delete(globalAttributeOptions)
+        .where(eq(globalAttributeOptions.id, id))
+        .returning();
+        
+      return !!deletedOption;
+    } catch (error) {
+      console.error('Error deleting global attribute option:', error);
+      return false;
+    }
+  }
+  
+  // Product Global Attribute operations
+  async getProductGlobalAttributes(productId: number): Promise<(ProductAttributeValue & { globalAttribute: GlobalAttribute })[]> {
+    // Get attribute values where globalAttributeId is not null and isFromGlobalAttribute is true
+    const attributeValues = await db
+      .select({
+        value: productAttributeValues,
+        globalAttribute: globalAttributes
+      })
+      .from(productAttributeValues)
+      .innerJoin(
+        globalAttributes,
+        eq(productAttributeValues.globalAttributeId, globalAttributes.id)
+      )
+      .where(
+        and(
+          eq(productAttributeValues.productId, productId),
+          eq(productAttributeValues.isFromGlobalAttribute, true),
+          not(isNull(productAttributeValues.globalAttributeId))
+        )
+      );
+    
+    // Map the joined result to the expected output format
+    return attributeValues.map(row => ({
+      ...row.value,
+      globalAttribute: row.globalAttribute
+    }));
   }
 }
 
