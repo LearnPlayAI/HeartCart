@@ -397,12 +397,12 @@ export default function AdminCategories() {
             </div>
             
             {categoryView === 'grid' && (
-              <Select value={filterLevel || ""} onValueChange={(value) => setFilterLevel(value || null)}>
+              <Select value={filterLevel || "all"} onValueChange={(value) => setFilterLevel(value === "all" ? null : value)}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Filter by Level" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Levels</SelectItem>
+                  <SelectItem value="all">All Levels</SelectItem>
                   <SelectItem value="0">Main Categories (Level 0)</SelectItem>
                   <SelectItem value="1">Subcategories (Level 1)</SelectItem>
                 </SelectContent>
@@ -688,12 +688,12 @@ export default function AdminCategories() {
               
               <div className="grid gap-2">
                 <Label htmlFor="parent">Parent Category</Label>
-                <Select value={newParentId || ""} onValueChange={(value) => setNewParentId(value || null)}>
+                <Select value={newParentId || "none"} onValueChange={(value) => setNewParentId(value === "none" ? null : value)}>
                   <SelectTrigger id="parent">
                     <SelectValue placeholder="No Parent (Main Category)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No Parent (Main Category)</SelectItem>
+                    <SelectItem value="none">No Parent (Main Category)</SelectItem>
                     {categories?.filter(cat => cat.level === 0).map((cat) => (
                       <SelectItem key={cat.id} value={cat.id.toString()}>
                         {cat.name}
@@ -786,12 +786,12 @@ export default function AdminCategories() {
               
               <div className="grid gap-2">
                 <Label htmlFor="edit-parent">Parent Category</Label>
-                <Select value={newParentId || ""} onValueChange={(value) => setNewParentId(value || null)}>
+                <Select value={newParentId || "none"} onValueChange={(value) => setNewParentId(value === "none" ? null : value)}>
                   <SelectTrigger id="edit-parent">
                     <SelectValue placeholder="No Parent (Main Category)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No Parent (Main Category)</SelectItem>
+                    <SelectItem value="none">No Parent (Main Category)</SelectItem>
                     {categories?.filter(cat => 
                       cat.level === 0 && 
                       cat.id !== selectedCategory?.id
