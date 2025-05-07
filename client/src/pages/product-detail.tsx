@@ -196,6 +196,12 @@ const ProductDetailContent = ({
   const { data: globalAttributes } = useQuery<any[]>({
     queryKey: ['/api/products', product?.id, 'global-attributes'],
     enabled: !!product?.id,
+    onSuccess: (data) => {
+      console.log('Global attributes loaded:', data);
+    },
+    onError: (error) => {
+      console.error('Error loading global attributes:', error);
+    }
   });
   
   if (isLoading) {
