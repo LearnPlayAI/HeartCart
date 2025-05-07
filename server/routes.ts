@@ -188,6 +188,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.status(201).json(category);
   }));
 
+  app.put("/api/categories/:id", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    // Check if user is admin
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can update categories" });
+    }
+    
+    const { id } = req.params;
+    const categoryId = parseInt(id);
+    
+    // Validate the data
+    const categoryData = insertCategorySchema.partial().parse(req.body);
+    
+    // Update the category
+    const category = await storage.updateCategory(categoryId, categoryData);
+    
+    if (!category) {
+      return res.status(404).json({ message: "Category not found" });
+    }
+    
+    res.json(category);
+  }));
+  
+  app.put("/api/categories/:id/display-order", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    // Check if user is admin
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can update category order" });
+    }
+    
+    const { id } = req.params;
+    const categoryId = parseInt(id);
+    const { displayOrder } = req.body;
+    
+    if (typeof displayOrder !== 'number') {
+      return res.status(400).json({ message: "Display order must be a number" });
+    }
+    
+    // Update the category display order
+    const category = await storage.updateCategoryDisplayOrder(categoryId, displayOrder);
+    
+    if (!category) {
+      return res.status(404).json({ message: "Category not found" });
+    }
+    
+    res.json(category);
+  }));
+
   // CATEGORY ATTRIBUTE ROUTES
   app.get("/api/categories/:categoryId/attributes", handleErrors(async (req: Request, res: Response) => {
     const categoryId = parseInt(req.params.categoryId);
