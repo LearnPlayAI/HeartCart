@@ -281,53 +281,126 @@ export class ObjectStorageService {
   }
   
   /**
-   * Download a file as a Buffer
+   * Download a file as a Buffer with enhanced error handling and retry logic
    * @param objectKey The object key
    * @returns The file buffer
    */
   async downloadAsBuffer(objectKey: string): Promise<Buffer> {
-    try {
-      console.log(`Downloading file as buffer: ${objectKey}`);
-      const result = await this.client.downloadAsBytes(objectKey);
-      if ('err' in result) {
-        console.error(`Error in downloadAsBytes for ${objectKey}:`, result.err);
-        throw new Error(`Failed to download file: ${result.err.message || 'Unknown error'}`);
+    const MAX_RETRIES = 3;
+    let lastError: any = null;
+    
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        console.log(`Downloading file as buffer: ${objectKey} (attempt ${attempt}/${MAX_RETRIES})`);
+        
+        // Verify the file exists first
+        const exists = await this.exists(objectKey);
+        if (!exists) {
+          throw new Error(`File does not exist: ${objectKey}`);
+        }
+        
+        // Get the file content
+        const result = await this.client.downloadAsBytes(objectKey);
+        
+        // Check for error in result
+        if ('err' in result) {
+          console.error(`Error in downloadAsBytes for ${objectKey}:`, result.err);
+          throw new Error(`Failed to download file: ${result.err.message || 'Unknown error'}`);
+        }
+        
+        // Check for missing data
+        if (!result.ok) {
+          throw new Error(`Failed to download file: No data returned from object storage`);
+        }
+        
+        // Validate buffer
+        if (!Buffer.isBuffer(result.ok)) {
+          console.error(`Invalid result type from downloadAsBytes: ${typeof result.ok}`);
+          throw new Error(`Object storage returned an invalid data type: ${typeof result.ok}, expected Buffer`);
+        }
+        
+        // Check for empty buffer
+        if (result.ok.length === 0) {
+          console.warn(`Warning: Downloaded empty buffer from ${objectKey}`);
+        }
+        
+        console.log(`Successfully downloaded file: ${objectKey}, size: ${result.ok.length} bytes`);
+        return result.ok;
+      } catch (error: any) {
+        lastError = error;
+        console.error(`Error downloading file ${objectKey} (attempt ${attempt}/${MAX_RETRIES}):`, error);
+        
+        // Wait before retrying (exponential backoff)
+        if (attempt < MAX_RETRIES) {
+          const delay = Math.pow(2, attempt) * 100; // 200ms, 400ms, 800ms
+          console.log(`Retrying download in ${delay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
       }
-      
-      if (!result.ok) {
-        throw new Error(`Failed to download file: No data returned from object storage`);
-      }
-      
-      // Check if result.ok is a buffer
-      if (!Buffer.isBuffer(result.ok)) {
-        console.error(`Invalid result type from downloadAsBytes: ${typeof result.ok}`);
-        throw new Error('Object storage returned an invalid data type, expected Buffer');
-      }
-      
-      console.log(`Successfully downloaded file: ${objectKey}, size: ${result.ok.length} bytes`);
-      return result.ok;
-    } catch (error: any) {
-      console.error(`Error downloading file ${objectKey}:`, error);
-      throw new Error(`Failed to download file: ${error.message || 'Unknown error'}`);
     }
+    
+    // All retries failed
+    throw new Error(`Failed to download file after ${MAX_RETRIES} attempts: ${lastError?.message || 'Unknown error'}`);
   }
   
   /**
-   * Download a file as a stream
+   * Download a file as a stream with enhanced error handling
    * @param objectKey The object key
    * @returns The file stream
    */
   async downloadAsStream(objectKey: string): Promise<Readable> {
-    try {
-      const result = await this.client.downloadAsStream(objectKey);
-      if ('err' in result) {
-        throw new Error(`Failed to stream file: ${result.err.message || 'Unknown error'}`);
+    const MAX_RETRIES = 2;
+    let lastError: any = null;
+    
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        console.log(`Downloading file as stream: ${objectKey} (attempt ${attempt}/${MAX_RETRIES})`);
+        
+        // Verify the file exists first
+        const exists = await this.exists(objectKey);
+        if (!exists) {
+          throw new Error(`File does not exist: ${objectKey}`);
+        }
+        
+        // Since stream is more efficient for larger files, try to get as buffer first for smaller files
+        // This provides more reliability for smaller files
+        const metadata = await this.getMetadata(objectKey).catch(() => ({ size: undefined }));
+        
+        // For small files (under 1MB), use buffer approach which is more reliable
+        if (metadata.size !== undefined && metadata.size < 1024 * 1024) {
+          console.log(`Small file detected (${metadata.size} bytes), using buffer instead of stream`);
+          const buffer = await this.downloadAsBuffer(objectKey);
+          return Readable.from(buffer);
+        }
+        
+        // For larger files, use stream
+        const result = await this.client.downloadAsStream(objectKey);
+        if ('err' in result) {
+          throw new Error(`Failed to stream file: ${result.err.message || 'Unknown error'}`);
+        }
+        
+        // Add error handler to the stream
+        result.ok.on('error', (err) => {
+          console.error(`Stream error for ${objectKey}:`, err);
+        });
+        
+        console.log(`Successfully created stream for file: ${objectKey}`);
+        return result.ok;
+      } catch (error: any) {
+        lastError = error;
+        console.error(`Error streaming file ${objectKey} (attempt ${attempt}/${MAX_RETRIES}):`, error);
+        
+        // Wait before retrying
+        if (attempt < MAX_RETRIES) {
+          const delay = Math.pow(2, attempt) * 100;
+          console.log(`Retrying stream creation in ${delay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
       }
-      return result.ok;
-    } catch (error: any) {
-      console.error(`Error streaming file ${objectKey}:`, error);
-      throw new Error(`Failed to stream file: ${error.message || 'Unknown error'}`);
     }
+    
+    // All retries failed
+    throw new Error(`Failed to create stream after ${MAX_RETRIES} attempts: ${lastError?.message || 'Unknown error'}`);
   }
   
   /**
