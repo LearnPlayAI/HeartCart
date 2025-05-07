@@ -1308,11 +1308,17 @@ export class DatabaseStorage implements IStorage {
     return !!updatedCatalog;
   }
 
-  async getProductsByCatalogId(catalogId: number, activeOnly = true, limit = 20, offset = 0): Promise<Product[]> {
+  async getProductsByCatalogId(catalogId: number, activeOnly = true, limit = 20, offset = 0): Promise<(Product & { categoryName?: string })[]> {
+    const query = db
+      .select({
+        ...products,
+        categoryName: categories.name
+      })
+      .from(products)
+      .leftJoin(categories, eq(products.categoryId, categories.id));
+
     if (activeOnly) {
-      return await db
-        .select()
-        .from(products)
+      return await query
         .where(
           and(
             eq(products.catalogId, catalogId),
@@ -1322,9 +1328,7 @@ export class DatabaseStorage implements IStorage {
         .limit(limit)
         .offset(offset);
     } else {
-      return await db
-        .select()
-        .from(products)
+      return await query
         .where(eq(products.catalogId, catalogId))
         .limit(limit)
         .offset(offset);
