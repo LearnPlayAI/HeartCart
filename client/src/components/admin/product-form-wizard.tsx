@@ -222,11 +222,74 @@ export default function ProductFormWizard({ productId, catalogId, onSuccess }: P
       }
       return res.json();
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
+      // First, move any temporary images to permanent storage
+      if (uploadedImages.length > 0) {
+        try {
+          // Filter only temporary images
+          const tempImages = uploadedImages.filter(img => img.isTemp && img.file && img.file.objectKey);
+          
+          if (tempImages.length > 0) {
+            console.log(`Moving ${tempImages.length} temporary images to permanent storage`);
+            
+            // Process each temp image
+            for (const img of tempImages) {
+              try {
+                console.log(`Processing temp image: ${img.file.objectKey}`);
+                
+                // Create form data for the image move operation
+                const moveData = {
+                  sourceKey: img.file.objectKey,
+                  productId: data.id
+                };
+                
+                // Make API request to move the file
+                const moveRes = await apiRequest('POST', '/api/products/images/move', moveData);
+                
+                if (!moveRes.ok) {
+                  const error = await moveRes.json();
+                  console.error(`Failed to move image ${img.file.objectKey}:`, error);
+                  continue;
+                }
+                
+                const movedImage = await moveRes.json();
+                console.log(`Successfully moved image to ${movedImage.objectKey}`);
+                
+                // Create product image record 
+                const imageData = {
+                  productId: data.id,
+                  url: movedImage.url,
+                  objectKey: movedImage.objectKey,
+                  isMain: img.isMain || false,
+                  alt: img.alt || '',
+                };
+                
+                const imgRes = await apiRequest('POST', `/api/products/${data.id}/images`, imageData);
+                
+                if (!imgRes.ok) {
+                  const error = await imgRes.json();
+                  console.error(`Failed to create image record:`, error);
+                }
+              } catch (imgError) {
+                console.error(`Error processing image:`, imgError);
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Failed to process temporary images:', error);
+          toast({
+            title: 'Image Processing Warning',
+            description: 'Product was created, but there was an issue with some images',
+            variant: 'warning',
+          });
+        }
+      }
+      
       toast({
         title: 'Product created',
         description: 'The product has been created successfully',
       });
+      
       // Invalidate all relevant queries
       queryClient.invalidateQueries({ queryKey: ['/api/products'] });
       

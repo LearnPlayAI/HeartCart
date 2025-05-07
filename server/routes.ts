@@ -877,6 +877,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.redirect(`/api/files/${objectKey}`);
   });
   
+  // Handle moving images from temporary to permanent storage
+  app.post('/api/products/images/move', isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can manage product images" });
+    }
+    
+    const { sourceKey, productId } = req.body;
+    
+    if (!sourceKey || !productId) {
+      return res.status(400).json({ 
+        message: 'Source key and product ID are required',
+        success: false
+      });
+    }
+    
+    try {
+      console.log(`Moving file from temporary storage: ${sourceKey} to product ${productId}`);
+      
+      // Move file from temp to product folder
+      const result = await objectStore.moveFromTemp(sourceKey, parseInt(productId));
+      
+      console.log(`Successfully moved file to ${result.objectKey}`);
+      
+      return res.json({
+        success: true,
+        url: result.url,
+        objectKey: result.objectKey
+      });
+    } catch (error: any) {
+      console.error(`Error moving file ${sourceKey} to product ${productId}:`, error);
+      return res.status(500).json({
+        message: error.message || 'Failed to move file from temporary storage',
+        success: false
+      });
+    }
+  }));
+  
   app.get("/api/products/:productId/images", handleErrors(async (req: Request, res: Response) => {
     const productId = parseInt(req.params.productId);
     const images = await storage.getProductImages(productId);
@@ -891,6 +930,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     const productId = parseInt(req.params.productId);
+    
+    // If object key is already provided, just create the image record
+    if (req.body.objectKey && req.body.url) {
+      try {
+        // Create product image record directly from provided URL and objectKey
+        const imageData = {
+          productId,
+          url: req.body.url,
+          objectKey: req.body.objectKey,
+          isMain: req.body.isMain || false,
+          alt: req.body.alt || '',
+        };
+        
+        const image = await storage.createProductImage(imageData);
+        return res.status(201).json(image);
+      } catch (error: any) {
+        console.error('Error creating image record:', error);
+        return res.status(500).json({ 
+          message: "Failed to create image record",
+          error: error.message || 'Unknown error'
+        });
+      }
+    }
     
     // If the image has a base64 data URL, store it in object storage
     if (req.body.url && req.body.url.startsWith('data:')) {
