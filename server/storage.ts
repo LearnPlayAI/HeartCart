@@ -1343,12 +1343,27 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Category Attribute operations
-  async getCategoryAttributes(categoryId: number): Promise<CategoryAttribute[]> {
-    return await db
+  async getCategoryAttributes(categoryId: number): Promise<(CategoryAttribute & { categoryName?: string })[]> {
+    // First get the category name
+    const [category] = await db
+      .select()
+      .from(categories)
+      .where(eq(categories.id, categoryId));
+    
+    const categoryName = category?.name;
+      
+    // Then get the attributes
+    const attributes = await db
       .select()
       .from(categoryAttributes)
       .where(eq(categoryAttributes.categoryId, categoryId))
       .orderBy(asc(categoryAttributes.sortOrder));
+      
+    // Add the category name to each attribute
+    return attributes.map(attribute => ({
+      ...attribute,
+      categoryName
+    }));
   }
 
   async getCategoryAttributeById(id: number): Promise<CategoryAttribute | undefined> {

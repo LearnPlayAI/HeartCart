@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useParams, useLocation } from 'wouter';
 import { AdminLayout } from '@/components/admin/layout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -80,8 +80,8 @@ export default function CategoryAttributes() {
       if (!res.ok) {
         // If we get a 404, we'll still try to return a placeholder
         if (res.status === 404) {
-          console.warn(`Category with ID ${categoryId} not found, using placeholder`);
-          return { id: parseInt(categoryId), name: `Category #${categoryId}`, slug: '', isVisible: true, parentId: null, displayOrder: 0 };
+          console.warn(`Category with ID ${categoryId} not found, will try to get name from attributes`);
+          return { id: parseInt(categoryId), name: null, slug: '', isVisible: true, parentId: null, displayOrder: 0 };
         }
         throw new Error("Failed to fetch category");
       }
@@ -413,6 +413,21 @@ export default function CategoryAttributes() {
     }
   }, [options]);
   
+  // Try to get category name from attributes if it's not available from the direct category query
+  const categoryName = useMemo(() => {
+    if (category?.name) {
+      return category.name;
+    }
+    
+    // If we have attributes for this category, try to extract the real category name
+    // from the first attribute (they all should have the same category name)
+    if (attributes && attributes.length > 0 && attributes[0].categoryName) {
+      return attributes[0].categoryName;
+    }
+    
+    return `Category #${categoryId}`;
+  }, [category, attributes, categoryId]);
+  
   return (
     <AdminLayout>
       <DragDropContext onDragEnd={handleDragEnd}>
@@ -427,7 +442,7 @@ export default function CategoryAttributes() {
               Back to Categories
             </Button>
             <h1 className="text-2xl font-bold">
-              Attributes for <span className="text-pink-500">{category?.name || `Category #${categoryId}`}</span>
+              Attributes for <span className="text-pink-500">{categoryName}</span>
             </h1>
           </div>
           
