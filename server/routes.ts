@@ -13,7 +13,10 @@ import {
   insertProductImageSchema,
   insertPricingSchema,
   insertSupplierSchema,
-  insertCatalogSchema
+  insertCatalogSchema,
+  insertGlobalAttributeSchema,
+  insertGlobalAttributeOptionSchema,
+  insertProductAttributeValueSchema
 } from "@shared/schema";
 import { objectStore, STORAGE_FOLDERS } from "./object-store";
 import { setupAuth } from "./auth";
@@ -2174,6 +2177,137 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).send(`Error serving file: ${error.message}`);
     }
   });
+
+  // GLOBAL ATTRIBUTES ROUTES
+  app.get("/api/global-attributes", handleErrors(async (req: Request, res: Response) => {
+    const attributes = await storage.getAllGlobalAttributes();
+    res.json(attributes);
+  }));
+
+  app.get("/api/global-attributes/:id", handleErrors(async (req: Request, res: Response) => {
+    const attributeId = parseInt(req.params.id);
+    const attribute = await storage.getGlobalAttributeById(attributeId);
+    if (!attribute) {
+      return res.status(404).json({ message: "Global attribute not found" });
+    }
+    res.json(attribute);
+  }));
+
+  app.post("/api/global-attributes", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    // Check if user is admin
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can create global attributes" });
+    }
+    
+    const attributeData = insertGlobalAttributeSchema.parse(req.body);
+    const attribute = await storage.createGlobalAttribute(attributeData);
+    
+    res.status(201).json(attribute);
+  }));
+
+  app.put("/api/global-attributes/:id", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    // Check if user is admin
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can update global attributes" });
+    }
+    
+    const attributeId = parseInt(req.params.id);
+    const attributeData = insertGlobalAttributeSchema.partial().parse(req.body);
+    const attribute = await storage.updateGlobalAttribute(attributeId, attributeData);
+    
+    if (!attribute) {
+      return res.status(404).json({ message: "Global attribute not found" });
+    }
+    
+    res.json(attribute);
+  }));
+
+  app.delete("/api/global-attributes/:id", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    // Check if user is admin
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can delete global attributes" });
+    }
+    
+    const attributeId = parseInt(req.params.id);
+    const result = await storage.deleteGlobalAttribute(attributeId);
+    
+    if (!result) {
+      return res.status(404).json({ message: "Global attribute not found" });
+    }
+    
+    res.json({ success: true });
+  }));
+
+  // GLOBAL ATTRIBUTE OPTIONS ROUTES
+  app.get("/api/global-attributes/:attributeId/options", handleErrors(async (req: Request, res: Response) => {
+    const attributeId = parseInt(req.params.attributeId);
+    const options = await storage.getGlobalAttributeOptions(attributeId);
+    res.json(options);
+  }));
+
+  app.post("/api/global-attribute-options", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    // Check if user is admin
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can create attribute options" });
+    }
+    
+    const optionData = insertGlobalAttributeOptionSchema.parse(req.body);
+    const option = await storage.createGlobalAttributeOption(optionData);
+    
+    res.status(201).json(option);
+  }));
+
+  app.put("/api/global-attribute-options/:id", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    // Check if user is admin
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can update attribute options" });
+    }
+    
+    const optionId = parseInt(req.params.id);
+    const optionData = insertGlobalAttributeOptionSchema.partial().parse(req.body);
+    const option = await storage.updateGlobalAttributeOption(optionId, optionData);
+    
+    if (!option) {
+      return res.status(404).json({ message: "Attribute option not found" });
+    }
+    
+    res.json(option);
+  }));
+
+  app.delete("/api/global-attribute-options/:id", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    // Check if user is admin
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can delete attribute options" });
+    }
+    
+    const optionId = parseInt(req.params.id);
+    const result = await storage.deleteGlobalAttributeOption(optionId);
+    
+    if (!result) {
+      return res.status(404).json({ message: "Attribute option not found" });
+    }
+    
+    res.json({ success: true });
+  }));
+
+  // PRODUCT ATTRIBUTE VALUES ROUTES (For Global Attributes)
+  app.get("/api/products/:productId/global-attributes", handleErrors(async (req: Request, res: Response) => {
+    const productId = parseInt(req.params.productId);
+    const attributes = await storage.getProductGlobalAttributes(productId);
+    res.json(attributes);
+  }));
 
   const httpServer = createServer(app);
   return httpServer;

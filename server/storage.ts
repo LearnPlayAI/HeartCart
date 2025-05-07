@@ -14,7 +14,9 @@ import {
   categoryAttributes, type CategoryAttribute, type InsertCategoryAttribute,
   categoryAttributeOptions, type CategoryAttributeOption, type InsertCategoryAttributeOption,
   productAttributeValues, type ProductAttributeValue, type InsertProductAttributeValue,
-  productAttributeCombinations, type ProductAttributeCombination, type InsertProductAttributeCombination
+  productAttributeCombinations, type ProductAttributeCombination, type InsertProductAttributeCombination,
+  globalAttributes, type GlobalAttribute, type InsertGlobalAttribute,
+  globalAttributeOptions, type GlobalAttributeOption, type InsertGlobalAttributeOption
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, like, and, desc, asc, sql, inArray, isNull, not, or, SQL } from "drizzle-orm";
