@@ -28,7 +28,9 @@ import type {
   Product, 
   CategoryAttribute, 
   CategoryAttributeOption, 
-  ProductAttributeCombination
+  ProductAttributeCombination,
+  GlobalAttribute,
+  GlobalAttributeOption
 } from '@shared/schema';
 
 // This is a wrapper component that determines which path is matched and renders
@@ -190,6 +192,12 @@ const ProductDetailContent = ({
     enabled: !!product?.id,
   });
   
+  // Get product global attributes
+  const { data: globalAttributes } = useQuery<any[]>({
+    queryKey: ['/api/products', product?.id, 'global-attributes'],
+    enabled: !!product?.id,
+  });
+  
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -277,6 +285,25 @@ const ProductDetailContent = ({
   };
   
   const handleAddToCart = () => {
+    // Check if we have global attributes that need to be selected
+    const hasRequiredGlobalAttributes = globalAttributes && globalAttributes.length > 0;
+    
+    // Verify all global attributes are selected
+    const allGlobalAttributesSelected = 
+      !hasRequiredGlobalAttributes || 
+      globalAttributes.every(attr => selectedAttributes[attr.id]);
+    
+    if (hasRequiredGlobalAttributes && !allGlobalAttributesSelected) {
+      // Show toast message about required global attributes
+      toast({
+        title: "Selection required",
+        description: "Please select all product options before adding to cart.",
+        variant: "destructive",
+        duration: 3000,
+      });
+      return;
+    }
+    
     const cartItem = {
       productId: product.id,
       product,
@@ -284,6 +311,16 @@ const ProductDetailContent = ({
       combinationId: selectedCombination?.id,
       combinationHash: selectedCombination?.combinationHash,
       selectedAttributes,
+      globalAttributes: hasRequiredGlobalAttributes 
+        ? globalAttributes.map(attr => ({
+            id: attr.id,
+            name: attr.name,
+            displayName: attr.displayName || attr.name,
+            value: selectedAttributes[attr.id],
+            displayValue: attr.options.find(opt => opt.value === selectedAttributes[attr.id])?.displayValue 
+              || selectedAttributes[attr.id]
+          })) 
+        : [],
       adjustedPrice: currentPrice || product.salePrice || product.price
     };
     
@@ -392,7 +429,53 @@ const ProductDetailContent = ({
             
             <Separator className="my-4" />
             
-            {/* Attribute Selection */}
+            {/* Global Attribute Selection */}
+            {globalAttributes && globalAttributes.length > 0 && (
+              <div className="space-y-4 mb-6">
+                <h3 className="text-lg font-semibold">Product Options</h3>
+                
+                {globalAttributes.map(attribute => (
+                  <div key={attribute.id} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="font-medium text-sm">{attribute.displayName || attribute.name}</label>
+                      
+                      {selectedAttributes[attribute.id] && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge variant="outline" className="ml-2">
+                                {selectedAttributes[attribute.id]}
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Selected value</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                    </div>
+                    
+                    <Select 
+                      value={selectedAttributes[attribute.id] || ''}
+                      onValueChange={value => handleAttributeChange(attribute.id, value)}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder={`Select ${attribute.displayName || attribute.name}`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {attribute.options?.map(option => (
+                          <SelectItem key={option.id} value={option.value}>
+                            {option.displayValue || option.value}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {/* Category Attribute Selection */}
             {categoryAttributes && categoryAttributes.length > 0 && productAttributes && (
               <div className="space-y-4 mb-6">
                 <h3 className="text-lg font-semibold">Options</h3>
