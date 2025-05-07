@@ -19,12 +19,23 @@ import {
   TooltipContent,
   TooltipProvider
 } from '@/components/ui/tooltip';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { 
   Star, 
   StarHalf, 
   Minus, 
   Plus, 
-  ShoppingCart
+  ShoppingCart,
+  ChevronLeft,
+  ChevronRight,
+  X
 } from 'lucide-react';
 import { useCart } from '@/hooks/use-cart';
 import { useToast } from '@/hooks/use-toast';
@@ -118,6 +129,7 @@ const ProductDetailView = ({
   const [selectedAttributes, setSelectedAttributes] = useState<{[key: number]: string}>({});
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
   const [selectedCombination, setSelectedCombination] = useState<ProductAttributeCombination | null>(null);
+  const [currentImage, setCurrentImage] = useState<string | null>(null);
   
   // Get related products based on category
   const { data: relatedProducts } = useQuery<Product[]>({
@@ -143,6 +155,13 @@ const ProductDetailView = ({
     enabled: !!product?.id,
   });
   
+  // Effect to set initial image on component mount or when product changes
+  useEffect(() => {
+    if (product?.imageUrl) {
+      setCurrentImage(product.imageUrl);
+    }
+  }, [product]);
+
   // Effect to update price when attributes are selected
   useEffect(() => {
     if (!product) return;
@@ -193,6 +212,31 @@ const ProductDetailView = ({
       ...prev,
       [attributeId]: value
     }));
+  };
+  
+  // Handle thumbnail click to change main image
+  const handleThumbnailClick = (image: string) => {
+    setCurrentImage(image);
+  };
+  
+  // Open image carousel modal
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [carouselIndex, setCarouselIndex] = useState(0);
+  
+  const openImageModal = (index: number) => {
+    setCarouselIndex(index);
+    setIsModalOpen(true);
+  };
+  
+  const navigateCarousel = (direction: 'prev' | 'next') => {
+    if (!product || !product.additionalImages) return;
+    
+    const totalImages = product.additionalImages.length;
+    if (direction === 'next') {
+      setCarouselIndex(prev => (prev + 1) % totalImages);
+    } else {
+      setCarouselIndex(prev => (prev - 1 + totalImages) % totalImages);
+    }
   };
   
   // Add to cart handler
@@ -297,9 +341,12 @@ const ProductDetailView = ({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Product Images */}
           <div>
-            <div className="mb-4 bg-white rounded-lg overflow-hidden border border-gray-200">
+            <div 
+              className="mb-4 bg-white rounded-lg overflow-hidden border border-gray-200 cursor-pointer"
+              onClick={() => openImageModal(product.additionalImages?.findIndex(img => img === currentImage) || 0)}
+            >
               <img 
-                src={product.imageUrl || ''} 
+                src={currentImage || product.imageUrl || ''} 
                 alt={product.name || 'Product image'} 
                 className="w-full h-auto object-contain aspect-square"
               />
@@ -308,16 +355,80 @@ const ProductDetailView = ({
             {product.additionalImages && product.additionalImages.length > 0 && (
               <div className="grid grid-cols-5 gap-2">
                 {product.additionalImages.map((image, index) => (
-                  <div key={index} className="border border-gray-200 rounded-md overflow-hidden">
+                  <div 
+                    key={index} 
+                    className={`border rounded-md overflow-hidden cursor-pointer transition-all ${
+                      currentImage === image 
+                        ? 'border-[#FF69B4] shadow-md scale-105' 
+                        : 'border-gray-200 hover:border-gray-400'
+                    }`}
+                    onClick={() => handleThumbnailClick(image)}
+                  >
                     <img 
                       src={image} 
-                      alt={`${product.name} - image ${index + 2}`} 
+                      alt={`${product.name} - image ${index + 1}`} 
                       className="w-full h-auto object-cover aspect-square"
                     />
                   </div>
                 ))}
               </div>
             )}
+            
+            {/* Image Carousel Modal */}
+            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+              <DialogContent className="max-w-4xl p-0 bg-black/95 border-none">
+                <div className="relative flex items-center justify-center h-[80vh]">
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="absolute right-2 top-2 text-white hover:bg-white/20 z-10"
+                    onClick={() => setIsModalOpen(false)}
+                  >
+                    <X className="h-5 w-5" />
+                  </Button>
+                  
+                  {product.additionalImages && (
+                    <div className="relative w-full h-full flex items-center justify-center">
+                      <img 
+                        src={product.additionalImages[carouselIndex]} 
+                        alt={`${product.name} - large view`} 
+                        className="max-h-full max-w-full object-contain"
+                      />
+                      
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="absolute left-2 top-1/2 -translate-y-1/2 text-white hover:bg-white/20"
+                        onClick={() => navigateCarousel('prev')}
+                      >
+                        <ChevronLeft className="h-8 w-8" />
+                      </Button>
+                      
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-white hover:bg-white/20"
+                        onClick={() => navigateCarousel('next')}
+                      >
+                        <ChevronRight className="h-8 w-8" />
+                      </Button>
+                      
+                      <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2">
+                        {product.additionalImages.map((_, idx) => (
+                          <div 
+                            key={idx}
+                            className={`w-2 h-2 rounded-full ${
+                              idx === carouselIndex ? 'bg-white' : 'bg-white/40'
+                            }`}
+                            onClick={() => setCarouselIndex(idx)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
           
           {/* Product Information */}
