@@ -84,7 +84,14 @@ router.post('/products/:productId/images', upload.array('images', 10), async (re
       return res.status(400).json({ message: 'Invalid product ID' });
     }
     
-    const results = await Promise.all(files.map(async (file) => {
+    // Import storage for database operations
+    const { storage } = await import('./storage');
+    
+    // Check if any existing images for this product
+    const existingImages = await storage.getProductImages(productId);
+    const hasExistingImages = existingImages && existingImages.length > 0;
+    
+    const results = await Promise.all(files.map(async (file, index) => {
       const { originalname, buffer, mimetype } = file;
       const timestamp = Date.now();
       const randomString = Math.random().toString(36).substring(2, 15);
@@ -98,11 +105,32 @@ router.post('/products/:productId/images', upload.array('images', 10), async (re
         mimetype
       );
       
+      // Determine if this should be the main image
+      // First image is main if no existing images, otherwise not main
+      const isMain = !hasExistingImages && index === 0;
+      
+      try {
+        // Create the product image record in the database
+        await storage.createProductImage({
+          productId,
+          url,
+          objectKey,
+          isMain,
+          alt: originalname.split('.')[0] || 'Product image', // Basic alt text from filename
+        });
+        
+        console.log(`Successfully created product image record for ${objectKey}`);
+      } catch (dbError) {
+        console.error(`Failed to create product image record for ${objectKey}:`, dbError);
+        // We don't throw here to allow other files to be processed
+      }
+      
       return {
         url,
         objectKey,
         originalname,
-        filename
+        filename,
+        isMain
       };
     }));
     
@@ -122,7 +150,7 @@ router.post('/products/:productId/images', upload.array('images', 10), async (re
  */
 router.post('/products/images/move', async (req: Request, res: Response) => {
   try {
-    const { sourceKey, productId } = req.body;
+    const { sourceKey, productId, isMain = false } = req.body;
     
     if (!sourceKey || !productId) {
       return res.status(400).json({ 
@@ -133,6 +161,30 @@ router.post('/products/images/move', async (req: Request, res: Response) => {
     
     // Move file from temp to product folder
     const result = await objectStore.moveFromTemp(sourceKey, parseInt(productId));
+    
+    // Import storage for database operations
+    const { storage } = await import('./storage');
+    
+    try {
+      // Check if any existing images for this product
+      const existingImages = await storage.getProductImages(parseInt(productId));
+      const hasExistingImages = existingImages && existingImages.length > 0;
+      
+      // Create the product image record in the database
+      // This will be the main image if it's the first one or if isMain is explicitly set to true
+      await storage.createProductImage({
+        productId: parseInt(productId),
+        url: result.url,
+        objectKey: result.objectKey,
+        isMain: isMain || !hasExistingImages,
+        alt: 'Product image', // Basic default alt text
+      });
+      
+      console.log(`Successfully created product image record for ${result.objectKey}`);
+    } catch (dbError) {
+      console.error(`Failed to create product image record for ${result.objectKey}:`, dbError);
+      // We don't throw here to still return the successful file move
+    }
     
     res.json({ 
       success: true, 
