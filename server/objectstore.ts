@@ -203,6 +203,9 @@ export class ObjectStorageService {
    * @returns True if the object exists
    */
   async exists(objectKey: string): Promise<boolean> {
+    // Ensure storage is initialized
+    await this.ensureInitialized();
+    
     try {
       // Use the Replit Object Storage Client's exists method
       const result = await this.client.exists(objectKey);
@@ -286,6 +289,18 @@ export class ObjectStorageService {
           throw new Error('File upload verification failed - file does not exist after upload');
         }
         
+        // Advanced verification: Check file size and integrity
+        try {
+          const downloadedFile = await this.getFileAsBuffer(objectKey);
+          if (downloadedFile.data.length !== buffer.length) {
+            throw new Error(`File size mismatch in Object Storage: expected ${buffer.length} bytes, got ${downloadedFile.data.length} bytes`);
+          }
+          console.log(`File content verification successful for ${objectKey}: ${buffer.length} bytes match`);
+        } catch (verifyError: any) {
+          console.error(`File content verification failed for ${objectKey}:`, verifyError);
+          throw new Error(`File upload verification failed: ${verifyError.message}`);
+        }
+        
         console.log(`Successfully uploaded and verified file in object storage: ${objectKey}`);
         return this.getPublicUrl(objectKey);
       } catch (error: any) {
@@ -312,27 +327,23 @@ export class ObjectStorageService {
    * @returns The public URL of the uploaded file
    */
   async uploadFromFile(objectKey: string, filePath: string, metadata?: FileMetadata): Promise<string> {
+    // Ensure storage is initialized
+    await this.ensureInitialized();
+    
     try {
-      // Store metadata in a separate file if needed
-      const metadataKey = `${objectKey}.metadata`;
-      const contentType = metadata?.contentType || this.detectContentType(filePath);
+      // First read the file into a buffer
+      console.log(`Reading file from disk: ${filePath}`);
+      const fileBuffer = await fs.promises.readFile(filePath);
       
-      if (metadata || contentType) {
-        const metadataContent = JSON.stringify({
-          contentType: contentType,
-          cacheControl: metadata?.cacheControl || 'public, max-age=86400',
-          contentDisposition: metadata?.contentDisposition,
-          originalFileName: metadata?.filename || path.basename(filePath)
-        });
-        await this.client.uploadFromText(metadataKey, metadataContent);
-      }
+      console.log(`Read file into buffer: ${filePath}, size: ${fileBuffer.length} bytes`);
       
-      // Use the direct file upload method
-      await this.client.uploadFromFilename(objectKey, filePath, {
-        compress: true // Enable compression for better storage efficiency
+      // Now use our reliable uploadFromBuffer method which already has retry, verification, etc.
+      return await this.uploadFromBuffer(objectKey, fileBuffer, {
+        contentType: metadata?.contentType || this.detectContentType(filePath),
+        cacheControl: metadata?.cacheControl || 'public, max-age=86400',
+        contentDisposition: metadata?.contentDisposition,
+        filename: metadata?.filename || path.basename(filePath)
       });
-      
-      return this.getPublicUrl(objectKey);
     } catch (error: any) {
       console.error(`Error uploading file ${filePath} to ${objectKey}:`, error);
       throw new Error(`Failed to upload file from path: ${error.message || 'Unknown error'}`);
@@ -347,6 +358,9 @@ export class ObjectStorageService {
    * @returns The public URL of the uploaded file
    */
   async uploadFromBase64(objectKey: string, base64DataUrl: string, metadata?: FileMetadata): Promise<string> {
+    // Ensure storage is initialized
+    await this.ensureInitialized();
+    
     try {
       // Extract the base64 data and content type
       const matches = base64DataUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
@@ -364,29 +378,19 @@ export class ObjectStorageService {
         throw new Error(`Invalid buffer type: ${typeof buffer}`);
       }
       
-      // Store metadata in a separate file
-      const metadataKey = `${objectKey}.metadata`;
-      const metadataContent = JSON.stringify({
+      if (buffer.length === 0) {
+        throw new Error(`Empty buffer from base64 data for ${objectKey}`);
+      }
+      
+      console.log(`Converting base64 data to buffer for ${objectKey}: ${buffer.length} bytes`);
+      
+      // Now use our reliable uploadFromBuffer method which already has retry, verification, etc.
+      return await this.uploadFromBuffer(objectKey, buffer, {
         contentType: contentType,
         cacheControl: metadata?.cacheControl || 'public, max-age=86400',
         contentDisposition: metadata?.contentDisposition,
-        originalFileName: metadata?.filename
+        filename: metadata?.filename
       });
-      await this.client.uploadFromText(metadataKey, metadataContent);
-      
-      // Upload the actual file
-      const uploadResult = await this.client.uploadFromBytes(objectKey, buffer, {
-        compress: true // Enable compression for better storage efficiency
-      });
-      
-      // Check for errors in the result
-      if ('err' in uploadResult) {
-        console.error(`Upload failed for ${objectKey}:`, uploadResult.err);
-        throw new Error(`Upload failed: ${uploadResult.err.message || 'Unknown error'}`);
-      }
-      
-      console.log(`Successfully uploaded base64 file to ${objectKey}`);
-      return this.getPublicUrl(objectKey);
     } catch (error: any) {
       console.error(`Error uploading base64 data to ${objectKey}:`, error);
       throw new Error(`Failed to upload base64 data: ${error.message || 'Unknown error'}`);
@@ -764,6 +768,21 @@ export class ObjectStorageService {
     originalFilename: string,
     contentType?: string
   ): Promise<{ url: string, objectKey: string }> {
+    // Ensure storage is initialized
+    await this.ensureInitialized();
+    
+    // Validate buffer before uploading
+    if (!Buffer.isBuffer(imageFile)) {
+      console.error(`Invalid buffer type for product image: ${typeof imageFile}`);
+      throw new Error(`Invalid buffer type: ${typeof imageFile}`);
+    }
+    
+    if (imageFile.length === 0) {
+      throw new Error(`Empty buffer for product image: ${originalFilename}`);
+    }
+    
+    console.log(`Uploading product image for product ${productId}: ${originalFilename}, size: ${imageFile.length} bytes`);
+    
     // Generate a unique filename
     const filename = this.generateUniqueFilename(originalFilename);
     
@@ -773,13 +792,57 @@ export class ObjectStorageService {
     // Ensure the folder exists
     await this.createFolder(this.buildObjectKey(STORAGE_FOLDERS.PRODUCTS, productId, 'images'));
     
-    // Upload the file
-    const url = await this.uploadFromBuffer(objectKey, imageFile, {
-      contentType: contentType || this.detectContentType(filename),
-      cacheControl: 'public, max-age=86400' // 1 day cache
-    });
+    const MAX_RETRIES = 3;
+    let lastError: any = null;
     
-    return { url, objectKey };
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        console.log(`Uploading product image attempt ${attempt}/${MAX_RETRIES}: ${objectKey}`);
+        
+        // Set explicit content type
+        const detectedContentType = contentType || this.detectContentType(filename);
+        console.log(`Content type for ${filename}: ${detectedContentType}`);
+        
+        // Upload the file
+        const url = await this.uploadFromBuffer(objectKey, imageFile, {
+          contentType: detectedContentType,
+          cacheControl: 'public, max-age=86400', // 1 day cache
+          filename: originalFilename  // Store original filename in metadata
+        });
+        
+        // Add a delay after upload to ensure Replit Object Storage has processed the file
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        // Verify the file exists in Object Storage
+        const exists = await this.exists(objectKey);
+        if (!exists) {
+          throw new Error(`File was not found in Object Storage after upload: ${objectKey}`);
+        }
+        
+        // Get the file to verify it's accessible and has the correct size
+        const downloadedFile = await this.getFileAsBuffer(objectKey);
+        if (downloadedFile.data.length !== imageFile.length) {
+          throw new Error(`File size mismatch in Object Storage: expected ${imageFile.length} bytes, got ${downloadedFile.data.length} bytes`);
+        }
+        
+        console.log(`Successfully uploaded and verified product image in object storage: ${objectKey}`);
+        
+        return { url, objectKey };
+      } catch (error: any) {
+        lastError = error;
+        console.error(`Error uploading product image (attempt ${attempt}/${MAX_RETRIES}): ${error.message}`);
+        
+        if (attempt < MAX_RETRIES) {
+          // Exponential backoff
+          const delay = Math.pow(2, attempt) * 300;
+          console.log(`Retrying upload after ${delay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
+    }
+    
+    // If we got here, all attempts failed
+    throw new Error(`Failed to upload product image after ${MAX_RETRIES} attempts: ${lastError?.message || 'Unknown error'}`);
   }
   
   /**
