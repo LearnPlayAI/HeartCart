@@ -46,13 +46,13 @@ const ProductDetail = () => {
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
   const [selectedCombination, setSelectedCombination] = useState<ProductAttributeCombination | null>(null);
   
-  // Fetch product by slug if available
+  // Always fetch both, but only enable the relevant one - this ensures hooks are called in the same order
   const { 
     data: productFromSlug, 
     isLoading: isLoadingSlug, 
     error: errorSlug 
   } = useQuery<Product>({
-    queryKey: [`/api/products/slug/${slug}`],
+    queryKey: [`/api/products/slug/${slug || ''}`],
     enabled: !!slug && !id, // Only fetch by slug if no ID is present
   });
   
@@ -62,7 +62,7 @@ const ProductDetail = () => {
     isLoading: isLoadingId, 
     error: errorId 
   } = useQuery<Product>({
-    queryKey: [`/api/products/${id}`],
+    queryKey: [`/api/products/${id || ''}`],
     enabled: !!id,
   });
   
