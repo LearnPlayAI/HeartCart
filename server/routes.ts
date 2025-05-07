@@ -284,7 +284,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(404).json({ message: "Category not found" });
     }
     
-    res.json(category);
+    // After updating the category, update all products in this category to match visibility
+    // Get all products in this category
+    const categoryProducts = await storage.getProductsByCategory(categoryId, undefined, undefined, {
+      includeInactive: true,
+      includeCategoryInactive: true
+    });
+    
+    // Update each product's isActive status to match category's visibility
+    let updatedCount = 0;
+    for (const product of categoryProducts) {
+      await storage.updateProduct(product.id, {
+        isActive: isActive
+      });
+      updatedCount++;
+    }
+    
+    console.log(`Updated visibility status for ${updatedCount} products in category ${categoryId} to: ${isActive}`);
+    
+    res.json({
+      ...category,
+      productsUpdated: updatedCount
+    });
   }));
 
   // CATEGORY ATTRIBUTE ROUTES
@@ -412,14 +433,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const categoryId = req.query.category ? parseInt(req.query.category as string) : undefined;
     const search = req.query.search as string | undefined;
     
-    const products = await storage.getAllProducts(limit, offset, categoryId, search);
+    const user = req.user as any;
+    const isAdmin = user && user.role === 'admin';
+    
+    const options = { 
+      includeInactive: isAdmin, 
+      includeCategoryInactive: isAdmin 
+    };
+    
+    const products = await storage.getAllProducts(limit, offset, categoryId, search, options);
     res.json(products);
   }));
 
   // Specific route patterns must be defined before generic patterns with path parameters
   app.get("/api/products/slug/:slug", handleErrors(async (req: Request, res: Response) => {
     const { slug } = req.params;
-    const product = await storage.getProductBySlug(slug);
+    
+    const user = req.user as any;
+    const isAdmin = user && user.role === 'admin';
+    
+    const options = { 
+      includeInactive: isAdmin, 
+      includeCategoryInactive: isAdmin 
+    };
+    
+    const product = await storage.getProductBySlug(slug, options);
     
     if (!product) {
       res.status(404).json({ message: "Product not found" });
@@ -441,7 +479,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
     const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
     
-    const products = await storage.getProductsByCategory(categoryId, limit, offset);
+    const user = req.user as any;
+    const isAdmin = user && user.role === 'admin';
+    
+    const options = { 
+      includeInactive: isAdmin, 
+      includeCategoryInactive: isAdmin 
+    };
+    
+    const products = await storage.getProductsByCategory(categoryId, limit, offset, options);
     res.json(products);
   }));
   
@@ -454,8 +500,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return;
     }
     
+    const user = req.user as any;
+    const isAdmin = user && user.role === 'admin';
+    
+    const options = { 
+      includeInactive: isAdmin, 
+      includeCategoryInactive: isAdmin 
+    };
+    
     // Get all products in this category
-    const products = await storage.getProductsByCategory(categoryId);
+    const products = await storage.getProductsByCategory(categoryId, undefined, undefined, options);
     
     // Get all attributes for this category
     const categoryAttributes = await storage.getCategoryAttributes(categoryId);
@@ -505,7 +559,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return;
     }
     
-    const product = await storage.getProductById(id);
+    const user = req.user as any;
+    const isAdmin = user && user.role === 'admin';
+    
+    const options = { 
+      includeInactive: isAdmin, 
+      includeCategoryInactive: isAdmin 
+    };
+    
+    const product = await storage.getProductById(id, options);
     
     if (!product) {
       res.status(404).json({ message: "Product not found" });
@@ -517,13 +579,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/featured-products", handleErrors(async (req: Request, res: Response) => {
     const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
-    const products = await storage.getFeaturedProducts(limit);
+    
+    const user = req.user as any;
+    const isAdmin = user && user.role === 'admin';
+    
+    const options = { 
+      includeInactive: isAdmin, 
+      includeCategoryInactive: isAdmin 
+    };
+    
+    const products = await storage.getFeaturedProducts(limit, options);
     res.json(products);
   }));
 
   app.get("/api/flash-deals", handleErrors(async (req: Request, res: Response) => {
     const limit = req.query.limit ? parseInt(req.query.limit as string) : 6;
-    const products = await storage.getFlashDeals(limit);
+    
+    const user = req.user as any;
+    const isAdmin = user && user.role === 'admin';
+    
+    const options = { 
+      includeInactive: isAdmin, 
+      includeCategoryInactive: isAdmin 
+    };
+    
+    const products = await storage.getFlashDeals(limit, options);
     res.json(products);
   }));
 
@@ -537,7 +617,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return;
     }
     
-    const products = await storage.searchProducts(query, limit, offset);
+    const user = req.user as any;
+    const isAdmin = user && user.role === 'admin';
+    
+    const options = { 
+      includeInactive: isAdmin, 
+      includeCategoryInactive: isAdmin 
+    };
+    
+    const products = await storage.searchProducts(query, limit, offset, options);
     res.json(products);
   }));
   

@@ -37,13 +37,13 @@ export interface IStorage {
   updateCategoryDisplayOrder(id: number, displayOrder: number): Promise<Category | undefined>;
   
   // Product operations
-  getAllProducts(limit?: number, offset?: number, categoryId?: number, search?: string): Promise<Product[]>;
-  getProductById(id: number): Promise<Product | undefined>;
-  getProductBySlug(slug: string): Promise<Product | undefined>;
-  getProductsByCategory(categoryId: number, limit?: number, offset?: number): Promise<Product[]>;
-  getFeaturedProducts(limit?: number): Promise<Product[]>;
-  getFlashDeals(limit?: number): Promise<Product[]>;
-  searchProducts(query: string, limit?: number, offset?: number): Promise<Product[]>;
+  getAllProducts(limit?: number, offset?: number, categoryId?: number, search?: string, options?: { includeInactive?: boolean, includeCategoryInactive?: boolean }): Promise<Product[]>;
+  getProductById(id: number, options?: { includeInactive?: boolean, includeCategoryInactive?: boolean }): Promise<Product | undefined>;
+  getProductBySlug(slug: string, options?: { includeInactive?: boolean, includeCategoryInactive?: boolean }): Promise<Product | undefined>;
+  getProductsByCategory(categoryId: number, limit?: number, offset?: number, options?: { includeInactive?: boolean, includeCategoryInactive?: boolean }): Promise<Product[]>;
+  getFeaturedProducts(limit?: number, options?: { includeInactive?: boolean, includeCategoryInactive?: boolean }): Promise<Product[]>;
+  getFlashDeals(limit?: number, options?: { includeInactive?: boolean, includeCategoryInactive?: boolean }): Promise<Product[]>;
+  searchProducts(query: string, limit?: number, offset?: number, options?: { includeInactive?: boolean, includeCategoryInactive?: boolean }): Promise<Product[]>;
   createProduct(product: InsertProduct): Promise<Product>;
   updateProduct(id: number, productData: Partial<InsertProduct>): Promise<Product | undefined>;
   
@@ -307,21 +307,78 @@ export class DatabaseStorage implements IStorage {
     limit = 20, 
     offset = 0, 
     categoryId?: number, 
-    search?: string
+    search?: string,
+    options?: { includeInactive?: boolean, includeCategoryInactive?: boolean }
   ): Promise<Product[]> {
-    // Create base query
-    let baseCondition = eq(products.isActive, true);
+    // Create conditions array
+    const conditions: SQL<unknown>[] = [];
+    
+    // Only filter active products if not explicitly including inactive ones
+    if (!options?.includeInactive) {
+      conditions.push(eq(products.isActive, true));
+    }
     
     // Add category filter if provided
     if (categoryId) {
-      baseCondition = and(baseCondition, eq(products.categoryId, categoryId));
+      conditions.push(eq(products.categoryId, categoryId));
+      
+      // If we're not including products with inactive categories,
+      // add a join to check if the category is active
+      if (!options?.includeCategoryInactive) {
+        // First get the specified category to check if it's active
+        const categoryQuery = db.select()
+          .from(categories)
+          .where(and(
+            eq(categories.id, categoryId),
+            eq(categories.isActive, true)
+          ));
+          
+        const [category] = await categoryQuery;
+        
+        // If category doesn't exist or is inactive, return empty array
+        if (!category) {
+          return [];
+        }
+      }
+    } else if (!options?.includeCategoryInactive) {
+      // If we're not filtering by category but we need to exclude products
+      // from inactive categories, we need to join with the categories table
+      const query = db.select({
+        product: products
+      })
+      .from(products)
+      .innerJoin(categories, eq(products.categoryId, categories.id))
+      .where(and(
+        ...conditions,
+        eq(categories.isActive, true)
+      ));
+      
+      // Apply search filter if provided
+      if (search) {
+        const searchTerm = `%${search}%`;
+        query.where(
+          or(
+            like(products.name, searchTerm),
+            like(products.description || '', searchTerm)
+          )
+        );
+      }
+      
+      const result = await query.limit(limit).offset(offset);
+      return result.map(row => row.product);
     }
+    
+    // If we got here, we're either including products with inactive categories
+    // or we filtered by a specific category that is active
     
     // Apply base conditions
     let query = db
       .select()
-      .from(products)
-      .where(baseCondition);
+      .from(products);
+      
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
     
     // Add search condition if provided
     if (search) {
@@ -337,67 +394,211 @@ export class DatabaseStorage implements IStorage {
     return await query.limit(limit).offset(offset);
   }
 
-  async getProductById(id: number): Promise<Product | undefined> {
+  async getProductById(id: number, options?: { includeInactive?: boolean, includeCategoryInactive?: boolean }): Promise<Product | undefined> {
+    // Create conditions array
+    const conditions: SQL<unknown>[] = [eq(products.id, id)];
+    
+    // Only filter active products if not explicitly including inactive ones
+    if (!options?.includeInactive) {
+      conditions.push(eq(products.isActive, true));
+    }
+    
+    // Get the product
     const [product] = await db
       .select()
       .from(products)
-      .where(and(eq(products.id, id), eq(products.isActive, true)));
+      .where(and(...conditions));
+      
+    if (!product) {
+      return undefined;
+    }
+    
+    // Check category visibility if needed
+    if (!options?.includeCategoryInactive) {
+      const [category] = await db
+        .select()
+        .from(categories)
+        .where(and(
+          eq(categories.id, product.categoryId),
+          eq(categories.isActive, true)
+        ));
+      
+      // If category doesn't exist or is inactive, return undefined
+      if (!category) {
+        return options?.includeInactive ? product : undefined;
+      }
+    }
+    
     return product;
   }
 
-  async getProductBySlug(slug: string): Promise<Product | undefined> {
+  async getProductBySlug(slug: string, options?: { includeInactive?: boolean, includeCategoryInactive?: boolean }): Promise<Product | undefined> {
+    // Create conditions array
+    const conditions: SQL<unknown>[] = [eq(products.slug, slug)];
+    
+    // Only filter active products if not explicitly including inactive ones
+    if (!options?.includeInactive) {
+      conditions.push(eq(products.isActive, true));
+    }
+    
+    // Get the product
     const [product] = await db
       .select()
       .from(products)
-      .where(and(eq(products.slug, slug), eq(products.isActive, true)));
+      .where(and(...conditions));
+      
+    if (!product) {
+      return undefined;
+    }
+    
+    // Check category visibility if needed
+    if (!options?.includeCategoryInactive) {
+      const [category] = await db
+        .select()
+        .from(categories)
+        .where(and(
+          eq(categories.id, product.categoryId),
+          eq(categories.isActive, true)
+        ));
+      
+      // If category doesn't exist or is inactive, return undefined
+      if (!category) {
+        return options?.includeInactive ? product : undefined;
+      }
+    }
+    
     return product;
   }
 
-  async getProductsByCategory(categoryId: number, limit = 20, offset = 0): Promise<Product[]> {
+  async getProductsByCategory(categoryId: number, limit = 20, offset = 0, options?: { includeInactive?: boolean, includeCategoryInactive?: boolean }): Promise<Product[]> {
+    // Check if the category exists and is active (if needed)
+    if (!options?.includeCategoryInactive) {
+      const [category] = await db
+        .select()
+        .from(categories)
+        .where(and(
+          eq(categories.id, categoryId),
+          eq(categories.isActive, true)
+        ));
+      
+      // If category is inactive or doesn't exist, return empty array
+      if (!category) {
+        return [];
+      }
+    }
+    
+    // Create conditions array
+    const conditions: SQL<unknown>[] = [eq(products.categoryId, categoryId)];
+    
+    // Only filter active products if not explicitly including inactive ones
+    if (!options?.includeInactive) {
+      conditions.push(eq(products.isActive, true));
+    }
+    
     return await db
       .select()
       .from(products)
-      .where(and(eq(products.categoryId, categoryId), eq(products.isActive, true)))
+      .where(and(...conditions))
       .limit(limit)
       .offset(offset);
   }
 
-  async getFeaturedProducts(limit = 10): Promise<Product[]> {
-    return await db
-      .select()
+  async getFeaturedProducts(limit = 10, options?: { includeInactive?: boolean, includeCategoryInactive?: boolean }): Promise<Product[]> {
+    if (!options?.includeCategoryInactive) {
+      // For featured products, we need to join with categories to check if category is active
+      const query = db.select({
+        product: products
+      })
       .from(products)
-      .where(and(eq(products.isFeatured, true), eq(products.isActive, true)))
+      .innerJoin(categories, eq(products.categoryId, categories.id))
+      .where(and(
+        eq(products.isFeatured, true),
+        options?.includeInactive ? sql`1=1` : eq(products.isActive, true),
+        eq(categories.isActive, true)
+      ))
       .limit(limit);
+      
+      const result = await query;
+      return result.map(row => row.product);
+    } else {
+      // If we don't need to check category visibility, use simpler query
+      return await db
+        .select()
+        .from(products)
+        .where(and(
+          eq(products.isFeatured, true),
+          options?.includeInactive ? sql`1=1` : eq(products.isActive, true)
+        ))
+        .limit(limit);
+    }
   }
 
-  async getFlashDeals(limit = 6): Promise<Product[]> {
+  async getFlashDeals(limit = 6, options?: { includeInactive?: boolean, includeCategoryInactive?: boolean }): Promise<Product[]> {
     const now = new Date();
-    return await db
-      .select()
+    
+    if (!options?.includeCategoryInactive) {
+      // For flash deals, we need to join with categories to check if category is active
+      const query = db.select({
+        product: products
+      })
       .from(products)
-      .where(
-        and(
-          eq(products.isFlashDeal, true),
-          eq(products.isActive, true),
-          sql`${products.flashDealEnd} > ${now}`
-        )
-      )
+      .innerJoin(categories, eq(products.categoryId, categories.id))
+      .where(and(
+        eq(products.isFlashDeal, true),
+        options?.includeInactive ? sql`1=1` : eq(products.isActive, true),
+        eq(categories.isActive, true),
+        sql`${products.flashDealEnd} > ${now}`
+      ))
       .limit(limit);
+      
+      const result = await query;
+      return result.map(row => row.product);
+    } else {
+      // If we don't need to check category visibility, use simpler query
+      return await db
+        .select()
+        .from(products)
+        .where(and(
+          eq(products.isFlashDeal, true),
+          options?.includeInactive ? sql`1=1` : eq(products.isActive, true),
+          sql`${products.flashDealEnd} > ${now}`
+        ))
+        .limit(limit);
+    }
   }
 
-  async searchProducts(query: string, limit = 20, offset = 0): Promise<Product[]> {
+  async searchProducts(query: string, limit = 20, offset = 0, options?: { includeInactive?: boolean, includeCategoryInactive?: boolean }): Promise<Product[]> {
     const searchTerm = `%${query}%`;
-    return await db
-      .select()
+    
+    if (!options?.includeCategoryInactive) {
+      // For search, we need to join with categories to check if category is active
+      const searchQuery = db.select({
+        product: products
+      })
       .from(products)
-      .where(
-        and(
-          eq(products.isActive, true),
-          like(products.name, searchTerm)
-        )
-      )
+      .innerJoin(categories, eq(products.categoryId, categories.id))
+      .where(and(
+        options?.includeInactive ? sql`1=1` : eq(products.isActive, true),
+        eq(categories.isActive, true),
+        like(products.name, searchTerm)
+      ))
       .limit(limit)
       .offset(offset);
+      
+      const result = await searchQuery;
+      return result.map(row => row.product);
+    } else {
+      // If we don't need to check category visibility, use simpler query
+      return await db
+        .select()
+        .from(products)
+        .where(and(
+          options?.includeInactive ? sql`1=1` : eq(products.isActive, true),
+          like(products.name, searchTerm)
+        ))
+        .limit(limit)
+        .offset(offset);
+    }
   }
 
   async createProduct(product: InsertProduct): Promise<Product> {
