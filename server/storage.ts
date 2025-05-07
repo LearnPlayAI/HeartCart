@@ -1135,19 +1135,36 @@ export class DatabaseStorage implements IStorage {
     
     const catalogData = await query;
     
-    // Add product count and format dates properly
-    return catalogData.map(catalog => {
-      // Format all dates as ISO strings
-      const formattedCatalog = {
-        ...catalog,
-        startDate: catalog.startDate ? new Date(catalog.startDate).toISOString() : null,
-        endDate: catalog.endDate ? new Date(catalog.endDate).toISOString() : null,
-        createdAt: catalog.createdAt ? new Date(catalog.createdAt).toISOString() : null,
-        productsCount: 0 // Default to 0 until we implement product count functionality
-      };
-      
-      return formattedCatalog;
-    });
+    // Add product count for each catalog
+    const catalogsWithProductCount = await Promise.all(
+      catalogData.map(async (catalog) => {
+        // Count products in this catalog
+        const productsQuery = activeOnly
+          ? db
+              .select({ count: sql<number>`count(*)` })
+              .from(products)
+              .where(and(
+                eq(products.catalogId, catalog.id),
+                eq(products.isActive, true)
+              ))
+          : db
+              .select({ count: sql<number>`count(*)` })
+              .from(products)
+              .where(eq(products.catalogId, catalog.id));
+              
+        const [result] = await productsQuery;
+        const count = result?.count || 0;
+        
+        // Format all dates as ISO strings
+        return {
+          ...catalog,
+          startDate: catalog.startDate ? new Date(catalog.startDate).toISOString() : null,
+          endDate: catalog.endDate ? new Date(catalog.endDate).toISOString() : null,
+          createdAt: catalog.createdAt ? new Date(catalog.createdAt).toISOString() : null,
+          productsCount: Number(count)
+        };
+      })
+    );
   }
 
   async getCatalogsBySupplierId(supplierId: number, activeOnly = true): Promise<any[]> {
