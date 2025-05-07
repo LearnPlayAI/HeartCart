@@ -1979,37 +1979,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const objectKey = req.params.path;
       console.log(`Serving file from object storage: ${objectKey}`);
       
-      // First check if the file exists
-      if (!(await objectStorageService.exists(objectKey))) {
-        console.error(`File not found in object storage: ${objectKey}`);
-        return res.status(404).send('File not found');
+      const MAX_RETRIES = 3;
+      let lastError: any = null;
+      
+      for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        try {
+          // First check if the file exists
+          if (!(await objectStorageService.exists(objectKey))) {
+            console.error(`File not found in object storage: ${objectKey}`);
+            return res.status(404).send('File not found');
+          }
+          
+          // Use our new buffer-based method for reliable file handling
+          console.log(`Retrieving file ${objectKey} using buffer-based approach (attempt ${attempt}/${MAX_RETRIES})`);
+          
+          // Apply a small delay if this is a temp file to prevent race conditions
+          if (objectKey.includes('/temp/')) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+          
+          // Get the file data and content type in one operation
+          const { data, contentType } = await objectStorageService.getFileAsBuffer(objectKey);
+          
+          // Validate the buffer has actual content
+          if (!data || data.length === 0) {
+            throw new Error(`Retrieved empty buffer for ${objectKey}`);
+          }
+          
+          // Set appropriate headers
+          res.setHeader('Content-Type', contentType);
+          res.setHeader('Content-Length', data.length);
+          res.setHeader('Cache-Control', contentType.startsWith('image/') ? 'public, max-age=86400' : 'no-cache');
+          
+          console.log(`Successfully retrieved file ${objectKey}: ${data.length} bytes, type: ${contentType}`);
+          
+          // Send the buffer directly (more reliable than streaming)
+          return res.end(data);
+        } catch (downloadError: any) {
+          lastError = downloadError;
+          console.error(`Error retrieving file ${objectKey} (attempt ${attempt}/${MAX_RETRIES}):`, downloadError);
+          
+          if (attempt < MAX_RETRIES) {
+            // Exponential backoff
+            const delay = Math.pow(2, attempt) * 200;
+            console.log(`Retrying file retrieval after ${delay}ms...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+          } else {
+            return res.status(500).send(`Error reading file: ${downloadError.message}`);
+          }
+        }
       }
       
-      try {
-        // Use our new buffer-based method for reliable file handling
-        console.log(`Retrieving file ${objectKey} using buffer-based approach`);
-        
-        // Apply a small delay if this is a temp file to prevent race conditions
-        if (objectKey.includes('/temp/')) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-        }
-        
-        // Get the file data and content type in one operation
-        const { data, contentType } = await objectStorageService.getFileAsBuffer(objectKey);
-        
-        // Set appropriate headers
-        res.setHeader('Content-Type', contentType);
-        res.setHeader('Content-Length', data.length);
-        res.setHeader('Cache-Control', contentType.startsWith('image/') ? 'public, max-age=86400' : 'no-cache');
-        
-        console.log(`Successfully retrieved file ${objectKey}: ${data.length} bytes, type: ${contentType}`);
-        
-        // Send the buffer directly (more reliable than streaming)
-        return res.end(data);
-      } catch (downloadError: any) {
-        console.error(`Error retrieving file ${objectKey}:`, downloadError);
-        return res.status(500).send(`Error reading file: ${downloadError.message}`);
-      }
+      // If we get here, all retries failed
+      return res.status(500).send(`Failed to retrieve file after ${MAX_RETRIES} attempts: ${lastError?.message || 'Unknown error'}`);
+      
     } catch (error: any) {
       console.error('Error serving file:', error);
       return res.status(500).send(`Error serving file: ${error.message}`);
