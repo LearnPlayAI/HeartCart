@@ -59,10 +59,11 @@ type ProductFormValues = z.infer<typeof productFormSchema>;
 
 type ProductFormWizardProps = {
   productId?: number;
+  catalogId?: number;
   onSuccess?: () => void;
 };
 
-export default function ProductFormWizard({ productId, onSuccess }: ProductFormWizardProps) {
+export default function ProductFormWizard({ productId, catalogId, onSuccess }: ProductFormWizardProps) {
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const [uploadedImages, setUploadedImages] = useState<any[]>([]);
@@ -100,6 +101,18 @@ export default function ProductFormWizard({ productId, onSuccess }: ProductFormW
       return res.json() as Promise<Product>;
     },
     enabled: !!productId,
+  });
+  
+  // Fetch catalog data if creating from catalog context
+  const { data: catalog, isLoading: isLoadingCatalog } = useQuery({
+    queryKey: ['/api/catalogs', catalogId],
+    queryFn: async () => {
+      if (!catalogId) return null;
+      const res = await fetch(`/api/catalogs/${catalogId}`);
+      if (!res.ok) throw new Error('Failed to fetch catalog');
+      return res.json();
+    },
+    enabled: !!catalogId && !productId, // Only fetch if creating new product from catalog
   });
   
   // Form setup
@@ -140,6 +153,33 @@ export default function ProductFormWizard({ productId, onSuccess }: ProductFormW
     }
   }, [product, form]);
   
+  // Pre-populate with catalog data when creating from catalog context
+  useEffect(() => {
+    if (catalog && !product && !form.getValues('name')) {
+      console.log("Pre-populating form with catalog data:", catalog);
+      
+      // Pre-populate relevant form fields from catalog
+      form.setValue('isActive', catalog.isActive);
+      
+      // If catalog has default markup percentage, use it to help with pricing calculations
+      if (catalog.defaultMarkupPercentage) {
+        // Listen for changes in cost price to auto-calculate retail price
+        const costPriceSubscription = form.watch((value, { name }) => {
+          if (name === 'costPrice' && value.costPrice) {
+            const costPrice = parseFloat(value.costPrice.toString());
+            if (!isNaN(costPrice) && costPrice > 0) {
+              const calculatedPrice = costPrice * (1 + (catalog.defaultMarkupPercentage / 100));
+              form.setValue('price', Math.round(calculatedPrice * 100) / 100);
+            }
+          }
+        });
+        
+        // Cleanup subscription
+        return () => costPriceSubscription.unsubscribe();
+      }
+    }
+  }, [catalog, form, product]);
+  
   // Fetch product images if editing
   useEffect(() => {
     const fetchProductImages = async () => {
@@ -167,9 +207,13 @@ export default function ProductFormWizard({ productId, onSuccess }: ProductFormW
       const formattedData = {
         ...data,
         flashDealEnd: data.flashDealEnd ? new Date(data.flashDealEnd).toISOString() : null,
+        // Add catalog ID if provided
+        catalogId: catalogId,
       };
       
       delete formattedData.newTag;
+      
+      console.log("Creating product with data:", formattedData);
       
       const res = await apiRequest('POST', '/api/products', formattedData);
       if (!res.ok) {
@@ -183,7 +227,14 @@ export default function ProductFormWizard({ productId, onSuccess }: ProductFormW
         title: 'Product created',
         description: 'The product has been created successfully',
       });
+      // Invalidate all relevant queries
       queryClient.invalidateQueries({ queryKey: ['/api/products'] });
+      
+      if (catalogId) {
+        // Also invalidate catalog products queries to update catalog product list
+        queryClient.invalidateQueries({ queryKey: [`/api/catalogs/${catalogId}/products`] });
+      }
+      
       if (onSuccess) {
         onSuccess();
       } else {
