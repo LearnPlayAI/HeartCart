@@ -117,7 +117,7 @@ const ProductDetail = () => {
   
   // Effect to update price when a valid attribute combination is selected
   useEffect(() => {
-    if (!combinations || !product) return;
+    if (!product) return;
     
     // Check if all attributes have been selected
     const allSelected = categoryAttributes?.every(attr => selectedAttributes[attr.id]) || false;
@@ -130,7 +130,7 @@ const ProductDetail = () => {
         .join('|');
       
       // Find matching combination
-      const matchingCombination = combinations.find(c => c.combinationHash === combinationParts);
+      const matchingCombination = combinations?.find(c => c.combinationHash === combinationParts);
       
       if (matchingCombination) {
         // Calculate adjusted price

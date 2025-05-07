@@ -72,7 +72,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   if (isFlashDeal) {
     return (
       <div className="product-card bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <Link href={`/product/${product.slug}`} className="block">
+        <Link href={`/product/id/${product.id}`} className="block">
           <img 
             src={product.imageUrl || ''} 
             alt={product.name || 'Product image'} 
@@ -141,7 +141,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   
   return (
     <div className="product-card bg-white rounded-lg shadow-md overflow-hidden">
-      <Link href={`/product/${product.slug}`} className="block">
+      <Link href={`/product/id/${product.id}`} className="block">
         <img 
           src={product.imageUrl || ''} 
           alt={product.name || 'Product image'} 
