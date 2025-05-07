@@ -22,6 +22,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Filter, SlidersHorizontal, X } from 'lucide-react';
 import ProductCard from '@/components/product/product-card';
+import { CategorySidebar } from '@/components/ui/category-sidebar';
+import { CategorySidebarDrawer } from '@/components/ui/category-sidebar-drawer';
 import type { Product, Category, CategoryAttribute, CategoryAttributeOption } from '@shared/schema';
 
 const CategoryPage = () => {
@@ -241,42 +243,34 @@ const CategoryPage = () => {
             } md:relative md:block md:w-64 md:flex-shrink-0`}
           >
             {isFilterOpen && (
-              <div className="flex justify-between items-center mb-4 md:hidden">
-                <h2 className="text-lg font-medium">Filters</h2>
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  onClick={toggleFilter}
-                >
-                  <X className="h-5 w-5" />
-                </Button>
-              </div>
+              <>
+                <div className="flex justify-between items-center mb-4 md:hidden">
+                  <h2 className="text-lg font-medium">Filters</h2>
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={toggleFilter}
+                  >
+                    <X className="h-5 w-5" />
+                  </Button>
+                </div>
+                <div className="block md:hidden mb-4">
+                  <CategorySidebarDrawer onCategorySelect={toggleFilter} />
+                </div>
+              </>
             )}
+            
+            {/* Desktop Category Sidebar */}
+            <div className="hidden md:block mb-6">
+              <CategorySidebar className="border rounded-md shadow-sm" />
+            </div>
             
             <div className="hidden md:flex justify-between items-center mb-4">
               <h2 className="text-lg font-medium">Filters</h2>
               <SlidersHorizontal className="h-5 w-5 text-gray-500" />
             </div>
             
-            <Accordion type="multiple" defaultValue={['categories', 'price', 'filters']}>
-              <AccordionItem value="categories">
-                <AccordionTrigger>Categories</AccordionTrigger>
-                <AccordionContent>
-                  <div className="space-y-2">
-                    {categories?.map(cat => (
-                      <div key={cat.id} className="flex items-center">
-                        <Link href={`/category/${cat.slug}`}>
-                          <a className={`text-sm hover:text-[#FF69B4] ${
-                            cat.slug === slug ? 'text-[#FF69B4] font-medium' : 'text-gray-700'
-                          }`}>
-                            {cat.name}
-                          </a>
-                        </Link>
-                      </div>
-                    ))}
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
+            <Accordion type="multiple" defaultValue={['price', 'filters']}>
               
               <AccordionItem value="price">
                 <AccordionTrigger>Price Range</AccordionTrigger>
@@ -435,7 +429,7 @@ const CategoryPage = () => {
                 </p>
                 <Button asChild>
                   <Link href="/">
-                    <a>Continue Shopping</a>
+                    Continue Shopping
                   </Link>
                 </Button>
               </div>

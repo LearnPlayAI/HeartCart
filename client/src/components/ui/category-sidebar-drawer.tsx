@@ -6,14 +6,19 @@ import { CategorySidebar } from "@/components/ui/category-sidebar";
 
 interface CategorySidebarDrawerProps {
   className?: string;
+  onCategorySelect?: () => void;
 }
 
-export function CategorySidebarDrawer({ className }: CategorySidebarDrawerProps) {
+export function CategorySidebarDrawer({ className, onCategorySelect }: CategorySidebarDrawerProps) {
   const [open, setOpen] = React.useState(false);
   
   // Close the drawer when a category is selected
   const handleCategorySelect = () => {
     setOpen(false);
+    // Call external handler if provided
+    if (onCategorySelect) {
+      onCategorySelect();
+    }
   };
   
   return (
