@@ -813,7 +813,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const expectedFileName = `${baseName}_${timestamp}${fileExt}`;
           
           // Upload to Object Storage with product ID in the path
-          const { url, objectKey } = await objectStorageService.uploadTempFile(
+          const { url, objectKey } = await objectStore.uploadTempFile(
             fileBuffer,
             expectedFileName,
             productId, // Pass product ID to create correct folder structure
@@ -825,7 +825,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await new Promise(resolve => setTimeout(resolve, 300));
           
           // Verify the file exists in Object Storage before proceeding
-          const exists = await objectStorageService.exists(objectKey);
+          const exists = await objectStore.exists(objectKey);
           if (!exists) {
             console.error(`File ${objectKey} was not found in Object Storage after upload`);
             throw new Error('File upload to Object Storage failed - verification failed');
