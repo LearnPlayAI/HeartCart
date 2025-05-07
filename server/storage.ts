@@ -677,11 +677,28 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateProduct(id: number, productData: Partial<InsertProduct>): Promise<Product | undefined> {
+    // Check if the product exists and get its current catalogId
+    const [existingProduct] = await db
+      .select()
+      .from(products)
+      .where(eq(products.id, id));
+    
+    if (!existingProduct) {
+      return undefined;
+    }
+    
+    // If catalogId is not provided in the update data but exists in the current product,
+    // preserve it to ensure catalog assignments are not lost during updates
+    if (productData.catalogId === undefined && existingProduct.catalogId !== null) {
+      productData.catalogId = existingProduct.catalogId;
+    }
+    
     const [updatedProduct] = await db
       .update(products)
       .set(productData)
       .where(eq(products.id, id))
       .returning();
+      
     return updatedProduct;
   }
 

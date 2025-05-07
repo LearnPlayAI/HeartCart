@@ -37,6 +37,7 @@ const productFormSchema = z.object({
     required_error: "Category is required",
     invalid_type_error: "Please select a category",
   }),
+  catalogId: z.number().nullable().optional(), // Allow selecting catalog for organization
   price: z.number().min(0.01, "Price must be greater than 0"),
   costPrice: z.number().min(0, "Cost price must be greater than or equal to 0").optional(),
   salePrice: z.number().nullable().optional(),
@@ -123,6 +124,7 @@ export default function ProductFormWizard({ productId, catalogId, onSuccess }: P
       slug: '',
       description: '',
       categoryId: undefined,
+      catalogId: catalogId || null, // Initial catalog ID from props
       price: 0,
       costPrice: 0,
       salePrice: null,
@@ -218,8 +220,8 @@ export default function ProductFormWizard({ productId, catalogId, onSuccess }: P
       const formattedData = {
         ...data,
         flashDealEnd: data.flashDealEnd ? new Date(data.flashDealEnd).toISOString() : null,
-        // Add catalog ID if provided
-        catalogId: catalogId,
+        // Use catalog ID from form or from props
+        catalogId: data.catalogId !== undefined ? data.catalogId : catalogId,
         // Add supplier ID from catalog if creating from catalog context
         supplierId: catalog?.supplierId,
       };
@@ -327,12 +329,30 @@ export default function ProductFormWizard({ productId, catalogId, onSuccess }: P
       const res = await apiRequest('PUT', `/api/products/${productId}`, formattedData);
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (updatedProduct) => {
       toast({
         title: 'Product updated',
         description: 'The product has been updated successfully',
       });
+      
+      // Invalidate product queries
       queryClient.invalidateQueries({ queryKey: ['/api/products'] });
+      
+      // Invalidate catalog product queries if catalogId is present
+      if (updatedProduct.catalogId) {
+        queryClient.invalidateQueries({ 
+          queryKey: [`/api/catalogs/${updatedProduct.catalogId}/products`] 
+        });
+      }
+      
+      // If we have access to the previous product data and the catalog has changed,
+      // also invalidate the previous catalog's products
+      if (product && product.catalogId && product.catalogId !== updatedProduct.catalogId) {
+        queryClient.invalidateQueries({ 
+          queryKey: [`/api/catalogs/${product.catalogId}/products`] 
+        });
+      }
+      
       if (onSuccess) {
         onSuccess();
       }

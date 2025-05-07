@@ -5,10 +5,12 @@ import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UseFormReturn } from "react-hook-form";
 import { format } from "date-fns";
+import { useQuery } from "@tanstack/react-query";
 
 interface AdditionalInfoStepProps {
   form: UseFormReturn<any>;
@@ -17,8 +19,61 @@ interface AdditionalInfoStepProps {
 export default function AdditionalInfoStep({
   form,
 }: AdditionalInfoStepProps) {
+  // Fetch catalogs for the dropdown
+  const { data: catalogs, isLoading: isLoadingCatalogs } = useQuery({
+    queryKey: ['/api/catalogs'],
+    queryFn: async () => {
+      const res = await fetch('/api/catalogs');
+      if (!res.ok) throw new Error('Failed to fetch catalogs');
+      return res.json();
+    }
+  });
+
   return (
     <div className="space-y-6">
+      {/* Catalog Assignment */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Catalog Assignment</CardTitle>
+          <CardDescription>
+            Assign this product to a catalog for better organization
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <FormField
+            control={form.control}
+            name="catalogId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Catalog</FormLabel>
+                <Select 
+                  onValueChange={(value) => field.onChange(value ? parseInt(value) : null)}
+                  value={field.value?.toString() || ''}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a catalog" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="">None</SelectItem>
+                    {catalogs?.map((catalog) => (
+                      <SelectItem key={catalog.id} value={catalog.id.toString()}>
+                        {catalog.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormDescription>
+                  Assigning a product to a catalog helps with organization and bulk operations
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle>Featured & Flash Deal Settings</CardTitle>
