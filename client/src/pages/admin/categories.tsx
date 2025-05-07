@@ -17,24 +17,51 @@ import {
   DropdownMenu, 
   DropdownMenuContent, 
   DropdownMenuItem, 
-  DropdownMenuTrigger 
+  DropdownMenuTrigger, 
+  DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Edit, Trash, MoreHorizontal } from "lucide-react";
+import { 
+  Loader2, 
+  Plus, 
+  Edit, 
+  Trash, 
+  MoreHorizontal, 
+  FolderTree, 
+  Tag, 
+  ChevronRight, 
+  Layers, 
+  ArrowUpDown 
+} from "lucide-react";
 import { slugify } from "@/lib/utils";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Category } from "@shared/schema";
+import { Link, useLocation } from "wouter";
 
 export default function AdminCategories() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [, navigate] = useLocation();
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [newSlug, setNewSlug] = useState("");
   const [newDescription, setNewDescription] = useState("");
-
+  const [newParentId, setNewParentId] = useState<string | null>(null);
+  const [newLevel, setNewLevel] = useState<number>(0);
+  const [newDisplayOrder, setNewDisplayOrder] = useState<number>(0);
+  const [categoryView, setCategoryView] = useState<'grid' | 'tree'>('grid');
+  const [filterLevel, setFilterLevel] = useState<string | null>(null);
+  
   // Fetch categories
   const { data: categories, isLoading } = useQuery<Category[]>({
     queryKey: ["/api/categories"],
@@ -44,10 +71,27 @@ export default function AdminCategories() {
       return await response.json();
     },
   });
+  
+  // Fetch hierarchical category data for tree view
+  const { data: hierarchicalCategories } = useQuery<Array<{ category: Category, children: Category[] }>>({
+    queryKey: ["/api/categories/main/with-children"],
+    queryFn: async () => {
+      const response = await fetch("/api/categories/main/with-children");
+      if (!response.ok) throw new Error("Failed to fetch hierarchical categories");
+      return await response.json();
+    },
+  });
 
   // Create category mutation
   const createMutation = useMutation({
-    mutationFn: async (data: { name: string; slug: string; description: string }) => {
+    mutationFn: async (data: { 
+      name: string; 
+      slug: string; 
+      description: string; 
+      parentId?: number;
+      level: number;
+      displayOrder: number;
+    }) => {
       const response = await fetch("/api/categories", {
         method: "POST",
         headers: {
@@ -64,6 +108,7 @@ export default function AdminCategories() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/categories/main/with-children"] });
       toast({
         title: "Category created",
         description: "The category has been created successfully",
@@ -71,6 +116,9 @@ export default function AdminCategories() {
       setNewName("");
       setNewSlug("");
       setNewDescription("");
+      setNewParentId(null);
+      setNewLevel(0);
+      setNewDisplayOrder(0);
     },
     onError: (error) => {
       toast({
@@ -83,16 +131,27 @@ export default function AdminCategories() {
 
   // Update category mutation
   const updateMutation = useMutation({
-    mutationFn: async (data: { id: number; name: string; slug: string; description: string }) => {
+    mutationFn: async (data: { 
+      id: number; 
+      name: string; 
+      slug: string; 
+      description: string;
+      parentId?: number | null;
+      level: number;
+      displayOrder: number;
+    }) => {
       const response = await fetch(`/api/categories/${data.id}`, {
-        method: "PATCH",
+        method: "PUT", // Changed from PATCH to match server implementation
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
           name: data.name,
           slug: data.slug,
-          description: data.description
+          description: data.description,
+          parentId: data.parentId === 0 ? null : data.parentId,
+          level: data.level,
+          displayOrder: data.displayOrder
         }),
       });
 
@@ -104,6 +163,7 @@ export default function AdminCategories() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/categories/main/with-children"] });
       toast({
         title: "Category updated",
         description: "The category has been updated successfully",
@@ -133,6 +193,7 @@ export default function AdminCategories() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/categories/main/with-children"] });
       toast({
         title: "Category deleted",
         description: "The category has been deleted successfully",
@@ -148,6 +209,77 @@ export default function AdminCategories() {
     },
   });
 
+  // Update display order mutation
+  const updateDisplayOrderMutation = useMutation({
+    mutationFn: async (data: { id: number; displayOrder: number }) => {
+      const response = await fetch(`/api/categories/${data.id}/display-order`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ displayOrder: data.displayOrder }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update category display order");
+      }
+
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/categories/main/with-children"] });
+      toast({
+        title: "Display order updated",
+        description: "The category display order has been updated",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: String(error),
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Effect to set initial display order for new categories
+  useEffect(() => {
+    if (categories && categories.length > 0) {
+      // If parent is selected, find the max display order among its children
+      if (newParentId) {
+        const parentIdNum = parseInt(newParentId);
+        const siblingCategories = categories.filter(c => c.parentId === parentIdNum);
+        if (siblingCategories.length > 0) {
+          const maxOrder = Math.max(...siblingCategories.map(c => c.displayOrder || 0));
+          setNewDisplayOrder(maxOrder + 1);
+          return;
+        }
+      }
+      
+      // Otherwise, for level 0 categories
+      const levelZeroCategories = categories.filter(c => c.level === 0);
+      if (levelZeroCategories.length > 0) {
+        const maxOrder = Math.max(...levelZeroCategories.map(c => c.displayOrder || 0));
+        setNewDisplayOrder(maxOrder + 1);
+      } else {
+        setNewDisplayOrder(0);
+      }
+    }
+  }, [categories, newParentId]);
+
+  // Effect to update level based on parent selection
+  useEffect(() => {
+    if (newParentId) {
+      const parentCategory = categories?.find(c => c.id === parseInt(newParentId));
+      if (parentCategory) {
+        setNewLevel((parentCategory.level || 0) + 1);
+      }
+    } else {
+      setNewLevel(0);
+    }
+  }, [newParentId, categories]);
+
   const handleCreateCategory = () => {
     if (!newName) {
       toast({
@@ -161,7 +293,10 @@ export default function AdminCategories() {
     createMutation.mutate({
       name: newName,
       slug: newSlug || slugify(newName),
-      description: newDescription
+      description: newDescription,
+      parentId: newParentId ? parseInt(newParentId) : undefined,
+      level: newLevel,
+      displayOrder: newDisplayOrder
     });
   };
 
@@ -170,6 +305,9 @@ export default function AdminCategories() {
     setNewName(category.name);
     setNewSlug(category.slug);
     setNewDescription(category.description || "");
+    setNewParentId(category.parentId ? category.parentId.toString() : null);
+    setNewLevel(category.level || 0);
+    setNewDisplayOrder(category.displayOrder || 0);
   };
 
   const handleUpdateCategory = () => {
@@ -188,7 +326,10 @@ export default function AdminCategories() {
       id: selectedCategory.id,
       name: newName,
       slug: newSlug || slugify(newName),
-      description: newDescription
+      description: newDescription,
+      parentId: newParentId ? parseInt(newParentId) : null,
+      level: newLevel,
+      displayOrder: newDisplayOrder
     });
   };
 
@@ -201,6 +342,13 @@ export default function AdminCategories() {
     if (selectedCategory) {
       deleteMutation.mutate(selectedCategory.id);
     }
+  };
+  
+  // Helper to get parent category name
+  const getCategoryParentName = (category: Category): string => {
+    if (!category.parentId) return "None";
+    const parent = categories?.find(c => c.id === category.parentId);
+    return parent ? parent.name : "Unknown";
   };
 
   return (
