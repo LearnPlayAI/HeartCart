@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { ZodError } from "zod";
 import { removeImageBackground, generateProductTags, analyzeProductImage, suggestPrice, getAvailableAiModels, getCurrentAiModelSetting, updateAiModel } from "./ai-service";
+import { ImageService, THUMBNAIL_SIZES } from "./image-service";
 import { 
   insertCartItemSchema, 
   insertOrderSchema, 
