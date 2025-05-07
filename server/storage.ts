@@ -2075,6 +2075,15 @@ export class DatabaseStorage implements IStorage {
     
     return options.map(row => row.option);
   }
+
+  async getGlobalAttributeOptionsForProduct(productAttributeId: number): Promise<ProductGlobalAttributeOption[]> {
+    const options = await db
+      .select()
+      .from(productGlobalAttributeOptions)
+      .where(eq(productGlobalAttributeOptions.productAttributeId, productAttributeId));
+    
+    return options;
+  }
   
   async addGlobalAttributeOptionToProduct(productAttributeId: number, optionId: number): Promise<ProductGlobalAttributeOption> {
     // Check if this option is already assigned
