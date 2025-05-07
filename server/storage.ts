@@ -18,6 +18,7 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, like, and, desc, asc, sql, inArray, isNull, not, or, SQL } from "drizzle-orm";
+import { objectStore } from "./object-store";
 
 export interface IStorage {
   // User operations
@@ -1020,8 +1021,74 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteProductImage(id: number): Promise<boolean> {
-    const result = await db.delete(productImages).where(eq(productImages.id, id));
+    const [image] = await db
+      .select()
+      .from(productImages)
+      .where(eq(productImages.id, id));
+      
+    if (image) {
+      // Delete the image file from object storage if it exists
+      if (image.objectKey) {
+        try {
+          await objectStore.deleteFile(image.objectKey);
+          console.log(`Deleted original image from object storage: ${image.objectKey}`);
+        } catch (error) {
+          console.error(`Error deleting original image from object storage: ${image.objectKey}`, error);
+          // Continue with deletion even if file deletion fails
+        }
+      }
+      
+      // Delete the background-removed image if it exists
+      if (image.bgRemovedObjectKey) {
+        try {
+          await objectStore.deleteFile(image.bgRemovedObjectKey);
+          console.log(`Deleted bg removed image from object storage: ${image.bgRemovedObjectKey}`);
+        } catch (error) {
+          console.error(`Error deleting bg removed image from object storage: ${image.bgRemovedObjectKey}`, error);
+          // Continue with deletion even if file deletion fails
+        }
+      }
+    }
+    
+    // Delete the database record
+    await db.delete(productImages).where(eq(productImages.id, id));
     return true;
+  }
+  
+  async deleteProduct(id: number): Promise<boolean> {
+    // First, get all product images to delete them from object storage
+    const productImagesData = await this.getProductImages(id);
+    
+    // Delete each image from database and object storage
+    for (const image of productImagesData) {
+      await this.deleteProductImage(image.id);
+    }
+    
+    // Delete product attribute values
+    await db.delete(productAttributeValues).where(eq(productAttributeValues.productId, id));
+    
+    // Delete product attribute combinations
+    await db.delete(productAttributeCombinations).where(eq(productAttributeCombinations.productId, id));
+    
+    // Finally delete the product itself
+    await db.delete(products).where(eq(products.id, id));
+    
+    return true;
+  }
+  
+  async bulkUpdateProductStatus(productIds: number[], isActive: boolean): Promise<number> {
+    if (productIds.length === 0) {
+      return 0;
+    }
+    
+    // Update all products in the list to the new status
+    await db
+      .update(products)
+      .set({ isActive })
+      .where(inArray(products.id, productIds));
+      
+    // Return the number of affected rows
+    return productIds.length;
   }
 
   // AI Recommendation operations

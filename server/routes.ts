@@ -442,6 +442,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const products = await storage.getAllProducts(limit, offset, categoryId, search, options);
     res.json(products);
   }));
+  
+  // Bulk update product status endpoint
+  app.post("/api/products/bulk-update-status", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    // Check if user is admin
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can update product status" });
+    }
+    
+    const { productIds, isActive } = req.body;
+    
+    if (!Array.isArray(productIds) || productIds.length === 0) {
+      return res.status(400).json({ message: "Product IDs array is required" });
+    }
+    
+    if (typeof isActive !== 'boolean') {
+      return res.status(400).json({ message: "isActive must be a boolean value" });
+    }
+    
+    const updatedCount = await storage.bulkUpdateProductStatus(productIds, isActive);
+    res.json({ 
+      success: true, 
+      count: updatedCount,
+      message: `${updatedCount} products ${isActive ? 'activated' : 'deactivated'} successfully` 
+    });
+  }));
 
   // Specific route patterns must be defined before generic patterns with path parameters
   app.get("/api/products/slug/:slug", handleErrors(async (req: Request, res: Response) => {
@@ -607,6 +634,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const updatedProduct = await storage.updateProduct(productId, updateData);
     
     res.json(updatedProduct);
+  }));
+  
+  // Delete a product endpoint
+  app.delete("/api/products/:id", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    // Check if user is admin
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can delete products" });
+    }
+    
+    const productId = parseInt(req.params.id);
+    
+    if (isNaN(productId)) {
+      return res.status(400).json({ message: "Invalid product ID" });
+    }
+    
+    // Get the existing product to check if it exists
+    const existingProduct = await storage.getProductById(productId);
+    
+    if (!existingProduct) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+    
+    try {
+      // Delete the product and all associated data
+      const success = await storage.deleteProduct(productId);
+      
+      res.json({ 
+        success, 
+        message: `Product "${existingProduct.name}" was successfully deleted along with all associated images and data.` 
+      });
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: "An error occurred while deleting the product. Please try again." 
+      });
+    }
   }));
 
   app.get("/api/featured-products", handleErrors(async (req: Request, res: Response) => {
