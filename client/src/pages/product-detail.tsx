@@ -117,7 +117,7 @@ const ProductDetail = () => {
   
   // Effect to update price when a valid attribute combination is selected
   useEffect(() => {
-    if (!combinations || combinations.length === 0 || !product) return;
+    if (!combinations || !product) return;
     
     // Check if all attributes have been selected
     const allSelected = categoryAttributes?.every(attr => selectedAttributes[attr.id]) || false;
@@ -481,32 +481,11 @@ const ProductDetail = () => {
                 .filter(p => p.id !== product.id)
                 .slice(0, 5)
                 .map(relatedProduct => (
-                  <Link 
-                    key={relatedProduct.id} 
-                    href={`/product/${relatedProduct.slug}`}
-                    className="product-card bg-white rounded-lg shadow-md overflow-hidden"
-                  >
-                    <img 
-                      src={relatedProduct.imageUrl || ''} 
-                      alt={relatedProduct.name || 'Product image'} 
-                      className="w-full h-40 object-cover"
-                    />
-                    <div className="p-3">
-                      <h3 className="text-sm font-medium text-gray-800 mb-1 line-clamp-2">
-                        {relatedProduct.name}
-                      </h3>
-                      <div className="flex items-baseline">
-                        <span className="text-[#FF69B4] font-bold">
-                          {formatCurrency(relatedProduct.salePrice || relatedProduct.price)}
-                        </span>
-                        {relatedProduct.salePrice && (
-                          <span className="text-gray-500 text-xs ml-1 line-through">
-                            {formatCurrency(relatedProduct.price)}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </Link>
+                  <ProductCard
+                    key={relatedProduct.id}
+                    product={relatedProduct}
+                    showAddToCart={false}
+                  />
                 ))}
             </div>
           </div>
