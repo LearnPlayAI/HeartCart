@@ -78,8 +78,8 @@ export default function ImagesBasicInfoStep({
     
     try {
       const endpoint = productId 
-        ? `/api/products/${productId}/images` 
-        : '/api/products/images/temp';
+        ? `/api/upload/products/${productId}/images` 
+        : '/api/upload/products/images/temp';
       
       const res = await fetch(endpoint, {
         method: 'POST',
