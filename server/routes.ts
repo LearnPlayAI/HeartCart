@@ -1949,7 +1949,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     // Get the existing product to check if it exists
-    const existingProduct = await storage.getProduct(productId);
+    const existingProduct = await storage.getProductById(productId);
     
     if (!existingProduct) {
       return res.status(404).json({ message: "Product not found" });
@@ -1959,7 +1959,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const updatedProduct = await storage.updateProduct(productId, {
       name,
       price,
-      listPrice,
+      listPrice: listPrice === undefined ? undefined : listPrice,
       sku,
       stockQuantity,
       isActive
