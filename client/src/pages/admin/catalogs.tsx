@@ -77,8 +77,16 @@ export default function AdminCatalogs() {
   const [selectedCatalog, setSelectedCatalog] = useState<Catalog | null>(null);
 
   // Query catalogs from API
-  const { data: catalogs, isLoading } = useQuery<Catalog[]>({
+  const { data: catalogs, isLoading, refetch } = useQuery<Catalog[]>({
     queryKey: ["/api/catalogs", searchQuery],
+    queryFn: async () => {
+      // Add explicit query parameter to force showing inactive catalogs for admins
+      const response = await fetch(`/api/catalogs?activeOnly=false&q=${encodeURIComponent(searchQuery)}`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch catalogs");
+      }
+      return response.json();
+    }
   });
 
   // CRUD operations
@@ -165,7 +173,18 @@ export default function AdminCatalogs() {
       <Card>
         <CardHeader className="py-4">
           <div className="flex items-center justify-between">
-            <CardTitle>All Catalogs</CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle>All Catalogs</CardTitle>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => refetch()} 
+                title="Refresh catalogs list"
+                className="h-8 px-2"
+              >
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+            </div>
             <div className="relative w-64">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input

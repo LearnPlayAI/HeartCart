@@ -23,7 +23,8 @@ import {
   Factory,
   MoreVertical,
   Edit,
-  Trash
+  Trash,
+  RefreshCw
 } from "lucide-react";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
@@ -66,9 +67,17 @@ export default function AdminSuppliers() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
   
-  // Query suppliers from API
-  const { data: suppliers, isLoading } = useQuery<Supplier[]>({
+  // Query suppliers from API - set queryKey to include a parameter forcing inactive suppliers to be shown
+  const { data: suppliers, isLoading, refetch } = useQuery<Supplier[]>({
     queryKey: ["/api/suppliers", searchQuery],
+    queryFn: async () => {
+      // Add explicit query parameter to force showing inactive suppliers for admins
+      const response = await fetch(`/api/suppliers?activeOnly=false&q=${encodeURIComponent(searchQuery)}`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch suppliers");
+      }
+      return response.json();
+    }
   });
 
   // CRUD operations
@@ -138,7 +147,18 @@ export default function AdminSuppliers() {
       <Card>
         <CardHeader className="py-4">
           <div className="flex items-center justify-between">
-            <CardTitle>All Suppliers</CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle>All Suppliers</CardTitle>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => refetch()} 
+                title="Refresh suppliers list"
+                className="h-8 px-2"
+              >
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+            </div>
             <div className="relative w-64">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
