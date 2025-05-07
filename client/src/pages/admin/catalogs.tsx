@@ -210,13 +210,14 @@ export default function AdminCatalogs() {
                 <TableHead>Start Date</TableHead>
                 <TableHead>End Date</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Products</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-10">
+                  <TableCell colSpan={8} className="text-center py-10">
                     <div className="flex justify-center">
                       <Loader2 className="h-8 w-8 animate-spin text-pink-500" />
                     </div>
@@ -266,6 +267,17 @@ export default function AdminCatalogs() {
                         {catalog.isActive ? "Active" : "Inactive"}
                       </Badge>
                     </TableCell>
+                    <TableCell>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => navigate(`/admin/catalogs/${catalog.id}/products`)}
+                        className="flex items-center gap-1"
+                      >
+                        <ShoppingBag className="h-3.5 w-3.5" />
+                        <span>Manage</span>
+                      </Button>
+                    </TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -276,6 +288,10 @@ export default function AdminCatalogs() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          <DropdownMenuItem onClick={() => navigate(`/admin/catalogs/${catalog.id}/products`)}>
+                            <ShoppingBag className="mr-2 h-4 w-4" />
+                            Manage Products
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => navigate(`/admin/catalogs/${catalog.id}`)}>
                             <Eye className="mr-2 h-4 w-4" />
                             View
@@ -299,7 +315,7 @@ export default function AdminCatalogs() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-10">
+                  <TableCell colSpan={8} className="text-center py-10">
                     <div className="flex flex-col items-center justify-center space-y-2">
                       <BookOpen className="h-10 w-10 text-gray-400" />
                       <div className="text-lg font-medium">No catalogs found</div>
