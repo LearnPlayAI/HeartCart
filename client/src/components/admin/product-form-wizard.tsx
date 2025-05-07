@@ -161,6 +161,15 @@ export default function ProductFormWizard({ productId, catalogId, onSuccess }: P
       // Pre-populate relevant form fields from catalog
       form.setValue('isActive', catalog.isActive);
       
+      // Set the supplier ID from the catalog
+      if (catalog.supplierId) {
+        console.log("Setting supplier ID from catalog:", catalog.supplierId);
+      }
+      
+      // Initialize default values for dimensions, sale price and discount
+      form.setValue('salePrice', null);
+      form.setValue('discount', 0);
+      
       // If catalog has default markup percentage, use it to help with pricing calculations
       if (catalog.defaultMarkupPercentage) {
         // Listen for changes in cost price to auto-calculate retail price
@@ -209,6 +218,8 @@ export default function ProductFormWizard({ productId, catalogId, onSuccess }: P
         flashDealEnd: data.flashDealEnd ? new Date(data.flashDealEnd).toISOString() : null,
         // Add catalog ID if provided
         catalogId: catalogId,
+        // Add supplier ID from catalog if creating from catalog context
+        supplierId: catalog?.supplierId,
       };
       
       delete formattedData.newTag;
