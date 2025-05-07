@@ -92,17 +92,23 @@ export default function ImagesBasicInfoStep({
       
       const data = await res.json();
       
-      if (!productId && data.success && data.files && Array.isArray(data.files)) {
-        // Handle temp file upload response for new product
-        const tempImages = data.files.map(file => ({
-          id: Date.now() + Math.floor(Math.random() * 1000), // Temporary ID until we create the product
-          url: file.path,
-          alt: '',
+      if (data.success && data.files && Array.isArray(data.files)) {
+        // Handle standard file upload response format
+        const newImages = data.files.map(file => ({
+          id: Date.now() + Math.floor(Math.random() * 1000), // Temporary ID 
+          url: file.url, // Use url from response
+          objectKey: file.objectKey,
+          alt: file.originalname || '',
           isMain: false,
-          isTemp: true,
+          isTemp: !productId, // Mark as temp if no productId
           file: file
         }));
-        setUploadedImages(prev => [...prev, ...tempImages]);
+        setUploadedImages(prev => [...prev, ...newImages]);
+        
+        toast({
+          title: "Upload Complete",
+          description: `Successfully uploaded ${data.files.length} images`,
+        });
       } else if (Array.isArray(data)) {
         // Handle multiple images from existing product
         setUploadedImages(prev => [...prev, ...data]);

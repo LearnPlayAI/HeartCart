@@ -174,6 +174,14 @@ const ProductImageUploader = ({ productId, onUploadComplete }: ProductImageUploa
       
       const data = await response.json();
       
+      // Log successful response for debugging
+      console.log("Upload successful, response:", data);
+      
+      // Verify we got the expected response format
+      if (!data.success || !data.files || !Array.isArray(data.files)) {
+        console.warn("Unexpected response format:", data);
+      }
+      
       // Update all files to success
       setFiles(prev => 
         prev.map(file => {
