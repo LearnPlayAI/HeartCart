@@ -1165,6 +1165,8 @@ export class DatabaseStorage implements IStorage {
         };
       })
     );
+    
+    return catalogsWithProductCount;
   }
 
   async getCatalogsBySupplierId(supplierId: number, activeOnly = true): Promise<any[]> {
@@ -1212,19 +1214,38 @@ export class DatabaseStorage implements IStorage {
     
     const catalogData = await query;
     
-    // Add product count and format dates properly
-    return catalogData.map(catalog => {
-      // Format all dates as ISO strings
-      const formattedCatalog = {
-        ...catalog,
-        startDate: catalog.startDate ? new Date(catalog.startDate).toISOString() : null,
-        endDate: catalog.endDate ? new Date(catalog.endDate).toISOString() : null,
-        createdAt: catalog.createdAt ? new Date(catalog.createdAt).toISOString() : null,
-        productsCount: 0 // Default to 0 until we implement product count functionality
-      };
-      
-      return formattedCatalog;
-    });
+    // Add product count for each catalog
+    const catalogsWithProductCount = await Promise.all(
+      catalogData.map(async (catalog) => {
+        // Count products in this catalog
+        const productsQuery = activeOnly
+          ? db
+              .select({ count: sql<number>`count(*)` })
+              .from(products)
+              .where(and(
+                eq(products.catalogId, catalog.id),
+                eq(products.isActive, true)
+              ))
+          : db
+              .select({ count: sql<number>`count(*)` })
+              .from(products)
+              .where(eq(products.catalogId, catalog.id));
+              
+        const [result] = await productsQuery;
+        const count = result?.count || 0;
+        
+        // Format all dates as ISO strings
+        return {
+          ...catalog,
+          startDate: catalog.startDate ? new Date(catalog.startDate).toISOString() : null,
+          endDate: catalog.endDate ? new Date(catalog.endDate).toISOString() : null,
+          createdAt: catalog.createdAt ? new Date(catalog.createdAt).toISOString() : null,
+          productsCount: Number(count)
+        };
+      })
+    );
+    
+    return catalogsWithProductCount;
   }
 
   async getCatalogById(id: number): Promise<any | undefined> {
@@ -1249,13 +1270,21 @@ export class DatabaseStorage implements IStorage {
 
     if (!catalogData) return undefined;
     
+    // Count products in this catalog
+    const [productCountResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(products)
+      .where(eq(products.catalogId, id));
+      
+    const productCount = productCountResult?.count || 0;
+    
     // For edit form compatibility, add placeholders and format dates properly
     const catalog = {
       ...catalogData,
       startDate: catalogData.startDate ? new Date(catalogData.startDate).toISOString() : null,
       endDate: catalogData.endDate ? new Date(catalogData.endDate).toISOString() : null,
       freeShipping: false, // Placeholder for freeShipping
-      productsCount: 0, // Default product count
+      productsCount: Number(productCount),
       createdAt: catalogData.createdAt ? new Date(catalogData.createdAt).toISOString() : null,
       updatedAt: catalogData.updatedAt ? new Date(catalogData.updatedAt).toISOString() : null
     };
