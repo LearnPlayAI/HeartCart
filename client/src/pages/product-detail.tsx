@@ -197,6 +197,17 @@ const ProductDetailContent = ({
   const { data: globalAttributes = [] } = useQuery<any[]>({
     queryKey: ['/api/products', product?.id, 'global-attributes'],
     enabled: !!product?.id,
+    queryFn: async () => {
+      console.log('Fetching global attributes for product id:', product?.id);
+      const res = await fetch(`/api/products/${product?.id}/global-attributes`);
+      if (!res.ok) {
+        console.error('Error fetching global attributes:', res.statusText);
+        return [];
+      }
+      const data = await res.json();
+      console.log('Global attributes response:', data);
+      return data;
+    }
   });
   
   if (isLoading) {
@@ -431,12 +442,12 @@ const ProductDetailContent = ({
             <Separator className="my-4" />
             
             {/* Global Attribute Selection */}
-            {globalAttributes && globalAttributes.length > 0 && (
-              <div className="space-y-4 mb-6">
-                <h3 className="text-lg font-semibold">Product Options</h3>
-                
-                {globalAttributes.map(productAttr => {
-                  // API returns different format, extract attribute info from it
+            <div className="space-y-4 mb-6">
+              <h3 className="text-lg font-semibold">Product Options</h3>
+              
+              {globalAttributes && globalAttributes.length > 0 ? (
+                globalAttributes.map(productAttr => {
+                  console.log('Rendering attribute:', productAttr);
                   const attribute = productAttr.attribute || productAttr;
                   const options = productAttr.options || [];
                   
@@ -478,9 +489,13 @@ const ProductDetailContent = ({
                       </Select>
                     </div>
                   );
-                })}
-              </div>
-            )}
+                })
+              ) : (
+                <div className="text-sm text-gray-500">
+                  (Debug: No product options available)
+                </div>
+              )}
+            </div>
             
             {/* Category Attribute Selection */}
             {categoryAttributes && categoryAttributes.length > 0 && productAttributes && (
