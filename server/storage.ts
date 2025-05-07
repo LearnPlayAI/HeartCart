@@ -16,7 +16,9 @@ import {
   productAttributeValues, type ProductAttributeValue, type InsertProductAttributeValue,
   productAttributeCombinations, type ProductAttributeCombination, type InsertProductAttributeCombination,
   globalAttributes, type GlobalAttribute, type InsertGlobalAttribute,
-  globalAttributeOptions, type GlobalAttributeOption, type InsertGlobalAttributeOption
+  globalAttributeOptions, type GlobalAttributeOption, type InsertGlobalAttributeOption,
+  productGlobalAttributes, type ProductGlobalAttribute, type InsertProductGlobalAttribute,
+  productGlobalAttributeOptions, type ProductGlobalAttributeOption, type InsertProductGlobalAttributeOption
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, like, and, desc, asc, sql, inArray, isNull, not, or, SQL } from "drizzle-orm";
@@ -149,7 +151,19 @@ export interface IStorage {
   deleteGlobalAttributeOption(id: number): Promise<boolean>;
   
   // Product Global Attribute operations
-  getProductGlobalAttributes(productId: number): Promise<(ProductAttributeValue & { globalAttribute: GlobalAttribute })[]>;
+  getProductGlobalAttributes(productId: number): Promise<(ProductGlobalAttribute & { attribute: GlobalAttribute, options: GlobalAttributeOption[] })[]>;
+  addGlobalAttributeToProduct(productId: number, attributeId: number): Promise<ProductGlobalAttribute>;
+  removeGlobalAttributeFromProduct(productId: number, attributeId: number): Promise<boolean>;
+  
+  // Product Global Attribute Option operations
+  getProductGlobalAttributeOptions(productAttributeId: number): Promise<ProductGlobalAttributeOption[]>;
+  addGlobalAttributeOptionToProduct(productAttributeId: number, optionId: number): Promise<ProductGlobalAttributeOption>;
+  removeGlobalAttributeOptionFromProduct(productAttributeId: number, optionId: number): Promise<boolean>;
+  getGlobalAttributesWithOptionsForProduct(productId: number): Promise<{ 
+    attribute: GlobalAttribute; 
+    productAttributeId: number;
+    selectedOptions: GlobalAttributeOption[] 
+  }[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1963,30 +1977,159 @@ export class DatabaseStorage implements IStorage {
   }
   
   // Product Global Attribute operations
-  async getProductGlobalAttributes(productId: number): Promise<(ProductAttributeValue & { globalAttribute: GlobalAttribute })[]> {
-    // Get attribute values where globalAttributeId is not null and isFromGlobalAttribute is true
-    const attributeValues = await db
+  async getProductGlobalAttributes(productId: number): Promise<(ProductGlobalAttribute & { attribute: GlobalAttribute, options: GlobalAttributeOption[] })[]> {
+    const result = await db
       .select({
-        value: productAttributeValues,
-        globalAttribute: globalAttributes
+        productAttr: productGlobalAttributes,
+        attribute: globalAttributes
       })
-      .from(productAttributeValues)
+      .from(productGlobalAttributes)
       .innerJoin(
         globalAttributes,
-        eq(productAttributeValues.globalAttributeId, globalAttributes.id)
+        eq(productGlobalAttributes.attributeId, globalAttributes.id)
       )
+      .where(eq(productGlobalAttributes.productId, productId));
+    
+    // For each product-attribute relationship, get the selected options
+    const enriched = await Promise.all(result.map(async (row) => {
+      const options = await this.getProductGlobalAttributeOptions(row.productAttr.id);
+      return {
+        ...row.productAttr,
+        attribute: row.attribute,
+        options
+      };
+    }));
+    
+    return enriched;
+  }
+  
+  async addGlobalAttributeToProduct(productId: number, attributeId: number): Promise<ProductGlobalAttribute> {
+    // Check if this attribute is already assigned to this product
+    const existing = await db
+      .select()
+      .from(productGlobalAttributes)
       .where(
         and(
-          eq(productAttributeValues.productId, productId),
-          eq(productAttributeValues.isFromGlobalAttribute, true),
-          not(isNull(productAttributeValues.globalAttributeId))
+          eq(productGlobalAttributes.productId, productId),
+          eq(productGlobalAttributes.attributeId, attributeId)
         )
       );
     
-    // Map the joined result to the expected output format
-    return attributeValues.map(row => ({
-      ...row.value,
-      globalAttribute: row.globalAttribute
+    if (existing.length > 0) {
+      return existing[0]; // Return the existing relationship
+    }
+    
+    // Create new relationship
+    const [newAttr] = await db
+      .insert(productGlobalAttributes)
+      .values({
+        productId,
+        attributeId
+      })
+      .returning();
+    
+    return newAttr;
+  }
+  
+  async removeGlobalAttributeFromProduct(productId: number, attributeId: number): Promise<boolean> {
+    // Find the product-attribute relationship
+    const [relation] = await db
+      .select()
+      .from(productGlobalAttributes)
+      .where(
+        and(
+          eq(productGlobalAttributes.productId, productId),
+          eq(productGlobalAttributes.attributeId, attributeId)
+        )
+      );
+    
+    if (!relation) {
+      return false; // Nothing to delete
+    }
+    
+    // First delete all options associated with this product-attribute relationship
+    await db
+      .delete(productGlobalAttributeOptions)
+      .where(eq(productGlobalAttributeOptions.productAttributeId, relation.id));
+    
+    // Then delete the relationship itself
+    const result = await db
+      .delete(productGlobalAttributes)
+      .where(eq(productGlobalAttributes.id, relation.id));
+    
+    return result.count > 0;
+  }
+  
+  // Product Global Attribute Option operations
+  async getProductGlobalAttributeOptions(productAttributeId: number): Promise<GlobalAttributeOption[]> {
+    const options = await db
+      .select({
+        option: globalAttributeOptions
+      })
+      .from(productGlobalAttributeOptions)
+      .innerJoin(
+        globalAttributeOptions,
+        eq(productGlobalAttributeOptions.optionId, globalAttributeOptions.id)
+      )
+      .where(eq(productGlobalAttributeOptions.productAttributeId, productAttributeId));
+    
+    return options.map(row => row.option);
+  }
+  
+  async addGlobalAttributeOptionToProduct(productAttributeId: number, optionId: number): Promise<ProductGlobalAttributeOption> {
+    // Check if this option is already assigned
+    const existing = await db
+      .select()
+      .from(productGlobalAttributeOptions)
+      .where(
+        and(
+          eq(productGlobalAttributeOptions.productAttributeId, productAttributeId),
+          eq(productGlobalAttributeOptions.optionId, optionId)
+        )
+      );
+    
+    if (existing.length > 0) {
+      return existing[0]; // Return the existing relationship
+    }
+    
+    // Create new relationship
+    const [newOption] = await db
+      .insert(productGlobalAttributeOptions)
+      .values({
+        productAttributeId,
+        optionId
+      })
+      .returning();
+    
+    return newOption;
+  }
+  
+  async removeGlobalAttributeOptionFromProduct(productAttributeId: number, optionId: number): Promise<boolean> {
+    const result = await db
+      .delete(productGlobalAttributeOptions)
+      .where(
+        and(
+          eq(productGlobalAttributeOptions.productAttributeId, productAttributeId),
+          eq(productGlobalAttributeOptions.optionId, optionId)
+        )
+      );
+    
+    return result.count > 0;
+  }
+  
+  async getGlobalAttributesWithOptionsForProduct(productId: number): Promise<{ 
+    attribute: GlobalAttribute; 
+    productAttributeId: number;
+    selectedOptions: GlobalAttributeOption[] 
+  }[]> {
+    // Get all global attributes assigned to this product
+    const productGlobalAttrs = await this.getProductGlobalAttributes(productId);
+    
+    // Map to the required format
+    return productGlobalAttrs.map(productAttr => ({
+      attribute: productAttr.attribute,
+      productAttributeId: productAttr.id,
+      selectedOptions: productAttr.options
     }));
   }
 }

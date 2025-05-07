@@ -20,6 +20,7 @@ import {
 } from "@shared/schema";
 import { objectStore, STORAGE_FOLDERS } from "./object-store";
 import { setupAuth } from "./auth";
+import { isAuthenticated, isAdmin } from "./auth-middleware";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -2306,6 +2307,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/products/:productId/global-attributes", handleErrors(async (req: Request, res: Response) => {
     const productId = parseInt(req.params.productId);
     const attributes = await storage.getProductGlobalAttributes(productId);
+    res.json(attributes);
+  }));
+
+  // Product Global Attributes API routes
+  app.get("/api/admin/products/:productId/global-attributes", isAdmin, handleErrors(async (req: Request, res: Response) => {
+    const { productId } = req.params;
+    const attributes = await storage.getGlobalAttributesWithOptionsForProduct(parseInt(productId));
+    res.json(attributes);
+  }));
+
+  // Add a global attribute to a product
+  app.post("/api/admin/products/:productId/global-attributes", isAdmin, handleErrors(async (req: Request, res: Response) => {
+    const { productId } = req.params;
+    const { attributeId } = req.body;
+    
+    if (!attributeId) {
+      return res.status(400).json({ error: "attributeId is required" });
+    }
+    
+    const productAttribute = await storage.addGlobalAttributeToProduct(
+      parseInt(productId),
+      attributeId
+    );
+    
+    res.status(201).json(productAttribute);
+  }));
+
+  // Remove a global attribute from a product
+  app.delete("/api/admin/products/:productId/global-attributes/:attributeId", isAdmin, handleErrors(async (req: Request, res: Response) => {
+    const { productId, attributeId } = req.params;
+    
+    const removed = await storage.removeGlobalAttributeFromProduct(
+      parseInt(productId),
+      parseInt(attributeId)
+    );
+    
+    if (removed) {
+      res.status(204).send();
+    } else {
+      res.status(404).json({ error: "Attribute not found for this product" });
+    }
+  }));
+
+  // Add an option to a product's global attribute
+  app.post("/api/admin/product-attributes/:productAttributeId/options", isAdmin, handleErrors(async (req: Request, res: Response) => {
+    const { productAttributeId } = req.params;
+    const { optionId } = req.body;
+    
+    if (!optionId) {
+      return res.status(400).json({ error: "optionId is required" });
+    }
+    
+    const option = await storage.addGlobalAttributeOptionToProduct(
+      parseInt(productAttributeId),
+      optionId
+    );
+    
+    res.status(201).json(option);
+  }));
+
+  // Remove an option from a product's global attribute
+  app.delete("/api/admin/product-attributes/:productAttributeId/options/:optionId", isAdmin, handleErrors(async (req: Request, res: Response) => {
+    const { productAttributeId, optionId } = req.params;
+    
+    const removed = await storage.removeGlobalAttributeOptionFromProduct(
+      parseInt(productAttributeId),
+      parseInt(optionId)
+    );
+    
+    if (removed) {
+      res.status(204).send();
+    } else {
+      res.status(404).json({ error: "Option not found for this product attribute" });
+    }
+  }));
+
+  // Public routes for accessing product global attributes (non-admin)
+  app.get("/api/products/:productId/global-attributes", handleErrors(async (req: Request, res: Response) => {
+    const { productId } = req.params;
+    const attributes = await storage.getGlobalAttributesWithOptionsForProduct(parseInt(productId));
     res.json(attributes);
   }));
 
