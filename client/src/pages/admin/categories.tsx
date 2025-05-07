@@ -1175,6 +1175,56 @@ export default function AdminCategories() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        
+        {/* Cascade Visibility Dialog */}
+        <Dialog open={isCascadeDialogOpen} onOpenChange={setIsCascadeDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{cascadeVisibilityData.isActive ? 'Show' : 'Hide'} Category</DialogTitle>
+              <DialogDescription>
+                <p className="mb-2">
+                  You are about to {cascadeVisibilityData.isActive ? 'show' : 'hide'} the category "{cascadeVisibilityData.categoryName}".
+                </p>
+                <p>Would you like to apply the same visibility to its subcategories and products?</p>
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="flex flex-col sm:flex-row gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setIsCascadeDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                variant="secondary" 
+                onClick={() => handleConfirmCascadeVisibility(false)}
+                disabled={updateVisibilityMutation.isPending}
+              >
+                {updateVisibilityMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  'Only This Category'
+                )}
+              </Button>
+              <Button 
+                onClick={() => handleConfirmCascadeVisibility(true)}
+                disabled={updateVisibilityMutation.isPending}
+              >
+                {updateVisibilityMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  'Apply to All Subcategories & Products'
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AdminLayout>
   );
