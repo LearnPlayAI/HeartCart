@@ -1459,7 +1459,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // SUPPLIER ROUTES
   app.get("/api/suppliers", handleErrors(async (req: Request, res: Response) => {
-    const activeOnly = req.query.activeOnly !== 'false'; // Default to true if not specified
+    // For admin users, show all suppliers regardless of active status
+    // For regular users, only show active suppliers
+    const user = req.user as any;
+    const isAdmin = user && user.role === 'admin';
+    const activeOnly = isAdmin ? false : req.query.activeOnly !== 'false';
+    
     const suppliers = await storage.getAllSuppliers(activeOnly);
     res.json(suppliers);
   }));
@@ -1546,7 +1551,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // CATALOG ROUTES
   app.get("/api/catalogs", handleErrors(async (req: Request, res: Response) => {
-    const activeOnly = req.query.activeOnly !== 'false'; // Default to true if not specified
+    // For admin users, show all catalogs regardless of active status
+    // For regular users, only show active catalogs
+    const user = req.user as any;
+    const isAdmin = user && user.role === 'admin';
+    const activeOnly = isAdmin ? false : req.query.activeOnly !== 'false';
+    
     const catalogs = await storage.getAllCatalogs(activeOnly);
     res.json(catalogs);
   }));
@@ -1565,7 +1575,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/suppliers/:supplierId/catalogs", handleErrors(async (req: Request, res: Response) => {
     const supplierId = parseInt(req.params.supplierId);
-    const activeOnly = req.query.activeOnly !== 'false'; // Default to true if not specified
+    // For admin users, show all catalogs regardless of active status
+    // For regular users, only show active catalogs
+    const user = req.user as any;
+    const isAdmin = user && user.role === 'admin';
+    const activeOnly = isAdmin ? false : req.query.activeOnly !== 'false';
+    
     const catalogs = await storage.getCatalogsBySupplierId(supplierId, activeOnly);
     res.json(catalogs);
   }));
@@ -1631,7 +1646,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/catalogs/:catalogId/products", handleErrors(async (req: Request, res: Response) => {
     const catalogId = parseInt(req.params.catalogId);
-    const activeOnly = req.query.activeOnly !== 'false'; // Default to true if not specified
+    // For admin users, show all products regardless of active status
+    // For regular users, only show active products
+    const user = req.user as any;
+    const isAdmin = user && user.role === 'admin';
+    const activeOnly = isAdmin ? false : req.query.activeOnly !== 'false';
+    
     const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
     const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
     
