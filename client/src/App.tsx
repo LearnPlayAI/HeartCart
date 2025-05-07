@@ -123,8 +123,8 @@ function App() {
                   <main className="flex-1">
                     <Switch>
                       <Route path="/"><Home /></Route>
-                      <Route path="/product/:slug"><ProductDetail /></Route>
                       <Route path="/product/id/:id"><ProductDetail /></Route>
+                      <Route path="/product/:slug"><ProductDetail /></Route>
                       <Route path="/category/:slug"><Category /></Route>
                       <Route path="/products"><ProductListing /></Route>
                       <ProtectedRoute path="/checkout" component={Checkout} />

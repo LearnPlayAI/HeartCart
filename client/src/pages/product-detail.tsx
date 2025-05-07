@@ -32,8 +32,12 @@ import type {
 } from '@shared/schema';
 
 const ProductDetail = () => {
-  const [match, params] = useRoute('/product/:slug');
-  const slug = params?.slug;
+  const [matchSlug, paramsSlug] = useRoute('/product/:slug');
+  const [matchId, paramsId] = useRoute('/product/id/:id');
+  
+  const slug = paramsSlug?.slug;
+  const id = paramsId?.id ? parseInt(paramsId.id, 10) : undefined;
+  
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { addItem } = useCart();
@@ -42,10 +46,30 @@ const ProductDetail = () => {
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
   const [selectedCombination, setSelectedCombination] = useState<ProductAttributeCombination | null>(null);
   
-  const { data: product, isLoading, error } = useQuery<Product>({
+  // Fetch product by slug if available
+  const { 
+    data: productFromSlug, 
+    isLoading: isLoadingSlug, 
+    error: errorSlug 
+  } = useQuery<Product>({
     queryKey: [`/api/products/slug/${slug}`],
-    enabled: !!slug,
+    enabled: !!slug && !id, // Only fetch by slug if no ID is present
   });
+  
+  // Fetch product by ID if available
+  const { 
+    data: productFromId, 
+    isLoading: isLoadingId, 
+    error: errorId 
+  } = useQuery<Product>({
+    queryKey: [`/api/products/${id}`],
+    enabled: !!id,
+  });
+  
+  // Use whichever product data is available
+  const product = productFromId || productFromSlug;
+  const isLoading = isLoadingId || isLoadingSlug;
+  const error = errorId || errorSlug;
   
   // Get related products based on the same category
   const { data: relatedProducts } = useQuery<Product[]>({
