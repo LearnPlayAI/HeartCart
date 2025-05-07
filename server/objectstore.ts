@@ -564,19 +564,42 @@ export class ObjectStorageService {
     originalFilename: string,
     contentType?: string
   ): Promise<{ url: string, objectKey: string }> {
-    // Generate a unique filename
-    const filename = this.generateUniqueFilename(originalFilename);
+    // Validate buffer before uploading
+    if (!Buffer.isBuffer(fileBuffer)) {
+      console.error(`Invalid buffer type for temp file: ${typeof fileBuffer}`);
+      throw new Error(`Invalid buffer type: ${typeof fileBuffer}`);
+    }
+    
+    console.log(`Uploading temp file: ${originalFilename}, size: ${fileBuffer.length} bytes`);
+    
+    // Use provided filename to maintain consistency between uploads
+    const filename = originalFilename;
     
     // Build the object key
     const objectKey = `${STORAGE_FOLDERS.TEMP}/${filename}`;
     
-    // Upload the file
-    const url = await this.uploadFromBuffer(objectKey, fileBuffer, {
-      contentType: contentType || this.detectContentType(filename),
-      cacheControl: 'no-cache, max-age=0' // Don't cache temp files
-    });
-    
-    return { url, objectKey };
+    try {
+      // Set explicit content type to ensure browser can display it correctly
+      const detectedContentType = contentType || this.detectContentType(filename);
+      console.log(`Content type for ${filename}: ${detectedContentType}`);
+      
+      // Upload the file
+      const url = await this.uploadFromBuffer(objectKey, fileBuffer, {
+        contentType: detectedContentType,
+        cacheControl: 'no-cache, max-age=0', // Don't cache temp files
+        filename: originalFilename  // Store original filename in metadata
+      });
+      
+      console.log(`Successfully uploaded temp file to ${objectKey}`);
+      
+      return { 
+        url: `/api/files/${objectKey}`,  // Use our file serving endpoint 
+        objectKey 
+      };
+    } catch (error: any) {
+      console.error(`Error uploading temp file ${originalFilename}:`, error);
+      throw error; // Rethrow to handle in the calling code
+    }
   }
 }
 

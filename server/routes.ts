@@ -836,29 +836,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Read the file from disk
           const fileBuffer = await fs.promises.readFile(file.path);
           
-          // Save a special copy with the expected name pattern for easier retrieval
+          // Generate consistent filename for object storage
           const timestamp = Date.now();
           const fileExt = path.extname(file.originalname);
           const baseName = path.basename(file.originalname, fileExt);
           const expectedFileName = `${baseName}_${timestamp}${fileExt}`;
           
-          // Copy the file to the expected name pattern
-          const expectedFilePath = path.join(process.cwd(), 'temp', expectedFileName);
-          await fs.promises.copyFile(file.path, expectedFilePath);
-          
-          // Upload to Object Storage
+          // Upload to Object Storage with consistent filename
           const { url, objectKey } = await objectStorageService.uploadTempFile(
             fileBuffer,
-            file.originalname,
+            expectedFileName, // Use our generated filename
             file.mimetype
           );
           
+          console.log(`Uploaded temp file to object storage: ${objectKey}, size: ${fileBuffer.length} bytes`);
+          
           processedFiles.push({
-            filename: expectedFileName,
+            filename: path.basename(objectKey),
             originalname: file.originalname,
             mimetype: file.mimetype,
             size: file.size,
-            path: `/api/files/temp/${expectedFileName}`, // Use our file serving endpoint
+            path: `/api/files/temp/${path.basename(objectKey)}`, // Use our consistent naming
             objectKey
           });
           
@@ -883,7 +881,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
   
-  // Serve temporary files
+  // Serve temporary files exclusively from Object Storage
   app.get('/temp/:filename', async (req: Request, res: Response) => {
     try {
       const filename = req.params.filename;
@@ -892,7 +890,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if the file exists in Object Storage
       const exists = await objectStorageService.exists(objectKey);
       
-      if (exists) {
+      if (!exists) {
+        console.warn(`Temp file not found in object storage: ${objectKey}`);
+        return res.status(404).send('File not found');
+      }
+      
+      try {
         // Get metadata
         const metadata = await objectStorageService.getMetadata(objectKey);
         
@@ -907,28 +910,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Set cache control for temp files
         res.setHeader('Cache-Control', 'no-cache, max-age=0');
         
-        // Stream the file from Object Storage
-        const fileStream = await objectStorageService.downloadAsStream(objectKey);
-        fileStream.pipe(res);
-        return;
+        // Get as buffer for more reliable handling
+        const buffer = await objectStorageService.downloadAsBuffer(objectKey);
+        
+        if (!Buffer.isBuffer(buffer)) {
+          throw new Error('Invalid data type returned from object storage');
+        }
+        
+        console.log(`Successfully retrieved temp file ${objectKey}: ${buffer.length} bytes`);
+        return res.end(buffer);
+      } catch (err: any) {
+        console.error(`Error retrieving temp file ${objectKey}:`, err);
+        return res.status(500).send(`Server error: ${err.message || 'Unknown error'}`);
       }
-      
-      // If not in Object Storage, try the local file system (for backward compatibility)
-      const filePath = path.join(process.cwd(), 'temp', filename);
-      
-      if (fs.existsSync(filePath)) {
-        // Send the file from the local file system
-        res.sendFile(filePath, (err) => {
-          if (err) {
-            console.error('Error serving temp file:', err);
-            res.status(404).send('File not found');
-          }
-        });
-        return;
-      }
-      
-      // File not found in either location
-      res.status(404).send('File not found');
     } catch (error: any) {
       console.error('Error serving temporary file:', error);
       res.status(500).send(`Server error: ${error.message || 'Unknown error'}`);
@@ -2007,71 +2001,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   }));
   
-  // Object storage file access endpoint with fallback to local file system
+  // Object storage file access endpoint - exclusively using Replit Object Store
   app.get('/api/files/:path(*)', async (req: Request, res: Response) => {
     try {
       const objectKey = req.params.path;
-      console.log(`Serving file from path: ${objectKey}`);
+      console.log(`Serving file from object storage: ${objectKey}`);
       
-      // Parse the path parts for potential fallback
-      const pathParts = objectKey.split('/');
-      const folderName = pathParts[0];
-      const fileName = pathParts[pathParts.length - 1];
-      
-      // Handle temp images directly from file system as a workaround
-      if (folderName === 'temp') {
-        // Look for the file in the temp directory with a similar name (by timestamp)
-        const fs = require('fs');
-        const path = require('path');
-        const tempDir = path.join(process.cwd(), 'temp');
-        
-        // Try to find an exactly matching file first
-        const exactFileName = path.join(tempDir, fileName);
-        if (fs.existsSync(exactFileName)) {
-          console.log(`Serving temp file directly from: ${exactFileName}`);
-          const fileData = fs.readFileSync(exactFileName);
-          
-          // Determine content type based on file extension
-          const ext = path.extname(fileName).toLowerCase();
-          let contentType = 'application/octet-stream'; // default
-          if (ext === '.jpg' || ext === '.jpeg') contentType = 'image/jpeg';
-          else if (ext === '.png') contentType = 'image/png';
-          else if (ext === '.webp') contentType = 'image/webp';
-          else if (ext === '.gif') contentType = 'image/gif';
-          
-          // Set headers and send file
-          res.setHeader('Content-Type', contentType);
-          res.setHeader('Cache-Control', 'public, max-age=86400');
-          return res.end(fileData);
-        }
-        
-        // If exact file not found, try to match by base name (before the timestamp)
-        const baseName = fileName.split('_')[0];
-        if (baseName) {
-          const files = fs.readdirSync(tempDir);
-          for (const file of files) {
-            if (file.includes(baseName)) {
-              console.log(`Found matching temp file: ${file}`);
-              const fileData = fs.readFileSync(path.join(tempDir, file));
-              
-              // Determine content type based on file extension
-              const ext = path.extname(file).toLowerCase();
-              let contentType = 'application/octet-stream'; // default
-              if (ext === '.jpg' || ext === '.jpeg') contentType = 'image/jpeg';
-              else if (ext === '.png') contentType = 'image/png';
-              else if (ext === '.webp') contentType = 'image/webp';
-              else if (ext === '.gif') contentType = 'image/gif';
-              
-              // Set headers and send file
-              res.setHeader('Content-Type', contentType);
-              res.setHeader('Cache-Control', 'public, max-age=86400');
-              return res.end(fileData);
-            }
-          }
-        }
-      }
-      
-      // If we're here, try the object storage
       // First check if the file exists
       if (!(await objectStorageService.exists(objectKey))) {
         return res.status(404).send('File not found');
@@ -2086,10 +2021,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       } catch (err) {
         console.warn(`Could not get metadata for ${objectKey}, using default content type`);
+        
+        // Fallback to detection based on file extension
+        const path = require('path');
+        const ext = path.extname(objectKey).toLowerCase();
+        if (ext === '.jpg' || ext === '.jpeg') contentType = 'image/jpeg';
+        else if (ext === '.png') contentType = 'image/png';
+        else if (ext === '.webp') contentType = 'image/webp';
+        else if (ext === '.gif') contentType = 'image/gif';
       }
       
       try {
-        // Try to get file as buffer (this may fail with boolean result)
+        // Get file from Replit Object Store
         const buffer = await objectStorageService.downloadAsBuffer(objectKey);
         
         // Validate that we have a proper buffer
@@ -2097,6 +2040,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error(`Invalid buffer returned for ${objectKey}, type: ${typeof buffer}`);
           throw new Error('Invalid data type returned from object storage');
         }
+        
+        console.log(`Successfully retrieved file ${objectKey} from object storage: ${buffer.length} bytes`);
         
         // Set content type and cache headers
         res.setHeader('Content-Type', contentType);
