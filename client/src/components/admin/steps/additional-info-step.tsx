@@ -1,3 +1,4 @@
+import * as React from "react";
 import { FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -6,11 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, PlusCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UseFormReturn } from "react-hook-form";
 import { format } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
+import { GlobalAttribute, GlobalAttributeOption } from "@shared/schema";
 
 interface AdditionalInfoStepProps {
   form: UseFormReturn<any>;
@@ -293,6 +297,262 @@ export default function AdditionalInfoStep({
           />
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Global Attributes</CardTitle>
+          <CardDescription>
+            Assign global attributes like color, size, material to this product
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <GlobalAttributesSection productId={form.getValues("id")} />
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// Component to manage global attributes for a product
+function GlobalAttributesSection({ productId }: { productId?: number }) {
+  const [selectedAttributes, setSelectedAttributes] = React.useState<number[]>([]);
+  
+  // Fetch all global attributes
+  const { data: globalAttributes, isLoading: isLoadingAttributes } = useQuery({
+    queryKey: ['/api/global-attributes'],
+    queryFn: async () => {
+      const res = await fetch('/api/global-attributes');
+      if (!res.ok) throw new Error('Failed to fetch global attributes');
+      return res.json() as Promise<GlobalAttribute[]>;
+    }
+  });
+  
+  // Fetch product attributes if a product ID is provided
+  const { data: productAttributes, isLoading: isLoadingProductAttributes } = useQuery({
+    queryKey: ['/api/products', productId, 'attributes'],
+    queryFn: async () => {
+      if (!productId) return [];
+      const res = await fetch(`/api/products/${productId}/attributes`);
+      if (!res.ok) throw new Error('Failed to fetch product attributes');
+      return res.json();
+    },
+    enabled: !!productId
+  });
+  
+  // Fetch attribute options for a specific attribute
+  const getAttributeOptions = async (attributeId: number) => {
+    const res = await fetch(`/api/global-attributes/${attributeId}/options`);
+    if (!res.ok) throw new Error('Failed to fetch attribute options');
+    return res.json() as Promise<GlobalAttributeOption[]>;
+  };
+  
+  // Add a global attribute to the product
+  const addAttributeToProduct = async (attributeId: number, selectedOptions: number[]) => {
+    if (!productId) return;
+    
+    try {
+      const res = await fetch(`/api/products/${productId}/attributes`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          attributeId,
+          optionIds: selectedOptions
+        })
+      });
+      
+      if (!res.ok) throw new Error('Failed to add attribute to product');
+      return true;
+    } catch (error) {
+      console.error('Error adding attribute to product:', error);
+      return false;
+    }
+  };
+  
+  // Remove a global attribute from the product
+  const removeAttributeFromProduct = async (attributeId: number) => {
+    if (!productId) return;
+    
+    try {
+      const res = await fetch(`/api/products/${productId}/attributes/${attributeId}`, {
+        method: 'DELETE'
+      });
+      
+      if (!res.ok) throw new Error('Failed to remove attribute from product');
+      return true;
+    } catch (error) {
+      console.error('Error removing attribute from product:', error);
+      return false;
+    }
+  };
+  
+  return (
+    <div className="space-y-4">
+      {isLoadingAttributes ? (
+        <div className="text-center py-4">Loading global attributes...</div>
+      ) : globalAttributes && globalAttributes.length > 0 ? (
+        <>
+          <div className="mb-4">
+            <Select onValueChange={(value) => {
+              const attributeId = parseInt(value);
+              if (!selectedAttributes.includes(attributeId)) {
+                setSelectedAttributes([...selectedAttributes, attributeId]);
+              }
+            }}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select an attribute to add" />
+              </SelectTrigger>
+              <SelectContent>
+                {globalAttributes.map((attribute) => (
+                  <SelectItem 
+                    key={attribute.id} 
+                    value={attribute.id.toString()}
+                    disabled={selectedAttributes.includes(attribute.id)}
+                  >
+                    {attribute.displayName || attribute.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {selectedAttributes.map((attributeId) => {
+            const attribute = globalAttributes.find(a => a.id === attributeId);
+            if (!attribute) return null;
+            
+            return (
+              <Card key={attribute.id} className="mb-4">
+                <CardHeader className="pb-3">
+                  <div className="flex justify-between items-center">
+                    <CardTitle className="text-lg">{attribute.displayName || attribute.name}</CardTitle>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => {
+                        setSelectedAttributes(selectedAttributes.filter(id => id !== attribute.id));
+                        if (productId) {
+                          removeAttributeFromProduct(attribute.id);
+                        }
+                      }}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <AttributeOptionSelector 
+                    attributeId={attribute.id} 
+                    getOptions={getAttributeOptions}
+                    onSave={(selectedOptions) => {
+                      if (productId) {
+                        addAttributeToProduct(attribute.id, selectedOptions);
+                      }
+                    }}
+                  />
+                </CardContent>
+              </Card>
+            );
+          })}
+        </>
+      ) : (
+        <div className="text-center py-4 border rounded-md">
+          <p className="text-muted-foreground mb-2">No global attributes available</p>
+          <Button asChild size="sm" variant="outline">
+            <a href="/admin/global-attributes" target="_blank" rel="noopener noreferrer">
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Create attributes
+            </a>
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Component to select options for an attribute
+function AttributeOptionSelector({ 
+  attributeId, 
+  getOptions,
+  onSave
+}: { 
+  attributeId: number; 
+  getOptions: (attributeId: number) => Promise<GlobalAttributeOption[]>;
+  onSave: (selectedOptions: number[]) => void;
+}) {
+  const [options, setOptions] = React.useState<GlobalAttributeOption[]>([]);
+  const [selectedOptions, setSelectedOptions] = React.useState<number[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+  
+  React.useEffect(() => {
+    const loadOptions = async () => {
+      setIsLoading(true);
+      try {
+        const optionsData = await getOptions(attributeId);
+        setOptions(optionsData);
+      } catch (error) {
+        console.error('Error loading attribute options:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadOptions();
+  }, [attributeId, getOptions]);
+  
+  if (isLoading) {
+    return <div className="text-center py-2">Loading options...</div>;
+  }
+  
+  if (options.length === 0) {
+    return (
+      <div className="text-center py-2 border rounded-md">
+        <p className="text-muted-foreground mb-2">No options available for this attribute</p>
+        <Button asChild size="sm" variant="outline">
+          <a href={`/admin/global-attributes/${attributeId}`} target="_blank" rel="noopener noreferrer">
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add options
+          </a>
+        </Button>
+      </div>
+    );
+  }
+  
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-2">
+        {options.map((option) => (
+          <div 
+            key={option.id}
+            className={`
+              border p-2 rounded-md cursor-pointer
+              ${selectedOptions.includes(option.id) ? 'bg-primary/10 border-primary' : ''}
+            `}
+            onClick={() => {
+              if (selectedOptions.includes(option.id)) {
+                setSelectedOptions(selectedOptions.filter(id => id !== option.id));
+              } else {
+                setSelectedOptions([...selectedOptions, option.id]);
+              }
+            }}
+          >
+            <div className="flex items-center space-x-2">
+              <div className={`w-4 h-4 rounded-full ${selectedOptions.includes(option.id) ? 'bg-primary' : 'bg-muted'}`} />
+              <span>{option.value}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+      
+      <Button 
+        onClick={() => onSave(selectedOptions)}
+        variant="outline" 
+        size="sm"
+        className="w-full"
+        disabled={selectedOptions.length === 0}
+      >
+        Save Selected Options
+      </Button>
     </div>
   );
 }
