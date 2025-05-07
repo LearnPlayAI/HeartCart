@@ -157,6 +157,7 @@ export interface IStorage {
   
   // Product Global Attribute Option operations
   getProductGlobalAttributeOptions(productAttributeId: number): Promise<ProductGlobalAttributeOption[]>;
+  getGlobalAttributeOptionsForProduct(productAttributeId: number): Promise<ProductGlobalAttributeOption[]>;
   addGlobalAttributeOptionToProduct(productAttributeId: number, optionId: number): Promise<ProductGlobalAttributeOption>;
   removeGlobalAttributeOptionFromProduct(productAttributeId: number, optionId: number): Promise<boolean>;
   getGlobalAttributesWithOptionsForProduct(productId: number): Promise<{ 
