@@ -39,12 +39,15 @@ import {
   FolderTree, 
   Tag, 
   ChevronRight, 
-  Layers 
+  Layers,
+  GripVertical,
+  ArrowUpDown 
 } from "lucide-react";
-import { slugify } from "@/lib/utils";
+import { slugify, cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { Category } from "@shared/schema";
 import { useLocation } from "wouter";
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 
 export default function AdminCategories() {
   const queryClient = useQueryClient();
@@ -61,7 +64,7 @@ export default function AdminCategories() {
   const [newParentId, setNewParentId] = useState<string | null>(null);
   const [newLevel, setNewLevel] = useState<number>(0);
   const [newDisplayOrder, setNewDisplayOrder] = useState<number>(0);
-  const [categoryView, setCategoryView] = useState<'grid' | 'tree'>('grid');
+  const [categoryView, setCategoryView] = useState<'grid' | 'tree'>('tree');
   const [filterLevel, setFilterLevel] = useState<string | null>(null);
   
   // Fetch categories
@@ -360,6 +363,71 @@ export default function AdminCategories() {
   const handleManageAttributes = (categoryId: number) => {
     navigate(`/admin/category-attributes/${categoryId}`);
   };
+  
+  // Handle drag end for the drag and drop functionality
+  const handleDragEnd = (result: any) => {
+    const { destination, source, draggableId, type } = result;
+    
+    // If no destination, do nothing
+    if (!destination) return;
+    
+    // If dropped in the same place, do nothing
+    if (
+      destination.droppableId === source.droppableId && 
+      destination.index === source.index
+    ) {
+      return;
+    }
+    
+    // Handle reordering main categories
+    if (type === 'MAIN_CATEGORY') {
+      if (!hierarchicalCategories) return;
+      
+      // Get the reordered categories
+      const reorderedCategories = Array.from(hierarchicalCategories);
+      const [removed] = reorderedCategories.splice(source.index, 1);
+      reorderedCategories.splice(destination.index, 0, removed);
+      
+      // Update display orders for all affected categories
+      reorderedCategories.forEach((item, index) => {
+        if (item.category.displayOrder !== index) {
+          updateDisplayOrderMutation.mutate({
+            id: item.category.id,
+            displayOrder: index
+          });
+        }
+      });
+      
+      return;
+    }
+    
+    // Handle reordering subcategories
+    if (type === 'SUB_CATEGORY') {
+      if (!hierarchicalCategories) return;
+      
+      // Get the parent category's ID from the droppableId
+      const parentId = parseInt(source.droppableId.replace('parent-', ''));
+      
+      // Find the parent category
+      const parentItem = hierarchicalCategories.find(h => h.category.id === parentId);
+      if (!parentItem) return;
+      
+      // Get the reordered subcategories
+      const reorderedSubcategories = Array.from(parentItem.children);
+      const [removed] = reorderedSubcategories.splice(source.index, 1);
+      reorderedSubcategories.splice(destination.index, 0, removed);
+      
+      // Update display orders for all affected subcategories
+      reorderedSubcategories.forEach((item, index) => {
+        if (item.displayOrder !== index) {
+          updateDisplayOrderMutation.mutate({
+            id: item.id,
+            displayOrder: index
+          });
+        }
+      });
+    }
+  };
 
   return (
     <AdminLayout>
@@ -449,122 +517,199 @@ export default function AdminCategories() {
             </Button>
           </div>
         ) : categoryView === 'tree' ? (
-          // Tree View for hierarchical display
+          // Tree View for hierarchical display with drag and drop
           <div className="border rounded-md">
-            {hierarchicalCategories?.map((item) => (
-              <div key={item.category.id} className="border-b last:border-0">
-                <div className="p-4 bg-slate-50 flex justify-between items-center">
-                  <div className="flex items-center">
-                    <h3 className="font-medium">{item.category.name}</h3>
-                    <Badge variant="outline" className="ml-2">Level 0</Badge>
-                    <Badge 
-                      variant="secondary" 
-                      className="ml-2"
-                    >
-                      Display Order: {item.category.displayOrder || 0}
-                    </Badge>
-                  </div>
-                  <div className="flex space-x-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => handleManageAttributes(item.category.id)}
-                    >
-                      <Tag className="h-4 w-4 mr-2" />
-                      Attributes
-                    </Button>
-                    
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Actions</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onSelect={(e) => {
-                          e.preventDefault();
-                          handleEditClick(item.category);
-                        }}>
-                          <Edit className="h-4 w-4 mr-2" />
-                          Edit
-                        </DropdownMenuItem>
-                        
-                        <DropdownMenuItem
-                          onSelect={(e) => {
-                            e.preventDefault();
-                            handleDeleteClick(item.category);
-                          }}
-                          className="text-red-600"
-                        >
-                          <Trash className="h-4 w-4 mr-2" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-                
-                {item.children.length > 0 && (
-                  <div className="pl-8 pr-4 py-2">
-                    {item.children.map((child) => (
-                      <div key={child.id} className="border-b last:border-0 py-3 flex justify-between items-center">
-                        <div className="flex items-center">
-                          <ChevronRight className="h-4 w-4 mr-2 text-muted-foreground" />
-                          <span className="font-medium">{child.name}</span>
-                          <Badge variant="outline" className="ml-2">Level 1</Badge>
-                          <Badge 
-                            variant="secondary" 
-                            className="ml-2"
+            <div className="p-3 bg-slate-100 border-b">
+              <p className="flex items-center text-sm text-muted-foreground">
+                <ArrowUpDown className="h-4 w-4 mr-2" />
+                <span>Drag items to reorder categories and subcategories</span>
+              </p>
+            </div>
+            
+            <DragDropContext onDragEnd={handleDragEnd}>
+              <Droppable droppableId="main-categories" type="MAIN_CATEGORY">
+                {(provided) => (
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    className="divide-y"
+                  >
+                    {hierarchicalCategories?.map((item, index) => (
+                      <Draggable 
+                        key={item.category.id.toString()}
+                        draggableId={item.category.id.toString()}
+                        index={index}
+                      >
+                        {(provided, snapshot) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            className={cn(
+                              "border-b last:border-0",
+                              snapshot.isDragging ? "bg-slate-100 shadow-lg" : ""
+                            )}
                           >
-                            Display Order: {child.displayOrder || 0}
-                          </Badge>
-                        </div>
-                        <div className="flex space-x-2">
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => handleManageAttributes(child.id)}
-                          >
-                            <Tag className="h-4 w-4 mr-2" />
-                            Attributes
-                          </Button>
-                          
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <MoreHorizontal className="h-4 w-4" />
-                                <span className="sr-only">Actions</span>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onSelect={(e) => {
-                                e.preventDefault();
-                                handleEditClick(child);
-                              }}>
-                                <Edit className="h-4 w-4 mr-2" />
-                                Edit
-                              </DropdownMenuItem>
-                              
-                              <DropdownMenuItem
-                                onSelect={(e) => {
-                                  e.preventDefault();
-                                  handleDeleteClick(child);
-                                }}
-                                className="text-red-600"
+                            <div className="p-4 bg-slate-50 flex justify-between items-center">
+                              <div className="flex items-center">
+                                <div
+                                  {...provided.dragHandleProps}
+                                  className="mr-2 cursor-grab"
+                                >
+                                  <GripVertical className="h-5 w-5 text-muted-foreground" />
+                                </div>
+                                <h3 className="font-medium">{item.category.name}</h3>
+                                <Badge variant="outline" className="ml-2">Level 0</Badge>
+                                <Badge 
+                                  variant="secondary" 
+                                  className="ml-2"
+                                >
+                                  Order: {item.category.displayOrder || 0}
+                                </Badge>
+                              </div>
+                              <div className="flex space-x-2">
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => handleManageAttributes(item.category.id)}
+                                >
+                                  <Tag className="h-4 w-4 mr-2" />
+                                  Attributes
+                                </Button>
+                                
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                                      <MoreHorizontal className="h-4 w-4" />
+                                      <span className="sr-only">Actions</span>
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onSelect={(e) => {
+                                      e.preventDefault();
+                                      handleEditClick(item.category);
+                                    }}>
+                                      <Edit className="h-4 w-4 mr-2" />
+                                      Edit
+                                    </DropdownMenuItem>
+                                    
+                                    <DropdownMenuItem
+                                      onSelect={(e) => {
+                                        e.preventDefault();
+                                        handleDeleteClick(item.category);
+                                      }}
+                                      className="text-red-600"
+                                    >
+                                      <Trash className="h-4 w-4 mr-2" />
+                                      Delete
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </div>
+                            </div>
+                            
+                            {item.children.length > 0 && (
+                              <Droppable 
+                                droppableId={`parent-${item.category.id}`} 
+                                type="SUB_CATEGORY"
                               >
-                                <Trash className="h-4 w-4 mr-2" />
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      </div>
+                                {(provided, snapshot) => (
+                                  <div
+                                    ref={provided.innerRef}
+                                    {...provided.droppableProps}
+                                    className={cn(
+                                      "pl-8 pr-4 py-2",
+                                      snapshot.isDraggingOver ? "bg-pink-50" : ""
+                                    )}
+                                  >
+                                    {item.children.map((child, index) => (
+                                      <Draggable 
+                                        key={child.id.toString()}
+                                        draggableId={child.id.toString()}
+                                        index={index}
+                                      >
+                                        {(provided, snapshot) => (
+                                          <div
+                                            ref={provided.innerRef}
+                                            {...provided.draggableProps}
+                                            className={cn(
+                                              "border-b last:border-0 py-3 flex justify-between items-center",
+                                              snapshot.isDragging ? "bg-white shadow-md rounded-md" : ""
+                                            )}
+                                          >
+                                            <div className="flex items-center">
+                                              <div
+                                                {...provided.dragHandleProps}
+                                                className="mr-1 cursor-grab"
+                                              >
+                                                <GripVertical className="h-4 w-4 text-muted-foreground" />
+                                              </div>
+                                              <ChevronRight className="h-4 w-4 mr-2 text-muted-foreground" />
+                                              <span className="font-medium">{child.name}</span>
+                                              <Badge variant="outline" className="ml-2">Level 1</Badge>
+                                              <Badge 
+                                                variant="secondary" 
+                                                className="ml-2"
+                                              >
+                                                Order: {child.displayOrder || 0}
+                                              </Badge>
+                                            </div>
+                                            <div className="flex space-x-2">
+                                              <Button 
+                                                variant="outline" 
+                                                size="sm"
+                                                onClick={() => handleManageAttributes(child.id)}
+                                              >
+                                                <Tag className="h-4 w-4 mr-2" />
+                                                Attributes
+                                              </Button>
+                                              
+                                              <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                    <MoreHorizontal className="h-4 w-4" />
+                                                    <span className="sr-only">Actions</span>
+                                                  </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                  <DropdownMenuItem onSelect={(e) => {
+                                                    e.preventDefault();
+                                                    handleEditClick(child);
+                                                  }}>
+                                                    <Edit className="h-4 w-4 mr-2" />
+                                                    Edit
+                                                  </DropdownMenuItem>
+                                                  
+                                                  <DropdownMenuItem
+                                                    onSelect={(e) => {
+                                                      e.preventDefault();
+                                                      handleDeleteClick(child);
+                                                    }}
+                                                    className="text-red-600"
+                                                  >
+                                                    <Trash className="h-4 w-4 mr-2" />
+                                                    Delete
+                                                  </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                              </DropdownMenu>
+                                            </div>
+                                          </div>
+                                        )}
+                                      </Draggable>
+                                    ))}
+                                    {provided.placeholder}
+                                  </div>
+                                )}
+                              </Droppable>
+                            )}
+                          </div>
+                        )}
+                      </Draggable>
                     ))}
+                    {provided.placeholder}
                   </div>
                 )}
-              </div>
-            ))}
+              </Droppable>
+            </DragDropContext>
           </div>
         ) : (
           // Grid View
