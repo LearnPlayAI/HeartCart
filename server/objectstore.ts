@@ -794,10 +794,17 @@ export class ObjectStorageService {
     originalFilename: string,
     contentType?: string
   ): Promise<{ url: string, objectKey: string }> {
+    // Ensure storage is initialized
+    await this.ensureInitialized();
+    
     // Validate buffer before uploading
     if (!Buffer.isBuffer(fileBuffer)) {
       console.error(`Invalid buffer type for temp file: ${typeof fileBuffer}`);
       throw new Error(`Invalid buffer type: ${typeof fileBuffer}`);
+    }
+    
+    if (fileBuffer.length === 0) {
+      throw new Error(`Empty buffer for temp file: ${originalFilename}`);
     }
     
     console.log(`Uploading temp file: ${originalFilename}, size: ${fileBuffer.length} bytes`);
@@ -808,39 +815,62 @@ export class ObjectStorageService {
     // Build the object key
     const objectKey = `${STORAGE_FOLDERS.TEMP}/${filename}`;
     
-    try {
-      // Set explicit content type to ensure browser can display it correctly
-      const detectedContentType = contentType || this.detectContentType(filename);
-      console.log(`Content type for ${filename}: ${detectedContentType}`);
-      
-      // Upload the file
-      const url = await this.uploadFromBuffer(objectKey, fileBuffer, {
-        contentType: detectedContentType,
-        cacheControl: 'no-cache, max-age=0', // Don't cache temp files
-        filename: originalFilename  // Store original filename in metadata
-      });
-      
-      // Add a delay after upload to ensure Replit Object Storage has processed the file
-      // This is critical for avoiding race conditions where the file is reported as uploaded
-      // but not yet available for download
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      // Verify the file exists in Object Storage
-      const exists = await this.exists(objectKey);
-      if (!exists) {
-        throw new Error(`File was not found in Object Storage after upload: ${objectKey}`);
+    const MAX_RETRIES = 3;
+    let lastError: any = null;
+    
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        console.log(`Uploading temp file attempt ${attempt}/${MAX_RETRIES}: ${objectKey}`);
+        
+        // Set explicit content type to ensure browser can display it correctly
+        const detectedContentType = contentType || this.detectContentType(filename);
+        console.log(`Content type for ${filename}: ${detectedContentType}`);
+        
+        // Upload the file
+        const url = await this.uploadFromBuffer(objectKey, fileBuffer, {
+          contentType: detectedContentType,
+          cacheControl: 'no-cache, max-age=0', // Don't cache temp files
+          filename: originalFilename  // Store original filename in metadata
+        });
+        
+        // Add a delay after upload to ensure Replit Object Storage has processed the file
+        // This is critical for avoiding race conditions where the file is reported as uploaded
+        // but not yet available for download
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        // Verify the file exists in Object Storage
+        const exists = await this.exists(objectKey);
+        if (!exists) {
+          throw new Error(`File was not found in Object Storage after upload: ${objectKey}`);
+        }
+        
+        // Get the file to verify it's accessible and has the correct size
+        const downloadedFile = await this.getFileAsBuffer(objectKey);
+        if (downloadedFile.data.length !== fileBuffer.length) {
+          throw new Error(`File size mismatch in Object Storage: expected ${fileBuffer.length} bytes, got ${downloadedFile.data.length} bytes`);
+        }
+        
+        console.log(`Successfully uploaded and verified temp file in object storage: ${objectKey}`);
+        
+        return { 
+          url: `/api/files/${objectKey}`,  // Use our file serving endpoint 
+          objectKey 
+        };
+      } catch (error: any) {
+        lastError = error;
+        console.error(`Error uploading temp file (attempt ${attempt}/${MAX_RETRIES}): ${error.message}`);
+        
+        if (attempt < MAX_RETRIES) {
+          // Exponential backoff
+          const delay = Math.pow(2, attempt) * 300;
+          console.log(`Retrying upload after ${delay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
       }
-      
-      console.log(`Successfully uploaded and verified temp file in object storage: ${objectKey}`);
-      
-      return { 
-        url: `/api/files/${objectKey}`,  // Use our file serving endpoint 
-        objectKey 
-      };
-    } catch (error: any) {
-      console.error(`Error uploading temp file ${originalFilename}:`, error);
-      throw error; // Rethrow to handle in the calling code
     }
+    
+    // If we got here, all attempts failed
+    throw new Error(`Failed to upload temp file after ${MAX_RETRIES} attempts: ${lastError?.message || 'Unknown error'}`);
   }
 }
 
