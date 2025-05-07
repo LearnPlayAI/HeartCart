@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { ZodError } from "zod";
 import { removeImageBackground, generateProductTags, analyzeProductImage, suggestPrice, getAvailableAiModels, getCurrentAiModelSetting, updateAiModel } from "./ai-service";
-import { ImageService, THUMBNAIL_SIZES } from "./image-service";
+import { imageService, THUMBNAIL_SIZES } from "./image-service";
 import { 
   insertCartItemSchema, 
   insertOrderSchema, 
@@ -15,16 +15,15 @@ import {
   insertSupplierSchema,
   insertCatalogSchema
 } from "@shared/schema";
-import { objectStorageService, STORAGE_FOLDERS } from "./objectstore";
+import { objectStore, STORAGE_FOLDERS } from "./object-store";
 import { setupAuth } from "./auth";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import fileRoutes from "./file-routes";
+import uploadHandlers from "./upload-handlers";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Initialize ImageService with the objectStorageService
-  const imageService = new ImageService(objectStorageService);
-  
   // Use memory storage for file uploads to avoid local filesystem
   // Files will go directly to Replit Object Storage
   const upload = multer({ 
@@ -47,56 +46,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication with our new auth module
   setupAuth(app);
   
-  // Setup a route to serve files from Object Storage
+  // Mount file routes for serving files from Object Storage
+  app.use('/api/files', fileRoutes);
+  
+  // Mount upload handler routes
+  app.use('/api/upload', uploadHandlers);
+  
+  // Legacy route redirects to new file serving endpoint
   app.get('/object-storage/:folder/:subfolder/:filename', async (req: Request, res: Response) => {
-    try {
-      const { folder, subfolder, filename } = req.params;
-      const objectKey = `${folder}/${subfolder}/${filename}`;
-      
-      // Check if the file exists
-      const exists = await objectStorageService.exists(objectKey);
-      if (!exists) {
-        return res.status(404).send('File not found');
-      }
-      
-      // Attempt to get metadata for the file
-      try {
-        const metadata = await objectStorageService.getMetadata(objectKey);
-        
-        // Set content type from metadata if available
-        if (metadata.contentType) {
-          res.setHeader('Content-Type', metadata.contentType);
-        } else {
-          // Fall back to detection based on filename
-          res.setHeader('Content-Type', objectStorageService.detectContentType(filename));
-        }
-        
-        // Set cache control if available in metadata
-        if (metadata.cacheControl) {
-          res.setHeader('Cache-Control', metadata.cacheControl);
-        } else {
-          // Default cache control
-          res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache for 1 day
-        }
-        
-        // Set content disposition if available
-        if (metadata.contentDisposition) {
-          res.setHeader('Content-Disposition', metadata.contentDisposition);
-        }
-      } catch (metadataError) {
-        // If metadata retrieval fails, use the basic approach
-        console.warn(`Metadata retrieval failed for ${objectKey}, using basic detection`, metadataError);
-        res.setHeader('Content-Type', objectStorageService.detectContentType(filename));
-        res.setHeader('Cache-Control', 'public, max-age=86400');
-      }
-      
-      // Stream the file to the response
-      const fileStream = await objectStorageService.downloadAsStream(objectKey);
-      fileStream.pipe(res);
-    } catch (error) {
-      console.error('Error serving file from Object Storage:', error);
-      res.status(500).send('Error serving file');
-    }
+    const { folder, subfolder, filename } = req.params;
+    const objectKey = `${folder}/${subfolder}/${filename}`;
+    res.redirect(`/api/files/${objectKey}`);
   });
   
   // Error handling middleware
