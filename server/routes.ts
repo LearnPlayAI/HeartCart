@@ -1907,6 +1907,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   }));
 
+  // PATCH endpoint to reorder products in a catalog
+  app.patch("/api/catalogs/:id/products/reorder", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can reorder catalog products" });
+    }
+    
+    const catalogId = parseInt(req.params.id);
+    const { productIds } = req.body;
+    
+    if (!Array.isArray(productIds)) {
+      return res.status(400).json({ message: "productIds must be an array of product IDs" });
+    }
+    
+    // Update the display order for each product
+    const result = await storage.updateProductDisplayOrder(catalogId, productIds);
+    
+    res.json({ 
+      success: true, 
+      message: `Updated display order for ${result.count} products`,
+      count: result.count
+    });
+  }));
+
   const httpServer = createServer(app);
   return httpServer;
 }
