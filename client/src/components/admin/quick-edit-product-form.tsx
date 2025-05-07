@@ -81,11 +81,8 @@ export function QuickEditProductForm({
   // Mutation for updating product data
   const { mutate: updateProduct, isPending } = useMutation({
     mutationFn: async (data: QuickEditFormValues) => {
+      // Use centralized error handling in apiRequest
       const response = await apiRequest("PATCH", `/api/products/${product.id}/quick-edit`, data);
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || "Failed to update product");
-      }
       return await response.json();
     },
     onSuccess: () => {
@@ -97,6 +94,7 @@ export function QuickEditProductForm({
       onSaved();
     },
     onError: (error: any) => {
+      console.error("Product quick edit error:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to update product",

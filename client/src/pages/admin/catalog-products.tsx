@@ -145,11 +145,8 @@ export default function CatalogProducts() {
   // Delete product mutation
   const { mutate: deleteProduct, isPending: isDeleting } = useMutation({
     mutationFn: async (productId: number) => {
+      // Simply call apiRequest and let the centralized error handling in queryClient.ts do its job
       const response = await apiRequest("DELETE", `/api/products/${productId}`);
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || "Failed to delete product");
-      }
       return await response.json();
     },
     onSuccess: () => {
@@ -162,22 +159,21 @@ export default function CatalogProducts() {
       setSelectedProduct(null);
     },
     onError: (error: any) => {
+      console.error("Product deletion error:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to delete product",
         variant: "destructive",
       });
+      setShowDeleteDialog(false); // Close dialog on error too
     },
   });
 
   // Bulk activate products mutation
   const { mutate: bulkActivateProducts, isPending: isBulkActivating } = useMutation({
     mutationFn: async (data: { productIds: number[], active: boolean }) => {
+      // Use centralized error handling in apiRequest
       const response = await apiRequest("PATCH", `/api/products/bulk-update-status`, data);
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || "Failed to update products");
-      }
       return await response.json();
     },
     onSuccess: (_, variables) => {
@@ -189,6 +185,7 @@ export default function CatalogProducts() {
       setSelectedProducts([]);
     },
     onError: (error: any) => {
+      console.error("Bulk activation error:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to update products",
@@ -200,11 +197,8 @@ export default function CatalogProducts() {
   // Update product display order mutation
   const { mutate: updateProductOrder, isPending: isUpdatingOrder } = useMutation({
     mutationFn: async (data: { productIds: number[], catalogId: number }) => {
+      // Use centralized error handling in apiRequest
       const response = await apiRequest("PATCH", `/api/catalogs/${catalogId}/products/reorder`, data);
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || "Failed to reorder products");
-      }
       return await response.json();
     },
     onSuccess: () => {
@@ -215,6 +209,7 @@ export default function CatalogProducts() {
       queryClient.invalidateQueries({ queryKey: [`/api/catalogs/${catalogId}/products`] });
     },
     onError: (error: any) => {
+      console.error("Product reordering error:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to reorder products",

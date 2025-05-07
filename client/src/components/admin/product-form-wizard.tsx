@@ -215,11 +215,8 @@ export default function ProductFormWizard({ productId, catalogId, onSuccess }: P
       
       console.log("Creating product with data:", formattedData);
       
+      // Use centralized error handling in apiRequest
       const res = await apiRequest('POST', '/api/products', formattedData);
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || 'Failed to create product');
-      }
       return res.json();
     },
     onSuccess: async (data) => {
