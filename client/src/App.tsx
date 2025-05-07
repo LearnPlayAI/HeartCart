@@ -109,6 +109,7 @@ function App() {
               <AdminProtectedRoute path="/admin/products/:productId/attributes" component={ProductAttributes} />
               <AdminProtectedRoute path="/admin/categories" component={AdminCategories} />
               <AdminProtectedRoute path="/admin/categories/:categoryId/attributes" component={CategoryAttributes} />
+              <AdminProtectedRoute path="/admin/category-attributes/:categoryId" component={CategoryAttributes} />
               <AdminProtectedRoute path="/admin/pricing" component={AdminPricing} />
               <AdminProtectedRoute path="/admin/orders" component={AdminOrders} />
               <AdminProtectedRoute path="/admin/ai-settings" component={AdminAISettings} />
