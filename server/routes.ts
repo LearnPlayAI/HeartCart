@@ -912,10 +912,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const objectKey = `products/${productId}/${filename}`;
         
         // Upload to object storage
-        await objectStorageService.uploadFromBuffer(objectKey, buffer, { contentType });
+        await objectStore.uploadFromBuffer(objectKey, buffer, { contentType });
         
         // Generate public URL
-        const publicUrl = objectStorageService.getPublicUrl(objectKey);
+        const publicUrl = objectStore.getPublicUrl(objectKey);
         
         // Prepare the image data
         const imageData = {
@@ -1014,7 +1014,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     try {
       // Check if the image exists
-      const exists = await objectStorageService.exists(objectKey);
+      const exists = await objectStore.exists(objectKey);
       if (!exists) {
         return res.status(404).json({ message: "Image not found" });
       }
@@ -1029,7 +1029,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       
       // Get size of original image for comparison
-      const originalSize = await objectStorageService.getSize(objectKey);
+      const originalSize = await objectStore.getSize(objectKey);
       const sizeReduction = originalSize ? Math.round((1 - result.size / originalSize) * 100) : 0;
       
       res.json({
@@ -1064,7 +1064,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     try {
       // Check if the image exists
-      const exists = await objectStorageService.exists(objectKey);
+      const exists = await objectStore.exists(objectKey);
       if (!exists) {
         return res.status(404).json({ message: "Image not found" });
       }
@@ -1110,7 +1110,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     try {
       // Check if the image exists
-      const exists = await objectStorageService.exists(objectKey);
+      const exists = await objectStore.exists(objectKey);
       if (!exists) {
         return res.status(404).json({ message: "Image not found" });
       }
@@ -1181,10 +1181,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const objectKey = `products/bg_removed/${filename}`;
         
         // Upload to object storage
-        await objectStorageService.uploadFromBuffer(objectKey, buffer, { contentType });
+        await objectStore.uploadFromBuffer(objectKey, buffer, { contentType });
         
         // Generate public URL
-        const publicUrl = objectStorageService.getPublicUrl(objectKey);
+        const publicUrl = objectStore.getPublicUrl(objectKey);
         
         // Update the product image with background removed URL
         await storage.updateProductImage(imageId, {
@@ -1961,7 +1961,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
         try {
           // First check if the file exists
-          if (!(await objectStorageService.exists(objectKey))) {
+          if (!(await objectStore.exists(objectKey))) {
             console.error(`File not found in object storage: ${objectKey}`);
             return res.status(404).send('File not found');
           }
@@ -1975,7 +1975,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           
           // Get the file data and content type in one operation
-          const { data, contentType } = await objectStorageService.getFileAsBuffer(objectKey);
+          const { data, contentType } = await objectStore.getFileAsBuffer(objectKey);
           
           // Validate the buffer has actual content
           if (!data || data.length === 0) {
