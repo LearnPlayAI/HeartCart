@@ -240,15 +240,8 @@ export default function ProductFormWizard({ productId, catalogId, onSuccess }: P
                   productId: data.id
                 };
                 
-                // Make API request to move the file
+                // Move the image file using centralized error handling
                 const moveRes = await apiRequest('POST', '/api/products/images/move', moveData);
-                
-                if (!moveRes.ok) {
-                  const error = await moveRes.json();
-                  console.error(`Failed to move image ${img.file.objectKey}:`, error);
-                  continue;
-                }
-                
                 const movedImage = await moveRes.json();
                 console.log(`Successfully moved image to ${movedImage.objectKey}`);
                 
@@ -261,12 +254,10 @@ export default function ProductFormWizard({ productId, catalogId, onSuccess }: P
                   alt: img.alt || '',
                 };
                 
+                // Create image record with centralized error handling
                 const imgRes = await apiRequest('POST', `/api/products/${data.id}/images`, imageData);
-                
-                if (!imgRes.ok) {
-                  const error = await imgRes.json();
-                  console.error(`Failed to create image record:`, error);
-                }
+                await imgRes.json();
+                console.log("Product image record created successfully");
               } catch (imgError) {
                 console.error(`Error processing image:`, imgError);
               }
@@ -277,7 +268,6 @@ export default function ProductFormWizard({ productId, catalogId, onSuccess }: P
           toast({
             title: 'Image Processing Warning',
             description: 'Product was created, but there was an issue with some images',
-            variant: 'warning',
           });
         }
       }
@@ -320,11 +310,8 @@ export default function ProductFormWizard({ productId, catalogId, onSuccess }: P
       
       delete formattedData.newTag;
       
+      // Use centralized error handling in apiRequest
       const res = await apiRequest('PUT', `/api/products/${productId}`, formattedData);
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || 'Failed to update product');
-      }
       return res.json();
     },
     onSuccess: () => {
@@ -434,14 +421,11 @@ export default function ProductFormWizard({ productId, catalogId, onSuccess }: P
       // Use the first image for analysis
       const imageUrl = uploadedImages[0].url;
       
+      // Use centralized error handling in apiRequest
       const res = await apiRequest('POST', '/api/ai/analyze-product', { 
         imageUrl,
         productName
       });
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || 'Failed to analyze product');
-      }
       
       const analysis = await res.json();
       setAiSuggestions(analysis);
@@ -554,16 +538,12 @@ export default function ProductFormWizard({ productId, catalogId, onSuccess }: P
         throw new Error('Please provide at least the product name before requesting tag suggestions');
       }
       
+      // Use centralized error handling in apiRequest
       const res = await apiRequest('POST', '/api/ai/generate-tags', { 
         productName,
         description: description || '',
         categoryName: categories?.find(cat => cat.id === form.getValues('categoryId'))?.name
       });
-      
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || 'Failed to generate tags');
-      }
       
       const suggestion = await res.json();
       
