@@ -157,8 +157,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(category);
   }));
   
+  app.get("/api/categories/main/with-children", handleErrors(async (req: Request, res: Response) => {
+    const mainCategoriesWithChildren = await storage.getMainCategoriesWithChildren();
+    res.json(mainCategoriesWithChildren);
+  }));
+  
   app.get("/api/categories/:id/with-children", handleErrors(async (req: Request, res: Response) => {
     const categoryId = parseInt(req.params.id);
+    
+    // Validate categoryId is a number
+    if (isNaN(categoryId)) {
+      res.status(400).json({ message: "Invalid category ID" });
+      return;
+    }
+    
     const categoryWithChildren = await storage.getCategoryWithChildren(categoryId);
     
     if (!categoryWithChildren) {
@@ -167,11 +179,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     res.json(categoryWithChildren);
-  }));
-  
-  app.get("/api/categories/main/with-children", handleErrors(async (req: Request, res: Response) => {
-    const mainCategoriesWithChildren = await storage.getMainCategoriesWithChildren();
-    res.json(mainCategoriesWithChildren);
   }));
 
   app.post("/api/categories", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
@@ -367,18 +374,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(products);
   }));
 
-  app.get("/api/products/:id", handleErrors(async (req: Request, res: Response) => {
-    const id = parseInt(req.params.id);
-    const product = await storage.getProductById(id);
-    
-    if (!product) {
-      res.status(404).json({ message: "Product not found" });
-      return;
-    }
-    
-    res.json(product);
-  }));
-
+  // Specific route patterns must be defined before generic patterns with path parameters
   app.get("/api/products/slug/:slug", handleErrors(async (req: Request, res: Response) => {
     const { slug } = req.params;
     const product = await storage.getProductBySlug(slug);
@@ -393,6 +389,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/products/category/:categoryId", handleErrors(async (req: Request, res: Response) => {
     const categoryId = parseInt(req.params.categoryId);
+    
+    // Validate categoryId is a number
+    if (isNaN(categoryId)) {
+      res.status(400).json({ message: "Invalid category ID" });
+      return;
+    }
+    
     const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
     const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
     
@@ -402,6 +405,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.get("/api/products/attributes-for-category/:categoryId", handleErrors(async (req: Request, res: Response) => {
     const categoryId = parseInt(req.params.categoryId);
+    
+    // Validate categoryId is a number
+    if (isNaN(categoryId)) {
+      res.status(400).json({ message: "Invalid category ID" });
+      return;
+    }
     
     // Get all products in this category
     const products = await storage.getProductsByCategory(categoryId);
@@ -442,6 +451,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     res.json(result);
+  }));
+  
+  // Generic route for product by ID must come after more specific routes
+  app.get("/api/products/:id", handleErrors(async (req: Request, res: Response) => {
+    const id = parseInt(req.params.id);
+    
+    // Validate id is a number
+    if (isNaN(id)) {
+      res.status(400).json({ message: "Invalid product ID" });
+      return;
+    }
+    
+    const product = await storage.getProductById(id);
+    
+    if (!product) {
+      res.status(404).json({ message: "Product not found" });
+      return;
+    }
+    
+    res.json(product);
   }));
 
   app.get("/api/featured-products", handleErrors(async (req: Request, res: Response) => {
@@ -489,6 +518,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // PRODUCT ATTRIBUTE ROUTES
   app.get("/api/products/:productId/attributes", handleErrors(async (req: Request, res: Response) => {
     const productId = parseInt(req.params.productId);
+    
+    // Validate productId is a number
+    if (isNaN(productId)) {
+      res.status(400).json({ message: "Invalid product ID" });
+      return;
+    }
+    
     const attributes = await storage.getProductAttributeValues(productId);
     res.json(attributes);
   }));
