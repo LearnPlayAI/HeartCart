@@ -253,13 +253,16 @@ export default function AdminCategories() {
   
   // Update visibility mutation
   const updateVisibilityMutation = useMutation({
-    mutationFn: async (data: { id: number; isActive: boolean }) => {
+    mutationFn: async (data: { id: number; isActive: boolean; cascade?: boolean }) => {
       const response = await fetch(`/api/categories/${data.id}/visibility`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ isActive: data.isActive }),
+        body: JSON.stringify({ 
+          isActive: data.isActive, 
+          cascade: data.cascade !== undefined ? data.cascade : true 
+        }),
       });
 
       if (!response.ok) {
@@ -271,9 +274,30 @@ export default function AdminCategories() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
       queryClient.invalidateQueries({ queryKey: ["/api/categories/main/with-children"] });
+      
+      let description = `The category is now ${data.isActive ? 'visible' : 'hidden'}`;
+      
+      // Add information about updated products and subcategories
+      if (data.productsUpdated > 0 || data.subcategoriesUpdated > 0) {
+        const updates = [];
+        
+        if (data.subcategoriesUpdated > 0) {
+          updates.push(`${data.subcategoriesUpdated} subcategories`);
+        }
+        
+        if (data.productsUpdated > 0) {
+          updates.push(`${data.productsUpdated} products`);
+        }
+        
+        if (updates.length > 0) {
+          description += `. Updated ${updates.join(' and ')} to match.`;
+        }
+      }
+      
       toast({
         title: "Visibility updated",
-        description: `The category is now ${data.isActive ? 'visible' : 'hidden'}`,
+        description: description,
+        duration: 5000, // Show for 5 seconds due to potentially longer message
       });
     },
     onError: (error) => {
@@ -399,12 +423,53 @@ export default function AdminCategories() {
     navigate(`/admin/category-attributes/${categoryId}`);
   };
   
+  // State for cascade visibility confirmation dialog
+  const [isCascadeDialogOpen, setIsCascadeDialogOpen] = useState(false);
+  const [cascadeVisibilityData, setCascadeVisibilityData] = useState<{categoryId: number, isActive: boolean, categoryName: string}>({
+    categoryId: 0,
+    isActive: false,
+    categoryName: ''
+  });
+  
   // Handle visibility toggle
   const handleVisibilityToggle = (categoryId: number, isActive: boolean) => {
+    // First, find the category to check if it has children
+    const category = categories?.find(c => c.id === categoryId);
+    if (!category) return;
+    
+    // Check if this is a main category with potential subcategories
+    if (category.level === 0) {
+      // Get subcategories count
+      const subcategories = categories?.filter(c => c.parentId === categoryId) || [];
+      
+      // If there are subcategories, show confirmation dialog
+      if (subcategories.length > 0) {
+        setCascadeVisibilityData({
+          categoryId,
+          isActive,
+          categoryName: category.name
+        });
+        setIsCascadeDialogOpen(true);
+        return;
+      }
+    }
+    
+    // If no subcategories or not a main category, proceed directly
     updateVisibilityMutation.mutate({
       id: categoryId,
-      isActive
+      isActive,
+      cascade: true // Default behavior
     });
+  };
+  
+  // Handle confirmation of cascade visibility change
+  const handleConfirmCascadeVisibility = (cascade: boolean) => {
+    updateVisibilityMutation.mutate({
+      id: cascadeVisibilityData.categoryId,
+      isActive: cascadeVisibilityData.isActive,
+      cascade
+    });
+    setIsCascadeDialogOpen(false);
   };
   
   // Handle drag end for the drag and drop functionality

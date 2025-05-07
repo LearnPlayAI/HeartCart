@@ -271,7 +271,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     const { id } = req.params;
     const categoryId = parseInt(id);
-    const { isActive } = req.body;
+    const { isActive, cascade = true } = req.body;
     
     if (typeof isActive !== 'boolean') {
       return res.status(400).json({ message: "isActive must be a boolean value" });
@@ -284,27 +284,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(404).json({ message: "Category not found" });
     }
     
-    // After updating the category, update all products in this category to match visibility
-    // Get all products in this category
+    // Initialize counters for response
+    let updatedProductCount = 0;
+    let updatedSubcategoryCount = 0;
+    
+    // If cascade is true and this is a parent category, update all its subcategories
+    if (cascade && category.level === 0) {
+      // Get all subcategories for this parent
+      const subcategories = await storage.getAllCategories({
+        parentId: categoryId,
+        includeInactive: true // Include all subcategories regardless of their current status
+      });
+      
+      // Update each subcategory's visibility
+      for (const subcategory of subcategories) {
+        await storage.updateCategory(subcategory.id, { isActive });
+        updatedSubcategoryCount++;
+        
+        // Get and update products in this subcategory
+        const subcategoryProducts = await storage.getProductsByCategory(subcategory.id, undefined, undefined, {
+          includeInactive: true,
+          includeCategoryInactive: true
+        });
+        
+        // Update each product's isActive status
+        for (const product of subcategoryProducts) {
+          await storage.updateProduct(product.id, {
+            isActive: isActive
+          });
+          updatedProductCount++;
+        }
+      }
+      
+      console.log(`Cascaded visibility status to ${updatedSubcategoryCount} subcategories of category ${categoryId}`);
+    }
+    
+    // Update products directly in this category
     const categoryProducts = await storage.getProductsByCategory(categoryId, undefined, undefined, {
       includeInactive: true,
       includeCategoryInactive: true
     });
     
     // Update each product's isActive status to match category's visibility
-    let updatedCount = 0;
     for (const product of categoryProducts) {
       await storage.updateProduct(product.id, {
         isActive: isActive
       });
-      updatedCount++;
+      updatedProductCount++;
     }
     
-    console.log(`Updated visibility status for ${updatedCount} products in category ${categoryId} to: ${isActive}`);
+    console.log(`Updated visibility status for ${updatedProductCount} products in category ${categoryId} to: ${isActive}`);
     
     res.json({
       ...category,
-      productsUpdated: updatedCount
+      productsUpdated: updatedProductCount,
+      subcategoriesUpdated: updatedSubcategoryCount,
+      cascaded: cascade
     });
   }));
 
