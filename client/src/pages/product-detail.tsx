@@ -31,12 +31,26 @@ import type {
   ProductAttributeCombination
 } from '@shared/schema';
 
+// This is a wrapper component that determines which path is matched and renders
+// the actual ProductDetail component with the right identifier
 const ProductDetail = () => {
-  const [matchSlug, paramsSlug] = useRoute('/product/:slug');
-  const [matchId, paramsId] = useRoute('/product/id/:id');
+  // Check which route matches
+  const [matchSlug] = useRoute('/product/:slug');
+  const [matchId] = useRoute('/product/id/:id');
   
-  const slug = paramsSlug?.slug;
-  const id = paramsId?.id ? parseInt(paramsId.id, 10) : undefined;
+  // If ID route matches, use ProductDetailById
+  if (matchId) {
+    return <ProductDetailById />;
+  }
+  
+  // Otherwise use ProductDetailBySlug
+  return <ProductDetailBySlug />;
+};
+
+// Component for product detail by slug
+const ProductDetailBySlug = () => {
+  const [, params] = useRoute('/product/:slug');
+  const slug = params?.slug;
   
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -46,30 +60,111 @@ const ProductDetail = () => {
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
   const [selectedCombination, setSelectedCombination] = useState<ProductAttributeCombination | null>(null);
   
-  // Always fetch both, but only enable the relevant one - this ensures hooks are called in the same order
+  // Fetch product by slug
   const { 
-    data: productFromSlug, 
-    isLoading: isLoadingSlug, 
-    error: errorSlug 
+    data: product, 
+    isLoading, 
+    error 
   } = useQuery<Product>({
-    queryKey: [`/api/products/slug/${slug || ''}`],
-    enabled: !!slug && !id, // Only fetch by slug if no ID is present
+    queryKey: [`/api/products/slug/${slug}`],
+    enabled: !!slug,
   });
   
-  // Fetch product by ID if available
+  return (
+    <ProductDetailContent 
+      product={product}
+      isLoading={isLoading}
+      error={error}
+      quantity={quantity}
+      setQuantity={setQuantity}
+      selectedAttributes={selectedAttributes}
+      setSelectedAttributes={setSelectedAttributes}
+      currentPrice={currentPrice}
+      setCurrentPrice={setCurrentPrice}
+      selectedCombination={selectedCombination}
+      setSelectedCombination={setSelectedCombination}
+      addToCart={addItem}
+      toast={toast}
+      queryClient={queryClient}
+    />
+  );
+};
+
+// Component for product detail by ID
+const ProductDetailById = () => {
+  const [, params] = useRoute('/product/id/:id');
+  const id = params?.id ? parseInt(params.id, 10) : undefined;
+  
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const { addItem } = useCart();
+  const [quantity, setQuantity] = useState(1);
+  const [selectedAttributes, setSelectedAttributes] = useState<{[key: number]: string}>({});
+  const [currentPrice, setCurrentPrice] = useState<number | null>(null);
+  const [selectedCombination, setSelectedCombination] = useState<ProductAttributeCombination | null>(null);
+  
+  // Fetch product by ID
   const { 
-    data: productFromId, 
-    isLoading: isLoadingId, 
-    error: errorId 
+    data: product, 
+    isLoading, 
+    error 
   } = useQuery<Product>({
-    queryKey: [`/api/products/${id || ''}`],
+    queryKey: [`/api/products/${id}`],
     enabled: !!id,
   });
   
-  // Use whichever product data is available
-  const product = productFromId || productFromSlug;
-  const isLoading = isLoadingId || isLoadingSlug;
-  const error = errorId || errorSlug;
+  return (
+    <ProductDetailContent 
+      product={product}
+      isLoading={isLoading}
+      error={error}
+      quantity={quantity}
+      setQuantity={setQuantity}
+      selectedAttributes={selectedAttributes}
+      setSelectedAttributes={setSelectedAttributes}
+      currentPrice={currentPrice}
+      setCurrentPrice={setCurrentPrice}
+      selectedCombination={selectedCombination}
+      setSelectedCombination={setSelectedCombination}
+      addToCart={addItem}
+      toast={toast}
+      queryClient={queryClient}
+    />
+  );
+};
+
+// Common component that renders the actual product detail content
+const ProductDetailContent = ({ 
+  product,
+  isLoading,
+  error,
+  quantity,
+  setQuantity,
+  selectedAttributes,
+  setSelectedAttributes,
+  currentPrice,
+  setCurrentPrice,
+  selectedCombination,
+  setSelectedCombination,
+  addToCart,
+  toast,
+  queryClient
+}: {
+  product: Product | undefined;
+  isLoading: boolean;
+  error: Error | null;
+  quantity: number;
+  setQuantity: (quantity: number) => void;
+  selectedAttributes: {[key: number]: string};
+  setSelectedAttributes: React.Dispatch<React.SetStateAction<{[key: number]: string}>>;
+  currentPrice: number | null;
+  setCurrentPrice: React.Dispatch<React.SetStateAction<number | null>>;
+  selectedCombination: ProductAttributeCombination | null;
+  setSelectedCombination: React.Dispatch<React.SetStateAction<ProductAttributeCombination | null>>;
+  addToCart: (item: any) => void;
+  toast: any;
+  queryClient: any;
+}) => {
   
   // Get related products based on the same category
   const { data: relatedProducts } = useQuery<Product[]>({
