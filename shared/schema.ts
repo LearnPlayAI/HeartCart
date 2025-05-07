@@ -425,7 +425,7 @@ export const categoriesRelations = relations(categories, ({ one, many }) => ({
   products: many(products)
 }));
 
-export const productsRelations = relations(products, ({ one }) => ({
+export const productsRelations = relations(products, ({ one, many }) => ({
   category: one(categories, {
     fields: [products.categoryId],
     references: [categories.id]
@@ -433,5 +433,25 @@ export const productsRelations = relations(products, ({ one }) => ({
   catalog: one(catalogs, {
     fields: [products.catalogId],
     references: [catalogs.id]
+  }),
+  images: many(productImages)
+}));
+
+export const productImagesRelations = relations(productImages, ({ one }) => ({
+  product: one(products, {
+    fields: [productImages.productId],
+    references: [products.id]
   })
+}));
+
+export const catalogsRelations = relations(catalogs, ({ one, many }) => ({
+  supplier: one(suppliers, {
+    fields: [catalogs.supplierId],
+    references: [suppliers.id]
+  }),
+  products: many(products)
+}));
+
+export const suppliersRelations = relations(suppliers, ({ many }) => ({
+  catalogs: many(catalogs)
 }));
