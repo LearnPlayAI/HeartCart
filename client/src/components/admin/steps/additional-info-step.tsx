@@ -47,8 +47,8 @@ export default function AdditionalInfoStep({
               <FormItem>
                 <FormLabel>Catalog</FormLabel>
                 <Select 
-                  onValueChange={(value) => field.onChange(value ? parseInt(value) : null)}
-                  value={field.value?.toString() || ''}
+                  onValueChange={(value) => field.onChange(value === 'null' ? null : parseInt(value))}
+                  value={field.value?.toString() || 'null'}
                 >
                   <FormControl>
                     <SelectTrigger>
@@ -56,7 +56,7 @@ export default function AdditionalInfoStep({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="null">None</SelectItem>
                     {catalogs?.map((catalog) => (
                       <SelectItem key={catalog.id} value={catalog.id.toString()}>
                         {catalog.name}
