@@ -11,10 +11,11 @@ import { CalendarIcon, PlusCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UseFormReturn } from "react-hook-form";
 import { format } from "date-fns";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { GlobalAttribute, GlobalAttributeOption } from "@shared/schema";
+import { useToast } from "@/hooks/use-toast";
 
 interface AdditionalInfoStepProps {
   form: UseFormReturn<any>;
@@ -529,6 +530,11 @@ function AttributeOptionSelector({
   const [options, setOptions] = React.useState<GlobalAttributeOption[]>([]);
   const [selectedOptions, setSelectedOptions] = React.useState<number[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [showNewOptionForm, setShowNewOptionForm] = React.useState(false);
+  const [newOptionValue, setNewOptionValue] = React.useState('');
+  const [isCreatingOption, setIsCreatingOption] = React.useState(false);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   // Fetch existing options for this product attribute
   const { data: attributeOptions, isLoading: isLoadingOptions } = useQuery({
@@ -567,22 +573,63 @@ function AttributeOptionSelector({
     loadOptions();
   }, [attributeId, getOptions]);
   
+  // Function to create a new option
+  const createNewOption = async () => {
+    if (!newOptionValue.trim()) return;
+    
+    setIsCreatingOption(true);
+    try {
+      const response = await fetch('/api/global-attribute-options', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          attributeId,
+          value: newOptionValue.trim(),
+          displayOrder: options.length + 1
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to create option');
+      }
+      
+      const newOption = await response.json();
+      
+      // Update the options list
+      setOptions([...options, newOption]);
+      
+      // Select the new option
+      setSelectedOptions([...selectedOptions, newOption.id]);
+      
+      // Reset the form
+      setNewOptionValue('');
+      setShowNewOptionForm(false);
+      
+      // Invalidate the options cache
+      queryClient.invalidateQueries({
+        queryKey: ['/api/global-attributes', attributeId, 'options']
+      });
+      
+      toast({
+        title: "Option created",
+        description: `The option "${newOption.value}" was created successfully.`,
+      });
+    } catch (error) {
+      console.error('Error creating option:', error);
+      toast({
+        title: "Error creating option",
+        description: (error as Error).message || "Something went wrong",
+        variant: "destructive"
+      });
+    } finally {
+      setIsCreatingOption(false);
+    }
+  };
+  
   if (isLoading) {
     return <div className="text-center py-2">Loading options...</div>;
-  }
-  
-  if (options.length === 0) {
-    return (
-      <div className="text-center py-2 border rounded-md">
-        <p className="text-muted-foreground mb-2">No options available for this attribute</p>
-        <Button asChild size="sm" variant="outline">
-          <a href={`/admin/global-attributes/${attributeId}`} target="_blank" rel="noopener noreferrer">
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Add options
-          </a>
-        </Button>
-      </div>
-    );
   }
   
   return (
@@ -609,17 +656,79 @@ function AttributeOptionSelector({
             </div>
           </div>
         ))}
+        
+        {/* Add new option tile */}
+        {!showNewOptionForm && (
+          <div 
+            className="border border-dashed p-2 rounded-md cursor-pointer flex items-center justify-center text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+            onClick={() => setShowNewOptionForm(true)}
+          >
+            <PlusCircle className="h-4 w-4 mr-2" />
+            <span>Add new option</span>
+          </div>
+        )}
       </div>
       
-      <Button 
-        onClick={() => onSave(selectedOptions)}
-        variant="outline" 
-        size="sm"
-        className="w-full"
-        disabled={selectedOptions.length === 0}
-      >
-        Save Selected Options
-      </Button>
+      {/* New option form */}
+      {showNewOptionForm && (
+        <div className="border p-3 rounded-md space-y-2">
+          <div className="flex items-center space-x-2">
+            <Input 
+              placeholder="Enter option value (e.g. Red, Large, etc.)"
+              value={newOptionValue}
+              onChange={(e) => setNewOptionValue(e.target.value)}
+              disabled={isCreatingOption}
+              className="flex-1"
+            />
+          </div>
+          <div className="flex justify-end space-x-2">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => {
+                setShowNewOptionForm(false);
+                setNewOptionValue('');
+              }}
+              disabled={isCreatingOption}
+            >
+              Cancel
+            </Button>
+            <Button 
+              size="sm"
+              onClick={createNewOption}
+              disabled={!newOptionValue.trim() || isCreatingOption}
+            >
+              {isCreatingOption ? 'Creating...' : 'Create Option'}
+            </Button>
+          </div>
+        </div>
+      )}
+      
+      {options.length === 0 && !showNewOptionForm && (
+        <div className="text-center py-2 border rounded-md">
+          <p className="text-muted-foreground mb-2">No options available for this attribute</p>
+          <Button 
+            size="sm" 
+            variant="outline"
+            onClick={() => setShowNewOptionForm(true)}
+          >
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add first option
+          </Button>
+        </div>
+      )}
+      
+      {(options.length > 0 || selectedOptions.length > 0) && (
+        <Button 
+          onClick={() => onSave(selectedOptions)}
+          variant="outline" 
+          size="sm"
+          className="w-full"
+          disabled={selectedOptions.length === 0}
+        >
+          Save Selected Options
+        </Button>
+      )}
     </div>
   );
 }
