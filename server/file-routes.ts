@@ -1,7 +1,7 @@
 import express, { Request, Response, NextFunction } from 'express';
 import path from 'path';
 import { isAuthenticated, isAdmin } from './auth-middleware';
-import { objectStore } from './object-store';
+import { objectStore, STORAGE_FOLDERS } from './object-store';
 
 const router = express.Router();
 

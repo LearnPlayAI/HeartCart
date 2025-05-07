@@ -77,7 +77,8 @@ class ObjectStoreService {
       // Try a list operation with a small max parameter to see if we have access
       const result = await this.objectStore.list("", { maxKeys: 1 });
       
-      if ('err' in result) {
+      // Check for error in the result
+      if ('err' in result && result.err) {
         throw new Error(`Object Store access error: ${result.err.message}`);
       }
       
@@ -277,8 +278,24 @@ class ObjectStoreService {
         contentType = this.detectContentType(objectKey);
       }
       
+      // Ensure we have a proper Buffer
+      let data: Buffer;
+      if (result.value) {
+        if (Buffer.isBuffer(result.value)) {
+          data = result.value;
+        } else if (Array.isArray(result.value)) {
+          // Handle array result by concatenating or using the first element
+          data = Buffer.from(result.value[0] || '');
+        } else {
+          // Convert other types to buffer if possible
+          data = Buffer.from(result.value.toString());
+        }
+      } else {
+        data = Buffer.from('');
+      }
+      
       return {
-        data: result.value as Buffer,
+        data,
         contentType
       };
     } catch (error) {
@@ -383,24 +400,29 @@ class ObjectStoreService {
     await this.initialize();
     
     try {
-      const options: any = { 
-        prefix,
-        delimiter: recursive ? undefined : '/' // Use delimiter for non-recursive listing
+      const listOptions = { 
+        prefix: prefix,
+        delimiter: recursive ? undefined : '/',
+        maxKeys: 1000 // Limit results to a reasonable number
       };
       
-      const result = await this.objectStore.list(options);
+      const result = await this.objectStore.list(prefix, listOptions);
       
-      if (result.err) {
+      if ('err' in result) {
         console.error(`Error listing files with prefix ${prefix}:`, result.err);
         throw new Error(`Failed to list files: ${result.err.message}`);
       }
       
-      // Extract keys from the result
-      const keys = result.value?.map(obj => obj.key) || [];
+      // Extract keys from the result objects
+      const keys: string[] = [];
       
-      // If using delimiter, also include common prefixes (folders)
-      if (!recursive && result.commonPrefixes) {
-        return [...keys, ...result.commonPrefixes];
+      // Process object keys
+      if (result.value && Array.isArray(result.value)) {
+        for (const obj of result.value) {
+          if (obj && typeof obj === 'object' && 'key' in obj) {
+            keys.push(obj.key as string);
+          }
+        }
       }
       
       return keys;
