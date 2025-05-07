@@ -123,7 +123,7 @@ export class ObjectStorageService {
    * @returns The public URL
    */
   getPublicUrl(objectKey: string): string {
-    return `/object-storage/${objectKey}`;
+    return `/api/files/${objectKey}`;
   }
   
   /**

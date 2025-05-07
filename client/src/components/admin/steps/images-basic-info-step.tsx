@@ -317,12 +317,12 @@ export default function ImagesBasicInfoStep({
                       >
                         {image.url ? (
                           <img
-                            src={image.url.startsWith('http') ? image.url : `https://${window.location.host}${image.url}`}
+                            src={image.url}
                             alt={`Product image ${index + 1}`}
                             className="h-full w-full object-cover"
                             onError={(e) => {
                               console.error("Image load error:", image);
-                              console.log("Attempted URL:", image.url.startsWith('http') ? image.url : `https://${window.location.host}${image.url}`);
+                              console.log("Attempted URL:", image.url);
                               (e.target as HTMLImageElement).src = "data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ff3040' stroke-width='2'%3E%3Crect width='20' height='20' x='2' y='2' rx='5' ry='5'/%3E%3Cpath d='M16 16l-4-4-4 4M16 8l-4 4-4-4'/%3E%3C/svg%3E";
                               (e.target as HTMLImageElement).classList.add("bg-gray-100");
                             }}

@@ -1996,6 +1996,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       count: result.count
     });
   }));
+  
+  // Object storage file access endpoint
+  app.get('/api/files/:path(*)', async (req: Request, res: Response) => {
+    try {
+      const objectKey = req.params.path;
+      console.log(`Serving file from object storage: ${objectKey}`);
+      
+      // First check if the file exists
+      if (!(await objectStorageService.exists(objectKey))) {
+        return res.status(404).send('File not found');
+      }
+      
+      // Get metadata for content type
+      let contentType = 'application/octet-stream';
+      try {
+        const metadata = await objectStorageService.getMetadata(objectKey);
+        if (metadata.contentType) {
+          contentType = metadata.contentType;
+        }
+      } catch (err) {
+        console.warn(`Could not get metadata for ${objectKey}, using default content type`);
+      }
+      
+      // Set content type header
+      res.setHeader('Content-Type', contentType);
+      
+      // Get file as stream
+      const fileStream = await objectStorageService.downloadAsStream(objectKey);
+      
+      // Pipe the stream to the response
+      fileStream.pipe(res);
+    } catch (error: any) {
+      console.error('Error serving file:', error);
+      res.status(500).send(`Error serving file: ${error.message}`);
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;
