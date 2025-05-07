@@ -574,6 +574,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     res.json(product);
   }));
+  
+  // Full update of a product
+  app.put("/api/products/:id", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    // Check if user is admin
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can update products" });
+    }
+    
+    const productId = parseInt(req.params.id);
+    
+    if (isNaN(productId)) {
+      return res.status(400).json({ message: "Invalid product ID" });
+    }
+    
+    // Get the existing product to check if it exists
+    const existingProduct = await storage.getProductById(productId);
+    
+    if (!existingProduct) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+    
+    // Remove properties that shouldn't be updated directly
+    const updateData = { ...req.body };
+    delete updateData.id;
+    delete updateData.createdAt;
+    delete updateData.updatedAt;
+    
+    // Update the product
+    const updatedProduct = await storage.updateProduct(productId, updateData);
+    
+    res.json(updatedProduct);
+  }));
 
   app.get("/api/featured-products", handleErrors(async (req: Request, res: Response) => {
     const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
