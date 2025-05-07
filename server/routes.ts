@@ -152,7 +152,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/categories/:slug", handleErrors(async (req: Request, res: Response) => {
     const { slug } = req.params;
-    const category = await storage.getCategoryBySlug(slug);
+    const user = req.user as any;
+    const isAdmin = user && user.role === 'admin';
+    
+    const options = { includeInactive: isAdmin };
+    const category = await storage.getCategoryBySlug(slug, options);
     
     if (!category) {
       res.status(404).json({ message: "Category not found" });
@@ -173,6 +177,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.get("/api/categories/:id/with-children", handleErrors(async (req: Request, res: Response) => {
     const categoryId = parseInt(req.params.id);
+    const user = req.user as any;
+    const isAdmin = user && user.role === 'admin';
     
     // Validate categoryId is a number
     if (isNaN(categoryId)) {
@@ -180,7 +186,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return;
     }
     
-    const categoryWithChildren = await storage.getCategoryWithChildren(categoryId);
+    const options = { includeInactive: isAdmin };
+    const categoryWithChildren = await storage.getCategoryWithChildren(categoryId, options);
     
     if (!categoryWithChildren) {
       res.status(404).json({ message: "Category not found" });

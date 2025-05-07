@@ -29,9 +29,9 @@ export interface IStorage {
   
   // Category operations
   getAllCategories(options?: { includeInactive?: boolean, parentId?: number | null, level?: number, orderBy?: 'name' | 'displayOrder' }): Promise<Category[]>;
-  getCategoryBySlug(slug: string): Promise<Category | undefined>;
-  getCategoryWithChildren(categoryId: number): Promise<{ category: Category, children: Category[] } | undefined>;
-  getMainCategoriesWithChildren(): Promise<Array<{ category: Category, children: Category[] }>>;
+  getCategoryBySlug(slug: string, options?: { includeInactive?: boolean }): Promise<Category | undefined>;
+  getCategoryWithChildren(categoryId: number, options?: { includeInactive?: boolean }): Promise<{ category: Category, children: Category[] } | undefined>;
+  getMainCategoriesWithChildren(options?: { includeInactive?: boolean }): Promise<Array<{ category: Category, children: Category[] }>>;
   createCategory(category: InsertCategory): Promise<Category>;
   updateCategory(id: number, categoryData: Partial<InsertCategory>): Promise<Category | undefined>;
   updateCategoryDisplayOrder(id: number, displayOrder: number): Promise<Category | undefined>;
@@ -199,33 +199,55 @@ export class DatabaseStorage implements IStorage {
     return await query;
   }
 
-  async getCategoryBySlug(slug: string): Promise<Category | undefined> {
+  async getCategoryBySlug(slug: string, options?: { includeInactive?: boolean }): Promise<Category | undefined> {
+    // Build conditions
+    const conditions: SQL<unknown>[] = [eq(categories.slug, slug)];
+    
+    // Only filter by isActive if we're not including inactive categories
+    if (!options?.includeInactive) {
+      conditions.push(eq(categories.isActive, true));
+    }
+    
     const [category] = await db
       .select()
       .from(categories)
-      .where(and(eq(categories.slug, slug), eq(categories.isActive, true)));
+      .where(and(...conditions));
+      
     return category;
   }
   
-  async getCategoryWithChildren(categoryId: number): Promise<{ category: Category, children: Category[] } | undefined> {
+  async getCategoryWithChildren(categoryId: number, options?: { includeInactive?: boolean }): Promise<{ category: Category, children: Category[] } | undefined> {
+    // Build conditions for parent category
+    const categoryConditions: SQL<unknown>[] = [eq(categories.id, categoryId)];
+    
+    // Only filter by isActive if we're not including inactive categories
+    if (!options?.includeInactive) {
+      categoryConditions.push(eq(categories.isActive, true));
+    }
+    
     // Get the category
     const [category] = await db
       .select()
       .from(categories)
-      .where(and(eq(categories.id, categoryId), eq(categories.isActive, true)));
+      .where(and(...categoryConditions));
     
     if (!category) {
       return undefined;
+    }
+    
+    // Build conditions for children
+    const childrenConditions: SQL<unknown>[] = [eq(categories.parentId, categoryId)];
+    
+    // Only filter by isActive if we're not including inactive categories
+    if (!options?.includeInactive) {
+      childrenConditions.push(eq(categories.isActive, true));
     }
     
     // Get the children
     const children = await db
       .select()
       .from(categories)
-      .where(and(
-        eq(categories.parentId, categoryId),
-        eq(categories.isActive, true)
-      ))
+      .where(and(...childrenConditions))
       .orderBy(asc(categories.displayOrder), asc(categories.name));
     
     return { category, children };
