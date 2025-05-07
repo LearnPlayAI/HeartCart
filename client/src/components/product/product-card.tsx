@@ -133,7 +133,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
         <QuickViewModal
           open={quickViewOpen}
           onOpenChange={setQuickViewOpen}
-          productSlug={product.slug || ''}
+          productId={product.id}
         />
       </div>
     );
@@ -205,7 +205,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
       <QuickViewModal
         open={quickViewOpen}
         onOpenChange={setQuickViewOpen}
-        productSlug={product.slug || ''}
+        productId={product.id}
       />
     </div>
   );

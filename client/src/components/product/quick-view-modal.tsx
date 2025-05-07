@@ -40,10 +40,11 @@ interface ProductAttributeCombination {
 interface QuickViewModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  productSlug: string;
+  productSlug?: string;
+  productId?: number;
 }
 
-export default function QuickViewModal({ open, onOpenChange, productSlug }: QuickViewModalProps) {
+export default function QuickViewModal({ open, onOpenChange, productSlug, productId }: QuickViewModalProps) {
   const [quantity, setQuantity] = useState(1);
   const [selectedAttributes, setSelectedAttributes] = useState<Record<number, string>>({});
   const [currentCombination, setCurrentCombination] = useState<ProductAttributeCombination | null>(null);
@@ -53,7 +54,7 @@ export default function QuickViewModal({ open, onOpenChange, productSlug }: Quic
   const { toast } = useToast();
 
   // Fetch product details
-  const { data: product, isLoading: isLoadingProduct } = useQuery({
+  const { data: productFromSlug, isLoading: isLoadingProductFromSlug } = useQuery({
     queryKey: ['/api/products/slug', productSlug],
     queryFn: async () => {
       const response = await fetch(`/api/products/slug/${productSlug}`);
@@ -64,6 +65,23 @@ export default function QuickViewModal({ open, onOpenChange, productSlug }: Quic
     },
     enabled: !!productSlug && open,
   });
+  
+  // Fetch product details by ID
+  const { data: productFromId, isLoading: isLoadingProductFromId } = useQuery({
+    queryKey: ['/api/products/id', productId],
+    queryFn: async () => {
+      const response = await fetch(`/api/products/${productId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch product');
+      }
+      return response.json();
+    },
+    enabled: !!productId && open,
+  });
+  
+  // Use whichever product data is available
+  const product = productFromId || productFromSlug;
+  const isLoadingProduct = isLoadingProductFromId || isLoadingProductFromSlug;
 
   // Fetch category attributes
   const { data: categoryAttributes, isLoading: isLoadingAttributes } = useQuery({
@@ -349,7 +367,7 @@ export default function QuickViewModal({ open, onOpenChange, productSlug }: Quic
               variant="outline" 
               className="w-full mt-2"
               onClick={() => {
-                navigate(`/product/${product.slug}`);
+                navigate(`/product/id/${product.id}`);
                 onOpenChange(false);
               }}
             >
