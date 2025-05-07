@@ -82,13 +82,15 @@ export class ImageService {
       let sharpInstance = sharp(imageBuffer);
       
       // Apply resize with options
-      sharpInstance = sharpInstance.resize({
-        width: options.width,
-        height: options.height,
-        fit: options.fit || 'cover',
-        position: options.position || 'centre',
-        background: options.background || { r: 255, g: 255, b: 255, alpha: 1 }
-      });
+      sharpInstance = sharpInstance.resize(
+        options.width,
+        options.height,
+        {
+          fit: options.fit || 'cover',
+          position: options.position || 'centre',
+          background: options.background || { r: 255, g: 255, b: 255, alpha: 1 }
+        }
+      );
       
       // Set format and quality
       if (format === 'jpeg') {

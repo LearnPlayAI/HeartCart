@@ -22,6 +22,9 @@ import path from "path";
 import fs from "fs";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Initialize ImageService with the objectStorageService
+  const imageService = new ImageService(objectStorageService);
+  
   // Set up multer storage for temporary file uploads
   const tempStorage = multer.diskStorage({
     destination: function (req, file, cb) {
