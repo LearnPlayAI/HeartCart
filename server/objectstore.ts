@@ -849,12 +849,14 @@ export class ObjectStorageService {
    * Helper method to upload a temporary file
    * @param fileBuffer The file buffer
    * @param originalFilename The original filename
+   * @param productId The product ID (or 'pending' for products not yet created)
    * @param contentType Optional content type
    * @returns The public URL and object key
    */
   async uploadTempFile(
     fileBuffer: Buffer,
     originalFilename: string,
+    productId: string | number = 'pending',
     contentType?: string
   ): Promise<{ url: string, objectKey: string }> {
     // Ensure storage is initialized
@@ -870,13 +872,19 @@ export class ObjectStorageService {
       throw new Error(`Empty buffer for temp file: ${originalFilename}`);
     }
     
-    console.log(`Uploading temp file: ${originalFilename}, size: ${fileBuffer.length} bytes`);
+    console.log(`Uploading temp file for product ${productId}: ${originalFilename}, size: ${fileBuffer.length} bytes`);
     
-    // Use provided filename to maintain consistency between uploads
-    const filename = originalFilename;
+    // Generate a unique filename with timestamp to avoid collisions
+    const timestamp = Date.now();
+    const ext = path.extname(originalFilename);
+    const baseName = path.basename(originalFilename, ext);
+    const uniqueFilename = `${baseName}_${timestamp}${ext}`;
     
-    // Build the object key
-    const objectKey = `${STORAGE_FOLDERS.TEMP}/${filename}`;
+    // Build the object key with product ID in the folder structure
+    const objectKey = `${STORAGE_FOLDERS.TEMP}/${productId}/${uniqueFilename}`;
+    
+    // Ensure the folder exists
+    await this.createFolder(`${STORAGE_FOLDERS.TEMP}/${productId}`);
     
     const MAX_RETRIES = 3;
     let lastError: any = null;
@@ -886,8 +894,8 @@ export class ObjectStorageService {
         console.log(`Uploading temp file attempt ${attempt}/${MAX_RETRIES}: ${objectKey}`);
         
         // Set explicit content type to ensure browser can display it correctly
-        const detectedContentType = contentType || this.detectContentType(filename);
-        console.log(`Content type for ${filename}: ${detectedContentType}`);
+        const detectedContentType = contentType || this.detectContentType(uniqueFilename);
+        console.log(`Content type for ${uniqueFilename}: ${detectedContentType}`);
         
         // Upload the file
         const url = await this.uploadFromBuffer(objectKey, fileBuffer, {

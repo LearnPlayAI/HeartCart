@@ -25,30 +25,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize ImageService with the objectStorageService
   const imageService = new ImageService(objectStorageService);
   
-  // Set up multer storage for temporary file uploads
-  const tempStorage = multer.diskStorage({
-    destination: function (req, file, cb) {
-      console.log('Multer file received:', file.fieldname, file.originalname);
-      cb(null, path.join(process.cwd(), 'temp'));
-    },
-    filename: function (req, file, cb) {
-      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-      const ext = path.extname(file.originalname);
-      // Use a consistent field name for the filename prefix
-      cb(null, 'product-image-' + uniqueSuffix + ext);
-    }
-  });
-  
+  // Use memory storage for file uploads to avoid local filesystem
+  // Files will go directly to Replit Object Storage
   const upload = multer({ 
-    storage: tempStorage,
+    storage: multer.memoryStorage(), // Use memory storage instead of disk storage
     limits: {
       fileSize: 5 * 1024 * 1024, // 5MB limit
     },
     fileFilter: (req, file, cb) => {
       // Accept only images
       if (file.mimetype.startsWith('image/')) {
+        console.log('Multer file accepted:', file.fieldname, file.originalname);
         cb(null, true);
       } else {
+        console.log('Multer file rejected (not an image):', file.fieldname, file.originalname);
         cb(null, false);
       }
     }
@@ -827,14 +817,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.files || !Array.isArray(req.files) || req.files.length === 0) {
         return res.status(400).json({ message: 'No files uploaded' });
       }
+      
+      // Get productId if provided, otherwise use 'pending'
+      let productId = 'pending';
+      if (req.body.productId) {
+        productId = req.body.productId;
+      } else if (req.query.productId) {
+        productId = req.query.productId as string;
+      } else if (req.query.catalogId) {
+        // If no product ID but we have a catalog ID, use that as part of the temp path
+        productId = `catalog_${req.query.catalogId}`;
+      }
+      
+      console.log(`Using product ID for temp storage: ${productId}`);
     
-      // Process files and upload to Object Storage
+      // Process files and upload directly to Object Storage
       const processedFiles = [];
       
       try {
-        for (const file of req.files) {
-          // Read the file from disk
-          const fileBuffer = await fs.promises.readFile(file.path);
+        for (const file of req.files as Express.Multer.File[]) {
+          // With multer memory storage, file is already in memory as a buffer
+          const fileBuffer = file.buffer;
+          
+          if (!fileBuffer || fileBuffer.length === 0) {
+            console.error(`Empty file buffer received for ${file.originalname}`);
+            continue;
+          }
+          
+          console.log(`Processing file ${file.originalname}, size: ${fileBuffer.length} bytes`);
           
           // Generate consistent filename for object storage
           const timestamp = Date.now();
@@ -842,16 +852,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const baseName = path.basename(file.originalname, fileExt);
           const expectedFileName = `${baseName}_${timestamp}${fileExt}`;
           
-          // Upload to Object Storage with consistent filename
+          // Upload to Object Storage with product ID in the path
           const { url, objectKey } = await objectStorageService.uploadTempFile(
             fileBuffer,
-            expectedFileName, // Use our generated filename
+            expectedFileName,
+            productId, // Pass product ID to create correct folder structure
             file.mimetype
           );
           
           // Add a delay after upload to ensure Replit Object Storage has propagated the file
           // This is crucial for preventing issues with file not being available immediately
-          await new Promise(resolve => setTimeout(resolve, 500));
+          await new Promise(resolve => setTimeout(resolve, 300));
           
           // Verify the file exists in Object Storage before proceeding
           const exists = await objectStorageService.exists(objectKey);
@@ -867,13 +878,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             originalname: file.originalname,
             mimetype: file.mimetype,
             size: file.size,
-            path: `/api/files/temp/${path.basename(objectKey)}`, // Use our consistent naming
+            path: url, // Use the URL from the uploadTempFile method
             objectKey
-          });
-          
-          // Remove the temporary file from disk
-          await fs.promises.unlink(file.path).catch(err => {
-            console.warn(`Could not delete temporary file ${file.path}:`, err);
           });
         }
         
@@ -893,9 +899,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Redirect temp file requests to the main file serving endpoint for consistent handling
+  app.get('/temp/:productId/:filename', async (req: Request, res: Response) => {
+    const { productId, filename } = req.params;
+    const objectKey = `${STORAGE_FOLDERS.TEMP}/${productId}/${filename}`;
+    
+    // Redirect to our universal file serving endpoint
+    res.redirect(`/api/files/${objectKey}`);
+  });
+  
+  // Legacy route for backward compatibility
   app.get('/temp/:filename', async (req: Request, res: Response) => {
     const filename = req.params.filename;
-    const objectKey = `${STORAGE_FOLDERS.TEMP}/${filename}`;
+    // Default to 'pending' folder for legacy files
+    const objectKey = `${STORAGE_FOLDERS.TEMP}/pending/${filename}`;
     
     // Redirect to our universal file serving endpoint
     res.redirect(`/api/files/${objectKey}`);
