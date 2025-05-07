@@ -2304,11 +2304,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }));
 
   // PRODUCT ATTRIBUTE VALUES ROUTES (For Global Attributes)
-  app.get("/api/products/:productId/global-attributes", handleErrors(async (req: Request, res: Response) => {
-    const productId = parseInt(req.params.productId);
-    const attributes = await storage.getProductGlobalAttributes(productId);
-    res.json(attributes);
-  }));
+  // Note: This route is replaced by the public route below which uses getGlobalAttributesWithOptionsForProduct
 
   // Product Global Attributes API routes
   app.get("/api/admin/products/:productId/global-attributes", isAdmin, handleErrors(async (req: Request, res: Response) => {

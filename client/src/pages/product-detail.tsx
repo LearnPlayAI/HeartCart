@@ -372,7 +372,7 @@ const ProductDetailContent = ({
       adjustedPrice: currentPrice || product.salePrice || product.price
     };
     
-    addItem(cartItem);
+    addToCart(cartItem);
     
     toast({
       title: "Added to cart",
