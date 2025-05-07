@@ -28,6 +28,7 @@ import {
   SelectValue
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { 
@@ -249,6 +250,40 @@ export default function AdminCategories() {
       });
     },
   });
+  
+  // Update visibility mutation
+  const updateVisibilityMutation = useMutation({
+    mutationFn: async (data: { id: number; isActive: boolean }) => {
+      const response = await fetch(`/api/categories/${data.id}/visibility`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ isActive: data.isActive }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update category visibility");
+      }
+
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/categories/main/with-children"] });
+      toast({
+        title: "Visibility updated",
+        description: `The category is now ${data.isActive ? 'visible' : 'hidden'}`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: String(error),
+        variant: "destructive",
+      });
+    },
+  });
 
   // Effect to set initial display order for new categories
   useEffect(() => {
@@ -362,6 +397,14 @@ export default function AdminCategories() {
   // Handle opening the attributes management page
   const handleManageAttributes = (categoryId: number) => {
     navigate(`/admin/category-attributes/${categoryId}`);
+  };
+  
+  // Handle visibility toggle
+  const handleVisibilityToggle = (categoryId: number, isActive: boolean) => {
+    updateVisibilityMutation.mutate({
+      id: categoryId,
+      isActive
+    });
   };
   
   // Handle drag end for the drag and drop functionality
@@ -565,6 +608,16 @@ export default function AdminCategories() {
                                 >
                                   Order: {item.category.displayOrder || 0}
                                 </Badge>
+                                <div className="ml-2 flex items-center">
+                                  <Switch
+                                    checked={item.category.isActive}
+                                    onCheckedChange={(checked) => handleVisibilityToggle(item.category.id, checked)}
+                                    className="data-[state=checked]:bg-green-500"
+                                  />
+                                  <span className="ml-2 text-xs text-muted-foreground">
+                                    {item.category.isActive ? 'Visible' : 'Hidden'}
+                                  </span>
+                                </div>
                               </div>
                               <div className="flex space-x-2">
                                 <Button 
@@ -652,6 +705,16 @@ export default function AdminCategories() {
                                               >
                                                 Order: {child.displayOrder || 0}
                                               </Badge>
+                                              <div className="ml-2 flex items-center">
+                                                <Switch
+                                                  checked={child.isActive}
+                                                  onCheckedChange={(checked) => handleVisibilityToggle(child.id, checked)}
+                                                  className="data-[state=checked]:bg-green-500"
+                                                />
+                                                <span className="ml-2 text-xs text-muted-foreground">
+                                                  {child.isActive ? 'Visible' : 'Hidden'}
+                                                </span>
+                                              </div>
                                             </div>
                                             <div className="flex space-x-2">
                                               <Button 

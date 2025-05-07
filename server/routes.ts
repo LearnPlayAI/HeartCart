@@ -245,6 +245,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(category);
   }));
 
+  app.put("/api/categories/:id/visibility", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    // Check if user is admin
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can update category visibility" });
+    }
+    
+    const { id } = req.params;
+    const categoryId = parseInt(id);
+    const { isActive } = req.body;
+    
+    if (typeof isActive !== 'boolean') {
+      return res.status(400).json({ message: "isActive must be a boolean value" });
+    }
+    
+    // Update the category's visibility
+    const category = await storage.updateCategory(categoryId, { isActive });
+    
+    if (!category) {
+      return res.status(404).json({ message: "Category not found" });
+    }
+    
+    res.json(category);
+  }));
+
   // CATEGORY ATTRIBUTE ROUTES
   app.get("/api/categories/:categoryId/attributes", handleErrors(async (req: Request, res: Response) => {
     const categoryId = parseInt(req.params.categoryId);
