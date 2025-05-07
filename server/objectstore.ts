@@ -291,6 +291,30 @@ export class ObjectStorageService {
   }
   
   /**
+   * Get the size of an object in bytes
+   * @param objectKey The object key
+   * @returns The file size in bytes
+   */
+  async getSize(objectKey: string): Promise<number> {
+    try {
+      // Try to get the metadata, which will contain the size
+      const metadata = await this.getMetadata(objectKey);
+      
+      // If metadata has size, return it
+      if (metadata.size !== undefined) {
+        return metadata.size;
+      }
+      
+      // If not, download as buffer and get size
+      const buffer = await this.downloadAsBuffer(objectKey);
+      return buffer.length;
+    } catch (error: any) {
+      console.error(`Error getting size for ${objectKey}:`, error);
+      throw new Error(`Failed to get file size: ${error.message || 'Unknown error'}`);
+    }
+  }
+  
+  /**
    * Get metadata for an object
    * @param objectKey The object key
    * @returns The file metadata

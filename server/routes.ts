@@ -1044,6 +1044,151 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ success: true });
   }));
   
+  // IMAGE PROCESSING ROUTES
+  
+  // Optimize an image for web display
+  app.post("/api/images/optimize", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can use image optimization" });
+    }
+    
+    const { objectKey, quality, format } = req.body;
+    
+    if (!objectKey || typeof objectKey !== 'string') {
+      return res.status(400).json({ message: "Object key is required" });
+    }
+    
+    try {
+      // Check if the image exists
+      const exists = await objectStorageService.exists(objectKey);
+      if (!exists) {
+        return res.status(404).json({ message: "Image not found" });
+      }
+      
+      // Optimize the image
+      const result = await imageService.optimizeImage(
+        objectKey,
+        { 
+          quality: quality ? parseInt(quality) : undefined,
+          format: format as 'jpeg' | 'png' | 'webp' | 'avif' | undefined
+        }
+      );
+      
+      // Get size of original image for comparison
+      const originalSize = await objectStorageService.getSize(objectKey);
+      const sizeReduction = originalSize ? Math.round((1 - result.size / originalSize) * 100) : 0;
+      
+      res.json({
+        success: true,
+        ...result,
+        originalKey: objectKey,
+        optimizedKey: result.objectKey,
+        sizeReduction: `${sizeReduction}%`
+      });
+    } catch (error: any) {
+      console.error('Image optimization error:', error);
+      res.status(500).json({ 
+        message: "Failed to optimize image", 
+        error: error.message || 'Unknown error'
+      });
+    }
+  }));
+  
+  // Generate thumbnails for an image
+  app.post("/api/images/thumbnails", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can generate thumbnails" });
+    }
+    
+    const { objectKey, sizes } = req.body;
+    
+    if (!objectKey || typeof objectKey !== 'string') {
+      return res.status(400).json({ message: "Object key is required" });
+    }
+    
+    try {
+      // Check if the image exists
+      const exists = await objectStorageService.exists(objectKey);
+      if (!exists) {
+        return res.status(404).json({ message: "Image not found" });
+      }
+      
+      // Generate thumbnails
+      const thumbnails = await imageService.generateThumbnails(
+        objectKey,
+        sizes || undefined
+      );
+      
+      res.json({
+        success: true,
+        thumbnails,
+        originalKey: objectKey,
+        count: Object.keys(thumbnails).length
+      });
+    } catch (error: any) {
+      console.error('Thumbnail generation error:', error);
+      res.status(500).json({ 
+        message: "Failed to generate thumbnails", 
+        error: error.message || 'Unknown error'
+      });
+    }
+  }));
+  
+  // Resize an image with custom dimensions
+  app.post("/api/images/resize", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can resize images" });
+    }
+    
+    const { objectKey, width, height, fit, format, quality } = req.body;
+    
+    if (!objectKey || typeof objectKey !== 'string') {
+      return res.status(400).json({ message: "Object key is required" });
+    }
+    
+    if (!width && !height) {
+      return res.status(400).json({ message: "At least one dimension (width or height) is required" });
+    }
+    
+    try {
+      // Check if the image exists
+      const exists = await objectStorageService.exists(objectKey);
+      if (!exists) {
+        return res.status(404).json({ message: "Image not found" });
+      }
+      
+      // Resize the image
+      const result = await imageService.resizeImage(
+        objectKey,
+        {
+          width: width ? parseInt(width) : undefined,
+          height: height ? parseInt(height) : undefined,
+          fit: fit as 'cover' | 'contain' | 'fill' | 'inside' | 'outside' | undefined,
+          format: format as 'jpeg' | 'png' | 'webp' | 'avif' | undefined,
+          quality: quality ? parseInt(quality) : undefined
+        }
+      );
+      
+      res.json({
+        success: true,
+        ...result,
+        originalKey: objectKey
+      });
+    } catch (error: any) {
+      console.error('Image resize error:', error);
+      res.status(500).json({ 
+        message: "Failed to resize image", 
+        error: error.message || 'Unknown error'
+      });
+    }
+  }));
+  
   // AI SERVICE ROUTES
   
   // Remove image background using Gemini AI
