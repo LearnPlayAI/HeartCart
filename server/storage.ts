@@ -17,7 +17,7 @@ import {
   productAttributeCombinations, type ProductAttributeCombination, type InsertProductAttributeCombination
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, like, and, desc, asc, sql, inArray } from "drizzle-orm";
+import { eq, like, and, desc, asc, sql, inArray, isNull, not, or, SQL } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -28,8 +28,10 @@ export interface IStorage {
   updateUser(id: number, userData: Partial<InsertUser>): Promise<User | undefined>;
   
   // Category operations
-  getAllCategories(): Promise<Category[]>;
+  getAllCategories(options?: { includeInactive?: boolean, parentId?: number | null, level?: number, orderBy?: 'name' | 'displayOrder' }): Promise<Category[]>;
   getCategoryBySlug(slug: string): Promise<Category | undefined>;
+  getCategoryWithChildren(categoryId: number): Promise<{ category: Category, children: Category[] } | undefined>;
+  getMainCategoriesWithChildren(): Promise<Array<{ category: Category, children: Category[] }>>;
   createCategory(category: InsertCategory): Promise<Category>;
   
   // Product operations
@@ -158,8 +160,41 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Category operations
-  async getAllCategories(): Promise<Category[]> {
-    return await db.select().from(categories).where(eq(categories.isActive, true));
+  async getAllCategories(options?: { includeInactive?: boolean, parentId?: number | null, level?: number, orderBy?: 'name' | 'displayOrder' }): Promise<Category[]> {
+    let query = db.select().from(categories);
+    
+    // Apply filters
+    const conditions: SQL<unknown>[] = [];
+    
+    if (!options?.includeInactive) {
+      conditions.push(eq(categories.isActive, true));
+    }
+    
+    if (options?.parentId !== undefined) {
+      if (options.parentId === null) {
+        conditions.push(isNull(categories.parentId));
+      } else {
+        conditions.push(eq(categories.parentId, options.parentId));
+      }
+    }
+    
+    if (options?.level !== undefined) {
+      conditions.push(eq(categories.level, options.level));
+    }
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+    
+    // Apply ordering
+    if (options?.orderBy === 'name') {
+      query = query.orderBy(asc(categories.name));
+    } else {
+      // Default to displayOrder if not specified or if displayOrder is specified
+      query = query.orderBy(asc(categories.displayOrder), asc(categories.name));
+    }
+    
+    return await query;
   }
 
   async getCategoryBySlug(slug: string): Promise<Category | undefined> {
@@ -168,6 +203,53 @@ export class DatabaseStorage implements IStorage {
       .from(categories)
       .where(and(eq(categories.slug, slug), eq(categories.isActive, true)));
     return category;
+  }
+  
+  async getCategoryWithChildren(categoryId: number): Promise<{ category: Category, children: Category[] } | undefined> {
+    // Get the category
+    const [category] = await db
+      .select()
+      .from(categories)
+      .where(and(eq(categories.id, categoryId), eq(categories.isActive, true)));
+    
+    if (!category) {
+      return undefined;
+    }
+    
+    // Get the children
+    const children = await db
+      .select()
+      .from(categories)
+      .where(and(
+        eq(categories.parentId, categoryId),
+        eq(categories.isActive, true)
+      ))
+      .orderBy(asc(categories.displayOrder), asc(categories.name));
+    
+    return { category, children };
+  }
+  
+  async getMainCategoriesWithChildren(): Promise<Array<{ category: Category, children: Category[] }>> {
+    // Get all main categories (level 0)
+    const mainCategories = await this.getAllCategories({ level: 0 });
+    
+    // For each main category, get its children
+    const result = await Promise.all(
+      mainCategories.map(async (category) => {
+        const children = await db
+          .select()
+          .from(categories)
+          .where(and(
+            eq(categories.parentId, category.id),
+            eq(categories.isActive, true)
+          ))
+          .orderBy(asc(categories.displayOrder), asc(categories.name));
+        
+        return { category, children };
+      })
+    );
+    
+    return result;
   }
 
   async createCategory(category: InsertCategory): Promise<Category> {

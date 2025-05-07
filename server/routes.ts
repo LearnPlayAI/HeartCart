@@ -121,7 +121,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // CATEGORY ROUTES
   app.get("/api/categories", handleErrors(async (req: Request, res: Response) => {
-    const categories = await storage.getAllCategories();
+    const { parentId, level, orderBy } = req.query;
+    
+    const options: { parentId?: number | null; level?: number; orderBy?: 'name' | 'displayOrder' } = {};
+    
+    if (parentId !== undefined) {
+      if (parentId === 'null') {
+        options.parentId = null;
+      } else {
+        options.parentId = parseInt(parentId as string);
+      }
+    }
+    
+    if (level !== undefined) {
+      options.level = parseInt(level as string);
+    }
+    
+    if (orderBy === 'name' || orderBy === 'displayOrder') {
+      options.orderBy = orderBy;
+    }
+    
+    const categories = await storage.getAllCategories(options);
     res.json(categories);
   }));
 
@@ -135,6 +155,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     res.json(category);
+  }));
+  
+  app.get("/api/categories/:id/with-children", handleErrors(async (req: Request, res: Response) => {
+    const categoryId = parseInt(req.params.id);
+    const categoryWithChildren = await storage.getCategoryWithChildren(categoryId);
+    
+    if (!categoryWithChildren) {
+      res.status(404).json({ message: "Category not found" });
+      return;
+    }
+    
+    res.json(categoryWithChildren);
+  }));
+  
+  app.get("/api/categories/main/with-children", handleErrors(async (req: Request, res: Response) => {
+    const mainCategoriesWithChildren = await storage.getMainCategoriesWithChildren();
+    res.json(mainCategoriesWithChildren);
   }));
 
   app.post("/api/categories", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
