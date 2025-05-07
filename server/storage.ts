@@ -18,7 +18,7 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, like, and, desc, asc, sql, inArray, isNull, not, or, SQL } from "drizzle-orm";
-import { objectStore } from "./object-store";
+import { objectStore, STORAGE_FOLDERS } from "./object-store";
 
 export interface IStorage {
   // User operations
@@ -1062,6 +1062,28 @@ export class DatabaseStorage implements IStorage {
     // Delete each image from database and object storage
     for (const image of productImagesData) {
       await this.deleteProductImage(image.id);
+    }
+    
+    // Additionally, search for any files in the product's folder that might not be linked in the database
+    try {
+      const productFolderPrefix = `${STORAGE_FOLDERS.PRODUCTS}/${id}/`;
+      const filesList = await objectStore.listFiles(productFolderPrefix, true);
+      
+      console.log(`Found ${filesList.length} files in product folder ${productFolderPrefix} to delete`);
+      
+      // Delete each file found in the folder
+      for (const objectKey of filesList) {
+        try {
+          await objectStore.deleteFile(objectKey);
+          console.log(`Deleted orphaned file from object storage: ${objectKey}`);
+        } catch (error) {
+          console.error(`Error deleting orphaned file ${objectKey}:`, error);
+          // Continue with deletion even if file deletion fails
+        }
+      }
+    } catch (error) {
+      console.error(`Error listing product files for cleanup:`, error);
+      // Continue with deletion even if listing fails
     }
     
     // Delete product attribute values
