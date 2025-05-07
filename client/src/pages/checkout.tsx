@@ -565,6 +565,18 @@ const CheckoutPage = () => {
                           </div>
                         )}
                         
+                        {/* Global attributes */}
+                        {item.globalAttributes && item.globalAttributes.length > 0 && (
+                          <div className="mt-1 mb-1">
+                            {item.globalAttributes.map((attr, index) => (
+                              <div key={index} className="flex text-xs text-gray-600">
+                                <span className="font-medium mr-1">{attr.displayName || attr.name}:</span>
+                                <span>{attr.displayValue || attr.value}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        
                         <div className="flex items-center mt-1">
                           <span className="text-sm text-[#FF69B4] font-medium">
                             {formatCurrency((item.product.salePrice || item.product.price) + (item.priceAdjustment || 0))}

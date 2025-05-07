@@ -86,10 +86,23 @@ const CartDrawer = () => {
                     {/* Selected attributes */}
                     {item.selectedAttributes && Object.keys(item.selectedAttributes).length > 0 && (
                       <div className="mt-1 mb-2">
+                        {/* Display category attributes */}
                         {Object.entries(item.selectedAttributes as Record<string, string>).map(([key, value], index) => (
                           <div key={index} className="flex text-xs text-gray-600">
                             <span className="font-medium mr-1">{key}:</span>
                             <span>{value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {/* Global attributes */}
+                    {item.globalAttributes && item.globalAttributes.length > 0 && (
+                      <div className="mt-1 mb-2">
+                        {item.globalAttributes.map((attr, index) => (
+                          <div key={index} className="flex text-xs text-gray-600">
+                            <span className="font-medium mr-1">{attr.displayName || attr.name}:</span>
+                            <span>{attr.displayValue || attr.value}</span>
                           </div>
                         ))}
                       </div>
