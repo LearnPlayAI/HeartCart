@@ -210,7 +210,7 @@ export default function AdminCatalogs() {
                 <TableHead>Start Date</TableHead>
                 <TableHead>End Date</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Products</TableHead>
+                <TableHead>Manage</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
