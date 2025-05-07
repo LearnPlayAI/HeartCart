@@ -1505,6 +1505,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return;
     }
     
+    // If 'isActive' property was changed to inactive, cascade to catalogs and products
+    if (supplierData.isActive === false) {
+      // First get all catalogs for this supplier
+      const supplierCatalogs = await storage.getCatalogsBySupplierId(id, false); // Get all catalogs, not just active ones
+      
+      // Update each catalog to inactive
+      let totalProductsUpdated = 0;
+      for (const catalog of supplierCatalogs) {
+        // Update catalog to inactive
+        await storage.updateCatalog(catalog.id, { isActive: false });
+        
+        // Update all products in this catalog to inactive
+        const productsUpdated = await storage.bulkUpdateCatalogProducts(catalog.id, { isActive: false });
+        totalProductsUpdated += productsUpdated;
+      }
+      
+      console.log(`Supplier ${id} marked inactive: updated ${supplierCatalogs.length} catalogs and ${totalProductsUpdated} products to inactive`);
+    }
+    
     res.json(supplier);
   }));
 
@@ -1580,6 +1599,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return;
     }
     
+    // If 'isActive' property was changed, update all products in this catalog
+    if (catalogData.isActive !== undefined) {
+      const updateResult = await storage.bulkUpdateCatalogProducts(id, { isActive: catalogData.isActive });
+      console.log(`Updated isActive status for ${updateResult} products in catalog ${id} to ${catalogData.isActive}`);
+    }
+    
     res.json(catalog);
   }));
 
@@ -1594,6 +1619,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const success = await storage.deleteCatalog(id);
     
     if (success) {
+      // When a catalog is deleted (marked inactive), also mark all its products as inactive
+      const productsUpdated = await storage.bulkUpdateCatalogProducts(id, { isActive: false });
+      console.log(`Catalog ${id} deleted: marked ${productsUpdated} products as inactive`);
+      
       res.json({ success: true });
     } else {
       res.status(404).json({ message: "Catalog not found" });

@@ -321,14 +321,12 @@ export const insertSupplierSchema = createInsertSchema(suppliers).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
-  isActive: true,
 });
 
 export const insertCatalogSchema = createInsertSchema(catalogs).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
-  isActive: true,
 }).extend({
   startDate: z.string().or(z.date()).optional(),
   endDate: z.string().or(z.date()).nullable().optional(),
