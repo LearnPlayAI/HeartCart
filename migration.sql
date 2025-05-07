@@ -1,29 +1,17 @@
--- Create Global Attributes table
-CREATE TABLE IF NOT EXISTS "global_attributes" (
-  "id" SERIAL PRIMARY KEY,
-  "name" VARCHAR(100) NOT NULL,
-  "display_name" VARCHAR(100) NOT NULL,
-  "description" TEXT,
-  "attribute_type" VARCHAR(50) NOT NULL,
-  "is_required" BOOLEAN DEFAULT false,
-  "sort_order" INTEGER DEFAULT 0,
-  "created_at" TIMESTAMP DEFAULT NOW() NOT NULL,
-  "updated_at" TIMESTAMP DEFAULT NOW() NOT NULL,
-  CONSTRAINT "global_attributes_name_unique" UNIQUE ("name")
+-- Create a new table to manage the relationship between products and global attributes
+CREATE TABLE IF NOT EXISTS product_global_attributes (
+  id SERIAL PRIMARY KEY,
+  product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  attribute_id INTEGER NOT NULL REFERENCES global_attributes(id) ON DELETE CASCADE,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  UNIQUE(product_id, attribute_id)
 );
 
--- Create Global Attribute Options table
-CREATE TABLE IF NOT EXISTS "global_attribute_options" (
-  "id" SERIAL PRIMARY KEY,
-  "attribute_id" INTEGER NOT NULL REFERENCES "global_attributes"("id"),
-  "value" VARCHAR(255) NOT NULL,
-  "display_value" VARCHAR(255) NOT NULL,
-  "sort_order" INTEGER DEFAULT 0,
-  "created_at" TIMESTAMP DEFAULT NOW() NOT NULL,
-  "updated_at" TIMESTAMP DEFAULT NOW() NOT NULL
+-- Create a table to manage product global attribute options (which options are selected)
+CREATE TABLE IF NOT EXISTS product_global_attribute_options (
+  id SERIAL PRIMARY KEY,
+  product_attribute_id INTEGER NOT NULL REFERENCES product_global_attributes(id) ON DELETE CASCADE,
+  option_id INTEGER NOT NULL REFERENCES global_attribute_options(id) ON DELETE CASCADE,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  UNIQUE(product_attribute_id, option_id)
 );
-
--- Add global_attribute_id column to product_attribute_values if it doesn't exist
-ALTER TABLE "product_attribute_values" 
-ADD COLUMN IF NOT EXISTS "global_attribute_id" INTEGER REFERENCES "global_attributes"("id"),
-ADD COLUMN IF NOT EXISTS "is_from_global_attribute" BOOLEAN DEFAULT false;

@@ -278,6 +278,30 @@ export const productAttributeCombinations = pgTable("product_attribute_combinati
   };
 });
 
+// Product Global Attributes - for storing which global attributes are assigned to products
+export const productGlobalAttributes = pgTable("product_global_attributes", {
+  id: serial("id").primaryKey(),
+  productId: integer("product_id").notNull().references(() => products.id),
+  attributeId: integer("attribute_id").notNull().references(() => globalAttributes.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    productAttributeUnique: unique().on(table.productId, table.attributeId),
+  };
+});
+
+// Product Global Attribute Options - for storing which options are selected for a product attribute
+export const productGlobalAttributeOptions = pgTable("product_global_attribute_options", {
+  id: serial("id").primaryKey(),
+  productAttributeId: integer("product_attribute_id").notNull().references(() => productGlobalAttributes.id),
+  optionId: integer("option_id").notNull().references(() => globalAttributeOptions.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    productAttributeOptionUnique: unique().on(table.productAttributeId, table.optionId),
+  };
+});
+
 // Create insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -403,6 +427,18 @@ export const insertProductAttributeCombinationSchema = createInsertSchema(produc
   updatedAt: true,
 });
 
+// Product Global Attributes insert schema
+export const insertProductGlobalAttributeSchema = createInsertSchema(productGlobalAttributes).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Product Global Attribute Options insert schema
+export const insertProductGlobalAttributeOptionSchema = createInsertSchema(productGlobalAttributeOptions).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Export types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -457,6 +493,12 @@ export type InsertProductAttributeValue = z.infer<typeof insertProductAttributeV
 
 export type ProductAttributeCombination = typeof productAttributeCombinations.$inferSelect;
 export type InsertProductAttributeCombination = z.infer<typeof insertProductAttributeCombinationSchema>;
+
+export type ProductGlobalAttribute = typeof productGlobalAttributes.$inferSelect;
+export type InsertProductGlobalAttribute = z.infer<typeof insertProductGlobalAttributeSchema>;
+
+export type ProductGlobalAttributeOption = typeof productGlobalAttributeOptions.$inferSelect;
+export type InsertProductGlobalAttributeOption = z.infer<typeof insertProductGlobalAttributeOptionSchema>;
 
 // Define all table relations after all tables and types are defined
 export const categoriesRelations = relations(categories, ({ one, many }) => ({
