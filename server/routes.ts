@@ -836,6 +836,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Read the file from disk
           const fileBuffer = await fs.promises.readFile(file.path);
           
+          // Save a special copy with the expected name pattern for easier retrieval
+          const timestamp = Date.now();
+          const fileExt = path.extname(file.originalname);
+          const baseName = path.basename(file.originalname, fileExt);
+          const expectedFileName = `${baseName}_${timestamp}${fileExt}`;
+          
+          // Copy the file to the expected name pattern
+          const expectedFilePath = path.join(process.cwd(), 'temp', expectedFileName);
+          await fs.promises.copyFile(file.path, expectedFilePath);
+          
           // Upload to Object Storage
           const { url, objectKey } = await objectStorageService.uploadTempFile(
             fileBuffer,
@@ -844,11 +854,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           );
           
           processedFiles.push({
-            filename: path.basename(objectKey),
+            filename: expectedFileName,
             originalname: file.originalname,
             mimetype: file.mimetype,
             size: file.size,
-            path: url, // Use the Object Storage URL
+            path: `/api/files/temp/${expectedFileName}`, // Use our file serving endpoint
             objectKey
           });
           
@@ -1997,12 +2007,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   }));
   
-  // Object storage file access endpoint
+  // Object storage file access endpoint with fallback to local file system
   app.get('/api/files/:path(*)', async (req: Request, res: Response) => {
     try {
       const objectKey = req.params.path;
-      console.log(`Serving file from object storage: ${objectKey}`);
+      console.log(`Serving file from path: ${objectKey}`);
       
+      // Parse the path parts for potential fallback
+      const pathParts = objectKey.split('/');
+      const folderName = pathParts[0];
+      const fileName = pathParts[pathParts.length - 1];
+      
+      // Handle temp images directly from file system as a workaround
+      if (folderName === 'temp') {
+        // Look for the file in the temp directory with a similar name (by timestamp)
+        const fs = require('fs');
+        const path = require('path');
+        const tempDir = path.join(process.cwd(), 'temp');
+        
+        // Try to find an exactly matching file first
+        const exactFileName = path.join(tempDir, fileName);
+        if (fs.existsSync(exactFileName)) {
+          console.log(`Serving temp file directly from: ${exactFileName}`);
+          const fileData = fs.readFileSync(exactFileName);
+          
+          // Determine content type based on file extension
+          const ext = path.extname(fileName).toLowerCase();
+          let contentType = 'application/octet-stream'; // default
+          if (ext === '.jpg' || ext === '.jpeg') contentType = 'image/jpeg';
+          else if (ext === '.png') contentType = 'image/png';
+          else if (ext === '.webp') contentType = 'image/webp';
+          else if (ext === '.gif') contentType = 'image/gif';
+          
+          // Set headers and send file
+          res.setHeader('Content-Type', contentType);
+          res.setHeader('Cache-Control', 'public, max-age=86400');
+          return res.end(fileData);
+        }
+        
+        // If exact file not found, try to match by base name (before the timestamp)
+        const baseName = fileName.split('_')[0];
+        if (baseName) {
+          const files = fs.readdirSync(tempDir);
+          for (const file of files) {
+            if (file.includes(baseName)) {
+              console.log(`Found matching temp file: ${file}`);
+              const fileData = fs.readFileSync(path.join(tempDir, file));
+              
+              // Determine content type based on file extension
+              const ext = path.extname(file).toLowerCase();
+              let contentType = 'application/octet-stream'; // default
+              if (ext === '.jpg' || ext === '.jpeg') contentType = 'image/jpeg';
+              else if (ext === '.png') contentType = 'image/png';
+              else if (ext === '.webp') contentType = 'image/webp';
+              else if (ext === '.gif') contentType = 'image/gif';
+              
+              // Set headers and send file
+              res.setHeader('Content-Type', contentType);
+              res.setHeader('Cache-Control', 'public, max-age=86400');
+              return res.end(fileData);
+            }
+          }
+        }
+      }
+      
+      // If we're here, try the object storage
       // First check if the file exists
       if (!(await objectStorageService.exists(objectKey))) {
         return res.status(404).send('File not found');
@@ -2020,20 +2089,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       try {
-        // Get file as buffer instead of stream for better compatibility
+        // Try to get file as buffer (this may fail with boolean result)
         const buffer = await objectStorageService.downloadAsBuffer(objectKey);
         
         // Validate that we have a proper buffer
         if (!Buffer.isBuffer(buffer)) {
           console.error(`Invalid buffer returned for ${objectKey}, type: ${typeof buffer}`);
-          return res.status(500).send('Invalid file data returned from storage');
+          throw new Error('Invalid data type returned from object storage');
         }
         
-        // Set content type and cache headers - do this right before sending the response
+        // Set content type and cache headers
         res.setHeader('Content-Type', contentType);
         res.setHeader('Cache-Control', 'public, max-age=86400');
         
-        // Send the buffer as response and end the response
+        // Send the buffer as response
         return res.end(buffer);
       } catch (bufferError: any) {
         console.error(`Error getting file buffer for ${objectKey}:`, bufferError);
