@@ -15,6 +15,7 @@ import Logo from '@/components/ui/logo';
 import { useCart } from '@/hooks/use-cart';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
+import { CategorySidebarDrawer } from '@/components/ui/category-sidebar-drawer';
 
 type Category = {
   id: number;
@@ -193,32 +194,32 @@ const Header = () => {
       </div>
       
       {/* Categories navigation */}
-      <nav className="bg-[#FF69B4] text-white overflow-x-auto scrollbar-none">
-        <div className="container mx-auto flex whitespace-nowrap py-2 px-4">
-          <Link href="/" className="px-4 py-1 font-medium text-sm hover:bg-white hover:text-[#FF69B4] rounded-full mx-1 transition-colors duration-200">
-            Home
-          </Link>
+      <nav className="bg-[#FF69B4] text-white">
+        <div className="container mx-auto flex items-center whitespace-nowrap py-2 px-4">
+          {/* Mobile Category Menu Button */}
+          <CategorySidebarDrawer />
           
-          <Link href="/products" className="px-4 py-1 font-medium text-sm hover:bg-white hover:text-[#FF69B4] rounded-full mx-1 transition-colors duration-200">
-            All Products
-          </Link>
-          
-          {/* Admin Dashboard direct link in main navigation */}
-          {user?.role === 'admin' && (
-            <Link 
-              href="/admin" 
-              className="px-4 py-1 font-medium text-sm bg-white text-[#FF69B4] rounded-full mx-1 transition-colors duration-200 flex items-center"
-            >
-              <LayoutDashboard className="h-3 w-3 mr-1" />
-              Admin
+          {/* Desktop Navigation Links */}
+          <div className="flex items-center overflow-x-auto scrollbar-none">
+            <Link href="/" className="px-4 py-1 font-medium text-sm hover:bg-white hover:text-[#FF69B4] rounded-full mx-1 transition-colors duration-200">
+              Home
             </Link>
-          )}
-          
-          {categories?.map((category) => (
-            <Link key={category.id} href={`/category/${category.slug}`} className="px-4 py-1 font-medium text-sm hover:bg-white hover:text-[#FF69B4] rounded-full mx-1 transition-colors duration-200">
-              {category.name}
+            
+            <Link href="/products" className="px-4 py-1 font-medium text-sm hover:bg-white hover:text-[#FF69B4] rounded-full mx-1 transition-colors duration-200">
+              All Products
             </Link>
-          ))}
+            
+            {/* Admin Dashboard direct link in main navigation */}
+            {user?.role === 'admin' && (
+              <Link 
+                href="/admin" 
+                className="px-4 py-1 font-medium text-sm bg-white text-[#FF69B4] rounded-full mx-1 transition-colors duration-200 flex items-center"
+              >
+                <LayoutDashboard className="h-3 w-3 mr-1" />
+                Admin
+              </Link>
+            )}
+          </div>
         </div>
       </nav>
     </header>
