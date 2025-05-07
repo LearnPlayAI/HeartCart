@@ -2350,6 +2350,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }));
 
+  // Get options for a product attribute
+  app.get("/api/admin/product-attributes/:productAttributeId/options", isAdmin, handleErrors(async (req: Request, res: Response) => {
+    const { productAttributeId } = req.params;
+    
+    const options = await storage.getGlobalAttributeOptionsForProduct(parseInt(productAttributeId));
+    res.json(options);
+  }));
+
   // Add an option to a product's global attribute
   app.post("/api/admin/product-attributes/:productAttributeId/options", isAdmin, handleErrors(async (req: Request, res: Response) => {
     const { productAttributeId } = req.params;

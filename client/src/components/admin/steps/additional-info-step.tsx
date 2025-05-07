@@ -316,6 +316,7 @@ export default function AdditionalInfoStep({
 // Component to manage global attributes for a product
 function GlobalAttributesSection({ productId }: { productId?: number }) {
   const [selectedAttributes, setSelectedAttributes] = React.useState<number[]>([]);
+  const [productAttributeMap, setProductAttributeMap] = React.useState<Record<number, any>>({});
   
   // Fetch all global attributes
   const { data: globalAttributes, isLoading: isLoadingAttributes } = useQuery({
@@ -329,15 +330,34 @@ function GlobalAttributesSection({ productId }: { productId?: number }) {
   
   // Fetch product attributes if a product ID is provided
   const { data: productAttributes, isLoading: isLoadingProductAttributes } = useQuery({
-    queryKey: ['/api/products', productId, 'attributes'],
+    queryKey: ['/api/admin/products', productId, 'global-attributes'],
     queryFn: async () => {
       if (!productId) return [];
-      const res = await fetch(`/api/products/${productId}/attributes`);
-      if (!res.ok) throw new Error('Failed to fetch product attributes');
+      const res = await fetch(`/api/admin/products/${productId}/global-attributes`);
+      if (!res.ok) throw new Error('Failed to fetch product global attributes');
       return res.json();
     },
     enabled: !!productId
   });
+  
+  // Load existing product attributes when data is available
+  React.useEffect(() => {
+    if (productAttributes && productAttributes.length > 0) {
+      // Create a map of attribute ID to product attribute data
+      const attributeMap: Record<number, any> = {};
+      const attributeIds: number[] = [];
+      
+      productAttributes.forEach((pa: any) => {
+        if (pa.attributeId) {
+          attributeIds.push(pa.attributeId);
+          attributeMap[pa.attributeId] = pa;
+        }
+      });
+      
+      setSelectedAttributes(attributeIds);
+      setProductAttributeMap(attributeMap);
+    }
+  }, [productAttributes]);
   
   // Fetch attribute options for a specific attribute
   const getAttributeOptions = async (attributeId: number) => {
@@ -351,18 +371,41 @@ function GlobalAttributesSection({ productId }: { productId?: number }) {
     if (!productId) return;
     
     try {
-      const res = await fetch(`/api/products/${productId}/attributes`, {
+      // First add the attribute to the product
+      const res = await fetch(`/api/admin/products/${productId}/global-attributes`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          attributeId,
-          optionIds: selectedOptions
+          attributeId
         })
       });
       
       if (!res.ok) throw new Error('Failed to add attribute to product');
+      
+      // Get the product attribute ID from the response
+      const productAttribute = await res.json();
+      
+      // Add each option to the product attribute
+      if (selectedOptions.length > 0) {
+        for (const optionId of selectedOptions) {
+          const optionRes = await fetch(`/api/admin/product-attributes/${productAttribute.id}/options`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              optionId
+            })
+          });
+          
+          if (!optionRes.ok) {
+            console.error('Failed to add option to product attribute');
+          }
+        }
+      }
+      
       return true;
     } catch (error) {
       console.error('Error adding attribute to product:', error);
@@ -375,7 +418,7 @@ function GlobalAttributesSection({ productId }: { productId?: number }) {
     if (!productId) return;
     
     try {
-      const res = await fetch(`/api/products/${productId}/attributes/${attributeId}`, {
+      const res = await fetch(`/api/admin/products/${productId}/global-attributes/${attributeId}`, {
         method: 'DELETE'
       });
       
@@ -442,7 +485,8 @@ function GlobalAttributesSection({ productId }: { productId?: number }) {
                 </CardHeader>
                 <CardContent>
                   <AttributeOptionSelector 
-                    attributeId={attribute.id} 
+                    attributeId={attribute.id}
+                    productAttributeId={productAttributeMap[attribute.id]?.id} 
                     getOptions={getAttributeOptions}
                     onSave={(selectedOptions) => {
                       if (productId) {
@@ -473,10 +517,12 @@ function GlobalAttributesSection({ productId }: { productId?: number }) {
 // Component to select options for an attribute
 function AttributeOptionSelector({ 
   attributeId, 
+  productAttributeId,
   getOptions,
   onSave
 }: { 
-  attributeId: number; 
+  attributeId: number;
+  productAttributeId?: number;
   getOptions: (attributeId: number) => Promise<GlobalAttributeOption[]>;
   onSave: (selectedOptions: number[]) => void;
 }) {
@@ -484,6 +530,27 @@ function AttributeOptionSelector({
   const [selectedOptions, setSelectedOptions] = React.useState<number[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   
+  // Fetch existing options for this product attribute
+  const { data: attributeOptions, isLoading: isLoadingOptions } = useQuery({
+    queryKey: ['/api/admin/product-attributes', productAttributeId, 'options'],
+    queryFn: async () => {
+      if (!productAttributeId) return [];
+      const res = await fetch(`/api/admin/product-attributes/${productAttributeId}/options`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!productAttributeId
+  });
+  
+  // When attribute options are loaded, set them as selected
+  React.useEffect(() => {
+    if (attributeOptions && attributeOptions.length > 0) {
+      const optionIds = attributeOptions.map((opt: any) => opt.optionId);
+      setSelectedOptions(optionIds);
+    }
+  }, [attributeOptions]);
+  
+  // Load available options for this attribute
   React.useEffect(() => {
     const loadOptions = async () => {
       setIsLoading(true);
