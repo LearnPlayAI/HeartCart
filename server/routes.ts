@@ -75,13 +75,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   };
 
-  // Authentication middleware
+  // Authentication middleware (disabled)
+  // This middleware has been disabled to allow open access
   const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
-    if (req.isAuthenticated()) {
-      next();
-      return;
-    }
-    res.status(401).json({ message: "Unauthorized" });
+    // Always proceed to the next middleware regardless of authentication status
+    next();
   };
 
   // CATEGORY ROUTES
