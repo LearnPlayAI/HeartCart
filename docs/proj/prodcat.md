@@ -27,8 +27,8 @@ This document outlines the implementation strategy for enhancing the product cat
   - [x] **Completed** - Configure permissions for unauthenticated access to /public/* files
 
 #### 1.4 Media Processing Capabilities
-- [ ] **Not Started** - Implement image resizing/optimization before storage
-- [ ] **Not Started** - Create thumbnail generation for product listings
+- [x] **Completed** - Implement image resizing/optimization before storage
+- [x] **Completed** - Create thumbnail generation for product listings
 - [x] **Completed** - Add support for multi-image products with proper ordering
 - [x] **Completed** - Implement image validation (size limits, allowed formats)
 
@@ -37,6 +37,9 @@ This document outlines the implementation strategy for enhancing the product cat
   - [x] **Completed** - Implement POST /api/files/upload for file uploads (via /api/products/images/temp)
   - [x] **Completed** - Implement GET /api/files/{path} for file retrieval (via /object-storage/...)
   - [x] **Completed** - Implement DELETE /api/files/{path} for removing files (via product image deletion endpoints)
+  - [x] **Completed** - Implement POST /api/images/optimize for image optimization
+  - [x] **Completed** - Implement POST /api/images/thumbnails for thumbnail generation
+  - [x] **Completed** - Implement POST /api/images/resize for custom image resizing
 
 #### 1.6 Frontend Components
 - [x] **Partially Completed** - Create reusable ImageUploader component:
