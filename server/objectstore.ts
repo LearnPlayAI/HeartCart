@@ -4,6 +4,12 @@ import path from 'path';
 import fs from 'fs';
 import { promisify } from 'util';
 import mime from 'mime-types';
+import { 
+  ReplitObjectStorageClient,
+  Result, 
+  RequestError, 
+  StorageObject 
+} from './types/objectStorage';
 
 // Convert fs.readFile to promise-based
 const readFile = promisify(fs.readFile);
@@ -126,10 +132,15 @@ export class ObjectStorageService {
    */
   async exists(objectKey: string): Promise<boolean> {
     try {
-      return await this.client.exists(objectKey);
+      const result = await this.client.exists(objectKey);
+      if ('err' in result) {
+        console.error(`Error checking if object exists ${objectKey}:`, result.err);
+        return false;
+      }
+      return result.ok;
     } catch (error: any) {
       console.error(`Error checking if object exists ${objectKey}:`, error);
-      throw new Error(`Failed to check if object exists: ${error.message || 'Unknown error'}`);
+      return false;
     }
   }
   
@@ -267,10 +278,14 @@ export class ObjectStorageService {
    */
   async downloadAsStream(objectKey: string): Promise<Readable> {
     try {
-      return await this.client.downloadAsStream(objectKey);
-    } catch (error) {
+      const result = await this.client.downloadAsStream(objectKey);
+      if ('err' in result) {
+        throw new Error(`Failed to stream file: ${result.err.message || 'Unknown error'}`);
+      }
+      return result.ok;
+    } catch (error: any) {
       console.error(`Error streaming file ${objectKey}:`, error);
-      throw new Error(`Failed to stream file: ${error.message}`);
+      throw new Error(`Failed to stream file: ${error.message || 'Unknown error'}`);
     }
   }
   
@@ -281,18 +296,33 @@ export class ObjectStorageService {
    */
   async getMetadata(objectKey: string): Promise<FileMetadata> {
     try {
-      const metadata = await this.client.head(objectKey);
+      // Since the Replit client doesn't have a proper head method, we'll
+      // try to get the metadata from our dedicated metadata file
+      const metadataKey = `${objectKey}.metadata`;
+      
+      if (await this.exists(metadataKey)) {
+        try {
+          const result = await this.client.downloadAsText(metadataKey);
+          if ('err' in result) {
+            throw new Error(`Failed to get metadata: ${result.err.message || 'Unknown error'}`);
+          }
+          
+          const metadata = JSON.parse(result.ok);
+          return metadata;
+        } catch (parseError: any) {
+          console.error(`Error parsing metadata for ${objectKey}:`, parseError);
+          // Fall back to basic metadata
+        }
+      }
+      
+      // If we can't get detailed metadata, return basic info
       return {
-        contentType: metadata.contentType,
-        contentDisposition: metadata.contentDisposition,
-        cacheControl: metadata.cacheControl,
-        size: metadata.size,
-        lastModified: metadata.lastModified,
-        etag: metadata.etag
+        contentType: this.detectContentType(objectKey),
+        size: 0
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Error getting metadata for ${objectKey}:`, error);
-      throw new Error(`Failed to get file metadata: ${error.message}`);
+      throw new Error(`Failed to get file metadata: ${error.message || 'Unknown error'}`);
     }
   }
   
@@ -302,10 +332,23 @@ export class ObjectStorageService {
    */
   async deleteFile(objectKey: string): Promise<void> {
     try {
-      await this.client.delete(objectKey);
-    } catch (error) {
+      // First try to delete any associated metadata
+      const metadataKey = `${objectKey}.metadata`;
+      if (await this.exists(metadataKey)) {
+        const metadataResult = await this.client.delete(metadataKey);
+        if ('err' in metadataResult) {
+          console.warn(`Failed to delete metadata file ${metadataKey}: ${metadataResult.err.message || 'Unknown error'}`);
+        }
+      }
+      
+      // Then delete the actual file
+      const result = await this.client.delete(objectKey);
+      if ('err' in result) {
+        throw new Error(`Failed to delete file: ${result.err.message || 'Unknown error'}`);
+      }
+    } catch (error: any) {
       console.error(`Error deleting file ${objectKey}:`, error);
-      throw new Error(`Failed to delete file: ${error.message}`);
+      throw new Error(`Failed to delete file: ${error.message || 'Unknown error'}`);
     }
   }
   
@@ -324,21 +367,49 @@ export class ObjectStorageService {
     maxResults: number = 100
   ): Promise<ListResult> {
     try {
+      // Note: Replit ObjectStorage client doesn't support delimiter
+      // and other parameters, so we'll handle filtering ourselves
       const result = await this.client.list({
-        prefix,
-        delimiter,
-        pageToken,
-        maxResults
+        prefix: prefix,
+        maxResults: maxResults
       });
       
+      if ('err' in result) {
+        throw new Error(`Failed to list files: ${result.err.message || 'Unknown error'}`);
+      }
+      
+      const objects = result.ok;
+      
+      // Process the results to simulate delimiter behavior
+      const filteredObjects: string[] = [];
+      const prefixes = new Set<string>();
+      
+      for (const obj of objects) {
+        // Skip metadata files
+        if (obj.name.endsWith('.metadata')) {
+          continue;
+        }
+        
+        const relativePath = obj.name.slice(prefix.length);
+        
+        if (delimiter && relativePath.includes(delimiter)) {
+          // This is a "nested" object, extract the prefix
+          const prefixPart = prefix + relativePath.split(delimiter)[0] + delimiter;
+          prefixes.add(prefixPart);
+        } else {
+          // This is a direct child object
+          filteredObjects.push(obj.name);
+        }
+      }
+      
       return {
-        objects: result.objects.map(obj => obj.key),
-        prefixes: result.prefixes,
-        nextPageToken: result.nextPageToken
+        objects: filteredObjects,
+        prefixes: Array.from(prefixes),
+        nextPageToken: undefined // Replit ObjectStorage doesn't support pagination
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Error listing files with prefix ${prefix}:`, error);
-      throw new Error(`Failed to list files: ${error.message}`);
+      throw new Error(`Failed to list files: ${error.message || 'Unknown error'}`);
     }
   }
   
@@ -348,27 +419,37 @@ export class ObjectStorageService {
    * @returns True if created or already exists
    */
   async createFolder(folderPath: string): Promise<boolean> {
-    // Object storage doesn't have folders, but we can check if the prefix exists
-    // by listing objects with the prefix
+    // Object storage doesn't have folders, but we can create a marker object
     try {
       // Add a trailing slash if not present
       const normalizedPath = folderPath.endsWith('/') ? folderPath : `${folderPath}/`;
       
-      // Check if any objects exist with this prefix
-      const result = await this.listFiles(normalizedPath, undefined, '/', 1);
-      
-      // If we have objects or prefixes, the "folder" exists
-      if (result.objects.length > 0 || result.prefixes.length > 0) {
+      // Check if the path exists by checking for the marker or listing files
+      if (await this.exists(`${normalizedPath}.keep`)) {
         return true;
+      }
+      
+      // Try to list objects with this prefix to check if any exist
+      try {
+        const result = await this.listFiles(normalizedPath, undefined, '/', 1);
+        if (result.objects.length > 0 || result.prefixes.length > 0) {
+          return true;
+        }
+      } catch (listError) {
+        // Ignore listing errors and proceed to create the marker
       }
       
       // Create an empty marker object to represent the folder
       // This is a common pattern for object storage
-      await this.client.uploadFromBytes(`${normalizedPath}.keep`, Buffer.from(''));
+      const result = await this.client.uploadFromBytes(`${normalizedPath}.keep`, Buffer.from(''));
+      if ('err' in result) {
+        throw new Error(`Failed to create folder marker: ${result.err.message || 'Unknown error'}`);
+      }
+      
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Error creating folder ${folderPath}:`, error);
-      throw new Error(`Failed to create folder: ${error.message}`);
+      throw new Error(`Failed to create folder: ${error.message || 'Unknown error'}`);
     }
   }
   
