@@ -46,9 +46,38 @@ export class ObjectStorageService {
     try {
       // Initialize the Replit Object Storage client
       this.client = new Client();
-      this.initializeStorage();
+      
+      // Initialize storage asynchronously
+      // We run this in the constructor but don't await it
+      // Operations will wait if needed through the ensureInitialized method
+      this.initializeStorage()
+        .then(() => {
+          console.log('Replit Object Storage client initialization completed');
+        })
+        .catch(error => {
+          console.error('Failed to fully initialize Replit Object Storage:', error);
+        });
     } catch (error) {
-      console.error('Failed to initialize Replit Object Storage Client:', error);
+      console.error('Failed to create Replit Object Storage Client:', error);
+      // Ensure client is initialized to avoid null references
+      this.client = new Client();
+    }
+  }
+  
+  /**
+   * Ensure that the Object Storage is initialized before continuing
+   * This should be called at the start of any storage operation
+   */
+  private async ensureInitialized(): Promise<void> {
+    // If already initialized, return immediately
+    if (this.initialized) return;
+    
+    // Otherwise, initialize storage
+    try {
+      await this.initializeStorage();
+    } catch (error) {
+      console.error('Failed to initialize storage when needed:', error);
+      throw new Error('Object Storage is not available');
     }
   }
   
@@ -169,17 +198,25 @@ export class ObjectStorageService {
   
   /**
    * Check if an object exists
+   * VeriTrade compatible implementation that's more reliable
    * @param objectKey The object key
    * @returns True if the object exists
    */
   async exists(objectKey: string): Promise<boolean> {
     try {
+      // Use the Replit Object Storage Client's exists method
       const result = await this.client.exists(objectKey);
+      
+      // Check for error response
       if ('err' in result) {
         console.error(`Error checking if object exists ${objectKey}:`, result.err);
         return false;
       }
-      return result.ok;
+      
+      // Log for debugging
+      console.log(`Checked existence of ${objectKey}: ${result.value ? 'Exists' : 'Does not exist'}`);
+      
+      return result.value;
     } catch (error: any) {
       console.error(`Error checking if object exists ${objectKey}:`, error);
       return false;
@@ -187,49 +224,84 @@ export class ObjectStorageService {
   }
   
   /**
-   * Upload a file from a Buffer
+   * Upload a file from a Buffer with VeriTrade's verified upload approach
    * @param objectKey The object key
    * @param buffer The file buffer
    * @param metadata Optional file metadata
    * @returns The public URL of the uploaded file
    */
   async uploadFromBuffer(objectKey: string, buffer: Buffer, metadata?: FileMetadata): Promise<string> {
-    try {
-      // Validate buffer before uploading
-      if (!Buffer.isBuffer(buffer)) {
-        console.error(`Invalid buffer type for ${objectKey}: ${typeof buffer}`);
-        throw new Error(`Invalid buffer type: ${typeof buffer}`);
-      }
-      
-      // Store the content type and other metadata in a separate file if needed
-      const metadataKey = `${objectKey}.metadata`;
-      if (metadata) {
-        const metadataContent = JSON.stringify({
-          contentType: metadata.contentType || this.detectContentType(objectKey),
-          cacheControl: metadata.cacheControl || 'public, max-age=86400',
-          contentDisposition: metadata.contentDisposition,
-          originalFileName: metadata.filename
-        });
-        await this.client.uploadFromText(metadataKey, metadataContent);
-      }
-      
-      // Upload the actual file
-      const uploadResult = await this.client.uploadFromBytes(objectKey, buffer, {
-        compress: true // Enable compression for better storage efficiency
-      });
-      
-      // Check for errors in the result
-      if ('err' in uploadResult) {
-        console.error(`Upload failed for ${objectKey}:`, uploadResult.err);
-        throw new Error(`Upload failed: ${uploadResult.err.message || 'Unknown error'}`);
-      }
-      
-      console.log(`Successfully uploaded file to ${objectKey}`);
-      return this.getPublicUrl(objectKey);
-    } catch (error: any) {
-      console.error(`Error uploading file to ${objectKey}:`, error);
-      throw new Error(`Failed to upload file: ${error.message || 'Unknown error'}`);
+    // Ensure storage is initialized
+    await this.ensureInitialized();
+    
+    const MAX_RETRIES = 3;
+    let lastError: any = null;
+    
+    // Validate buffer before uploading
+    if (!Buffer.isBuffer(buffer)) {
+      console.error(`Invalid buffer type for ${objectKey}: ${typeof buffer}`);
+      throw new Error(`Invalid buffer type: ${typeof buffer}`);
     }
+    
+    // Log the buffer size for debugging
+    console.log(`Uploading buffer for ${objectKey}: ${buffer.length} bytes`);
+    
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        console.log(`Uploading file to ${objectKey} (attempt ${attempt}/${MAX_RETRIES})`);
+        
+        // Store the content type and other metadata in a separate file
+        const metadataKey = `${objectKey}.metadata`;
+        const metadataContent = JSON.stringify({
+          contentType: metadata?.contentType || this.detectContentType(objectKey),
+          cacheControl: metadata?.cacheControl || 'public, max-age=86400',
+          contentDisposition: metadata?.contentDisposition,
+          originalFileName: metadata?.filename,
+          size: buffer.length,
+          lastModified: new Date().toISOString()
+        });
+        
+        // Upload metadata first
+        const metadataResult = await this.client.uploadFromText(metadataKey, metadataContent);
+        if ('err' in metadataResult) {
+          console.warn(`Failed to upload metadata for ${objectKey}, continuing with file upload:`, metadataResult.err);
+        }
+        
+        // Upload the actual file
+        const uploadResult = await this.client.uploadFromBytes(objectKey, buffer, {
+          compress: true // Enable compression for better storage efficiency
+        });
+        
+        // Check for errors in the result
+        if ('err' in uploadResult) {
+          throw new Error(`Upload failed: ${uploadResult.err.message || 'Unknown error'}`);
+        }
+        
+        // Verify the file was uploaded by checking its existence
+        // Add a small delay to ensure the upload has propagated
+        await new Promise(resolve => setTimeout(resolve, 250));
+        
+        const exists = await this.exists(objectKey);
+        if (!exists) {
+          throw new Error('File upload verification failed - file does not exist after upload');
+        }
+        
+        console.log(`Successfully uploaded and verified file in object storage: ${objectKey}`);
+        return this.getPublicUrl(objectKey);
+      } catch (error: any) {
+        lastError = error;
+        console.error(`Error uploading file to ${objectKey} (attempt ${attempt}):`, error);
+        
+        if (attempt < MAX_RETRIES) {
+          // Exponential backoff
+          const delay = Math.pow(2, attempt) * 250;
+          console.log(`Retrying upload after ${delay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
+    }
+    
+    throw new Error(`Failed to upload file after ${MAX_RETRIES} attempts: ${lastError?.message || 'Unknown error'}`);
   }
   
   /**
@@ -332,7 +404,16 @@ export class ObjectStorageService {
    * @param objectKey The object key to download
    * @returns Buffer containing the file data and its content type
    */
-  private async getFileAsBuffer(objectKey: string): Promise<{ data: Buffer, contentType: string }> {
+  /**
+   * Get a file's content as a buffer using the VeriTrade direct buffer approach
+   * This method is public so it can be used directly by routes
+   * @param objectKey The object key to download
+   * @returns Buffer containing the file data and its content type
+   */
+  async getFileAsBuffer(objectKey: string): Promise<{ data: Buffer, contentType: string }> {
+    // Ensure storage is initialized
+    await this.ensureInitialized();
+    
     const MAX_RETRIES = 3;
     let lastError: any = null;
     
@@ -340,11 +421,26 @@ export class ObjectStorageService {
       try {
         console.log(`Getting file as buffer: ${objectKey} (attempt ${attempt}/${MAX_RETRIES})`);
         
+        // Ensure object exists first
+        const exists = await this.exists(objectKey);
+        if (!exists) {
+          throw new Error(`File does not exist: ${objectKey}`);
+        }
+        
         // Get the file directly as a buffer (no streaming)
         const result = await this.client.downloadAsBytes(objectKey);
         if ('err' in result) {
           throw new Error(`Failed to get file as buffer: ${result.err.message || 'Unknown error'}`);
         }
+        
+        // Verify the buffer
+        if (!Buffer.isBuffer(result.value)) {
+          console.error(`Invalid data type returned for ${objectKey}: ${typeof result.value}`);
+          throw new Error(`Invalid data type returned from object storage: ${typeof result.value}`);
+        }
+        
+        // Log the buffer size for debugging
+        console.log(`Downloaded buffer for ${objectKey}: ${result.value.length} bytes`);
         
         // Get the metadata to determine content type
         let contentType = 'application/octet-stream';
@@ -352,14 +448,22 @@ export class ObjectStorageService {
           const metadataKey = `${objectKey}.metadata`;
           const metadataResult = await this.client.downloadAsText(metadataKey);
           if (!('err' in metadataResult)) {
-            const metadata = JSON.parse(metadataResult.value);
-            contentType = metadata.contentType || this.getContentTypeFromKey(objectKey);
+            try {
+              const metadata = JSON.parse(metadataResult.value);
+              contentType = metadata.contentType || this.getContentTypeFromKey(objectKey);
+              console.log(`Using content type from metadata for ${objectKey}: ${contentType}`);
+            } catch (parseError) {
+              console.error(`Error parsing metadata JSON for ${objectKey}:`, parseError);
+              contentType = this.getContentTypeFromKey(objectKey);
+            }
           } else {
             contentType = this.getContentTypeFromKey(objectKey);
+            console.log(`Using detected content type for ${objectKey}: ${contentType}`);
           }
         } catch (metadataError) {
           // If metadata doesn't exist, determine by extension
           contentType = this.getContentTypeFromKey(objectKey);
+          console.log(`Using filename-based content type for ${objectKey}: ${contentType}`);
         }
         
         return {
