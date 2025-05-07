@@ -245,6 +245,12 @@ export class ObjectStorageService {
       const base64Data = matches[2];
       const buffer = Buffer.from(base64Data, 'base64');
       
+      // Validate buffer
+      if (!Buffer.isBuffer(buffer)) {
+        console.error(`Invalid buffer type for ${objectKey}: ${typeof buffer}`);
+        throw new Error(`Invalid buffer type: ${typeof buffer}`);
+      }
+      
       // Store metadata in a separate file
       const metadataKey = `${objectKey}.metadata`;
       const metadataContent = JSON.stringify({
@@ -256,10 +262,17 @@ export class ObjectStorageService {
       await this.client.uploadFromText(metadataKey, metadataContent);
       
       // Upload the actual file
-      await this.client.uploadFromBytes(objectKey, buffer, {
+      const uploadResult = await this.client.uploadFromBytes(objectKey, buffer, {
         compress: true // Enable compression for better storage efficiency
       });
       
+      // Check for errors in the result
+      if ('err' in uploadResult) {
+        console.error(`Upload failed for ${objectKey}:`, uploadResult.err);
+        throw new Error(`Upload failed: ${uploadResult.err.message || 'Unknown error'}`);
+      }
+      
+      console.log(`Successfully uploaded base64 file to ${objectKey}`);
       return this.getPublicUrl(objectKey);
     } catch (error: any) {
       console.error(`Error uploading base64 data to ${objectKey}:`, error);
