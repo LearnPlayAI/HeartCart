@@ -101,6 +101,7 @@ export interface IStorage {
   deleteCatalog(id: number): Promise<boolean>;
   getProductsByCatalogId(catalogId: number, activeOnly?: boolean, limit?: number, offset?: number): Promise<Product[]>;
   bulkUpdateCatalogProducts(catalogId: number, updateData: Partial<InsertProduct>): Promise<number>;
+  updateProductDisplayOrder(catalogId: number, productIds: number[]): Promise<{ count: number }>;
   
   // Category Attribute operations
   getCategoryAttributes(categoryId: number): Promise<CategoryAttribute[]>;
@@ -1340,6 +1341,51 @@ export class DatabaseStorage implements IStorage {
       .returning({ id: products.id });
     
     return result.length;
+  }
+  
+  async updateProductDisplayOrder(catalogId: number, productIds: number[]): Promise<{ count: number }> {
+    // Update display order for each product based on its position in the provided array
+    // This ensures products appear in the order specified by productIds
+    
+    // Validate that all products belong to the specified catalog
+    const catalogProducts = await db
+      .select({ id: products.id })
+      .from(products)
+      .where(eq(products.catalogId, catalogId));
+    
+    const catalogProductIds = new Set(catalogProducts.map(p => p.id));
+    const validProductIds = productIds.filter(id => catalogProductIds.has(id));
+    
+    // If no valid product IDs, return count 0
+    if (validProductIds.length === 0) {
+      return { count: 0 };
+    }
+    
+    // Update each product's display order based on its position in the array
+    // This is done in a transaction to ensure all updates succeed or fail together
+    const updatedProducts = await db.transaction(async (tx) => {
+      const updates = [];
+      
+      for (let i = 0; i < validProductIds.length; i++) {
+        const productId = validProductIds[i];
+        updates.push(
+          tx
+            .update(products)
+            .set({ displayOrder: i })
+            .where(and(
+              eq(products.id, productId),
+              eq(products.catalogId, catalogId)
+            ))
+            .returning({ id: products.id })
+        );
+      }
+      
+      return await Promise.all(updates);
+    });
+    
+    // Count the number of products that were successfully updated
+    const count = updatedProducts.flat().length;
+    return { count };
   }
 
   // Category Attribute operations

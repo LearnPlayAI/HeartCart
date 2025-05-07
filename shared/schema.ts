@@ -66,6 +66,7 @@ export const products = pgTable("products", {
   dimensions: text("dimensions"), // format: "LxWxH" in cm
   brand: text("brand"),
   tags: text("tags").array(),
+  displayOrder: integer("display_order").default(999), // Default high number to place new products at the end
   hasBackgroundRemoved: boolean("has_background_removed").default(false),
   originalImageObjectKey: text("original_image_object_key"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -274,6 +275,8 @@ export const insertCategorySchema = createInsertSchema(categories).omit({
 export const insertProductSchema = createInsertSchema(products).omit({
   id: true,
   createdAt: true,
+}).extend({
+  displayOrder: z.number().default(999).optional(),
 });
 
 export const insertCartItemSchema = createInsertSchema(cartItems).omit({
