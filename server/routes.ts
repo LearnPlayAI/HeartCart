@@ -65,14 +65,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).send('File not found');
       }
       
-      // Get the content type using our service
-      const contentType = objectStorageService.detectContentType(filename);
-      
-      // Set the appropriate content type header
-      res.setHeader('Content-Type', contentType);
-      
-      // Set caching headers
-      res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache for 1 day
+      // Attempt to get metadata for the file
+      try {
+        const metadata = await objectStorageService.getMetadata(objectKey);
+        
+        // Set content type from metadata if available
+        if (metadata.contentType) {
+          res.setHeader('Content-Type', metadata.contentType);
+        } else {
+          // Fall back to detection based on filename
+          res.setHeader('Content-Type', objectStorageService.detectContentType(filename));
+        }
+        
+        // Set cache control if available in metadata
+        if (metadata.cacheControl) {
+          res.setHeader('Cache-Control', metadata.cacheControl);
+        } else {
+          // Default cache control
+          res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache for 1 day
+        }
+        
+        // Set content disposition if available
+        if (metadata.contentDisposition) {
+          res.setHeader('Content-Disposition', metadata.contentDisposition);
+        }
+      } catch (metadataError) {
+        // If metadata retrieval fails, use the basic approach
+        console.warn(`Metadata retrieval failed for ${objectKey}, using basic detection`, metadataError);
+        res.setHeader('Content-Type', objectStorageService.detectContentType(filename));
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+      }
       
       // Stream the file to the response
       const fileStream = await objectStorageService.downloadAsStream(objectKey);
@@ -780,7 +802,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log('Temp image upload - Content-Type:', req.headers['content-type']);
     
     // Continue to multer middleware
-    upload.array('images')(req, res, (err) => {
+    upload.array('images')(req, res, async (err) => {
       if (err) {
         console.error('Multer error:', err);
         return res.status(400).json({ 
@@ -802,34 +824,101 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'No files uploaded' });
       }
     
-      // Return information about the uploaded files
-      const uploadedFiles = Array.isArray(req.files) ? req.files.map(file => ({
-        filename: file.filename,
-        originalname: file.originalname,
-        mimetype: file.mimetype,
-        size: file.size,
-        path: `/temp/${file.filename}` // Path to access the file
-      })) : [];
+      // Process files and upload to Object Storage
+      const processedFiles = [];
       
-      return res.status(200).json({
-        success: true,
-        files: uploadedFiles
-      });
+      try {
+        for (const file of req.files) {
+          // Read the file from disk
+          const fileBuffer = await fs.promises.readFile(file.path);
+          
+          // Upload to Object Storage
+          const { url, objectKey } = await objectStorageService.uploadTempFile(
+            fileBuffer,
+            file.originalname,
+            file.mimetype
+          );
+          
+          processedFiles.push({
+            filename: path.basename(objectKey),
+            originalname: file.originalname,
+            mimetype: file.mimetype,
+            size: file.size,
+            path: url, // Use the Object Storage URL
+            objectKey
+          });
+          
+          // Remove the temporary file from disk
+          await fs.promises.unlink(file.path).catch(err => {
+            console.warn(`Could not delete temporary file ${file.path}:`, err);
+          });
+        }
+        
+        return res.status(200).json({
+          success: true,
+          files: processedFiles
+        });
+      } catch (error) {
+        console.error('Error processing uploaded files:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Error processing uploaded files',
+          error: error.message
+        });
+      }
     });
   });
   
   // Serve temporary files
-  app.get('/temp/:filename', (req: Request, res: Response) => {
-    const filename = req.params.filename;
-    const filePath = path.join(process.cwd(), 'temp', filename);
-    
-    // Send the file
-    res.sendFile(filePath, (err) => {
-      if (err) {
-        console.error('Error serving temp file:', err);
-        res.status(404).send('File not found');
+  app.get('/temp/:filename', async (req: Request, res: Response) => {
+    try {
+      const filename = req.params.filename;
+      const objectKey = `${STORAGE_FOLDERS.TEMP}/${filename}`;
+      
+      // Check if the file exists in Object Storage
+      const exists = await objectStorageService.exists(objectKey);
+      
+      if (exists) {
+        // Get metadata
+        const metadata = await objectStorageService.getMetadata(objectKey);
+        
+        // Set content type from metadata if available
+        if (metadata.contentType) {
+          res.setHeader('Content-Type', metadata.contentType);
+        } else {
+          // Fall back to detection based on filename
+          res.setHeader('Content-Type', objectStorageService.detectContentType(filename));
+        }
+        
+        // Set cache control for temp files
+        res.setHeader('Cache-Control', 'no-cache, max-age=0');
+        
+        // Stream the file from Object Storage
+        const fileStream = await objectStorageService.downloadAsStream(objectKey);
+        fileStream.pipe(res);
+        return;
       }
-    });
+      
+      // If not in Object Storage, try the local file system (for backward compatibility)
+      const filePath = path.join(process.cwd(), 'temp', filename);
+      
+      if (fs.existsSync(filePath)) {
+        // Send the file from the local file system
+        res.sendFile(filePath, (err) => {
+          if (err) {
+            console.error('Error serving temp file:', err);
+            res.status(404).send('File not found');
+          }
+        });
+        return;
+      }
+      
+      // File not found in either location
+      res.status(404).send('File not found');
+    } catch (error) {
+      console.error('Error serving temporary file:', error);
+      res.status(500).send('Server error');
+    }
   });
   
   app.get("/api/products/:productId/images", handleErrors(async (req: Request, res: Response) => {
