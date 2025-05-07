@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Star, StarHalf, Truck, Package, ShieldCheck, Heart, Share2, Minus, Plus } from 'lucide-react';
+import { ProductCard } from '@/components/product/product-card';
 import { useCart } from '@/hooks/use-cart';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency, calculateDiscount } from '@/lib/utils';
@@ -193,15 +194,9 @@ const ProductDetailContent = ({
   });
   
   // Get product global attributes
-  const { data: globalAttributes } = useQuery<any[]>({
+  const { data: globalAttributes = [] } = useQuery<any[]>({
     queryKey: ['/api/products', product?.id, 'global-attributes'],
     enabled: !!product?.id,
-    onSuccess: (data) => {
-      console.log('Global attributes loaded:', data);
-    },
-    onError: (error) => {
-      console.error('Error loading global attributes:', error);
-    }
   });
   
   if (isLoading) {
@@ -440,44 +435,50 @@ const ProductDetailContent = ({
               <div className="space-y-4 mb-6">
                 <h3 className="text-lg font-semibold">Product Options</h3>
                 
-                {globalAttributes.map(attribute => (
-                  <div key={attribute.id} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <label className="font-medium text-sm">{attribute.displayName || attribute.name}</label>
+                {globalAttributes.map(productAttr => {
+                  // API returns different format, extract attribute info from it
+                  const attribute = productAttr.attribute || productAttr;
+                  const options = productAttr.options || [];
+                  
+                  return (
+                    <div key={productAttr.id} className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="font-medium text-sm">{attribute.displayName || attribute.name}</label>
+                        
+                        {selectedAttributes[attribute.id] && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge variant="outline" className="ml-2">
+                                  {selectedAttributes[attribute.id]}
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Selected value</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                      </div>
                       
-                      {selectedAttributes[attribute.id] && (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Badge variant="outline" className="ml-2">
-                                {selectedAttributes[attribute.id]}
-                              </Badge>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Selected value</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      )}
+                      <Select 
+                        value={selectedAttributes[attribute.id] || ''}
+                        onValueChange={value => handleAttributeChange(attribute.id, value)}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder={`Select ${attribute.displayName || attribute.name}`} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {options.map(option => (
+                            <SelectItem key={option.id} value={option.value}>
+                              {option.displayValue || option.value}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
-                    
-                    <Select 
-                      value={selectedAttributes[attribute.id] || ''}
-                      onValueChange={value => handleAttributeChange(attribute.id, value)}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder={`Select ${attribute.displayName || attribute.name}`} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {attribute.options?.map(option => (
-                          <SelectItem key={option.id} value={option.value}>
-                            {option.displayValue || option.value}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
             
