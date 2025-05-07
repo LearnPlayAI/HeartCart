@@ -7,6 +7,9 @@ import retry from 'async-retry';
 // Standard folders for organizing files
 export const STORAGE_FOLDERS = {
   PRODUCTS: 'products',
+  CATEGORIES: 'categories',
+  SUPPLIERS: 'suppliers',
+  CATALOGS: 'catalogs',
   TEMP: 'temp',
   THUMBNAILS: 'thumbnails',
   OPTIMIZED: 'optimized'
@@ -71,10 +74,10 @@ class ObjectStoreService {
    */
   private async verifyAccess(): Promise<void> {
     try {
-      // Try to list objects with limit 1 to see if we have access
-      const result = await this.objectStore.list({ limit: 1 });
+      // Try a list operation with a small max parameter to see if we have access
+      const result = await this.objectStore.list("", { maxKeys: 1 });
       
-      if (result.err) {
+      if ('err' in result) {
         throw new Error(`Object Store access error: ${result.err.message}`);
       }
       
@@ -99,14 +102,14 @@ class ObjectStoreService {
       // Use retry with exponential backoff for reliability
       await retry(
         async () => {
-          const uploadResult = await this.objectStore.put(objectKey, buffer, {
+          const uploadResult = await this.objectStore.uploadFromBytes(objectKey, buffer, {
             contentType: options.contentType || this.detectContentType(objectKey),
             metadata: options.metadata || {},
             cacheControl: options.cacheControl || 'public, max-age=86400',
             contentDisposition: options.contentDisposition
           });
           
-          if (uploadResult.err) {
+          if ('err' in uploadResult) {
             console.error(`Error uploading buffer to ${objectKey}:`, uploadResult.err);
             throw new Error(uploadResult.err.message);
           }
@@ -237,9 +240,9 @@ class ObjectStoreService {
       // Use retry with exponential backoff for reliability
       const result = await retry(
         async () => {
-          const downloadResult = await this.objectStore.get(objectKey);
+          const downloadResult = await this.objectStore.downloadAsBytes(objectKey);
           
-          if (downloadResult.err) {
+          if ('err' in downloadResult) {
             console.error(`Error downloading ${objectKey}:`, downloadResult.err);
             throw new Error(downloadResult.err.message);
           }
@@ -291,23 +294,15 @@ class ObjectStoreService {
     await this.initialize();
     
     try {
-      const existsResult = await this.objectStore.head(objectKey);
+      const existsResult = await this.objectStore.exists(objectKey);
       
-      if (existsResult.err) {
-        if (existsResult.err.code === 'NoSuchKey') {
-          return false;
-        }
+      if ('err' in existsResult) {
         console.error(`Error checking existence of ${objectKey}:`, existsResult.err);
-        throw new Error(existsResult.err.message);
-      }
-      
-      return true;
-    } catch (error) {
-      // Handle the case where the error means the file doesn't exist
-      if (error instanceof Error && error.message.includes('NoSuchKey')) {
         return false;
       }
       
+      return existsResult.value;
+    } catch (error) {
       console.error(`Error checking if ${objectKey} exists:`, error);
       return false;
     }
@@ -326,9 +321,10 @@ class ObjectStoreService {
     await this.initialize();
     
     try {
-      const result = await this.objectStore.head(objectKey);
+      // Try to use stat for metadata
+      const result = await this.objectStore.stat(objectKey);
       
-      if (result.err) {
+      if ('err' in result) {
         console.error(`Error getting metadata for ${objectKey}:`, result.err);
         throw new Error(`Failed to get metadata: ${result.err.message}`);
       }
@@ -337,7 +333,7 @@ class ObjectStoreService {
       
       return {
         contentType: metadata?.contentType,
-        contentLength: metadata?.contentLength,
+        contentLength: metadata?.size,
         metadata: metadata?.metadata || {},
         cacheControl: metadata?.cacheControl,
         contentDisposition: metadata?.contentDisposition
@@ -370,7 +366,7 @@ class ObjectStoreService {
     try {
       const result = await this.objectStore.delete(objectKey);
       
-      if (result.err) {
+      if ('err' in result) {
         console.error(`Error deleting ${objectKey}:`, result.err);
         throw new Error(`Failed to delete file: ${result.err.message}`);
       }
