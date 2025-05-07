@@ -133,15 +133,38 @@ export default function ImagesBasicInfoStep({
     }
   };
 
-  const removeImage = async (imageId: number, index: number) => {
+  const removeImage = async (imageId: number | string, index: number) => {
     if (imageId) {
       try {
+        // Check if this is a temporary image (has file property)
+        const image = uploadedImages[index];
+        
+        if (image.isTemp && image.file && image.file.objectKey) {
+          // For temporary images, we should handle deletion differently
+          console.log("Removing temporary image:", image);
+          
+          // Just remove from UI state, no need for server call
+          setUploadedImages(
+            uploadedImages.filter((_, i) => i !== index)
+          );
+          
+          toast({
+            title: "Image Removed",
+            description: "The temporary image has been removed",
+          });
+          return;
+        }
+        
+        // For permanent images with actual database IDs
+        console.log("Deleting image with ID:", imageId);
         const res = await fetch(`/api/products/images/${imageId}`, {
           method: 'DELETE',
         });
         
         if (!res.ok) {
-          throw new Error('Failed to delete image');
+          const errorData = await res.json();
+          console.error("Delete image error:", errorData);
+          throw new Error(errorData.message || 'Failed to delete image');
         }
         
         // Remove from state
@@ -154,6 +177,7 @@ export default function ImagesBasicInfoStep({
           description: "The image has been removed successfully",
         });
       } catch (error: any) {
+        console.error("Image deletion error:", error);
         toast({
           title: "Delete Failed",
           description: error.message || 'Failed to delete image',
@@ -161,16 +185,20 @@ export default function ImagesBasicInfoStep({
         });
       }
     } else {
-      // For temporary images without an ID
+      // For any images without an ID
       setUploadedImages(
         uploadedImages.filter((_, i) => i !== index)
       );
     }
   };
 
-  const setMainImage = async (imageId: number, index: number) => {
-    if (!productId) {
-      // For new products, just update the state
+  const setMainImage = async (imageId: number | string, index: number) => {
+    // Check if this is a temporary image or there's no product ID yet
+    const image = uploadedImages[index];
+    
+    if (!productId || (image && image.isTemp)) {
+      // For new products or temporary images, just update the state
+      console.log("Setting main image in client state only:", index);
       const updatedImages = uploadedImages.map((img, i) => ({
         ...img,
         isMain: i === index
@@ -180,12 +208,15 @@ export default function ImagesBasicInfoStep({
     }
     
     try {
+      console.log(`Setting main image for product ${productId}, image ID ${imageId}`);
       const res = await fetch(`/api/products/${productId}/images/${imageId}/main`, {
         method: 'PUT',
       });
       
       if (!res.ok) {
-        throw new Error('Failed to set main image');
+        const errorData = await res.json();
+        console.error("Set main image error:", errorData);
+        throw new Error(errorData.message || 'Failed to set main image');
       }
       
       // Update local state
@@ -200,6 +231,7 @@ export default function ImagesBasicInfoStep({
         description: "The main product image has been updated",
       });
     } catch (error: any) {
+      console.error("Error setting main image:", error);
       toast({
         title: "Update Failed",
         description: error.message || 'Failed to update main image',
