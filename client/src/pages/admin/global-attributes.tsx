@@ -11,15 +11,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
   Table,
   TableBody,
   TableCell,
@@ -33,11 +24,12 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { Trash2, Edit, Plus } from "lucide-react";
+import { Trash2, Edit, Plus, ArrowLeft, Save, X } from "lucide-react";
 import {
   Form,
   FormControl,
@@ -52,23 +44,29 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { GlobalAttribute, GlobalAttributeOption } from "@shared/schema";
 import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
 
-const formSchema = z.object({
+const attributeFormSchema = z.object({
   name: z.string().min(2, {
     message: "Name must be at least 2 characters.",
   }),
+  displayName: z.string().min(2, {
+    message: "Display name must be at least 2 characters.",
+  }),
   description: z.string().optional(),
-  type: z.enum(["select", "color", "text", "number", "boolean"]),
+  attributeType: z.enum(["select", "color", "text", "number", "boolean"]),
   isRequired: z.boolean().default(false),
   isFilterable: z.boolean().default(false),
+  sortOrder: z.number().default(0),
 });
 
 const optionFormSchema = z.object({
   value: z.string().min(1, {
     message: "Value must be at least 1 character.",
   }),
-  label: z.string().min(1, {
-    message: "Label must be at least 1 character.",
+  displayValue: z.string().min(1, {
+    message: "Display value must be at least 1 character.",
   }),
   attributeId: z.number(),
   sortOrder: z.number().default(0),
@@ -77,11 +75,10 @@ const optionFormSchema = z.object({
 export default function GlobalAttributesPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [attributeDialogOpen, setAttributeDialogOpen] = useState(false);
-  const [optionDialogOpen, setOptionDialogOpen] = useState(false);
   const [selectedAttribute, setSelectedAttribute] = useState<GlobalAttribute | null>(null);
   const [selectedOption, setSelectedOption] = useState<GlobalAttributeOption | null>(null);
-  const [editMode, setEditMode] = useState(false);
+  const [editOption, setEditOption] = useState(false);
+  const [editingMode, setEditingMode] = useState<"list" | "create" | "edit">("list");
 
   // Fetch all global attributes
   const { data: attributes = [], isLoading: isLoadingAttributes } = useQuery({
@@ -106,14 +103,16 @@ export default function GlobalAttributesPage() {
   });
 
   // Attribute form
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  const attributeForm = useForm<z.infer<typeof attributeFormSchema>>({
+    resolver: zodResolver(attributeFormSchema),
     defaultValues: {
       name: "",
+      displayName: "",
       description: "",
-      type: "select",
+      attributeType: "select",
       isRequired: false,
       isFilterable: false,
+      sortOrder: 0,
     },
   });
 
@@ -122,7 +121,7 @@ export default function GlobalAttributesPage() {
     resolver: zodResolver(optionFormSchema),
     defaultValues: {
       value: "",
-      label: "",
+      displayValue: "",
       attributeId: 0,
       sortOrder: 0,
     },
@@ -130,7 +129,7 @@ export default function GlobalAttributesPage() {
 
   // Create attribute mutation
   const createAttributeMutation = useMutation({
-    mutationFn: async (data: z.infer<typeof formSchema>) => {
+    mutationFn: async (data: z.infer<typeof attributeFormSchema>) => {
       const response = await apiRequest("POST", "/api/global-attributes", data);
       if (!response.ok) {
         const errorData = await response.json();
@@ -144,8 +143,8 @@ export default function GlobalAttributesPage() {
         title: "Success",
         description: "Attribute created successfully",
       });
-      setAttributeDialogOpen(false);
-      form.reset();
+      setEditingMode("list");
+      attributeForm.reset();
     },
     onError: (error: Error) => {
       toast({
@@ -158,7 +157,7 @@ export default function GlobalAttributesPage() {
 
   // Update attribute mutation
   const updateAttributeMutation = useMutation({
-    mutationFn: async (data: z.infer<typeof formSchema> & { id: number }) => {
+    mutationFn: async (data: z.infer<typeof attributeFormSchema> & { id: number }) => {
       const { id, ...rest } = data;
       const response = await apiRequest("PUT", `/api/global-attributes/${id}`, rest);
       if (!response.ok) {
@@ -173,8 +172,8 @@ export default function GlobalAttributesPage() {
         title: "Success",
         description: "Attribute updated successfully",
       });
-      setAttributeDialogOpen(false);
-      form.reset();
+      setEditingMode("list");
+      attributeForm.reset();
     },
     onError: (error: Error) => {
       toast({
@@ -232,7 +231,7 @@ export default function GlobalAttributesPage() {
         title: "Success",
         description: "Option created successfully",
       });
-      setOptionDialogOpen(false);
+      setEditOption(false);
       optionForm.reset();
     },
     onError: (error: Error) => {
@@ -265,7 +264,7 @@ export default function GlobalAttributesPage() {
         title: "Success",
         description: "Option updated successfully",
       });
-      setOptionDialogOpen(false);
+      setEditOption(false);
       optionForm.reset();
     },
     onError: (error: Error) => {
@@ -308,8 +307,8 @@ export default function GlobalAttributesPage() {
   });
 
   // Handle attribute form submission
-  const onAttributeSubmit = (values: z.infer<typeof formSchema>) => {
-    if (editMode && selectedAttribute) {
+  const onAttributeSubmit = (values: z.infer<typeof attributeFormSchema>) => {
+    if (editingMode === "edit" && selectedAttribute) {
       updateAttributeMutation.mutate({ ...values, id: selectedAttribute.id });
     } else {
       createAttributeMutation.mutate(values);
@@ -318,7 +317,7 @@ export default function GlobalAttributesPage() {
 
   // Handle option form submission
   const onOptionSubmit = (values: z.infer<typeof optionFormSchema>) => {
-    if (editMode && selectedOption) {
+    if (selectedOption) {
       updateOptionMutation.mutate({ ...values, id: selectedOption.id });
     } else {
       createOptionMutation.mutate(values);
@@ -327,16 +326,17 @@ export default function GlobalAttributesPage() {
 
   // Handle attribute edit
   const handleEditAttribute = (attribute: GlobalAttribute) => {
-    setEditMode(true);
     setSelectedAttribute(attribute);
-    form.reset({
+    attributeForm.reset({
       name: attribute.name,
+      displayName: attribute.displayName,
       description: attribute.description || "",
-      type: attribute.type as "select" | "color" | "text" | "number" | "boolean",
-      isRequired: attribute.isRequired,
-      isFilterable: attribute.isFilterable,
+      attributeType: attribute.attributeType as "select" | "color" | "text" | "number" | "boolean",
+      isRequired: attribute.isRequired || false,
+      isFilterable: false, // Add this field if exists in your schema
+      sortOrder: attribute.sortOrder || 0,
     });
-    setAttributeDialogOpen(true);
+    setEditingMode("edit");
   };
 
   // Handle attribute delete
@@ -348,20 +348,19 @@ export default function GlobalAttributesPage() {
 
   // Handle option edit
   const handleEditOption = (option: GlobalAttributeOption) => {
-    setEditMode(true);
     setSelectedOption(option);
     optionForm.reset({
       value: option.value,
-      label: option.label,
+      displayValue: option.displayValue,
       attributeId: option.attributeId,
-      sortOrder: option.sortOrder,
+      sortOrder: option.sortOrder || 0,
     });
-    setOptionDialogOpen(true);
+    setEditOption(true);
   };
 
   // Handle option delete
   const handleDeleteOption = (option: GlobalAttributeOption) => {
-    if (window.confirm(`Are you sure you want to delete the option "${option.label}"?`)) {
+    if (window.confirm(`Are you sure you want to delete the option "${option.displayValue}"?`)) {
       deleteOptionMutation.mutate(option.id);
     }
   };
@@ -382,80 +381,403 @@ export default function GlobalAttributesPage() {
       return;
     }
 
-    setEditMode(false);
+    if (selectedAttribute.attributeType !== "select" && selectedAttribute.attributeType !== "color") {
+      toast({
+        title: "Error",
+        description: "Options can only be added to select or color attributes",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSelectedOption(null);
     optionForm.reset({
       value: "",
-      label: "",
+      displayValue: "",
       attributeId: selectedAttribute.id,
-      sortOrder: options.length,
+      sortOrder: 0,
     });
-    setOptionDialogOpen(true);
+    setEditOption(true);
   };
 
+  // Render attribute list view
+  if (editingMode === "list") {
+    return (
+      <AdminLayout>
+        <div className="flex flex-col space-y-8">
+          <div className="flex justify-between items-center">
+            <h1 className="text-2xl font-bold tracking-tight">Global Attributes</h1>
+            <Button onClick={() => {
+              setEditingMode("create");
+              attributeForm.reset({
+                name: "",
+                displayName: "",
+                description: "",
+                attributeType: "select",
+                isRequired: false,
+                isFilterable: false,
+                sortOrder: 0,
+              });
+            }}>
+              <Plus className="mr-2 h-4 w-4" /> Add Attribute
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card className="col-span-1">
+              <CardHeader>
+                <CardTitle>Attributes</CardTitle>
+                <CardDescription>
+                  Global attributes that can be used across all products
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isLoadingAttributes ? (
+                  <div className="p-8 text-center">Loading attributes...</div>
+                ) : attributes.length === 0 ? (
+                  <div className="p-8 text-center text-muted-foreground">
+                    No attributes created yet. Click the "Add Attribute" button to create one.
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {attributes.map((attribute) => (
+                      <div
+                        key={attribute.id}
+                        className={`flex justify-between items-center p-3 cursor-pointer rounded-md ${
+                          selectedAttribute?.id === attribute.id
+                            ? "bg-pink-100 border-pink-300 border"
+                            : "hover:bg-gray-100 border border-transparent"
+                        }`}
+                        onClick={() => handleSelectAttribute(attribute)}
+                      >
+                        <div>
+                          <div className="font-medium">{attribute.name}</div>
+                          <div className="text-sm text-gray-500">
+                            Type: {attribute.attributeType}
+                            {attribute.isRequired && " • Required"}
+                          </div>
+                        </div>
+                        <div className="flex space-x-2">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditAttribute(attribute);
+                            }}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteAttribute(attribute);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="col-span-1 md:col-span-2">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>
+                    {selectedAttribute
+                      ? `${selectedAttribute.name} Options`
+                      : "Attribute Options"}
+                  </CardTitle>
+                  <CardDescription>
+                    {selectedAttribute
+                      ? `Manage options for ${selectedAttribute.name}`
+                      : "Select an attribute to manage its options"}
+                  </CardDescription>
+                </div>
+                {selectedAttribute && (
+                  <Button
+                    size="sm"
+                    disabled={
+                      !selectedAttribute ||
+                      (selectedAttribute.attributeType !== "select" &&
+                        selectedAttribute.attributeType !== "color")
+                    }
+                    onClick={handleNewOption}
+                  >
+                    <Plus className="mr-2 h-4 w-4" /> Add Option
+                  </Button>
+                )}
+              </CardHeader>
+              <CardContent>
+                {!selectedAttribute ? (
+                  <div className="p-8 text-center text-muted-foreground">
+                    Select an attribute to view and manage its options
+                  </div>
+                ) : selectedAttribute.attributeType !== "select" &&
+                  selectedAttribute.attributeType !== "color" ? (
+                  <div className="p-8 text-center text-muted-foreground">
+                    {selectedAttribute.attributeType === "text"
+                      ? "Text attributes don't have predefined options. Values will be entered when adding products."
+                      : selectedAttribute.attributeType === "number"
+                      ? "Number attributes don't have predefined options. Values will be entered when adding products."
+                      : "Boolean attributes have built-in Yes/No options. No additional options needed."}
+                  </div>
+                ) : isLoadingOptions ? (
+                  <div className="p-8 text-center">Loading options...</div>
+                ) : options.length === 0 ? (
+                  <div className="p-8 text-center text-muted-foreground">
+                    No options created yet for this attribute. Click the "Add Option" button to create one.
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Value</TableHead>
+                        <TableHead>Display Label</TableHead>
+                        <TableHead>Sort Order</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {options.map((option) => (
+                        <TableRow key={option.id}>
+                          <TableCell>
+                            {selectedAttribute.attributeType === "color" ? (
+                              <div className="flex items-center">
+                                <div
+                                  className="h-6 w-6 rounded-full mr-2"
+                                  style={{ backgroundColor: option.value }}
+                                ></div>
+                                {option.value}
+                              </div>
+                            ) : (
+                              option.value
+                            )}
+                          </TableCell>
+                          <TableCell>{option.displayValue}</TableCell>
+                          <TableCell>{option.sortOrder}</TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => handleEditOption(option)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                              onClick={() => handleDeleteOption(option)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+              {editOption && (
+                <Card className="mt-4 border-t">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg">{selectedOption ? "Edit Option" : "Add Option"}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Form {...optionForm}>
+                      <form
+                        onSubmit={optionForm.handleSubmit(onOptionSubmit)}
+                        className="space-y-4"
+                      >
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            control={optionForm.control}
+                            name="value"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Value</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    placeholder={
+                                      selectedAttribute?.attributeType === "color"
+                                        ? "#FF0000"
+                                        : "e.g. small, red, cotton"
+                                    }
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormDescription>
+                                  {selectedAttribute?.attributeType === "color"
+                                    ? "Enter a valid hex color code (e.g. #FF0000)"
+                                    : "The actual value stored in the database"}
+                                </FormDescription>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={optionForm.control}
+                            name="displayValue"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Display Label</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    placeholder={
+                                      selectedAttribute?.attributeType === "color"
+                                        ? "Red"
+                                        : "e.g. Small, Red, Cotton"
+                                    }
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormDescription>
+                                  The label shown to customers
+                                </FormDescription>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        <FormField
+                          control={optionForm.control}
+                          name="sortOrder"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Sort Order</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  {...field}
+                                  onChange={(e) => {
+                                    field.onChange(parseInt(e.target.value) || 0);
+                                  }}
+                                />
+                              </FormControl>
+                              <FormDescription>
+                                Lower numbers appear first
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <div className="flex justify-end space-x-2 pt-2">
+                          <Button
+                            variant="outline"
+                            type="button"
+                            onClick={() => {
+                              setEditOption(false);
+                              setSelectedOption(null);
+                              optionForm.reset();
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            type="submit"
+                            disabled={
+                              createOptionMutation.isPending ||
+                              updateOptionMutation.isPending
+                            }
+                          >
+                            {selectedOption ? "Update" : "Create"}
+                          </Button>
+                        </div>
+                      </form>
+                    </Form>
+                  </CardContent>
+                </Card>
+              )}
+            </Card>
+          </div>
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  // Render attribute create/edit form
   return (
     <AdminLayout>
-      <div className="container mx-auto py-8">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">Global Attributes Management</h1>
-          <Dialog open={attributeDialogOpen} onOpenChange={setAttributeDialogOpen}>
-            <DialogTrigger asChild>
-              <Button
-                onClick={() => {
-                  setEditMode(false);
-                  setSelectedAttribute(null);
-                  form.reset({
-                    name: "",
-                    description: "",
-                    type: "select",
-                    isRequired: false,
-                    isFilterable: false,
-                  });
-                }}
-              >
-                <Plus className="mr-2 h-4 w-4" /> Add New Attribute
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]">
-              <DialogHeader>
-                <DialogTitle>{editMode ? "Edit Attribute" : "Create New Attribute"}</DialogTitle>
-                <DialogDescription>
-                  {editMode
-                    ? "Update the attribute details below."
-                    : "Global attributes can be used across all products regardless of their category."}
-                </DialogDescription>
-              </DialogHeader>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onAttributeSubmit)} className="space-y-4">
+      <div className="flex flex-col space-y-6">
+        <div className="flex items-center space-x-2">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => setEditingMode("list")}
+            className="gap-1"
+          >
+            <ArrowLeft className="h-4 w-4" /> Back to Attributes
+          </Button>
+          <h1 className="text-2xl font-bold tracking-tight">
+            {editingMode === "create" ? "Create Attribute" : `Edit ${selectedAttribute?.name}`}
+          </h1>
+        </div>
+
+        <Card>
+          <CardContent className="pt-6">
+            <Form {...attributeForm}>
+              <form onSubmit={attributeForm.handleSubmit(onAttributeSubmit)} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <FormField
-                    control={form.control}
+                    control={attributeForm.control}
                     name="name"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Name</FormLabel>
                         <FormControl>
-                          <Input placeholder="Color, Size, Material, etc." {...field} />
+                          <Input placeholder="e.g. color, size, material" {...field} />
                         </FormControl>
+                        <FormDescription>
+                          This is the internal name used in the system (no spaces).
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                   <FormField
-                    control={form.control}
-                    name="description"
+                    control={attributeForm.control}
+                    name="displayName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Description (Optional)</FormLabel>
+                        <FormLabel>Display Name</FormLabel>
                         <FormControl>
-                          <Input placeholder="A description of this attribute" {...field} />
+                          <Input placeholder="e.g. Color, Size, Material" {...field} />
                         </FormControl>
+                        <FormDescription>
+                          This is the name shown to customers.
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
+                </div>
+
+                <FormField
+                  control={attributeForm.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description (Optional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Optional description..." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <FormField
-                    control={form.control}
-                    name="type"
+                    control={attributeForm.control}
+                    name="attributeType"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Type</FormLabel>
@@ -466,328 +788,114 @@ export default function GlobalAttributesPage() {
                         >
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select a type" />
+                              <SelectValue placeholder="Select attribute type" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="select">Dropdown Select</SelectItem>
+                            <SelectItem value="select">Dropdown (Select)</SelectItem>
                             <SelectItem value="color">Color</SelectItem>
                             <SelectItem value="text">Text</SelectItem>
                             <SelectItem value="number">Number</SelectItem>
-                            <SelectItem value="boolean">Yes/No</SelectItem>
+                            <SelectItem value="boolean">Yes/No (Boolean)</SelectItem>
                           </SelectContent>
                         </Select>
+                        <FormDescription>
+                          How this attribute will be displayed and stored.
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="isRequired"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                          <div className="space-y-0.5">
-                            <FormLabel>Required</FormLabel>
-                            <FormDescription>
-                              If this attribute is required for all products
-                            </FormDescription>
-                          </div>
-                          <FormControl>
-                            <Switch
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="isFilterable"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                          <div className="space-y-0.5">
-                            <FormLabel>Filterable</FormLabel>
-                            <FormDescription>
-                              If this attribute can be used for filtering
-                            </FormDescription>
-                          </div>
-                          <FormControl>
-                            <Switch
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  <DialogFooter>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setAttributeDialogOpen(false)}
-                    >
-                      Cancel
-                    </Button>
-                    <Button type="submit" disabled={createAttributeMutation.isPending || updateAttributeMutation.isPending}>
-                      {editMode ? "Update" : "Create"}
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <Card>
-            <CardHeader>
-              <CardTitle>Attributes</CardTitle>
-              <CardDescription>Select an attribute to manage its options</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[60vh] overflow-y-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isLoadingAttributes ? (
-                      <TableRow>
-                        <TableCell colSpan={3} className="text-center">
-                          Loading...
-                        </TableCell>
-                      </TableRow>
-                    ) : attributes.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={3} className="text-center">
-                          No attributes found
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      attributes.map((attribute) => (
-                        <TableRow
-                          key={attribute.id}
-                          className={
-                            selectedAttribute?.id === attribute.id
-                              ? "bg-muted cursor-pointer"
-                              : "cursor-pointer hover:bg-muted/50"
-                          }
-                          onClick={() => handleSelectAttribute(attribute)}
-                        >
-                          <TableCell className="font-medium">{attribute.name}</TableCell>
-                          <TableCell>{attribute.type}</TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleEditAttribute(attribute);
-                              }}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteAttribute(attribute);
-                              }}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
+                  <FormField
+                    control={attributeForm.control}
+                    name="sortOrder"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Sort Order</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            {...field} 
+                            onChange={(e) => field.onChange(parseInt(e.target.value) || 0)} 
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Attributes with lower numbers appear first
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
                     )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="md:col-span-2">
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle>
-                    {selectedAttribute ? `Options for "${selectedAttribute.name}"` : "Options"}
-                  </CardTitle>
-                  <CardDescription>
-                    {selectedAttribute
-                      ? `Manage options for the ${selectedAttribute.name} attribute`
-                      : "Select an attribute to manage its options"}
-                  </CardDescription>
+                  />
                 </div>
-                {selectedAttribute && selectedAttribute.type === "select" && (
-                  <Button onClick={handleNewOption}>
-                    <Plus className="mr-2 h-4 w-4" /> Add Option
-                  </Button>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[60vh] overflow-y-auto">
-                {!selectedAttribute ? (
-                  <div className="text-center p-8 text-muted-foreground">
-                    Please select an attribute from the left panel to manage its options
-                  </div>
-                ) : selectedAttribute.type !== "select" ? (
-                  <div className="text-center p-8 text-muted-foreground">
-                    The attribute type "{selectedAttribute.type}" does not support options
-                  </div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Value</TableHead>
-                        <TableHead>Label</TableHead>
-                        <TableHead>Sort Order</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {isLoadingOptions ? (
-                        <TableRow>
-                          <TableCell colSpan={4} className="text-center">
-                            Loading...
-                          </TableCell>
-                        </TableRow>
-                      ) : options.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={4} className="text-center">
-                            No options found
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        options.map((option) => (
-                          <TableRow key={option.id}>
-                            <TableCell>{option.value}</TableCell>
-                            <TableCell>{option.label}</TableCell>
-                            <TableCell>{option.sortOrder}</TableCell>
-                            <TableCell className="text-right">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleEditOption(option)}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleDeleteOption(option)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
 
-      {/* Option Dialog */}
-      <Dialog open={optionDialogOpen} onOpenChange={setOptionDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>{editMode ? "Edit Option" : "Add New Option"}</DialogTitle>
-            <DialogDescription>
-              {editMode
-                ? "Update the option details below."
-                : `Add a new option for the "${selectedAttribute?.name}" attribute.`}
-            </DialogDescription>
-          </DialogHeader>
-          <Form {...optionForm}>
-            <form onSubmit={optionForm.handleSubmit(onOptionSubmit)} className="space-y-4">
-              <FormField
-                control={optionForm.control}
-                name="value"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Value</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Internal value (e.g., 'red', 'small')"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Internal value used in the system. Should be unique for this attribute.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={optionForm.control}
-                name="label"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Label</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Display label (e.g., 'Red', 'Small')"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      The label shown to users in the interface.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={optionForm.control}
-                name="sortOrder"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Sort Order</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        {...field}
-                        onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Controls the display order of options. Lower numbers appear first.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setOptionDialogOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={createOptionMutation.isPending || updateOptionMutation.isPending}>
-                  {editMode ? "Update" : "Create"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <FormField
+                    control={attributeForm.control}
+                    name="isRequired"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                        <div className="space-y-0.5">
+                          <FormLabel>Required</FormLabel>
+                          <FormDescription>
+                            Make this attribute required when adding to products
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={attributeForm.control}
+                    name="isFilterable"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                        <div className="space-y-0.5">
+                          <FormLabel>Filterable</FormLabel>
+                          <FormDescription>
+                            Allow customers to filter products by this attribute
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="flex justify-end space-x-2 pt-4">
+                  <Button
+                    variant="outline"
+                    type="button"
+                    onClick={() => {
+                      setEditingMode("list");
+                      attributeForm.reset();
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={
+                      createAttributeMutation.isPending || updateAttributeMutation.isPending
+                    }
+                  >
+                    {editingMode === "edit" ? "Update" : "Create"} Attribute
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+      </div>
     </AdminLayout>
   );
 }
