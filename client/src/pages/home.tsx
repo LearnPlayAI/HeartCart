@@ -6,6 +6,8 @@ import FeaturedProductsSection from '@/components/home/featured-products';
 import AIRecommendedProducts from '@/components/home/ai-recommended';
 import AppBanner from '@/components/home/app-banner';
 import InstallBanner from '@/components/pwa/install-banner';
+import { CategorySidebar } from '@/components/ui/category-sidebar';
+import { CategorySidebarDrawer } from '@/components/ui/category-sidebar-drawer';
 import { Helmet } from 'react-helmet';
 
 const Home = () => {
@@ -19,11 +21,31 @@ const Home = () => {
       <div className="container mx-auto px-4 py-4">
         <InstallBanner />
         <HeroBanner />
-        <FlashDealsSection />
-        <CategoriesShowcase />
-        <FeaturedProductsSection />
-        <AIRecommendedProducts />
-        <AppBanner />
+        
+        {/* Mobile Category Drawer - Shown only on mobile */}
+        <div className="block md:hidden mb-4">
+          <CategorySidebarDrawer />
+        </div>
+        
+        {/* Desktop Layout with Sidebar */}
+        <div className="flex flex-col md:flex-row gap-6 mt-4">
+          {/* Category Sidebar - Hidden on mobile */}
+          <div className="hidden md:block w-64 flex-shrink-0">
+            <div className="bg-white rounded-lg shadow-md p-4 sticky top-20">
+              <h2 className="text-lg font-bold mb-4">Categories</h2>
+              <CategorySidebar className="border-none p-0" />
+            </div>
+          </div>
+          
+          {/* Main Content */}
+          <div className="flex-1">
+            <FlashDealsSection />
+            <CategoriesShowcase />
+            <FeaturedProductsSection />
+            <AIRecommendedProducts />
+            <AppBanner />
+          </div>
+        </div>
       </div>
     </>
   );

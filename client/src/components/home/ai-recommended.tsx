@@ -52,37 +52,39 @@ const AIRecommendedProducts = () => {
           ))
         ) : productsToShow?.length ? (
           productsToShow.map((product) => (
-            <Link key={product.id} href={`/product/${product.slug}`}>
-              <a className="product-card bg-white rounded-lg border border-gray-200 overflow-hidden">
-                <img 
-                  src={product.imageUrl}
-                  alt={product.name}
-                  className="w-full h-40 object-cover"
-                />
-                <div className="p-3">
-                  <h3 className="text-sm font-medium text-gray-800 mb-1 line-clamp-2">
-                    {product.name}
-                  </h3>
-                  <div className="flex items-baseline mb-2">
-                    <span className="text-[#FF69B4] font-bold">
-                      {product.salePrice 
-                        ? formatCurrency(product.salePrice) 
-                        : formatCurrency(product.price)}
+            <Link 
+              key={product.id} 
+              href={`/product/${product.slug}`}
+              className="product-card bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
+            >
+              <img 
+                src={product.imageUrl}
+                alt={product.name}
+                className="w-full h-40 object-cover"
+              />
+              <div className="p-3">
+                <h3 className="text-sm font-medium text-gray-800 mb-1 line-clamp-2">
+                  {product.name}
+                </h3>
+                <div className="flex items-baseline mb-2">
+                  <span className="text-[#FF69B4] font-bold">
+                    {product.salePrice 
+                      ? formatCurrency(product.salePrice) 
+                      : formatCurrency(product.price)}
+                  </span>
+                  {product.salePrice && (
+                    <span className="text-gray-500 text-xs ml-1 line-through">
+                      {formatCurrency(product.price)}
                     </span>
-                    {product.salePrice && (
-                      <span className="text-gray-500 text-xs ml-1 line-through">
-                        {formatCurrency(product.price)}
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    <div className="flex items-center">
-                      <Bot className="text-[#FF69B4] mr-1 h-3 w-3" />
-                      {recommendations?.reason || 'Based on your browsing'}
-                    </div>
+                  )}
+                </div>
+                <div className="text-xs text-gray-500">
+                  <div className="flex items-center">
+                    <Bot className="text-[#FF69B4] mr-1 h-3 w-3" />
+                    {recommendations?.reason || 'Based on your browsing'}
                   </div>
                 </div>
-              </a>
+              </div>
             </Link>
           ))
         ) : (
