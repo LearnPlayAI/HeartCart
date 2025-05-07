@@ -587,12 +587,14 @@ function AttributeOptionSelector({
         body: JSON.stringify({
           attributeId,
           value: newOptionValue.trim(),
-          displayOrder: options.length + 1
+          displayValue: newOptionValue.trim(), // Adding the displayValue field that's required
+          sortOrder: options.length + 1
         })
       });
       
       if (!response.ok) {
-        throw new Error('Failed to create option');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to create option');
       }
       
       const newOption = await response.json();
