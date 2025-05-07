@@ -827,7 +827,8 @@ export class DatabaseStorage implements IStorage {
   // Product Image operations
   async getProductImages(productId: number): Promise<ProductImage[]> {
     // Select specific columns instead of '*' to avoid problems with schema changes
-    return await db
+    // Excluding the 'alt' field which might not exist in the database yet
+    const result = await db
       .select({
         id: productImages.id,
         productId: productImages.productId,
@@ -837,17 +838,23 @@ export class DatabaseStorage implements IStorage {
         hasBgRemoved: productImages.hasBgRemoved,
         bgRemovedUrl: productImages.bgRemovedUrl,
         bgRemovedObjectKey: productImages.bgRemovedObjectKey,
-        alt: productImages.alt,
         sortOrder: productImages.sortOrder,
         createdAt: productImages.createdAt
       })
       .from(productImages)
       .where(eq(productImages.productId, productId))
       .orderBy(asc(productImages.sortOrder));
+      
+    // Add a default empty string for the missing 'alt' field
+    return result.map(image => ({
+      ...image,
+      alt: ''
+    }));
   }
 
   async getProductImagesWithBgRemoved(productId: number): Promise<ProductImage[]> {
-    return await db
+    // Excluding the 'alt' field which might not exist in the database yet
+    const result = await db
       .select({
         id: productImages.id,
         productId: productImages.productId,
@@ -857,7 +864,6 @@ export class DatabaseStorage implements IStorage {
         hasBgRemoved: productImages.hasBgRemoved,
         bgRemovedUrl: productImages.bgRemovedUrl,
         bgRemovedObjectKey: productImages.bgRemovedObjectKey,
-        alt: productImages.alt,
         sortOrder: productImages.sortOrder,
         createdAt: productImages.createdAt
       })
@@ -869,6 +875,12 @@ export class DatabaseStorage implements IStorage {
         )
       )
       .orderBy(asc(productImages.sortOrder));
+      
+    // Add a default empty string for the missing 'alt' field
+    return result.map(image => ({
+      ...image,
+      alt: ''
+    }));
   }
 
   async createProductImage(image: InsertProductImage): Promise<ProductImage> {
