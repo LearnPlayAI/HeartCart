@@ -358,7 +358,6 @@ export const insertProductAttributeCombinationSchema = createInsertSchema(produc
   id: true,
   createdAt: true,
   updatedAt: true,
-  isActive: true,
 });
 
 // Export types
