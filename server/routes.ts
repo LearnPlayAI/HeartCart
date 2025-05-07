@@ -122,8 +122,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // CATEGORY ROUTES
   app.get("/api/categories", handleErrors(async (req: Request, res: Response) => {
     const { parentId, level, orderBy } = req.query;
+    const user = req.user as any;
+    const isAdmin = user && user.role === 'admin';
     
-    const options: { parentId?: number | null; level?: number; orderBy?: 'name' | 'displayOrder' } = {};
+    const options: { parentId?: number | null; level?: number; orderBy?: 'name' | 'displayOrder'; includeInactive?: boolean } = {};
+    
+    // Include inactive (hidden) categories only for admins
+    options.includeInactive = isAdmin;
     
     if (parentId !== undefined) {
       if (parentId === 'null') {
@@ -158,7 +163,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }));
   
   app.get("/api/categories/main/with-children", handleErrors(async (req: Request, res: Response) => {
-    const mainCategoriesWithChildren = await storage.getMainCategoriesWithChildren();
+    const user = req.user as any;
+    const isAdmin = user && user.role === 'admin';
+    
+    const options = { includeInactive: isAdmin };
+    const mainCategoriesWithChildren = await storage.getMainCategoriesWithChildren(options);
     res.json(mainCategoriesWithChildren);
   }));
   

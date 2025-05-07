@@ -231,20 +231,28 @@ export class DatabaseStorage implements IStorage {
     return { category, children };
   }
   
-  async getMainCategoriesWithChildren(): Promise<Array<{ category: Category, children: Category[] }>> {
+  async getMainCategoriesWithChildren(options?: { includeInactive?: boolean }): Promise<Array<{ category: Category, children: Category[] }>> {
     // Get all main categories (level 0)
-    const mainCategories = await this.getAllCategories({ level: 0 });
+    const mainCategories = await this.getAllCategories({ 
+      level: 0,
+      includeInactive: options?.includeInactive 
+    });
     
     // For each main category, get its children
     const result = await Promise.all(
       mainCategories.map(async (category) => {
+        // Build conditions
+        const conditions: SQL<unknown>[] = [eq(categories.parentId, category.id)];
+        
+        // Add visibility condition if not including inactive categories
+        if (!options?.includeInactive) {
+          conditions.push(eq(categories.isActive, true));
+        }
+        
         const children = await db
           .select()
           .from(categories)
-          .where(and(
-            eq(categories.parentId, category.id),
-            eq(categories.isActive, true)
-          ))
+          .where(and(...conditions))
           .orderBy(asc(categories.displayOrder), asc(categories.name));
         
         return { category, children };
