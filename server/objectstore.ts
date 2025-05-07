@@ -14,7 +14,7 @@ export const STORAGE_FOLDERS = {
   CATEGORIES: 'public/categories',
   SUPPLIERS: 'public/suppliers',
   CATALOGS: 'public/catalogs',
-  TEMP: 'temp'
+  TEMP: 'temp' // Base temp folder - product ID subfolders will be added dynamically
 };
 
 // Interface for file metadata
