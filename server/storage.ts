@@ -482,7 +482,9 @@ export class DatabaseStorage implements IStorage {
       }
     }
     
-    return product;
+    // Enrich product with main image URL
+    const enrichedProducts = await this.enrichProductsWithMainImage([product]);
+    return enrichedProducts[0];
   }
 
   async getProductBySlug(slug: string, options?: { includeInactive?: boolean, includeCategoryInactive?: boolean }): Promise<Product | undefined> {
@@ -520,7 +522,9 @@ export class DatabaseStorage implements IStorage {
       }
     }
     
-    return product;
+    // Enrich product with main image URL
+    const enrichedProducts = await this.enrichProductsWithMainImage([product]);
+    return enrichedProducts[0];
   }
 
   async getProductsByCategory(categoryId: number, limit = 20, offset = 0, options?: { includeInactive?: boolean, includeCategoryInactive?: boolean }): Promise<Product[]> {
@@ -548,12 +552,15 @@ export class DatabaseStorage implements IStorage {
       conditions.push(eq(products.isActive, true));
     }
     
-    return await db
+    const productList = await db
       .select()
       .from(products)
       .where(and(...conditions))
       .limit(limit)
       .offset(offset);
+      
+    // Enrich products with main image URLs
+    return await this.enrichProductsWithMainImage(productList);
   }
 
   async getFeaturedProducts(limit = 10, options?: { includeInactive?: boolean, includeCategoryInactive?: boolean }): Promise<Product[]> {
@@ -704,9 +711,12 @@ export class DatabaseStorage implements IStorage {
         .where(eq(products.id, item.productId));
         
       if (product) {
+        // Enrich product with main image URL
+        const enrichedProducts = await this.enrichProductsWithMainImage([product]);
+        
         result.push({
           ...item,
-          product
+          product: enrichedProducts[0]
         });
       }
     }
@@ -838,6 +848,10 @@ export class DatabaseStorage implements IStorage {
         .where(eq(products.id, item.productId));
       
       if (product) {
+        // Enrich product with main image URL
+        const enrichedProducts = await this.enrichProductsWithMainImage([product]);
+        const enrichedProduct = enrichedProducts[0];
+        
         let attributeDetails = undefined;
         
         // If there's a combination, get more details
@@ -849,7 +863,7 @@ export class DatabaseStorage implements IStorage {
             
           if (combination) {
             // Get category attributes
-            const categoryAttributes = await this.getCategoryAttributes(product.categoryId);
+            const categoryAttributes = await this.getCategoryAttributes(enrichedProduct.categoryId);
             
             attributeDetails = {
               combination,
@@ -861,7 +875,7 @@ export class DatabaseStorage implements IStorage {
         
         items.push({
           ...item,
-          product,
+          product: enrichedProduct,
           attributeDetails
         });
       }
