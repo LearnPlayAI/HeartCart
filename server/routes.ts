@@ -2022,11 +2022,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Set content type header
       res.setHeader('Content-Type', contentType);
       
-      // Get file as stream
-      const fileStream = await objectStorageService.downloadAsStream(objectKey);
+      // Get file as buffer instead of stream for better compatibility
+      const buffer = await objectStorageService.downloadAsBuffer(objectKey);
       
-      // Pipe the stream to the response
-      fileStream.pipe(res);
+      // Send the buffer as response
+      res.send(buffer);
     } catch (error: any) {
       console.error('Error serving file:', error);
       res.status(500).send(`Error serving file: ${error.message}`);
