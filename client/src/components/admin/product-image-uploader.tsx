@@ -153,7 +153,8 @@ const ProductImageUploader = ({ productId, onUploadComplete }: ProductImageUploa
       });
       
       // Upload all files at once using fetch directly (not apiRequest)
-      const response = await fetch(`/api/products/${productId}/images`, {
+      // Use the /api/upload route which has multer configured for file handling
+      const response = await fetch(`/api/upload/products/${productId}/images`, {
         method: 'POST',
         body: formData,
         // No Content-Type header - browser sets it automatically with boundary
