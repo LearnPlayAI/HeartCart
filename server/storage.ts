@@ -826,8 +826,7 @@ export class DatabaseStorage implements IStorage {
   
   // Product Image operations
   async getProductImages(productId: number): Promise<ProductImage[]> {
-    // Select specific columns instead of '*' to avoid problems with schema changes
-    // Excluding the 'alt' field which might not exist in the database yet
+    // Select specific columns that exist in the database
     const result = await db
       .select({
         id: productImages.id,
@@ -844,16 +843,12 @@ export class DatabaseStorage implements IStorage {
       .from(productImages)
       .where(eq(productImages.productId, productId))
       .orderBy(asc(productImages.sortOrder));
-      
-    // Add a default empty string for the missing 'alt' field
-    return result.map(image => ({
-      ...image,
-      alt: ''
-    }));
+    
+    return result;
   }
 
   async getProductImagesWithBgRemoved(productId: number): Promise<ProductImage[]> {
-    // Excluding the 'alt' field which might not exist in the database yet
+    // Select specific columns that exist in the database
     const result = await db
       .select({
         id: productImages.id,
@@ -876,11 +871,7 @@ export class DatabaseStorage implements IStorage {
       )
       .orderBy(asc(productImages.sortOrder));
       
-    // Add a default empty string for the missing 'alt' field
-    return result.map(image => ({
-      ...image,
-      alt: ''
-    }));
+    return result;
   }
 
   async createProductImage(image: InsertProductImage): Promise<ProductImage> {

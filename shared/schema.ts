@@ -120,7 +120,7 @@ export const productImages = pgTable("product_images", {
   hasBgRemoved: boolean("has_bg_removed").default(false),
   bgRemovedUrl: text("bg_removed_url"),
   bgRemovedObjectKey: text("bg_removed_object_key"),
-  alt: text("alt"),
+  // Note: 'alt' field removed as it doesn't exist in the database
   sortOrder: integer("sort_order").default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
