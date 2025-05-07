@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Star, StarHalf, Truck, Package, ShieldCheck, Heart, Share2, Minus, Plus } from 'lucide-react';
-import { ProductCard } from '@/components/product/product-card';
+import ProductCard from '@/components/product/product-card';
 import { useCart } from '@/hooks/use-cart';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency, calculateDiscount } from '@/lib/utils';
@@ -33,6 +33,10 @@ import type {
   GlobalAttribute,
   GlobalAttributeOption
 } from '@shared/schema';
+import { 
+  ProductGlobalAttributeResponse,
+  CartGlobalAttribute
+} from '@/types/attribute-types';
 
 // This is a wrapper component that determines which path is matched and renders
 // the actual ProductDetail component with the right identifier
@@ -194,7 +198,11 @@ const ProductDetailContent = ({
   });
   
   // Get product global attributes
-  const { data: globalAttributes = [] } = useQuery<any[]>({
+  const { 
+    data: globalAttributes = [],
+    error: globalAttributesError,
+    isLoading: globalAttributesLoading
+  } = useQuery<ProductGlobalAttributeResponse[]>({
     queryKey: ['/api/products', product?.id, 'global-attributes'],
     enabled: !!product?.id,
     queryFn: async () => {
@@ -303,7 +311,7 @@ const ProductDetailContent = ({
     // Verify all global attributes are selected
     const allGlobalAttributesSelected = 
       !hasRequiredGlobalAttributes || 
-      globalAttributes.every(attr => selectedAttributes[attr.id]);
+      globalAttributes.every(attr => selectedAttributes[attr.attribute.id]);
     
     if (hasRequiredGlobalAttributes && !allGlobalAttributesSelected) {
       // Show toast message about required global attributes
@@ -316,6 +324,23 @@ const ProductDetailContent = ({
       return;
     }
     
+    // Build cart attributes in cart-friendly format
+    const cartGlobalAttributes: CartGlobalAttribute[] = hasRequiredGlobalAttributes 
+      ? globalAttributes.map(attrItem => {
+          const { attribute, options } = attrItem;
+          const selectedValue = selectedAttributes[attribute.id];
+          const selectedOption = options.find((opt: GlobalAttributeOption) => opt.value === selectedValue);
+          
+          return {
+            id: attribute.id,
+            name: attribute.name,
+            displayName: attribute.displayName || attribute.name,
+            value: selectedValue,
+            displayValue: selectedOption?.displayValue || selectedValue
+          };
+        }) 
+      : [];
+    
     const cartItem = {
       productId: product.id,
       product,
@@ -323,16 +348,7 @@ const ProductDetailContent = ({
       combinationId: selectedCombination?.id,
       combinationHash: selectedCombination?.combinationHash,
       selectedAttributes,
-      globalAttributes: hasRequiredGlobalAttributes 
-        ? globalAttributes.map(attr => ({
-            id: attr.id,
-            name: attr.name,
-            displayName: attr.displayName || attr.name,
-            value: selectedAttributes[attr.id],
-            displayValue: attr.options.find(opt => opt.value === selectedAttributes[attr.id])?.displayValue 
-              || selectedAttributes[attr.id]
-          })) 
-        : [],
+      globalAttributes: cartGlobalAttributes,
       adjustedPrice: currentPrice || product.salePrice || product.price
     };
     
@@ -445,11 +461,21 @@ const ProductDetailContent = ({
             <div className="space-y-4 mb-6">
               <h3 className="text-lg font-semibold">Product Options</h3>
               
-              {globalAttributes && globalAttributes.length > 0 ? (
-                globalAttributes.map(productAttr => {
+              {globalAttributesLoading ? (
+                <div className="space-y-2">
+                  <div className="h-4 bg-gray-200 animate-pulse rounded w-1/3 mb-2"></div>
+                  <div className="h-10 bg-gray-200 animate-pulse rounded"></div>
+                </div>
+              ) : globalAttributesError ? (
+                <div className="text-sm text-red-500">
+                  Error loading product options. Please try refreshing the page.
+                </div>
+              ) : globalAttributes && globalAttributes.length > 0 ? (
+                globalAttributes.map((productAttr: ProductGlobalAttributeResponse) => {
                   console.log('Rendering attribute:', productAttr);
-                  const attribute = productAttr.attribute || productAttr;
-                  const options = productAttr.options || [];
+                  
+                  // These are properly typed now
+                  const { attribute, options } = productAttr;
                   
                   return (
                     <div key={productAttr.id} className="space-y-2">
@@ -474,13 +500,13 @@ const ProductDetailContent = ({
                       
                       <Select 
                         value={selectedAttributes[attribute.id] || ''}
-                        onValueChange={value => handleAttributeChange(attribute.id, value)}
+                        onValueChange={(value: string) => handleAttributeChange(attribute.id, value)}
                       >
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder={`Select ${attribute.displayName || attribute.name}`} />
                         </SelectTrigger>
                         <SelectContent>
-                          {options.map(option => (
+                          {options.map((option: GlobalAttributeOption) => (
                             <SelectItem key={option.id} value={option.value}>
                               {option.displayValue || option.value}
                             </SelectItem>
@@ -492,7 +518,7 @@ const ProductDetailContent = ({
                 })
               ) : (
                 <div className="text-sm text-gray-500">
-                  (Debug: No product options available)
+                  No product options available for this item.
                 </div>
               )}
             </div>
