@@ -126,13 +126,10 @@ export class ObjectStorageService {
    */
   async exists(objectKey: string): Promise<boolean> {
     try {
-      await this.client.head(objectKey);
-      return true;
+      return await this.client.exists(objectKey);
     } catch (error: any) {
-      if (error.message && error.message.includes('404')) {
-        return false;
-      }
-      throw error;
+      console.error(`Error checking if object exists ${objectKey}:`, error);
+      throw new Error(`Failed to check if object exists: ${error.message || 'Unknown error'}`);
     }
   }
   
@@ -145,18 +142,27 @@ export class ObjectStorageService {
    */
   async uploadFromBuffer(objectKey: string, buffer: Buffer, metadata?: FileMetadata): Promise<string> {
     try {
-      const contentType = metadata?.contentType || this.detectContentType(objectKey);
+      // Store the content type and other metadata in a separate file if needed
+      const metadataKey = `${objectKey}.metadata`;
+      if (metadata) {
+        const metadataContent = JSON.stringify({
+          contentType: metadata.contentType || this.detectContentType(objectKey),
+          cacheControl: metadata.cacheControl || 'public, max-age=86400',
+          contentDisposition: metadata.contentDisposition,
+          originalFileName: metadata.filename
+        });
+        await this.client.uploadFromText(metadataKey, metadataContent);
+      }
       
+      // Upload the actual file
       await this.client.uploadFromBytes(objectKey, buffer, {
-        contentType,
-        cacheControl: metadata?.cacheControl || 'public, max-age=86400', // 1 day cache by default
-        contentDisposition: metadata?.contentDisposition
+        compress: true // Enable compression for better storage efficiency
       });
       
       return this.getPublicUrl(objectKey);
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Error uploading file to ${objectKey}:`, error);
-      throw new Error(`Failed to upload file: ${error.message}`);
+      throw new Error(`Failed to upload file: ${error.message || 'Unknown error'}`);
     }
   }
   
@@ -169,19 +175,29 @@ export class ObjectStorageService {
    */
   async uploadFromFile(objectKey: string, filePath: string, metadata?: FileMetadata): Promise<string> {
     try {
-      const buffer = await readFile(filePath);
+      // Store metadata in a separate file if needed
+      const metadataKey = `${objectKey}.metadata`;
       const contentType = metadata?.contentType || this.detectContentType(filePath);
       
-      await this.client.uploadFromBytes(objectKey, buffer, {
-        contentType,
-        cacheControl: metadata?.cacheControl || 'public, max-age=86400',
-        contentDisposition: metadata?.contentDisposition
+      if (metadata || contentType) {
+        const metadataContent = JSON.stringify({
+          contentType: contentType,
+          cacheControl: metadata?.cacheControl || 'public, max-age=86400',
+          contentDisposition: metadata?.contentDisposition,
+          originalFileName: metadata?.filename || path.basename(filePath)
+        });
+        await this.client.uploadFromText(metadataKey, metadataContent);
+      }
+      
+      // Use the direct file upload method
+      await this.client.uploadFromFilename(objectKey, filePath, {
+        compress: true // Enable compression for better storage efficiency
       });
       
       return this.getPublicUrl(objectKey);
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Error uploading file ${filePath} to ${objectKey}:`, error);
-      throw new Error(`Failed to upload file from path: ${error.message}`);
+      throw new Error(`Failed to upload file from path: ${error.message || 'Unknown error'}`);
     }
   }
   
@@ -204,16 +220,25 @@ export class ObjectStorageService {
       const base64Data = matches[2];
       const buffer = Buffer.from(base64Data, 'base64');
       
-      await this.client.uploadFromBytes(objectKey, buffer, {
-        contentType,
+      // Store metadata in a separate file
+      const metadataKey = `${objectKey}.metadata`;
+      const metadataContent = JSON.stringify({
+        contentType: contentType,
         cacheControl: metadata?.cacheControl || 'public, max-age=86400',
-        contentDisposition: metadata?.contentDisposition
+        contentDisposition: metadata?.contentDisposition,
+        originalFileName: metadata?.filename
+      });
+      await this.client.uploadFromText(metadataKey, metadataContent);
+      
+      // Upload the actual file
+      await this.client.uploadFromBytes(objectKey, buffer, {
+        compress: true // Enable compression for better storage efficiency
       });
       
       return this.getPublicUrl(objectKey);
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Error uploading base64 data to ${objectKey}:`, error);
-      throw new Error(`Failed to upload base64 data: ${error.message}`);
+      throw new Error(`Failed to upload base64 data: ${error.message || 'Unknown error'}`);
     }
   }
   
@@ -224,10 +249,14 @@ export class ObjectStorageService {
    */
   async downloadAsBuffer(objectKey: string): Promise<Buffer> {
     try {
-      return await this.client.downloadAsBytes(objectKey);
-    } catch (error) {
+      const result = await this.client.downloadAsBytes(objectKey);
+      if ('err' in result) {
+        throw new Error(`Failed to download file: ${result.err.message || 'Unknown error'}`);
+      }
+      return result.ok;
+    } catch (error: any) {
       console.error(`Error downloading file ${objectKey}:`, error);
-      throw new Error(`Failed to download file: ${error.message}`);
+      throw new Error(`Failed to download file: ${error.message || 'Unknown error'}`);
     }
   }
   
