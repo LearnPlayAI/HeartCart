@@ -197,24 +197,44 @@ const ProductDetailContent = ({
     enabled: !!product?.id,
   });
   
-  // Get product global attributes
+  // Get product global attributes with proper error and debug handling
   const { 
     data: globalAttributes = [],
     error: globalAttributesError,
     isLoading: globalAttributesLoading
   } = useQuery<ProductGlobalAttributeResponse[]>({
+    // Use the same query key structure as other queries
     queryKey: ['/api/products', product?.id, 'global-attributes'],
     enabled: !!product?.id,
+    // Use a custom query function to debug the response
     queryFn: async () => {
-      console.log('Fetching global attributes for product id:', product?.id);
-      const res = await fetch(`/api/products/${product?.id}/global-attributes`);
-      if (!res.ok) {
-        console.error('Error fetching global attributes:', res.statusText);
+      console.log('DEBUG: Fetching global attributes for product id:', product?.id);
+      
+      // Make a direct fetch request to the correct endpoint
+      try {
+        const res = await fetch(`/api/products/${product?.id}/global-attributes`);
+        const resText = await res.text();
+        
+        if (!res.ok) {
+          console.error('Error fetching global attributes:', res.status, res.statusText);
+          console.error('Error response:', resText);
+          return [];
+        }
+        
+        // Try to parse as JSON
+        try {
+          const data = JSON.parse(resText);
+          console.log('DEBUG: Global attributes response:', data);
+          return data;
+        } catch (parseError) {
+          console.error('Failed to parse global attributes response:', parseError);
+          console.error('Raw response:', resText);
+          return [];
+        }
+      } catch (fetchError) {
+        console.error('Fetch error for global attributes:', fetchError);
         return [];
       }
-      const data = await res.json();
-      console.log('Global attributes response:', data);
-      return data;
     }
   });
   
