@@ -4,49 +4,114 @@ This document outlines the implementation strategy for enhancing the product cat
 
 ## Implementation Tasks
 
-### Phase 1: Image Upload and Storage Enhancements
+### Phase 1: Replit Object Storage Implementation
 
-#### 1.1 Replit Object Store Integration
-- [ ] **Not Started** - Create standardized folder structure for product images in Replit Object Store
-- [ ] **Not Started** - Implement proper error handling and retry mechanisms for image uploads
-- [ ] **Not Started** - Add validation for image types, sizes, and dimensions
-- [ ] **Not Started** - Create background processing for image optimization and thumbnail generation
+#### 1.1 Setup and Configuration
+- [ ] **Not Started** - Install and configure @replit/object-storage package
+- [ ] **Not Started** - Create organized storage structure with public asset folders
+- [ ] **Not Started** - Implement environment variable setup for Object Storage access
 
-#### 1.2 Image Management Improvements
-- [ ] **Not Started** - Develop multi-image upload interface with drag-and-drop functionality
-- [ ] **Not Started** - Implement image preview and cropping tools
-- [ ] **Not Started** - Create batch upload capabilities for catalog products
-- [ ] **Not Started** - Add image replacement and versioning capabilities
+#### 1.2 Core Storage Service Implementation
+- [ ] **Not Started** - Create objectstore.ts service module with core functionality:
+  - [ ] **Not Started** - Implement uploadFile with proper metadata and content-type detection
+  - [ ] **Not Started** - Implement getFile to retrieve files as streams or buffers
+  - [ ] **Not Started** - Implement deleteFile for removing files when needed
+  - [ ] **Not Started** - Implement listFiles with pagination support
+  - [ ] **Not Started** - Implement getPublicUrl for generating public access URLs
+  - [ ] **Not Started** - Implement createFolder for directory structure management
+
+#### 1.3 Product-Centric Organization
+- [ ] **Not Started** - Implement hierarchical structure for file organization:
+  - [ ] **Not Started** - Set up /public/products/{productId}/images/ structure
+  - [ ] **Not Started** - Set up /public/categories/{categoryId}/ structure
+  - [ ] **Not Started** - Configure permissions for unauthenticated access to /public/* files
+
+#### 1.4 Media Processing Capabilities
+- [ ] **Not Started** - Implement image resizing/optimization before storage
+- [ ] **Not Started** - Create thumbnail generation for product listings
+- [ ] **Not Started** - Add support for multi-image products with proper ordering
+- [ ] **Not Started** - Implement image validation (size limits, allowed formats)
+
+#### 1.5 API Integration
+- [ ] **Not Started** - Create API endpoints for file operations:
+  - [ ] **Not Started** - Implement POST /api/files/upload for file uploads
+  - [ ] **Not Started** - Implement GET /api/files/{path} for file retrieval
+  - [ ] **Not Started** - Implement DELETE /api/files/{path} for removing files
+
+#### 1.6 Frontend Components
+- [ ] **Not Started** - Create reusable ImageUploader component:
+  - [ ] **Not Started** - Implement drag-and-drop support
+  - [ ] **Not Started** - Add multiple file selection
+  - [ ] **Not Started** - Add progress indicators
+  - [ ] **Not Started** - Implement image preview capabilities
+- [ ] **Not Started** - Create ProductImageGallery component for displaying product images
+
+#### 1.7 Security Enhancements
+- [ ] **Not Started** - Implement file type validation (extension and content-type)
+- [ ] **Not Started** - Add size limits to optimize storage use
+- [ ] **Not Started** - Implement proper error handling for all storage operations
+- [ ] **Not Started** - Add filename sanitization to prevent path traversal attacks
 
 ### Phase 2: Catalog-to-Product Workflow Enhancement
 
 #### 2.1 Catalog Product Management Interface
 - [ ] **Not Started** - Add "Manage Products" direct action button in catalog list view
-- [ ] **Not Started** - Create filtered product views based on selected catalog
-- [ ] **Not Started** - Implement catalog-specific product templates with category attributes
-- [ ] **Not Started** - Develop catalog product dashboard with key metrics
+- [ ] **Not Started** - Implement catalog-specific product listing page
+- [ ] **Not Started** - Create quick-edit interface for catalog products
+- [ ] **Not Started** - Develop filter and search capability specific to catalog products
+- [ ] **Not Started** - Add catalog status indicators (active/inactive) with product counts
+- [ ] **Not Started** - Implement drag-and-drop product reordering within catalog
 
-#### 2.2 Bulk Product Management
+#### 2.2 Product Creation Enhancement
+- [ ] **Not Started** - Create streamlined product creation form from catalog context
+- [ ] **Not Started** - Implement catalog-specific product templates with pre-filled attributes
+- [ ] **Not Started** - Add catalog-based default values for common properties
+- [ ] **Not Started** - Create multi-step wizard for complex product creation
+- [ ] **Not Started** - Implement auto-save functionality for product drafts
+- [ ] **Not Started** - Add duplication feature for similar products
+
+#### 2.3 Bulk Product Management
 - [ ] **Not Started** - Create CSV/Excel import functionality for catalog products
-- [ ] **Not Started** - Implement validation rules for bulk imports
-- [ ] **Not Started** - Add bulk edit capabilities for products within a catalog
-- [ ] **Not Started** - Develop mass-update feature for pricing and availability
+- [ ] **Not Started** - Implement validation rules and error reporting for bulk imports
+- [ ] **Not Started** - Develop template download feature with catalog-specific columns
+- [ ] **Not Started** - Add batch processing for product image uploads
+- [ ] **Not Started** - Implement bulk edit capabilities for products within a catalog
+- [ ] **Not Started** - Create mass-update feature for pricing and availability
+- [ ] **Not Started** - Develop bulk activation/deactivation of catalog products
+
+#### 2.4 Catalog Performance Dashboard
+- [ ] **Not Started** - Create catalog overview with key performance metrics
+- [ ] **Not Started** - Implement product count and status visualization
+- [ ] **Not Started** - Add sales performance indicators by catalog
+- [ ] **Not Started** - Develop inventory status overview
+- [ ] **Not Started** - Create pricing and margin analysis by catalog
+- [ ] **Not Started** - Implement trend analysis and comparison between catalogs
 
 ### Phase 3: Pricing Strategy Implementation
 
 #### 3.1 Google Reverse Image Search Integration
-- [ ] **Not Started** - Research and select appropriate Google Vision API or alternative service
-- [ ] **Not Started** - Implement image analysis integration with proper API key management
-- [ ] **Not Started** - Create mechanism to extract South African pricing from search results
-- [ ] **Not Started** - Develop caching system to limit API calls and costs
+- [ ] **Not Started** - Set up Google Vision API with proper API key management
+- [ ] **Not Started** - Create service for reverse image search functionality using product images
+- [ ] **Not Started** - Implement South African market focus for image search results (site:.co.za filter)
+- [ ] **Not Started** - Build scraper to extract pricing information from search results
+- [ ] **Not Started** - Implement currency normalization for ZAR values
+- [ ] **Not Started** - Develop caching system to limit API calls and reduce costs
 
-#### 3.2 Competitive Pricing Display
-- [ ] **Not Started** - Create UI to display market prices found via image search
-- [ ] **Not Started** - Implement averaging mechanism for market prices
+#### 3.2 Market Price Analysis
+- [ ] **Not Started** - Create algorithm to filter and validate market prices
+- [ ] **Not Started** - Implement price outlier detection and removal
+- [ ] **Not Started** - Build averaging mechanism for market prices
+- [ ] **Not Started** - Develop confidence scoring system for price recommendations
+- [ ] **Not Started** - Implement periodic refresh strategy for market price data
+
+#### 3.3 Competitive Pricing Display
+- [ ] **Not Started** - Create UI to display detailed market prices found via image search
+- [ ] **Not Started** - Design interface showing competitor websites and their pricing
+- [ ] **Not Started** - Implement visualization of price ranges (min, max, average)
 - [ ] **Not Started** - Develop recommended pricing based on market average
-- [ ] **Not Started** - Add manual override options for suggested pricing
+- [ ] **Not Started** - Create market position indicator (where our price sits relative to competition)
 
-#### 3.3 Cost Price Protection
+#### 3.4 Cost Price Protection
 - [ ] **Not Started** - Implement validation to prevent selling below cost
 - [ ] **Not Started** - Create visual indicators for low-margin products
 - [ ] **Not Started** - Develop warning system for potential pricing issues
@@ -60,11 +125,20 @@ This document outlines the implementation strategy for enhancing the product cat
 - [ ] **Not Started** - Implement persistence for product markup data
 - [ ] **Not Started** - Add inheritance rules to respect product-level settings over category-level
 
-#### 4.2 AI-Powered Markup Suggestions
-- [ ] **Not Started** - Integrate Google Gemini API for markup analysis
-- [ ] **Not Started** - Design prompts to generate intelligent markup suggestions
-- [ ] **Not Started** - Create feedback mechanism to improve AI suggestions over time
-- [ ] **Not Started** - Implement one-click application of suggested markup values
+#### 4.2 AI-Powered Markup Suggestions with Google Gemini
+- [ ] **Not Started** - Configure Google Gemini API integration with proper authentication
+- [ ] **Not Started** - Design structured prompt template for product markup analysis
+- [ ] **Not Started** - Create data transformation for product + market data to Gemini-friendly format
+- [ ] **Not Started** - Implement market data enrichment with category, product, and competition context
+- [ ] **Not Started** - Develop prompt engineering for optimal markup suggestions based on:
+  - [ ] **Not Started** - Product category analysis
+  - [ ] **Not Started** - Competitive market position
+  - [ ] **Not Started** - Seasonal and trend factors
+  - [ ] **Not Started** - Cost price analysis
+- [ ] **Not Started** - Implement response parsing and validation
+- [ ] **Not Started** - Create confidence scoring for AI suggestions
+- [ ] **Not Started** - Develop feedback loop to improve AI suggestions over time
+- [ ] **Not Started** - Add one-click application of suggested markup values
 
 ### Phase 5: Customer Discount Implementation
 

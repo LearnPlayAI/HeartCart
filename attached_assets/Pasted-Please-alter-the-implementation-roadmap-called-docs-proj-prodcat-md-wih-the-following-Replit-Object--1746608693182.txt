@@ -1,0 +1,51 @@
+Please alter the implementation roadmap called docs/proj/prodcat.md wih the following Replit Object Storage solution information. I used this approach in another project whic worked well for my e-commerce product listings application. The implementation should follow the architecture as below.
+
+Specifically, I need you to:
+
+1. Setup and configuration:
+   - Install the @replit/object-storage package
+   - Create an organized storage structure with folders for:
+     * public assets (product images, category thumbnails)
+
+2. Core storage service:
+   - Create an objectstore.ts service module with the following functions:
+     * uploadFile: Upload files with proper metadata and content-type detection
+     * getFile: Retrieve files as streams or buffers
+     * deleteFile: Remove files when no longer needed
+     * listFiles: List files in a directory with pagination support
+     * getPublicUrl: Generate URLs for public file access
+     * createFolder: Create directory structure as needed
+
+3. Product-centric organization:
+   - Implement a hierarchical structure where files are organized by:
+     * /public/products/{productId}/images/
+     * /public/categories/{categoryId}/
+   - Handle permissions to allow unauthenticated access to /public/* files
+
+4. Media processing capabilities:
+   - Image resizing/optimization before storage
+   - Generate thumbnails for product listings
+   - Support multi-image products with proper ordering
+   - Handle image validation (size limits, allowed formats)
+
+5. Integration with the application:
+   - Create API endpoints for file operations:
+     * POST /api/files/upload - For uploads
+     * GET /api/files/{path} - For file retrieval
+     * DELETE /api/files/{path} - For removing files
+
+6. Frontend components:
+   - Create a reusable ImageUploader component with:
+     * Drag-and-drop support
+     * Multiple file selection
+     * Progress indicators
+     * Image preview capabilities
+   - Implement a ProductImageGallery component for displaying product images
+
+7. Security considerations:
+   - Validate file types using both extension and content-type
+   - Implement size limits to optimize storage use
+   - Use proper error handling for all storage operations
+   - Sanitize filenames to prevent path traversal attacks
+
+The solution should be scalable, support thousands of product listings with multiple images each, and maintain good performance. Ensure that file URLs are properly constructed for public access.
