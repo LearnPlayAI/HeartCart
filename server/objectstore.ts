@@ -437,14 +437,31 @@ export class ObjectStorageService {
           throw new Error(`Failed to get file as buffer: ${result.err.message || 'Unknown error'}`);
         }
         
-        // Verify the buffer
-        if (!Buffer.isBuffer(result.value)) {
+        // Convert value to buffer if it's not already a buffer
+        let bufferData: Buffer;
+        if (Buffer.isBuffer(result.value)) {
+          bufferData = result.value;
+        } else if (result.value instanceof Uint8Array) {
+          // Handle Uint8Array case
+          bufferData = Buffer.from(result.value);
+        } else if (typeof result.value === 'object') {
+          // Try to convert object to buffer - this handles odd Replit Object Storage behaviors
+          console.warn(`Object returned from Object Storage instead of Buffer for ${objectKey}, attempting conversion`);
+          try {
+            // Try to convert to string first then to buffer as a fallback
+            const objString = JSON.stringify(result.value);
+            bufferData = Buffer.from(objString);
+          } catch (conversionError) {
+            console.error(`Failed to convert object to buffer: ${conversionError}`);
+            throw new Error(`Cannot convert returned object to buffer: ${typeof result.value}`);
+          }
+        } else {
           console.error(`Invalid data type returned for ${objectKey}: ${typeof result.value}`);
           throw new Error(`Invalid data type returned from object storage: ${typeof result.value}`);
         }
         
         // Log the buffer size for debugging
-        console.log(`Downloaded buffer for ${objectKey}: ${result.value.length} bytes`);
+        console.log(`Downloaded buffer for ${objectKey}: ${bufferData.length} bytes`);
         
         // Get the metadata to determine content type
         let contentType = 'application/octet-stream';
@@ -471,7 +488,7 @@ export class ObjectStorageService {
         }
         
         return {
-          data: result.value,
+          data: bufferData,
           contentType
         };
       } catch (error: any) {
