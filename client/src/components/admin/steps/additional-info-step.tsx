@@ -30,7 +30,7 @@ export default function AdditionalInfoStep({
     queryFn: async () => {
       const res = await fetch('/api/catalogs');
       if (!res.ok) throw new Error('Failed to fetch catalogs');
-      return res.json();
+      return res.json() as Promise<any[]>;
     }
   });
 
@@ -334,11 +334,25 @@ function GlobalAttributesSection({ productId }: { productId?: number }) {
     queryKey: ['/api/admin/products', productId, 'global-attributes'],
     queryFn: async () => {
       if (!productId) return [];
-      const res = await fetch(`/api/admin/products/${productId}/global-attributes`);
+      const res = await fetch(`/api/admin/products/${productId}/global-attributes`, {
+        credentials: 'include' // Add credentials for authentication
+      });
+      
+      if (res.status === 401) {
+        // Handle authentication error by showing a toast and returning empty array
+        toast({
+          title: "Authentication required",
+          description: "Please log in again to continue editing.",
+          variant: "destructive"
+        });
+        return [];
+      }
+      
       if (!res.ok) throw new Error('Failed to fetch product global attributes');
       return res.json();
     },
-    enabled: !!productId
+    enabled: !!productId,
+    retry: false // Don't retry on failure
   });
   
   // Load existing product attributes when data is available
@@ -378,10 +392,20 @@ function GlobalAttributesSection({ productId }: { productId?: number }) {
         headers: {
           'Content-Type': 'application/json'
         },
+        credentials: 'include', // Include credentials for authentication
         body: JSON.stringify({
           attributeId
         })
       });
+      
+      if (res.status === 401 || res.status === 403) {
+        toast({
+          title: "Authentication required",
+          description: "Please log in again to continue editing.",
+          variant: "destructive"
+        });
+        return false;
+      }
       
       if (!res.ok) throw new Error('Failed to add attribute to product');
       
@@ -396,10 +420,20 @@ function GlobalAttributesSection({ productId }: { productId?: number }) {
             headers: {
               'Content-Type': 'application/json'
             },
+            credentials: 'include', // Include credentials for authentication
             body: JSON.stringify({
               optionId
             })
           });
+          
+          if (optionRes.status === 401 || optionRes.status === 403) {
+            toast({
+              title: "Authentication required",
+              description: "Please log in again to continue editing.",
+              variant: "destructive"
+            });
+            break;
+          }
           
           if (!optionRes.ok) {
             console.error('Failed to add option to product attribute');
@@ -407,9 +441,19 @@ function GlobalAttributesSection({ productId }: { productId?: number }) {
         }
       }
       
+      // Refresh the global attributes data after adding
+      queryClient.invalidateQueries({
+        queryKey: ['/api/admin/products', productId, 'global-attributes']
+      });
+      
       return true;
     } catch (error) {
       console.error('Error adding attribute to product:', error);
+      toast({
+        title: "Error adding attribute",
+        description: (error as Error).message || "Something went wrong",
+        variant: "destructive"
+      });
       return false;
     }
   };
