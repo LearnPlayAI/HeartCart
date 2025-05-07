@@ -281,6 +281,49 @@ export class ObjectStorageService {
   }
   
   /**
+   * Helper function to work around Replit object storage issues
+   * @param objectKey The object key to download
+   * @returns Buffer containing the file data
+   */
+  private async readFileDirectly(objectKey: string): Promise<Buffer> {
+    try {
+      // Alternative implementation using read stream
+      return new Promise((resolve, reject) => {
+        // Create an array to store chunks
+        const chunks: Buffer[] = [];
+        
+        // Create a read stream
+        this.client.downloadAsStream(objectKey)
+          .then((result: any) => {
+            if ('err' in result) {
+              return reject(new Error(`Stream error: ${result.err.message || 'Unknown error'}`));
+            }
+            
+            const stream = result.ok;
+            
+            // Handle stream events
+            stream.on('data', (chunk: Buffer) => {
+              chunks.push(chunk);
+            });
+            
+            stream.on('end', () => {
+              const buffer = Buffer.concat(chunks);
+              resolve(buffer);
+            });
+            
+            stream.on('error', (err: Error) => {
+              reject(new Error(`Stream error: ${err.message}`));
+            });
+          })
+          .catch(reject);
+      });
+    } catch (error: any) {
+      console.error(`Error in readFileDirectly for ${objectKey}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
    * Download a file as a Buffer with enhanced error handling and retry logic
    * @param objectKey The object key
    * @returns The file buffer
@@ -299,7 +342,16 @@ export class ObjectStorageService {
           throw new Error(`File does not exist: ${objectKey}`);
         }
         
-        // Get the file content
+        // Try our direct read method first (more reliable)
+        try {
+          const buffer = await this.readFileDirectly(objectKey);
+          console.log(`Successfully downloaded file using stream method: ${objectKey}, size: ${buffer.length} bytes`);
+          return buffer;
+        } catch (streamError) {
+          console.warn(`Stream method failed, trying downloadAsBytes: ${streamError.message}`);
+        }
+        
+        // Get the file content using alternative method
         const result = await this.client.downloadAsBytes(objectKey);
         
         // Check for error in result
@@ -308,22 +360,17 @@ export class ObjectStorageService {
           throw new Error(`Failed to download file: ${result.err.message || 'Unknown error'}`);
         }
         
-        // Check for missing data
-        if (!result.ok) {
-          throw new Error(`Failed to download file: No data returned from object storage`);
+        // If the API returned true or a non-buffer value, throw an error
+        if (typeof result.ok === 'boolean' || !Buffer.isBuffer(result.ok)) {
+          // This occurs with the current Replit Object Storage client
+          // Try again with our own implementation
+          console.log(`Got non-buffer response (${typeof result.ok}), using fallback method`);
+          const buffer = await this.readFileDirectly(objectKey);
+          console.log(`Successfully downloaded file using fallback: ${objectKey}, size: ${buffer.length} bytes`);
+          return buffer;
         }
         
-        // Validate buffer
-        if (!Buffer.isBuffer(result.ok)) {
-          console.error(`Invalid result type from downloadAsBytes: ${typeof result.ok}`);
-          throw new Error(`Object storage returned an invalid data type: ${typeof result.ok}, expected Buffer`);
-        }
-        
-        // Check for empty buffer
-        if (result.ok.length === 0) {
-          console.warn(`Warning: Downloaded empty buffer from ${objectKey}`);
-        }
-        
+        // If we got here, we have a valid buffer
         console.log(`Successfully downloaded file: ${objectKey}, size: ${result.ok.length} bytes`);
         return result.ok;
       } catch (error: any) {

@@ -881,52 +881,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
   
-  // Serve temporary files exclusively from Object Storage
+  // Redirect temp file requests to the main file serving endpoint for consistent handling
   app.get('/temp/:filename', async (req: Request, res: Response) => {
-    try {
-      const filename = req.params.filename;
-      const objectKey = `${STORAGE_FOLDERS.TEMP}/${filename}`;
-      
-      // Check if the file exists in Object Storage
-      const exists = await objectStorageService.exists(objectKey);
-      
-      if (!exists) {
-        console.warn(`Temp file not found in object storage: ${objectKey}`);
-        return res.status(404).send('File not found');
-      }
-      
-      try {
-        // Get metadata
-        const metadata = await objectStorageService.getMetadata(objectKey);
-        
-        // Set content type from metadata if available
-        if (metadata.contentType) {
-          res.setHeader('Content-Type', metadata.contentType);
-        } else {
-          // Fall back to detection based on filename
-          res.setHeader('Content-Type', objectStorageService.detectContentType(filename));
-        }
-        
-        // Set cache control for temp files
-        res.setHeader('Cache-Control', 'no-cache, max-age=0');
-        
-        // Get as buffer for more reliable handling
-        const buffer = await objectStorageService.downloadAsBuffer(objectKey);
-        
-        if (!Buffer.isBuffer(buffer)) {
-          throw new Error('Invalid data type returned from object storage');
-        }
-        
-        console.log(`Successfully retrieved temp file ${objectKey}: ${buffer.length} bytes`);
-        return res.end(buffer);
-      } catch (err: any) {
-        console.error(`Error retrieving temp file ${objectKey}:`, err);
-        return res.status(500).send(`Server error: ${err.message || 'Unknown error'}`);
-      }
-    } catch (error: any) {
-      console.error('Error serving temporary file:', error);
-      res.status(500).send(`Server error: ${error.message || 'Unknown error'}`);
-    }
+    const filename = req.params.filename;
+    const objectKey = `${STORAGE_FOLDERS.TEMP}/${filename}`;
+    
+    // Redirect to our universal file serving endpoint
+    res.redirect(`/api/files/${objectKey}`);
   });
   
   app.get("/api/products/:productId/images", handleErrors(async (req: Request, res: Response) => {
@@ -2009,49 +1970,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // First check if the file exists
       if (!(await objectStorageService.exists(objectKey))) {
+        console.error(`File not found in object storage: ${objectKey}`);
         return res.status(404).send('File not found');
       }
       
-      // Get metadata for content type
-      let contentType = 'application/octet-stream';
+      // Determine the content type
+      let contentType: string;
+      
+      // Try to get metadata first for the most accurate content type
       try {
         const metadata = await objectStorageService.getMetadata(objectKey);
         if (metadata.contentType) {
           contentType = metadata.contentType;
+          console.log(`Using content type from metadata for ${objectKey}: ${contentType}`);
+        } else {
+          // Fallback to detection based on file extension
+          contentType = objectStorageService.detectContentType(objectKey);
+          console.log(`Using detected content type for ${objectKey}: ${contentType}`);
         }
       } catch (err) {
-        console.warn(`Could not get metadata for ${objectKey}, using default content type`);
-        
-        // Fallback to detection based on file extension
-        const path = require('path');
-        const ext = path.extname(objectKey).toLowerCase();
-        if (ext === '.jpg' || ext === '.jpeg') contentType = 'image/jpeg';
-        else if (ext === '.png') contentType = 'image/png';
-        else if (ext === '.webp') contentType = 'image/webp';
-        else if (ext === '.gif') contentType = 'image/gif';
+        // Fallback to detection based on file extension if metadata retrieval fails
+        contentType = objectStorageService.detectContentType(objectKey);
+        console.log(`Using detected content type after metadata error for ${objectKey}: ${contentType}`);
       }
       
+      // Set response headers before sending data
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Cache-Control', contentType.startsWith('image/') ? 'public, max-age=86400' : 'no-cache');
+      
       try {
-        // Get file from Replit Object Store
-        const buffer = await objectStorageService.downloadAsBuffer(objectKey);
+        // For small files or non-image files, use buffer for more reliable handling
+        const isImage = contentType.startsWith('image/');
+        const useBuffer = !isImage || objectKey.includes('/temp/');
         
-        // Validate that we have a proper buffer
-        if (!Buffer.isBuffer(buffer)) {
-          console.error(`Invalid buffer returned for ${objectKey}, type: ${typeof buffer}`);
-          throw new Error('Invalid data type returned from object storage');
+        if (useBuffer) {
+          // Get file as buffer for more reliable handling (especially for smaller files)
+          console.log(`Retrieving file ${objectKey} as buffer`);
+          const buffer = await objectStorageService.downloadAsBuffer(objectKey);
+          
+          if (!Buffer.isBuffer(buffer)) {
+            throw new Error('Invalid data type returned from object storage');
+          }
+          
+          console.log(`Successfully retrieved file ${objectKey} from object storage: ${buffer.length} bytes`);
+          return res.end(buffer);
+        } else {
+          // For larger images, stream to improve performance
+          console.log(`Streaming file ${objectKey} from object storage`);
+          const stream = await objectStorageService.downloadAsStream(objectKey);
+          stream.pipe(res);
+          return;
         }
-        
-        console.log(`Successfully retrieved file ${objectKey} from object storage: ${buffer.length} bytes`);
-        
-        // Set content type and cache headers
-        res.setHeader('Content-Type', contentType);
-        res.setHeader('Cache-Control', 'public, max-age=86400');
-        
-        // Send the buffer as response
-        return res.end(buffer);
-      } catch (bufferError: any) {
-        console.error(`Error getting file buffer for ${objectKey}:`, bufferError);
-        return res.status(500).send(`Error reading file: ${bufferError.message}`);
+      } catch (downloadError: any) {
+        console.error(`Error retrieving file ${objectKey}:`, downloadError);
+        return res.status(500).send(`Error reading file: ${downloadError.message}`);
       }
     } catch (error: any) {
       console.error('Error serving file:', error);
