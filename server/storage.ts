@@ -826,8 +826,21 @@ export class DatabaseStorage implements IStorage {
   
   // Product Image operations
   async getProductImages(productId: number): Promise<ProductImage[]> {
+    // Select specific columns instead of '*' to avoid problems with schema changes
     return await db
-      .select()
+      .select({
+        id: productImages.id,
+        productId: productImages.productId,
+        url: productImages.url,
+        objectKey: productImages.objectKey,
+        isMain: productImages.isMain,
+        hasBgRemoved: productImages.hasBgRemoved,
+        bgRemovedUrl: productImages.bgRemovedUrl,
+        bgRemovedObjectKey: productImages.bgRemovedObjectKey,
+        alt: productImages.alt,
+        sortOrder: productImages.sortOrder,
+        createdAt: productImages.createdAt
+      })
       .from(productImages)
       .where(eq(productImages.productId, productId))
       .orderBy(asc(productImages.sortOrder));
@@ -835,7 +848,19 @@ export class DatabaseStorage implements IStorage {
 
   async getProductImagesWithBgRemoved(productId: number): Promise<ProductImage[]> {
     return await db
-      .select()
+      .select({
+        id: productImages.id,
+        productId: productImages.productId,
+        url: productImages.url,
+        objectKey: productImages.objectKey,
+        isMain: productImages.isMain,
+        hasBgRemoved: productImages.hasBgRemoved,
+        bgRemovedUrl: productImages.bgRemovedUrl,
+        bgRemovedObjectKey: productImages.bgRemovedObjectKey,
+        alt: productImages.alt,
+        sortOrder: productImages.sortOrder,
+        createdAt: productImages.createdAt
+      })
       .from(productImages)
       .where(
         and(

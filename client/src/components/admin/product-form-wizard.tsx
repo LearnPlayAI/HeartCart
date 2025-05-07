@@ -164,11 +164,13 @@ export default function ProductFormWizard({ productId, catalogId, onSuccess }: P
       // Set the supplier ID from the catalog
       if (catalog.supplierId) {
         console.log("Setting supplier ID from catalog:", catalog.supplierId);
+        form.setValue('supplierId', catalog.supplierId);
       }
       
       // Initialize default values for dimensions, sale price and discount
       form.setValue('salePrice', null);
       form.setValue('discount', 0);
+      form.setValue('dimensions', '');
       
       // If catalog has default markup percentage, use it to help with pricing calculations
       if (catalog.defaultMarkupPercentage) {
