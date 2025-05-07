@@ -1907,6 +1907,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   }));
 
+  // Quick edit product endpoint
+  app.patch("/api/products/:id/quick-edit", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can update products" });
+    }
+    
+    const productId = parseInt(req.params.id);
+    
+    if (isNaN(productId)) {
+      return res.status(400).json({ message: "Invalid product ID" });
+    }
+    
+    const { name, price, listPrice, sku, stockQuantity, isActive } = req.body;
+    
+    // Validate required fields
+    if (!name || name.trim().length < 3) {
+      return res.status(400).json({ message: "Product name must be at least 3 characters" });
+    }
+    
+    if (typeof price !== 'number' || price <= 0) {
+      return res.status(400).json({ message: "Price must be a positive number" });
+    }
+    
+    if (listPrice !== undefined && (typeof listPrice !== 'number' || listPrice < 0)) {
+      return res.status(400).json({ message: "List price must be a non-negative number" });
+    }
+    
+    if (!sku || sku.trim() === '') {
+      return res.status(400).json({ message: "SKU is required" });
+    }
+    
+    if (typeof stockQuantity !== 'number' || stockQuantity < 0 || !Number.isInteger(stockQuantity)) {
+      return res.status(400).json({ message: "Stock quantity must be a non-negative integer" });
+    }
+    
+    if (typeof isActive !== 'boolean') {
+      return res.status(400).json({ message: "Active status must be a boolean" });
+    }
+    
+    // Get the existing product to check if it exists
+    const existingProduct = await storage.getProduct(productId);
+    
+    if (!existingProduct) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+    
+    // Update the product
+    const updatedProduct = await storage.updateProduct(productId, {
+      name,
+      price,
+      listPrice,
+      sku,
+      stockQuantity,
+      isActive
+    });
+    
+    res.json({ 
+      success: true, 
+      message: "Product updated successfully",
+      product: updatedProduct
+    });
+  }));
+
   // PATCH endpoint to reorder products in a catalog
   app.patch("/api/catalogs/:id/products/reorder", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
     const user = req.user as any;
