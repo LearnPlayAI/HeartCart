@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { AdminLayout } from "@/components/admin/layout";
 import {
@@ -269,6 +270,49 @@ export default function CatalogProducts() {
     });
   };
 
+  // For drag-and-drop reordering
+  const [orderedProducts, setOrderedProducts] = useState<Product[]>([]);
+
+  useEffect(() => {
+    if (products && products.length > 0) {
+      // Sort products by displayOrder if available, otherwise maintain the API order
+      const sorted = [...products].sort((a, b) => {
+        if (a.displayOrder !== undefined && b.displayOrder !== undefined) {
+          return a.displayOrder - b.displayOrder;
+        }
+        return 0;
+      });
+      setOrderedProducts(sorted);
+    }
+  }, [products]);
+
+  const handleDragEnd = (result: any) => {
+    // Dropped outside the list
+    if (!result.destination) {
+      return;
+    }
+
+    // No actual change in position
+    if (result.destination.index === result.source.index) {
+      return;
+    }
+
+    // Reorder the array
+    const reordered = Array.from(orderedProducts);
+    const [removed] = reordered.splice(result.source.index, 1);
+    reordered.splice(result.destination.index, 0, removed);
+    
+    // Update state with new order
+    setOrderedProducts(reordered);
+    
+    // Save the new order to the server
+    const productIds = reordered.map(product => product.id);
+    updateProductOrder({
+      productIds,
+      catalogId
+    });
+  };
+
   return (
     <AdminLayout>
       <div className="flex items-center justify-between mb-6">
@@ -408,8 +452,8 @@ export default function CatalogProducts() {
                     </div>
                   </TableCell>
                 </TableRow>
-              ) : products && products.length > 0 ? (
-                products.map((product) => (
+              ) : orderedProducts && orderedProducts.length > 0 ? (
+                orderedProducts.map((product) => (
                   <TableRow key={product.id} className={!product.isActive ? "opacity-60" : ""}>
                     <TableCell>
                       <Checkbox 
