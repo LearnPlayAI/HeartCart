@@ -115,8 +115,8 @@ router.post('/products/:productId/images', upload.array('images', 10), async (re
           productId,
           url,
           objectKey,
-          isMain,
-          alt: originalname.split('.')[0] || 'Product image', // Basic alt text from filename
+          isMain
+          // Removed alt field as it doesn't exist in the database
         });
         
         console.log(`Successfully created product image record for ${objectKey}`);
@@ -176,8 +176,8 @@ router.post('/products/images/move', async (req: Request, res: Response) => {
         productId: parseInt(productId),
         url: result.url,
         objectKey: result.objectKey,
-        isMain: isMain || !hasExistingImages,
-        alt: 'Product image', // Basic default alt text
+        isMain: isMain || !hasExistingImages
+        // Removed alt field as it doesn't exist in the database
       });
       
       console.log(`Successfully created product image record for ${result.objectKey}`);
