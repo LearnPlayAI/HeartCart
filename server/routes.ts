@@ -14,15 +14,13 @@ import {
   insertSupplierSchema,
   insertCatalogSchema
 } from "@shared/schema";
-import { Client as ObjectStorageClient } from "@replit/object-storage";
+import { objectStorageService, STORAGE_FOLDERS } from "./objectstore";
 import { setupAuth } from "./auth";
 import multer from "multer";
 import path from "path";
+import fs from "fs";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Initialize object store for file uploads
-  const objectStore = new ObjectStorageClient();
-  
   // Set up multer storage for temporary file uploads
   const tempStorage = multer.diskStorage({
     destination: function (req, file, cb) {
@@ -62,22 +60,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const objectKey = `${folder}/${subfolder}/${filename}`;
       
       // Check if the file exists
-      const exists = await objectStore.exists(objectKey);
+      const exists = await objectStorageService.exists(objectKey);
       if (!exists) {
         return res.status(404).send('File not found');
       }
       
-      // Get the file mime type based on extension
-      const extension = filename.split('.').pop()?.toLowerCase() || '';
-      const mimeTypes: Record<string, string> = {
-        'jpg': 'image/jpeg',
-        'jpeg': 'image/jpeg',
-        'png': 'image/png',
-        'gif': 'image/gif',
-        'webp': 'image/webp',
-        'svg': 'image/svg+xml',
-      };
-      const contentType = mimeTypes[extension] || 'application/octet-stream';
+      // Get the content type using our service
+      const contentType = objectStorageService.detectContentType(filename);
       
       // Set the appropriate content type header
       res.setHeader('Content-Type', contentType);
@@ -86,7 +75,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache for 1 day
       
       // Stream the file to the response
-      const fileStream = await objectStore.downloadAsStream(objectKey);
+      const fileStream = await objectStorageService.downloadAsStream(objectKey);
       fileStream.pipe(res);
     } catch (error) {
       console.error('Error serving file from Object Storage:', error);
@@ -878,10 +867,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const objectKey = `products/${productId}/${filename}`;
         
         // Upload to object storage
-        await objectStore.uploadFromBytes(objectKey, buffer);
+        await objectStorageService.uploadFromBuffer(objectKey, buffer, { contentType });
         
-        // Generate public URL - since Replit Object Store has predictable URLs
-        const publicUrl = `/object-storage/${objectKey}`;
+        // Generate public URL
+        const publicUrl = objectStorageService.getPublicUrl(objectKey);
         
         // Prepare the image data
         const imageData = {
@@ -999,10 +988,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const objectKey = `products/bg_removed/${filename}`;
         
         // Upload to object storage
-        await objectStore.uploadFromBytes(objectKey, buffer);
+        await objectStorageService.uploadFromBuffer(objectKey, buffer, { contentType });
         
         // Generate public URL
-        const publicUrl = `/object-storage/${objectKey}`;
+        const publicUrl = objectStorageService.getPublicUrl(objectKey);
         
         // Update the product image with background removed URL
         await storage.updateProductImage(imageId, {

@@ -1,4 +1,4 @@
-import { ObjectStorageClient } from '@replit/object-storage';
+import { Client as ObjectStorageClient } from '@replit/object-storage';
 import { Readable } from 'stream';
 import path from 'path';
 import fs from 'fs';
@@ -128,8 +128,8 @@ export class ObjectStorageService {
     try {
       await this.client.head(objectKey);
       return true;
-    } catch (error) {
-      if (error.message.includes('404')) {
+    } catch (error: any) {
+      if (error.message && error.message.includes('404')) {
         return false;
       }
       throw error;
