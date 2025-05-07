@@ -2,7 +2,6 @@ import express, { Request, Response, NextFunction } from 'express';
 import multer from 'multer';
 import sharp from 'sharp';
 import path from 'path';
-import { isAuthenticated, isAdmin } from './auth-middleware';
 import { objectStore, STORAGE_FOLDERS } from './object-store';
 
 const router = express.Router();
@@ -27,7 +26,7 @@ const upload = multer({
  * Upload temporary product images
  * This handles images during product creation before a product ID exists
  */
-router.post('/products/images/temp', isAdmin, upload.array('images', 10), async (req: Request, res: Response) => {
+router.post('/products/images/temp', upload.array('images', 10), async (req: Request, res: Response) => {
   try {
     const files = req.files as Express.Multer.File[];
     
@@ -72,7 +71,7 @@ router.post('/products/images/temp', isAdmin, upload.array('images', 10), async 
 /**
  * Upload product images for an existing product
  */
-router.post('/products/:productId/images', isAdmin, upload.array('images', 10), async (req: Request, res: Response) => {
+router.post('/products/:productId/images', upload.array('images', 10), async (req: Request, res: Response) => {
   try {
     const files = req.files as Express.Multer.File[];
     const productId = parseInt(req.params.productId);
@@ -121,7 +120,7 @@ router.post('/products/:productId/images', isAdmin, upload.array('images', 10), 
 /**
  * Move a temporary file to a permanent location
  */
-router.post('/products/images/move', isAdmin, async (req: Request, res: Response) => {
+router.post('/products/images/move', async (req: Request, res: Response) => {
   try {
     const { sourceKey, productId } = req.body;
     
@@ -153,7 +152,7 @@ router.post('/products/images/move', isAdmin, async (req: Request, res: Response
 /**
  * Delete a file from object storage
  */
-router.delete('/:objectKey(*)', isAdmin, async (req: Request, res: Response) => {
+router.delete('/:objectKey(*)', async (req: Request, res: Response) => {
   try {
     const { objectKey } = req.params;
     

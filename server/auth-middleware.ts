@@ -15,7 +15,7 @@ export function isAuthenticated(req: Request, res: Response, next: NextFunction)
  * Middleware to check if a user is an admin
  */
 export function isAdmin(req: Request, res: Response, next: NextFunction) {
-  if (req.isAuthenticated?.() && req.user && (req.user as any).isAdmin) {
+  if (req.isAuthenticated?.() && req.user && (req.user as any).role === 'admin') {
     return next();
   }
   
