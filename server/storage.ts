@@ -46,6 +46,8 @@ export interface IStorage {
   searchProducts(query: string, limit?: number, offset?: number, options?: { includeInactive?: boolean, includeCategoryInactive?: boolean }): Promise<Product[]>;
   createProduct(product: InsertProduct): Promise<Product>;
   updateProduct(id: number, productData: Partial<InsertProduct>): Promise<Product | undefined>;
+  deleteProduct(id: number): Promise<boolean>;
+  bulkUpdateProductStatus(productIds: number[], isActive: boolean): Promise<number>;
   
   // Product Image operations
   getProductImages(productId: number): Promise<ProductImage[]>;
