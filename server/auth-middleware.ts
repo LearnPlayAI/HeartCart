@@ -2,26 +2,29 @@ import { Request, Response, NextFunction } from 'express';
 
 /**
  * Middleware to check if a user is authenticated
- * This has been modified to always allow access without authentication
  */
 export function isAuthenticated(req: Request, res: Response, next: NextFunction) {
-  // Authentication check disabled - always proceed
-  return next();
+  if (req.isAuthenticated?.()) {
+    return next();
+  }
+  
+  res.status(401).json({ message: 'Authentication required' });
 }
 
 /**
  * Middleware to check if a user is an admin
- * This has been modified to always allow access
  */
 export function isAdmin(req: Request, res: Response, next: NextFunction) {
-  // Admin access check disabled - always proceed
-  return next();
+  if (req.isAuthenticated?.() && req.user && (req.user as any).role === 'admin') {
+    return next();
+  }
+  
+  res.status(403).json({ message: 'Admin access required' });
 }
 
 /**
  * Middleware to check if an API request is authenticated and access permitted
  * This handles OPTIONS requests for CORS and checks for application/json content-type
- * Authentication has been disabled - all requests are allowed to proceed
  */
 export function apiAuthCheck(req: Request, res: Response, next: NextFunction) {
   // Allow OPTIONS requests to pass through for CORS
@@ -38,8 +41,12 @@ export function apiAuthCheck(req: Request, res: Response, next: NextFunction) {
     });
   }
   
-  // Authentication check disabled - always proceed
-  return next();
+  // Check authentication
+  if (!req.isAuthenticated?.()) {
+    return res.status(401).json({ message: 'Authentication required' });
+  }
+  
+  next();
 }
 
 /**
