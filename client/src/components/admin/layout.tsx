@@ -169,3 +169,6 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     </div>
   );
 }
+
+// Export as default as well for compatibility with both import styles
+export default AdminLayout;
