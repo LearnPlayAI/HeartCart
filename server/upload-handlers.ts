@@ -1,16 +1,25 @@
-import { Request, Response, Router } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import multer from 'multer';
 import sharp from 'sharp';
-import { objectStore, STORAGE_FOLDERS } from './object-store';
+import path from 'path';
 import { isAuthenticated, isAdmin } from './auth-middleware';
+import { objectStore, STORAGE_FOLDERS } from './object-store';
 
-const router = Router();
+const router = express.Router();
 
-// Memory storage for multer
+// Configure multer for memory storage
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    // Allow only image files
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'));
+    }
   }
 });
 
@@ -23,58 +32,39 @@ router.post('/products/images/temp', isAdmin, upload.array('images', 10), async 
     const files = req.files as Express.Multer.File[];
     
     if (!files || files.length === 0) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'No files uploaded' 
-      });
+      return res.status(400).json({ message: 'No files uploaded' });
     }
     
-    console.log(`Processing ${files.length} temporary product image(s)`);
-    
-    const results = await Promise.all(files.map(async (file, index) => {
-      try {
-        // Process image with sharp for optimization
-        const processedImageBuffer = await sharp(file.buffer)
-          .resize({ 
-            width: 1200,
-            height: 1200,
-            fit: 'inside',
-            withoutEnlargement: true
-          })
-          .jpeg({ quality: 85, progressive: true })
-          .toBuffer();
-        
-        // Upload to object store as temporary file
-        const { url, objectKey } = await objectStore.uploadTempFile(
-          processedImageBuffer,
-          file.originalname,
-          'pending',
-          'image/jpeg'
-        );
-        
-        return {
-          url,
-          objectKey,
-          originalName: file.originalname,
-          size: processedImageBuffer.length,
-          index
-        };
-      } catch (error) {
-        console.error(`Error processing file ${file.originalname}:`, error);
-        throw error;
-      }
+    const results = await Promise.all(files.map(async (file) => {
+      const { originalname, buffer, mimetype } = file;
+      const timestamp = Date.now();
+      const randomString = Math.random().toString(36).substring(2, 15);
+      const filename = `${timestamp}_${randomString}_${originalname}`;
+      const productId = req.body.productId || 'pending';
+      
+      // Upload to temp folder first
+      const { url, objectKey } = await objectStore.uploadTempFile(
+        buffer,
+        filename,
+        productId,
+        mimetype
+      );
+      
+      return {
+        url,
+        objectKey,
+        originalname,
+        filename
+      };
     }));
     
-    res.status(200).json({ 
-      success: true, 
-      files: results 
-    });
+    res.json({ success: true, files: results });
   } catch (error) {
-    console.error('Error processing uploaded files:', error);
+    console.error('Error uploading temp images:', error);
     res.status(500).json({ 
       success: false, 
-      message: 'Error processing uploaded files', 
-      error: error.message || String(error) 
+      message: 'Error uploading images',
+      error: error instanceof Error ? error.message : String(error)
     });
   }
 });
@@ -84,95 +74,46 @@ router.post('/products/images/temp', isAdmin, upload.array('images', 10), async 
  */
 router.post('/products/:productId/images', isAdmin, upload.array('images', 10), async (req: Request, res: Response) => {
   try {
-    const { productId } = req.params;
     const files = req.files as Express.Multer.File[];
+    const productId = parseInt(req.params.productId);
     
     if (!files || files.length === 0) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'No files uploaded' 
-      });
+      return res.status(400).json({ message: 'No files uploaded' });
     }
     
-    if (!productId || isNaN(parseInt(productId))) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Invalid product ID' 
-      });
+    if (isNaN(productId)) {
+      return res.status(400).json({ message: 'Invalid product ID' });
     }
     
-    console.log(`Processing ${files.length} image(s) for product ${productId}`);
-    
-    const results = await Promise.all(files.map(async (file, index) => {
-      try {
-        // Process image with sharp for optimization
-        const processedImageBuffer = await sharp(file.buffer)
-          .resize({ 
-            width: 1200,
-            height: 1200,
-            fit: 'inside',
-            withoutEnlargement: true
-          })
-          .jpeg({ quality: 85, progressive: true })
-          .toBuffer();
-        
-        // Generate thumbnails
-        const thumbnailBuffer = await sharp(processedImageBuffer)
-          .resize({ 
-            width: 300,
-            height: 300,
-            fit: 'cover'
-          })
-          .jpeg({ quality: 80 })
-          .toBuffer();
-        
-        // Upload main image
-        const { url, objectKey } = await objectStore.uploadProductImage(
-          parseInt(productId),
-          processedImageBuffer,
-          file.originalname,
-          'image/jpeg'
-        );
-        
-        // Upload thumbnail with similar key pattern
-        const thumbnailKey = objectKey.replace('/images/', '/thumbnails/');
-        await objectStore.uploadBuffer(
-          thumbnailKey,
-          thumbnailBuffer,
-          {
-            contentType: 'image/jpeg',
-            cacheControl: 'public, max-age=86400',
-            filename: `thumb_${file.originalname}`
-          }
-        );
-        
-        const thumbnailUrl = objectStore.getPublicUrl(thumbnailKey);
-        
-        return {
-          url,
-          objectKey,
-          thumbnailUrl,
-          thumbnailKey,
-          originalName: file.originalname,
-          size: processedImageBuffer.length,
-          index
-        };
-      } catch (error) {
-        console.error(`Error processing file ${file.originalname}:`, error);
-        throw error;
-      }
+    const results = await Promise.all(files.map(async (file) => {
+      const { originalname, buffer, mimetype } = file;
+      const timestamp = Date.now();
+      const randomString = Math.random().toString(36).substring(2, 15);
+      const filename = `${timestamp}_${randomString}_${originalname}`;
+      
+      // Upload directly to product folder
+      const { url, objectKey } = await objectStore.uploadProductFile(
+        buffer,
+        filename,
+        productId,
+        mimetype
+      );
+      
+      return {
+        url,
+        objectKey,
+        originalname,
+        filename
+      };
     }));
     
-    res.status(200).json({ 
-      success: true, 
-      files: results 
-    });
+    res.json({ success: true, files: results });
   } catch (error) {
-    console.error('Error processing uploaded files:', error);
+    console.error('Error uploading product images:', error);
     res.status(500).json({ 
       success: false, 
-      message: 'Error processing uploaded files', 
-      error: error.message || String(error) 
+      message: 'Error uploading images',
+      error: error instanceof Error ? error.message : String(error)
     });
   }
 });
@@ -184,83 +125,27 @@ router.post('/products/images/move', isAdmin, async (req: Request, res: Response
   try {
     const { sourceKey, productId } = req.body;
     
-    if (!sourceKey) {
+    if (!sourceKey || !productId) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Source key is required' 
+        message: 'Source key and product ID are required' 
       });
     }
     
-    if (!productId || isNaN(parseInt(productId))) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Valid product ID is required' 
-      });
-    }
+    // Move file from temp to product folder
+    const result = await objectStore.moveFromTemp(sourceKey, parseInt(productId));
     
-    // Check if source file exists
-    const exists = await objectStore.exists(sourceKey);
-    if (!exists) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Source file not found' 
-      });
-    }
-    
-    // Get source file buffer and content type
-    const { data: fileBuffer, contentType } = await objectStore.getFileAsBuffer(sourceKey);
-    
-    // Extract original filename from the source key
-    const originalFilename = sourceKey.split('/').pop() || 'image.jpg';
-    
-    // Upload to the permanent location
-    const { url, objectKey } = await objectStore.uploadProductImage(
-      parseInt(productId),
-      fileBuffer,
-      originalFilename,
-      contentType
-    );
-    
-    // Generate thumbnail
-    const thumbnailBuffer = await sharp(fileBuffer)
-      .resize({ 
-        width: 300,
-        height: 300,
-        fit: 'cover'
-      })
-      .jpeg({ quality: 80 })
-      .toBuffer();
-    
-    // Upload thumbnail
-    const thumbnailKey = objectKey.replace('/images/', '/thumbnails/');
-    await objectStore.uploadBuffer(
-      thumbnailKey,
-      thumbnailBuffer,
-      {
-        contentType: 'image/jpeg',
-        cacheControl: 'public, max-age=86400',
-        filename: `thumb_${originalFilename}`
-      }
-    );
-    
-    const thumbnailUrl = objectStore.getPublicUrl(thumbnailKey);
-    
-    // Delete the temporary file
-    await objectStore.deleteFile(sourceKey);
-    
-    res.status(200).json({
-      success: true,
-      url,
-      objectKey,
-      thumbnailUrl,
-      thumbnailKey
+    res.json({ 
+      success: true, 
+      url: result.url, 
+      objectKey: result.objectKey 
     });
   } catch (error) {
     console.error('Error moving file:', error);
     res.status(500).json({ 
       success: false, 
-      message: 'Error moving file', 
-      error: error.message || String(error) 
+      message: 'Error moving file',
+      error: error instanceof Error ? error.message : String(error)
     });
   }
 });
@@ -288,27 +173,16 @@ router.delete('/:objectKey(*)', isAdmin, async (req: Request, res: Response) => 
       });
     }
     
-    // Delete the file
+    // Delete file
     await objectStore.deleteFile(objectKey);
     
-    // If it's a product image, try to delete the thumbnail too
-    if (objectKey.includes('/images/')) {
-      const thumbnailKey = objectKey.replace('/images/', '/thumbnails/');
-      if (await objectStore.exists(thumbnailKey)) {
-        await objectStore.deleteFile(thumbnailKey);
-      }
-    }
-    
-    res.status(200).json({
-      success: true,
-      message: 'File deleted successfully'
-    });
+    res.json({ success: true });
   } catch (error) {
     console.error('Error deleting file:', error);
     res.status(500).json({ 
       success: false, 
-      message: 'Error deleting file', 
-      error: error.message || String(error) 
+      message: 'Error deleting file',
+      error: error instanceof Error ? error.message : String(error)
     });
   }
 });

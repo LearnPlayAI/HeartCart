@@ -1,541 +1,434 @@
+import { Client } from '@replit/object-storage';
 import { Readable } from 'stream';
-import { randomUUID } from 'crypto';
 import path from 'path';
-import { Client } from "@replit/object-storage";
 import mime from 'mime-types';
+import retry from 'async-retry';
 
-/**
- * File structure constants - hierarchical organization for better management
- */
+// Standard folders for organizing files
 export const STORAGE_FOLDERS = {
-  PRODUCTS: 'products', // Product images
-  CATEGORIES: 'categories', // Category images
-  SUPPLIERS: 'suppliers', // Supplier logos and images
-  USERS: 'users', // User profile pictures
-  TEMP: 'temp', // Temporary uploads before final placement
-  BANNERS: 'banners', // Homepage banners
-  FEATURED: 'featured', // Featured product highlights
-  AI_GENERATED: 'ai-generated', // AI generated images
+  PRODUCTS: 'products',
+  TEMP: 'temp',
+  THUMBNAILS: 'thumbnails',
+  OPTIMIZED: 'optimized'
 };
 
-/**
- * File metadata interface
- */
-export interface FileMetadata {
+// Define file operation options
+interface UploadOptions {
   contentType?: string;
-  contentDisposition?: string;
+  metadata?: Record<string, string>;
   cacheControl?: string;
-  filename?: string;
-  size?: number;
-  lastModified?: Date;
-  etag?: string;
+  contentDisposition?: string;
 }
 
+// Base path for serving files
+const BASE_URL = '/api/files';
+
 /**
- * A clean implementation of ObjectStore service for TeeMeYou
- * Using buffer-based approach for maximum reliability on Replit
+ * ObjectStore service for handling file operations
+ * This implementation uses a clean-break approach with no legacy code or fallbacks
  */
-export class ObjectStore {
-  private client: Client;
-  private initialized: boolean = false;
-
+class ObjectStoreService {
+  private objectStore: Client;
+  private isInitialized: boolean = false;
+  private initPromise: Promise<void> | null = null;
+  
   constructor() {
-    // Initialize Replit Object Store client
-    this.client = new Client();
-  }
-
-  /**
-   * Ensure the object store is initialized before any operation
-   */
-  private async ensureInitialized(): Promise<void> {
-    if (this.initialized) return;
-
-    console.log('Initializing Replit Object Storage...');
-
-    try {
-      // Create root directories
-      for (const folder of Object.values(STORAGE_FOLDERS)) {
-        await this.ensureDirectoryExists(folder);
-      }
-
-      // Verify access by storing and retrieving a small test file
-      const testKey = `_test/${randomUUID()}`;
-      const testData = Buffer.from('ObjectStore Initialization Test');
-
-      // Upload test
-      const uploadResult = await this.client.uploadFromBytes(testKey, testData);
-      if ('err' in uploadResult) {
-        throw new Error(`Test upload failed: ${uploadResult.err.message}`);
-      }
-
-      // Download test
-      const downloadResult = await this.client.downloadAsBytes(testKey);
-      if ('err' in downloadResult) {
-        throw new Error(`Test download failed: ${downloadResult.err.message}`);
-      }
-
-      // Cleanup test
-      await this.client.delete(testKey);
-      
-      this.initialized = true;
-      console.log('Replit Object Storage initialized successfully');
-    } catch (error) {
-      console.error('Failed to initialize Replit Object Storage:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Create a directory (folder) in object storage
-   * In object storage, directories are virtual concepts
-   */
-  private async ensureDirectoryExists(dirPath: string): Promise<void> {
-    try {
-      // Normalize the path (remove trailing slash)
-      const normalizedPath = dirPath.endsWith('/') 
-        ? dirPath.slice(0, -1) 
-        : dirPath;
-      
-      // Check if directory marker exists
-      const markerPath = `${normalizedPath}/.keep`;
-      const existsResult = await this.client.exists(markerPath);
-      
-      if (!('err' in existsResult) && !existsResult.value) {
-        // Create a marker file to represent the directory
-        const uploadResult = await this.client.uploadFromText(markerPath, '');
-        if ('err' in uploadResult) {
-          throw new Error(`Failed to create directory marker: ${uploadResult.err.message}`);
-        }
-        console.log(`Created directory: ${normalizedPath}`);
-      }
-    } catch (error) {
-      console.error(`Error creating directory ${dirPath}:`, error);
-      throw error;
-    }
-  }
-
-  /**
-   * Generate a unique filename with timestamp
-   */
-  generateUniqueFilename(originalFilename: string): string {
-    const timestamp = Date.now();
-    const ext = path.extname(originalFilename);
-    const baseName = path.basename(originalFilename, ext);
-    const uniqueId = randomUUID().slice(0, 8);
-    
-    return `${baseName}_${timestamp}_${uniqueId}${ext}`;
-  }
-
-  /**
-   * Build a complete object key from parts
-   */
-  buildObjectKey(folder: string, id: number | string, subFolder?: string, filename?: string): string {
-    let objectKey = folder;
-    
-    // Add ID
-    objectKey += `/${id}`;
-    
-    // Add subfolder if provided
-    if (subFolder) {
-      objectKey += `/${subFolder}`;
-    }
-    
-    // Add filename if provided
-    if (filename) {
-      objectKey += `/${filename}`;
-    }
-    
-    return objectKey;
-  }
-
-  /**
-   * Detect content type based on filename
-   */
-  detectContentType(filename: string, providedContentType?: string): string {
-    // If content type is provided, use it
-    if (providedContentType) {
-      return providedContentType;
-    }
-    
-    // Otherwise, detect from filename
-    const detectedType = mime.lookup(filename);
-    if (detectedType) {
-      return detectedType;
-    }
-    
-    // Default fallback
-    return 'application/octet-stream';
-  }
-
-  /**
-   * Upload a buffer to the object store
-   */
-  async uploadBuffer(objectKey: string, buffer: Buffer, metadata?: FileMetadata): Promise<string> {
-    // Ensure store is initialized
-    await this.ensureInitialized();
-    
-    // Validate buffer
-    if (!Buffer.isBuffer(buffer)) {
-      throw new Error(`Invalid buffer type: ${typeof buffer}`);
-    }
-    
-    if (buffer.length === 0) {
-      throw new Error(`Empty buffer for ${objectKey}`);
-    }
-    
-    console.log(`Uploading buffer for ${objectKey}: ${buffer.length} bytes, type: ${metadata?.contentType || 'not specified'}`);
-    
-    // Retry logic
-    const MAX_RETRIES = 3;
-    let lastError: Error | null = null;
-    
-    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-      try {
-        console.log(`Uploading file to ${objectKey} (attempt ${attempt}/${MAX_RETRIES})`);
-        
-        // Store metadata in a separate file
-        const metadataKey = `${objectKey}.metadata`;
-        const metadataContent = JSON.stringify({
-          contentType: metadata?.contentType || this.detectContentType(objectKey),
-          cacheControl: metadata?.cacheControl || 'public, max-age=86400',
-          contentDisposition: metadata?.contentDisposition,
-          originalFileName: metadata?.filename,
-          size: buffer.length,
-          lastModified: new Date().toISOString()
-        });
-        
-        // Upload metadata
-        const metadataResult = await this.client.uploadFromText(metadataKey, metadataContent);
-        if ('err' in metadataResult) {
-          console.warn(`Failed to upload metadata for ${objectKey}:`, metadataResult.err);
-        }
-        
-        // Upload the actual file
-        const uploadResult = await this.client.uploadFromBytes(objectKey, buffer, {
-          compress: true
-        });
-        
-        if ('err' in uploadResult) {
-          throw new Error(`Upload failed: ${uploadResult.err.message}`);
-        }
-        
-        // Verify the file exists
-        await new Promise(resolve => setTimeout(resolve, 300));
-        const existsResult = await this.client.exists(objectKey);
-        
-        if ('err' in existsResult || !existsResult.value) {
-          throw new Error('File not found after upload');
-        }
-        
-        console.log(`Successfully uploaded file: ${objectKey}`);
-        return this.getPublicUrl(objectKey);
-      } catch (error) {
-        lastError = error as Error;
-        console.error(`Error uploading to ${objectKey} (attempt ${attempt}):`, error);
-        
-        if (attempt < MAX_RETRIES) {
-          // Exponential backoff
-          const delay = Math.pow(2, attempt) * 300;
-          console.log(`Retrying upload after ${delay}ms...`);
-          await new Promise(resolve => setTimeout(resolve, delay));
-        }
-      }
-    }
-    
-    throw new Error(`Failed to upload file after ${MAX_RETRIES} attempts: ${lastError?.message}`);
+    // Safely instantiate the ObjectStore client
+    this.objectStore = new Client();
+    // Initialize right away to detect issues early
+    this.initialize();
   }
   
   /**
-   * Upload a file from base64 data
+   * Initialize the Object Store client
+   * This ensures initialization happens only once and is awaited properly
    */
-  async uploadFromBase64(objectKey: string, base64Data: string, metadata?: FileMetadata): Promise<string> {
+  async initialize(): Promise<void> {
+    if (this.isInitialized) {
+      return;
+    }
+    
+    if (this.initPromise) {
+      return this.initPromise;
+    }
+    
+    this.initPromise = (async () => {
+      try {
+        await this.verifyAccess();
+        this.isInitialized = true;
+        console.log('Object Store successfully initialized');
+      } catch (error) {
+        console.error('Failed to initialize Object Store:', error);
+        throw error;
+      }
+    })();
+    
+    return this.initPromise;
+  }
+  
+  /**
+   * Verify access to Object Store by attempting a simple operation
+   */
+  private async verifyAccess(): Promise<void> {
     try {
-      // Parse base64 data
-      const matches = base64Data.match(/^data:([A-Za-z-+/]+);base64,(.+)$/);
-      if (!matches || matches.length !== 3) {
-        throw new Error('Invalid base64 image format');
+      // Try to list objects with limit 1 to see if we have access
+      const result = await this.objectStore.list({ limit: 1 });
+      
+      if (result.err) {
+        throw new Error(`Object Store access error: ${result.err.message}`);
       }
       
-      const contentType = matches[1];
-      const data = matches[2];
-      const buffer = Buffer.from(data, 'base64');
-      
-      return this.uploadBuffer(objectKey, buffer, {
-        ...metadata,
-        contentType
-      });
+      console.log('Object Store access verified successfully');
     } catch (error) {
-      console.error(`Error uploading base64 data:`, error);
-      throw error;
+      console.error('Object Store access verification failed:', error);
+      throw new Error(`Failed to verify Object Store access: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
-
+  
   /**
-   * Get a file as a buffer
+   * Upload a buffer to Object Storage
    */
-  async getFileAsBuffer(objectKey: string): Promise<{ data: Buffer, contentType: string }> {
-    // Ensure store is initialized
-    await this.ensureInitialized();
+  async uploadFromBuffer(
+    objectKey: string,
+    buffer: Buffer,
+    options: UploadOptions = {}
+  ): Promise<string> {
+    await this.initialize();
     
-    // Retry logic
-    const MAX_RETRIES = 3;
-    let lastError: Error | null = null;
-    
-    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-      try {
-        console.log(`Getting file as buffer: ${objectKey} (attempt ${attempt}/${MAX_RETRIES})`);
-        
-        // Check if the file exists
-        const existsResult = await this.client.exists(objectKey);
-        if ('err' in existsResult) {
-          throw new Error(`Error checking if file exists: ${existsResult.err.message}`);
-        }
-        
-        if (!existsResult.value) {
-          throw new Error(`File does not exist: ${objectKey}`);
-        }
-        
-        // Get the file directly as a buffer
-        const result = await this.client.downloadAsBytes(objectKey);
-        if ('err' in result) {
-          throw new Error(`Failed to get file as buffer: ${result.err.message}`);
-        }
-        
-        // Convert value to buffer if needed
-        let buffer: Buffer;
-        if (Buffer.isBuffer(result.value)) {
-          buffer = result.value;
-        } else if (result.value instanceof Uint8Array) {
-          buffer = Buffer.from(result.value);
-        } else {
-          throw new Error(`Unexpected return type: ${typeof result.value}`);
-        }
-        
-        console.log(`Downloaded file: ${objectKey}, size: ${buffer.length} bytes`);
-        
-        // Get content type from metadata or deduce from filename
-        let contentType = 'application/octet-stream';
-        
-        try {
-          const metadataKey = `${objectKey}.metadata`;
-          const metadataResult = await this.client.downloadAsText(metadataKey);
+    try {
+      // Use retry with exponential backoff for reliability
+      await retry(
+        async () => {
+          const uploadResult = await this.objectStore.put(objectKey, buffer, {
+            contentType: options.contentType || this.detectContentType(objectKey),
+            metadata: options.metadata || {},
+            cacheControl: options.cacheControl || 'public, max-age=86400',
+            contentDisposition: options.contentDisposition
+          });
           
-          if (!('err' in metadataResult)) {
-            const metadata = JSON.parse(metadataResult.value);
-            contentType = metadata.contentType || this.detectContentType(objectKey);
-          } else {
-            contentType = this.detectContentType(objectKey);
+          if (uploadResult.err) {
+            console.error(`Error uploading buffer to ${objectKey}:`, uploadResult.err);
+            throw new Error(uploadResult.err.message);
           }
-        } catch (error) {
-          // If metadata doesn't exist, use extension
-          contentType = this.detectContentType(objectKey);
+          
+          // Verify upload by checking that the file exists
+          const exists = await this.exists(objectKey);
+          if (!exists) {
+            throw new Error(`Verification failed for ${objectKey}`);
+          }
+          
+          return uploadResult;
+        },
+        {
+          retries: 3,
+          minTimeout: 200,
+          factor: 3,
+          onRetry: (error, attempt) => {
+            console.warn(`Retrying upload for ${objectKey} (attempt ${attempt}/3):`, error.message);
+          }
         }
-        
-        return { data: buffer, contentType };
-      } catch (error) {
-        lastError = error as Error;
-        console.error(`Error getting file ${objectKey} (attempt ${attempt}):`, error);
-        
-        if (attempt < MAX_RETRIES) {
-          // Exponential backoff
-          const delay = Math.pow(2, attempt) * 300;
-          console.log(`Retrying get after ${delay}ms...`);
-          await new Promise(resolve => setTimeout(resolve, delay));
-        }
-      }
+      );
+      
+      // Return the URL for client use
+      return this.getPublicUrl(objectKey);
+    } catch (error) {
+      console.error(`Failed to upload buffer to ${objectKey} after retries:`, error);
+      throw new Error(`Upload failed: ${error instanceof Error ? error.message : String(error)}`);
     }
+  }
+  
+  /**
+   * Upload a temporary file
+   * This is used during product creation before a product ID is available
+   */
+  async uploadTempFile(
+    buffer: Buffer,
+    filename: string,
+    productId: string | number = 'pending',
+    contentType?: string
+  ): Promise<{ url: string; objectKey: string }> {
+    await this.initialize();
     
-    throw new Error(`Failed to get file after ${MAX_RETRIES} attempts: ${lastError?.message}`);
+    const objectKey = `${STORAGE_FOLDERS.TEMP}/${productId}/${filename}`;
+    
+    try {
+      await this.uploadFromBuffer(objectKey, buffer, {
+        contentType: contentType || this.detectContentType(filename)
+      });
+      
+      return {
+        url: this.getPublicUrl(objectKey),
+        objectKey
+      };
+    } catch (error) {
+      console.error(`Failed to upload temp file ${filename}:`, error);
+      throw new Error(`Temp file upload failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
   
   /**
-   * Download file as buffer (public convenience method)
+   * Upload a file directly to a product's folder
    */
-  async downloadAsBuffer(objectKey: string): Promise<Buffer> {
-    const { data } = await this.getFileAsBuffer(objectKey);
-    return data;
+  async uploadProductFile(
+    buffer: Buffer,
+    filename: string,
+    productId: number,
+    contentType?: string
+  ): Promise<{ url: string; objectKey: string }> {
+    await this.initialize();
+    
+    const objectKey = `${STORAGE_FOLDERS.PRODUCTS}/${productId}/${filename}`;
+    
+    try {
+      await this.uploadFromBuffer(objectKey, buffer, {
+        contentType: contentType || this.detectContentType(filename)
+      });
+      
+      return {
+        url: this.getPublicUrl(objectKey),
+        objectKey
+      };
+    } catch (error) {
+      console.error(`Failed to upload product file ${filename}:`, error);
+      throw new Error(`Product file upload failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
   
   /**
-   * Create a readable stream from a buffer (safer than direct streaming)
+   * Move a file from temp storage to a permanent location
    */
-  async downloadAsStream(objectKey: string): Promise<Readable> {
-    const { data } = await this.getFileAsBuffer(objectKey);
-    return Readable.from(data);
+  async moveFromTemp(
+    sourceKey: string,
+    productId: number
+  ): Promise<{ url: string; objectKey: string }> {
+    await this.initialize();
+    
+    try {
+      // Download the source file as a buffer
+      const { data, contentType } = await this.getFileAsBuffer(sourceKey);
+      
+      // Create a new key in the products folder
+      const filename = path.basename(sourceKey);
+      const destinationKey = `${STORAGE_FOLDERS.PRODUCTS}/${productId}/${filename}`;
+      
+      // Upload to the new location
+      await this.uploadFromBuffer(destinationKey, data, { contentType });
+      
+      // Delete the original file
+      await this.deleteFile(sourceKey);
+      
+      return {
+        url: this.getPublicUrl(destinationKey),
+        objectKey: destinationKey
+      };
+    } catch (error) {
+      console.error(`Failed to move file from ${sourceKey} to product ${productId}:`, error);
+      throw new Error(`File move operation failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
   
   /**
-   * Check if a file exists
+   * Download a file as a buffer
+   */
+  async getFileAsBuffer(objectKey: string): Promise<{ data: Buffer; contentType?: string }> {
+    await this.initialize();
+    
+    try {
+      // Use retry with exponential backoff for reliability
+      const result = await retry(
+        async () => {
+          const downloadResult = await this.objectStore.get(objectKey);
+          
+          if (downloadResult.err) {
+            console.error(`Error downloading ${objectKey}:`, downloadResult.err);
+            throw new Error(downloadResult.err.message);
+          }
+          
+          if (!downloadResult.value) {
+            throw new Error(`Empty response from Object Storage for ${objectKey}`);
+          }
+          
+          return downloadResult;
+        },
+        {
+          retries: 3,
+          minTimeout: 200,
+          factor: 3,
+          onRetry: (error, attempt) => {
+            console.warn(`Retrying download for ${objectKey} (attempt ${attempt}/3):`, error.message);
+          }
+        }
+      );
+      
+      // Determine content type
+      let contentType: string | undefined;
+      
+      try {
+        const headResult = await this.objectStore.head(objectKey);
+        if (!headResult.err && headResult.value) {
+          contentType = headResult.value.contentType;
+        }
+      } catch (headError) {
+        console.warn(`Could not retrieve metadata for ${objectKey}:`, headError);
+        // Fall back to detection based on filename
+        contentType = this.detectContentType(objectKey);
+      }
+      
+      return {
+        data: result.value as Buffer,
+        contentType
+      };
+    } catch (error) {
+      console.error(`Failed to get file ${objectKey} as buffer:`, error);
+      throw new Error(`Download failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+  
+  /**
+   * Check if a file exists in Object Storage
    */
   async exists(objectKey: string): Promise<boolean> {
+    await this.initialize();
+    
     try {
-      await this.ensureInitialized();
+      const existsResult = await this.objectStore.head(objectKey);
       
-      const result = await this.client.exists(objectKey);
-      if ('err' in result) {
-        throw new Error(`Error checking if file exists: ${result.err.message}`);
+      if (existsResult.err) {
+        if (existsResult.err.code === 'NoSuchKey') {
+          return false;
+        }
+        console.error(`Error checking existence of ${objectKey}:`, existsResult.err);
+        throw new Error(existsResult.err.message);
       }
       
-      return result.value;
+      return true;
     } catch (error) {
-      console.error(`Error checking if file exists: ${objectKey}`, error);
+      // Handle the case where the error means the file doesn't exist
+      if (error instanceof Error && error.message.includes('NoSuchKey')) {
+        return false;
+      }
+      
+      console.error(`Error checking if ${objectKey} exists:`, error);
       return false;
     }
   }
   
   /**
-   * Delete a file
+   * Get metadata for a file
    */
-  async deleteFile(objectKey: string): Promise<void> {
+  async getMetadata(objectKey: string): Promise<{
+    contentType?: string;
+    contentLength?: number;
+    metadata?: Record<string, string>;
+    cacheControl?: string;
+    contentDisposition?: string;
+  }> {
+    await this.initialize();
+    
     try {
-      await this.ensureInitialized();
+      const result = await this.objectStore.head(objectKey);
       
-      // Delete metadata file if it exists
-      const metadataKey = `${objectKey}.metadata`;
-      if (await this.exists(metadataKey)) {
-        await this.client.delete(metadataKey);
+      if (result.err) {
+        console.error(`Error getting metadata for ${objectKey}:`, result.err);
+        throw new Error(`Failed to get metadata: ${result.err.message}`);
       }
       
-      // Delete main file
-      const result = await this.client.delete(objectKey);
-      if ('err' in result) {
-        throw new Error(`Failed to delete file: ${result.err.message}`);
-      }
+      const metadata = result.value;
       
-      console.log(`Successfully deleted file: ${objectKey}`);
+      return {
+        contentType: metadata?.contentType,
+        contentLength: metadata?.contentLength,
+        metadata: metadata?.metadata || {},
+        cacheControl: metadata?.cacheControl,
+        contentDisposition: metadata?.contentDisposition
+      };
     } catch (error) {
-      console.error(`Error deleting file: ${objectKey}`, error);
-      throw error;
+      console.error(`Failed to get metadata for ${objectKey}:`, error);
+      throw new Error(`Metadata retrieval failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
   
   /**
-   * List files with a prefix
+   * Get the size of a file in bytes
    */
-  async listFiles(prefix: string, delimiter: string = '/'): Promise<{ objects: string[], prefixes: string[] }> {
+  async getSize(objectKey: string): Promise<number | undefined> {
     try {
-      await this.ensureInitialized();
+      const metadata = await this.getMetadata(objectKey);
+      return metadata.contentLength;
+    } catch (error) {
+      console.error(`Failed to get size for ${objectKey}:`, error);
+      return undefined;
+    }
+  }
+  
+  /**
+   * Delete a file from Object Storage
+   */
+  async deleteFile(objectKey: string): Promise<void> {
+    await this.initialize();
+    
+    try {
+      const result = await this.objectStore.delete(objectKey);
       
-      const result = await this.client.list({
+      if (result.err) {
+        console.error(`Error deleting ${objectKey}:`, result.err);
+        throw new Error(`Failed to delete file: ${result.err.message}`);
+      }
+    } catch (error) {
+      console.error(`Failed to delete ${objectKey}:`, error);
+      throw new Error(`Delete operation failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+  
+  /**
+   * List files in a directory (folder)
+   */
+  async listFiles(prefix: string, recursive: boolean = false): Promise<string[]> {
+    await this.initialize();
+    
+    try {
+      const options: any = { 
         prefix,
-        delimiter
-      });
+        delimiter: recursive ? undefined : '/' // Use delimiter for non-recursive listing
+      };
       
-      if ('err' in result) {
+      const result = await this.objectStore.list(options);
+      
+      if (result.err) {
+        console.error(`Error listing files with prefix ${prefix}:`, result.err);
         throw new Error(`Failed to list files: ${result.err.message}`);
       }
       
-      return {
-        objects: result.value.map(item => item.key),
-        prefixes: Array.isArray(result.commonPrefixes) ? result.commonPrefixes : []
-      };
+      // Extract keys from the result
+      const keys = result.value?.map(obj => obj.key) || [];
+      
+      // If using delimiter, also include common prefixes (folders)
+      if (!recursive && result.commonPrefixes) {
+        return [...keys, ...result.commonPrefixes];
+      }
+      
+      return keys;
     } catch (error) {
-      console.error(`Error listing files with prefix ${prefix}:`, error);
-      return { objects: [], prefixes: [] };
+      console.error(`Failed to list files with prefix ${prefix}:`, error);
+      throw new Error(`List operation failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
   
   /**
-   * Get public URL for a file
+   * Get a public URL for a file
    */
   getPublicUrl(objectKey: string): string {
-    // Use the API endpoint to serve files
-    return `/api/files/${objectKey}`;
+    return `${BASE_URL}/${objectKey}`;
   }
   
   /**
-   * Upload a product image
+   * Detect content type based on filename
    */
-  async uploadProductImage(
-    productId: number,
-    imageBuffer: Buffer,
-    originalFilename: string,
-    contentType?: string
-  ): Promise<{ url: string, objectKey: string }> {
-    try {
-      await this.ensureInitialized();
-      
-      // Validate input
-      if (!Buffer.isBuffer(imageBuffer) || imageBuffer.length === 0) {
-        throw new Error('Invalid or empty image buffer');
-      }
-      
-      // Generate unique filename and object key
-      const filename = this.generateUniqueFilename(originalFilename);
-      const objectKey = this.buildObjectKey(
-        STORAGE_FOLDERS.PRODUCTS, 
-        productId, 
-        'images', 
-        filename
-      );
-      
-      // Create folder if needed
-      await this.ensureDirectoryExists(
-        this.buildObjectKey(STORAGE_FOLDERS.PRODUCTS, productId, 'images')
-      );
-      
-      // Upload the file
-      const url = await this.uploadBuffer(objectKey, imageBuffer, {
-        contentType: contentType || this.detectContentType(originalFilename),
-        cacheControl: 'public, max-age=86400',
-        filename: originalFilename
-      });
-      
-      return { url, objectKey };
-    } catch (error) {
-      console.error(`Error uploading product image:`, error);
-      throw error;
-    }
-  }
-  
-  /**
-   * Upload a temporary file (for product creation workflows)
-   */
-  async uploadTempFile(
-    fileBuffer: Buffer,
-    originalFilename: string,
-    productId: string | number = 'pending',
-    contentType?: string
-  ): Promise<{ url: string, objectKey: string }> {
-    try {
-      await this.ensureInitialized();
-      
-      // Validate input
-      if (!Buffer.isBuffer(fileBuffer) || fileBuffer.length === 0) {
-        throw new Error('Invalid or empty file buffer');
-      }
-      
-      // Generate unique filename and object key
-      const filename = this.generateUniqueFilename(originalFilename);
-      const objectKey = this.buildObjectKey(
-        STORAGE_FOLDERS.TEMP, 
-        productId, 
-        undefined, 
-        filename
-      );
-      
-      // Create folder if needed
-      await this.ensureDirectoryExists(
-        this.buildObjectKey(STORAGE_FOLDERS.TEMP, productId)
-      );
-      
-      // Upload the file
-      const url = await this.uploadBuffer(objectKey, fileBuffer, {
-        contentType: contentType || this.detectContentType(originalFilename),
-        cacheControl: 'no-cache, max-age=0',
-        filename: originalFilename
-      });
-      
-      return { 
-        url: this.getPublicUrl(objectKey),
-        objectKey 
-      };
-    } catch (error) {
-      console.error(`Error uploading temp file:`, error);
-      throw error;
-    }
+  detectContentType(filename: string): string {
+    const contentType = mime.lookup(filename);
+    return contentType || 'application/octet-stream';
   }
 }
 
 // Export a singleton instance
-export const objectStore = new ObjectStore();
+export const objectStore = new ObjectStoreService();
