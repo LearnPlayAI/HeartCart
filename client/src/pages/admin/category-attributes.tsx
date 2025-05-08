@@ -111,67 +111,165 @@ function CategoryAttributesPage() {
 
   // Fetch category info
   const {
-    data: category,
+    data: categoryResponse,
     isLoading: categoryLoading,
     error: categoryError,
-  } = useQuery({
+  } = useQuery<{ success: boolean, data: any, error?: { message: string } }>({
     queryKey: ["/api/categories", categoryId],
     enabled: !!categoryId,
     retry: 1,
+    queryFn: async () => {
+      const response = await fetch(`/api/categories/${categoryId}`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch category");
+      }
+      
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error?.message || "Failed to fetch category");
+      }
+      
+      return result;
+    }
   });
+  
+  const category = categoryResponse?.data;
 
   // Fetch category attributes
   const {
-    data: categoryAttributes,
+    data: categoryAttributesResponse,
     isLoading: categoryAttributesLoading,
     error: categoryAttributesError,
-  } = useQuery({
+  } = useQuery<{ success: boolean, data: any[], error?: { message: string } }>({
     queryKey: ["/api/categories", categoryId, "attributes"],
     enabled: !!categoryId,
     retry: 1,
+    queryFn: async () => {
+      const response = await fetch(`/api/categories/${categoryId}/attributes`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch category attributes");
+      }
+      
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error?.message || "Failed to fetch category attributes");
+      }
+      
+      return result;
+    }
   });
+  
+  const categoryAttributes = categoryAttributesResponse?.data || [];
 
   // Fetch global attributes (for attribute selection)
   const {
-    data: globalAttributes,
+    data: globalAttributesResponse,
     isLoading: globalAttributesLoading,
     error: globalAttributesError,
-  } = useQuery({
+  } = useQuery<{ success: boolean, data: any[], error?: { message: string } }>({
     queryKey: ["/api/attributes"],
     retry: 1,
+    queryFn: async () => {
+      const response = await fetch("/api/attributes");
+      if (!response.ok) {
+        throw new Error("Failed to fetch global attributes");
+      }
+      
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error?.message || "Failed to fetch global attributes");
+      }
+      
+      return result;
+    }
   });
+  
+  const globalAttributes = globalAttributesResponse?.data || [];
 
   // Fetch all catalogs
   const {
-    data: catalogs,
+    data: catalogsResponse,
     isLoading: catalogsLoading,
     error: catalogsError,
-  } = useQuery({
+  } = useQuery<{ success: boolean, data: any[], error?: { message: string } }>({
     queryKey: ["/api/catalogs"],
     retry: 1,
+    queryFn: async () => {
+      const response = await fetch("/api/catalogs");
+      if (!response.ok) {
+        throw new Error("Failed to fetch catalogs");
+      }
+      
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error?.message || "Failed to fetch catalogs");
+      }
+      
+      return result;
+    }
   });
+  
+  const catalogs = catalogsResponse?.data || [];
 
   // Fetch catalog attributes when a catalog is selected
   const {
-    data: catalogAttributes,
+    data: catalogAttributesResponse,
     isLoading: catalogAttributesLoading,
     error: catalogAttributesError,
-  } = useQuery({
+  } = useQuery<{ success: boolean, data: any[], error?: { message: string } }>({
     queryKey: ["/api/catalogs", selectedCatalogId, "attributes"],
     enabled: !!selectedCatalogId && selectedCatalogId !== "",
     retry: 1,
+    queryFn: async () => {
+      if (!selectedCatalogId || selectedCatalogId === "") {
+        return { success: true, data: [] };
+      }
+      
+      const response = await fetch(`/api/catalogs/${selectedCatalogId}/attributes`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch catalog attributes");
+      }
+      
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error?.message || "Failed to fetch catalog attributes");
+      }
+      
+      return result;
+    }
   });
+  
+  const catalogAttributes = catalogAttributesResponse?.data || [];
 
   // Fetch attribute options when a category attribute is selected
   const {
-    data: options,
+    data: optionsResponse,
     isLoading: optionsLoading,
     error: optionsError,
-  } = useQuery({
+  } = useQuery<{ success: boolean, data: any[], error?: { message: string } }>({
     queryKey: ["/api/categories", categoryId, "attributes", selectedAttribute?.attributeId, "options"],
     enabled: !!selectedAttribute?.attributeId && !!categoryId,
     retry: 1,
+    queryFn: async () => {
+      if (!selectedAttribute?.attributeId || !categoryId) {
+        return { success: true, data: [] };
+      }
+      
+      const response = await fetch(`/api/categories/${categoryId}/attributes/${selectedAttribute.attributeId}/options`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch attribute options");
+      }
+      
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error?.message || "Failed to fetch attribute options");
+      }
+      
+      return result;
+    }
   });
+  
+  const options = optionsResponse?.data || [];
 
   // Update list of global attributes for selection, marking those already added to the category
   useEffect(() => {
