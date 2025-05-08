@@ -1,0 +1,535 @@
+# Mass Product Upload System - Implementation Roadmap
+
+## Introduction
+
+This document outlines the implementation strategy for the TeeMeYou mass product upload feature, designed to streamline the process of adding multiple products, catalogs, and their associated assets simultaneously.
+
+The mass upload system addresses a critical business need for TeeMeYou: enabling administrators and suppliers to efficiently add large numbers of products to the platform. This capability is essential for scaling the marketplace, onboarding new suppliers, and keeping product catalogs up-to-date with minimal manual effort.
+
+### Business Context
+
+In the South African e-commerce landscape, suppliers often manage hundreds or thousands of products across multiple categories. The manual entry of these products would be prohibitively time-consuming and error-prone. The mass upload system bridges this gap by providing:
+
+1. **Scalability** - Support for adding 100+ products in a single operation
+2. **Standardization** - Consistent product data structure through templates
+3. **Efficiency** - Reduced time and effort compared to manual entry
+4. **Error Reduction** - Validation to ensure data quality and completeness
+5. **Category Adaptability** - Support for different attribute sets based on product categories
+
+### Key Stakeholders
+
+- **Administrators** - Require full control over product data and catalogs
+- **Suppliers** - Need to efficiently add their product offerings to the platform
+- **Technical Team** - Responsible for implementation and maintenance
+- **End Users** - Benefit from comprehensive and accurate product information
+
+## System Overview
+
+The mass product upload system will allow users to:
+1. Upload a CSV file with product data
+2. Upload multiple product images individually or in batches
+3. Store all images securely in Replit Object Store
+4. Automatically create catalogs and products with their attributes
+5. Map dynamic attributes based on category requirements
+6. Validate and process data with clear error reporting using standardized API responses
+7. Associate products with their correct suppliers and catalogs
+
+### Standard API Approach
+
+All API endpoints for the mass upload system will follow TeeMeYou's standardized API response structure:
+
+```typescript
+{
+  success: boolean;
+  data?: T;
+  error?: {
+    message: string;
+    code?: string;
+    details?: unknown;
+  };
+  meta?: {
+    page?: number;
+    limit?: number;
+    total?: number;
+    totalPages?: number;
+  };
+}
+```
+
+This ensures consistent error handling, pagination support, and predictable response formats throughout the mass upload process.
+
+## Implementation Phases
+
+### Phase 1: Foundation Setup
+- [ ] Define the catalog-centric CSV template structure
+  - [ ] Create unified template with core product fields for all product types
+  - [ ] Design dynamic attribute handling across multiple categories
+  - [ ] Document field requirements and validations at catalog level
+  - [ ] Create sample CSV files for multi-category catalog uploads
+  - [ ] Implement product category field to differentiate products
+
+- [ ] Create the database storage functions for batch processing
+  - [ ] Design batch job tracking table
+  - [ ] Implement transaction management for batch operations
+  - [ ] Create product batch insert functions
+  - [ ] Add catalog creation/update functions
+  - [ ] Implement error logging and reporting storage
+
+- [ ] Design the upload interface UI components
+  - [ ] Create uploader component for CSV files
+  - [ ] Design Object Store direct image uploader 
+  - [ ] Build real-time progress indicator components
+  - [ ] Design preview grid for validation results
+  - [ ] Create comprehensive error display components
+  - [ ] Build supplier/catalog selector and creator
+
+- [ ] Implement the basic file upload infrastructure
+  - [ ] Set up temporary storage for uploaded files
+  - [ ] Create file processing service
+  - [ ] Implement secure file handling
+  - [ ] Add file type validation
+  - [ ] Create cleanup mechanisms for temp files
+
+- [ ] Set up validation schema for CSV data
+  - [ ] Define required field validations
+  - [ ] Create data type validators
+  - [ ] Set up reference validations (category IDs, etc.)
+  - [ ] Implement custom validators for special fields
+  - [ ] Create validation result formatting
+
+### Phase 2: CSV Processing and Validation
+- [ ] Implement CSV parsing functionality
+  - [ ] Create CSV stream processor for large files
+  - [ ] Implement header validation and mapping
+  - [ ] Build row data extraction and formatting
+  - [ ] Add support for various CSV formats and encodings
+  - [ ] Create parse error detection and recovery
+
+- [ ] Create validation rules for required fields
+  - [ ] Implement field presence validators
+  - [ ] Create data type and format validators
+  - [ ] Build reference validation for foreign keys
+  - [ ] Implement business rule validations
+  - [ ] Add conditional validation rules
+
+- [ ] Develop error handling and reporting system
+  - [ ] Create structured error collection system
+  - [ ] Implement error categorization (critical vs. warning)
+  - [ ] Build row-level error tracking
+  - [ ] Design user-friendly error messages
+  - [ ] Add suggestions for error resolution
+
+- [ ] Implement preview generation before final upload
+  - [ ] Create data preview transformer
+  - [ ] Build preview grid component
+  - [ ] Add field highlighting for validation issues
+  - [ ] Implement pagination for large datasets
+  - [ ] Create summary statistics for preview
+
+- [ ] Add support for duplicate detection
+  - [ ] Implement SKU uniqueness validation
+  - [ ] Create duplicate detection across fields
+  - [ ] Add conflict resolution options
+  - [ ] Build update mode for existing products
+  - [ ] Design merge strategies for duplicates
+
+### Phase 3: Image Processing with Replit Object Store
+- [ ] Implement direct Object Store upload system
+  - [ ] Create secure API endpoints for image uploads
+  - [ ] Implement standardized API responses for all operations
+  - [ ] Handle batch uploads with progress tracking
+  - [ ] Design efficient folder structure within Object Store 
+  - [ ] Create comprehensive error handling and reporting
+
+- [ ] Create image mapping system to match products
+  - [ ] Implement Object Store path to product mapping
+  - [ ] Build SKU-based image organization
+  - [ ] Create multi-image association logic for product galleries
+  - [ ] Develop primary/secondary image designation
+  - [ ] Add manual mapping capability for edge cases
+
+- [ ] Add image validation (format, size, dimensions)
+  - [ ] Implement format validation for Object Store uploads (JPG, PNG, WebP)
+  - [ ] Create file size validation and limits
+  - [ ] Add dimension checking and recommendations
+  - [ ] Implement image quality assessment
+  - [ ] Create detailed image validation before Object Store commitment
+
+- [ ] Implement image optimization for Object Store
+  - [ ] Create automatic image resizing service
+  - [ ] Implement format conversion if needed
+  - [ ] Add compression with quality preservation
+  - [ ] Generate thumbnails and variants automatically
+  - [ ] Implement efficient Object Store path generation by catalog and product
+
+- [ ] Design fallback mechanism for missing images
+  - [ ] Create placeholder image generation in Object Store
+  - [ ] Implement missing image detection
+  - [ ] Add reporting for missing product images
+  - [ ] Create manual Object Store upload interface
+  - [ ] Design post-process image association
+
+### Phase 4: Attribute Handling
+- [ ] Create dynamic attribute mapping from CSV columns
+  - [ ] Develop prefix-based attribute field detection
+  - [ ] Create attribute type inference from values
+  - [ ] Build mapping between CSV headers and attribute system
+  - [ ] Implement value transformation for different attribute types
+  - [ ] Add support for custom attribute naming
+
+- [ ] Implement multi-category attribute handling
+  - [ ] Create flexible attribute template system spanning all categories in a catalog
+  - [ ] Build validation rules that adapt based on product category
+  - [ ] Implement conditional attribute enforcement by product type
+  - [ ] Support cross-category attribute value lists
+  - [ ] Develop intelligent attribute detection based on catalog context
+
+- [ ] Add support for variant creation from attributes
+  - [ ] Design variant generation logic from attribute combinations
+  - [ ] Implement SKU generation for variants
+  - [ ] Create pricing rules for variants
+  - [ ] Build inventory management for variants
+  - [ ] Add variant image association capabilities
+
+- [ ] Develop validation rules for attribute constraints
+  - [ ] Implement data type validation for different attributes
+  - [ ] Create value range validations where applicable
+  - [ ] Build dropdown value validation for select attributes
+  - [ ] Implement interdependent attribute validation
+  - [ ] Add custom validation rule support
+
+- [ ] Create automatic attribute creation for new values
+  - [ ] Implement automatic attribute option creation
+  - [ ] Design intelligent attribute detection system
+  - [ ] Build attribute cleanup and normalization
+  - [ ] Add suggestion system for similar attributes
+  - [ ] Create attribute value standardization
+
+### Phase 5: Integration and Testing
+- [ ] Integrate with existing product management systems
+  - [ ] Connect with product CRUD operations
+  - [ ] Integrate with existing attribute management
+  - [ ] Add hooks into catalog management system
+  - [ ] Implement consistent transaction handling
+  - [ ] Create admin audit trail for mass operations
+
+- [ ] Implement catalog creation/selection logic
+  - [ ] Build catalog selection interface
+  - [ ] Add new catalog creation during import
+  - [ ] Implement catalog assignment validation
+  - [ ] Create catalog capacity checks
+  - [ ] Add catalog permission validation
+
+- [ ] Add bulk processing with progress tracking
+  - [ ] Implement background job processing
+  - [ ] Create real-time progress tracking
+  - [ ] Build cancellation capability for long processes
+  - [ ] Add resumable processing for large batches
+  - [ ] Develop detailed process logging
+
+- [ ] Create comprehensive test suite with multi-category sample data
+  - [ ] Build automated validation tests for catalog-centric uploads
+  - [ ] Create sample datasets with mixed product types within catalogs
+  - [ ] Implement integration tests across category boundaries
+  - [ ] Add stress tests for large multi-category datasets
+  - [ ] Create edge case test scenarios for catalog operations
+
+- [ ] Develop performance optimizations for large datasets
+  - [ ] Implement database query optimizations
+  - [ ] Add caching for lookup data
+  - [ ] Create batch processing techniques
+  - [ ] Optimize image processing pipeline
+  - [ ] Add monitoring for performance bottlenecks
+
+### Phase 6: UI/UX Refinement
+- [ ] Create step-by-step wizard interface
+  - [ ] Design multi-step upload workflow
+  - [ ] Implement intuitive navigation between steps
+  - [ ] Add contextual help at each step
+  - [ ] Create responsive design for all device sizes
+  - [ ] Implement accessibility features
+
+- [ ] Implement detailed error reporting and guidance
+  - [ ] Create user-friendly error messages
+  - [ ] Design visual error indicators in the interface
+  - [ ] Add context-specific help for common errors
+  - [ ] Implement inline correction suggestions
+  - [ ] Create exportable error reports
+
+- [ ] Add downloadable template generation
+  - [ ] Build dynamic template generator by catalog
+  - [ ] Create universal templates supporting multiple product categories
+  - [ ] Add sample data options with mixed product types
+  - [ ] Implement template versioning system
+  - [ ] Create comprehensive tutorial resources for catalog-centric uploads
+
+- [ ] Develop success/failure summaries with actions
+  - [ ] Design clear success/failure indicators
+  - [ ] Create detailed result summaries
+  - [ ] Implement actionable error resolution options
+  - [ ] Add notification system for completed processes
+  - [ ] Create exportable result reports
+
+- [ ] Add batch history and management features
+  - [ ] Create batch history dashboard
+  - [ ] Implement batch status tracking
+  - [ ] Add batch retry functionality
+  - [ ] Design batch export/import capabilities
+  - [ ] Create batch duplication and editing features
+
+## CSV Template Structure
+
+The CSV template will include the following fields:
+
+### Supplier and Catalog Fields (Required):
+- `supplier_id` OR `supplier_name` - Existing supplier ID or name
+- `catalog_id` OR `catalog_name` - Existing catalog ID or name for new catalog
+- Both supplier and catalog must exist or be created before product upload
+
+### Category Fields (Auto-created if needed):
+- `category_id` OR `category_name` - ID of existing category or name for new category
+- `category_parent_id` OR `category_parent_name` - Optional parent category reference
+- Categories will be automatically created if they don't exist
+
+### Required Core Fields:
+- `product_name` - Product display name
+- `product_description` - Full product description
+- `product_sku` - Unique product identifier
+- `primary_image_path` - Object Store path to primary product image
+
+### Required Pricing and Discount Fields:
+- `cost_price` - Supplier cost price (what we pay to supplier)
+- `regular_price` - Regular retail price before any discounts
+- `sale_price` - Actual selling price
+- `discount_percentage` - Customer-facing discount percentage (displayed to customer)
+- `discount_label` - Label to display for the discount (e.g., "Limited Offer", "Flash Sale")
+- `minimum_price` - Minimum allowable price for the product
+- `wholesale_minimum_qty` - Minimum quantity for wholesale pricing
+- `wholesale_discount_percentage` - Additional discount for wholesale orders
+
+### Optional Core Fields:
+- `short_description` - Brief product description
+- `tags` - Comma-separated product tags
+- `status` - Product status (active/draft/etc.)
+- `featured` - Whether product should be featured (true/false)
+- `weight` - Product weight
+- `dimensions` - Product dimensions (format: LxWxH)
+- `additional_image_paths` - Comma-separated Object Store paths to additional images
+
+### Dynamic Attribute Fields:
+The system will support dynamic attributes with a special prefix:
+- `attr_color` - Value for color attribute
+- `attr_size` - Value for size attribute
+- `attr_material` - Value for material attribute
+- etc.
+
+## Image Upload Requirements
+
+Images will be handled through direct upload to Replit Object Store:
+- All image uploads will use the Replit Object Store exclusively 
+- Images will be referenced by their unique identifier in the CSV
+- Image paths will follow a structured convention: `/products/{catalog_id}/{product_sku}/{image_name}`
+- Supported formats: JPG, PNG, WebP
+- Maximum image size: 5MB per image
+- Recommended dimensions: 1200x1200px or larger
+- Naming convention: should match the product_sku or follow a consistent pattern
+- Image uploads will be processed individually or in small batches through the API
+- All image operations will use standardized API responses
+
+## Implementation Details
+
+### Backend Components:
+1. **CSV Parser Service**: Handles parsing and validating CSV data
+2. **Object Store Image Service**: Handles secure image uploads to Replit Object Store
+3. **Product Batch Creator**: Creates products from validated data
+4. **Attribute Mapper**: Maps CSV fields to product attributes
+5. **Validation Service**: Validates all data before processing
+6. **Error Reporter**: Collects and formats validation errors
+7. **Supplier/Catalog Validator**: Ensures suppliers exist and creates catalogs if needed
+8. **Category Creator**: Automatically generates category hierarchy from CSV data
+9. **Pricing Engine**: Validates and applies all pricing rules and discounts
+10. **Standardized API Layer**: Ensures all operations follow the standard API response format
+
+### Admin Frontend Components:
+1. **Admin Upload Wizard**: Step-by-step interface for the catalog-centric upload process (admin-only)
+2. **Catalog Template Generator**: Creates downloadable CSV templates based on selected catalog
+3. **Multi-Category Preview Grid**: Shows preview of products to be created across categories
+4. **Pricing Preview Display**: Shows how pricing and discounts will appear on the site
+5. **Category Creation Preview**: Visualizes new category hierarchies before creation
+6. **Validation Display**: Shows validation errors with guidance 
+7. **Progress Tracker**: Shows upload and processing progress in real-time
+8. **Batch History**: Displays history of previous batch uploads by catalog
+9. **Admin Supplier Manager**: Interface for managing suppliers (admin-only, catalogs auto-created as needed)
+10. **Access Control Module**: Ensures only administrators can access upload functionality
+11. **Product Image Manager**: Dedicated interface for adding/removing images for each product after creation
+12. **Upload Images Button**: Button in dedicated column for each product in the catalog products list
+
+### End-User Frontend Components:
+1. **Product Display Cards**: Shows products without any supplier information
+2. **Category Navigation**: Allows browsing the auto-created category hierarchies
+3. **Price Display Component**: Shows properly formatted pricing with discounts
+4. **Product Detail Pages**: Complete product information without supplier references
+
+## Error Handling Strategy
+
+The system will implement a comprehensive error handling approach:
+1. **Validation Errors**: Before processing, report all validation issues
+2. **Row-Level Errors**: Track errors by CSV row number
+3. **Critical Errors**: Block processing if critical errors are found
+4. **Warning-Level Issues**: Allow processing with warnings
+5. **Recovery Options**: Suggestions for fixing common errors
+
+## Technical Considerations
+
+1. **Performance Optimization**:
+   - Process large files in chunks
+   - Use background workers for image processing
+   - Implement caching for category and attribute lookups
+
+2. **Database Efficiency**:
+   - Use batch processing for database operations
+   - Implement transaction management for rollbacks
+   - Optimize queries for attribute lookups
+
+3. **Storage Considerations**:
+   - Implement temporary storage for processing
+   - Clean up unused files after processing
+   - Optimize image storage with proper formats
+
+## CSV Example
+
+```csv
+supplier_id,catalog_id,category_name,category_parent_name,product_name,product_description,product_sku,cost_price,regular_price,sale_price,discount_percentage,discount_label,minimum_price,wholesale_minimum_qty,wholesale_discount_percentage,short_description,tags,status,featured,weight,dimensions,attr_color,attr_size,attr_material
+2,5,"Home Decor","Home","Ceramic Flower Pot","Beautiful handcrafted ceramic flower pot perfect for indoor plants.","FP-1001",120.50,299.99,249.99,17,"Limited Offer",199.99,5,10,"Handcrafted ceramic pot","home,decor,ceramic","active",true,0.5,"10x10x15","Blue","Medium","Ceramic"
+2,8,"Living Room Furniture","Furniture","Wooden Coffee Table","Sturdy wooden coffee table with modern design.","CT-2002",890.00,1999.99,1499.99,25,"Flash Sale",1399.99,2,15,"Modern wooden table","furniture,living room","active",false,12,"120x60x45","Natural","Large","Oak"
+,"HomeStyle","Accent Tables","Living Room","Marble Side Table","Elegant marble side table with metal legs","ST-3003",550.00,1199.99,899.99,25,"Weekend Special",799.99,3,12,"Luxury marble side table","furniture,luxury,marble","draft",true,8,"45x45x55","White","Medium","Marble"
+```
+
+In this example:
+- First row: Uses existing supplier ID 2 and catalog ID 5 with complete pricing information
+- Second row: Uses existing supplier ID 2 but different catalog ID 8 with 25% discount
+- Third row: Creates a new catalog "HomeStyle" and automatically creates categories
+- All rows include comprehensive pricing information that won't require manual maintenance after upload
+
+## Administrator Experience Flow
+
+### 1. Prerequisite Verification
+   - System checks if administrator has necessary admin role permissions
+   - If needed, administrator must first create required suppliers and catalogs
+   - Only users with admin role can access the mass upload system
+   - Catalogs and categories can be auto-created during the upload process
+   - Note: Suppliers never interact with the application directly
+
+### 2. Template Selection
+   - Administrator selects catalog for upload (catalog-centric approach)
+   - System generates a universal template supporting all product types within that catalog
+   - Template includes internal supplier information (never shown to end users)
+   - Template can support single product or hundreds of products in one upload
+   - Administrator downloads the generated CSV template
+
+### 3. Data Preparation
+   - Administrator populates CSV with product data, including all supplier/catalog information
+   - All supplier information is properly tracked internally but never displayed to customers
+   - No image uploads happen during the mass product upload process
+   - CSV contains all product details except images
+
+### 4. CSV Upload and Validation
+   - Administrator uploads the populated CSV file (single product or bulk upload)
+   - System performs initial validation checks:
+     - Verifies all required fields exist, including all pricing fields
+     - Validates data formats and values
+     - Confirms supplier/catalog relationships (internal tracking only)
+     - Ensures supplier information is properly structured but will remain hidden from customers
+     - Verifies pricing consistency (e.g., sale_price <= regular_price, sale_price >= minimum_price)
+     - Validates discount calculations match the discount_percentage values
+     - Validates category hierarchy if specified
+   - System displays validation results with detailed error messages
+   - Note: No image validation is performed as images are managed separately
+
+### 5. Product Preview
+   - Administrator reviews a preview of products to be created
+   - Preview shows how attributes will be mapped
+   - Preview displays products exactly as they will appear on the site including:
+     - Complete pricing display with strikethrough original prices
+     - Discount percentages and labels shown as they will appear to customers
+     - Wholesale pricing thresholds and discounts
+     - Automatically generated category placements
+     - Confirmation that supplier information is properly tracked but hidden from end users
+   - System highlights any potential issues or warnings
+   - Administrator can make corrections or proceed with upload
+
+### 6. Processing
+   - System processes the upload in background with progress tracking
+   - Creation follows internal hierarchy: supplier → catalog → product
+   - Supplier information is properly tracked but never exposed to end users
+   - System applies attribute mappings and sets up relationships
+   - Real-time status updates show completed and pending items
+   - System handles both single product uploads and large batch uploads efficiently
+   - No images are uploaded during this process
+
+### 7. Results Review
+   - Administrator views comprehensive summary of created products
+   - System highlights any issues encountered during processing
+   - Detailed logs are available for troubleshooting (accessible only to administrators)
+   - Administrator can take corrective actions for any failed items
+   - All supplier references in logs are kept internal and not exposed to end users
+
+### 8. Product Image Management
+   - After products are created, administrators can access the catalog products page
+   - When an admin clicks the "Manage" button for a catalog, they see the catalog products list
+   - Each product in the list has an "Upload Images" button in a dedicated column
+   - Clicking the "Upload Images" button opens an image upload interface for that specific product
+   - Administrators can upload one or more images directly to Replit Object Store
+   - Interface allows for adding, removing, and reordering product images
+   - System supports drag-and-drop uploading for multiple images
+   - Image management is handled independently from the mass upload process
+   - Interface shows a preview of how images will appear on the product detail page
+
+### 9. Post-Processing
+   - Administrator can perform bulk actions on created products
+   - System offers options to publish, categorize, or further edit
+   - Mass update options for common fields or attributes
+   - Export options for created product data (with supplier information only visible to administrators)
+   - Final storefront view ensures all supplier information is hidden from end users
+   - Images can be managed at any time after product creation
+
+## Success Criteria
+
+The mass upload system will be considered successful when:
+1. Administrators can upload both single products and 100+ products in a single batch
+2. All product attributes are correctly mapped
+3. Separate image management interface allows administrators to upload, remove, and reorder images for each product
+4. All pricing and discount information is correctly applied without manual intervention
+5. Products display with complete Temu-like presentation including:
+   - Strikethrough original prices
+   - Prominently displayed discount percentages
+   - Visible discount labels (e.g., "Flash Sale", "Limited Time")
+   - Clear wholesale pricing thresholds
+6. All supplier information is properly tracked internally but never visible to end users
+7. Automatically created categories function correctly in the navigation hierarchy
+8. Error reporting is clear and actionable for administrators
+9. Processing time is reasonable (under 5 minutes for 100 products, near-instant for single products)
+10. The system maintains proper access control, allowing only users with admin role to perform uploads
+11. Product list in catalog admin page includes an "Upload Images" button for each product in a dedicated column
+
+## Maintenance Considerations
+
+1. **Template Updates**:
+   - Process for administrators to update templates when new attributes are added
+   - Version tracking for template changes
+   - Documentation for administrators on handling supplier-specific templates
+
+2. **Error Pattern Analysis**:
+   - Tracking common errors to improve system
+   - Regular updates to validation rules 
+   - Administrator training on resolving common upload issues
+
+3. **Performance Monitoring**:
+   - Tracking processing times for both single product and batch uploads
+   - Optimizing based on real-world usage patterns
+   - Ensuring supplier information remains properly encapsulated throughout system updates
+
+4. **Access Control Maintenance**:
+   - Periodic review of administrator permissions
+   - Maintaining clear separation between end-user views and administrative functions
+   - Ensuring supplier data remains invisible to end users throughout system updates
