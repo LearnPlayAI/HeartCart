@@ -69,7 +69,7 @@ export default function AdminCategories() {
   const [filterLevel, setFilterLevel] = useState<string | null>(null);
   
   // Fetch categories
-  const { data: categories, isLoading } = useQuery<Category[]>({
+  const { data: categoriesResponse, isLoading } = useQuery<{success: boolean, data: Category[]}>({
     queryKey: ["/api/categories"],
     queryFn: async () => {
       const response = await fetch("/api/categories");
@@ -78,8 +78,10 @@ export default function AdminCategories() {
     },
   });
   
+  const categories = categoriesResponse?.data || [];
+  
   // Fetch hierarchical category data for tree view
-  const { data: hierarchicalCategories } = useQuery<Array<{ category: Category, children: Category[] }>>({
+  const { data: hierarchicalCategoriesResponse } = useQuery<{success: boolean, data: Array<{ category: Category, children: Category[] }>}>({
     queryKey: ["/api/categories/main/with-children"],
     queryFn: async () => {
       const response = await fetch("/api/categories/main/with-children");
@@ -87,6 +89,8 @@ export default function AdminCategories() {
       return await response.json();
     },
   });
+  
+  const hierarchicalCategories = hierarchicalCategoriesResponse?.data || [];
 
   // Create category mutation
   const createMutation = useMutation({
@@ -110,7 +114,11 @@ export default function AdminCategories() {
         throw new Error("Failed to create category");
       }
 
-      return await response.json();
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error?.message || "Failed to create category");
+      }
+      return result.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
@@ -166,7 +174,11 @@ export default function AdminCategories() {
         throw new Error("Failed to update category");
       }
 
-      return await response.json();
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error?.message || "Failed to update category");
+      }
+      return result.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
@@ -197,7 +209,11 @@ export default function AdminCategories() {
         throw new Error("Failed to delete category");
       }
 
-      return true;
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error?.message || "Failed to delete category");
+      }
+      return result.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
@@ -232,7 +248,11 @@ export default function AdminCategories() {
         throw new Error("Failed to update category display order");
       }
 
-      return await response.json();
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error?.message || "Failed to update category display order");
+      }
+      return result.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
