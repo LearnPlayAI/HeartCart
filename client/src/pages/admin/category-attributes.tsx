@@ -306,15 +306,16 @@ function CategoryAttributesPage() {
         body: JSON.stringify(newAttribute),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
+      const result = await response.json();
+      
+      if (!response.ok || !result.success) {
         throw new ApiError(
-          errorData.message || "Failed to add attribute to category",
+          result.error?.message || "Failed to add attribute to category",
           response.status
         );
       }
 
-      return await response.json();
+      return result.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/categories", categoryId, "attributes"] });
@@ -344,15 +345,16 @@ function CategoryAttributesPage() {
         body: JSON.stringify(data),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
+      const result = await response.json();
+      
+      if (!response.ok || !result.success) {
         throw new ApiError(
-          errorData.message || "Failed to update category attribute",
+          result.error?.message || "Failed to update category attribute",
           response.status
         );
       }
 
-      return await response.json();
+      return result.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/categories", categoryId, "attributes"] });
@@ -378,10 +380,11 @@ function CategoryAttributesPage() {
         method: "DELETE",
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
+      const result = await response.json();
+      
+      if (!response.ok || !result.success) {
         throw new ApiError(
-          errorData.message || "Failed to delete category attribute",
+          result.error?.message || "Failed to delete category attribute",
           response.status
         );
       }
@@ -420,15 +423,16 @@ function CategoryAttributesPage() {
         body: JSON.stringify(newOption),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
+      const result = await response.json();
+      
+      if (!response.ok || !result.success) {
         throw new ApiError(
-          errorData.message || "Failed to create option",
+          result.error?.message || "Failed to create option",
           response.status
         );
       }
 
-      return await response.json();
+      return result.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ 
@@ -463,15 +467,16 @@ function CategoryAttributesPage() {
         body: JSON.stringify(data),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
+      const result = await response.json();
+      
+      if (!response.ok || !result.success) {
         throw new ApiError(
-          errorData.message || "Failed to update option",
+          result.error?.message || "Failed to update option",
           response.status
         );
       }
 
-      return await response.json();
+      return result.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ 
@@ -502,10 +507,11 @@ function CategoryAttributesPage() {
         method: "DELETE",
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
+      const result = await response.json();
+      
+      if (!response.ok || !result.success) {
         throw new ApiError(
-          errorData.message || "Failed to delete option",
+          result.error?.message || "Failed to delete option",
           response.status
         );
       }
@@ -545,15 +551,16 @@ function CategoryAttributesPage() {
         body: JSON.stringify({ optionIds }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
+      const result = await response.json();
+      
+      if (!response.ok || !result.success) {
         throw new ApiError(
-          errorData.message || "Failed to reorder options",
+          result.error?.message || "Failed to reorder options",
           response.status
         );
       }
 
-      return await response.json();
+      return result.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ 
