@@ -27,6 +27,7 @@ import uploadHandlers from "./upload-handlers";
 import registerAttributeRoutes from "./attribute-routes";
 import registerProductAttributeRoutes from "./attribute-routes-product";
 import attributeDiscountRoutes from "./attribute-discount-routes";
+import pricingRoutes from "./pricing-routes";
 import { validateRequest, idSchema } from './validation-middleware';
 import { 
   productsQuerySchema,
