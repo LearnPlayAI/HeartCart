@@ -28,10 +28,26 @@ export default function EditSupplier() {
   const supplierId = params.id;
 
   // Fetch supplier details
-  const { data: supplier, isLoading } = useQuery<Supplier>({
+  const { data: supplierResponse, isLoading } = useQuery<{ success: boolean, data: Supplier, error?: { message: string } }>({
     queryKey: [`/api/suppliers/${supplierId}`],
     enabled: !!supplierId,
+    queryFn: async () => {
+      const response = await fetch(`/api/suppliers/${supplierId}`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch supplier details");
+      }
+      
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error?.message || "Failed to fetch supplier details");
+      }
+      
+      return result;
+    }
   });
+  
+  // Extract supplier data from the standardized response
+  const supplier = supplierResponse?.data;
 
   // Update supplier mutation
   const { mutate: updateSupplier, isPending } = useMutation({
@@ -41,7 +57,13 @@ export default function EditSupplier() {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || "Failed to update supplier");
       }
-      return await response.json();
+      
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error?.message || "Failed to update supplier");
+      }
+      
+      return result;
     },
     onSuccess: () => {
       toast({

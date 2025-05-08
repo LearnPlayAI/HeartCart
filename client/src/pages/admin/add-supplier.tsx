@@ -21,7 +21,13 @@ export default function AddSupplier() {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || "Failed to create supplier");
       }
-      return await response.json();
+      
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error?.message || "Failed to create supplier");
+      }
+      
+      return result;
     },
     onSuccess: () => {
       toast({
