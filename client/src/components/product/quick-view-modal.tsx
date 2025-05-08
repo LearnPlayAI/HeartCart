@@ -94,7 +94,7 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
 
   // Process product attributes
   useEffect(() => {
-    if (productAttributesData && categoryAttributes) {
+    if (productAttributesData && categoryAttributes && productAttributesData.length > 0) {
       const attributesMap: Record<number, Array<{id: number, value: string}>> = {};
       
       categoryAttributes.forEach((catAttr: CategoryAttribute) => {
@@ -108,9 +108,12 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
         }
       });
       
-      setProductAttributes(attributesMap);
+      // Only update if the map is different from current state
+      if (JSON.stringify(attributesMap) !== JSON.stringify(productAttributes)) {
+        setProductAttributes(attributesMap);
+      }
     }
-  }, [productAttributesData, categoryAttributes]);
+  }, [productAttributesData, categoryAttributes, productAttributes]);
 
   // Handle attribute change
   const handleAttributeChange = (attributeId: number, value: string) => {

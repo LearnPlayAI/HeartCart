@@ -149,7 +149,14 @@ export function useAttributeDiscounts() {
         throw new Error(errorData.error?.message || errorData.error || 'Failed to create discount rule');
       }
       
-      return response.json();
+      const result = await response.json();
+      
+      // Check standardized API response format
+      if (!result.success) {
+        throw new Error(result.error?.message || 'Failed to create discount rule');
+      }
+      
+      return result.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/attribute-discount-rules'] });
@@ -177,7 +184,14 @@ export function useAttributeDiscounts() {
         throw new Error(errorData.error?.message || errorData.error || 'Failed to update discount rule');
       }
       
-      return response.json();
+      const result = await response.json();
+      
+      // Check standardized API response format
+      if (!result.success) {
+        throw new Error(result.error?.message || 'Failed to update discount rule');
+      }
+      
+      return result.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/attribute-discount-rules'] });
@@ -203,6 +217,13 @@ export function useAttributeDiscounts() {
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error?.message || errorData.error || 'Failed to delete discount rule');
+      }
+      
+      const result = await response.json();
+      
+      // Check standardized API response format
+      if (!result.success) {
+        throw new Error(result.error?.message || 'Failed to delete discount rule');
       }
       
       return true;
