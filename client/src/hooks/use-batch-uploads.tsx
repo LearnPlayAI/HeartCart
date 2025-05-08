@@ -148,6 +148,8 @@ export function useBatchUploads() {
     const data = await response.json();
     return data.data;
   };
+  
+  // Batch control operations
 
   // Batch control mutations
   const {

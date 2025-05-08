@@ -593,7 +593,16 @@ export default function BatchUploadPage() {
     uploadCsvFile,
     deleteBatchUpload,
     getBatchUploadErrors,
-    downloadTemplateCSV 
+    downloadTemplateCSV,
+    // Batch control functions
+    cancelBatchUpload,
+    pauseBatchUpload,
+    resumeBatchUpload,
+    retryBatchUpload,
+    isCancellingBatch,
+    isPausingBatch,
+    isResumingBatch,
+    isRetryingBatch
   } = useBatchUploads();
   
   // Handler for showing errors
@@ -619,6 +628,43 @@ export default function BatchUploadPage() {
     if (window.confirm("Are you sure you want to delete this batch upload? This action cannot be undone.")) {
       try {
         await deleteBatchUpload(batchId);
+      } catch (error) {
+        // Error handling is done in the mutation
+      }
+    }
+  };
+  
+  // Batch control handlers
+  const handleCancelBatch = async (batchId: number) => {
+    if (window.confirm("Are you sure you want to cancel this batch upload? Processing will stop and cannot be resumed.")) {
+      try {
+        await cancelBatchUpload(batchId);
+      } catch (error) {
+        // Error handling is done in the mutation
+      }
+    }
+  };
+  
+  const handlePauseBatch = async (batchId: number) => {
+    try {
+      await pauseBatchUpload(batchId);
+    } catch (error) {
+      // Error handling is done in the mutation
+    }
+  };
+  
+  const handleResumeBatch = async (batchId: number) => {
+    try {
+      await resumeBatchUpload(batchId);
+    } catch (error) {
+      // Error handling is done in the mutation
+    }
+  };
+  
+  const handleRetryBatch = async (batchId: number) => {
+    if (window.confirm("Are you sure you want to retry this batch upload? This will restart the processing from the last error point.")) {
+      try {
+        await retryBatchUpload(batchId);
       } catch (error) {
         // Error handling is done in the mutation
       }
