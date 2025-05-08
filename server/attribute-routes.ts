@@ -237,7 +237,7 @@ export default function registerAttributeRoutes(app: Express) {
   app.post("/api/catalogs/:catalogId/attributes/:attributeId/options", isAdmin, handleErrors(async (req: Request, res: Response) => {
     const attributeId = parseInt(req.params.attributeId);
     if (isNaN(attributeId)) {
-      return res.status(400).json({ message: "Invalid attribute ID" });
+      return sendError(res, "Invalid attribute ID", 400, "INVALID_ID");
     }
 
     const optionData = insertCatalogAttributeOptionSchema.parse({
@@ -246,55 +246,55 @@ export default function registerAttributeRoutes(app: Express) {
     });
     
     const newOption = await storage.createCatalogAttributeOption(optionData);
-    res.status(201).json(newOption);
+    sendSuccess(res, newOption, 201);
   }));
 
   app.put("/api/catalogs/:catalogId/attributes/:attributeId/options/:id", isAdmin, handleErrors(async (req: Request, res: Response) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
-      return res.status(400).json({ message: "Invalid option ID" });
+      return sendError(res, "Invalid option ID", 400, "INVALID_ID");
     }
 
     const optionData = insertCatalogAttributeOptionSchema.partial().parse(req.body);
     const updatedOption = await storage.updateCatalogAttributeOption(id, optionData);
     
     if (!updatedOption) {
-      return res.status(404).json({ message: "Option not found" });
+      return sendError(res, "Option not found", 404, "NOT_FOUND");
     }
     
-    res.json(updatedOption);
+    sendSuccess(res, updatedOption);
   }));
 
   app.delete("/api/catalogs/:catalogId/attributes/:attributeId/options/:id", isAdmin, handleErrors(async (req: Request, res: Response) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
-      return res.status(400).json({ message: "Invalid option ID" });
+      return sendError(res, "Invalid option ID", 400, "INVALID_ID");
     }
 
     const success = await storage.deleteCatalogAttributeOption(id);
     if (!success) {
-      return res.status(404).json({ message: "Option not found or could not be deleted" });
+      return sendError(res, "Option not found or could not be deleted", 404, "NOT_FOUND");
     }
     
-    res.status(204).send();
+    sendSuccess(res, null, 204);
   }));
 
   app.post("/api/catalogs/:catalogId/attributes/:attributeId/options/reorder", isAdmin, handleErrors(async (req: Request, res: Response) => {
     const attributeId = parseInt(req.params.attributeId);
     if (isNaN(attributeId)) {
-      return res.status(400).json({ message: "Invalid attribute ID" });
+      return sendError(res, "Invalid attribute ID", 400, "INVALID_ID");
     }
 
     const { optionIds } = req.body;
     if (!Array.isArray(optionIds)) {
-      return res.status(400).json({ message: "optionIds must be an array of IDs" });
+      return sendError(res, "optionIds must be an array of IDs", 400, "INVALID_FORMAT");
     }
 
     const success = await storage.updateCatalogAttributeOptionsOrder(attributeId, optionIds);
     if (!success) {
-      return res.status(500).json({ message: "Failed to update options order" });
+      return sendError(res, "Failed to update options order", 500, "SERVER_ERROR");
     }
     
-    res.status(200).json({ message: "Options reordered successfully" });
+    sendSuccess(res, { message: "Options reordered successfully" });
   }));
 }
