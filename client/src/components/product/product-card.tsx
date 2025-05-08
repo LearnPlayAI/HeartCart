@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'wouter';
-import { Star, StarHalf, Eye, ShoppingCart } from 'lucide-react';
+import { Star, StarHalf, Eye, ShoppingCart, ImageOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/hooks/use-cart';
 import { formatCurrency, calculateDiscount } from '@/lib/utils';
@@ -25,6 +25,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const { addItem } = useCart();
   const { toast } = useToast();
   const [quickViewOpen, setQuickViewOpen] = useState(false);
+  const [imageError, setImageError] = useState(false);
   
   const discount = product.salePrice
     ? calculateDiscount(product.price, product.salePrice)
@@ -34,17 +35,28 @@ const ProductCard: React.FC<ProductCardProps> = ({
     e.preventDefault();
     e.stopPropagation();
     
-    addItem({
-      productId: product.id,
-      product,
-      quantity: 1
-    });
-    
-    toast({
-      title: "Added to cart",
-      description: `${product.name} has been added to your cart.`,
-      duration: 2000,
-    });
+    try {
+      addItem({
+        productId: product.id,
+        product,
+        quantity: 1
+      });
+      
+      toast({
+        title: "Added to cart",
+        description: `${product.name} has been added to your cart.`,
+        duration: 2000,
+      });
+    } catch (error) {
+      console.error('Error adding item to cart:', error);
+      
+      toast({
+        title: "Failed to add to cart",
+        description: "There was a problem adding this item to your cart. Please try again.",
+        variant: "destructive",
+        duration: 3000,
+      });
+    }
   };
   
   const renderStars = (rating: number | null = 0) => {
@@ -73,11 +85,18 @@ const ProductCard: React.FC<ProductCardProps> = ({
     return (
       <div className="product-card bg-white rounded-lg border border-gray-200 overflow-hidden">
         <Link href={`/product/id/${product.id}`} className="block">
-          <img 
-            src={product.imageUrl || ''} 
-            alt={product.name || 'Product image'} 
-            className="w-full h-36 object-cover"
-          />
+          {imageError ? (
+            <div className="w-full h-36 bg-gray-100 flex items-center justify-center">
+              <ImageOff className="w-8 h-8 text-gray-400" />
+            </div>
+          ) : (
+            <img 
+              src={product.imageUrl || ''} 
+              alt={product.name || 'Product image'} 
+              className="w-full h-36 object-cover"
+              onError={() => setImageError(true)}
+            />
+          )}
           <div className="p-2">
             <div className="flex items-center mb-1">
               <span className="bg-[#FF69B4] text-white text-xs font-bold px-2 py-0.5 rounded">
@@ -142,11 +161,18 @@ const ProductCard: React.FC<ProductCardProps> = ({
   return (
     <div className="product-card bg-white rounded-lg shadow-md overflow-hidden">
       <Link href={`/product/id/${product.id}`} className="block">
-        <img 
-          src={product.imageUrl || ''} 
-          alt={product.name || 'Product image'} 
-          className="w-full h-48 object-cover"
-        />
+        {imageError ? (
+          <div className="w-full h-48 bg-gray-100 flex items-center justify-center">
+            <ImageOff className="w-10 h-10 text-gray-400" />
+          </div>
+        ) : (
+          <img 
+            src={product.imageUrl || ''} 
+            alt={product.name || 'Product image'} 
+            className="w-full h-48 object-cover"
+            onError={() => setImageError(true)}
+          />
+        )}
         <div className="p-3">
           <h3 className="text-sm font-medium text-gray-800 mb-1 line-clamp-2 h-10">
             {product.name}

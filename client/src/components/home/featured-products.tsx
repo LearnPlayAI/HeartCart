@@ -3,18 +3,15 @@ import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import ProductCard from '@/components/product/product-card';
 import type { Product } from '@shared/schema';
+import { useToast } from '@/hooks/use-toast';
+import type { StandardApiResponse } from '@/types/api';
 
 const FeaturedProductsSection = () => {
   const [page, setPage] = useState(1);
   const limit = 10;
+  const { toast } = useToast();
   
-  // Define the standardized API response type
-  interface ApiResponse {
-    success: boolean;
-    data: Product[];
-  }
-  
-  const { data: response, isLoading, isFetching, error } = useQuery<ApiResponse>({
+  const { data: response, isLoading, isFetching, error } = useQuery<StandardApiResponse<Product[]>>({
     queryKey: ['/api/featured-products', { limit, offset: (page - 1) * limit }],
   });
   
@@ -25,8 +22,13 @@ const FeaturedProductsSection = () => {
   useEffect(() => {
     if (error) {
       console.error('Error fetching featured products:', error);
+      toast({
+        title: "Error loading featured products",
+        description: error instanceof Error ? error.message : "An unexpected error occurred",
+        variant: "destructive",
+      });
     }
-  }, [error]);
+  }, [error, toast]);
   
   const loadMore = () => {
     setPage(prev => prev + 1);
