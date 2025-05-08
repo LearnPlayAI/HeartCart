@@ -770,6 +770,17 @@ export default function CatalogProducts() {
               {product.isActive ? "Active" : "Inactive"}
             </Badge>
           </TableCell>
+          <TableCell>
+            <Button 
+              size="sm" 
+              variant="outline"
+              className="flex items-center"
+              onClick={() => navigate(`/admin/products/${product.id}/images`)}
+            >
+              <PlusSquare className="h-4 w-4 mr-1" />
+              Upload Images
+            </Button>
+          </TableCell>
           <TableCell className="text-right">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -991,7 +1002,7 @@ export default function CatalogProducts() {
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-10">
+                        <TableCell colSpan={8} className="text-center py-10">
                           <div className="flex flex-col items-center justify-center space-y-2">
                             <ShoppingBag className="h-10 w-10 text-gray-400" />
                             <div className="text-lg font-medium">No products found</div>
