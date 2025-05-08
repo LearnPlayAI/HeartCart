@@ -100,10 +100,10 @@ const createBatchUploadSchema = z.object({
 
 // Form schema for uploading a CSV file
 const uploadCsvSchema = z.object({
-  file: z.instanceof(File, { message: "Please select a CSV file" })
-    .refine(file => file.type === 'text/csv' || file.name.endsWith('.csv'), {
-      message: "File must be a CSV file"
-    }),
+  file: z.any()
+    .refine((file) => file instanceof File, { message: "Please select a CSV file" })
+    .refine((file) => file?.name?.endsWith('.csv'), { message: "File must be a CSV file" })
+    .refine((file) => file?.size <= 10 * 1024 * 1024, { message: "File size must be less than 10MB" })
 });
 
 function getStatusBadge(status: string) {
@@ -144,7 +144,8 @@ function BatchUploadListItem({
   onCancel,
   onPause,
   onResume,
-  onRetry
+  onRetry,
+  onUpload
 }: { 
   batch: BatchUpload; 
   onDelete: () => void;
@@ -154,6 +155,7 @@ function BatchUploadListItem({
   onPause?: () => void;
   onResume?: () => void;
   onRetry?: () => void;
+  onUpload?: (id: number) => void;
 }) {
   const status = batch.status.toLowerCase();
   const isComplete = status === 'completed';
@@ -807,6 +809,11 @@ export default function BatchUploadPage() {
                   onDelete={() => handleDelete(batch.id)}
                   onViewErrors={() => handleViewErrors(batch.id)}
                   onRefresh={() => refetchBatchUploads()}
+                  onCancel={() => handleCancelBatch(batch.id)}
+                  onPause={() => handlePauseBatch(batch.id)}
+                  onResume={() => handleResumeBatch(batch.id)}
+                  onRetry={() => handleRetryBatch(batch.id)}
+                  onUpload={(id) => openUploadDialog(id)}
                 />
               ))}
             </div>
