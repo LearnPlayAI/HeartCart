@@ -39,6 +39,7 @@ import {
 } from 'lucide-react';
 import { useCart } from '@/hooks/use-cart';
 import { useToast } from '@/hooks/use-toast';
+import { useAttributeDiscounts } from '@/hooks/use-attribute-discounts';
 import { formatCurrency, calculateDiscount } from '@/lib/utils';
 import ProductCard from '@/components/product/product-card';
 import { Product } from '@shared/schema';
@@ -124,6 +125,7 @@ const ProductDetailView = ({
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { addItem } = useCart();
+  const { calculatePriceAdjustments } = useAttributeDiscounts();
   
   // Local state
   const [quantity, setQuantity] = useState(1);
@@ -131,6 +133,16 @@ const ProductDetailView = ({
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
   const [selectedAttributeValues, setSelectedAttributeValues] = useState<ProductAttributeValue[]>([]);
   const [currentImage, setCurrentImage] = useState<string | null>(null);
+  const [priceAdjustments, setPriceAdjustments] = useState<{
+    adjustments: Array<{
+      ruleId: number,
+      ruleName: string,
+      discountType: string,
+      discountValue: number,
+      appliedValue: number
+    }>,
+    totalAdjustment: number
+  } | null>(null);
   
   // Get related products based on category
   const { data: relatedProducts } = useQuery<Product[]>({
@@ -163,7 +175,7 @@ const ProductDetailView = ({
     }
   }, [product]);
 
-  // Effect to update price when attributes are selected
+  // Effect to update price when attributes are selected or quantity changes
   useEffect(() => {
     if (!product || !attributeValues || !productAttributes) return;
     
@@ -184,7 +196,7 @@ const ProductDetailView = ({
            value.textValue === selectedOptionId);
       });
       
-      // Calculate total price adjustment from all selected attribute values
+      // Calculate total base price adjustment from all selected attribute values
       let totalPriceAdjustment = 0;
       
       selectedAttrValues.forEach(value => {
@@ -193,17 +205,49 @@ const ProductDetailView = ({
         }
       });
       
-      // Apply price adjustment to base price
+      // Apply base price adjustment 
       const basePrice = product.salePrice || product.price;
-      const adjustedPrice = Number(basePrice) + totalPriceAdjustment;
+      const initialAdjustedPrice = Number(basePrice) + totalPriceAdjustment;
       
-      setCurrentPrice(adjustedPrice);
+      // Store the selected attribute values for display/cart purposes
       setSelectedAttributeValues(selectedAttrValues);
+      
+      // Calculate dynamic discounts based on selected attributes and quantity
+      if (product.id) {
+        // Use async IIFE to call the calculatePriceAdjustments function
+        (async () => {
+          try {
+            // Get discount adjustments from the API
+            const adjustmentResult = await calculatePriceAdjustments(
+              product.id,
+              selectedAttributes,
+              quantity
+            );
+            
+            // Store the adjustments for display
+            setPriceAdjustments(adjustmentResult);
+            
+            // Apply discounts to the adjusted price
+            const finalPrice = initialAdjustedPrice - adjustmentResult.totalAdjustment;
+            setCurrentPrice(finalPrice > 0 ? finalPrice : 0);
+          } catch (error) {
+            console.error('Failed to calculate attribute discounts:', error);
+            // Fallback to the base price adjustment if discount calculation fails
+            setCurrentPrice(initialAdjustedPrice);
+            setPriceAdjustments(null);
+          }
+        })();
+      } else {
+        // If we don't have a product ID, just use the base price adjustment
+        setCurrentPrice(initialAdjustedPrice);
+        setPriceAdjustments(null);
+      }
     } else {
       setCurrentPrice(null);
       setSelectedAttributeValues([]);
+      setPriceAdjustments(null);
     }
-  }, [selectedAttributes, attributeValues, product, productAttributes]);
+  }, [selectedAttributes, attributeValues, product, productAttributes, quantity, calculatePriceAdjustments]);
   
   // Handle quantity change
   const handleQuantityChange = (newQuantity: number) => {
