@@ -130,11 +130,35 @@ API routes are implemented in multiple files including `routes.ts`, with authent
 - [ ] Add proper error boundary handling for query failures
 - [ ] Implement optimistic updates for mutations
 
-#### Task 4.2: Local Storage Strategy [NOT STARTED]
-- [ ] Define clear strategy for data that can be stored locally
-- [ ] Implement encryption for sensitive local data
-- [ ] Create local storage service with type safety
-- [ ] Add synchronization between local and server state
+#### Task 4.2: Server-First Storage Strategy [NOT STARTED]
+- [ ] Implement centralized server-side storage for all persistent data
+- [ ] Define specific data types that can be temporarily cached in-memory (session-only)
+- [ ] Create clear lifecycle policies for all client-side cached data
+- [ ] Implement automatic cache invalidation for stale data
+
+##### Server Storage Requirements (Persistent)
+- **User Data**: All user profile information, preferences, and settings
+- **Cart & Order Information**: Complete cart state, order history, saved items
+- **Product Data**: All product details, pricing, inventory, and related metadata
+- **Catalog & Category Information**: Complete hierarchical structure of products
+- **Attributes & Options**: All attribute definitions, options, and values
+- **Pricing & Discount Rules**: All pricing rules, discount calculations, and special offers
+- **Media Assets**: All product images, thumbnails, and related files using Replit Object Store
+- **Supplier Data**: All supplier information and relationships
+- **System Configuration**: All application settings and configuration
+- **Analytics & Metrics**: All usage statistics and tracking information
+
+##### Client-Side Temporary Caching (Session-only)
+- **UI State**: Current form input values, scroll positions, tab selections
+- **Navigation State**: Current page, view mode, sorting preferences
+- **Search Parameters**: Current search terms and filter selections
+- **Pagination State**: Current page number and items per page
+- **Component Visibility**: Modal states, drawer open/closed states
+- **Input Validation**: Form validation states and error messages
+- **Optimistic Updates**: Temporary UI updates while waiting for server confirmation
+- **Query Results**: React Query cached responses with appropriate invalidation
+- **Authentication Tokens**: Short-lived session tokens managed by authentication system
+- **Form Draft Data**: Unsaved form data for current editing session only
 
 #### Task 4.3: Form Management Improvements [NOT STARTED]
 - [ ] Standardize form validation patterns
@@ -196,9 +220,11 @@ API routes are implemented in multiple files including `routes.ts`, with authent
 
 ### Client-Side Principles
 1. **React Query First**: Use React Query as the primary mechanism for data fetching and state management.
-2. **Minimal Local State**: Minimize data stored only in local state without server persistence.
-3. **Type Safety**: Ensure comprehensive TypeScript types for all client-server interactions.
-4. **Loading and Error States**: Implement consistent handling of loading and error states across the application.
+2. **No Local Persistence**: No data should be stored locally for long-term persistence - all persistent data should reside on the server.
+3. **Temporary In-Memory Caching Only**: Client-side should only temporarily cache data needed for current session interactions.
+4. **Type Safety**: Ensure comprehensive TypeScript types for all client-server interactions.
+5. **Loading and Error States**: Implement consistent handling of loading and error states across the application.
+6. **Replit Object Store Integration**: Use Replit Object Store exclusively for all file storage needs.
 
 ## Implementation Considerations
 
