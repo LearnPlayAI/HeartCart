@@ -251,43 +251,39 @@ router.get('/template', isAdmin, handleErrors(async (req: Request, res: Response
   let catalogName = "generic";
   
   try {
-    if (req.query.catalogId && req.query.catalogId !== 'none' && req.query.catalogId !== 'undefined') {
+    // Parse catalog ID if provided
+    if (req.query.catalogId) {
       const parsedId = parseInt(req.query.catalogId as string);
       // Only use the parsed ID if it's a valid number
-      if (!isNaN(parsedId)) {
+      if (!isNaN(parsedId) && parsedId > 0) {
         catalogId = parsedId;
-        
-        // Try to get catalog name for the filename
-        const db = (await import('./db')).db;
-        const { catalogs } = await import('@shared/schema');
-        const { eq } = await import('drizzle-orm');
-        
-        const [catalog] = await db.select({ name: catalogs.name })
-          .from(catalogs)
-          .where(eq(catalogs.id, catalogId));
-          
-        if (catalog?.name) {
-          catalogName = catalog.name.toLowerCase().replace(/\s+/g, '_');
-        }
       }
     }
     
-    const csvContent = await batchUploadService.generateTemplateCsv(catalogId);
+    // Generate template with enhanced error handling
+    const result = await batchUploadService.generateTemplateCsv(catalogId);
     
+    // Use catalog name from the service result if available
+    if (result.catalogName) {
+      catalogName = result.catalogName.toLowerCase().replace(/\s+/g, '_');
+    }
+    
+    // Set response headers
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', `attachment; filename="product_upload_template_${catalogName}_${Date.now()}.csv"`);
     
-    return res.send(csvContent);
+    // Send the CSV content
+    return res.send(result.content);
   } catch (error) {
     console.error("Error generating template:", error);
     // Fallback to generic template if anything goes wrong
     try {
-      const csvContent = await batchUploadService.generateTemplateCsv(undefined);
+      const result = await batchUploadService.generateTemplateCsv(undefined);
       
       res.setHeader('Content-Type', 'text/csv');
       res.setHeader('Content-Disposition', `attachment; filename="product_upload_template_generic_${Date.now()}.csv"`);
       
-      return res.send(csvContent);
+      return res.send(result.content);
     } catch (fallbackError) {
       console.error("Critical error generating fallback template:", fallbackError);
       return sendError(res, {
@@ -308,43 +304,39 @@ router.get('/template/:catalogId', isAdmin, handleErrors(async (req: Request, re
   let catalogName = "generic";
   
   try {
-    if (req.params.catalogId && req.params.catalogId !== 'none' && req.params.catalogId !== 'undefined') {
+    // Parse catalog ID if provided
+    if (req.params.catalogId) {
       const parsedId = parseInt(req.params.catalogId);
       // Only use the parsed ID if it's a valid number
-      if (!isNaN(parsedId)) {
+      if (!isNaN(parsedId) && parsedId > 0) {
         catalogId = parsedId;
-        
-        // Try to get catalog name for the filename
-        const db = (await import('./db')).db;
-        const { catalogs } = await import('@shared/schema');
-        const { eq } = await import('drizzle-orm');
-        
-        const [catalog] = await db.select({ name: catalogs.name })
-          .from(catalogs)
-          .where(eq(catalogs.id, catalogId));
-          
-        if (catalog?.name) {
-          catalogName = catalog.name.toLowerCase().replace(/\s+/g, '_');
-        }
       }
     }
     
-    const csvContent = await batchUploadService.generateTemplateCsv(catalogId);
+    // Generate template with enhanced error handling
+    const result = await batchUploadService.generateTemplateCsv(catalogId);
     
+    // Use catalog name from the service result if available
+    if (result.catalogName) {
+      catalogName = result.catalogName.toLowerCase().replace(/\s+/g, '_');
+    }
+    
+    // Set response headers
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', `attachment; filename="product_upload_template_${catalogName}_${Date.now()}.csv"`);
     
-    return res.send(csvContent);
+    // Send the CSV content
+    return res.send(result.content);
   } catch (error) {
     console.error("Error generating template with catalog ID:", error);
     // Fallback to generic template if anything goes wrong
     try {
-      const csvContent = await batchUploadService.generateTemplateCsv(undefined);
+      const result = await batchUploadService.generateTemplateCsv(undefined);
       
       res.setHeader('Content-Type', 'text/csv');
       res.setHeader('Content-Disposition', `attachment; filename="product_upload_template_generic_${Date.now()}.csv"`);
       
-      return res.send(csvContent);
+      return res.send(result.content);
     } catch (fallbackError) {
       console.error("Critical error generating fallback template:", fallbackError);
       return sendError(res, {

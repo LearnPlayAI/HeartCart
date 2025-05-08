@@ -1330,7 +1330,15 @@ export class BatchUploadService {
   /**
    * Generate a template CSV for a catalog
    */
-  async generateTemplateCsv(catalogId?: number): Promise<string> {
+  async generateTemplateCsv(catalogId?: number): Promise<{ content: string; catalogName?: string }> {
+    // Handle special cases for catalogId
+    const isValidCatalogId = catalogId !== undefined && 
+                           catalogId !== null && 
+                           !isNaN(Number(catalogId)) && 
+                           Number(catalogId) > 0 &&
+                           String(catalogId).toLowerCase() !== 'none' &&
+                           String(catalogId).toLowerCase() !== 'undefined';
+    
     // Base template headers
     const headers = [
       'supplier_id',
@@ -1358,37 +1366,55 @@ export class BatchUploadService {
     
     // Add dynamic attribute headers based on global attributes and catalog attributes
     const attributeNames = new Set<string>();
+    let catalogInfo = null;
     
-    // Get all global attributes
-    const globalAttributes = await db.select().from(attributes);
-    globalAttributes.forEach(attr => attributeNames.add(attr.name));
+    try {
+      // Get all global attributes
+      const globalAttributes = await db.select().from(attributes);
+      globalAttributes.forEach(attr => attributeNames.add(attr.name));
+    } catch (error) {
+      console.error('Error fetching global attributes:', error);
+      // Continue with empty attributes rather than failing completely
+    }
     
-    // If catalogId is provided and valid, get catalog-specific attributes
+    // If catalogId is provided and valid, get catalog-specific attributes and info
     let validCatalog = false;
-    if (catalogId && !isNaN(catalogId)) {
+    if (isValidCatalogId) {
       try {
-        const catalogAttributesList = await db
-          .select({
-            attributeName: attributes.name,
-          })
-          .from(catalogAttributes)
-          .innerJoin(attributes, eq(attributes.id, catalogAttributes.attributeId))
-          .where(eq(catalogAttributes.catalogId, catalogId));
-          
-        catalogAttributesList.forEach(item => attributeNames.add(item.attributeName));
-        
-        // Check if catalog exists
+        // First check if catalog exists
         const [catalog] = await db
           .select({
             id: catalogs.id,
+            name: catalogs.name,
+            supplierId: catalogs.supplierId,
           })
           .from(catalogs)
-          .where(eq(catalogs.id, catalogId));
+          .where(eq(catalogs.id, Number(catalogId)));
         
-        validCatalog = !!catalog;
+        if (catalog) {
+          catalogInfo = catalog;
+          validCatalog = true;
+          
+          // Get catalog attributes
+          try {
+            const catalogAttributesList = await db
+              .select({
+                attributeName: attributes.name,
+              })
+              .from(catalogAttributes)
+              .innerJoin(attributes, eq(attributes.id, catalogAttributes.attributeId))
+              .where(eq(catalogAttributes.catalogId, Number(catalogId)));
+              
+            catalogAttributesList.forEach(item => attributeNames.add(item.attributeName));
+          } catch (attrError) {
+            console.error('Error fetching catalog attributes:', attrError);
+            // Continue with global attributes
+          }
+        } else {
+          console.warn(`Catalog with ID ${catalogId} not found.`);
+        }
       } catch (error) {
-        console.error('Error fetching catalog attributes:', error);
-        // Continue even if there's an error
+        console.error('Error verifying catalog existence:', error);
       }
     }
     
@@ -1402,51 +1428,40 @@ export class BatchUploadService {
     let csvContent = allHeaders.join(',') + '\n';
     
     // Add example rows
-    if (validCatalog) {
+    if (validCatalog && catalogInfo) {
       // Add catalog-specific example
       try {
-        const [catalog] = await db
-          .select({
-            id: catalogs.id,
-            name: catalogs.name,
-            supplierId: catalogs.supplierId,
-          })
-          .from(catalogs)
-          .where(eq(catalogs.id, catalogId as number));
-          
-        if (catalog) {
-          // Example row for existing catalog
-          const exampleRow = [
-            catalog.supplierId || '',
-            catalog.id,
-            'Example Category',
-            'Parent Category',
-            'Example Product',
-            'This is an example product description.',
-            'SKU-12345',
-            '100.00',
-            '249.99',
-            '199.99',
-            '20',
-            'Special Offer',
-            '150.00',
-            '5',
-            '10',
-            'Short product description',
-            'example,product,sample',
-            'active',
-            'false',
-            '1.5',
-            '20x30x10',
-          ];
-          
-          // Add example attribute values
-          attributeHeaders.forEach(attr => {
-            exampleRow.push('Value1,Value2,Value3');
-          });
-          
-          csvContent += exampleRow.join(',') + '\n';
-        }
+        // Example row for existing catalog
+        const exampleRow = [
+          catalogInfo.supplierId || '',
+          catalogInfo.id,
+          'Example Category',
+          'Parent Category',
+          'Example Product',
+          'This is an example product description.',
+          'SKU-12345',
+          '100.00',
+          '249.99',
+          '199.99',
+          '20',
+          'Special Offer',
+          '150.00',
+          '5',
+          '10',
+          'Short product description',
+          'example,product,sample',
+          'active',
+          'false',
+          '1.5',
+          '20x30x10',
+        ];
+        
+        // Add example attribute values
+        attributeHeaders.forEach(attr => {
+          exampleRow.push('Value1,Value2,Value3');
+        });
+        
+        csvContent += exampleRow.join(',') + '\n';
       } catch (error) {
         console.error('Error generating catalog-specific template:', error);
         // Continue with generic example if there's an error
@@ -1525,7 +1540,11 @@ export class BatchUploadService {
       csvContent += exampleRow2.join(',') + '\n';
     }
     
-    return csvContent;
+    // Return both the CSV content and catalog info for filename customization
+    return {
+      content: csvContent,
+      catalogName: catalogInfo?.name
+    };
   }
 }
 
