@@ -27,6 +27,8 @@ import uploadHandlers from "./upload-handlers";
 import registerAttributeRoutes from "./attribute-routes";
 import registerProductAttributeRoutes from "./attribute-routes-product";
 import attributeDiscountRoutes from "./attribute-discount-routes";
+import { validateRequest, idSchema } from './validation-middleware';
+import { createCategorySchema, updateCategorySchema } from '@shared/validation-schemas';
 import { 
   asyncHandler, 
   BadRequestError, 
@@ -36,7 +38,7 @@ import {
   AppError,
   ErrorCode
 } from "./error-handler";
-import * as z from "zod";
+import * as z from "zod"; // For schema validation
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Use memory storage for file uploads to avoid local filesystem
@@ -166,188 +168,164 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(categoryWithChildren);
   }));
 
-  app.post("/api/categories", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
-    const user = req.user as any;
-    
-    // Check if user is admin
-    if (user.role !== 'admin') {
-      throw new ForbiddenError("Only administrators can create categories");
-    }
-    
-    try {
-      const categoryData = insertCategorySchema.parse(req.body);
-      const category = await storage.createCategory(categoryData);
+  // Use validation middleware to validate requests
+
+  app.post(
+    "/api/categories", 
+    isAuthenticated, 
+    isAdmin, // Use the isAdmin middleware directly
+    validateRequest({ body: createCategorySchema }), 
+    asyncHandler(async (req: Request, res: Response) => {
+      // With validation middleware, the request body is already validated and typed
+      const category = await storage.createCategory(req.body);
       
       res.status(201).json(category);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        throw new ValidationError("Invalid category data", error.format());
-      }
-      throw error;
-    }
-  }));
+    })
+  );
 
-  app.put("/api/categories/:id", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
-    const user = req.user as any;
-    
-    // Check if user is admin
-    if (user.role !== 'admin') {
-      throw new ForbiddenError("Only administrators can update categories");
-    }
-    
-    const { id } = req.params;
-    const categoryId = parseInt(id);
-    
-    if (isNaN(categoryId)) {
-      throw new BadRequestError("Invalid category ID");
-    }
-    
-    try {
-      // Validate the data
-      const categoryData = insertCategorySchema.partial().parse(req.body);
+  app.put(
+    "/api/categories/:id", 
+    isAuthenticated, 
+    isAdmin,
+    validateRequest({
+      params: idSchema,
+      body: updateCategorySchema
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const categoryId = Number(req.params.id);
       
       // Update the category
-      const category = await storage.updateCategory(categoryId, categoryData);
+      const category = await storage.updateCategory(categoryId, req.body);
       
       if (!category) {
         throw new NotFoundError(`Category with ID ${categoryId} not found`, 'category');
       }
       
       res.json(category);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        throw new ValidationError("Invalid category data", error.format());
-      }
-      throw error;
-    }
-  }));
+    })
+  );
   
-  app.put("/api/categories/:id/display-order", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
-    const user = req.user as any;
-    
-    // Check if user is admin
-    if (user.role !== 'admin') {
-      throw new ForbiddenError("Only administrators can update category order");
-    }
-    
-    const { id } = req.params;
-    const categoryId = parseInt(id);
-    
-    if (isNaN(categoryId)) {
-      throw new BadRequestError("Invalid category ID");
-    }
-    
-    const { displayOrder } = req.body;
-    
-    if (typeof displayOrder !== 'number') {
-      throw new ValidationError("Display order must be a number");
-    }
-    
-    // Update the category display order
-    const category = await storage.updateCategoryDisplayOrder(categoryId, displayOrder);
-    
-    if (!category) {
-      throw new NotFoundError(`Category with ID ${categoryId} not found`, 'category');
-    }
-    
-    res.json(category);
-  }));
+  // Create display order schema
+  const displayOrderSchema = z.object({
+    displayOrder: z.number().int()
+  });
 
-  app.put("/api/categories/:id/visibility", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
-    const user = req.user as any;
-    
-    // Check if user is admin
-    if (user.role !== 'admin') {
-      throw new ForbiddenError("Only administrators can update category visibility");
-    }
-    
-    const { id } = req.params;
-    const categoryId = parseInt(id);
-    
-    if (isNaN(categoryId)) {
-      throw new BadRequestError("Invalid category ID");
-    }
-    
-    const { isActive, cascade = true } = req.body;
-    
-    if (typeof isActive !== 'boolean') {
-      throw new ValidationError("isActive must be a boolean value");
-    }
-    
-    // Update the category's visibility
-    const category = await storage.updateCategory(categoryId, { isActive });
-    
-    if (!category) {
-      throw new NotFoundError(`Category with ID ${categoryId} not found`, 'category');
-    }
-    
-    // Initialize counters for response
-    let updatedProductCount = 0;
-    let updatedSubcategoryCount = 0;
-    
-    try {
-      // If cascade is true and this is a parent category, update all its subcategories
-      if (cascade && category.level === 0) {
-        // Get all subcategories for this parent
-        const subcategories = await storage.getAllCategories({
-          parentId: categoryId,
-          includeInactive: true // Include all subcategories regardless of their current status
-        });
-        
-        // Update each subcategory's visibility
-        for (const subcategory of subcategories) {
-          await storage.updateCategory(subcategory.id, { isActive });
-          updatedSubcategoryCount++;
-          
-          // Get and update products in this subcategory
-          const subcategoryProducts = await storage.getProductsByCategory(subcategory.id, undefined, undefined, {
-            includeInactive: true,
-            includeCategoryInactive: true
+  app.put(
+    "/api/categories/:id/display-order", 
+    isAuthenticated, 
+    isAdmin,
+    validateRequest({
+      params: idSchema,
+      body: displayOrderSchema
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const categoryId = Number(req.params.id);
+      const { displayOrder } = req.body;
+      
+      // Update the category display order
+      const category = await storage.updateCategoryDisplayOrder(categoryId, displayOrder);
+      
+      if (!category) {
+        throw new NotFoundError(`Category with ID ${categoryId} not found`, 'category');
+      }
+      
+      res.json(category);
+    })
+  );
+
+  // Create visibility update schema
+  const visibilitySchema = z.object({
+    isActive: z.boolean(),
+    cascade: z.boolean().default(true)
+  });
+
+  app.put(
+    "/api/categories/:id/visibility", 
+    isAuthenticated, 
+    isAdmin,
+    validateRequest({
+      params: idSchema,
+      body: visibilitySchema
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const categoryId = Number(req.params.id);
+      const { isActive, cascade } = req.body;
+      
+      // Update the category's visibility
+      const category = await storage.updateCategory(categoryId, { isActive });
+      
+      if (!category) {
+        throw new NotFoundError(`Category with ID ${categoryId} not found`, 'category');
+      }
+      
+      // Initialize counters for response
+      let updatedProductCount = 0;
+      let updatedSubcategoryCount = 0;
+      
+      try {
+        // If cascade is true and this is a parent category, update all its subcategories
+        if (cascade && category.level === 0) {
+          // Get all subcategories for this parent
+          const subcategories = await storage.getAllCategories({
+            parentId: categoryId,
+            includeInactive: true // Include all subcategories regardless of their current status
           });
           
-          // Update each product's isActive status
-          for (const product of subcategoryProducts) {
-            await storage.updateProduct(product.id, {
-              isActive: isActive
+          // Update each subcategory's visibility
+          for (const subcategory of subcategories) {
+            await storage.updateCategory(subcategory.id, { isActive });
+            updatedSubcategoryCount++;
+            
+            // Get and update products in this subcategory
+            const subcategoryProducts = await storage.getProductsByCategory(subcategory.id, undefined, undefined, {
+              includeInactive: true,
+              includeCategoryInactive: true
             });
-            updatedProductCount++;
+            
+            // Update each product's isActive status
+            for (const product of subcategoryProducts) {
+              await storage.updateProduct(product.id, {
+                isActive: isActive
+              });
+              updatedProductCount++;
+            }
           }
+          
+          logger.info(`Cascaded visibility status to ${updatedSubcategoryCount} subcategories of category ${categoryId}`);
         }
         
-        logger.info(`Cascaded visibility status to ${updatedSubcategoryCount} subcategories of category ${categoryId}`);
-      }
-      
-      // Update products directly in this category
-      const categoryProducts = await storage.getProductsByCategory(categoryId, undefined, undefined, {
-        includeInactive: true,
-        includeCategoryInactive: true
-      });
-      
-      // Update each product's isActive status to match category's visibility
-      for (const product of categoryProducts) {
-        await storage.updateProduct(product.id, {
-          isActive: isActive
+        // Update products directly in this category
+        const categoryProducts = await storage.getProductsByCategory(categoryId, undefined, undefined, {
+          includeInactive: true,
+          includeCategoryInactive: true
         });
-        updatedProductCount++;
+        
+        // Update each product's isActive status to match category's visibility
+        for (const product of categoryProducts) {
+          await storage.updateProduct(product.id, {
+            isActive: isActive
+          });
+          updatedProductCount++;
+        }
+        
+        logger.info(`Updated visibility status for ${updatedProductCount} products in category ${categoryId} to: ${isActive}`);
+        
+        res.json({
+          ...category,
+          productsUpdated: updatedProductCount,
+          subcategoriesUpdated: updatedSubcategoryCount,
+          cascaded: cascade
+        });
+      } catch (error) {
+        logger.error('Error updating category visibility:', { error, categoryId, isActive });
+        throw new AppError(
+          "An error occurred while updating category visibility. Please try again.",
+          ErrorCode.INTERNAL_SERVER_ERROR,
+          500
+        );
       }
-      
-      logger.info(`Updated visibility status for ${updatedProductCount} products in category ${categoryId} to: ${isActive}`);
-      
-      res.json({
-        ...category,
-        productsUpdated: updatedProductCount,
-        subcategoriesUpdated: updatedSubcategoryCount,
-        cascaded: cascade
-      });
-    } catch (error) {
-      logger.error('Error updating category visibility:', { error, categoryId, isActive });
-      throw new AppError(
-        "An error occurred while updating category visibility. Please try again.",
-        ErrorCode.INTERNAL_SERVER_ERROR,
-        500
-      );
-    }
-  }));
+    })
+  );
 
   // CATEGORY ATTRIBUTE ROUTES - Removed as part of attribute system redesign
 
@@ -387,41 +365,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(products);
   }));
   
-  // Bulk update product status endpoint
-  app.post("/api/products/bulk-update-status", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
-    const user = req.user as any;
-    
-    // Check if user is admin
-    if (user.role !== 'admin') {
-      throw new ForbiddenError("Only administrators can update product status");
-    }
-    
-    const { productIds, isActive } = req.body;
-    
-    if (!Array.isArray(productIds) || productIds.length === 0) {
-      throw new ValidationError("Product IDs array is required");
-    }
-    
-    if (typeof isActive !== 'boolean') {
-      throw new ValidationError("isActive must be a boolean value");
-    }
-    
-    try {
-      const updatedCount = await storage.bulkUpdateProductStatus(productIds, isActive);
-      res.json({ 
-        success: true, 
-        count: updatedCount,
-        message: `${updatedCount} products ${isActive ? 'activated' : 'deactivated'} successfully` 
-      });
-    } catch (error) {
-      logger.error('Error updating product status:', { error, productIds, isActive });
-      throw new AppError(
-        "An error occurred while updating product status. Please try again.",
-        ErrorCode.INTERNAL_SERVER_ERROR,
-        500
-      );
-    }
-  }));
+  // Create bulk update status schema
+  const bulkUpdateStatusSchema = z.object({
+    productIds: z.array(z.number().int().positive()).nonempty({
+      message: "At least one product ID is required"
+    }),
+    isActive: z.boolean()
+  });
+
+  app.post(
+    "/api/products/bulk-update-status", 
+    isAuthenticated, 
+    isAdmin,
+    validateRequest({
+      body: bulkUpdateStatusSchema
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const { productIds, isActive } = req.body;
+      
+      try {
+        const updatedCount = await storage.bulkUpdateProductStatus(productIds, isActive);
+        res.json({ 
+          success: true, 
+          count: updatedCount,
+          message: `${updatedCount} products ${isActive ? 'activated' : 'deactivated'} successfully` 
+        });
+      } catch (error) {
+        logger.error('Error updating product status:', { error, productIds, isActive });
+        throw new AppError(
+          "An error occurred while updating product status. Please try again.",
+          ErrorCode.INTERNAL_SERVER_ERROR,
+          500
+        );
+      }
+    })
+  );
 
   // Specific route patterns must be defined before generic patterns with path parameters
   app.get("/api/products/slug/:slug", asyncHandler(async (req: Request, res: Response) => {
@@ -601,84 +579,103 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }));
 
-  app.get("/api/featured-products", asyncHandler(async (req: Request, res: Response) => {
-    const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
-    
-    // Validate limit parameter
-    if (limit < 0 || isNaN(limit)) {
-      throw new ValidationError("Limit must be a non-negative number");
-    }
-    
-    const user = req.user as any;
-    const isAdmin = user && user.role === 'admin';
-    
-    const options = { 
-      includeInactive: isAdmin, 
-      includeCategoryInactive: isAdmin 
-    };
-    
-    try {
-      const products = await storage.getFeaturedProducts(limit, options);
-      res.json(products);
-    } catch (error) {
-      logger.error('Error fetching featured products', { error });
-      throw new AppError(
-        "Failed to fetch featured products",
-        ErrorCode.INTERNAL_SERVER_ERROR,
-        500
-      );
-    }
-  }));
+  // Create featured products query schema
+  const featuredProductsQuerySchema = z.object({
+    limit: z.coerce.number().int().nonnegative().default(10)
+  });
 
-  app.get("/api/flash-deals", asyncHandler(async (req: Request, res: Response) => {
-    const limit = req.query.limit ? parseInt(req.query.limit as string) : 6;
-    
-    // Validate limit parameter
-    if (limit < 0 || isNaN(limit)) {
-      throw new ValidationError("Limit must be a non-negative number");
-    }
-    
-    const user = req.user as any;
-    const isAdmin = user && user.role === 'admin';
-    
-    const options = { 
-      includeInactive: isAdmin, 
-      includeCategoryInactive: isAdmin 
-    };
-    
-    try {
-      const products = await storage.getFlashDeals(limit, options);
-      res.json(products);
-    } catch (error) {
-      logger.error('Error fetching flash deals', { error });
-      throw new AppError(
-        "Failed to fetch flash deals",
-        ErrorCode.INTERNAL_SERVER_ERROR,
-        500
-      );
-    }
-  }));
+  app.get(
+    "/api/featured-products",
+    validateRequest({
+      query: featuredProductsQuerySchema
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const { limit } = req.query;
+      
+      const user = req.user as any;
+      const isAdmin = user && user.role === 'admin';
+      
+      const options = { 
+        includeInactive: isAdmin, 
+        includeCategoryInactive: isAdmin 
+      };
+      
+      try {
+        const products = await storage.getFeaturedProducts(limit as number, options);
+        res.json(products);
+      } catch (error) {
+        logger.error('Error fetching featured products', { error });
+        throw new AppError(
+          "Failed to fetch featured products",
+          ErrorCode.INTERNAL_SERVER_ERROR,
+          500
+        );
+      }
+    })
+  );
 
-  app.get("/api/search", asyncHandler(async (req: Request, res: Response) => {
-    const query = req.query.q as string;
-    const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
-    const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
-    
-    if (!query) {
-      throw new BadRequestError("Search query is required");
-    }
-    
-    const user = req.user as any;
-    const isAdmin = user && user.role === 'admin';
-    
-    const options = { 
-      includeInactive: isAdmin, 
-      includeCategoryInactive: isAdmin 
-    };
-    
-    const products = await storage.searchProducts(query, limit, offset, options);
-    res.json(products);
-  }));
+  // Create flash deals query schema
+  const flashDealsQuerySchema = z.object({
+    limit: z.coerce.number().int().nonnegative().default(6)
+  });
+
+  app.get(
+    "/api/flash-deals",
+    validateRequest({
+      query: flashDealsQuerySchema
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const { limit } = req.query;
+      
+      const user = req.user as any;
+      const isAdmin = user && user.role === 'admin';
+      
+      const options = { 
+        includeInactive: isAdmin, 
+        includeCategoryInactive: isAdmin 
+      };
+      
+      try {
+        const products = await storage.getFlashDeals(limit as number, options);
+        res.json(products);
+      } catch (error) {
+        logger.error('Error fetching flash deals', { error });
+        throw new AppError(
+          "Failed to fetch flash deals",
+          ErrorCode.INTERNAL_SERVER_ERROR,
+          500
+        );
+      }
+    })
+  );
+
+  // Create search query schema
+  const searchQuerySchema = z.object({
+    q: z.string().min(1, { message: "Search query is required" }),
+    limit: z.coerce.number().int().nonnegative().default(20),
+    offset: z.coerce.number().int().nonnegative().default(0)
+  });
+
+  app.get(
+    "/api/search",
+    validateRequest({
+      query: searchQuerySchema
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const { q: query, limit, offset } = req.query;
+      
+      const user = req.user as any;
+      const isAdmin = user && user.role === 'admin';
+      
+      const options = { 
+        includeInactive: isAdmin, 
+        includeCategoryInactive: isAdmin 
+      };
+      
+      const products = await storage.searchProducts(query as string, limit as number, offset as number, options);
+      res.json(products);
+    })
+  );
   
   app.post("/api/products", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
     const user = req.user as any;
