@@ -276,7 +276,7 @@ All client and server-side components must be completely updated to match the ne
   - ✓ Document API response patterns
 
 #### 3.4. Front-end Component Standardization for API Integration
-- **Status**: In Progress (85% Complete)
+- **Status**: In Progress (90% Complete)
 - **Description**: Update all front-end components to use standardized API responses
 - **Tasks**:
   - [x] Standardize front-end cart interaction components:
@@ -298,7 +298,7 @@ All client and server-side components must be completely updated to match the ne
     - [x] Standardize admin/orders.tsx for better error handling
   - [ ] Standardize product components:
     - [x] Update product-listing.tsx to use standardized API responses
-    - [ ] Standardize product-detail-new.tsx for consistent API integration
+    - [x] Standardize product-detail-new.tsx for consistent API integration
     - [x] Update product-card.tsx component for API consistency
     - [x] Update quick-view-modal.tsx to fix infinite loop and standardize API handling
     - [ ] Standardize product-grid.tsx component for pagination handling
@@ -320,12 +320,16 @@ All client and server-side components must be completely updated to match the ne
   **Latest Progress (May 2025):**
   - Updated product-listing.tsx to use StandardApiResponse type consistently for all API queries
   - Applied StandardApiResponse type to categories, products, filterable attributes, and product attribute values queries
+  - Enhanced product-detail-new.tsx with standardized error handling for all queries
+  - Added robust error UI with specific error messages in product-detail-new.tsx
+  - Implemented separate error handling for related products and attributes queries
   - Standardized authentication components (use-auth.tsx, auth-page.tsx) to handle StandardApiResponse format
   - Updated layout components (header.tsx) to use StandardApiResponse for categories API
   - Updated cart system components (use-cart.tsx) to handle StandardApiResponse for cart operations
-  - Next tasks: Complete standardization of product-detail-new.tsx and product-grid.tsx components
+  - Next tasks: Complete standardization of product-grid.tsx component and utility hooks
     - [ ] Standardize use-products.tsx hook for consistent response handling
     - [ ] Update use-categories.tsx for standardized responses
+    - [ ] Implement pagination handling in product-grid.tsx
     - [x] Update use-attribute-discounts.tsx for standardized API responses
     - [ ] Standardize use-ai-settings.tsx for API consistency
 
