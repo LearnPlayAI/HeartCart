@@ -106,9 +106,7 @@ async function migrateAllTimezones(): Promise<void> {
   }
 }
 
-// Only run the migration if this file is executed directly
-if (require.main === module) {
-  migrateAllTimezones().catch(console.error);
-}
+// Run the migration (when executing this file directly as an ES module)
+migrateAllTimezones().catch(console.error);
 
 export { migrateAllTimezones };
