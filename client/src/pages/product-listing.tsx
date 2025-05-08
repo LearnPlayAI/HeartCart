@@ -30,12 +30,14 @@ import {
   Search,
   Star,
   Grid2X2,
-  List
+  List,
+  CircleCheck
 } from 'lucide-react';
 import ProductCard from '@/components/product/product-card';
 import type { Product, Category } from '@shared/schema';
 import { Input } from '@/components/ui/input';
 import { formatCurrency } from '@/lib/utils';
+import type { Attribute, AttributeOption, CategoryAttribute } from '@/types/attribute-types';
 
 // Availability filter options (replaced stock filter)
 const availabilityOptions = [
@@ -53,6 +55,21 @@ const ratingOptions = [
 // View modes
 type ViewMode = 'grid' | 'list';
 
+// Type definition for attribute filters
+interface AttributeFilter {
+  attributeId: number;
+  attributeName: string;
+  selectedOptions: string[];
+}
+
+// Helper function to get attribute display name
+const getAttributeDisplayName = (attribute: Attribute | CategoryAttribute): string => {
+  if ('overrideDisplayName' in attribute && attribute.overrideDisplayName) {
+    return attribute.overrideDisplayName;
+  }
+  return attribute.attribute?.displayName || '';
+};
+
 const ProductListing = () => {
   const [location, setLocation] = useLocation();
   const searchParams = new URLSearchParams(location.split('?')[1] || '');
@@ -69,6 +86,7 @@ const ProductListing = () => {
   const [ratingFilter, setRatingFilter] = useState(searchParams.get('rating') || '');
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
+  const [attributeFilters, setAttributeFilters] = useState<AttributeFilter[]>([]);
   const [filters, setFilters] = useState({
     onSale: searchParams.get('on_sale') === 'true',
     freeShipping: searchParams.get('free_shipping') === 'true',
@@ -87,6 +105,15 @@ const ProductListing = () => {
   // Fetch products
   const { data: products, isLoading: isLoadingProducts } = useQuery<Product[]>({
     queryKey: ['/api/products', { limit, offset: (page - 1) * limit }],
+  });
+  
+  // Fetch filterable attributes based on selected category
+  const { data: filterableAttributes, isLoading: isLoadingAttributes } = useQuery<(CategoryAttribute & { options: AttributeOption[], attribute: Attribute })[]>({
+    queryKey: [selectedCategory ? 
+      `/api/categories/${selectedCategory}/filterable-attributes` : 
+      '/api/products/filterable-attributes'
+    ],
+    enabled: !!products,
   });
   
   // Update URL with filters
@@ -164,6 +191,65 @@ const ProductListing = () => {
     setPage(1);
   };
   
+  // Handle attribute filter changes
+  const handleAttributeFilterChange = (attributeId: number, attributeName: string, optionValue: string, isChecked: boolean) => {
+    setAttributeFilters(prevFilters => {
+      // Find existing filter for this attribute
+      const existingFilterIndex = prevFilters.findIndex(f => f.attributeId === attributeId);
+      
+      if (existingFilterIndex >= 0) {
+        const existingFilter = prevFilters[existingFilterIndex];
+        let updatedSelectedOptions = [...existingFilter.selectedOptions];
+        
+        if (isChecked) {
+          // Add option if it's not already selected
+          if (!updatedSelectedOptions.includes(optionValue)) {
+            updatedSelectedOptions.push(optionValue);
+          }
+        } else {
+          // Remove option
+          updatedSelectedOptions = updatedSelectedOptions.filter(opt => opt !== optionValue);
+        }
+        
+        // If no options selected, remove the filter entirely
+        if (updatedSelectedOptions.length === 0) {
+          return prevFilters.filter(f => f.attributeId !== attributeId);
+        }
+        
+        // Update the filter with new selected options
+        const updatedFilter = {
+          ...existingFilter,
+          selectedOptions: updatedSelectedOptions
+        };
+        
+        return [
+          ...prevFilters.slice(0, existingFilterIndex),
+          updatedFilter,
+          ...prevFilters.slice(existingFilterIndex + 1)
+        ];
+      } else {
+        // Create new filter
+        return [
+          ...prevFilters,
+          {
+            attributeId,
+            attributeName,
+            selectedOptions: [optionValue]
+          }
+        ];
+      }
+    });
+    
+    setPage(1);
+  };
+  
+  // Check if an attribute option is selected
+  const isAttributeOptionSelected = (attributeId: number, optionValue: string): boolean => {
+    const attributeFilter = attributeFilters.find(f => f.attributeId === attributeId);
+    if (!attributeFilter) return false;
+    return attributeFilter.selectedOptions.includes(optionValue);
+  };
+  
   const removeFilter = (filter: string) => {
     if (filter.startsWith('Category:')) {
       setSelectedCategory(null);
@@ -177,6 +263,28 @@ const ProductListing = () => {
       setRatingFilter('');
     } else if (filter.startsWith('Price:')) {
       setPriceRange([0, 5000]);
+    } else if (filter.includes(':')) {
+      // Handle attribute filters
+      const [attributeName, optionValue] = filter.split(': ');
+      const attributeFilter = attributeFilters.find(f => f.attributeName === attributeName);
+      
+      if (attributeFilter) {
+        const updatedOptions = attributeFilter.selectedOptions.filter(opt => opt !== optionValue);
+        
+        if (updatedOptions.length === 0) {
+          // Remove the entire filter if no options left
+          setAttributeFilters(prevFilters => prevFilters.filter(f => f.attributeId !== attributeFilter.attributeId));
+        } else {
+          // Update the filter with remaining options
+          setAttributeFilters(prevFilters => 
+            prevFilters.map(f => 
+              f.attributeId === attributeFilter.attributeId 
+                ? { ...f, selectedOptions: updatedOptions } 
+                : f
+            )
+          );
+        }
+      }
     }
   };
   
@@ -189,10 +297,41 @@ const ProductListing = () => {
       freeShipping: false,
       newArrivals: false
     });
+    setAttributeFilters([]);
     setSearchQuery('');
     setSortBy('default');
     setPage(1);
   };
+  
+  // Fetch product attribute values for filtering
+  const { data: productAttributeValues } = useQuery<{
+    productId: number;
+    attributeId: number;
+    optionId: number | null;
+    textValue: string | null;
+  }[]>({
+    queryKey: ['/api/products/attribute-values'],
+    enabled: !!products && attributeFilters.length > 0,
+  });
+  
+  // Update active filters to include attribute filters
+  useEffect(() => {
+    if (!attributeFilters.length) return;
+    
+    const newActiveFilters = [...activeFilters];
+    
+    // Add attribute filters to active filters
+    attributeFilters.forEach(filter => {
+      filter.selectedOptions.forEach(option => {
+        const filterLabel = `${filter.attributeName}: ${option}`;
+        if (!newActiveFilters.includes(filterLabel)) {
+          newActiveFilters.push(filterLabel);
+        }
+      });
+    });
+    
+    setActiveFilters(newActiveFilters);
+  }, [attributeFilters]);
   
   // Apply filters and sorting to products
   const filteredProducts = products ? products
@@ -225,6 +364,36 @@ const ProductListing = () => {
       
       // Apply search query
       if (searchQuery && !product.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+      
+      // Apply attribute filters
+      if (attributeFilters.length > 0 && productAttributeValues) {
+        // For each attribute filter
+        for (const filter of attributeFilters) {
+          // Get all attribute values for this product and attribute
+          const productValues = productAttributeValues.filter(
+            pav => pav.productId === product.id && pav.attributeId === filter.attributeId
+          );
+          
+          // If no values found for this attribute, filter out the product
+          if (productValues.length === 0) return false;
+          
+          // Check if any of the selected options match this product's values
+          const hasMatch = filter.selectedOptions.some(selectedOption => 
+            productValues.some(pav => {
+              // Match either by option ID or text value
+              if (pav.optionId) {
+                const option = filterableAttributes?.find(attr => attr.id === filter.attributeId)
+                  ?.options.find(opt => opt.id === pav.optionId);
+                return option && option.value === selectedOption;
+              }
+              return pav.textValue === selectedOption;
+            })
+          );
+          
+          // If no matches found for this attribute filter, filter out the product
+          if (!hasMatch) return false;
+        }
+      }
       
       return true;
     })

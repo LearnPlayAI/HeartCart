@@ -30,6 +30,39 @@ export default function registerProductAttributeRoutes(app: Express) {
     }
   };
 
+  // New endpoint to get filterable attributes for product listings
+  app.get("/api/categories/:categoryId/filterable-attributes", handleErrors(async (req: Request, res: Response) => {
+    const categoryId = parseInt(req.params.categoryId);
+    if (isNaN(categoryId)) {
+      return res.status(400).json({ message: "Invalid category ID" });
+    }
+    
+    // Get all attributes for this category
+    const categoryAttributes = await storage.getCategoryAttributes(categoryId);
+    
+    // Filter to only include filterable attributes
+    const filterableAttributes = [];
+    
+    for (const catAttr of categoryAttributes) {
+      const attribute = await storage.getAttributeById(catAttr.attributeId);
+      if (attribute && attribute.isFilterable) {
+        // Get the options for this attribute
+        const options = await storage.getCategoryAttributeOptions(catAttr.id);
+        
+        // Only include attributes that have options
+        if (options.length > 0) {
+          filterableAttributes.push({
+            ...catAttr,
+            attribute,
+            options
+          });
+        }
+      }
+    }
+    
+    res.json(filterableAttributes);
+  }));
+
   // Category Attribute Routes
   app.get("/api/categories/:categoryId/attributes", handleErrors(async (req: Request, res: Response) => {
     const categoryId = parseInt(req.params.categoryId);
@@ -301,6 +334,60 @@ export default function registerProductAttributeRoutes(app: Express) {
 
     const values = await storage.getProductAttributeValues(productId);
     res.json(values);
+  }));
+  
+  // New endpoint to get filterable attributes for product listing when no specific category is selected
+  app.get("/api/products/filterable-attributes", handleErrors(async (req: Request, res: Response) => {
+    // Get product IDs from query params (optional)
+    const productIds = req.query.productIds ? 
+      (req.query.productIds as string).split(',').map(id => parseInt(id)).filter(id => !isNaN(id)) : 
+      [];
+    
+    // Get all global attributes that are marked as filterable
+    const allAttributes = await storage.getAttributes();
+    const filterableAttributes = allAttributes.filter(attr => attr.isFilterable);
+    
+    // For each filterable attribute, collect all unique options used across products
+    const result = [];
+    
+    for (const attribute of filterableAttributes) {
+      const attributeWithOptions = {
+        ...attribute,
+        options: []
+      };
+      
+      // If product IDs are provided, only check options for those products
+      if (productIds.length > 0) {
+        for (const productId of productIds) {
+          // Get product attributes
+          const productAttributes = await storage.getProductAttributes(productId);
+          const matchingAttribute = productAttributes.find(pa => pa.attributeId === attribute.id);
+          
+          if (matchingAttribute) {
+            // Get options for this product attribute
+            const options = await storage.getProductAttributeOptions(matchingAttribute.id);
+            
+            // Add unique options to the result
+            for (const option of options) {
+              if (!attributeWithOptions.options.some(o => o.value === option.value)) {
+                attributeWithOptions.options.push(option);
+              }
+            }
+          }
+        }
+      } else {
+        // Get all attribute options
+        const globalOptions = await storage.getAttributeOptions(attribute.id);
+        attributeWithOptions.options = globalOptions;
+      }
+      
+      // Only include attributes that have options
+      if (attributeWithOptions.options.length > 0) {
+        result.push(attributeWithOptions);
+      }
+    }
+    
+    res.json(result);
   }));
 
   app.post("/api/products/:productId/attribute-values", handleErrors(async (req: Request, res: Response) => {
