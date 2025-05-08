@@ -343,7 +343,13 @@ export default function ProductFormWizard({ productId, catalogId, onSuccess }: P
       const res = await apiRequest('PUT', `/api/products/${productId}`, formattedData);
       return res.json();
     },
-    onSuccess: (updatedProduct) => {
+    onSuccess: (response) => {
+      // Extract the product data from standardized response
+      if (!response.success) {
+        throw new Error(response.error?.message || "Failed to update product");
+      }
+      
+      const updatedProduct = response.data;
       toast({
         title: 'Product updated',
         description: 'The product has been updated successfully',
@@ -474,7 +480,13 @@ export default function ProductFormWizard({ productId, catalogId, onSuccess }: P
         productName
       });
       
-      const analysis = await res.json();
+      const response = await res.json();
+      // Extract the analysis data from standardized response
+      if (!response.success) {
+        throw new Error(response.error?.message || "Failed to analyze product");
+      }
+      
+      const analysis = response.data;
       setAiSuggestions(analysis);
     } catch (error: any) {
       toast({
@@ -592,7 +604,13 @@ export default function ProductFormWizard({ productId, catalogId, onSuccess }: P
         categoryName: categories?.find(cat => cat.id === form.getValues('categoryId'))?.name
       });
       
-      const suggestion = await res.json();
+      const response = await res.json();
+      // Extract the suggestion data from standardized response
+      if (!response.success) {
+        throw new Error(response.error?.message || "Failed to generate tags");
+      }
+      
+      const suggestion = response.data;
       
       if (suggestion.tags && suggestion.tags.length > 0) {
         form.setValue('tags', suggestion.tags);
