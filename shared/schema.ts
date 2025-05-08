@@ -194,19 +194,23 @@ export const catalogs = pgTable("catalogs", {
 });
 
 // =============================================================================
-// DEPRECATED ATTRIBUTE TABLES - Commented out as part of attribute system redesign
-// These tables have been dropped from the database but code is preserved for reference
+// NEW ATTRIBUTE SYSTEM TABLES
+// Implementing the new hierarchical attribute system design
 // =============================================================================
 
-/*
-// Global Attributes - for defining attributes that can be used across any product
-export const globalAttributes = pgTable("global_attributes", {
+// Core Attributes - base attribute definitions that can be used at any level
+export const attributes = pgTable("attributes", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 100 }).notNull(),
   displayName: varchar("display_name", { length: 100 }).notNull(),
   description: text("description"),
-  attributeType: varchar("attribute_type", { length: 50 }).notNull(), // 'select', 'color', 'text', etc.
+  attributeType: varchar("attribute_type", { length: 50 }).notNull(), // 'select', 'radio', 'color', 'text', etc.
+  validationRules: jsonb("validation_rules"), // JSON with validation settings like min/max length, regex, etc.
   isRequired: boolean("is_required").default(false),
+  isFilterable: boolean("is_filterable").default(false), // Can this attribute be used for filtering in product listings?
+  isComparable: boolean("is_comparable").default(false), // Can this attribute be used in product comparisons?
+  isSwatch: boolean("is_swatch").default(false), // Is this attribute shown as a swatch (color/texture)?
+  displayInProductSummary: boolean("display_in_product_summary").default(false), // Show in product list summaries?
   sortOrder: integer("sort_order").default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -216,98 +220,147 @@ export const globalAttributes = pgTable("global_attributes", {
   };
 });
 
-// Global Attribute Options - predefined options for select-type global attributes
-export const globalAttributeOptions = pgTable("global_attribute_options", {
+// Attribute Options - predefined options for select/radio/color-type attributes
+export const attributeOptions = pgTable("attribute_options", {
   id: serial("id").primaryKey(),
-  attributeId: integer("attribute_id").notNull().references(() => globalAttributes.id),
+  attributeId: integer("attribute_id").notNull().references(() => attributes.id, { onDelete: "cascade" }),
   value: varchar("value", { length: 255 }).notNull(),
   displayValue: varchar("display_value", { length: 255 }).notNull(),
+  metadata: jsonb("metadata"), // Additional data like hex code for colors, image URL for texture, etc.
   sortOrder: integer("sort_order").default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    attrOptionUnique: unique().on(table.attributeId, table.value),
+  };
 });
 
-// Category Attributes - for defining which attributes a category has
+// Catalog Attributes - attributes assigned to a catalog
+export const catalogAttributes = pgTable("catalog_attributes", {
+  id: serial("id").primaryKey(),
+  catalogId: integer("catalog_id").notNull().references(() => catalogs.id, { onDelete: "cascade" }),
+  attributeId: integer("attribute_id").notNull().references(() => attributes.id, { onDelete: "cascade" }),
+  overrideDisplayName: varchar("override_display_name", { length: 100 }), // Optional custom name for this catalog
+  overrideDescription: text("override_description"), // Optional custom description for this catalog
+  isRequired: boolean("is_required"), // Override the base attribute's isRequired flag
+  isFilterable: boolean("is_filterable"), // Override the base attribute's isFilterable flag
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    catalogAttrUnique: unique().on(table.catalogId, table.attributeId),
+  };
+});
+
+// Catalog Attribute Options - custom options for catalog level attributes (can override or add to base options)
+export const catalogAttributeOptions = pgTable("catalog_attribute_options", {
+  id: serial("id").primaryKey(),
+  catalogAttributeId: integer("catalog_attribute_id").notNull().references(() => catalogAttributes.id, { onDelete: "cascade" }),
+  value: varchar("value", { length: 255 }).notNull(),
+  displayValue: varchar("display_value", { length: 255 }).notNull(),
+  baseOptionId: integer("base_option_id").references(() => attributeOptions.id), // May link to a base option, or null if custom
+  metadata: jsonb("metadata"), // Additional data
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    catalogAttrOptionUnique: unique().on(table.catalogAttributeId, table.value),
+  };
+});
+
+// Category Attributes - attributes assigned to a category
 export const categoryAttributes = pgTable("category_attributes", {
   id: serial("id").primaryKey(),
-  categoryId: integer("category_id").notNull().references(() => categories.id),
-  name: varchar("name", { length: 100 }).notNull(),
-  displayName: varchar("display_name", { length: 100 }).notNull(),
-  description: text("description"),
-  attributeType: varchar("attribute_type", { length: 50 }).notNull(), // 'select', 'color', 'text', etc.
-  isRequired: boolean("is_required").default(false),
+  categoryId: integer("category_id").notNull().references(() => categories.id, { onDelete: "cascade" }),
+  attributeId: integer("attribute_id").notNull().references(() => attributes.id, { onDelete: "cascade" }),
+  catalogAttributeId: integer("catalog_attribute_id").references(() => catalogAttributes.id), // Can inherit from catalog or be null
+  overrideDisplayName: varchar("override_display_name", { length: 100 }),
+  overrideDescription: text("override_description"),
+  isRequired: boolean("is_required"),
+  isFilterable: boolean("is_filterable"),
+  inheritFromParent: boolean("inherit_from_parent").default(false), // Whether to inherit from parent category
   sortOrder: integer("sort_order").default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => {
   return {
-    categoryAttrUnique: unique().on(table.categoryId, table.name),
+    categoryAttrUnique: unique().on(table.categoryId, table.attributeId),
   };
 });
 
-// Category Attribute Options - for storing predefined options for select-type attributes
+// Category Attribute Options - custom options for category level attributes
 export const categoryAttributeOptions = pgTable("category_attribute_options", {
   id: serial("id").primaryKey(),
-  attributeId: integer("attribute_id").notNull().references(() => categoryAttributes.id),
+  categoryAttributeId: integer("category_attribute_id").notNull().references(() => categoryAttributes.id, { onDelete: "cascade" }),
   value: varchar("value", { length: 255 }).notNull(),
   displayValue: varchar("display_value", { length: 255 }).notNull(),
+  baseOptionId: integer("base_option_id").references(() => attributeOptions.id), // May link to base option or catalog option
+  catalogOptionId: integer("catalog_option_id").references(() => catalogAttributeOptions.id),
+  metadata: jsonb("metadata"),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    categoryAttrOptionUnique: unique().on(table.categoryAttributeId, table.value),
+  };
+});
+
+// Product Attributes - attributes assigned to a product
+export const productAttributes = pgTable("product_attributes", {
+  id: serial("id").primaryKey(),
+  productId: integer("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
+  attributeId: integer("attribute_id").notNull().references(() => attributes.id, { onDelete: "cascade" }),
+  categoryAttributeId: integer("category_attribute_id").references(() => categoryAttributes.id), // Can inherit or be custom
+  overrideDisplayName: varchar("override_display_name", { length: 100 }),
+  overrideDescription: text("override_description"),
+  isRequired: boolean("is_required"),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    productAttrUnique: unique().on(table.productId, table.attributeId),
+  };
+});
+
+// Product Attribute Options - custom options for product level attributes
+export const productAttributeOptions = pgTable("product_attribute_options", {
+  id: serial("id").primaryKey(),
+  productAttributeId: integer("product_attribute_id").notNull().references(() => productAttributes.id, { onDelete: "cascade" }),
+  value: varchar("value", { length: 255 }).notNull(),
+  displayValue: varchar("display_value", { length: 255 }).notNull(),
+  baseOptionId: integer("base_option_id").references(() => attributeOptions.id),
+  categoryOptionId: integer("category_option_id").references(() => categoryAttributeOptions.id),
+  catalogOptionId: integer("catalog_option_id").references(() => catalogAttributeOptions.id),
+  priceAdjustment: decimal("price_adjustment", { precision: 10, scale: 2 }).default("0"),
+  metadata: jsonb("metadata"),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    productAttrOptionUnique: unique().on(table.productAttributeId, table.value),
+  };
+});
+
+// Product Attribute Values - selected attribute values for a specific product
+export const productAttributeValues = pgTable("product_attribute_values", {
+  id: serial("id").primaryKey(),
+  productId: integer("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
+  attributeId: integer("attribute_id").notNull().references(() => attributes.id, { onDelete: "cascade" }),
+  optionId: integer("option_id").references(() => productAttributeOptions.id), // For select/radio/color types
+  textValue: text("text_value"), // For text/textarea types
+  dateValue: timestamp("date_value"), // For date types
+  numericValue: decimal("numeric_value", { precision: 10, scale: 2 }), // For numeric types
+  priceAdjustment: decimal("price_adjustment", { precision: 10, scale: 2 }).default("0"),
   sortOrder: integer("sort_order").default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
-
-// Product Attribute Values - for storing the actual values of attributes for each product
-export const productAttributeValues = pgTable("product_attribute_values", {
-  id: serial("id").primaryKey(),
-  productId: integer("product_id").notNull().references(() => products.id),
-  attributeId: integer("attribute_id").references(() => categoryAttributes.id), // Can be null if using globalAttributeId
-  globalAttributeId: integer("global_attribute_id").references(() => globalAttributes.id), // Can be null if using attributeId
-  value: text("value").notNull(), // Could be an option ID, color hex code, text, etc.
-  priceAdjustment: decimal("price_adjustment", { precision: 10, scale: 2 }).default("0"),
-  isFromGlobalAttribute: boolean("is_from_global_attribute").default(false),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
-
-// Product Attribute Combinations - for storing different combinations and their prices
-export const productAttributeCombinations = pgTable("product_attribute_combinations", {
-  id: serial("id").primaryKey(),
-  productId: integer("product_id").notNull().references(() => products.id),
-  combinationHash: varchar("combination_hash", { length: 64 }).notNull(), // Hash of the attribute values
-  priceAdjustment: decimal("price_adjustment", { precision: 10, scale: 2 }).default("0"),
-  isActive: boolean("is_active").default(true),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-}, (table) => {
-  return {
-    productCombinationUnique: unique().on(table.productId, table.combinationHash),
-  };
-});
-
-// Product Global Attributes - for storing which global attributes are assigned to products
-export const productGlobalAttributes = pgTable("product_global_attributes", {
-  id: serial("id").primaryKey(),
-  productId: integer("product_id").notNull().references(() => products.id),
-  attributeId: integer("attribute_id").notNull().references(() => globalAttributes.id),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-}, (table) => {
-  return {
-    productAttributeUnique: unique().on(table.productId, table.attributeId),
-  };
-});
-
-// Product Global Attribute Options - for storing which options are selected for a product attribute
-export const productGlobalAttributeOptions = pgTable("product_global_attribute_options", {
-  id: serial("id").primaryKey(),
-  productAttributeId: integer("product_attribute_id").notNull().references(() => productGlobalAttributes.id),
-  optionId: integer("option_id").notNull().references(() => globalAttributeOptions.id),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-}, (table) => {
-  return {
-    productAttributeOptionUnique: unique().on(table.productAttributeId, table.optionId),
-  };
-});
-*/
 
 // Create insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
@@ -393,64 +446,97 @@ export const insertCatalogSchema = createInsertSchema(catalogs).omit({
 });
 
 // =============================================================================
-// DEPRECATED ATTRIBUTE INSERT SCHEMAS - Commented out as part of attribute system redesign
+// NEW ATTRIBUTE SYSTEM INSERT SCHEMAS
 // =============================================================================
 
-/*
-// Global Attributes insert schema
-export const insertGlobalAttributeSchema = createInsertSchema(globalAttributes).omit({
+// Core attribute insert schema
+export const insertAttributeSchema = createInsertSchema(attributes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  validationRules: z.record(z.any()).optional(),
+  metadata: z.record(z.any()).optional(),
+});
+
+// Attribute options insert schema
+export const insertAttributeOptionSchema = createInsertSchema(attributeOptions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  metadata: z.record(z.any()).optional(),
+});
+
+// Catalog attribute insert schema
+export const insertCatalogAttributeSchema = createInsertSchema(catalogAttributes).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
 });
 
-// Global Attribute Options insert schema
-export const insertGlobalAttributeOptionSchema = createInsertSchema(globalAttributeOptions).omit({
+// Catalog attribute option insert schema
+export const insertCatalogAttributeOptionSchema = createInsertSchema(catalogAttributeOptions).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  metadata: z.record(z.any()).optional(),
+  baseOptionId: z.number().nullable().optional(),
 });
 
-// Category Attributes insert schema
+// Category attribute insert schema
 export const insertCategoryAttributeSchema = createInsertSchema(categoryAttributes).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  catalogAttributeId: z.number().nullable().optional(),
 });
 
-// Category Attribute Options insert schema
+// Category attribute option insert schema
 export const insertCategoryAttributeOptionSchema = createInsertSchema(categoryAttributeOptions).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  metadata: z.record(z.any()).optional(),
+  baseOptionId: z.number().nullable().optional(),
+  catalogOptionId: z.number().nullable().optional(),
 });
 
-// Product Attribute Values insert schema
+// Product attribute insert schema
+export const insertProductAttributeSchema = createInsertSchema(productAttributes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  categoryAttributeId: z.number().nullable().optional(),
+});
+
+// Product attribute option insert schema
+export const insertProductAttributeOptionSchema = createInsertSchema(productAttributeOptions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  metadata: z.record(z.any()).optional(),
+  baseOptionId: z.number().nullable().optional(),
+  categoryOptionId: z.number().nullable().optional(),
+  catalogOptionId: z.number().nullable().optional(),
+});
+
+// Product attribute value insert schema
 export const insertProductAttributeValueSchema = createInsertSchema(productAttributeValues).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  optionId: z.number().nullable().optional(),
+  textValue: z.string().nullable().optional(),
+  dateValue: z.date().nullable().optional(),
+  numericValue: z.number().nullable().optional(),
 });
-
-// Product Attribute Combinations insert schema
-export const insertProductAttributeCombinationSchema = createInsertSchema(productAttributeCombinations).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-// Product Global Attributes insert schema
-export const insertProductGlobalAttributeSchema = createInsertSchema(productGlobalAttributes).omit({
-  id: true,
-  createdAt: true,
-});
-
-// Product Global Attribute Options insert schema
-export const insertProductGlobalAttributeOptionSchema = createInsertSchema(productGlobalAttributeOptions).omit({
-  id: true,
-  createdAt: true,
-});
-*/
 
 // Export types
 export type User = typeof users.$inferSelect;
@@ -490,15 +576,20 @@ export type Catalog = typeof catalogs.$inferSelect;
 export type InsertCatalog = z.infer<typeof insertCatalogSchema>;
 
 // =============================================================================
-// DEPRECATED ATTRIBUTE TYPES - Commented out as part of attribute system redesign
+// NEW ATTRIBUTE SYSTEM TYPES
 // =============================================================================
 
-/*
-export type GlobalAttribute = typeof globalAttributes.$inferSelect;
-export type InsertGlobalAttribute = z.infer<typeof insertGlobalAttributeSchema>;
+export type Attribute = typeof attributes.$inferSelect;
+export type InsertAttribute = z.infer<typeof insertAttributeSchema>;
 
-export type GlobalAttributeOption = typeof globalAttributeOptions.$inferSelect;
-export type InsertGlobalAttributeOption = z.infer<typeof insertGlobalAttributeOptionSchema>;
+export type AttributeOption = typeof attributeOptions.$inferSelect;
+export type InsertAttributeOption = z.infer<typeof insertAttributeOptionSchema>;
+
+export type CatalogAttribute = typeof catalogAttributes.$inferSelect;
+export type InsertCatalogAttribute = z.infer<typeof insertCatalogAttributeSchema>;
+
+export type CatalogAttributeOption = typeof catalogAttributeOptions.$inferSelect;
+export type InsertCatalogAttributeOption = z.infer<typeof insertCatalogAttributeOptionSchema>;
 
 export type CategoryAttribute = typeof categoryAttributes.$inferSelect;
 export type InsertCategoryAttribute = z.infer<typeof insertCategoryAttributeSchema>;
@@ -506,18 +597,14 @@ export type InsertCategoryAttribute = z.infer<typeof insertCategoryAttributeSche
 export type CategoryAttributeOption = typeof categoryAttributeOptions.$inferSelect;
 export type InsertCategoryAttributeOption = z.infer<typeof insertCategoryAttributeOptionSchema>;
 
+export type ProductAttribute = typeof productAttributes.$inferSelect;
+export type InsertProductAttribute = z.infer<typeof insertProductAttributeSchema>;
+
+export type ProductAttributeOption = typeof productAttributeOptions.$inferSelect;
+export type InsertProductAttributeOption = z.infer<typeof insertProductAttributeOptionSchema>;
+
 export type ProductAttributeValue = typeof productAttributeValues.$inferSelect;
 export type InsertProductAttributeValue = z.infer<typeof insertProductAttributeValueSchema>;
-
-export type ProductAttributeCombination = typeof productAttributeCombinations.$inferSelect;
-export type InsertProductAttributeCombination = z.infer<typeof insertProductAttributeCombinationSchema>;
-
-export type ProductGlobalAttribute = typeof productGlobalAttributes.$inferSelect;
-export type InsertProductGlobalAttribute = z.infer<typeof insertProductGlobalAttributeSchema>;
-
-export type ProductGlobalAttributeOption = typeof productGlobalAttributeOptions.$inferSelect;
-export type InsertProductGlobalAttributeOption = z.infer<typeof insertProductGlobalAttributeOptionSchema>;
-*/
 
 // Define all table relations after all tables and types are defined
 export const categoriesRelations = relations(categories, ({ one, many }) => ({
@@ -564,33 +651,141 @@ export const suppliersRelations = relations(suppliers, ({ many }) => ({
 }));
 
 // =============================================================================
-// DEPRECATED ATTRIBUTE RELATIONS - Commented out as part of attribute system redesign
+// NEW ATTRIBUTE SYSTEM RELATIONS
 // =============================================================================
 
-/*
-export const globalAttributesRelations = relations(globalAttributes, ({ many }) => ({
-  options: many(globalAttributeOptions)
+// Attribute relations
+export const attributesRelations = relations(attributes, ({ many }) => ({
+  options: many(attributeOptions),
+  catalogAttributes: many(catalogAttributes),
+  categoryAttributes: many(categoryAttributes),
+  productAttributes: many(productAttributes),
+  productAttributeValues: many(productAttributeValues)
 }));
 
-export const globalAttributeOptionsRelations = relations(globalAttributeOptions, ({ one }) => ({
-  attribute: one(globalAttributes, {
-    fields: [globalAttributeOptions.attributeId],
-    references: [globalAttributes.id]
+// Attribute options relations
+export const attributeOptionsRelations = relations(attributeOptions, ({ one }) => ({
+  attribute: one(attributes, {
+    fields: [attributeOptions.attributeId],
+    references: [attributes.id]
   })
 }));
 
+// Catalog attributes relations
+export const catalogAttributesRelations = relations(catalogAttributes, ({ one, many }) => ({
+  catalog: one(catalogs, {
+    fields: [catalogAttributes.catalogId],
+    references: [catalogs.id]
+  }),
+  attribute: one(attributes, {
+    fields: [catalogAttributes.attributeId],
+    references: [attributes.id]
+  }),
+  options: many(catalogAttributeOptions),
+  categoryAttributes: many(categoryAttributes, {
+    relationName: "catalog_relation"
+  })
+}));
+
+// Catalog attribute options relations
+export const catalogAttributeOptionsRelations = relations(catalogAttributeOptions, ({ one }) => ({
+  catalogAttribute: one(catalogAttributes, {
+    fields: [catalogAttributeOptions.catalogAttributeId],
+    references: [catalogAttributes.id]
+  }),
+  baseOption: one(attributeOptions, {
+    fields: [catalogAttributeOptions.baseOptionId],
+    references: [attributeOptions.id]
+  })
+}));
+
+// Category attributes relations
+export const categoryAttributesRelations = relations(categoryAttributes, ({ one, many }) => ({
+  category: one(categories, {
+    fields: [categoryAttributes.categoryId],
+    references: [categories.id]
+  }),
+  attribute: one(attributes, {
+    fields: [categoryAttributes.attributeId],
+    references: [attributes.id]
+  }),
+  catalogAttribute: one(catalogAttributes, {
+    fields: [categoryAttributes.catalogAttributeId],
+    references: [catalogAttributes.id],
+    relationName: "catalog_relation"
+  }),
+  options: many(categoryAttributeOptions),
+  productAttributes: many(productAttributes, {
+    relationName: "category_relation"
+  })
+}));
+
+// Category attribute options relations
+export const categoryAttributeOptionsRelations = relations(categoryAttributeOptions, ({ one }) => ({
+  categoryAttribute: one(categoryAttributes, {
+    fields: [categoryAttributeOptions.categoryAttributeId],
+    references: [categoryAttributes.id]
+  }),
+  baseOption: one(attributeOptions, {
+    fields: [categoryAttributeOptions.baseOptionId],
+    references: [attributeOptions.id]
+  }),
+  catalogOption: one(catalogAttributeOptions, {
+    fields: [categoryAttributeOptions.catalogOptionId],
+    references: [catalogAttributeOptions.id]
+  })
+}));
+
+// Product attributes relations
+export const productAttributesRelations = relations(productAttributes, ({ one, many }) => ({
+  product: one(products, {
+    fields: [productAttributes.productId],
+    references: [products.id]
+  }),
+  attribute: one(attributes, {
+    fields: [productAttributes.attributeId],
+    references: [attributes.id]
+  }),
+  categoryAttribute: one(categoryAttributes, {
+    fields: [productAttributes.categoryAttributeId],
+    references: [categoryAttributes.id],
+    relationName: "category_relation"
+  }),
+  options: many(productAttributeOptions)
+}));
+
+// Product attribute options relations
+export const productAttributeOptionsRelations = relations(productAttributeOptions, ({ one }) => ({
+  productAttribute: one(productAttributes, {
+    fields: [productAttributeOptions.productAttributeId],
+    references: [productAttributes.id]
+  }),
+  baseOption: one(attributeOptions, {
+    fields: [productAttributeOptions.baseOptionId],
+    references: [attributeOptions.id]
+  }),
+  categoryOption: one(categoryAttributeOptions, {
+    fields: [productAttributeOptions.categoryOptionId],
+    references: [categoryAttributeOptions.id]
+  }),
+  catalogOption: one(catalogAttributeOptions, {
+    fields: [productAttributeOptions.catalogOptionId],
+    references: [catalogAttributeOptions.id]
+  })
+}));
+
+// Product attribute values relations
 export const productAttributeValuesRelations = relations(productAttributeValues, ({ one }) => ({
   product: one(products, {
     fields: [productAttributeValues.productId],
     references: [products.id]
   }),
-  categoryAttribute: one(categoryAttributes, {
+  attribute: one(attributes, {
     fields: [productAttributeValues.attributeId],
-    references: [categoryAttributes.id]
+    references: [attributes.id]
   }),
-  globalAttribute: one(globalAttributes, {
-    fields: [productAttributeValues.globalAttributeId],
-    references: [globalAttributes.id]
+  option: one(productAttributeOptions, {
+    fields: [productAttributeValues.optionId],
+    references: [productAttributeOptions.id]
   })
 }));
-*/
