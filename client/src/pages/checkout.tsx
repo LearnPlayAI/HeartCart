@@ -173,12 +173,18 @@ const CheckoutPage = () => {
         items: cartItems.map(item => ({
           productId: item.productId,
           quantity: item.quantity,
-          price: (item.product.salePrice || item.product.price) + (item.priceAdjustment || 0),
-          // Include attribute information for the order item
+          // Use the itemPrice when available, otherwise fallback to calculated price
+          price: item.itemPrice ? 
+            (item.itemPrice - item.totalDiscount) : 
+            (item.product.salePrice || item.product.price) + (item.priceAdjustment || 0),
+          // Include all attribute and discount information for the order item
           combinationId: item.combinationId || null,
           combinationHash: item.combinationHash || null,
           selectedAttributes: item.selectedAttributes || {},
           priceAdjustment: item.priceAdjustment || 0,
+          originalPrice: item.itemPrice || null,
+          totalDiscount: item.totalDiscount || 0,
+          discountData: item.discountData || null,
         })),
       };
       
@@ -567,15 +573,34 @@ const CheckoutPage = () => {
                         )}
                         
                         <div className="flex items-center mt-1">
-                          <span className="text-sm text-[#FF69B4] font-medium">
-                            {formatCurrency((item.product.salePrice || item.product.price) + (item.priceAdjustment || 0))}
+                          <span className="text-sm text-[#FF69B4] font-medium flex items-center gap-2">
+                            {item.itemPrice ? 
+                              formatCurrency(item.itemPrice - item.totalDiscount) : 
+                              formatCurrency((item.product.salePrice || item.product.price) + (item.priceAdjustment || 0))
+                            }
+                            
+                            {item.totalDiscount > 0 && (
+                              <span className="text-gray-500 line-through text-xs">
+                                {formatCurrency(item.itemPrice || 0)}
+                              </span>
+                            )}
                           </span>
                           <span className="text-xs text-gray-500 mx-2">×</span>
                           <span className="text-sm">{item.quantity}</span>
                         </div>
                       </div>
-                      <div className="font-medium">
-                        {formatCurrency(((item.product.salePrice || item.product.price) + (item.priceAdjustment || 0)) * item.quantity)}
+                      <div className="font-medium flex flex-col items-end">
+                        <span>
+                          {item.itemPrice ? 
+                            formatCurrency((item.itemPrice - item.totalDiscount) * item.quantity) :
+                            formatCurrency(((item.product.salePrice || item.product.price) + (item.priceAdjustment || 0)) * item.quantity)
+                          }
+                        </span>
+                        {item.totalDiscount > 0 && (
+                          <span className="text-xs text-pink-600">
+                            You save: {formatCurrency(item.totalDiscount * item.quantity)}
+                          </span>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -589,6 +614,12 @@ const CheckoutPage = () => {
                     <span className="text-gray-600">Subtotal</span>
                     <span>{formatCurrency(subtotal)}</span>
                   </div>
+                  {cartSummary.totalDiscount > 0 && (
+                    <div className="flex justify-between text-pink-600">
+                      <span>Discount</span>
+                      <span>-{formatCurrency(cartSummary.totalDiscount)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <span className="text-gray-600">Shipping</span>
                     <span>{formatCurrency(shippingCost)}</span>
