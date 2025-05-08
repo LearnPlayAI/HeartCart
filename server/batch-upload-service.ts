@@ -104,49 +104,82 @@ export class BatchUploadService {
    * Get batch upload by ID
    */
   async getBatchUpload(id: number): Promise<BatchUpload | null> {
-    const [batchUpload] = await db.select().from(batchUploads).where(eq(batchUploads.id, id));
-    return batchUpload || null;
+    // Validate ID is a valid number
+    if (isNaN(id) || id <= 0) {
+      console.warn(`Invalid batch upload ID provided: ${id}`);
+      return null;
+    }
+    
+    try {
+      const [batchUpload] = await db.select().from(batchUploads).where(eq(batchUploads.id, id));
+      return batchUpload || null;
+    } catch (error) {
+      console.error(`Error fetching batch upload with ID ${id}:`, error);
+      return null;
+    }
   }
 
   /**
    * Log an error for a batch upload
    */
   async logBatchError(error: InsertBatchUploadError): Promise<void> {
-    await db.insert(batchUploadErrors).values(error);
+    try {
+      // Validate batchId is a valid number
+      if (isNaN(error.batchId) || error.batchId <= 0) {
+        console.warn(`Invalid batch ID in error log: ${error.batchId}`);
+        return;
+      }
+      
+      await db.insert(batchUploadErrors).values(error);
+    } catch (dbError) {
+      console.error('Failed to log batch error:', dbError);
+      // Continue without throwing to avoid cascading errors
+    }
   }
 
   /**
    * Update batch upload status
    */
   async updateBatchStatus(id: number, status: string, updatedFields: Partial<BatchUpload> = {}): Promise<void> {
-    const statusFields: Partial<BatchUpload> = {
-      status,
-      updatedAt: new Date(),
-    };
-    
-    // Add appropriate timestamp based on status
-    switch (status) {
-      case BATCH_STATUSES.COMPLETED:
-        statusFields.completedAt = new Date();
-        break;
-      case BATCH_STATUSES.CANCELLED:
-        statusFields.canceledAt = new Date();
-        break;
-      case BATCH_STATUSES.PAUSED:
-        statusFields.pausedAt = new Date();
-        break;
-      case BATCH_STATUSES.RESUMABLE:
-      case BATCH_STATUSES.RETRYING:
-        statusFields.resumedAt = new Date();
-        break;
+    // Validate ID is a valid number
+    if (isNaN(id) || id <= 0) {
+      console.warn(`Invalid batch upload ID provided for status update: ${id}`);
+      return;
     }
     
-    await db.update(batchUploads)
-      .set({
-        ...statusFields,
-        ...updatedFields
-      })
-      .where(eq(batchUploads.id, id));
+    try {
+      const statusFields: Partial<BatchUpload> = {
+        status,
+        updatedAt: new Date(),
+      };
+      
+      // Add appropriate timestamp based on status
+      switch (status) {
+        case BATCH_STATUSES.COMPLETED:
+          statusFields.completedAt = new Date();
+          break;
+        case BATCH_STATUSES.CANCELLED:
+          statusFields.canceledAt = new Date();
+          break;
+        case BATCH_STATUSES.PAUSED:
+          statusFields.pausedAt = new Date();
+          break;
+        case BATCH_STATUSES.RESUMABLE:
+        case BATCH_STATUSES.RETRYING:
+          statusFields.resumedAt = new Date();
+          break;
+      }
+      
+      await db.update(batchUploads)
+        .set({
+          ...statusFields,
+          ...updatedFields
+        })
+        .where(eq(batchUploads.id, id));
+    } catch (error) {
+      console.error(`Error updating batch status for ID ${id}:`, error);
+      // Continue without throwing to avoid cascading errors
+    }
   }
 
   /**
