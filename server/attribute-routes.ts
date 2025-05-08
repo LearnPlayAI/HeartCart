@@ -36,7 +36,7 @@ export default function registerAttributeRoutes(app: Express) {
 
   // Global Attribute Routes
   app.get("/api/attributes", handleErrors(async (req: Request, res: Response) => {
-    const attributes = await storage.getAttributes();
+    const attributes = await storage.getAllAttributes();
     sendSuccess(res, attributes);
   }));
 
