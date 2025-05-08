@@ -276,61 +276,61 @@ export default function registerProductAttributeRoutes(app: Express) {
   app.put("/api/products/:productId/attributes/:attributeId/options/:id", isAdmin, handleErrors(async (req: Request, res: Response) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
-      return res.status(400).json({ message: "Invalid option ID" });
+      return sendError(res, "Invalid option ID", 400, "INVALID_ID");
     }
 
     const optionData = insertProductAttributeOptionSchema.partial().parse(req.body);
     const updatedOption = await storage.updateProductAttributeOption(id, optionData);
     
     if (!updatedOption) {
-      return res.status(404).json({ message: "Option not found" });
+      return sendError(res, "Option not found", 404, "NOT_FOUND");
     }
     
-    res.json(updatedOption);
+    sendSuccess(res, updatedOption);
   }));
 
   app.delete("/api/products/:productId/attributes/:attributeId/options/:id", isAdmin, handleErrors(async (req: Request, res: Response) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
-      return res.status(400).json({ message: "Invalid option ID" });
+      return sendError(res, "Invalid option ID", 400, "INVALID_ID");
     }
 
     const success = await storage.deleteProductAttributeOption(id);
     if (!success) {
-      return res.status(404).json({ message: "Option not found or could not be deleted" });
+      return sendError(res, "Option not found or could not be deleted", 404, "NOT_FOUND");
     }
     
-    res.status(204).send();
+    sendSuccess(res, null, 204);
   }));
 
   app.post("/api/products/:productId/attributes/:attributeId/options/reorder", isAdmin, handleErrors(async (req: Request, res: Response) => {
     const attributeId = parseInt(req.params.attributeId);
     if (isNaN(attributeId)) {
-      return res.status(400).json({ message: "Invalid attribute ID" });
+      return sendError(res, "Invalid attribute ID", 400, "INVALID_ID");
     }
 
     const { optionIds } = req.body;
     if (!Array.isArray(optionIds)) {
-      return res.status(400).json({ message: "optionIds must be an array of IDs" });
+      return sendError(res, "optionIds must be an array of IDs", 400, "INVALID_REQUEST");
     }
 
     const success = await storage.updateProductAttributeOptionsOrder(attributeId, optionIds);
     if (!success) {
-      return res.status(500).json({ message: "Failed to update options order" });
+      return sendError(res, "Failed to update options order", 500, "SERVER_ERROR");
     }
     
-    res.status(200).json({ message: "Options reordered successfully" });
+    sendSuccess(res, { message: "Options reordered successfully" });
   }));
 
   // Product Attribute Values Routes
   app.get("/api/products/:productId/attribute-values", handleErrors(async (req: Request, res: Response) => {
     const productId = parseInt(req.params.productId);
     if (isNaN(productId)) {
-      return res.status(400).json({ message: "Invalid product ID" });
+      return sendError(res, "Invalid product ID", 400, "INVALID_ID");
     }
 
     const values = await storage.getProductAttributeValues(productId);
-    res.json(values);
+    sendSuccess(res, values);
   }));
   
   // New endpoint to get filterable attributes for product listing when no specific category is selected
@@ -384,13 +384,13 @@ export default function registerProductAttributeRoutes(app: Express) {
       }
     }
     
-    res.json(result);
+    sendSuccess(res, result);
   }));
 
   app.post("/api/products/:productId/attribute-values", handleErrors(async (req: Request, res: Response) => {
     const productId = parseInt(req.params.productId);
     if (isNaN(productId)) {
-      return res.status(400).json({ message: "Invalid product ID" });
+      return sendError(res, "Invalid product ID", 400, "INVALID_ID");
     }
 
     const valueData = insertProductAttributeValueSchema.parse({
@@ -399,36 +399,36 @@ export default function registerProductAttributeRoutes(app: Express) {
     });
     
     const newValue = await storage.createProductAttributeValue(valueData);
-    res.status(201).json(newValue);
+    sendSuccess(res, newValue, 201);
   }));
 
   app.put("/api/products/:productId/attribute-values/:id", handleErrors(async (req: Request, res: Response) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
-      return res.status(400).json({ message: "Invalid value ID" });
+      return sendError(res, "Invalid value ID", 400, "INVALID_ID");
     }
 
     const valueData = insertProductAttributeValueSchema.partial().parse(req.body);
     const updatedValue = await storage.updateProductAttributeValue(id, valueData);
     
     if (!updatedValue) {
-      return res.status(404).json({ message: "Attribute value not found" });
+      return sendError(res, "Attribute value not found", 404, "NOT_FOUND");
     }
     
-    res.json(updatedValue);
+    sendSuccess(res, updatedValue);
   }));
 
   app.delete("/api/products/:productId/attribute-values/:id", handleErrors(async (req: Request, res: Response) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
-      return res.status(400).json({ message: "Invalid value ID" });
+      return sendError(res, "Invalid value ID", 400, "INVALID_ID");
     }
 
     const success = await storage.deleteProductAttributeValue(id);
     if (!success) {
-      return res.status(404).json({ message: "Attribute value not found or could not be deleted" });
+      return sendError(res, "Attribute value not found or could not be deleted", 404, "NOT_FOUND");
     }
     
-    res.status(204).send();
+    sendSuccess(res, { message: "Attribute value deleted successfully" }, 200);
   }));
 }
