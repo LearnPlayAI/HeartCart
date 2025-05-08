@@ -69,7 +69,7 @@ export const products = pgTable("products", {
   displayOrder: integer("display_order").default(999), // Default high number to place new products at the end
   hasBackgroundRemoved: boolean("has_background_removed").default(false),
   originalImageObjectKey: text("original_image_object_key"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 // Cart items table
@@ -87,7 +87,7 @@ export const cartItems = pgTable("cart_items", {
   discountData: jsonb("discount_data"),
   totalDiscount: doublePrecision("total_discount").default(0),
   itemPrice: doublePrecision("item_price"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 // Orders table
@@ -99,7 +99,7 @@ export const orders = pgTable("orders", {
   shippingAddress: text("shipping_address").notNull(),
   shippingMethod: text("shipping_method"),
   paymentMethod: text("payment_method"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 // Order items table
