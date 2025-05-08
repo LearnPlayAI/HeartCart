@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Package, Truck, CreditCard, CalendarCheck } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { useDateFormat } from '@/hooks/use-date-format';
 
 interface OrderItem {
   id: number;
@@ -131,11 +132,8 @@ export default function OrderDetail() {
     );
   }
   
-  const orderDate = new Date(order.createdAt).toLocaleDateString('en-ZA', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
+  const { formatDate } = useDateFormat();
+  const orderDate = formatDate(order.createdAt);
   
   // Format status for display (capitalize first letter)
   const formattedStatus = order.status.charAt(0).toUpperCase() + order.status.slice(1);

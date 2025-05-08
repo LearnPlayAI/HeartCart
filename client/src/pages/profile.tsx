@@ -47,6 +47,7 @@ import {
   Settings 
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useDateFormat } from '@/hooks/use-date-format';
 import { formatCurrency } from '@/lib/utils';
 import { apiRequest } from '@/lib/queryClient';
 
