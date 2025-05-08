@@ -31,10 +31,15 @@ const ProductImageManager = ({ productId, onBackgroundRemoved }: ProductImageMan
     queryKey: [`/api/products/${productId}/images`],
     queryFn: async () => {
       const res = await fetch(`/api/products/${productId}/images`);
-      if (!res.ok) {
-        throw new Error('Failed to fetch product images');
+      
+      const result = await res.json();
+      
+      // Check if the response follows the standardized format
+      if (!result.success) {
+        throw new Error(result.error?.message || 'Failed to fetch product images');
       }
-      return res.json() as Promise<ProductImage[]>;
+      
+      return result.data as ProductImage[];
     },
   });
   
@@ -118,10 +123,15 @@ const ProductImageManager = ({ productId, onBackgroundRemoved }: ProductImageMan
         `/api/products/images/${imageId}`,
         {}
       );
-      if (!res.ok) {
-        throw new Error('Failed to delete image');
+      
+      const result = await res.json();
+      
+      // Check if the response follows the standardized format
+      if (!result.success) {
+        throw new Error(result.error?.message || 'Failed to delete image');
       }
-      return res.json();
+      
+      return result.data;
     },
     onSuccess: () => {
       toast({
