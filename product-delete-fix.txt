@@ -1,0 +1,39 @@
+  // Delete a product endpoint
+  app.delete(
+    "/api/products/:id", 
+    isAuthenticated, 
+    validateRequest({ params: idParamSchema }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const user = req.user as any;
+      
+      // Check if user is admin
+      if (user.role !== 'admin') {
+        throw new ForbiddenError("Only administrators can delete products");
+      }
+      
+      const productId = Number(req.params.id);
+      
+      // Get the existing product to check if it exists, including inactive products
+      const existingProduct = await storage.getProductById(productId, { includeInactive: true });
+      
+      if (!existingProduct) {
+        throw new NotFoundError(`Product with ID ${productId} not found`, 'product');
+      }
+      
+      try {
+        // Delete the product and all associated data
+        const success = await storage.deleteProduct(productId);
+        
+        res.json({ 
+          success, 
+          message: `Product "${existingProduct.name}" was successfully deleted along with all associated images and data.` 
+        });
+      } catch (error) {
+        throw new ServerError(
+          "An error occurred while deleting the product. Please try again.",
+          ErrorCode.INTERNAL_SERVER_ERROR,
+          500
+        );
+      }
+    })
+  );
