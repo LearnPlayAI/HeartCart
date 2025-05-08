@@ -2438,6 +2438,356 @@ export class DatabaseStorage implements IStorage {
       return false;
     }
   }
+  
+  // Category attribute operations
+  async getCategoryAttributes(categoryId: number): Promise<(CategoryAttribute & { attribute: Attribute })[]> {
+    const result = await db
+      .select({
+        categoryAttribute: categoryAttributes,
+        attribute: attributes
+      })
+      .from(categoryAttributes)
+      .innerJoin(attributes, eq(categoryAttributes.attributeId, attributes.id))
+      .where(eq(categoryAttributes.categoryId, categoryId))
+      .orderBy(asc(categoryAttributes.sortOrder));
+    
+    return result.map(row => ({
+      ...row.categoryAttribute,
+      attribute: row.attribute
+    }));
+  }
+  
+  async getCategoryAttributeById(id: number): Promise<(CategoryAttribute & { attribute: Attribute }) | undefined> {
+    const result = await db
+      .select({
+        categoryAttribute: categoryAttributes,
+        attribute: attributes
+      })
+      .from(categoryAttributes)
+      .innerJoin(attributes, eq(categoryAttributes.attributeId, attributes.id))
+      .where(eq(categoryAttributes.id, id));
+    
+    if (result.length === 0) {
+      return undefined;
+    }
+    
+    return {
+      ...result[0].categoryAttribute,
+      attribute: result[0].attribute
+    };
+  }
+  
+  async createCategoryAttribute(categoryAttribute: InsertCategoryAttribute): Promise<CategoryAttribute> {
+    const [newCategoryAttribute] = await db
+      .insert(categoryAttributes)
+      .values(categoryAttribute)
+      .returning();
+    return newCategoryAttribute;
+  }
+  
+  async updateCategoryAttribute(id: number, categoryAttributeData: Partial<InsertCategoryAttribute>): Promise<CategoryAttribute | undefined> {
+    const [updatedCategoryAttribute] = await db
+      .update(categoryAttributes)
+      .set(categoryAttributeData)
+      .where(eq(categoryAttributes.id, id))
+      .returning();
+    return updatedCategoryAttribute;
+  }
+  
+  async deleteCategoryAttribute(id: number): Promise<boolean> {
+    try {
+      await db
+        .delete(categoryAttributes)
+        .where(eq(categoryAttributes.id, id));
+      return true;
+    } catch (error) {
+      console.error("Error deleting category attribute:", error);
+      return false;
+    }
+  }
+  
+  // Category attribute options operations
+  async getCategoryAttributeOptions(categoryAttributeId: number): Promise<(CategoryAttributeOption & { 
+    baseOption?: AttributeOption, 
+    catalogOption?: CatalogAttributeOption 
+  })[]> {
+    const result = await db
+      .select({
+        categoryOption: categoryAttributeOptions,
+        baseOption: attributeOptions,
+        catalogOption: catalogAttributeOptions
+      })
+      .from(categoryAttributeOptions)
+      .leftJoin(attributeOptions, eq(categoryAttributeOptions.baseOptionId, attributeOptions.id))
+      .leftJoin(catalogAttributeOptions, eq(categoryAttributeOptions.catalogOptionId, catalogAttributeOptions.id))
+      .where(eq(categoryAttributeOptions.categoryAttributeId, categoryAttributeId))
+      .orderBy(asc(categoryAttributeOptions.sortOrder));
+    
+    return result.map(row => ({
+      ...row.categoryOption,
+      baseOption: row.baseOption || undefined,
+      catalogOption: row.catalogOption || undefined
+    }));
+  }
+  
+  async getCategoryAttributeOptionById(id: number): Promise<CategoryAttributeOption | undefined> {
+    const [option] = await db
+      .select()
+      .from(categoryAttributeOptions)
+      .where(eq(categoryAttributeOptions.id, id));
+    return option;
+  }
+  
+  async createCategoryAttributeOption(option: InsertCategoryAttributeOption): Promise<CategoryAttributeOption> {
+    const [newOption] = await db
+      .insert(categoryAttributeOptions)
+      .values(option)
+      .returning();
+    return newOption;
+  }
+  
+  async updateCategoryAttributeOption(id: number, optionData: Partial<InsertCategoryAttributeOption>): Promise<CategoryAttributeOption | undefined> {
+    const [updatedOption] = await db
+      .update(categoryAttributeOptions)
+      .set(optionData)
+      .where(eq(categoryAttributeOptions.id, id))
+      .returning();
+    return updatedOption;
+  }
+  
+  async deleteCategoryAttributeOption(id: number): Promise<boolean> {
+    try {
+      await db
+        .delete(categoryAttributeOptions)
+        .where(eq(categoryAttributeOptions.id, id));
+      return true;
+    } catch (error) {
+      console.error("Error deleting category attribute option:", error);
+      return false;
+    }
+  }
+  
+  async updateCategoryAttributeOptionsOrder(categoryAttributeId: number, optionIds: number[]): Promise<boolean> {
+    try {
+      // Start a transaction
+      await db.transaction(async (tx) => {
+        // Update the sort order for each option
+        for (let i = 0; i < optionIds.length; i++) {
+          await tx
+            .update(categoryAttributeOptions)
+            .set({ sortOrder: i })
+            .where(and(
+              eq(categoryAttributeOptions.id, optionIds[i]),
+              eq(categoryAttributeOptions.categoryAttributeId, categoryAttributeId)
+            ));
+        }
+      });
+      return true;
+    } catch (error) {
+      console.error("Error updating category attribute options order:", error);
+      return false;
+    }
+  }
+  
+  // Product attribute operations
+  async getProductAttributes(productId: number): Promise<(ProductAttribute & { attribute: Attribute })[]> {
+    const result = await db
+      .select({
+        productAttribute: productAttributes,
+        attribute: attributes
+      })
+      .from(productAttributes)
+      .innerJoin(attributes, eq(productAttributes.attributeId, attributes.id))
+      .where(eq(productAttributes.productId, productId))
+      .orderBy(asc(productAttributes.sortOrder));
+    
+    return result.map(row => ({
+      ...row.productAttribute,
+      attribute: row.attribute
+    }));
+  }
+  
+  async getProductAttributeById(id: number): Promise<(ProductAttribute & { attribute: Attribute }) | undefined> {
+    const result = await db
+      .select({
+        productAttribute: productAttributes,
+        attribute: attributes
+      })
+      .from(productAttributes)
+      .innerJoin(attributes, eq(productAttributes.attributeId, attributes.id))
+      .where(eq(productAttributes.id, id));
+    
+    if (result.length === 0) {
+      return undefined;
+    }
+    
+    return {
+      ...result[0].productAttribute,
+      attribute: result[0].attribute
+    };
+  }
+  
+  async createProductAttribute(productAttribute: InsertProductAttribute): Promise<ProductAttribute> {
+    const [newProductAttribute] = await db
+      .insert(productAttributes)
+      .values(productAttribute)
+      .returning();
+    return newProductAttribute;
+  }
+  
+  async updateProductAttribute(id: number, productAttributeData: Partial<InsertProductAttribute>): Promise<ProductAttribute | undefined> {
+    const [updatedProductAttribute] = await db
+      .update(productAttributes)
+      .set(productAttributeData)
+      .where(eq(productAttributes.id, id))
+      .returning();
+    return updatedProductAttribute;
+  }
+  
+  async deleteProductAttribute(id: number): Promise<boolean> {
+    try {
+      await db
+        .delete(productAttributes)
+        .where(eq(productAttributes.id, id));
+      return true;
+    } catch (error) {
+      console.error("Error deleting product attribute:", error);
+      return false;
+    }
+  }
+  
+  // Product attribute options operations
+  async getProductAttributeOptions(productAttributeId: number): Promise<(ProductAttributeOption & { 
+    baseOption?: AttributeOption, 
+    catalogOption?: CatalogAttributeOption,
+    categoryOption?: CategoryAttributeOption
+  })[]> {
+    const result = await db
+      .select({
+        productOption: productAttributeOptions,
+        baseOption: attributeOptions,
+        catalogOption: catalogAttributeOptions,
+        categoryOption: categoryAttributeOptions
+      })
+      .from(productAttributeOptions)
+      .leftJoin(attributeOptions, eq(productAttributeOptions.baseOptionId, attributeOptions.id))
+      .leftJoin(catalogAttributeOptions, eq(productAttributeOptions.catalogOptionId, catalogAttributeOptions.id))
+      .leftJoin(categoryAttributeOptions, eq(productAttributeOptions.categoryOptionId, categoryAttributeOptions.id))
+      .where(eq(productAttributeOptions.productAttributeId, productAttributeId))
+      .orderBy(asc(productAttributeOptions.sortOrder));
+    
+    return result.map(row => ({
+      ...row.productOption,
+      baseOption: row.baseOption || undefined,
+      catalogOption: row.catalogOption || undefined,
+      categoryOption: row.categoryOption || undefined
+    }));
+  }
+  
+  async getProductAttributeOptionById(id: number): Promise<ProductAttributeOption | undefined> {
+    const [option] = await db
+      .select()
+      .from(productAttributeOptions)
+      .where(eq(productAttributeOptions.id, id));
+    return option;
+  }
+  
+  async createProductAttributeOption(option: InsertProductAttributeOption): Promise<ProductAttributeOption> {
+    const [newOption] = await db
+      .insert(productAttributeOptions)
+      .values(option)
+      .returning();
+    return newOption;
+  }
+  
+  async updateProductAttributeOption(id: number, optionData: Partial<InsertProductAttributeOption>): Promise<ProductAttributeOption | undefined> {
+    const [updatedOption] = await db
+      .update(productAttributeOptions)
+      .set(optionData)
+      .where(eq(productAttributeOptions.id, id))
+      .returning();
+    return updatedOption;
+  }
+  
+  async deleteProductAttributeOption(id: number): Promise<boolean> {
+    try {
+      await db
+        .delete(productAttributeOptions)
+        .where(eq(productAttributeOptions.id, id));
+      return true;
+    } catch (error) {
+      console.error("Error deleting product attribute option:", error);
+      return false;
+    }
+  }
+  
+  async updateProductAttributeOptionsOrder(productAttributeId: number, optionIds: number[]): Promise<boolean> {
+    try {
+      // Start a transaction
+      await db.transaction(async (tx) => {
+        // Update the sort order for each option
+        for (let i = 0; i < optionIds.length; i++) {
+          await tx
+            .update(productAttributeOptions)
+            .set({ sortOrder: i })
+            .where(and(
+              eq(productAttributeOptions.id, optionIds[i]),
+              eq(productAttributeOptions.productAttributeId, productAttributeId)
+            ));
+        }
+      });
+      return true;
+    } catch (error) {
+      console.error("Error updating product attribute options order:", error);
+      return false;
+    }
+  }
+  
+  // Product attribute values operations
+  async getProductAttributeValues(productId: number): Promise<ProductAttributeValue[]> {
+    return await db
+      .select()
+      .from(productAttributeValues)
+      .where(eq(productAttributeValues.productId, productId))
+      .orderBy(asc(productAttributeValues.sortOrder));
+  }
+  
+  async getProductAttributeValueById(id: number): Promise<ProductAttributeValue | undefined> {
+    const [value] = await db
+      .select()
+      .from(productAttributeValues)
+      .where(eq(productAttributeValues.id, id));
+    return value;
+  }
+  
+  async createProductAttributeValue(value: InsertProductAttributeValue): Promise<ProductAttributeValue> {
+    const [newValue] = await db
+      .insert(productAttributeValues)
+      .values(value)
+      .returning();
+    return newValue;
+  }
+  
+  async updateProductAttributeValue(id: number, valueData: Partial<InsertProductAttributeValue>): Promise<ProductAttributeValue | undefined> {
+    const [updatedValue] = await db
+      .update(productAttributeValues)
+      .set(valueData)
+      .where(eq(productAttributeValues.id, id))
+      .returning();
+    return updatedValue;
+  }
+  
+  async deleteProductAttributeValue(id: number): Promise<boolean> {
+    try {
+      await db
+        .delete(productAttributeValues)
+        .where(eq(productAttributeValues.id, id));
+      return true;
+    } catch (error) {
+      console.error("Error deleting product attribute value:", error);
+      return false;
+    }
+  }
 }
 
 export const storage = new DatabaseStorage();

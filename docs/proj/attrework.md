@@ -54,10 +54,13 @@ We'll implement a structure with the following main tables:
   - Create migration script to create new tables
   - Add relations between tables
 
-- [ ] **Task 2.2: Storage Methods Implementation** (In Progress)
-  - Implement CRUD operations for attributes
-  - Implement methods for attribute associations
-  - Implement methods for option management
+- [x] **Task 2.2: Storage Methods Implementation** (Complete)
+  - ✓ Implement CRUD operations for core attributes
+  - ✓ Implement CRUD for attribute options
+  - ✓ Implement catalog attribute CRUD methods
+  - ✓ Implement category attribute methods
+  - ✓ Implement product attribute methods
+  - ✓ Implement attribute value methods
 
 - [ ] **Task 2.3: API Routes Implementation** (Not Started)
   - Create routes for attribute management

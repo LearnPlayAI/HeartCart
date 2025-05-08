@@ -23,6 +23,8 @@ import path from "path";
 import fs from "fs";
 import fileRoutes from "./file-routes";
 import uploadHandlers from "./upload-handlers";
+import registerAttributeRoutes from "./attribute-routes";
+import registerProductAttributeRoutes from "./attribute-routes-product";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Use memory storage for file uploads to avoid local filesystem
