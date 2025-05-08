@@ -1340,124 +1340,184 @@ export class DatabaseStorage implements IStorage {
   
   // Product Image operations
   async getProductImages(productId: number): Promise<ProductImage[]> {
-    // Select specific columns that exist in the database
-    const result = await db
-      .select({
-        id: productImages.id,
-        productId: productImages.productId,
-        url: productImages.url,
-        objectKey: productImages.objectKey,
-        isMain: productImages.isMain,
-        hasBgRemoved: productImages.hasBgRemoved,
-        bgRemovedUrl: productImages.bgRemovedUrl,
-        bgRemovedObjectKey: productImages.bgRemovedObjectKey,
-        sortOrder: productImages.sortOrder,
-        createdAt: productImages.createdAt
-      })
-      .from(productImages)
-      .where(eq(productImages.productId, productId))
-      .orderBy(asc(productImages.sortOrder));
-    
-    return result;
+    try {
+      // Select specific columns that exist in the database
+      const result = await db
+        .select({
+          id: productImages.id,
+          productId: productImages.productId,
+          url: productImages.url,
+          objectKey: productImages.objectKey,
+          isMain: productImages.isMain,
+          hasBgRemoved: productImages.hasBgRemoved,
+          bgRemovedUrl: productImages.bgRemovedUrl,
+          bgRemovedObjectKey: productImages.bgRemovedObjectKey,
+          sortOrder: productImages.sortOrder,
+          createdAt: productImages.createdAt
+        })
+        .from(productImages)
+        .where(eq(productImages.productId, productId))
+        .orderBy(asc(productImages.sortOrder));
+      
+      return result;
+    } catch (error) {
+      console.error(`Error fetching images for product ${productId}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
   }
 
   async getProductImagesWithBgRemoved(productId: number): Promise<ProductImage[]> {
-    // Select specific columns that exist in the database
-    const result = await db
-      .select({
-        id: productImages.id,
-        productId: productImages.productId,
-        url: productImages.url,
-        objectKey: productImages.objectKey,
-        isMain: productImages.isMain,
-        hasBgRemoved: productImages.hasBgRemoved,
-        bgRemovedUrl: productImages.bgRemovedUrl,
-        bgRemovedObjectKey: productImages.bgRemovedObjectKey,
-        sortOrder: productImages.sortOrder,
-        createdAt: productImages.createdAt
-      })
-      .from(productImages)
-      .where(
-        and(
-          eq(productImages.productId, productId),
-          eq(productImages.hasBgRemoved, true)
+    try {
+      // Select specific columns that exist in the database
+      const result = await db
+        .select({
+          id: productImages.id,
+          productId: productImages.productId,
+          url: productImages.url,
+          objectKey: productImages.objectKey,
+          isMain: productImages.isMain,
+          hasBgRemoved: productImages.hasBgRemoved,
+          bgRemovedUrl: productImages.bgRemovedUrl,
+          bgRemovedObjectKey: productImages.bgRemovedObjectKey,
+          sortOrder: productImages.sortOrder,
+          createdAt: productImages.createdAt
+        })
+        .from(productImages)
+        .where(
+          and(
+            eq(productImages.productId, productId),
+            eq(productImages.hasBgRemoved, true)
+          )
         )
-      )
-      .orderBy(asc(productImages.sortOrder));
-      
-    return result;
+        .orderBy(asc(productImages.sortOrder));
+        
+      return result;
+    } catch (error) {
+      console.error(`Error fetching background-removed images for product ${productId}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
   }
 
   async getProductImageById(id: number): Promise<ProductImage | undefined> {
-    const [image] = await db
-      .select()
-      .from(productImages)
-      .where(eq(productImages.id, id));
-    return image;
+    try {
+      const [image] = await db
+        .select()
+        .from(productImages)
+        .where(eq(productImages.id, id));
+      return image;
+    } catch (error) {
+      console.error(`Error fetching image with ID ${id}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
   }
   
   async createProductImage(image: InsertProductImage): Promise<ProductImage> {
-    // If this is marked as main image, unset any existing main image
-    if (image.isMain && image.productId) {
-      await db
-        .update(productImages)
-        .set({ isMain: false })
-        .where(
-          and(
-            eq(productImages.productId, image.productId),
-            eq(productImages.isMain, true)
-          )
-        );
+    try {
+      // If this is marked as main image, unset any existing main image
+      if (image.isMain && image.productId) {
+        try {
+          await db
+            .update(productImages)
+            .set({ isMain: false })
+            .where(
+              and(
+                eq(productImages.productId, image.productId),
+                eq(productImages.isMain, true)
+              )
+            );
+        } catch (updateError) {
+          console.error(`Error unsetting existing main image for product ${image.productId}:`, updateError);
+          throw updateError; // Rethrow so the route handler can catch it and send a proper error response
+        }
+      }
+      
+      try {
+        const [newImage] = await db.insert(productImages).values(image).returning();
+        return newImage;
+      } catch (insertError) {
+        console.error('Error inserting new product image:', insertError);
+        throw insertError; // Rethrow so the route handler can catch it and send a proper error response
+      }
+    } catch (error) {
+      console.error('Error in createProductImage:', error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
-    
-    const [newImage] = await db.insert(productImages).values(image).returning();
-    return newImage;
   }
 
   async updateProductImage(id: number, imageData: Partial<InsertProductImage>): Promise<ProductImage | undefined> {
-    // If this is marked as main image, unset any existing main images
-    if (imageData.isMain && imageData.productId) {
-      await db
-        .update(productImages)
-        .set({ isMain: false })
-        .where(
-          and(
-            eq(productImages.productId, imageData.productId),
-            eq(productImages.isMain, true),
-            sql`${productImages.id} != ${id}`
-          )
-        );
+    try {
+      // If this is marked as main image, unset any existing main images
+      if (imageData.isMain && imageData.productId) {
+        try {
+          await db
+            .update(productImages)
+            .set({ isMain: false })
+            .where(
+              and(
+                eq(productImages.productId, imageData.productId),
+                eq(productImages.isMain, true),
+                sql`${productImages.id} != ${id}`
+              )
+            );
+        } catch (updateError) {
+          console.error(`Error unsetting existing main image for product ${imageData.productId}:`, updateError);
+          throw updateError; // Rethrow so the route handler can catch it and send a proper error response
+        }
+      }
+      
+      try {
+        const [updatedImage] = await db
+          .update(productImages)
+          .set(imageData)
+          .where(eq(productImages.id, id))
+          .returning();
+        
+        return updatedImage;
+      } catch (updateError) {
+        console.error(`Error updating product image ${id}:`, updateError);
+        throw updateError; // Rethrow so the route handler can catch it and send a proper error response
+      }
+    } catch (error) {
+      console.error(`Error in updateProductImage for image ${id}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
-    
-    const [updatedImage] = await db
-      .update(productImages)
-      .set(imageData)
-      .where(eq(productImages.id, id))
-      .returning();
-    
-    return updatedImage;
   }
 
   async setMainProductImage(productId: number, imageId: number): Promise<boolean> {
-    // Unset existing main image
-    await db
-      .update(productImages)
-      .set({ isMain: false })
-      .where(
-        and(
-          eq(productImages.productId, productId),
-          eq(productImages.isMain, true)
-        )
-      );
-    
-    // Set new main image
-    const [updatedImage] = await db
-      .update(productImages)
-      .set({ isMain: true })
-      .where(eq(productImages.id, imageId))
-      .returning();
-    
-    return !!updatedImage;
+    try {
+      // Unset existing main image
+      try {
+        await db
+          .update(productImages)
+          .set({ isMain: false })
+          .where(
+            and(
+              eq(productImages.productId, productId),
+              eq(productImages.isMain, true)
+            )
+          );
+      } catch (unsetError) {
+        console.error(`Error unsetting existing main image for product ${productId}:`, unsetError);
+        throw unsetError; // Rethrow so the route handler can catch it and send a proper error response
+      }
+      
+      try {
+        // Set new main image
+        const [updatedImage] = await db
+          .update(productImages)
+          .set({ isMain: true })
+          .where(eq(productImages.id, imageId))
+          .returning();
+        
+        return !!updatedImage;
+      } catch (setError) {
+        console.error(`Error setting image ${imageId} as main for product ${productId}:`, setError);
+        throw setError; // Rethrow so the route handler can catch it and send a proper error response
+      }
+    } catch (error) {
+      console.error(`Error in setMainProductImage for product ${productId} and image ${imageId}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
   }
 
   async deleteProductImage(id: number): Promise<boolean> {
@@ -1568,84 +1628,139 @@ export class DatabaseStorage implements IStorage {
   }
   
   async bulkUpdateProductStatus(productIds: number[], isActive: boolean): Promise<number> {
-    if (productIds.length === 0) {
-      return 0;
-    }
-    
-    // Update all products in the list to the new status
-    await db
-      .update(products)
-      .set({ isActive })
-      .where(inArray(products.id, productIds));
+    try {
+      if (productIds.length === 0) {
+        return 0;
+      }
       
-    // Return the number of affected rows
-    return productIds.length;
+      try {
+        // Update all products in the list to the new status
+        await db
+          .update(products)
+          .set({ isActive })
+          .where(inArray(products.id, productIds));
+          
+        // Return the number of affected rows
+        return productIds.length;
+      } catch (updateError) {
+        console.error(`Error updating status to ${isActive ? 'active' : 'inactive'} for ${productIds.length} products:`, updateError);
+        throw updateError; // Rethrow so the route handler can catch it and send a proper error response
+      }
+    } catch (error) {
+      console.error(`Error in bulkUpdateProductStatus for ${productIds.length} products:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
   }
 
   // AI Recommendation operations
   async saveRecommendation(recommendation: InsertAiRecommendation): Promise<AiRecommendation> {
-    const [newRecommendation] = await db
-      .insert(aiRecommendations)
-      .values(recommendation)
-      .returning();
-    return newRecommendation;
+    try {
+      const [newRecommendation] = await db
+        .insert(aiRecommendations)
+        .values(recommendation)
+        .returning();
+      return newRecommendation;
+    } catch (error) {
+      console.error('Error saving AI recommendation:', error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
   }
 
   async getRecommendationsForUser(userId: number): Promise<AiRecommendation | undefined> {
-    const [recommendation] = await db
-      .select()
-      .from(aiRecommendations)
-      .where(eq(aiRecommendations.userId, userId))
-      .orderBy(desc(aiRecommendations.createdAt))
-      .limit(1);
-    
-    return recommendation;
+    try {
+      const [recommendation] = await db
+        .select()
+        .from(aiRecommendations)
+        .where(eq(aiRecommendations.userId, userId))
+        .orderBy(desc(aiRecommendations.createdAt))
+        .limit(1);
+      
+      return recommendation;
+    } catch (error) {
+      console.error(`Error fetching AI recommendations for user ${userId}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
   }
 
   // Pricing operations
   async getPricingByCategoryId(categoryId: number): Promise<Pricing | undefined> {
-    const [pricingSetting] = await db
-      .select()
-      .from(pricing)
-      .where(eq(pricing.categoryId, categoryId));
-    
-    return pricingSetting;
+    try {
+      const [pricingSetting] = await db
+        .select()
+        .from(pricing)
+        .where(eq(pricing.categoryId, categoryId));
+      
+      return pricingSetting;
+    } catch (error) {
+      console.error(`Error fetching pricing for category ${categoryId}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
   }
   
   async getPricingById(id: number): Promise<Pricing | undefined> {
-    const [pricingSetting] = await db
-      .select()
-      .from(pricing)
-      .where(eq(pricing.id, id));
-    
-    return pricingSetting;
+    try {
+      const [pricingSetting] = await db
+        .select()
+        .from(pricing)
+        .where(eq(pricing.id, id));
+      
+      return pricingSetting;
+    } catch (error) {
+      console.error(`Error fetching pricing with ID ${id}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
   }
   
   async getAllPricingSettings(): Promise<Pricing[]> {
-    return await db.select().from(pricing);
+    try {
+      return await db.select().from(pricing);
+    } catch (error) {
+      console.error('Error fetching all pricing settings:', error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
   }
   
   async createOrUpdatePricing(pricingData: InsertPricing): Promise<Pricing> {
-    // Check if pricing for this category already exists
-    const existing = await this.getPricingByCategoryId(pricingData.categoryId);
-    
-    if (existing) {
-      // Update existing pricing
-      const [updated] = await db
-        .update(pricing)
-        .set({
-          markupPercentage: pricingData.markupPercentage,
-          description: pricingData.description,
-          updatedAt: new Date()
-        })
-        .where(eq(pricing.id, existing.id))
-        .returning();
-      
-      return updated;
-    } else {
-      // Create new pricing
-      const [newPricing] = await db.insert(pricing).values(pricingData).returning();
-      return newPricing;
+    try {
+      // Check if pricing for this category already exists
+      try {
+        const existing = await this.getPricingByCategoryId(pricingData.categoryId);
+        
+        if (existing) {
+          try {
+            // Update existing pricing
+            const [updated] = await db
+              .update(pricing)
+              .set({
+                markupPercentage: pricingData.markupPercentage,
+                description: pricingData.description,
+                updatedAt: new Date()
+              })
+              .where(eq(pricing.id, existing.id))
+              .returning();
+            
+            return updated;
+          } catch (updateError) {
+            console.error(`Error updating existing pricing for category ${pricingData.categoryId}:`, updateError);
+            throw updateError; // Rethrow so the route handler can catch it and send a proper error response
+          }
+        } else {
+          try {
+            // Create new pricing
+            const [newPricing] = await db.insert(pricing).values(pricingData).returning();
+            return newPricing;
+          } catch (insertError) {
+            console.error(`Error creating new pricing for category ${pricingData.categoryId}:`, insertError);
+            throw insertError; // Rethrow so the route handler can catch it and send a proper error response
+          }
+        }
+      } catch (lookupError) {
+        console.error(`Error checking if pricing exists for category ${pricingData.categoryId}:`, lookupError);
+        throw lookupError; // Rethrow so the route handler can catch it and send a proper error response
+      }
+    } catch (error) {
+      console.error(`Error in createOrUpdatePricing for category ${pricingData.categoryId}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
   }
   
@@ -1660,107 +1775,162 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getDefaultMarkupPercentage(): Promise<number | null> {
-    // Look for a special "global default" setting (categoryId = 0 or null)
-    const [defaultSetting] = await db
-      .select()
-      .from(pricing)
-      .where(eq(pricing.categoryId, 0));
-    
-    // Return the markup percentage if found, or null if not found
-    return defaultSetting?.markupPercentage || null;
+    try {
+      // Look for a special "global default" setting (categoryId = 0 or null)
+      const [defaultSetting] = await db
+        .select()
+        .from(pricing)
+        .where(eq(pricing.categoryId, 0));
+      
+      // Return the markup percentage if found, or null if not found
+      return defaultSetting?.markupPercentage || null;
+    } catch (error) {
+      console.error('Error fetching default markup percentage:', error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
   }
 
   // AI Settings operations
   async getAiSetting(settingName: string): Promise<AiSetting | undefined> {
-    const [setting] = await db
-      .select()
-      .from(aiSettings)
-      .where(eq(aiSettings.settingName, settingName));
-    
-    return setting;
+    try {
+      const [setting] = await db
+        .select()
+        .from(aiSettings)
+        .where(eq(aiSettings.settingName, settingName));
+      
+      return setting;
+    } catch (error) {
+      console.error(`Error fetching AI setting with name "${settingName}":`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
   }
   
   async getAllAiSettings(): Promise<AiSetting[]> {
-    return await db
-      .select()
-      .from(aiSettings)
-      .orderBy(asc(aiSettings.settingName));
+    try {
+      return await db
+        .select()
+        .from(aiSettings)
+        .orderBy(asc(aiSettings.settingName));
+    } catch (error) {
+      console.error('Error fetching all AI settings:', error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
   }
   
   async saveAiSetting(setting: InsertAiSetting): Promise<AiSetting> {
-    // Check if the setting already exists
-    const existingSetting = await this.getAiSetting(setting.settingName);
-    
-    if (existingSetting) {
-      // Update existing setting
-      const [updatedSetting] = await db
-        .update(aiSettings)
-        .set({
-          ...setting,
-          updatedAt: new Date()
-        })
-        .where(eq(aiSettings.settingName, setting.settingName))
-        .returning();
-      
-      return updatedSetting;
-    } else {
-      // Create new setting
-      const [newSetting] = await db
-        .insert(aiSettings)
-        .values(setting)
-        .returning();
-      
-      return newSetting;
+    try {
+      // Check if the setting already exists
+      try {
+        const existingSetting = await this.getAiSetting(setting.settingName);
+        
+        if (existingSetting) {
+          try {
+            // Update existing setting
+            const [updatedSetting] = await db
+              .update(aiSettings)
+              .set({
+                ...setting,
+                updatedAt: new Date()
+              })
+              .where(eq(aiSettings.settingName, setting.settingName))
+              .returning();
+            
+            return updatedSetting;
+          } catch (updateError) {
+            console.error(`Error updating existing AI setting "${setting.settingName}":`, updateError);
+            throw updateError; // Rethrow so the route handler can catch it and send a proper error response
+          }
+        } else {
+          try {
+            // Create new setting
+            const [newSetting] = await db
+              .insert(aiSettings)
+              .values(setting)
+              .returning();
+            
+            return newSetting;
+          } catch (insertError) {
+            console.error(`Error creating new AI setting "${setting.settingName}":`, insertError);
+            throw insertError; // Rethrow so the route handler can catch it and send a proper error response
+          }
+        }
+      } catch (lookupError) {
+        console.error(`Error checking if AI setting "${setting.settingName}" exists:`, lookupError);
+        throw lookupError; // Rethrow so the route handler can catch it and send a proper error response
+      }
+    } catch (error) {
+      console.error(`Error in saveAiSetting for "${setting.settingName}":`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
   }
 
   // Supplier operations
   async getAllSuppliers(activeOnly = true): Promise<Supplier[]> {
-    if (activeOnly) {
-      return await db
-        .select()
-        .from(suppliers)
-        .where(eq(suppliers.isActive, true))
-        .orderBy(asc(suppliers.name));
-    } else {
-      return await db
-        .select()
-        .from(suppliers)
-        .orderBy(asc(suppliers.name));
+    try {
+      if (activeOnly) {
+        return await db
+          .select()
+          .from(suppliers)
+          .where(eq(suppliers.isActive, true))
+          .orderBy(asc(suppliers.name));
+      } else {
+        return await db
+          .select()
+          .from(suppliers)
+          .orderBy(asc(suppliers.name));
+      }
+    } catch (error) {
+      console.error(`Error fetching all suppliers (activeOnly=${activeOnly}):`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
   }
 
   async getSupplierById(id: number): Promise<Supplier | undefined> {
-    const [supplier] = await db
-      .select()
-      .from(suppliers)
-      .where(eq(suppliers.id, id));
-    return supplier;
+    try {
+      const [supplier] = await db
+        .select()
+        .from(suppliers)
+        .where(eq(suppliers.id, id));
+      return supplier;
+    } catch (error) {
+      console.error(`Error fetching supplier with ID ${id}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
   }
 
   async createSupplier(supplier: InsertSupplier): Promise<Supplier> {
-    const now = new Date();
-    const [newSupplier] = await db
-      .insert(suppliers)
-      .values({
-        ...supplier,
-        createdAt: now,
-        updatedAt: now
-      })
-      .returning();
-    return newSupplier;
+    try {
+      const now = new Date();
+      const [newSupplier] = await db
+        .insert(suppliers)
+        .values({
+          ...supplier,
+          createdAt: now,
+          updatedAt: now
+        })
+        .returning();
+      return newSupplier;
+    } catch (error) {
+      console.error(`Error creating supplier "${supplier.name}":`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
   }
 
   async updateSupplier(id: number, supplierData: Partial<InsertSupplier>): Promise<Supplier | undefined> {
-    const [updatedSupplier] = await db
-      .update(suppliers)
-      .set({
-        ...supplierData,
-        updatedAt: new Date()
-      })
-      .where(eq(suppliers.id, id))
-      .returning();
-    return updatedSupplier;
+    try {
+      const [updatedSupplier] = await db
+        .update(suppliers)
+        .set({
+          ...supplierData,
+          updatedAt: new Date()
+        })
+        .where(eq(suppliers.id, id))
+        .returning();
+      return updatedSupplier;
+    } catch (error) {
+      console.error(`Error updating supplier with ID ${id}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
   }
 
   async deleteSupplier(id: number): Promise<boolean> {
@@ -1783,76 +1953,103 @@ export class DatabaseStorage implements IStorage {
 
   // Catalog operations
   async getAllCatalogs(activeOnly = true): Promise<any[]> {
-    // Get catalogs with supplier information
-    const query = activeOnly
-      ? db
-          .select({
-            id: catalogs.id,
-            name: catalogs.name,
-            description: catalogs.description,
-            supplierId: catalogs.supplierId,
-            supplierName: suppliers.name,
-            isActive: catalogs.isActive,
-            defaultMarkupPercentage: catalogs.defaultMarkupPercentage,
-            startDate: catalogs.startDate,
-            endDate: catalogs.endDate,
-            createdAt: catalogs.createdAt
-          })
-          .from(catalogs)
-          .leftJoin(suppliers, eq(catalogs.supplierId, suppliers.id))
-          .where(eq(catalogs.isActive, true))
-          .orderBy(asc(catalogs.name))
-      : db
-          .select({
-            id: catalogs.id,
-            name: catalogs.name,
-            description: catalogs.description,
-            supplierId: catalogs.supplierId,
-            supplierName: suppliers.name,
-            isActive: catalogs.isActive,
-            defaultMarkupPercentage: catalogs.defaultMarkupPercentage,
-            startDate: catalogs.startDate,
-            endDate: catalogs.endDate,
-            createdAt: catalogs.createdAt
-          })
-          .from(catalogs)
-          .leftJoin(suppliers, eq(catalogs.supplierId, suppliers.id))
-          .orderBy(asc(catalogs.name));
-    
-    const catalogData = await query;
-    
-    // Add product count for each catalog
-    const catalogsWithProductCount = await Promise.all(
-      catalogData.map(async (catalog) => {
-        // Count products in this catalog
-        const productsQuery = activeOnly
+    try {
+      // Get catalogs with supplier information
+      try {
+        const query = activeOnly
           ? db
-              .select({ count: sql<number>`count(*)` })
-              .from(products)
-              .where(and(
-                eq(products.catalogId, catalog.id),
-                eq(products.isActive, true)
-              ))
+              .select({
+                id: catalogs.id,
+                name: catalogs.name,
+                description: catalogs.description,
+                supplierId: catalogs.supplierId,
+                supplierName: suppliers.name,
+                isActive: catalogs.isActive,
+                defaultMarkupPercentage: catalogs.defaultMarkupPercentage,
+                startDate: catalogs.startDate,
+                endDate: catalogs.endDate,
+                createdAt: catalogs.createdAt
+              })
+              .from(catalogs)
+              .leftJoin(suppliers, eq(catalogs.supplierId, suppliers.id))
+              .where(eq(catalogs.isActive, true))
+              .orderBy(asc(catalogs.name))
           : db
-              .select({ count: sql<number>`count(*)` })
-              .from(products)
-              .where(eq(products.catalogId, catalog.id));
-              
-        const [result] = await productsQuery;
-        const count = result?.count || 0;
+              .select({
+                id: catalogs.id,
+                name: catalogs.name,
+                description: catalogs.description,
+                supplierId: catalogs.supplierId,
+                supplierName: suppliers.name,
+                isActive: catalogs.isActive,
+                defaultMarkupPercentage: catalogs.defaultMarkupPercentage,
+                startDate: catalogs.startDate,
+                endDate: catalogs.endDate,
+                createdAt: catalogs.createdAt
+              })
+              .from(catalogs)
+              .leftJoin(suppliers, eq(catalogs.supplierId, suppliers.id))
+              .orderBy(asc(catalogs.name));
         
-        // Format all dates as ISO strings
-        return {
-          ...catalog,
-          startDate: catalog.startDate ? new Date(catalog.startDate).toISOString() : null,
-          endDate: catalog.endDate ? new Date(catalog.endDate).toISOString() : null,
-          createdAt: catalog.createdAt ? new Date(catalog.createdAt).toISOString() : null,
-          productsCount: Number(count)
-        };
-      })
-    );
-    
-    return catalogsWithProductCount;
+        const catalogData = await query;
+        
+        // Add product count for each catalog
+        try {
+          const catalogsWithProductCount = await Promise.all(
+            catalogData.map(async (catalog) => {
+              try {
+                // Count products in this catalog
+                const productsQuery = activeOnly
+                  ? db
+                      .select({ count: sql<number>`count(*)` })
+                      .from(products)
+                      .where(and(
+                        eq(products.catalogId, catalog.id),
+                        eq(products.isActive, true)
+                      ))
+                  : db
+                      .select({ count: sql<number>`count(*)` })
+                      .from(products)
+                      .where(eq(products.catalogId, catalog.id));
+                      
+                const [result] = await productsQuery;
+                const count = result?.count || 0;
+                
+                // Format all dates as ISO strings
+                return {
+                  ...catalog,
+                  startDate: catalog.startDate ? new Date(catalog.startDate).toISOString() : null,
+                  endDate: catalog.endDate ? new Date(catalog.endDate).toISOString() : null,
+                  createdAt: catalog.createdAt ? new Date(catalog.createdAt).toISOString() : null,
+                  productsCount: Number(count)
+                };
+              } catch (productCountError) {
+                console.error(`Error counting products for catalog ${catalog.id}:`, productCountError);
+                // Return the catalog with a zero product count in case of an error
+                return {
+                  ...catalog,
+                  startDate: catalog.startDate ? new Date(catalog.startDate).toISOString() : null,
+                  endDate: catalog.endDate ? new Date(catalog.endDate).toISOString() : null,
+                  createdAt: catalog.createdAt ? new Date(catalog.createdAt).toISOString() : null,
+                  productsCount: 0
+                };
+              }
+            })
+          );
+          
+          return catalogsWithProductCount;
+        } catch (productCountsError) {
+          console.error('Error while getting product counts for catalogs:', productCountsError);
+          throw productCountsError; // Rethrow so the route handler can catch it and send a proper error response
+        }
+      } catch (catalogsQueryError) {
+        console.error(`Error fetching catalogs (activeOnly=${activeOnly}):`, catalogsQueryError);
+        throw catalogsQueryError; // Rethrow so the route handler can catch it and send a proper error response
+      }
+    } catch (error) {
+      console.error(`Error in getAllCatalogs (activeOnly=${activeOnly}):`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
   }
 
   async getCatalogsBySupplierId(supplierId: number, activeOnly = true): Promise<any[]> {
