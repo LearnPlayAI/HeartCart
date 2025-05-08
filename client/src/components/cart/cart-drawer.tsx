@@ -83,10 +83,17 @@ const CartDrawer = () => {
                       {formatCurrency((item.product.salePrice || item.product.price) + (item.priceAdjustment || 0))}
                     </div>
                     
-                    {/* Attribute display code removed during system redesign */}
-                    
-                    {/* Note: selectedAttributes and globalAttributes rendering has been 
-                         temporarily removed during the attribute system redesign */}
+                    {/* Display selected attributes */}
+                    {item.selectedAttributes && Object.keys(item.selectedAttributes).length > 0 && (
+                      <div className="mt-1 text-xs text-gray-600">
+                        {Object.entries(item.selectedAttributes).map(([attributeId, selection]) => (
+                          <div key={attributeId} className="flex items-center gap-1">
+                            <span className="font-medium">{selection.attributeName}:</span>
+                            <span>{selection.displayValue || selection.value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     
                     <div className="flex items-center mt-2">
                       <Button 

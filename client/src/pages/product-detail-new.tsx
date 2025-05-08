@@ -255,14 +255,36 @@ const ProductDetailView = ({
       .sort()
       .join('|');
     
+    // Format selectedAttributes for cart storage
+    const formattedAttributes: Record<string, any> = {};
+    
+    if (productAttributes && Object.keys(selectedAttributes).length > 0) {
+      productAttributes.forEach(attr => {
+        const attrId = attr.id.toString();
+        const selectedValue = selectedAttributes[attr.id];
+        
+        if (selectedValue) {
+          // Find the option display value for select-type attributes
+          const options = attributeOptions?.[attr.id] || [];
+          const selectedOption = options.find(opt => opt.value === selectedValue);
+          
+          formattedAttributes[attrId] = {
+            attributeId: attr.id,
+            attributeName: attr.displayName,
+            value: selectedValue,
+            displayValue: selectedOption?.displayValue || selectedValue,
+          };
+        }
+      });
+    }
+    
     const cartItem = {
       productId: product.id,
       product,
       quantity,
-      selectedAttributeValues,
-      combinationHash,
-      selectedAttributes,
-      adjustedPrice: currentPrice || product.salePrice || product.price
+      combinationHash: combinationHash || null,
+      selectedAttributes: Object.keys(formattedAttributes).length > 0 ? formattedAttributes : null,
+      priceAdjustment: currentPrice !== null ? currentPrice - (product.salePrice || product.price) : 0
     };
     
     addItem(cartItem);

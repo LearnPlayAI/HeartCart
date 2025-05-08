@@ -9,10 +9,9 @@ type CartItem = {
   productId: number;
   quantity: number;
   product: Product;
-  // The following fields have been temporarily removed during attribute system redesign
-  // combinationId?: number | null;
-  // combinationHash?: string | null;
-  // selectedAttributes?: Record<string, string> | null;
+  combinationId?: number | null;
+  combinationHash?: string | null;
+  selectedAttributes?: Record<string, any> | null;
   priceAdjustment?: number | null;
 };
 
