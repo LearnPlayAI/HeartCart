@@ -39,6 +39,7 @@ import ProductAttributes from "@/pages/admin/product-attributes";
 import GlobalAttributes from "@/pages/admin/global-attributes";
 import AttributeEditor from "@/pages/admin/attribute-editor";
 import ProductImages from "@/pages/admin/product-images";
+import BatchUpload from "@/pages/admin/batch-upload";
 
 // Admin-specific protected route
 import { useAuth } from "@/hooks/use-auth";
@@ -123,6 +124,7 @@ function App() {
               <AdminProtectedRoute path="/admin/pricing" component={AdminPricing} />
               <AdminProtectedRoute path="/admin/orders" component={AdminOrders} />
               <AdminProtectedRoute path="/admin/ai-settings" component={AdminAISettings} />
+              <AdminProtectedRoute path="/admin/batch-upload" component={BatchUpload} />
               
               {/* Regular Routes - With header/footer */}
               <Route path="*">
