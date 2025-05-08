@@ -41,12 +41,13 @@ import { useCart } from '@/hooks/use-cart';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency, calculateDiscount } from '@/lib/utils';
 import ProductCard from '@/components/product/product-card';
+import { Product } from '@shared/schema';
 import { 
-  Product, 
   CategoryAttribute, 
   CategoryAttributeOption, 
-  ProductAttributeCombination
-} from '@shared/schema';
+  ProductAttributeValue,
+  ProductAttributeOption
+} from '@/types/attribute-types';
 
 // This is a router component that decides which Product Detail implementation to use
 const ProductDetail = () => {
