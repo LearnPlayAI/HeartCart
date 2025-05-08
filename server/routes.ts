@@ -2,6 +2,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { ZodError } from "zod";
+import { logger } from "./logger";
 import { removeImageBackground, generateProductTags, analyzeProductImage, suggestPrice, getAvailableAiModels, getCurrentAiModelSetting, updateAiModel } from "./ai-service";
 import { imageService, THUMBNAIL_SIZES } from "./image-service";
 import { 
@@ -600,9 +601,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }));
 
-  app.get("/api/featured-products", handleErrors(async (req: Request, res: Response) => {
+  app.get("/api/featured-products", asyncHandler(async (req: Request, res: Response) => {
     const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
     
+    // Validate limit parameter
+    if (limit < 0 || isNaN(limit)) {
+      throw new ValidationError("Limit must be a non-negative number");
+    }
+    
     const user = req.user as any;
     const isAdmin = user && user.role === 'admin';
     
@@ -611,12 +617,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       includeCategoryInactive: isAdmin 
     };
     
-    const products = await storage.getFeaturedProducts(limit, options);
-    res.json(products);
+    try {
+      const products = await storage.getFeaturedProducts(limit, options);
+      res.json(products);
+    } catch (error) {
+      logger.error('Error fetching featured products', { error });
+      throw new AppError(
+        "Failed to fetch featured products",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500
+      );
+    }
   }));
 
-  app.get("/api/flash-deals", handleErrors(async (req: Request, res: Response) => {
+  app.get("/api/flash-deals", asyncHandler(async (req: Request, res: Response) => {
     const limit = req.query.limit ? parseInt(req.query.limit as string) : 6;
+    
+    // Validate limit parameter
+    if (limit < 0 || isNaN(limit)) {
+      throw new ValidationError("Limit must be a non-negative number");
+    }
     
     const user = req.user as any;
     const isAdmin = user && user.role === 'admin';
@@ -626,8 +646,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       includeCategoryInactive: isAdmin 
     };
     
-    const products = await storage.getFlashDeals(limit, options);
-    res.json(products);
+    try {
+      const products = await storage.getFlashDeals(limit, options);
+      res.json(products);
+    } catch (error) {
+      logger.error('Error fetching flash deals', { error });
+      throw new AppError(
+        "Failed to fetch flash deals",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500
+      );
+    }
   }));
 
   app.get("/api/search", asyncHandler(async (req: Request, res: Response) => {
