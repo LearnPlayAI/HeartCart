@@ -22,7 +22,7 @@ export function useCatalogs() {
   const { toast } = useToast();
 
   // Get all catalogs
-  const getAllCatalogs = useQuery<Catalog[]>({
+  const result = useQuery<Catalog[]>({
     queryKey: ["/api/catalogs"],
     queryFn: getQueryFn()
   });
@@ -30,14 +30,14 @@ export function useCatalogs() {
   // Get catalog by ID
   const getCatalog = (id: number) => useQuery<Catalog>({
     queryKey: ["/api/catalogs", id],
-    queryFn: getQueryFn(),
+    queryFn: getQueryFn({ queryKey: ["/api/catalogs", id] }),
     enabled: !!id
   });
 
   // Get catalogs by supplier ID
   const getCatalogsBySupplier = (supplierId: number) => useQuery<Catalog[]>({
     queryKey: ["/api/suppliers", supplierId, "catalogs"],
-    queryFn: getQueryFn(),
+    queryFn: getQueryFn({ queryKey: ["/api/suppliers", supplierId, "catalogs"] }),
     enabled: !!supplierId
   });
 

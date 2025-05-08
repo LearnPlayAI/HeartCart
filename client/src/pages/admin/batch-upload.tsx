@@ -1,6 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useDropzone } from "react-dropzone";
+import { cn } from "@/lib/utils";
 import * as z from "zod";
 import { Helmet } from "react-helmet";
 import { useCatalogs } from "@/hooks/use-catalogs";
@@ -69,24 +71,27 @@ import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { 
-  Clock, 
-  FileText, 
-  Upload, 
-  Trash2, 
-  MoreVertical, 
-  Eye, 
-  Download, 
-  Plus, 
   AlertCircle,
-  Check, 
-  X, 
-  RefreshCw, 
   ArrowUpDown,
+  Check, 
+  CheckCircle2,
+  Clock, 
+  Download, 
+  Eye, 
+  FileText, 
   HelpCircle,
+  Info,
+  Loader2,
+  MoreVertical, 
   Pause,
   Play,
+  Plus, 
+  RefreshCw, 
+  RotateCcw,
   StopCircle,
-  RotateCcw
+  Trash2, 
+  Upload, 
+  X
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
@@ -463,33 +468,63 @@ function UploadCsvForm({
   onClose: () => void; 
   onSubmit: (data: { id: number; file: File }) => Promise<void>; 
 }) {
+  const { toast } = useToast();
+  const [file, setFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  
   const form = useForm<z.infer<typeof uploadCsvSchema>>({
     resolver: zodResolver(uploadCsvSchema),
-    defaultValues: {},
+    defaultValues: {
+      file: undefined,
+    },
   });
   
-  const [fileSelected, setFileSelected] = useState<boolean>(false);
-  const [fileName, setFileName] = useState<string>('');
-  
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      form.setValue('file', files[0]);
-      setFileSelected(true);
-      setFileName(files[0].name);
-    } else {
-      form.setValue('file', undefined as any);
-      setFileSelected(false);
-      setFileName('');
+  const onDropAccepted = useCallback((acceptedFiles: File[]) => {
+    const selectedFile = acceptedFiles[0];
+    if (selectedFile) {
+      setFile(selectedFile);
+      form.setValue('file', selectedFile);
     }
-  };
-
+  }, [form]);
+  
+  const onDropRejected = useCallback((rejections: any) => {
+    const message = rejections[0]?.errors[0]?.message || 'Invalid file';
+    toast({
+      title: "File upload error",
+      description: message,
+      variant: "destructive",
+    });
+  }, [toast]);
+  
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    accept: {
+      'text/csv': ['.csv'],
+    },
+    maxFiles: 1,
+    maxSize: 10 * 1024 * 1024, // 10MB
+    onDropAccepted,
+    onDropRejected,
+  });
+  
   const handleSubmit = async (data: z.infer<typeof uploadCsvSchema>) => {
     try {
-      await onSubmit({ id: batchId, file: data.file });
+      setIsUploading(true);
+      
+      if (!file) {
+        toast({
+          title: "File required",
+          description: "Please select a CSV file to upload",
+          variant: "destructive",
+        });
+        setIsUploading(false);
+        return;
+      }
+      
+      await onSubmit({ id: batchId, file });
       onClose();
     } catch (error) {
-      // Error handling is done in the mutation
+      console.error("Error uploading file:", error);
+      setIsUploading(false);
     }
   };
 
@@ -499,58 +534,75 @@ function UploadCsvForm({
         <FormField
           control={form.control}
           name="file"
-          render={({ field: { ref, ...field } }) => (
+          render={({ field }) => (
             <FormItem>
               <FormLabel>CSV File</FormLabel>
               <FormControl>
-                <div className="grid w-full gap-2">
-                  <div className="flex items-center justify-center w-full">
-                    <label
-                      htmlFor="csv-upload"
-                      className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50"
-                    >
-                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                        <Upload className="w-8 h-8 mb-3 text-gray-400" />
-                        <p className="mb-2 text-sm text-gray-500">
-                          <span className="font-semibold">Click to upload</span> or drag and drop
-                        </p>
-                        <p className="text-xs text-gray-500">CSV files only</p>
-                      </div>
-                      <input
-                        id="csv-upload"
-                        type="file"
-                        accept=".csv"
-                        className="hidden"
-                        ref={ref}
-                        onChange={handleFileChange}
-                        {...field}
-                      />
-                    </label>
-                  </div>
-                  
-                  {fileSelected && (
-                    <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-blue-500" />
-                      <span className="text-sm truncate">{fileName}</span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0"
-                        onClick={() => {
-                          form.setValue('file', undefined as any);
-                          setFileSelected(false);
-                          setFileName('');
-                        }}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
+                <div 
+                  {...getRootProps()} 
+                  className={cn(
+                    "border-2 border-dashed rounded-md p-6 transition-colors cursor-pointer",
+                    isDragActive 
+                      ? "border-primary bg-primary/5" 
+                      : file 
+                        ? "border-green-500 bg-green-50" 
+                        : "border-muted-foreground/25 hover:border-muted-foreground/50"
                   )}
+                >
+                  <input {...getInputProps()} />
+                  <div className="flex flex-col items-center justify-center space-y-2 text-center">
+                    {file ? (
+                      <>
+                        <CheckCircle2 className="h-8 w-8 text-green-500" />
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium">{file.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {(file.size / 1024).toFixed(2)} KB • Ready to upload
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="mt-2"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setFile(null);
+                            form.setValue('file', undefined);
+                          }}
+                        >
+                          <X className="h-4 w-4 mr-1" />
+                          Change file
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium">Drop your CSV file here or click to browse</p>
+                          <p className="text-xs text-muted-foreground">
+                            CSV file up to 10MB with product data
+                          </p>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
               </FormControl>
               <FormDescription>
-                Upload a CSV file containing product data.
+                <div className="flex items-center space-x-1 text-xs">
+                  <InfoIcon className="h-3 w-3 text-muted-foreground" />
+                  <span>
+                    Need a template? <a 
+                      href="/api/batch-upload/template" 
+                      download="product_template.csv" 
+                      className="text-primary hover:underline"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Download template
+                    </a>
+                  </span>
+                </div>
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -558,17 +610,23 @@ function UploadCsvForm({
         />
         
         <DialogFooter>
-          <Button variant="outline" type="button" onClick={onClose}>
+          <Button variant="outline" type="button" onClick={onClose} disabled={isUploading}>
             Cancel
           </Button>
           <Button 
             type="submit" 
-            disabled={!fileSelected || form.formState.isSubmitting}
+            disabled={!file || isUploading}
           >
-            {form.formState.isSubmitting ? (
-              <>Uploading...</>
+            {isUploading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Uploading...
+              </>
             ) : (
-              <>Upload CSV</>
+              <>
+                <Upload className="mr-2 h-4 w-4" />
+                Upload File
+              </>
             )}
           </Button>
         </DialogFooter>
