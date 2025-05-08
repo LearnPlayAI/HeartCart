@@ -11,6 +11,7 @@ import { formatCurrency } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import { StandardApiResponse } from '@/types/api';
 
 interface ProductAttribute {
   id: number;
