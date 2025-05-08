@@ -1177,46 +1177,66 @@ export class DatabaseStorage implements IStorage {
   }
   
   async deleteProduct(id: number): Promise<boolean> {
-    // First, get all product images to delete them from object storage
-    const productImagesData = await this.getProductImages(id);
-    
-    // Delete each image from database and object storage
-    for (const image of productImagesData) {
-      await this.deleteProductImage(image.id);
-    }
-    
-    // Additionally, search for any files in the product's folder that might not be linked in the database
     try {
-      const productFolderPrefix = `${STORAGE_FOLDERS.PRODUCTS}/${id}/`;
-      const filesList = await objectStore.listFiles(productFolderPrefix, true);
+      // First, get all product images to delete them from object storage
+      const productImagesData = await this.getProductImages(id);
       
-      console.log(`Found ${filesList.length} files in product folder ${productFolderPrefix} to delete`);
-      
-      // Delete each file found in the folder
-      for (const objectKey of filesList) {
+      // Delete each image from database and object storage
+      for (const image of productImagesData) {
         try {
-          await objectStore.deleteFile(objectKey);
-          console.log(`Deleted orphaned file from object storage: ${objectKey}`);
-        } catch (error) {
-          console.error(`Error deleting orphaned file ${objectKey}:`, error);
-          // Continue with deletion even if file deletion fails
+          await this.deleteProductImage(image.id);
+        } catch (imageError) {
+          console.error(`Error deleting product image ID ${image.id}:`, imageError);
+          // Continue with deletion even if a specific image deletion fails
         }
       }
+      
+      // Additionally, search for any files in the product's folder that might not be linked in the database
+      try {
+        const productFolderPrefix = `${STORAGE_FOLDERS.PRODUCTS}/${id}/`;
+        const filesList = await objectStore.listFiles(productFolderPrefix, true);
+        
+        console.log(`Found ${filesList.length} files in product folder ${productFolderPrefix} to delete`);
+        
+        // Delete each file found in the folder
+        for (const objectKey of filesList) {
+          try {
+            await objectStore.deleteFile(objectKey);
+            console.log(`Deleted orphaned file from object storage: ${objectKey}`);
+          } catch (fileError) {
+            console.error(`Error deleting orphaned file ${objectKey}:`, fileError);
+            // Continue with deletion even if file deletion fails
+          }
+        }
+      } catch (folderError) {
+        console.error(`Error listing product files for cleanup:`, folderError);
+        // Continue with deletion even if listing fails
+      }
+      
+      try {
+        // Delete product attribute values
+        await db.delete(productAttributeValues).where(eq(productAttributeValues.productId, id));
+      } catch (attrValuesError) {
+        console.error(`Error deleting product attribute values for product ${id}:`, attrValuesError);
+        // Continue with deletion
+      }
+      
+      try {
+        // Delete product attribute combinations
+        await db.delete(productAttributeCombinations).where(eq(productAttributeCombinations.productId, id));
+      } catch (combosError) {
+        console.error(`Error deleting product attribute combinations for product ${id}:`, combosError);
+        // Continue with deletion
+      }
+      
+      // Finally delete the product itself
+      await db.delete(products).where(eq(products.id, id));
+      
+      return true;
     } catch (error) {
-      console.error(`Error listing product files for cleanup:`, error);
-      // Continue with deletion even if listing fails
+      console.error(`Error deleting product ${id}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
-    
-    // Delete product attribute values
-    await db.delete(productAttributeValues).where(eq(productAttributeValues.productId, id));
-    
-    // Delete product attribute combinations
-    await db.delete(productAttributeCombinations).where(eq(productAttributeCombinations.productId, id));
-    
-    // Finally delete the product itself
-    await db.delete(products).where(eq(products.id, id));
-    
-    return true;
   }
   
   async bulkUpdateProductStatus(productIds: number[], isActive: boolean): Promise<number> {
