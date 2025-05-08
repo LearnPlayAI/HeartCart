@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { XCircle, ShoppingBag, Plus, Minus, Trash2 } from 'lucide-react';
+import { XCircle, ShoppingBag, Plus, Minus, Trash2, Tag as TagIcon } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -14,12 +14,14 @@ const CartDrawer = () => {
     closeCart, 
     updateItemQuantity, 
     removeItem,
-    calculateSubtotal
+    cartSummary,
+    isLoading
   } = useCart();
   
-  const subtotal = calculateSubtotal();
+  // Use the cart summary data which already includes all calculations
+  const { subtotal, finalTotal, totalDiscount } = cartSummary;
   const shipping = subtotal > 0 ? 50 : 0; // R50 shipping fee
-  const total = subtotal + shipping;
+  const total = finalTotal + shipping;
   
   // Close cart on ESC key
   useEffect(() => {
@@ -82,12 +84,12 @@ const CartDrawer = () => {
                     <div className="text-[#FF69B4] font-bold text-sm flex items-center gap-2">
                       {item.itemPrice ? (
                         <>
-                          {formatCurrency(item.itemPrice)} 
+                          {formatCurrency(item.itemPrice - item.totalDiscount)} 
                           
                           {/* Show original price if there are discounts */}
-                          {item.discounts && item.discounts.totalAdjustment > 0 && (
+                          {item.totalDiscount > 0 && (
                             <span className="text-gray-500 line-through text-xs">
-                              {formatCurrency((item.product.salePrice || item.product.price) + (item.priceAdjustment || 0))}
+                              {formatCurrency(item.itemPrice)}
                             </span>
                           )}
                         </>
@@ -109,12 +111,12 @@ const CartDrawer = () => {
                     )}
                     
                     {/* Display discount information */}
-                    {item.discounts && item.discounts.totalAdjustment > 0 && (
+                    {item.totalDiscount > 0 && (
                       <div className="mt-1 text-xs text-pink-600">
                         <div className="flex items-center gap-1">
                           <TagIcon className="h-3 w-3" />
                           <span className="font-medium">
-                            Savings: {formatCurrency(item.discounts.totalAdjustment)}
+                            Savings: {formatCurrency(item.totalDiscount)}
                           </span>
                         </div>
                       </div>

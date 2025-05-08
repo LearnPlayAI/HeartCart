@@ -81,8 +81,9 @@ const CheckoutPage = () => {
   
   const {
     cartItems,
-    calculateSubtotal,
-    clearCart
+    clearCart,
+    cartSummary,
+    isLoading
   } = useCart();
   
   // Get user profile if logged in
@@ -145,8 +146,8 @@ const CheckoutPage = () => {
     },
   ];
   
-  // Calculate subtotal
-  const subtotal = calculateSubtotal();
+  // Get cart summary values
+  const { subtotal, finalTotal } = cartSummary;
   
   // Get selected shipping method price
   const selectedShippingMethod = form.watch('shippingMethod');
@@ -154,8 +155,8 @@ const CheckoutPage = () => {
     method => method.id === selectedShippingMethod
   )?.price || 50;
   
-  // Calculate total
-  const total = subtotal + shippingCost;
+  // Calculate total with shipping
+  const total = finalTotal + shippingCost;
   
   // Create order mutation
   const createOrderMutation = useMutation({

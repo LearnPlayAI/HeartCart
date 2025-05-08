@@ -83,6 +83,10 @@ export const cartItems = pgTable("cart_items", {
   combinationId: integer("combination_id"),
   selectedAttributes: jsonb("selected_attributes").default({}),
   priceAdjustment: doublePrecision("price_adjustment").default(0),
+  // New discount-related fields
+  discountData: jsonb("discount_data"),
+  totalDiscount: doublePrecision("total_discount").default(0),
+  itemPrice: doublePrecision("item_price"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

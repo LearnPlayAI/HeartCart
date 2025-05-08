@@ -40,10 +40,10 @@ We will implement Option A: Full Database Persistence. This means:
 
 ### Phase 2: Schema and Type Updates
 
-#### Task 2.1: Update Database Schema (If Option A) [NOT STARTED]
-- [ ] Create migration script to add discount-related fields to cart_items table
-- [ ] Update shared/schema.ts to include new fields
-- [ ] Test migration in development environment
+#### Task 2.1: Update Database Schema (If Option A) [COMPLETED]
+- [x] Create migration script to add discount-related fields to cart_items table
+- [x] Update shared/schema.ts to include new fields
+- [x] Test migration in development environment
 
 #### Task 2.2: Standardize Type Definitions [NOT STARTED]
 - [ ] Update CartItem type in client code to match implementation strategy

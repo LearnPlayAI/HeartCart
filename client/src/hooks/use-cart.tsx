@@ -1,30 +1,22 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useMemo } from 'react';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Product } from '@shared/schema';
+import { CartItemWithDiscounts, CartSummary } from '@/types/cart.types';
 
-type CartItem = {
-  id: number;
-  productId: number;
-  quantity: number;
-  product: Product;
-  combinationId?: number | null;
-  combinationHash?: string | null;
-  selectedAttributes?: Record<string, any> | null;
-  priceAdjustment?: number | null;
-};
-
+// CartContextType defines the shape of the cart context
 type CartContextType = {
-  cartItems: CartItem[];
+  cartItems: CartItemWithDiscounts[];
   isOpen: boolean;
   openCart: () => void;
   closeCart: () => void;
-  addItem: (item: Omit<CartItem, 'id'>) => void;
+  addItem: (item: Omit<CartItemWithDiscounts, 'id' | 'discountData' | 'totalDiscount' | 'itemPrice'>) => void;
   updateItemQuantity: (id: number, quantity: number) => void;
   removeItem: (id: number) => void;
   clearCart: () => void;
-  calculateSubtotal: () => number;
+  cartSummary: CartSummary;
+  isLoading: boolean;
 };
 
 const defaultCartContext: CartContextType = {
@@ -36,7 +28,13 @@ const defaultCartContext: CartContextType = {
   updateItemQuantity: () => {},
   removeItem: () => {},
   clearCart: () => {},
-  calculateSubtotal: () => 0
+  cartSummary: {
+    itemCount: 0,
+    subtotal: 0,
+    totalDiscount: 0,
+    finalTotal: 0
+  },
+  isLoading: false
 };
 
 const CartContext = createContext<CartContextType>(defaultCartContext);
@@ -46,8 +44,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  // Get cart items from server
-  const { data } = useQuery<CartItem[]>({
+  // Get cart items from server with improved typing for discount fields
+  const { data, isLoading } = useQuery<CartItemWithDiscounts[]>({
     queryKey: ['/api/cart'],
     retry: false,
     gcTime: 0,
@@ -55,16 +53,40 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   });
   
   // Safe type casting with fallback to empty array
-  const cartItems = (data as CartItem[] || []);
+  const cartItems = (data as CartItemWithDiscounts[] || []);
+  
+  // Calculate cart summary with persistence approach
+  // Since we're using database persistence, the pricing calculations are done server-side
+  // Here we simply aggregate the information that was calculated and stored in the database
+  const cartSummary = useMemo<CartSummary>(() => {
+    return cartItems.reduce((summary, item) => {
+      // For each item, accumulate total items, price and discounts
+      return {
+        itemCount: summary.itemCount + item.quantity,
+        subtotal: summary.subtotal + ((item.itemPrice || 0) * item.quantity),
+        totalDiscount: summary.totalDiscount + (item.totalDiscount * item.quantity),
+        finalTotal: summary.finalTotal + (((item.itemPrice || 0) - item.totalDiscount) * item.quantity)
+      };
+    }, {
+      itemCount: 0,
+      subtotal: 0,
+      totalDiscount: 0,
+      finalTotal: 0
+    });
+  }, [cartItems]);
   
   // Add to cart mutation
   const addToCartMutation = useMutation({
-    mutationFn: async (item: Omit<CartItem, 'id'>) => {
+    mutationFn: async (item: Omit<CartItemWithDiscounts, 'id' | 'discountData' | 'totalDiscount' | 'itemPrice'>) => {
       const { product, ...rest } = item;
       await apiRequest('POST', '/api/cart', rest);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
+      toast({
+        title: "Added to cart",
+        description: "Item successfully added to your cart",
+      });
     },
     onError: (error) => {
       toast({
@@ -116,6 +138,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
+      toast({
+        title: "Cart cleared",
+        description: "All items have been removed from your cart",
+      });
     },
     onError: (error) => {
       toast({
@@ -129,11 +155,16 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const openCart = () => setIsOpen(true);
   const closeCart = () => setIsOpen(false);
   
-  const addItem = (item: Omit<CartItem, 'id'>) => {
+  // Type-safe version of addItem that excludes the server-calculated fields
+  const addItem = (item: Omit<CartItemWithDiscounts, 'id' | 'discountData' | 'totalDiscount' | 'itemPrice'>) => {
     addToCartMutation.mutate(item);
   };
   
   const updateItemQuantity = (id: number, quantity: number) => {
+    if (quantity < 1) {
+      removeItem(id);
+      return;
+    }
     updateCartMutation.mutate({ id, quantity });
   };
   
@@ -143,14 +174,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   
   const clearCart = () => {
     clearCartMutation.mutate();
-  };
-  
-  const calculateSubtotal = () => {
-    return cartItems.reduce((total, item) => {
-      const basePrice = item.product.salePrice || item.product.price;
-      const priceWithAdjustment = basePrice + (item.priceAdjustment || 0);
-      return total + priceWithAdjustment * item.quantity;
-    }, 0);
   };
   
   return (
@@ -164,7 +187,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         updateItemQuantity,
         removeItem,
         clearCart,
-        calculateSubtotal
+        cartSummary,
+        isLoading
       }}
     >
       {children}
