@@ -804,13 +804,13 @@ export const batchUploads = pgTable("batch_uploads", {
   userId: integer("user_id").references(() => users.id),
   totalRecords: integer("total_records").default(0),
   processedRecords: integer("processed_records").default(0),
-  successRecords: integer("success_records").default(0),
-  failedRecords: integer("failed_records").default(0),
+  successCount: integer("success_count").default(0),
+  errorCount: integer("error_count").default(0),
   status: text("status").notNull().default("pending"), // pending, processing, completed, failed
   catalogId: integer("catalog_id").references(() => catalogs.id),
-  originalFilename: text("original_filename"),
-  tempFilePath: text("temp_file_path"),
-  errorLog: jsonb("error_log").default([]),
+  originalFilename: text("file_original_name"),
+  fileName: text("file_name"),
+  warnings: jsonb("warnings").default([]),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   completedAt: timestamp("completed_at", { withTimezone: true }),
@@ -893,9 +893,9 @@ export const insertBatchUploadSchema = createInsertSchema(batchUploads).omit({
   updatedAt: true,
   completedAt: true,
   processedRecords: true,
-  successRecords: true,
-  failedRecords: true,
-  errorLog: true,
+  successCount: true,
+  errorCount: true,
+  warnings: true,
 });
 
 // Create insert schema for batch upload errors
