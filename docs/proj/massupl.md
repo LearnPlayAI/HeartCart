@@ -59,93 +59,123 @@ This ensures consistent error handling, pagination support, and predictable resp
 
 ## Implementation Phases
 
-### Phase 1: Foundation Setup
+### Phase 1: Database and Data Model Setup
+- [ ] Create the database storage functions for multi-value attributes
+  - [ ] Design schema for products with multiple attribute values
+  - [ ] Create attribute value tables with foreign key relationships
+  - [ ] Implement transaction management for batch operations
+  - [ ] Design batch job tracking table for monitoring uploads
+  - [ ] Add catalog creation/update functions with attribute mapping
+
+- [ ] Set up validation schema for multi-attribute CSV data
+  - [ ] Define required field validations
+  - [ ] Create data type validators for comma-separated values
+  - [ ] Set up reference validations (category IDs, etc.)
+  - [ ] Create validation rules for attribute value lists
+  - [ ] Implement custom validators for special fields
+  - [ ] Create validation result formatting
+
+### Phase 2: CSV Template and Processing
 - [ ] Define the catalog-centric CSV template structure
   - [ ] Create unified template with core product fields for all product types
-  - [ ] Design dynamic attribute handling across multiple categories
+  - [ ] Design dynamic attribute handling for multiple values per attribute
   - [ ] Document field requirements and validations at catalog level
-  - [ ] Create sample CSV files for multi-category catalog uploads
+  - [ ] Create sample CSV files demonstrating multiple attribute values
   - [ ] Implement product category field to differentiate products
 
-- [ ] Create the database storage functions for batch processing
-  - [ ] Design batch job tracking table
-  - [ ] Implement transaction management for batch operations
-  - [ ] Create product batch insert functions
-  - [ ] Add catalog creation/update functions
-  - [ ] Implement error logging and reporting storage
+- [ ] Implement CSV parsing functionality for multi-value attributes
+  - [ ] Create CSV stream processor for large files
+  - [ ] Implement header validation and mapping
+  - [ ] Build row data extraction with support for comma-separated attribute values
+  - [ ] Add support for various CSV formats and encodings
+  - [ ] Create parse error detection and recovery
 
+- [ ] Create validation rules for multi-value attribute fields
+  - [ ] Implement field presence validators
+  - [ ] Create data type and format validators for comma-separated lists
+  - [ ] Build reference validation for foreign keys
+  - [ ] Implement business rule validations for attribute combinations
+  - [ ] Add conditional validation rules based on product category
+
+### Phase 3: Multi-Value Attribute Handling
+- [ ] Implement multi-value attribute parsing
+  - [ ] Create parser for comma-separated attribute value lists
+  - [ ] Build validation for multi-value attribute combinations
+  - [ ] Add support for empty attribute values where applicable
+  - [ ] Implement error handling for malformed value lists
+  - [ ] Create formatter for displaying multi-value attributes
+
+- [ ] Create dynamic attribute mapping from CSV columns
+  - [ ] Develop prefix-based attribute field detection
+  - [ ] Create parser for comma-separated attribute values
+  - [ ] Build mapping between CSV headers and attribute system
+  - [ ] Implement value transformation for different attribute types
+  - [ ] Add support for custom attribute naming
+
+- [ ] Implement multi-category attribute handling
+  - [ ] Create flexible attribute template system spanning all categories in a catalog
+  - [ ] Build validation rules that adapt based on product category
+  - [ ] Implement conditional attribute enforcement by product type
+  - [ ] Support cross-category attribute value lists
+  - [ ] Develop intelligent attribute detection based on catalog context
+
+- [ ] Create automatic attribute creation for new values
+  - [ ] Implement automatic attribute option creation from comma-separated lists
+  - [ ] Design intelligent attribute detection system
+  - [ ] Build attribute cleanup and normalization for value lists
+  - [ ] Add suggestion system for similar attributes
+  - [ ] Create attribute value standardization for consistent formatting
+
+- [ ] Develop validation rules for attribute constraints
+  - [ ] Implement data type validation for different attributes
+  - [ ] Create value range validations where applicable
+  - [ ] Build dropdown value validation for select attributes
+  - [ ] Implement interdependent attribute validation
+  - [ ] Add custom validation rule support
+
+### Phase 4: UI Components for Upload and Preview
 - [ ] Design the upload interface UI components
   - [ ] Create uploader component for CSV files
-  - [ ] Design Object Store direct image uploader 
   - [ ] Build real-time progress indicator components
-  - [ ] Design preview grid for validation results
-  - [ ] Create comprehensive error display components
+  - [ ] Design preview grid for validation results with multi-value attributes
+  - [ ] Create attribute value preview components for comma-separated lists
   - [ ] Build supplier/catalog selector and creator
 
 - [ ] Implement the basic file upload infrastructure
   - [ ] Set up temporary storage for uploaded files
-  - [ ] Create file processing service
+  - [ ] Create file processing service with multi-value attribute support
   - [ ] Implement secure file handling
   - [ ] Add file type validation
   - [ ] Create cleanup mechanisms for temp files
-
-- [ ] Set up validation schema for CSV data
-  - [ ] Define required field validations
-  - [ ] Create data type validators
-  - [ ] Set up reference validations (category IDs, etc.)
-  - [ ] Implement custom validators for special fields
-  - [ ] Create validation result formatting
-
-### Phase 2: CSV Processing and Validation
-- [ ] Implement CSV parsing functionality
-  - [ ] Create CSV stream processor for large files
-  - [ ] Implement header validation and mapping
-  - [ ] Build row data extraction and formatting
-  - [ ] Add support for various CSV formats and encodings
-  - [ ] Create parse error detection and recovery
-
-- [ ] Create validation rules for required fields
-  - [ ] Implement field presence validators
-  - [ ] Create data type and format validators
-  - [ ] Build reference validation for foreign keys
-  - [ ] Implement business rule validations
-  - [ ] Add conditional validation rules
+  
+- [ ] Implement preview generation with multi-value attributes
+  - [ ] Create data preview transformer for attribute value lists
+  - [ ] Build preview grid component showing multiple attribute values
+  - [ ] Add field highlighting for validation issues in comma-separated lists
+  - [ ] Implement pagination for large datasets
+  - [ ] Create summary statistics for preview including attribute combinations
 
 - [ ] Develop error handling and reporting system
-  - [ ] Create structured error collection system
+  - [ ] Create structured error collection system for multi-value attributes
   - [ ] Implement error categorization (critical vs. warning)
-  - [ ] Build row-level error tracking
-  - [ ] Design user-friendly error messages
+  - [ ] Build row-level error tracking with attribute-specific messages
+  - [ ] Design user-friendly error messages for attribute value problems
   - [ ] Add suggestions for error resolution
 
-- [ ] Implement preview generation before final upload
-  - [ ] Create data preview transformer
-  - [ ] Build preview grid component
-  - [ ] Add field highlighting for validation issues
-  - [ ] Implement pagination for large datasets
-  - [ ] Create summary statistics for preview
+### Phase 5: Separated Image Management System
+- [ ] Design the product image upload interface 
+  - [ ] Create dedicated "Upload Images" button column in product list
+  - [ ] Build product-specific image management page
+  - [ ] Implement drag-and-drop upload interface
+  - [ ] Create image preview components
+  - [ ] Add image reordering and deletion functionality
 
-- [ ] Add support for duplicate detection
-  - [ ] Implement SKU uniqueness validation
-  - [ ] Create duplicate detection across fields
-  - [ ] Add conflict resolution options
-  - [ ] Build update mode for existing products
-  - [ ] Design merge strategies for duplicates
-
-### Phase 3: Image Processing with Replit Object Store
 - [ ] Implement direct Object Store upload system
   - [ ] Create secure API endpoints for image uploads
   - [ ] Implement standardized API responses for all operations
   - [ ] Handle batch uploads with progress tracking
   - [ ] Design efficient folder structure within Object Store 
   - [ ] Create comprehensive error handling and reporting
-
-- [ ] Create image mapping system to match products
-  - [ ] Implement Object Store path to product mapping
-  - [ ] Build SKU-based image organization
-  - [ ] Create multi-image association logic for product galleries
-  - [ ] Develop primary/secondary image designation
-  - [ ] Add manual mapping capability for edge cases
 
 - [ ] Add image validation (format, size, dimensions)
   - [ ] Implement format validation for Object Store uploads (JPG, PNG, WebP)
@@ -161,52 +191,9 @@ This ensures consistent error handling, pagination support, and predictable resp
   - [ ] Generate thumbnails and variants automatically
   - [ ] Implement efficient Object Store path generation by catalog and product
 
-- [ ] Design fallback mechanism for missing images
-  - [ ] Create placeholder image generation in Object Store
-  - [ ] Implement missing image detection
-  - [ ] Add reporting for missing product images
-  - [ ] Create manual Object Store upload interface
-  - [ ] Design post-process image association
-
-### Phase 4: Attribute Handling
-- [ ] Create dynamic attribute mapping from CSV columns
-  - [ ] Develop prefix-based attribute field detection
-  - [ ] Create attribute type inference from values
-  - [ ] Build mapping between CSV headers and attribute system
-  - [ ] Implement value transformation for different attribute types
-  - [ ] Add support for custom attribute naming
-
-- [ ] Implement multi-category attribute handling
-  - [ ] Create flexible attribute template system spanning all categories in a catalog
-  - [ ] Build validation rules that adapt based on product category
-  - [ ] Implement conditional attribute enforcement by product type
-  - [ ] Support cross-category attribute value lists
-  - [ ] Develop intelligent attribute detection based on catalog context
-
-- [ ] Add support for variant creation from attributes
-  - [ ] Design variant generation logic from attribute combinations
-  - [ ] Implement SKU generation for variants
-  - [ ] Create pricing rules for variants
-  - [ ] Build inventory management for variants
-  - [ ] Add variant image association capabilities
-
-- [ ] Develop validation rules for attribute constraints
-  - [ ] Implement data type validation for different attributes
-  - [ ] Create value range validations where applicable
-  - [ ] Build dropdown value validation for select attributes
-  - [ ] Implement interdependent attribute validation
-  - [ ] Add custom validation rule support
-
-- [ ] Create automatic attribute creation for new values
-  - [ ] Implement automatic attribute option creation
-  - [ ] Design intelligent attribute detection system
-  - [ ] Build attribute cleanup and normalization
-  - [ ] Add suggestion system for similar attributes
-  - [ ] Create attribute value standardization
-
-### Phase 5: Integration and Testing
+### Phase 6: Integration and Testing
 - [ ] Integrate with existing product management systems
-  - [ ] Connect with product CRUD operations
+  - [ ] Connect with product CRUD operations for multi-value attributes
   - [ ] Integrate with existing attribute management
   - [ ] Add hooks into catalog management system
   - [ ] Implement consistent transaction handling
@@ -220,27 +207,27 @@ This ensures consistent error handling, pagination support, and predictable resp
   - [ ] Add catalog permission validation
 
 - [ ] Add bulk processing with progress tracking
-  - [ ] Implement background job processing
+  - [ ] Implement background job processing for multi-value attribute parsing
   - [ ] Create real-time progress tracking
   - [ ] Build cancellation capability for long processes
   - [ ] Add resumable processing for large batches
   - [ ] Develop detailed process logging
 
 - [ ] Create comprehensive test suite with multi-category sample data
-  - [ ] Build automated validation tests for catalog-centric uploads
-  - [ ] Create sample datasets with mixed product types within catalogs
+  - [ ] Build automated validation tests for comma-separated attribute values
+  - [ ] Create sample datasets with mixed product types and multiple attribute values
   - [ ] Implement integration tests across category boundaries
   - [ ] Add stress tests for large multi-category datasets
-  - [ ] Create edge case test scenarios for catalog operations
+  - [ ] Create edge case test scenarios for attribute combinations
 
-- [ ] Develop performance optimizations for large datasets
-  - [ ] Implement database query optimizations
-  - [ ] Add caching for lookup data
-  - [ ] Create batch processing techniques
-  - [ ] Optimize image processing pipeline
-  - [ ] Add monitoring for performance bottlenecks
+- [ ] Add support for duplicate detection
+  - [ ] Implement SKU uniqueness validation
+  - [ ] Create duplicate detection across fields and attribute combinations
+  - [ ] Add conflict resolution options
+  - [ ] Build update mode for existing products
+  - [ ] Design merge strategies for duplicates
 
-### Phase 6: UI/UX Refinement
+### Phase 7: UI/UX Refinement
 - [ ] Create step-by-step wizard interface
   - [ ] Design multi-step upload workflow
   - [ ] Implement intuitive navigation between steps
@@ -249,22 +236,22 @@ This ensures consistent error handling, pagination support, and predictable resp
   - [ ] Implement accessibility features
 
 - [ ] Implement detailed error reporting and guidance
-  - [ ] Create user-friendly error messages
+  - [ ] Create user-friendly error messages for attribute value formats
   - [ ] Design visual error indicators in the interface
-  - [ ] Add context-specific help for common errors
+  - [ ] Add context-specific help for common errors with multi-value attributes
   - [ ] Implement inline correction suggestions
   - [ ] Create exportable error reports
 
 - [ ] Add downloadable template generation
   - [ ] Build dynamic template generator by catalog
   - [ ] Create universal templates supporting multiple product categories
-  - [ ] Add sample data options with mixed product types
+  - [ ] Add sample data options demonstrating multi-value attributes
   - [ ] Implement template versioning system
   - [ ] Create comprehensive tutorial resources for catalog-centric uploads
 
 - [ ] Develop success/failure summaries with actions
   - [ ] Design clear success/failure indicators
-  - [ ] Create detailed result summaries
+  - [ ] Create detailed result summaries highlighting attribute value issues
   - [ ] Implement actionable error resolution options
   - [ ] Add notification system for completed processes
   - [ ] Create exportable result reports
@@ -314,11 +301,14 @@ The CSV template will include the following fields:
 - `dimensions` - Product dimensions (format: LxWxH)
 
 ### Dynamic Attribute Fields:
-The system will support dynamic attributes with a special prefix:
-- `attr_color` - Value for color attribute
-- `attr_size` - Value for size attribute
-- `attr_material` - Value for material attribute
+The system will support dynamic attributes with a special prefix and multiple values (comma-separated):
+- `attr_color` - Multiple values for color attribute (e.g., "Blue,Red,Green,Purple")
+- `attr_size` - Multiple values for size attribute (e.g., "Small,Medium,Large,XL")
+- `attr_material` - Multiple values for material attribute (e.g., "Cotton,Polyester,Wool")
+- `attr_bed_size` - Multiple values for bed size attribute (e.g., "Single,Double,Queen,King")
 - etc.
+
+Each product can have multiple attributes, and each attribute can have multiple values. This allows for products that come in various combinations (e.g., a bed blanket that's available in multiple colors and bed sizes).
 
 ## Post-Upload Image Management Requirements
 
@@ -398,17 +388,21 @@ The system will implement a comprehensive error handling approach:
 ## CSV Example
 
 ```csv
-supplier_id,catalog_id,category_name,category_parent_name,product_name,product_description,product_sku,cost_price,regular_price,sale_price,discount_percentage,discount_label,minimum_price,wholesale_minimum_qty,wholesale_discount_percentage,short_description,tags,status,featured,weight,dimensions,attr_color,attr_size,attr_material
-2,5,"Home Decor","Home","Ceramic Flower Pot","Beautiful handcrafted ceramic flower pot perfect for indoor plants.","FP-1001",120.50,299.99,249.99,17,"Limited Offer",199.99,5,10,"Handcrafted ceramic pot","home,decor,ceramic","active",true,0.5,"10x10x15","Blue","Medium","Ceramic"
-2,8,"Living Room Furniture","Furniture","Wooden Coffee Table","Sturdy wooden coffee table with modern design.","CT-2002",890.00,1999.99,1499.99,25,"Flash Sale",1399.99,2,15,"Modern wooden table","furniture,living room","active",false,12,"120x60x45","Natural","Large","Oak"
-,"HomeStyle","Accent Tables","Living Room","Marble Side Table","Elegant marble side table with metal legs","ST-3003",550.00,1199.99,899.99,25,"Weekend Special",799.99,3,12,"Luxury marble side table","furniture,luxury,marble","draft",true,8,"45x45x55","White","Medium","Marble"
+supplier_id,catalog_id,category_name,category_parent_name,product_name,product_description,product_sku,cost_price,regular_price,sale_price,discount_percentage,discount_label,minimum_price,wholesale_minimum_qty,wholesale_discount_percentage,short_description,tags,status,featured,weight,dimensions,attr_color,attr_size,attr_material,attr_bed_size
+2,5,"Home Decor","Home","Ceramic Flower Pot","Beautiful handcrafted ceramic flower pot perfect for indoor plants.","FP-1001",120.50,299.99,249.99,17,"Limited Offer",199.99,5,10,"Handcrafted ceramic pot","home,decor,ceramic","active",true,0.5,"10x10x15","Blue,Red,Green,White","Small,Medium,Large","Ceramic",""
+2,8,"Living Room Furniture","Furniture","Wooden Coffee Table","Sturdy wooden coffee table with modern design.","CT-2002",890.00,1999.99,1499.99,25,"Flash Sale",1399.99,2,15,"Modern wooden table","furniture,living room","active",false,12,"120x60x45","Natural,Cherry,Walnut","Standard,Large","Oak,Pine,Maple",""
+,"HomeStyle","Bedding","Bedroom","Premium Bed Blanket","Luxurious bed blanket made from high-quality materials for supreme comfort","BB-3003",350.00,899.99,699.99,22,"Weekend Special",599.99,3,12,"Premium comfort blanket","bedding,blanket,luxury","active",true,2,"200x180x2","Blue,Red,Green,Purple,Beige,Black","","Cotton,Wool,Microfiber","Single,Double,Queen,King"
+,"HomeStyle","Accent Tables","Living Room","Marble Side Table","Elegant marble side table with metal legs","ST-4004",550.00,1199.99,899.99,25,"Flash Sale",799.99,3,12,"Luxury marble side table","furniture,luxury,marble","draft",true,8,"45x45x55","White,Black,Grey","Small,Medium,Large","Marble,Granite",""
 ```
 
 In this example:
-- First row: Uses existing supplier ID 2 and catalog ID 5 with complete pricing information
-- Second row: Uses existing supplier ID 2 but different catalog ID 8 with 25% discount
-- Third row: Creates a new catalog "HomeStyle" and automatically creates categories
-- All rows include comprehensive pricing information that won't require manual maintenance after upload
+- First row: Ceramic Flower Pot available in 4 colors (Blue, Red, Green, White) and 3 sizes (Small, Medium, Large)
+- Second row: Wooden Coffee Table available in 3 wood finishes (Natural, Cherry, Walnut), 2 sizes, and 3 material options
+- Third row: Bed Blanket with 6 color options, 3 material choices, and 4 bed sizes (Single, Double, Queen, King)
+- Fourth row: Marble Side Table with multiple color, size and material options
+- Each product has multiple attributes, and each attribute can have multiple values
+- All products include comprehensive pricing and catalog information
+- Some attributes may be left empty if not applicable (empty string)
 
 ## Administrator Experience Flow
 
@@ -436,25 +430,29 @@ In this example:
    - Administrator uploads the populated CSV file (single product or bulk upload)
    - System performs initial validation checks:
      - Verifies all required fields exist, including all pricing fields
-     - Validates data formats and values
+     - Validates data formats and values, including comma-separated attribute value lists
      - Confirms supplier/catalog relationships (internal tracking only)
      - Ensures supplier information is properly structured but will remain hidden from customers
      - Verifies pricing consistency (e.g., sale_price <= regular_price, sale_price >= minimum_price)
      - Validates discount calculations match the discount_percentage values
      - Validates category hierarchy if specified
+     - Parses and validates all comma-separated attribute value lists
+     - Identifies any malformed attribute value combinations
    - System displays validation results with detailed error messages
    - Note: No image validation is performed as images are managed separately
 
 ### 5. Product Preview
    - Administrator reviews a preview of products to be created
-   - Preview shows how attributes will be mapped
+   - Preview shows how multiple attribute values will be mapped for each product
+   - Preview displays a sample product with each attribute value combination
    - Preview displays products exactly as they will appear on the site including:
      - Complete pricing display with strikethrough original prices
      - Discount percentages and labels shown as they will appear to customers
      - Wholesale pricing thresholds and discounts
+     - All available attribute value combinations (e.g., all colors, sizes, materials, etc.)
      - Automatically generated category placements
      - Confirmation that supplier information is properly tracked but hidden from end users
-   - System highlights any potential issues or warnings
+   - System highlights any potential issues or warnings with multi-value attributes
    - Administrator can make corrections or proceed with upload
 
 ### 6. Processing
