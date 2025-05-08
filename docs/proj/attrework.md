@@ -33,17 +33,17 @@ We'll implement a structure with the following main tables:
   - Remove all existing attribute-related tables from the database
   - Create migration script to safely drop tables
 
-- [ ] **Task 1.2: Code Cleanup - Backend** (Not Started)
+- [x] **Task 1.2: Code Cleanup - Backend** (Complete)
   - Remove attribute-related code from storage.ts
   - Remove attribute-related routes from routes.ts
   - Clean up attribute references in other server files
 
-- [ ] **Task 1.3: Code Cleanup - Frontend** (Not Started)
+- [ ] **Task 1.3: Code Cleanup - Frontend** (In Progress)
   - Remove attribute components from UI
   - Remove attribute-related hooks and utilities
   - Clean up attribute references in product pages
 
-- [ ] **Task 1.4: Schema Cleanup** (Not Started)
+- [x] **Task 1.4: Schema Cleanup** (Complete)
   - Remove attribute-related types from shared/schema.ts
   - Ensure all remaining code compiles without attribute references
 
