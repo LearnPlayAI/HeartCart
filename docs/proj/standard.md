@@ -1,321 +1,268 @@
-# TeeMeYou Implementation Plan
+# TeeMeYou Architecture Standardization Plan
 
 ## Introduction
 
-This document outlines the comprehensive implementation plan for the TeeMeYou e-commerce platform. It presents a structured approach to development, focusing on consistent implementation across all components while ensuring all functionality works correctly before testing.
+This document outlines the standardization plan for the existing TeeMeYou e-commerce platform. The goal is to fix broken features, eliminate code duplication, and adopt consistent design patterns throughout the codebase. Rather than rebuilding from scratch, we'll focus on improving the existing architecture while maintaining current functionality.
 
 ## Core Principles
 
-1. **Consistency First**: All changes must be implemented consistently throughout the entire application.
-2. **Complete Implementation**: Any feature that is modified must be fully implemented across all affected components.
-3. **No Fallbacks**: Avoid temporary solutions in favor of proper implementations.
-4. **Server-Side Persistence**: No data should be stored locally for long-term persistence - all persistent data should reside on the server.
-5. **Object Storage Integration**: Use Replit Object Store exclusively for all file storage needs.
+1. **Consistency First**: Apply consistent patterns across the entire codebase
+2. **Code Deduplication**: Identify and remove duplicate code by creating reusable components and utilities
+3. **Server-Side Persistence**: Ensure all persistent data resides on the server
+4. **Type Safety**: Implement comprehensive TypeScript types for all components
+5. **Error Handling**: Add proper error handling throughout the application
+6. **Object Storage Integration**: Use Replit Object Store consistently for all file storage needs
 
-## Implementation Tasks
+## Standardization Tasks
 
-### 1. Database Setup and Configuration
+### 1. Code Architecture Assessment
 
-#### 1.1. Database Schema Updates
+#### 1.1. Identify Code Duplication
 - **Status**: Not Started
-- **Description**: Update the database schema to support all required features
+- **Description**: Analyze codebase to identify duplicated code and patterns
 - **Tasks**:
-  - Create migration scripts for new tables
-  - Add required fields to existing tables
-  - Implement proper relationships between tables
+  - Review UI components for duplication
+  - Identify redundant utility functions
+  - Map out inconsistent API call patterns
+  - Document areas with parallel implementations of the same feature
 
-#### 1.2. Drizzle ORM Configuration
+#### 1.2. Catalog Design Pattern Inconsistencies
 - **Status**: Not Started
-- **Description**: Configure Drizzle ORM to work with the updated schema
+- **Description**: Document inconsistent design patterns across the application
 - **Tasks**:
-  - Update Drizzle schema definitions
-  - Configure relationships between tables
-  - Implement required query helpers
+  - Review state management approaches across components
+  - Identify inconsistent error handling
+  - Document varying form validation techniques
+  - Map data fetching inconsistencies
 
-### 2. Authentication and User Management
+### 2. Database and Data Layer Standardization
 
-#### 2.1. Authentication System
+#### 2.1. Fix Drizzle ORM Schema Issues
 - **Status**: Not Started
-- **Description**: Implement a robust authentication system
+- **Description**: Address issues in the existing Drizzle ORM schema
 - **Tasks**:
-  - Set up user registration and login flows
-  - Implement password hashing and security measures
-  - Create authentication middleware
-  - Add session management
+  - Correct TypeScript errors in schema definitions
+  - Standardize relationship definitions
+  - Fix inconsistent column naming conventions
+  - Add missing schema validations
 
-#### 2.2. User Roles and Permissions
+#### 2.2. API Layer Standardization
 - **Status**: Not Started
-- **Description**: Implement role-based access control
+- **Description**: Standardize API endpoint implementations
 - **Tasks**:
-  - Define user roles (admin, regular user)
-  - Implement permission checks
-  - Create admin-only routes and UI components
+  - Implement consistent error response format
+  - Standardize success response structures
+  - Add proper validation to all endpoints
+  - Fix inconsistent parameter handling
 
-### 3. Product Management
+### 3. Authentication and Authorization
 
-#### 3.1. Product Schema
+#### 3.1. Fix Authentication Issues
 - **Status**: Not Started
-- **Description**: Implement the product data model
+- **Description**: Address problems in the current authentication system
 - **Tasks**:
-  - Define product schema with all required fields
-  - Set up relationships with categories and attributes
-  - Implement validation rules
+  - Standardize session handling
+  - Fix token validation inconsistencies
+  - Implement proper error handling for auth failures
+  - Test and fix authentication edge cases
 
-#### 3.2. Product CRUD Operations
+#### 3.2. Standardize Authorization
 - **Status**: Not Started
-- **Description**: Implement product management functionality
+- **Description**: Create consistent authorization checks
 - **Tasks**:
-  - Create product creation forms
-  - Implement product update functionality
-  - Add product deletion with validation
-  - Create product listing and detail views
+  - Create centralized permission checking utility
+  - Implement consistent role-based access control
+  - Fix inconsistent admin route protection
+  - Add proper error messages for unauthorized actions
 
-#### 3.3. Product Image Processing
+### 4. UI Component Standardization
+
+#### 4.1. Create Component Library
 - **Status**: Not Started
-- **Description**: Implement image uploading and processing
+- **Description**: Refactor duplicated UI components into a shared library
 - **Tasks**:
-  - Set up image upload to Replit Object Store
-  - Implement image resizing and optimization
-  - Add background removal using AI
-  - Create image display components
+  - Extract common form components
+  - Standardize button and input styles
+  - Create reusable layout components
+  - Implement consistent loading and error states
 
-### 4. Catalog and Category System
-
-#### 4.1. Catalog Management
+#### 4.2. Standardize Form Handling
 - **Status**: Not Started
-- **Description**: Implement catalog functionality
+- **Description**: Implement consistent form validation and submission
 - **Tasks**:
-  - Create catalog data model
-  - Implement catalog CRUD operations
-  - Set up relationships with products
-  - Create catalog UI components
+  - Standardize form validation using Zod
+  - Create reusable form hooks
+  - Implement consistent error message display
+  - Standardize form submission handling
 
-#### 4.2. Category Hierarchy
+### 5. State Management Standardization
+
+#### 5.1. React Query Implementation
 - **Status**: Not Started
-- **Description**: Implement category system
+- **Description**: Ensure consistent React Query usage throughout the application
 - **Tasks**:
-  - Create parent-child category relationships
-  - Implement category CRUD operations
-  - Create category navigation UI
-  - Add category filtering functionality
+  - Standardize query key formats
+  - Create consistent error handling for queries
+  - Implement proper cache invalidation
+  - Add loading states to all queries
 
-### 5. Attribute System
-
-#### 5.1. Global Attributes
+#### 5.2. Local State Management
 - **Status**: Not Started
-- **Description**: Implement global attribute system
+- **Description**: Standardize component local state management
 - **Tasks**:
-  - Create attribute schema
-  - Implement attribute CRUD operations
-  - Add attribute option management
-  - Create attribute UI components
+  - Identify and fix prop drilling issues
+  - Standardize useState and useReducer usage
+  - Create consistent patterns for derived state
+  - Implement proper state initialization
 
-#### 5.2. Catalog Attributes
+### 6. Error Handling and Logging
+
+#### 6.1. Global Error Handling
 - **Status**: Not Started
-- **Description**: Implement catalog-specific attributes
+- **Description**: Implement consistent error handling throughout the application
 - **Tasks**:
-  - Create catalog-attribute relationships
-  - Implement inheritance from global attributes
-  - Add catalog attribute management UI
+  - Create global error boundary components
+  - Implement centralized error logging
+  - Standardize error message display
+  - Add user-friendly error recovery options
 
-#### 5.3. Category Attributes
+#### 6.2. Form Error Standardization
 - **Status**: Not Started
-- **Description**: Implement category-specific attributes
+- **Description**: Create consistent form error handling
 - **Tasks**:
-  - Create category-attribute relationships
-  - Implement inheritance from catalog attributes
-  - Add category attribute management UI
+  - Standardize field-level error display
+  - Implement form-level error summaries
+  - Create consistent validation error messages
+  - Add proper server error handling in forms
 
-#### 5.4. Product Attributes
-- **Status**: Not Started
-- **Description**: Implement product-specific attributes
-- **Tasks**:
-  - Create product-attribute relationships
-  - Implement inheritance from category attributes
-  - Add product attribute management UI
-  - Implement attribute-based pricing
+### 7. Cart and Checkout System
 
-### 6. Cart and Checkout System
-
-#### 6.1. Cart Management
+#### 7.1. Fix Cart Persistence Issues
 - **Status**: In Progress
-- **Description**: Implement shopping cart functionality
+- **Description**: Address current issues with cart persistence
 - **Tasks**:
-  - Create cart data model
-  - Implement add/remove/update cart items
-  - Add cart persistence
-  - Create cart UI components
+  - Standardize cart item structure
+  - Fix inconsistent discount application
+  - Implement proper error handling for cart operations
+  - Ensure consistent cart state updates
 
-#### 6.2. Discount System
+#### 7.2. Standardize Discount Application
 - **Status**: In Progress
-- **Description**: Implement discount functionality
+- **Description**: Create consistent discount calculation logic
 - **Tasks**:
-  - Create discount data model
-  - Implement discount application logic
-  - Add attribute-based discounts
-  - Create discount UI components
+  - Centralize discount calculation code
+  - Implement proper type safety for discount data
+  - Fix inconsistent price display with discounts
+  - Standardize discount UI components
 
-#### 6.3. Checkout Process
+### 8. Product Attribute System
+
+#### 8.1. Standardize Attribute Storage
 - **Status**: Not Started
-- **Description**: Implement checkout functionality
+- **Description**: Fix inconsistencies in attribute data storage
 - **Tasks**:
-  - Create checkout flow
-  - Implement address management
-  - Add order summary
-  - Create payment integration placeholders
+  - Create consistent attribute value types
+  - Standardize attribute option handling
+  - Fix inheritance issues between attribute levels
+  - Implement proper validation for attribute values
 
-### 7. Order Management
-
-#### 7.1. Order Creation
+#### 8.2. Attribute UI Standardization
 - **Status**: Not Started
-- **Description**: Implement order creation
+- **Description**: Create consistent UI for attribute management
 - **Tasks**:
-  - Create order data model
-  - Implement order creation from cart
-  - Add order confirmation
-  - Create order success page
+  - Standardize attribute editing components
+  - Create reusable attribute display components
+  - Fix inconsistent attribute filtering UI
+  - Implement consistent attribute grouping
 
-#### 7.2. Order History
+### 9. File Handling Standardization
+
+#### 9.1. Object Storage Integration
 - **Status**: Not Started
-- **Description**: Implement order history
+- **Description**: Fix issues with Replit Object Storage integration
 - **Tasks**:
-  - Create order listing page
-  - Implement order details view
-  - Add order status tracking
-  - Create order filtering and sorting
+  - Create centralized file upload utility
+  - Standardize error handling for file operations
+  - Fix inconsistent file path handling
+  - Implement proper file type validation
 
-### 8. Admin Interface
-
-#### 8.1. Dashboard
+#### 9.2. Image Processing Standardization
 - **Status**: Not Started
-- **Description**: Implement admin dashboard
+- **Description**: Create consistent image processing workflow
 - **Tasks**:
-  - Create dashboard overview
-  - Implement key metrics display
-  - Add quick action buttons
-  - Create activity feeds
+  - Standardize image resize operations
+  - Fix AI background removal implementation
+  - Implement consistent image optimization
+  - Create proper error handling for image processing failures
 
-#### 8.2. Product Management
+### 10. Testing and Validation
+
+#### 10.1. Manual Testing Plan
 - **Status**: Not Started
-- **Description**: Implement admin product management
+- **Description**: Create comprehensive testing plan for standardized components
 - **Tasks**:
-  - Create product listing with filtering
-  - Implement bulk operations
-  - Add product approval workflow
-  - Create product statistics
-
-#### 8.3. User Management
-- **Status**: Not Started
-- **Description**: Implement admin user management
-- **Tasks**:
-  - Create user listing with filtering
-  - Implement user editing
-  - Add user role management
-  - Create user activity tracking
-
-### 9. Search and Filtering
-
-#### 9.1. Product Search
-- **Status**: Not Started
-- **Description**: Implement product search functionality
-- **Tasks**:
-  - Create basic search functionality
-  - Implement advanced search with filters
-  - Add search results sorting
-  - Create search UI components
-
-#### 9.2. Attribute Filtering
-- **Status**: Not Started
-- **Description**: Implement attribute-based filtering
-- **Tasks**:
-  - Create filter UI components
-  - Implement filter application logic
-  - Add filter persistence
-  - Create filter combination logic
-
-### 10. AI Integration
-
-#### 10.1. Image Processing
-- **Status**: Not Started
-- **Description**: Implement AI image processing
-- **Tasks**:
-  - Set up Gemini API integration
-  - Implement background removal
-  - Add image enhancement
-  - Create image processing UI
-
-#### 10.2. Product Suggestions
-- **Status**: Not Started
-- **Description**: Implement AI product suggestions
-- **Tasks**:
-  - Create product tag generation
-  - Implement price suggestions
-  - Add product description enhancement
-  - Create AI suggestion UI
+  - Define test cases for fixed features
+  - Create regression test checklist
+  - Document edge cases to verify
+  - Define acceptance criteria for standardized components
 
 ## Manual Testing Checklist
 
-### User Authentication
-- [ ] Register a new user with valid information
-- [ ] Attempt registration with invalid information (should display errors)
-- [ ] Log in with valid credentials
-- [ ] Attempt login with invalid credentials (should display errors)
-- [ ] Access protected routes when authenticated
-- [ ] Attempt to access protected routes when not authenticated (should redirect)
-- [ ] Test admin access to admin-only routes
-- [ ] Test regular user access to admin-only routes (should be denied)
-- [ ] Log out and verify session termination
+### Authentication System
+- [ ] Verify user login with correct credentials succeeds
+- [ ] Verify user login with incorrect credentials fails with proper error
+- [ ] Test user registration with valid data
+- [ ] Test user registration with duplicate username (should show error)
+- [ ] Verify logout functionality clears session
+- [ ] Check that protected routes require authentication
+- [ ] Verify admin-only routes are properly restricted
 
 ### Product Management
-- [ ] Create a new product with all required information
-- [ ] Create a product with missing required fields (should display errors)
-- [ ] Update an existing product's information
-- [ ] Delete a product and verify it's removed
-- [ ] Add product attributes and verify they display correctly
-- [ ] Upload product images and verify they process correctly
-- [ ] Test AI background removal for product images
-- [ ] Verify product appears in appropriate categories and listings
+- [ ] Verify product creation with valid data
+- [ ] Test product update with changed attributes
+- [ ] Verify product images upload correctly
+- [ ] Test product deletion
+- [ ] Verify product listing displays correctly
+- [ ] Check product filtering functionality
+- [ ] Verify product search returns correct results
 
-### Cart Functionality
-- [ ] Add an item to the cart
-- [ ] Add multiple items to the cart
-- [ ] Update item quantities in the cart
-- [ ] Remove items from the cart
-- [ ] Apply valid discount codes
-- [ ] Attempt to apply invalid discount codes (should display errors)
-- [ ] Verify cart persistence across sessions
-- [ ] Verify cart total and item subtotals calculate correctly
-- [ ] Test attribute-based pricing in cart
+### Attribute System
+- [ ] Test creation of global attributes
+- [ ] Verify attribute inheritance in catalogs
+- [ ] Test attribute application to products
+- [ ] Verify attribute-based filtering works
+- [ ] Check attribute option ordering
+- [ ] Test attribute value validation
+- [ ] Verify attribute display in product details
 
-### Checkout Process
-- [ ] Complete checkout with valid information
-- [ ] Attempt checkout with invalid information (should display errors)
-- [ ] Verify order creation after successful checkout
-- [ ] Test address management during checkout
-- [ ] Verify order summary displays correct information
-- [ ] Check order confirmation page after successful checkout
-- [ ] Verify inventory updates after checkout (if applicable)
+### Cart System
+- [ ] Add product to cart and verify persistence
+- [ ] Update product quantity in cart
+- [ ] Remove product from cart
+- [ ] Verify cart calculation with multiple items
+- [ ] Test cart with products having attribute-based pricing
+- [ ] Verify discounts apply correctly
+- [ ] Check cart state after user login/logout
 
-### Admin Functionality
-- [ ] Access admin dashboard and verify statistics
-- [ ] Manage products (create, update, delete)
-- [ ] Manage users (create, update, delete)
-- [ ] Configure system settings
-- [ ] View and manage orders
-- [ ] Test admin-only actions
-- [ ] Verify permission restrictions
+### Order Processing
+- [ ] Complete checkout process with valid data
+- [ ] Verify order creation from cart items
+- [ ] Check order history display
+- [ ] Test order status updates
+- [ ] Verify order details page shows correct information
+- [ ] Test order filtering in admin interface
 
-### Search and Filtering
-- [ ] Search for products with various keywords
-- [ ] Use attribute filters to narrow search results
-- [ ] Sort products by different criteria
-- [ ] Combine multiple filters and verify results
-- [ ] Clear filters and verify all products are displayed
-- [ ] Test category-based filtering
+### Admin Interface
+- [ ] Verify admin dashboard displays correctly
+- [ ] Test product management functionality
+- [ ] Check user management features
+- [ ] Verify catalog and category management
+- [ ] Test order management functions
+- [ ] Verify system settings can be configured
 
-### Responsive Design
-- [ ] Test layout on desktop browsers
-- [ ] Test layout on tablet devices
-- [ ] Test layout on mobile phones
-- [ ] Verify touch interactions work correctly
-- [ ] Check that all UI elements are accessible on small screens
+### Error Handling
+- [ ] Verify form validation errors display correctly
+- [ ] Test API error responses show user-friendly messages
+- [ ] Check handling of network failures
+- [ ] Verify file upload errors are properly displayed
+- [ ] Test error recovery functionality
