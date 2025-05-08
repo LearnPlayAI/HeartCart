@@ -1037,7 +1037,7 @@ export class BatchUploadService {
       try {
         // Update batch status to cancelled
         await this.updateBatchStatus(batchId, BATCH_STATUSES.CANCELLED, {
-          completedAt: new Date(), // Add completion timestamp for cancelled batch
+          canceledAt: new Date(), // Add cancellation timestamp for tracking
         });
         
         // Log the system event for audit trail
