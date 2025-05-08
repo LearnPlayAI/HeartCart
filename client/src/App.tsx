@@ -10,6 +10,7 @@ import Home from "@/pages/home";
 import ProductDetail from "@/pages/product-detail-new";
 import Category from "@/pages/category";
 import ProductListing from "@/pages/product-listing";
+import ProductsExample from "@/pages/products-example";
 import Checkout from "@/pages/checkout";
 import OrderDetail from "@/pages/order-detail";
 import SearchResults from "@/pages/search-results";
@@ -129,6 +130,7 @@ function App() {
                       <Route path="/product/:slug"><ProductDetail /></Route>
                       <Route path="/category/:slug"><Category /></Route>
                       <Route path="/products"><ProductListing /></Route>
+                      <Route path="/products-example"><ProductsExample /></Route>
                       <ProtectedRoute path="/checkout" component={Checkout} />
                       <Route path="/search"><SearchResults /></Route>
                       <ProtectedRoute path="/profile" component={Profile} />
