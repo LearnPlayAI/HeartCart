@@ -29,7 +29,13 @@ export default function AddCatalog() {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || "Failed to create catalog");
       }
-      return await response.json();
+      
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error?.message || "Failed to create catalog");
+      }
+      
+      return result;
     },
     onSuccess: () => {
       toast({

@@ -279,13 +279,14 @@ All client and server-side components must be completely updated to match the ne
 - **Status**: In Progress
 - **Description**: Update all front-end components to use standardized API responses
 - **Tasks**:
-  - [ ] Standardize front-end cart interaction components:
-    - [ ] Update use-cart.tsx hook to handle standardized API responses
-    - [ ] Standardize cart-item.tsx component for consistent API integration
-    - [ ] Update cart-sidebar.tsx for standardized response handling
+  - [x] Standardize front-end cart interaction components:
+    - [x] Update use-cart.tsx hook to handle standardized API responses
+    - [x] Standardize cart-item.tsx component for consistent API integration
+    - [x] Update cart-sidebar.tsx for standardized response handling
   - [ ] Standardize admin components:
-    - [ ] Update admin/products.tsx to use standardized API responses
-    - [ ] Update admin/product-edit.tsx for consistent API integration
+    - [x] Update admin/products.tsx to use standardized API responses
+    - [x] Update admin/product-edit.tsx for consistent API integration
+    - [x] Update admin/product-form-wizard.tsx to handle standardized API responses
     - [ ] Standardize admin/catalogs.tsx for updated API responses
     - [ ] Update admin/add-catalog.tsx and edit-catalog.tsx components
     - [ ] Standardize admin/suppliers.tsx for API response consistency

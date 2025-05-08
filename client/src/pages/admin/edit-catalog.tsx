@@ -28,10 +28,26 @@ export default function EditCatalog() {
   const catalogId = params.id;
 
   // Fetch catalog details
-  const { data: catalog, isLoading } = useQuery<Catalog>({
+  const { data: catalogResponse, isLoading } = useQuery<{ success: boolean, data: Catalog, error?: { message: string } }>({
     queryKey: [`/api/catalogs/${catalogId}`],
     enabled: !!catalogId,
+    queryFn: async () => {
+      const response = await fetch(`/api/catalogs/${catalogId}`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch catalog details");
+      }
+      
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error?.message || "Failed to fetch catalog details");
+      }
+      
+      return result;
+    }
   });
+  
+  // Extract catalog data from the standardized response
+  const catalog = catalogResponse?.data;
 
   // Update catalog mutation
   const { mutate: updateCatalog, isPending } = useMutation({
@@ -49,7 +65,13 @@ export default function EditCatalog() {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || "Failed to update catalog");
       }
-      return await response.json();
+      
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error?.message || "Failed to update catalog");
+      }
+      
+      return result;
     },
     onSuccess: () => {
       toast({
