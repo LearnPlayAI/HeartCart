@@ -5,6 +5,7 @@ import { Helmet } from 'react-helmet';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useDateFormat } from '@/hooks/use-date-format';
 import { 
   Form, 
   FormControl, 
@@ -65,6 +66,7 @@ type ProfileFormValues = z.infer<typeof profileSchema>;
 const ProfilePage: React.FC = () => {
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const { formatShortDate } = useDateFormat();
   const [activeTab, setActiveTab] = useState('orders');
   
   // Get user profile if logged in
@@ -284,7 +286,7 @@ const ProfilePage: React.FC = () => {
                           <TableRow key={order.id}>
                             <TableCell>#{order.id}</TableCell>
                             <TableCell>
-                              {new Date(order.createdAt).toLocaleDateString()}
+                              {formatShortDate(order.createdAt)}
                             </TableCell>
                             <TableCell>
                               <span className={`px-2 py-1 rounded-full text-xs font-medium ${

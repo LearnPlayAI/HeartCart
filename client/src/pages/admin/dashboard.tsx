@@ -139,6 +139,7 @@ function DashboardCards() {
  * Recent Orders Component
  */
 function RecentOrders() {
+  const { formatShortDate } = useDateFormat();
   const { data: recentOrders, isLoading } = useQuery<any[]>({
     queryKey: ["/api/admin/orders/recent"],
     queryFn: async () => {
@@ -220,7 +221,7 @@ function RecentOrders() {
                   </span>
                 </div>
                 <div className="text-muted-foreground">
-                  {new Date(order.date).toLocaleDateString()}
+                  {formatShortDate(order.date)}
                 </div>
                 <div className="text-right font-medium">
                   {formatCurrency(order.total)}
