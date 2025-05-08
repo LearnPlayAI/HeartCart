@@ -1,10 +1,21 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { setSessionTimezone } from "./db";
+import { SAST_TIMEZONE } from "@shared/date-utils";
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Set database timezone to SAST at server startup
+setSessionTimezone()
+  .then(() => {
+    console.log(`Database timezone set to ${SAST_TIMEZONE}`);
+  })
+  .catch(error => {
+    console.error(`Failed to set database timezone: ${error.message}`);
+  });
 
 app.use((req, res, next) => {
   const start = Date.now();

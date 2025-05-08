@@ -42,61 +42,57 @@ Before implementation, it's critical to understand potential system-breaking eff
 7. **Backward Compatibility**: Maintain compatibility with existing data and APIs during the transition
 8. **Incremental Implementation**: Deploy changes in small, testable increments to avoid system disruption
 
-## Coordinated Implementation Approach
+## Clean-Break Implementation Approach
 
-The standardization process requires coordinated changes between server and client components. For each area of functionality:
+Since the system is not yet in production, we will implement a clean-break approach rather than a gradual migration. This approach allows for comprehensive, system-wide changes without needing to maintain backward compatibility during a transition period.
 
-1. First, define shared TypeScript interfaces in the shared directory
-2. Update server-side implementations to conform to these interfaces
-3. Modify client-side components to work with the standardized server interfaces
-4. Test both sides together to ensure compatibility
+### Core Implementation Principles
 
-This approach ensures that server and client changes remain in sync throughout the standardization process, preventing integration issues and maintaining application functionality during the transition.
+1. **Complete System-Wide Changes**: Make all required changes consistently throughout the entire system
+2. **No Transition Period**: Implement new standards directly without maintaining backward compatibility
+3. **Comprehensive Verification**: Thoroughly verify all changes work together before considering implementation complete
+4. **Single-Phase Deployment**: Deploy all changes in a single coordinated phase instead of gradually
 
-## Implementation Sequence
+### Implementation Sequence
 
-All implementations must follow this coordinated sequence to ensure alignment between server and client components while maintaining system stability:
+Our clean-break approach will follow this coordinated sequence:
 
-1. **Risk Assessment & Backup**
-   - Create a database backup before starting any phase
-   - Identify potential breaking changes and plan mitigation strategies
-   - Document current API response formats for compatibility checks
-   - Establish rollback procedures for each implementation step
+1. **Backup & Planning**
+   - Create a complete database backup before implementation
+   - Create a comprehensive inventory of all affected components
+   - Develop a detailed implementation checklist covering all system components
+   - Document clear success criteria for each standardization area
 
-2. **Shared Type Definitions (shared/)**
-   - Define shared interfaces, types, and schemas
-   - Implement type compatibility layers for backwards compatibility
-   - Ensure server and client use the same type definitions
-   - Create validation schemas that work on both sides
+2. **Complete Type System Overhaul (shared/)**
+   - Redefine all shared interfaces, types, and schemas according to new standards
+   - Eliminate all deprecated or transitional type definitions
+   - Implement a comprehensive type checking process to verify type consistency
+   - Create validation schemas that enforce new standards
 
 3. **Server Implementation (server/)**
-   - Update server-side code to implement the shared interfaces
-   - Maintain API backward compatibility during transition
-   - Fix any TypeScript errors in the server implementation
-   - Implement proper validation using shared schemas
-   - Add versioning to API endpoints where needed
+   - Completely replace existing API implementations with standardized versions
+   - Update all database queries and data access patterns to match new schemas
+   - Implement comprehensive error handling across all endpoints
+   - Enforce strict validation on all inputs and outputs
 
 4. **Client Implementation (client/)**
-   - Update client components to work with standardized server interfaces
-   - Implement compatibility adapters for API responses during transition
-   - Apply shared validation schemas to form validation
-   - Ensure proper error handling and user feedback
+   - Completely refactor client components to work with new standards
+   - Replace all affected state management implementations
+   - Implement consistent error handling and user feedback
+   - Standardize form handling and validation
 
-5. **Incremental Testing & Verification**
-   - Test server endpoints with sample requests after each change
-   - Verify client components work with updated server responses
-   - Run parallel testing with both old and new implementations
-   - Implement feature flags to control gradual rollout
-   - Check for any regression issues or integration problems
-   - Document any implementation details for future reference
+5. **Complete System Verification**
+   - Create comprehensive test sequences that verify all system functions
+   - Verify all client-server interactions function correctly
+   - Validate all data flows through complete user journeys
+   - Create a verification checklist that must be completed before considering implementation done
 
-6. **Deployment & Monitoring**
-   - Deploy changes incrementally in small batches
-   - Monitor system performance and error rates after each deployment
-   - Maintain ability to quickly rollback problematic changes
-   - Gradually phase out deprecated APIs and features
+6. **One-Time Deployment**
+   - Deploy all changes simultaneously in a single coordinated release
+   - Run full system verification after deployment
+   - Document any issues for immediate resolution
 
-In each phase below, both client and server-side changes must be made in tandem to ensure compatibility. No server-side changes should be deployed without corresponding client-side updates, and vice versa. For high-risk changes, implement parallel systems that allow fallback to the original implementation if issues arise.
+All client and server-side components must be completely updated to match the new standards. No partial implementations or compatibility layers are needed since we are taking a clean-break approach with no users in production.
 
 ## Standardization Tasks
 
@@ -128,78 +124,55 @@ In each phase below, both client and server-side changes must be made in tandem 
 - **Status**: Not Started
 - **Description**: Create consistent type definitions across the application
 - **Tasks**:
-  - **Shared**: Create shared interface definitions in shared/schema.ts
-  - **Safety**: Create type adapter/wrapper functions to handle transitional compatibility
-  - **Server**: Fix type errors in existing server code without breaking existing API responses
-  - **Client**: Update client component props and state types with backward compatibility
-  - **Shared**: Implement proper type guards for null/undefined handling
-  - **Documentation**: Document type usage patterns for both client and server
-  - **Testing**: Verify existing functionality continues to work with new type definitions
+  - **Inventory**: Create complete inventory of all existing types and interfaces
+  - **Analysis**: Identify inconsistencies and issues in current type definitions
+  - **Schema Design**: Design comprehensive type schema based on clean-break approach
+  - **Shared**: Completely rewrite shared interface definitions in shared/schema.ts
+  - **Server**: Update all server code to use new type definitions consistently
+  - **Client**: Rewrite client component props and state types to match new standards
+  - **Shared**: Implement strict type guards for null/undefined handling
+  - **Documentation**: Create comprehensive type reference documentation
+  - **Verification**: Create verification script to ensure type consistency system-wide
 
 #### 2.2. Fix Drizzle ORM Schema Issues
 - **Status**: Not Started
 - **Description**: Address issues in the existing Drizzle ORM schema
 - **Tasks**:
   - **Backup**: Create a full database backup before schema modifications
-  - **Preparation**: Document all existing schema relationships and dependencies
-  - **Shared**: Correct TypeScript errors in schema definitions
-  - **Server**: Standardize relationship definitions
-  - **Server**: Fix inconsistent column naming conventions
-  - **Server**: Ensure schema validation consistency
-  - **Safety**: Create migration scripts that preserve existing data
-  - **Documentation**: Update schema documentation
-  - **Testing**: Verify data integrity after schema updates
+  - **Schema Audit**: Create a complete inventory of schema issues and inconsistencies
+  - **Schema Design**: Create comprehensive schema redesign that follows consistent patterns
+  - **Shared**: Completely rewrite schema definitions following new standards
+  - **Server**: Implement standardized relationship definitions across all models
+  - **Server**: Apply consistent column naming conventions system-wide
+  - **Server**: Create comprehensive schema validation with consistent error messages
+  - **Implementation**: Create all migration scripts needed for the clean-break implementation
+  - **Documentation**: Create complete schema documentation for all models
+  - **Verification**: Implement comprehensive schema validation tool for the new system
 
 #### 2.3. Timezone Standardization
-- **Status**: Not Started
+- **Status**: In Progress
 - **Description**: Implement SAST (UTC+2) timezone handling throughout the application
 - **Tasks**:
-  - **Backup**: Create a database backup before implementing timezone changes
-  - **Testing**: Document current date/time behavior in the system as baseline
-  - **Phased Approach**: Plan a gradual implementation to avoid breaking changes
-  - **Server**: Install pg-timezone package to handle timezone conversion
-  - **Server**: Create compatibility wrapper functions for timezone handling during transition:
+  - **Backup**: Create a complete database backup before implementing timezone changes
+  - ✓ **Timezone Audit**: Perform complete audit of all date/time usage in the application
+  - ✓ **Design**: Create detailed implementation plan for clean-break timezone standardization
+  - ✓ **Server**: Configure PostgreSQL to use proper timezone settings
+  - ✓ **Server**: Implement SAST timezone utilities in shared/date-utils.ts:
     ```typescript
-    // Example compatibility utilities in shared/date-utils.ts
+    // Standard date utilities in shared/date-utils.ts
     
-    // Use this for new code
+    // Create new dates in SAST timezone
     export function createSASTDate(date?: Date): Date {
       const now = date || new Date();
       return new Date(now.toLocaleString('en-US', { timeZone: 'Africa/Johannesburg' }));
     }
     
-    // Use this for handling existing dates (transition period only)
-    export function parseLegacyDate(dateStr: string): Date {
-      // Handle dates stored in the old format during transition
-      const date = new Date(dateStr);
-      // Apply conversion if needed based on detected format
-      return date;
+    // Convert any date to SAST timezone
+    export function toSASTTimezone(date: Date): Date {
+      return new Date(date.toLocaleString('en-US', { timeZone: 'Africa/Johannesburg' }));
     }
-    ```
-  - **Server**: Configure PostgreSQL connection with SAST timezone settings:
-    ```typescript
-    // Example configuration for db.ts
-    import { Pool, neonConfig } from '@neondatabase/serverless';
-    import { drizzle } from 'drizzle-orm/neon-serverless';
-    import ws from "ws";
-    import pgTimezone from 'pg-timezone';
     
-    // Apply timezone patches to PostgreSQL driver
-    pgTimezone.register();
-    
-    // Configure database connection with SAST timezone
-    neonConfig.webSocketConstructor = ws;
-    const pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-      // Set timezone to Africa/Johannesburg (SAST)
-      timezone: 'Africa/Johannesburg'
-    });
-    ```
-  - **Server**: Create migration script to convert existing timestamps to SAST timezone
-  - **Server**: Update date/time column types in schema.ts to use timestamptz
-  - **Client**: Create standardized date formatting functions that respect SAST:
-    ```typescript
-    // Example client utility
+    // Format date for display with SAST timezone
     export function formatSASTDateTime(date: Date): string {
       return date.toLocaleString('en-ZA', { 
         timeZone: 'Africa/Johannesburg',
@@ -208,16 +181,46 @@ In each phase below, both client and server-side changes must be made in tandem 
       });
     }
     
-    // Transitional function for handling possibly inconsistent date formats
+    // Safe formatter for any date format
     export function formatDateSafe(date: Date | string | null | undefined): string {
       if (!date) return 'N/A';
       const parsedDate = typeof date === 'string' ? new Date(date) : date;
       return formatSASTDateTime(parsedDate);
     }
     ```
-  - **Testing**: Add test cases to verify correct timezone handling
-  - **Monitoring**: Implement logging for date/time operations during transition period
-  - **Validation**: Create a validation script to check all date fields after migration
+  - ✓ **Server**: Configure PostgreSQL connection with SAST timezone settings:
+    ```typescript
+    // Configuration for db.ts
+    import { Pool, neonConfig } from '@neondatabase/serverless';
+    import { drizzle } from 'drizzle-orm/neon-serverless';
+    import ws from "ws";
+    import { SAST_TIMEZONE } from '@shared/date-utils';
+    
+    // Configure websocket for Neon Serverless
+    neonConfig.webSocketConstructor = ws;
+    
+    // Configure database connection - Neon doesn't support the options.timezone parameter
+    export const pool = new Pool({ 
+      connectionString: process.env.DATABASE_URL
+      // Note: Timezone will be set via session parameters instead
+    });
+    
+    // Set PostgreSQL session timezone to SAST
+    export async function setSessionTimezone(): Promise<void> {
+      const client = await pool.connect();
+      try {
+        await client.query(`SET timezone TO '${SAST_TIMEZONE}'`);
+      } finally {
+        client.release();
+      }
+    }
+    ```
+  - **Server**: Create one-time migration script to convert existing timestamps to SAST timezone
+  - **Server**: Update all date/time column types in schema.ts to use timestamptz
+  - **Client**: Replace all client-side date formatting with standardized SAST utilities
+  - **Server**: Replace all server-side date handling with standardized SAST utilities
+  - **API**: Update all API endpoints to send/receive dates in consistent SAST format
+  - **Validation**: Create verification tool to validate all date/time handling is correct
 
 #### 2.4. Create Utility Function Library
 - **Status**: Not Started
