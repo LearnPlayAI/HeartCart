@@ -49,12 +49,12 @@ We'll implement a structure with the following main tables:
 
 ### Phase 2: Core System Implementation
 
-- [ ] **Task 2.1: Database Schema Design** (Not Started)
+- [x] **Task 2.1: Database Schema Design** (Complete)
   - Define new attribute tables in shared/schema.ts
   - Create migration script to create new tables
   - Add relations between tables
 
-- [ ] **Task 2.2: Storage Methods Implementation** (Not Started)
+- [ ] **Task 2.2: Storage Methods Implementation** (In Progress)
   - Implement CRUD operations for attributes
   - Implement methods for attribute associations
   - Implement methods for option management
