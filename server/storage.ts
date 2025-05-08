@@ -1867,22 +1867,27 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteCategoryAttribute(id: number): Promise<boolean> {
-    // First delete all options for this attribute
-    await db
-      .delete(categoryAttributeOptions)
-      .where(eq(categoryAttributeOptions.attributeId, id));
-    
-    // Then delete all product attribute values for this attribute
-    await db
-      .delete(productAttributeValues)
-      .where(eq(productAttributeValues.attributeId, id));
-    
-    // Finally delete the attribute itself
-    await db
-      .delete(categoryAttributes)
-      .where(eq(categoryAttributes.id, id));
-    
-    return true;
+    try {
+      // First delete all options for this attribute
+      await db
+        .delete(categoryAttributeOptions)
+        .where(eq(categoryAttributeOptions.attributeId, id));
+      
+      // Then delete all product attribute values for this attribute
+      await db
+        .delete(productAttributeValues)
+        .where(eq(productAttributeValues.attributeId, id));
+      
+      // Finally delete the attribute itself
+      await db
+        .delete(categoryAttributes)
+        .where(eq(categoryAttributes.id, id));
+      
+      return true;
+    } catch (error) {
+      console.error(`Error deleting category attribute ${id}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
   }
 
   // Category Attribute Option operations
@@ -1912,10 +1917,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteCategoryAttributeOption(id: number): Promise<boolean> {
-    await db
-      .delete(categoryAttributeOptions)
-      .where(eq(categoryAttributeOptions.id, id));
-    return true;
+    try {
+      await db
+        .delete(categoryAttributeOptions)
+        .where(eq(categoryAttributeOptions.id, id));
+      return true;
+    } catch (error) {
+      console.error(`Error deleting category attribute option ${id}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
   }
 
   // Product Attribute Value operations
@@ -1957,10 +1967,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteProductAttributeValue(id: number): Promise<boolean> {
-    await db
-      .delete(productAttributeValues)
-      .where(eq(productAttributeValues.id, id));
-    return true;
+    try {
+      await db
+        .delete(productAttributeValues)
+        .where(eq(productAttributeValues.id, id));
+      return true;
+    } catch (error) {
+      console.error(`Error deleting product attribute value ${id}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
   }
 
   // Product Attribute Combination operations
@@ -2069,8 +2084,8 @@ export class DatabaseStorage implements IStorage {
         
       return !!deletedAttribute;
     } catch (error) {
-      console.error('Error deleting global attribute:', error);
-      return false;
+      console.error(`Error deleting global attribute ${id}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
   }
   
@@ -2114,8 +2129,8 @@ export class DatabaseStorage implements IStorage {
         
       return !!deletedOption;
     } catch (error) {
-      console.error('Error deleting global attribute option:', error);
-      return false;
+      console.error(`Error deleting global attribute option ${id}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
   }
   
@@ -2338,8 +2353,8 @@ export class DatabaseStorage implements IStorage {
         .where(eq(attributes.id, id));
       return true;
     } catch (error) {
-      console.error("Error deleting attribute:", error);
-      return false;
+      console.error(`Error deleting attribute ${id}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
   }
   
@@ -2406,8 +2421,8 @@ export class DatabaseStorage implements IStorage {
       });
       return true;
     } catch (error) {
-      console.error("Error updating attribute options order:", error);
-      return false;
+      console.error(`Error updating attribute options order for attribute ${attributeId}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
   }
   
