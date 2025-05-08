@@ -98,23 +98,26 @@ const ProductListing = () => {
   const limit = 20;
   
   // Fetch categories
-  const { data: categories } = useQuery<Category[]>({
+  const { data: categoriesResponse } = useQuery<{success: boolean, data: Category[]}>({
     queryKey: ['/api/categories'],
   });
+  const categories = categoriesResponse?.data || [];
   
   // Fetch products
-  const { data: products, isLoading: isLoadingProducts } = useQuery<Product[]>({
+  const { data: productsResponse, isLoading: isLoadingProducts } = useQuery<{success: boolean, data: Product[]}>({
     queryKey: ['/api/products', { limit, offset: (page - 1) * limit }],
   });
+  const products = productsResponse?.data || [];
   
   // Fetch filterable attributes based on selected category
-  const { data: filterableAttributes, isLoading: isLoadingAttributes } = useQuery<(CategoryAttribute & { options: AttributeOption[], attribute: Attribute })[]>({
+  const { data: filterableAttributesResponse, isLoading: isLoadingAttributes } = useQuery<{success: boolean, data: (CategoryAttribute & { options: AttributeOption[], attribute: Attribute })[]}>({
     queryKey: [selectedCategory ? 
       `/api/categories/${selectedCategory}/filterable-attributes` : 
       '/api/products/filterable-attributes'
     ],
     enabled: !!products,
   });
+  const filterableAttributes = filterableAttributesResponse?.data || [];
   
   // Update URL with filters
   useEffect(() => {
@@ -304,15 +307,19 @@ const ProductListing = () => {
   };
   
   // Fetch product attribute values for filtering
-  const { data: productAttributeValues } = useQuery<{
-    productId: number;
-    attributeId: number;
-    optionId: number | null;
-    textValue: string | null;
-  }[]>({
+  const { data: productAttributeValuesResponse } = useQuery<{
+    success: boolean, 
+    data: {
+      productId: number;
+      attributeId: number;
+      optionId: number | null;
+      textValue: string | null;
+    }[]
+  }>({
     queryKey: ['/api/products/attribute-values'],
     enabled: !!products && attributeFilters.length > 0,
   });
+  const productAttributeValues = productAttributeValuesResponse?.data || [];
   
   // Update active filters to include attribute filters
   useEffect(() => {
