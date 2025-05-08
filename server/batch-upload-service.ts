@@ -7,7 +7,7 @@
  */
 
 import { db } from './db';
-import { and, eq, ilike, inArray, isNull, or } from 'drizzle-orm';
+import { and, eq, ilike, inArray, isNull, or, desc } from 'drizzle-orm';
 import {
   batchUploads,
   batchUploadErrors,
@@ -25,7 +25,8 @@ import {
   InsertBatchUploadError,
   InsertProduct,
   Product,
-  BatchUpload
+  BatchUpload,
+  BatchUploadError
 } from '@shared/schema';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -571,26 +572,24 @@ export class BatchUploadService {
     // Extract tags
     const tags = row.tags ? row.tags.split(',').map(tag => tag.trim()) : [];
     
-    // Prepare product data
+    // Prepare product data with safe undefined handling
     const productData: InsertProduct = {
       name: row.product_name,
       slug: this.slugify(row.product_sku),
       description: row.product_description,
-      categoryId,
-      catalogId: actualCatalogId,
+      categoryId: categoryId || undefined,
+      catalogId: actualCatalogId || undefined,
       price: Number(row.regular_price),
       costPrice: Number(row.cost_price),
-      salePrice: Number(row.sale_price),
-      discount: Number(row.discount_percentage),
-      // Remove fields not in InsertProduct
+      salePrice: row.sale_price ? Number(row.sale_price) : undefined,
+      discount: row.discount_percentage ? Number(row.discount_percentage) : undefined,
       isActive: row.status !== 'draft',
       isFeatured: row.featured === 'true',
-      weight: row.weight ? Number(row.weight) : null,
-      dimensions: row.dimensions || null,
+      weight: row.weight ? Number(row.weight) : undefined,
+      dimensions: row.dimensions || undefined,
       tags,
-      // Add required fields for supplier that weren't previously included
-      supplier: row.supplier_name || null,
-      brand: row.brand || null,
+      supplier: row.supplier_name || undefined,
+      brand: row.brand || undefined,
     };
     
     return productData;
@@ -778,7 +777,7 @@ export class BatchUploadService {
     categoryName: string, 
     parentCategoryName?: string
   ): Promise<{ id: number; name: string }> {
-    let parentId: number | null = null;
+    let parentId: number | undefined = undefined;
     
     // Find parent category if provided
     if (parentCategoryName) {
@@ -843,7 +842,7 @@ export class BatchUploadService {
     catalogName: string,
     supplierIdOrName?: string
   ): Promise<{ id: number; name: string }> {
-    let supplierId: number | null = null;
+    let supplierId: number | undefined = undefined;
     
     // Handle supplier
     if (supplierIdOrName) {
@@ -922,13 +921,18 @@ export class BatchUploadService {
    * Get all batch uploads
    */
   async getAllBatchUploads(userId?: number): Promise<BatchUpload[]> {
-    let query = db.select().from(batchUploads);
-    
     if (userId) {
-      query = query.where(eq(batchUploads.userId, userId));
+      return await db
+        .select()
+        .from(batchUploads)
+        .where(eq(batchUploads.userId, userId))
+        .orderBy(batchUploads.createdAt);
     }
     
-    return await query.orderBy(batchUploads.createdAt);
+    return await db
+      .select()
+      .from(batchUploads)
+      .orderBy(batchUploads.createdAt);
   }
 
   /**
