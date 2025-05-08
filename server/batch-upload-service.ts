@@ -43,6 +43,10 @@ export const BATCH_STATUSES = {
   PROCESSING: 'processing',
   COMPLETED: 'completed',
   FAILED: 'failed',
+  CANCELLED: 'cancelled',
+  PAUSED: 'paused',
+  RESUMABLE: 'resumable',
+  RETRYING: 'retrying',
 };
 
 export const ERROR_TYPES = {
@@ -115,11 +119,31 @@ export class BatchUploadService {
    * Update batch upload status
    */
   async updateBatchStatus(id: number, status: string, updatedFields: Partial<BatchUpload> = {}): Promise<void> {
+    const statusFields: Partial<BatchUpload> = {
+      status,
+      updatedAt: new Date(),
+    };
+    
+    // Add appropriate timestamp based on status
+    switch (status) {
+      case BATCH_STATUSES.COMPLETED:
+        statusFields.completedAt = new Date();
+        break;
+      case BATCH_STATUSES.CANCELLED:
+        statusFields.canceledAt = new Date();
+        break;
+      case BATCH_STATUSES.PAUSED:
+        statusFields.pausedAt = new Date();
+        break;
+      case BATCH_STATUSES.RESUMABLE:
+      case BATCH_STATUSES.RETRYING:
+        statusFields.resumedAt = new Date();
+        break;
+    }
+    
     await db.update(batchUploads)
       .set({
-        status,
-        updatedAt: new Date(),
-        ...(status === BATCH_STATUSES.COMPLETED ? { completedAt: new Date() } : {}),
+        ...statusFields,
         ...updatedFields
       })
       .where(eq(batchUploads.id, id));

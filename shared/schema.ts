@@ -806,14 +806,27 @@ export const batchUploads = pgTable("batch_uploads", {
   processedRecords: integer("processed_records").default(0),
   successCount: integer("success_count").default(0),
   errorCount: integer("error_count").default(0),
-  status: text("status").notNull().default("pending"), // pending, processing, completed, failed
+  // Extended status options: pending, processing, completed, failed, cancelled, paused, resumable
+  status: text("status").notNull().default("pending"),
   catalogId: integer("catalog_id").references(() => catalogs.id),
   originalFilename: text("file_original_name"),
   fileName: text("file_name"),
   warnings: jsonb("warnings").default([]),
+  // New fields for enhanced batch management
+  lastProcessedRow: integer("last_processed_row").default(0),
+  processingStrategy: text("processing_strategy").default("sequential"), // sequential, parallel
+  retryCount: integer("retry_count").default(0),
+  maxRetries: integer("max_retries").default(3),
+  // New fields for capacity checks and tracking
+  catalogCapacity: integer("catalog_capacity"),
+  catalogCurrentCount: integer("catalog_current_count"),
+  // Timestamps
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   completedAt: timestamp("completed_at", { withTimezone: true }),
+  canceledAt: timestamp("canceled_at", { withTimezone: true }),
+  pausedAt: timestamp("paused_at", { withTimezone: true }),
+  resumedAt: timestamp("resumed_at", { withTimezone: true }),
 });
 
 // Batch upload error logs for detailed error tracking
@@ -892,10 +905,15 @@ export const insertBatchUploadSchema = createInsertSchema(batchUploads).omit({
   createdAt: true,
   updatedAt: true,
   completedAt: true,
+  canceledAt: true,
+  pausedAt: true,
+  resumedAt: true,
   processedRecords: true,
   successCount: true,
   errorCount: true,
   warnings: true,
+  lastProcessedRow: true,
+  retryCount: true,
 });
 
 // Create insert schema for batch upload errors
