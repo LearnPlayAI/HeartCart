@@ -8,9 +8,18 @@ const FeaturedProductsSection = () => {
   const [page, setPage] = useState(1);
   const limit = 10;
   
-  const { data: featuredProducts, isLoading, isFetching } = useQuery<Product[]>({
+  // Define the standardized API response type
+  interface ApiResponse {
+    success: boolean;
+    data: Product[];
+  }
+  
+  const { data: response, isLoading, isFetching } = useQuery<ApiResponse>({
     queryKey: ['/api/featured-products', { limit, offset: (page - 1) * limit }],
   });
+  
+  // Extract the featured products from the standardized response
+  const featuredProducts = response?.data || [];
   
   const loadMore = () => {
     setPage(prev => prev + 1);

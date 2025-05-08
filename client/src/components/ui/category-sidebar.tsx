@@ -22,10 +22,19 @@ export function CategorySidebar({ className, onCategorySelect }: CategorySidebar
     children: Category[];
   }
   
+  // Define the standardized API response type
+  interface ApiResponse {
+    success: boolean;
+    data: CategoryWithChildren[];
+  }
+  
   // Fetch main categories with their children using the new API endpoint
-  const { data: categoriesWithChildren, isLoading } = useQuery<CategoryWithChildren[]>({
+  const { data: response, isLoading } = useQuery<ApiResponse>({
     queryKey: ["/api/categories/main/with-children"],
   });
+  
+  // Extract the categories with children from the standardized response
+  const categoriesWithChildren = response?.data || [];
   
   // Extract the category slug from the current URL if we're on a category page
   const categorySlug = location.startsWith("/category/") 

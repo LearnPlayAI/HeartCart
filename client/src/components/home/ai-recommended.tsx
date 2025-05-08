@@ -13,18 +13,35 @@ type AiRecommendationResponse = {
   timestamp: string;
 };
 
+// Define the standardized API response types
+interface ApiRecommendationResponse {
+  success: boolean;
+  data: AiRecommendationResponse;
+}
+
+interface ApiFeaturedResponse {
+  success: boolean;
+  data: Product[];
+}
+
 const AIRecommendedProducts = () => {
-  const { data: recommendations, isLoading, error } = useQuery<AiRecommendationResponse>({
+  const { data: recommendationsResponse, isLoading, error } = useQuery<ApiRecommendationResponse>({
     queryKey: ['/api/recommendations'],
     // Return empty array on 401 (not authenticated)
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
   
+  // Extract the recommendations from the standardized response
+  const recommendations = recommendationsResponse?.data;
+  
   // Fallback products if AI recommendations fail or user is not authenticated
-  const { data: fallbackProducts } = useQuery<Product[]>({
+  const { data: fallbackResponse } = useQuery<ApiFeaturedResponse>({
     queryKey: ['/api/featured-products', { limit: 4 }],
-    enabled: !!error || !recommendations || recommendations.products.length === 0,
+    enabled: !!error || !recommendations || recommendations?.products.length === 0,
   });
+  
+  // Extract the fallback products from the standardized response
+  const fallbackProducts = fallbackResponse?.data || [];
   
   const productsToShow = recommendations?.products.length ? recommendations.products : fallbackProducts;
   

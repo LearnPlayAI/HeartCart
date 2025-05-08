@@ -18,9 +18,18 @@ const FlashDealsSection = () => {
   
   const { timeRemaining, formattedTime } = useCountdown(endTime);
   
-  const { data: flashDeals, isLoading } = useQuery<Product[]>({
+  // Define the standardized API response type
+  interface ApiResponse {
+    success: boolean;
+    data: Product[];
+  }
+  
+  const { data: response, isLoading } = useQuery<ApiResponse>({
     queryKey: ['/api/flash-deals'],
   });
+  
+  // Extract the flash deals from the standardized response
+  const flashDeals = response?.data || [];
   
   return (
     <section className="mb-8 bg-white rounded-lg shadow-md overflow-hidden">

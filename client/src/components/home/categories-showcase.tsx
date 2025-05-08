@@ -24,9 +24,18 @@ const categoryIcons: Record<string, React.ReactNode> = {
 };
 
 const CategoriesShowcase = () => {
-  const { data: categories, isLoading } = useQuery<Category[]>({
+  // Define the standardized API response type
+  interface ApiResponse {
+    success: boolean;
+    data: Category[];
+  }
+  
+  const { data: response, isLoading } = useQuery<ApiResponse>({
     queryKey: ['/api/categories'],
   });
+  
+  // Extract the categories from the standardized response
+  const categories = response?.data || [];
   
   return (
     <section className="mb-8 bg-white rounded-lg shadow-md p-4">

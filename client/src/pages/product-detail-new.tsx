@@ -69,15 +69,24 @@ const ProductDetailBySlug = () => {
   const [, params] = useRoute('/product/:slug');
   const slug = params?.slug;
   
+  // Define the standardized API response type
+  interface ApiResponse {
+    success: boolean;
+    data: Product;
+  }
+  
   // Fetch product by slug
   const { 
-    data: product, 
+    data: response, 
     isLoading, 
     error 
-  } = useQuery<Product>({
+  } = useQuery<ApiResponse>({
     queryKey: [`/api/products/slug/${slug}`],
     enabled: !!slug,
   });
+  
+  // Extract the product from the standardized response
+  const product = response?.data;
   
   return (
     <ProductDetailView
@@ -93,15 +102,24 @@ const ProductDetailById = () => {
   const [, params] = useRoute('/product/id/:id');
   const id = params?.id ? parseInt(params.id, 10) : undefined;
   
+  // Define the standardized API response type
+  interface ApiResponse {
+    success: boolean;
+    data: Product;
+  }
+  
   // Fetch product by ID
   const { 
-    data: product, 
+    data: response, 
     isLoading, 
     error 
-  } = useQuery<Product>({
+  } = useQuery<ApiResponse>({
     queryKey: [`/api/products/${id}`],
     enabled: !!id,
   });
+  
+  // Extract the product from the standardized response
+  const product = response?.data;
   
   return (
     <ProductDetailView
@@ -531,7 +549,7 @@ const ProductDetailView = ({
                 {renderStars(product.rating)}
               </div>
               <span className="text-sm text-gray-500">
-                {product.rating?.toFixed(1)} ({product.reviewCount} reviews)
+                {product.rating !== null && product.rating !== undefined ? product.rating.toFixed(1) : '0.0'} ({product.reviewCount || 0} reviews)
               </span>
             </div>
             
