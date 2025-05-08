@@ -2565,8 +2565,8 @@ export class DatabaseStorage implements IStorage {
       });
       return true;
     } catch (error) {
-      console.error("Error updating catalog attribute options order:", error);
-      return false;
+      console.error(`Error updating catalog attribute options order for catalogAttributeId ${catalogAttributeId}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
   }
   
@@ -2715,8 +2715,8 @@ export class DatabaseStorage implements IStorage {
       });
       return true;
     } catch (error) {
-      console.error("Error updating category attribute options order:", error);
-      return false;
+      console.error(`Error updating category attribute options order for categoryAttributeId ${categoryAttributeId}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
   }
   
@@ -2869,7 +2869,7 @@ export class DatabaseStorage implements IStorage {
       });
       return true;
     } catch (error) {
-      console.error(`Error updating product attribute options order for attributeId ${productAttributeId}:`, error);
+      console.error(`Error updating product attribute options order for productAttributeId ${productAttributeId}:`, error);
       throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
   }
