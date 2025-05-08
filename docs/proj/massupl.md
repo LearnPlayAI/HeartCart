@@ -60,20 +60,20 @@ This ensures consistent error handling, pagination support, and predictable resp
 ## Implementation Phases
 
 ### Phase 1: Database and Data Model Setup
-- [ ] Create the database storage functions for multi-value attributes
-  - [ ] Design schema for products with multiple attribute values
-  - [ ] Create attribute value tables with foreign key relationships
-  - [ ] Implement transaction management for batch operations
-  - [ ] Design batch job tracking table for monitoring uploads
-  - [ ] Add catalog creation/update functions with attribute mapping
+- [x] Create the database storage functions for multi-value attributes
+  - [x] Design schema for products with multiple attribute values
+  - [x] Create attribute value tables with foreign key relationships
+  - [x] Implement transaction management for batch operations
+  - [x] Design batch job tracking table for monitoring uploads
+  - [x] Add catalog creation/update functions with attribute mapping
 
-- [ ] Set up validation schema for multi-attribute CSV data
-  - [ ] Define required field validations
-  - [ ] Create data type validators for comma-separated values
-  - [ ] Set up reference validations (category IDs, etc.)
-  - [ ] Create validation rules for attribute value lists
-  - [ ] Implement custom validators for special fields
-  - [ ] Create validation result formatting
+- [x] Set up validation schema for multi-attribute CSV data
+  - [x] Define required field validations
+  - [x] Create data type validators for comma-separated values
+  - [x] Set up reference validations (category IDs, etc.)
+  - [x] Create validation rules for attribute value lists
+  - [x] Implement custom validators for special fields
+  - [x] Create validation result formatting
 
 ### Phase 2: CSV Template and Processing
 - [ ] Define the catalog-centric CSV template structure
@@ -134,12 +134,12 @@ This ensures consistent error handling, pagination support, and predictable resp
   - [ ] Add custom validation rule support
 
 ### Phase 4: UI Components for Upload and Preview
-- [ ] Design the upload interface UI components
-  - [ ] Create uploader component for CSV files
-  - [ ] Build real-time progress indicator components
-  - [ ] Design preview grid for validation results with multi-value attributes
-  - [ ] Create attribute value preview components for comma-separated lists
-  - [ ] Build supplier/catalog selector and creator
+- [x] Design the upload interface UI components
+  - [x] Create uploader component for CSV files
+  - [x] Build real-time progress indicator components
+  - [x] Design preview grid for validation results with multi-value attributes
+  - [x] Create attribute value preview components for comma-separated lists
+  - [x] Build supplier/catalog selector and creator
 
 - [ ] Implement the basic file upload infrastructure
   - [ ] Set up temporary storage for uploaded files
@@ -163,12 +163,12 @@ This ensures consistent error handling, pagination support, and predictable resp
   - [ ] Add suggestions for error resolution
 
 ### Phase 5: Separated Image Management System
-- [ ] Design the product image upload interface 
-  - [ ] Create dedicated "Upload Images" button column in product list
-  - [ ] Build product-specific image management page
-  - [ ] Implement drag-and-drop upload interface
-  - [ ] Create image preview components
-  - [ ] Add image reordering and deletion functionality
+- [x] Design the product image upload interface 
+  - [x] Create dedicated "Upload Images" button column in product list
+  - [x] Build product-specific image management page
+  - [x] Implement drag-and-drop upload interface
+  - [x] Create image preview components
+  - [x] Add image reordering and deletion functionality
 
 - [ ] Implement direct Object Store upload system
   - [ ] Create secure API endpoints for image uploads
