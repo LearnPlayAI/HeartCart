@@ -1022,7 +1022,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Process the image before moving it (optimize and validate)
       try {
         // Get file buffer for processing
-        const imageBuffer = await objectStore.downloadAsBuffer(sourceKey);
+        const { data: imageBuffer } = await objectStore.getFileAsBuffer(sourceKey);
         
         // Validate the image
         const validationResult = await imageService.validateImage(imageBuffer, path.basename(sourceKey));
@@ -1049,14 +1049,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Upload optimized version
             const ext = path.extname(sourceKey);
             const baseName = path.basename(sourceKey, ext);
-            optimizedKey = `${path.dirname(sourceKey)}/${baseName}.webp`;
+            const newOptimizedKey = `${path.dirname(sourceKey)}/${baseName}.webp`;
             
-            await objectStore.uploadFromBuffer(optimizedKey, processedBuffer, { contentType: 'image/webp' });
+            await objectStore.uploadFromBuffer(newOptimizedKey, processedBuffer, { contentType: 'image/webp' });
             
-            console.log(`Created optimized version at ${optimizedKey}`);
+            console.log(`Created optimized version at ${newOptimizedKey}`);
             
             // If the optimized version was created successfully, use it as the source for moving
-            sourceKey = optimizedKey;
+            sourceKey = newOptimizedKey;
           } catch (optimizeError) {
             console.error(`Failed to optimize image before moving:`, optimizeError);
             // Continue with original file if optimization fails

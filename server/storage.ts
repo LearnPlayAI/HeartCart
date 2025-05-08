@@ -1069,6 +1069,14 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
+  async getProductImageById(id: number): Promise<ProductImage | undefined> {
+    const [image] = await db
+      .select()
+      .from(productImages)
+      .where(eq(productImages.id, id));
+    return image;
+  }
+  
   async createProductImage(image: InsertProductImage): Promise<ProductImage> {
     // If this is marked as main image, unset any existing main image
     if (image.isMain && image.productId) {
