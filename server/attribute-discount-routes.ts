@@ -1,52 +1,51 @@
-import { Router } from "express";
+import { Router, Request, Response } from "express";
 import { storage } from "./storage";
 import { attributeDiscountRules, insertAttributeDiscountRuleSchema } from "@shared/schema";
 import { z } from "zod";
+import { sendSuccess, sendError } from "./api-response";
 
 const router = Router();
 
-// Get all attribute discount rules
-router.get("/attribute-discount-rules", async (req, res) => {
+// Helper function to standardize error handling
+const handleErrors = (fn: Function) => async (req: Request, res: Response) => {
   try {
-    const rules = await storage.getAllAttributeDiscountRules();
-    res.json(rules);
+    await fn(req, res);
   } catch (error) {
-    console.error("Error fetching attribute discount rules:", error);
-    res.status(500).json({ error: "Failed to fetch attribute discount rules" });
+    if (error instanceof z.ZodError) {
+      return sendError(res, "Validation error", 400, "VALIDATION_ERROR", error.errors);
+    }
+    console.error("API Error:", error);
+    sendError(res, error.message || "An unexpected error occurred", 500, "SERVER_ERROR");
   }
-});
+};
+
+// Get all attribute discount rules
+router.get("/attribute-discount-rules", handleErrors(async (req: Request, res: Response) => {
+  const rules = await storage.getAllAttributeDiscountRules();
+  sendSuccess(res, rules);
+}));
 
 // Get attribute discount rules by product
-router.get("/attribute-discount-rules/product/:productId", async (req, res) => {
-  try {
-    const productId = parseInt(req.params.productId);
-    if (isNaN(productId)) {
-      return res.status(400).json({ error: "Invalid product ID" });
-    }
-    
-    const rules = await storage.getAttributeDiscountRulesByProduct(productId);
-    res.json(rules);
-  } catch (error) {
-    console.error("Error fetching product attribute discount rules:", error);
-    res.status(500).json({ error: "Failed to fetch product attribute discount rules" });
+router.get("/attribute-discount-rules/product/:productId", handleErrors(async (req: Request, res: Response) => {
+  const productId = parseInt(req.params.productId);
+  if (isNaN(productId)) {
+    return sendError(res, "Invalid product ID", 400, "INVALID_ID");
   }
-});
+  
+  const rules = await storage.getAttributeDiscountRulesByProduct(productId);
+  sendSuccess(res, rules);
+}));
 
 // Get attribute discount rules by category
-router.get("/attribute-discount-rules/category/:categoryId", async (req, res) => {
-  try {
-    const categoryId = parseInt(req.params.categoryId);
-    if (isNaN(categoryId)) {
-      return res.status(400).json({ error: "Invalid category ID" });
-    }
-    
-    const rules = await storage.getAttributeDiscountRulesByCategory(categoryId);
-    res.json(rules);
-  } catch (error) {
-    console.error("Error fetching category attribute discount rules:", error);
-    res.status(500).json({ error: "Failed to fetch category attribute discount rules" });
+router.get("/attribute-discount-rules/category/:categoryId", handleErrors(async (req: Request, res: Response) => {
+  const categoryId = parseInt(req.params.categoryId);
+  if (isNaN(categoryId)) {
+    return sendError(res, "Invalid category ID", 400, "INVALID_ID");
   }
-});
+  
+  const rules = await storage.getAttributeDiscountRulesByCategory(categoryId);
+  sendSuccess(res, rules);
+}));
 
 // Get attribute discount rules by catalog
 router.get("/attribute-discount-rules/catalog/:catalogId", async (req, res) => {
