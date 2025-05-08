@@ -41,7 +41,7 @@ export default function AdminProducts() {
   const [itemsPerPage] = useState(10);
   
   // Fetch categories for filtering
-  const { data: categories, isLoading: loadingCategories } = useQuery({
+  const { data: categoriesResponse, isLoading: loadingCategories } = useQuery<{ success: boolean, data: { id: number; name: string }[] }>({
     queryKey: ["/api/categories"],
     queryFn: async () => {
       const response = await fetch("/api/categories");
@@ -49,9 +49,10 @@ export default function AdminProducts() {
       return await response.json();
     },
   });
+  const categories = categoriesResponse?.data;
 
   // Fetch products with filtering
-  const { data: products, isLoading: loadingProducts } = useQuery<Product[]>({
+  const { data: productsResponse, isLoading: loadingProducts } = useQuery<{ success: boolean, data: Product[] }>({
     queryKey: ["/api/products", searchTerm, categoryFilter],
     queryFn: async () => {
       let url = "/api/products";
@@ -67,6 +68,7 @@ export default function AdminProducts() {
       return await response.json();
     },
   });
+  const products = productsResponse?.data;
 
   // Pagination logic
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -91,6 +93,12 @@ export default function AdminProducts() {
         
         if (!response.ok) {
           throw new Error("Failed to delete product");
+        }
+        
+        const result = await response.json();
+        
+        if (!result.success) {
+          throw new Error(result.error?.message || "Failed to delete product");
         }
         
         queryClient.invalidateQueries({ queryKey: ["/api/products"] });
