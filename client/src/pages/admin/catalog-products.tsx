@@ -539,7 +539,14 @@ export default function CatalogProducts() {
     mutationFn: async (productId: number) => {
       // Simply call apiRequest and let the centralized error handling in queryClient.ts do its job
       const response = await apiRequest("DELETE", `/api/products/${productId}`);
-      return await response.json();
+      const data = await response.json();
+      
+      // Check if the response follows the standardized format
+      if (!data.success) {
+        throw new Error(data.error?.message || "Failed to delete product");
+      }
+      
+      return data.data;
     },
     onSuccess: () => {
       toast({
@@ -566,7 +573,14 @@ export default function CatalogProducts() {
     mutationFn: async (data: { productIds: number[], active: boolean }) => {
       // Use centralized error handling in apiRequest
       const response = await apiRequest("PATCH", `/api/products/bulk-update-status`, data);
-      return await response.json();
+      const result = await response.json();
+      
+      // Check if the response follows the standardized format
+      if (!result.success) {
+        throw new Error(result.error?.message || "Failed to update products");
+      }
+      
+      return result.data;
     },
     onSuccess: (_, variables) => {
       toast({
@@ -591,7 +605,14 @@ export default function CatalogProducts() {
     mutationFn: async (data: { productIds: number[], catalogId: number }) => {
       // Use centralized error handling in apiRequest
       const response = await apiRequest("PATCH", `/api/catalogs/${catalogId}/products/reorder`, data);
-      return await response.json();
+      const result = await response.json();
+      
+      // Check if the response follows the standardized format
+      if (!result.success) {
+        throw new Error(result.error?.message || "Failed to reorder products");
+      }
+      
+      return result.data;
     },
     onSuccess: () => {
       toast({

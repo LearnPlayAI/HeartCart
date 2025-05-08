@@ -46,10 +46,15 @@ const ProductImageManager = ({ productId, onBackgroundRemoved }: ProductImageMan
         `/api/products/${productId}/images/${imageId}/main`,
         {}
       );
-      if (!res.ok) {
-        throw new Error('Failed to set as main image');
+      
+      const result = await res.json();
+      
+      // Check if the response follows the standardized format
+      if (!result.success) {
+        throw new Error(result.error?.message || 'Failed to set as main image');
       }
-      return res.json();
+      
+      return result.data;
     },
     onSuccess: () => {
       toast({
@@ -75,10 +80,15 @@ const ProductImageManager = ({ productId, onBackgroundRemoved }: ProductImageMan
         `/api/products/images/${imageId}`,
         { hasBgRemoved: true }
       );
-      if (!res.ok) {
-        throw new Error('Failed to request background removal');
+      
+      const result = await res.json();
+      
+      // Check if the response follows the standardized format
+      if (!result.success) {
+        throw new Error(result.error?.message || 'Failed to request background removal');
       }
-      return res.json();
+      
+      return result.data;
     },
     onSuccess: () => {
       toast({
