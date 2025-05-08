@@ -2,6 +2,7 @@ import { Express, Request, Response } from "express";
 import { ZodError } from "zod";
 import { storage } from "./storage";
 import { isAdmin } from "./auth-middleware";
+import { sendSuccess, sendError } from "./api-response";
 import {
   insertCategoryAttributeSchema,
   insertCategoryAttributeOptionSchema,
@@ -19,14 +20,10 @@ export default function registerProductAttributeRoutes(app: Express) {
       await fn(req, res);
     } catch (error) {
       if (error instanceof ZodError) {
-        res.status(400).json({
-          message: "Validation error",
-          errors: error.errors,
-        });
-        return;
+        return sendError(res, "Validation error", 400, "VALIDATION_ERROR", error.errors);
       }
       console.error("Error in product attribute route:", error);
-      res.status(500).json({ message: "Internal server error" });
+      return sendError(res, "Internal server error", 500, "SERVER_ERROR");
     }
   };
 
@@ -34,7 +31,7 @@ export default function registerProductAttributeRoutes(app: Express) {
   app.get("/api/categories/:categoryId/filterable-attributes", handleErrors(async (req: Request, res: Response) => {
     const categoryId = parseInt(req.params.categoryId);
     if (isNaN(categoryId)) {
-      return res.status(400).json({ message: "Invalid category ID" });
+      return sendError(res, "Invalid category ID", 400, "INVALID_ID");
     }
     
     // Get all attributes for this category
@@ -60,24 +57,24 @@ export default function registerProductAttributeRoutes(app: Express) {
       }
     }
     
-    res.json(filterableAttributes);
+    sendSuccess(res, filterableAttributes);
   }));
 
   // Category Attribute Routes
   app.get("/api/categories/:categoryId/attributes", handleErrors(async (req: Request, res: Response) => {
     const categoryId = parseInt(req.params.categoryId);
     if (isNaN(categoryId)) {
-      return res.status(400).json({ message: "Invalid category ID" });
+      return sendError(res, "Invalid category ID", 400, "INVALID_ID");
     }
 
     const attributes = await storage.getCategoryAttributes(categoryId);
-    res.json(attributes);
+    sendSuccess(res, attributes);
   }));
 
   app.post("/api/categories/:categoryId/attributes", isAdmin, handleErrors(async (req: Request, res: Response) => {
     const categoryId = parseInt(req.params.categoryId);
     if (isNaN(categoryId)) {
-      return res.status(400).json({ message: "Invalid category ID" });
+      return sendError(res, "Invalid category ID", 400, "INVALID_ID");
     }
 
     const attributeData = insertCategoryAttributeSchema.parse({
@@ -86,48 +83,48 @@ export default function registerProductAttributeRoutes(app: Express) {
     });
     
     const newAttribute = await storage.createCategoryAttribute(attributeData);
-    res.status(201).json(newAttribute);
+    sendSuccess(res, newAttribute, 201);
   }));
 
   app.put("/api/categories/:categoryId/attributes/:id", isAdmin, handleErrors(async (req: Request, res: Response) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
-      return res.status(400).json({ message: "Invalid attribute ID" });
+      return sendError(res, "Invalid attribute ID", 400, "INVALID_ID");
     }
 
     const attributeData = insertCategoryAttributeSchema.partial().parse(req.body);
     const updatedAttribute = await storage.updateCategoryAttribute(id, attributeData);
     
     if (!updatedAttribute) {
-      return res.status(404).json({ message: "Category attribute not found" });
+      return sendError(res, "Category attribute not found", 404, "NOT_FOUND");
     }
     
-    res.json(updatedAttribute);
+    sendSuccess(res, updatedAttribute);
   }));
 
   app.delete("/api/categories/:categoryId/attributes/:id", isAdmin, handleErrors(async (req: Request, res: Response) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
-      return res.status(400).json({ message: "Invalid attribute ID" });
+      return sendError(res, "Invalid attribute ID", 400, "INVALID_ID");
     }
 
     const success = await storage.deleteCategoryAttribute(id);
     if (!success) {
-      return res.status(404).json({ message: "Category attribute not found or could not be deleted" });
+      return sendError(res, "Category attribute not found or could not be deleted", 404, "NOT_FOUND");
     }
     
-    res.status(204).send();
+    sendSuccess(res, null, 204);
   }));
 
   // Category Attribute Options Routes
   app.get("/api/categories/:categoryId/attributes/:attributeId/options", handleErrors(async (req: Request, res: Response) => {
     const attributeId = parseInt(req.params.attributeId);
     if (isNaN(attributeId)) {
-      return res.status(400).json({ message: "Invalid attribute ID" });
+      return sendError(res, "Invalid attribute ID", 400, "INVALID_ID");
     }
 
     const options = await storage.getCategoryAttributeOptions(attributeId);
-    res.json(options);
+    sendSuccess(res, options);
   }));
 
   app.post("/api/categories/:categoryId/attributes/:attributeId/options", isAdmin, handleErrors(async (req: Request, res: Response) => {
