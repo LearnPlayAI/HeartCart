@@ -168,8 +168,14 @@ const ProductDetailView = ({
     data: relatedProductsResponse,
     error: relatedProductsError
   } = useQuery<StandardApiResponse<Product[]>>({
-    queryKey: ['/api/products/category', product?.categoryId, { limit: 5 }],
+    queryKey: ['/api/products/category', product?.categoryId],
     enabled: !!product?.categoryId,
+    queryFn: async ({ queryKey }) => {
+      const categoryId = queryKey[1];
+      const res = await fetch(`/api/products/category/${categoryId}?limit=5`);
+      if (!res.ok) throw new Error(`Failed to fetch related products: ${res.status}`);
+      return res.json();
+    }
   });
   const relatedProducts = relatedProductsResponse?.success ? relatedProductsResponse.data : [];
   
