@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { AdminLayout } from "@/components/admin/layout";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useDateFormat } from "@/hooks/use-date-format";
 import {
   Table,
   TableBody,
@@ -139,6 +140,9 @@ export default function AdminCatalogs() {
     }
   };
 
+  // Use the standardized date formatting hook
+  const { formatShortDate } = useDateFormat();
+  
   const formatDate = (dateString: string) => {
     // Check if the dateString is valid and not a 1970 date
     const date = new Date(dateString);
@@ -148,12 +152,8 @@ export default function AdminCatalogs() {
       return "Not set";
     }
     
-    // Format the date properly for display
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
+    // Use the standardized date formatting from our hook
+    return formatShortDate(date);
   };
 
   return (

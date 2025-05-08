@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, ShoppingCart, Users, BarChart, DollarSign } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import { useDateFormat } from "@/hooks/use-date-format";
 
 /**
  * Admin Dashboard Overview Cards
