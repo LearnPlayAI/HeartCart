@@ -1142,38 +1142,43 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteProductImage(id: number): Promise<boolean> {
-    const [image] = await db
-      .select()
-      .from(productImages)
-      .where(eq(productImages.id, id));
-      
-    if (image) {
-      // Delete the image file from object storage if it exists
-      if (image.objectKey) {
-        try {
-          await objectStore.deleteFile(image.objectKey);
-          console.log(`Deleted original image from object storage: ${image.objectKey}`);
-        } catch (error) {
-          console.error(`Error deleting original image from object storage: ${image.objectKey}`, error);
-          // Continue with deletion even if file deletion fails
+    try {
+      const [image] = await db
+        .select()
+        .from(productImages)
+        .where(eq(productImages.id, id));
+        
+      if (image) {
+        // Delete the image file from object storage if it exists
+        if (image.objectKey) {
+          try {
+            await objectStore.deleteFile(image.objectKey);
+            console.log(`Deleted original image from object storage: ${image.objectKey}`);
+          } catch (error) {
+            console.error(`Error deleting original image from object storage: ${image.objectKey}`, error);
+            // Continue with deletion even if file deletion fails
+          }
+        }
+        
+        // Delete the background-removed image if it exists
+        if (image.bgRemovedObjectKey) {
+          try {
+            await objectStore.deleteFile(image.bgRemovedObjectKey);
+            console.log(`Deleted bg removed image from object storage: ${image.bgRemovedObjectKey}`);
+          } catch (error) {
+            console.error(`Error deleting bg removed image from object storage: ${image.bgRemovedObjectKey}`, error);
+            // Continue with deletion even if file deletion fails
+          }
         }
       }
       
-      // Delete the background-removed image if it exists
-      if (image.bgRemovedObjectKey) {
-        try {
-          await objectStore.deleteFile(image.bgRemovedObjectKey);
-          console.log(`Deleted bg removed image from object storage: ${image.bgRemovedObjectKey}`);
-        } catch (error) {
-          console.error(`Error deleting bg removed image from object storage: ${image.bgRemovedObjectKey}`, error);
-          // Continue with deletion even if file deletion fails
-        }
-      }
+      // Delete the database record
+      await db.delete(productImages).where(eq(productImages.id, id));
+      return true;
+    } catch (error) {
+      console.error(`Error deleting product image ${id}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
-    
-    // Delete the database record
-    await db.delete(productImages).where(eq(productImages.id, id));
-    return true;
   }
   
   async deleteProduct(id: number): Promise<boolean> {
@@ -2379,8 +2384,8 @@ export class DatabaseStorage implements IStorage {
         .where(eq(attributeOptions.id, id));
       return true;
     } catch (error) {
-      console.error("Error deleting attribute option:", error);
-      return false;
+      console.error(`Error deleting attribute option ${id}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
   }
   
@@ -2468,8 +2473,8 @@ export class DatabaseStorage implements IStorage {
         .where(eq(catalogAttributes.id, id));
       return true;
     } catch (error) {
-      console.error("Error deleting catalog attribute:", error);
-      return false;
+      console.error(`Error deleting catalog attribute ${id}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
   }
   
@@ -2523,8 +2528,8 @@ export class DatabaseStorage implements IStorage {
         .where(eq(catalogAttributeOptions.id, id));
       return true;
     } catch (error) {
-      console.error("Error deleting catalog attribute option:", error);
-      return false;
+      console.error(`Error deleting catalog attribute option ${id}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
   }
   
@@ -2612,8 +2617,8 @@ export class DatabaseStorage implements IStorage {
         .where(eq(categoryAttributes.id, id));
       return true;
     } catch (error) {
-      console.error("Error deleting category attribute:", error);
-      return false;
+      console.error(`Error deleting category attribute ${id}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
   }
   
