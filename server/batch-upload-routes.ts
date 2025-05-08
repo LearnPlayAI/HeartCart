@@ -178,6 +178,70 @@ router.delete('/:id', isAdmin, handleErrors(async (req: Request, res: Response) 
 }));
 
 /**
+ * @route POST /api/batch-upload/:id/cancel
+ * @desc Cancel a batch upload
+ * @access Admin only
+ */
+router.post('/:id/cancel', isAdmin, handleErrors(async (req: Request, res: Response) => {
+  const batchId = parseInt(req.params.id);
+  const result = await batchUploadService.cancelBatchUpload(batchId);
+  
+  if (result.success) {
+    return sendSuccess(res, result.data);
+  } else {
+    return sendError(res, result.error, 400);
+  }
+}));
+
+/**
+ * @route POST /api/batch-upload/:id/pause
+ * @desc Pause a batch upload
+ * @access Admin only
+ */
+router.post('/:id/pause', isAdmin, handleErrors(async (req: Request, res: Response) => {
+  const batchId = parseInt(req.params.id);
+  const result = await batchUploadService.pauseBatchUpload(batchId);
+  
+  if (result.success) {
+    return sendSuccess(res, result.data);
+  } else {
+    return sendError(res, result.error, 400);
+  }
+}));
+
+/**
+ * @route POST /api/batch-upload/:id/resume
+ * @desc Resume a paused batch upload
+ * @access Admin only
+ */
+router.post('/:id/resume', isAdmin, handleErrors(async (req: Request, res: Response) => {
+  const batchId = parseInt(req.params.id);
+  const result = await batchUploadService.resumeBatchUpload(batchId);
+  
+  if (result.success) {
+    return sendSuccess(res, result.data);
+  } else {
+    return sendError(res, result.error, 400);
+  }
+}));
+
+/**
+ * @route POST /api/batch-upload/:id/retry
+ * @desc Retry a failed batch upload
+ * @access Admin only
+ */
+router.post('/:id/retry', isAdmin, handleErrors(async (req: Request, res: Response) => {
+  const batchId = parseInt(req.params.id);
+  const result = await batchUploadService.retryBatchUpload(batchId);
+  
+  if (result.success) {
+    return sendSuccess(res, result.data);
+  } else {
+    return sendError(res, result.error, 400);
+  }
+}));
+
+/**
  * @route GET /api/batch-upload/template
  * @desc Generate a template CSV file
  * @access Admin only

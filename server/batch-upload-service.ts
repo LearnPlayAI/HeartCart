@@ -953,6 +953,302 @@ export class BatchUploadService {
   }
 
   /**
+   * Cancel a batch upload
+   */
+  async cancelBatchUpload(batchId: number): Promise<StandardApiResponse<BatchUpload>> {
+    try {
+      const batch = await this.getBatchUpload(batchId);
+      if (!batch) {
+        return {
+          success: false,
+          error: {
+            message: `Batch upload with ID ${batchId} not found`,
+            code: 'BATCH_NOT_FOUND',
+          }
+        };
+      }
+      
+      // Only allow cancellation of batches that are in processing, pending, or paused state
+      if (![BATCH_STATUSES.PROCESSING, BATCH_STATUSES.PENDING, BATCH_STATUSES.PAUSED].includes(batch.status)) {
+        return {
+          success: false,
+          error: {
+            message: `Cannot cancel batch in ${batch.status} status`,
+            code: 'INVALID_BATCH_STATE',
+          }
+        };
+      }
+      
+      await this.updateBatchStatus(batchId, BATCH_STATUSES.CANCELLED);
+      
+      const updatedBatch = await this.getBatchUpload(batchId);
+      return {
+        success: true,
+        data: updatedBatch as BatchUpload
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Error cancelling batch:', error);
+      
+      return {
+        success: false,
+        error: {
+          message: 'Failed to cancel batch upload',
+          code: 'BATCH_CANCEL_FAILED',
+          details: errorMessage
+        }
+      };
+    }
+  }
+  
+  /**
+   * Pause a batch upload
+   */
+  async pauseBatchUpload(batchId: number): Promise<StandardApiResponse<BatchUpload>> {
+    try {
+      const batch = await this.getBatchUpload(batchId);
+      if (!batch) {
+        return {
+          success: false,
+          error: {
+            message: `Batch upload with ID ${batchId} not found`,
+            code: 'BATCH_NOT_FOUND',
+          }
+        };
+      }
+      
+      // Only allow pausing of batches that are in processing state
+      if (batch.status !== BATCH_STATUSES.PROCESSING) {
+        return {
+          success: false,
+          error: {
+            message: `Cannot pause batch in ${batch.status} status`,
+            code: 'INVALID_BATCH_STATE',
+          }
+        };
+      }
+      
+      // Update the batch status to paused, and store the last processed row
+      await this.updateBatchStatus(batchId, BATCH_STATUSES.PAUSED, {
+        lastProcessedRow: batch.processedRecords || 0
+      });
+      
+      const updatedBatch = await this.getBatchUpload(batchId);
+      return {
+        success: true,
+        data: updatedBatch as BatchUpload
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Error pausing batch:', error);
+      
+      return {
+        success: false,
+        error: {
+          message: 'Failed to pause batch upload',
+          code: 'BATCH_PAUSE_FAILED',
+          details: errorMessage
+        }
+      };
+    }
+  }
+  
+  /**
+   * Resume a batch upload
+   */
+  async resumeBatchUpload(batchId: number): Promise<StandardApiResponse<BatchUpload>> {
+    try {
+      const batch = await this.getBatchUpload(batchId);
+      if (!batch) {
+        return {
+          success: false,
+          error: {
+            message: `Batch upload with ID ${batchId} not found`,
+            code: 'BATCH_NOT_FOUND',
+          }
+        };
+      }
+      
+      // Only allow resuming of batches that are in paused or resumable state
+      if (![BATCH_STATUSES.PAUSED, BATCH_STATUSES.RESUMABLE].includes(batch.status)) {
+        return {
+          success: false,
+          error: {
+            message: `Cannot resume batch in ${batch.status} status`,
+            code: 'INVALID_BATCH_STATE',
+          }
+        };
+      }
+      
+      // Make sure the file exists
+      if (!batch.fileName || !fs.existsSync(batch.fileName)) {
+        return {
+          success: false,
+          error: {
+            message: 'CSV file no longer exists',
+            code: 'FILE_NOT_FOUND',
+          }
+        };
+      }
+      
+      // Update batch status to processing
+      await this.updateBatchStatus(batchId, BATCH_STATUSES.PROCESSING);
+      
+      // Process the CSV file from the last processed row
+      const results = await this.parseAndProcessCsv(
+        batchId, 
+        batch.fileName, 
+        batch.lastProcessedRow || 0
+      );
+      
+      // Update batch status based on results
+      await this.updateBatchStatus(batchId, results.success ? BATCH_STATUSES.COMPLETED : BATCH_STATUSES.FAILED, {
+        totalRecords: (batch.totalRecords || 0) + results.totalRecords,
+        processedRecords: (batch.processedRecords || 0) + results.processedRecords,
+        successCount: (batch.successCount || 0) + results.successRecords,
+        errorCount: (batch.errorCount || 0) + results.failedRecords,
+      });
+      
+      const updatedBatch = await this.getBatchUpload(batchId);
+      return {
+        success: results.success,
+        data: updatedBatch as BatchUpload,
+        ...(results.success ? {} : {
+          error: {
+            message: 'Batch resume completed with errors',
+            code: 'BATCH_RESUME_ERRORS',
+            details: results.errors
+          }
+        })
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Error resuming batch:', error);
+      
+      // Log the system error
+      await this.logBatchError({
+        batchId,
+        errorType: ERROR_TYPES.SYSTEM,
+        errorMessage: `Resume error: ${errorMessage}`,
+        severity: ERROR_SEVERITY.ERROR,
+      });
+      
+      // Update batch status to failed
+      await this.updateBatchStatus(batchId, BATCH_STATUSES.FAILED);
+      
+      return {
+        success: false,
+        error: {
+          message: 'Failed to resume batch upload',
+          code: 'BATCH_RESUME_FAILED',
+          details: errorMessage
+        }
+      };
+    }
+  }
+  
+  /**
+   * Retry a failed batch upload
+   */
+  async retryBatchUpload(batchId: number): Promise<StandardApiResponse<BatchUpload>> {
+    try {
+      const batch = await this.getBatchUpload(batchId);
+      if (!batch) {
+        return {
+          success: false,
+          error: {
+            message: `Batch upload with ID ${batchId} not found`,
+            code: 'BATCH_NOT_FOUND',
+          }
+        };
+      }
+      
+      // Only allow retrying of batches that are in failed state
+      if (batch.status !== BATCH_STATUSES.FAILED) {
+        return {
+          success: false,
+          error: {
+            message: `Cannot retry batch in ${batch.status} status`,
+            code: 'INVALID_BATCH_STATE',
+          }
+        };
+      }
+      
+      // Make sure the file exists
+      if (!batch.fileName || !fs.existsSync(batch.fileName)) {
+        return {
+          success: false,
+          error: {
+            message: 'CSV file no longer exists',
+            code: 'FILE_NOT_FOUND',
+          }
+        };
+      }
+      
+      // Increment retry count
+      const retryCount = (batch.retryCount || 0) + 1;
+      
+      // Update batch status to retrying
+      await this.updateBatchStatus(batchId, BATCH_STATUSES.RETRYING, {
+        retryCount,
+        processedRecords: 0,
+        successCount: 0,
+        errorCount: 0
+      });
+      
+      // Clear previous errors for this batch
+      await db.delete(batchUploadErrors).where(eq(batchUploadErrors.batchId, batchId));
+      
+      // Process the CSV file
+      const results = await this.parseAndProcessCsv(batchId, batch.fileName);
+      
+      // Update batch status based on results
+      await this.updateBatchStatus(batchId, results.success ? BATCH_STATUSES.COMPLETED : BATCH_STATUSES.FAILED, {
+        totalRecords: results.totalRecords,
+        processedRecords: results.processedRecords,
+        successCount: results.successRecords,
+        errorCount: results.failedRecords,
+      });
+      
+      const updatedBatch = await this.getBatchUpload(batchId);
+      return {
+        success: results.success,
+        data: updatedBatch as BatchUpload,
+        ...(results.success ? {} : {
+          error: {
+            message: 'Batch retry completed with errors',
+            code: 'BATCH_RETRY_ERRORS',
+            details: results.errors
+          }
+        })
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Error retrying batch:', error);
+      
+      // Log the system error
+      await this.logBatchError({
+        batchId,
+        errorType: ERROR_TYPES.SYSTEM,
+        errorMessage: `Retry error: ${errorMessage}`,
+        severity: ERROR_SEVERITY.ERROR,
+      });
+      
+      // Update batch status to failed
+      await this.updateBatchStatus(batchId, BATCH_STATUSES.FAILED);
+      
+      return {
+        success: false,
+        error: {
+          message: 'Failed to retry batch upload',
+          code: 'BATCH_RETRY_FAILED',
+          details: errorMessage
+        }
+      };
+    }
+  }
+
+  /**
    * Get all batch uploads
    */
   async getAllBatchUploads(userId?: number): Promise<BatchUpload[]> {

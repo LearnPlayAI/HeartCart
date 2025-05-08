@@ -19,6 +19,11 @@ export interface BatchUpload {
   fileOriginalName: string | null;
   fileName: string | null;
   completedAt: string | null;
+  canceledAt: string | null;
+  pausedAt: string | null;
+  resumedAt: string | null;
+  lastProcessedRow: number | null;
+  retryCount: number | null;
 }
 
 export interface BatchUploadError {
@@ -144,6 +149,107 @@ export function useBatchUploads() {
     return data.data;
   };
 
+  // Batch control mutations
+  const {
+    mutateAsync: cancelBatchUpload,
+    isPending: isCancellingBatch,
+  } = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await apiRequest("POST", `/api/batch-upload/${id}/cancel`);
+      const result = await response.json();
+      return result.data;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Batch cancelled",
+        description: "The batch upload has been cancelled successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/batch-upload"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error cancelling batch",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const {
+    mutateAsync: pauseBatchUpload,
+    isPending: isPausingBatch,
+  } = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await apiRequest("POST", `/api/batch-upload/${id}/pause`);
+      const result = await response.json();
+      return result.data;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Batch paused",
+        description: "The batch upload has been paused successfully. You can resume it later.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/batch-upload"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error pausing batch",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const {
+    mutateAsync: resumeBatchUpload,
+    isPending: isResumingBatch,
+  } = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await apiRequest("POST", `/api/batch-upload/${id}/resume`);
+      const result = await response.json();
+      return result.data;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Batch resumed",
+        description: "The batch upload has been resumed successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/batch-upload"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error resuming batch",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const {
+    mutateAsync: retryBatchUpload,
+    isPending: isRetryingBatch,
+  } = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await apiRequest("POST", `/api/batch-upload/${id}/retry`);
+      const result = await response.json();
+      return result.data;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Batch retry started",
+        description: "The batch upload retry has started successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/batch-upload"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error retrying batch",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const downloadTemplateCSV = async (catalogId?: number) => {
     try {
       const url = catalogId
@@ -192,5 +298,14 @@ export function useBatchUploads() {
     getBatchUpload,
     getBatchUploadErrors,
     downloadTemplateCSV,
+    // Batch control functions
+    cancelBatchUpload,
+    isCancellingBatch,
+    pauseBatchUpload,
+    isPausingBatch,
+    resumeBatchUpload,
+    isResumingBatch,
+    retryBatchUpload,
+    isRetryingBatch,
   };
 }
