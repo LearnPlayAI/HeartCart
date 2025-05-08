@@ -847,13 +847,13 @@ export class DatabaseStorage implements IStorage {
             .where(eq(productAttributeCombinations.id, item.combinationId));
             
           if (combination) {
-            // Get category attributes
-            const categoryAttributes = await this.getCategoryAttributes(enrichedProduct.categoryId);
+            // Get category attributes - COMMENTED OUT as part of attribute system redesign
+            // const categoryAttributes = await this.getCategoryAttributes(enrichedProduct.categoryId);
             
             attributeDetails = {
               combination,
-              attributes: item.selectedAttributes,
-              categoryAttributes
+              attributes: item.selectedAttributes
+              // categoryAttributes removed as part of attribute system redesign
             };
           }
         }
