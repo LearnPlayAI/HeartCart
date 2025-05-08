@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, Link } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet';
+import { StandardApiResponse } from '@/types/api';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/hooks/use-cart';
 import { useToast } from '@/hooks/use-toast';
@@ -98,20 +99,20 @@ const ProductListing = () => {
   const limit = 20;
   
   // Fetch categories
-  const { data: categoriesResponse } = useQuery<{success: boolean, data: Category[]}>({
+  const { data: categoriesResponse } = useQuery<StandardApiResponse<Category[]>>({
     queryKey: ['/api/categories'],
   });
   const categories = categoriesResponse?.success ? categoriesResponse.data : [];
   
   // Fetch products
-  const { data: productsResponse, isLoading: isLoadingProducts } = useQuery<{success: boolean, data: Product[], meta?: { total?: number, totalPages?: number }}>({
+  const { data: productsResponse, isLoading: isLoadingProducts } = useQuery<StandardApiResponse<Product[], { total?: number, totalPages?: number }>>({
     queryKey: ['/api/products', { limit, offset: (page - 1) * limit }],
   });
   const products = productsResponse?.success ? productsResponse.data : [];
   const totalPages = productsResponse?.meta?.totalPages || 1;
   
   // Fetch filterable attributes based on selected category
-  const { data: filterableAttributesResponse, isLoading: isLoadingAttributes } = useQuery<{success: boolean, data: (CategoryAttribute & { options: AttributeOption[], attribute: Attribute })[]}>({
+  const { data: filterableAttributesResponse, isLoading: isLoadingAttributes } = useQuery<StandardApiResponse<(CategoryAttribute & { options: AttributeOption[], attribute: Attribute })[]>>({
     queryKey: [selectedCategory ? 
       `/api/categories/${selectedCategory}/filterable-attributes` : 
       '/api/products/filterable-attributes'
@@ -308,15 +309,12 @@ const ProductListing = () => {
   };
   
   // Fetch product attribute values for filtering
-  const { data: productAttributeValuesResponse } = useQuery<{
-    success: boolean, 
-    data: {
-      productId: number;
-      attributeId: number;
-      optionId: number | null;
-      textValue: string | null;
-    }[]
-  }>({
+  const { data: productAttributeValuesResponse } = useQuery<StandardApiResponse<{
+    productId: number;
+    attributeId: number;
+    optionId: number | null;
+    textValue: string | null;
+  }[]>>({
     queryKey: ['/api/products/attribute-values'],
     enabled: !!products && attributeFilters.length > 0,
   });

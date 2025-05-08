@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useRoute, Link } from 'wouter';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet';
+import { StandardApiResponse } from '@/types/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -49,7 +50,6 @@ import {
   ProductAttributeValue,
   ProductAttributeOption
 } from '@/types/attribute-types';
-import { StandardApiResponse } from '@/types/api';
 
 // This is a router component that decides which Product Detail implementation to use
 const ProductDetail = () => {
