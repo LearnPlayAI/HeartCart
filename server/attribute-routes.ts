@@ -1,7 +1,10 @@
-import { Express, Request, Response } from "express";
+import { Express, Request, Response, NextFunction } from "express";
 import { ZodError } from "zod";
 import { storage } from "./storage";
 import { isAdmin } from "./auth-middleware";
+import { logger } from "./logger";
+import { sendError, sendSuccess } from "./api-response";
+import { withStandardResponse } from "./response-wrapper";
 import {
   insertAttributeSchema,
   insertAttributeOptionSchema,
@@ -23,71 +26,68 @@ export default function registerAttributeRoutes(app: Express) {
       await fn(req, res);
     } catch (error) {
       if (error instanceof ZodError) {
-        res.status(400).json({
-          message: "Validation error",
-          errors: error.errors,
-        });
+        sendError(res, "Validation error", 400, "VALIDATION_ERROR", error.errors);
         return;
       }
-      console.error("Error in attribute route:", error);
-      res.status(500).json({ message: "Internal server error" });
+      logger.error("Error in attribute route:", error);
+      sendError(res, "Internal server error", 500, "INTERNAL_ERROR");
     }
   };
 
   // Global Attribute Routes
   app.get("/api/attributes", handleErrors(async (req: Request, res: Response) => {
     const attributes = await storage.getAttributes();
-    res.json(attributes);
+    sendSuccess(res, attributes);
   }));
 
   app.get("/api/attributes/:id", handleErrors(async (req: Request, res: Response) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
-      return res.status(400).json({ message: "Invalid attribute ID" });
+      return sendError(res, "Invalid attribute ID", 400, "INVALID_ID");
     }
 
     const attribute = await storage.getAttributeById(id);
     if (!attribute) {
-      return res.status(404).json({ message: "Attribute not found" });
+      return sendError(res, "Attribute not found", 404, "NOT_FOUND");
     }
 
-    res.json(attribute);
+    sendSuccess(res, attribute);
   }));
 
   app.post("/api/attributes", isAdmin, handleErrors(async (req: Request, res: Response) => {
     const attributeData = insertAttributeSchema.parse(req.body);
     const newAttribute = await storage.createAttribute(attributeData);
-    res.status(201).json(newAttribute);
+    sendSuccess(res, newAttribute, 201);
   }));
 
   app.put("/api/attributes/:id", isAdmin, handleErrors(async (req: Request, res: Response) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
-      return res.status(400).json({ message: "Invalid attribute ID" });
+      return sendError(res, "Invalid attribute ID", 400, "INVALID_ID");
     }
 
     const attributeData = insertAttributeSchema.partial().parse(req.body);
     const updatedAttribute = await storage.updateAttribute(id, attributeData);
     
     if (!updatedAttribute) {
-      return res.status(404).json({ message: "Attribute not found" });
+      return sendError(res, "Attribute not found", 404, "NOT_FOUND");
     }
     
-    res.json(updatedAttribute);
+    sendSuccess(res, updatedAttribute);
   }));
 
   app.delete("/api/attributes/:id", isAdmin, handleErrors(async (req: Request, res: Response) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
-      return res.status(400).json({ message: "Invalid attribute ID" });
+      return sendError(res, "Invalid attribute ID", 400, "INVALID_ID");
     }
 
     const success = await storage.deleteAttribute(id);
     if (!success) {
-      return res.status(404).json({ message: "Attribute not found or could not be deleted" });
+      return sendError(res, "Attribute not found or could not be deleted", 404, "NOT_FOUND");
     }
     
-    res.status(204).send();
+    sendSuccess(res, null, 204);
   }));
 
   // Attribute Options Routes
