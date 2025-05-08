@@ -576,23 +576,21 @@ export class BatchUploadService {
       name: row.product_name,
       slug: this.slugify(row.product_sku),
       description: row.product_description,
-      // Remove shortDescription as it's not in the InsertProduct type
       categoryId,
       catalogId: actualCatalogId,
       price: Number(row.regular_price),
       costPrice: Number(row.cost_price),
       salePrice: Number(row.sale_price),
       discount: Number(row.discount_percentage),
-      discountLabel: row.discount_label,
-      minimumPrice: Number(row.minimum_price),
-      wholesaleMinQty: Number(row.wholesale_minimum_qty),
-      wholesaleDiscount: Number(row.wholesale_discount_percentage),
-      status: row.status || 'active',
+      // Remove fields not in InsertProduct
       isActive: row.status !== 'draft',
       isFeatured: row.featured === 'true',
       weight: row.weight ? Number(row.weight) : null,
       dimensions: row.dimensions || null,
       tags,
+      // Add required fields for supplier that weren't previously included
+      supplier: row.supplier_name || null,
+      brand: row.brand || null,
     };
     
     return productData;
