@@ -94,17 +94,17 @@ export default function registerAttributeRoutes(app: Express) {
   app.get("/api/attributes/:attributeId/options", handleErrors(async (req: Request, res: Response) => {
     const attributeId = parseInt(req.params.attributeId);
     if (isNaN(attributeId)) {
-      return res.status(400).json({ message: "Invalid attribute ID" });
+      return sendError(res, "Invalid attribute ID", 400, "INVALID_ID");
     }
 
     const options = await storage.getAttributeOptions(attributeId);
-    res.json(options);
+    sendSuccess(res, options);
   }));
 
   app.post("/api/attributes/:attributeId/options", isAdmin, handleErrors(async (req: Request, res: Response) => {
     const attributeId = parseInt(req.params.attributeId);
     if (isNaN(attributeId)) {
-      return res.status(400).json({ message: "Invalid attribute ID" });
+      return sendError(res, "Invalid attribute ID", 400, "INVALID_ID");
     }
 
     const optionData = insertAttributeOptionSchema.parse({
@@ -113,7 +113,7 @@ export default function registerAttributeRoutes(app: Express) {
     });
     
     const newOption = await storage.createAttributeOption(optionData);
-    res.status(201).json(newOption);
+    sendSuccess(res, newOption, 201);
   }));
 
   app.put("/api/attributes/:attributeId/options/:id", isAdmin, handleErrors(async (req: Request, res: Response) => {
@@ -121,67 +121,67 @@ export default function registerAttributeRoutes(app: Express) {
     const id = parseInt(req.params.id);
     
     if (isNaN(attributeId) || isNaN(id)) {
-      return res.status(400).json({ message: "Invalid ID" });
+      return sendError(res, "Invalid ID", 400, "INVALID_ID");
     }
 
     const optionData = insertAttributeOptionSchema.partial().parse(req.body);
     const updatedOption = await storage.updateAttributeOption(id, optionData);
     
     if (!updatedOption) {
-      return res.status(404).json({ message: "Option not found" });
+      return sendError(res, "Option not found", 404, "NOT_FOUND");
     }
     
-    res.json(updatedOption);
+    sendSuccess(res, updatedOption);
   }));
 
   app.delete("/api/attributes/:attributeId/options/:id", isAdmin, handleErrors(async (req: Request, res: Response) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
-      return res.status(400).json({ message: "Invalid option ID" });
+      return sendError(res, "Invalid option ID", 400, "INVALID_ID");
     }
 
     const success = await storage.deleteAttributeOption(id);
     if (!success) {
-      return res.status(404).json({ message: "Option not found or could not be deleted" });
+      return sendError(res, "Option not found or could not be deleted", 404, "NOT_FOUND");
     }
     
-    res.status(204).send();
+    sendSuccess(res, null, 204);
   }));
 
   app.post("/api/attributes/:attributeId/options/reorder", isAdmin, handleErrors(async (req: Request, res: Response) => {
     const attributeId = parseInt(req.params.attributeId);
     if (isNaN(attributeId)) {
-      return res.status(400).json({ message: "Invalid attribute ID" });
+      return sendError(res, "Invalid attribute ID", 400, "INVALID_ID");
     }
 
     const { optionIds } = req.body;
     if (!Array.isArray(optionIds)) {
-      return res.status(400).json({ message: "optionIds must be an array of IDs" });
+      return sendError(res, "optionIds must be an array of IDs", 400, "INVALID_FORMAT");
     }
 
     const success = await storage.updateAttributeOptionsOrder(attributeId, optionIds);
     if (!success) {
-      return res.status(500).json({ message: "Failed to update options order" });
+      return sendError(res, "Failed to update options order", 500, "SERVER_ERROR");
     }
     
-    res.status(200).json({ message: "Options reordered successfully" });
+    sendSuccess(res, { message: "Options reordered successfully" });
   }));
 
   // Catalog Attribute Routes
   app.get("/api/catalogs/:catalogId/attributes", handleErrors(async (req: Request, res: Response) => {
     const catalogId = parseInt(req.params.catalogId);
     if (isNaN(catalogId)) {
-      return res.status(400).json({ message: "Invalid catalog ID" });
+      return sendError(res, "Invalid catalog ID", 400, "INVALID_ID");
     }
 
     const attributes = await storage.getCatalogAttributes(catalogId);
-    res.json(attributes);
+    sendSuccess(res, attributes);
   }));
 
   app.post("/api/catalogs/:catalogId/attributes", isAdmin, handleErrors(async (req: Request, res: Response) => {
     const catalogId = parseInt(req.params.catalogId);
     if (isNaN(catalogId)) {
-      return res.status(400).json({ message: "Invalid catalog ID" });
+      return sendError(res, "Invalid catalog ID", 400, "INVALID_ID");
     }
 
     const attributeData = insertCatalogAttributeSchema.parse({
@@ -190,48 +190,48 @@ export default function registerAttributeRoutes(app: Express) {
     });
     
     const newAttribute = await storage.createCatalogAttribute(attributeData);
-    res.status(201).json(newAttribute);
+    sendSuccess(res, newAttribute, 201);
   }));
 
   app.put("/api/catalogs/:catalogId/attributes/:id", isAdmin, handleErrors(async (req: Request, res: Response) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
-      return res.status(400).json({ message: "Invalid attribute ID" });
+      return sendError(res, "Invalid attribute ID", 400, "INVALID_ID");
     }
 
     const attributeData = insertCatalogAttributeSchema.partial().parse(req.body);
     const updatedAttribute = await storage.updateCatalogAttribute(id, attributeData);
     
     if (!updatedAttribute) {
-      return res.status(404).json({ message: "Catalog attribute not found" });
+      return sendError(res, "Catalog attribute not found", 404, "NOT_FOUND");
     }
     
-    res.json(updatedAttribute);
+    sendSuccess(res, updatedAttribute);
   }));
 
   app.delete("/api/catalogs/:catalogId/attributes/:id", isAdmin, handleErrors(async (req: Request, res: Response) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
-      return res.status(400).json({ message: "Invalid attribute ID" });
+      return sendError(res, "Invalid attribute ID", 400, "INVALID_ID");
     }
 
     const success = await storage.deleteCatalogAttribute(id);
     if (!success) {
-      return res.status(404).json({ message: "Catalog attribute not found or could not be deleted" });
+      return sendError(res, "Catalog attribute not found or could not be deleted", 404, "NOT_FOUND");
     }
     
-    res.status(204).send();
+    sendSuccess(res, null, 204);
   }));
 
   // Catalog Attribute Options Routes
   app.get("/api/catalogs/:catalogId/attributes/:attributeId/options", handleErrors(async (req: Request, res: Response) => {
     const attributeId = parseInt(req.params.attributeId);
     if (isNaN(attributeId)) {
-      return res.status(400).json({ message: "Invalid attribute ID" });
+      return sendError(res, "Invalid attribute ID", 400, "INVALID_ID");
     }
 
     const options = await storage.getCatalogAttributeOptions(attributeId);
-    res.json(options);
+    sendSuccess(res, options);
   }));
 
   app.post("/api/catalogs/:catalogId/attributes/:attributeId/options", isAdmin, handleErrors(async (req: Request, res: Response) => {
