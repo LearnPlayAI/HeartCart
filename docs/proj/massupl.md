@@ -4,7 +4,7 @@
 
 This document outlines the implementation strategy for the TeeMeYou mass product upload feature, designed to streamline the process of adding multiple products, catalogs, and their associated assets simultaneously.
 
-The mass upload system addresses a critical business need for TeeMeYou: enabling administrators and suppliers to efficiently add large numbers of products to the platform. This capability is essential for scaling the marketplace, onboarding new suppliers, and keeping product catalogs up-to-date with minimal manual effort.
+The mass upload system addresses a critical business need for TeeMeYou: enabling administrators to efficiently add large numbers of products to the platform. This capability is essential for scaling the marketplace, onboarding new suppliers, and keeping product catalogs up-to-date with minimal manual effort.
 
 ### Business Context
 
@@ -19,20 +19,19 @@ In the South African e-commerce landscape, suppliers often manage hundreds or th
 ### Key Stakeholders
 
 - **Administrators** - Require full control over product data and catalogs
-- **Suppliers** - Need to efficiently add their product offerings to the platform
 - **Technical Team** - Responsible for implementation and maintenance
 - **End Users** - Benefit from comprehensive and accurate product information
 
 ## System Overview
 
-The mass product upload system will allow users to:
-1. Upload a CSV file with product data
-2. Upload multiple product images individually or in batches
-3. Store all images securely in Replit Object Store
-4. Automatically create catalogs and products with their attributes
-5. Map dynamic attributes based on category requirements
-6. Validate and process data with clear error reporting using standardized API responses
-7. Associate products with their correct suppliers and catalogs
+The mass product upload system will allow administrators to:
+1. Upload a CSV file with product data (NO images)
+2. Automatically create catalogs and products with their attributes
+3. Map dynamic attributes based on category requirements
+4. Validate and process data with clear error reporting using standardized API responses
+5. Associate products with their correct suppliers and catalogs
+
+Note: Image handling is deliberately separated from the mass upload process. After products are created, administrators will use a dedicated image management interface to upload product images through the "Upload Images" button in the catalog products list.
 
 ### Standard API Approach
 
@@ -295,7 +294,6 @@ The CSV template will include the following fields:
 - `product_name` - Product display name
 - `product_description` - Full product description
 - `product_sku` - Unique product identifier
-- `primary_image_path` - Object Store path to primary product image
 
 ### Required Pricing and Discount Fields:
 - `cost_price` - Supplier cost price (what we pay to supplier)
@@ -314,7 +312,6 @@ The CSV template will include the following fields:
 - `featured` - Whether product should be featured (true/false)
 - `weight` - Product weight
 - `dimensions` - Product dimensions (format: LxWxH)
-- `additional_image_paths` - Comma-separated Object Store paths to additional images
 
 ### Dynamic Attribute Fields:
 The system will support dynamic attributes with a special prefix:
@@ -323,18 +320,20 @@ The system will support dynamic attributes with a special prefix:
 - `attr_material` - Value for material attribute
 - etc.
 
-## Image Upload Requirements
+## Post-Upload Image Management Requirements
 
-Images will be handled through direct upload to Replit Object Store:
+Image management is completely separate from the mass upload process and will be handled through a dedicated interface:
+- After products are created via CSV upload, administrators manage images through the "Upload Images" button
 - All image uploads will use the Replit Object Store exclusively 
-- Images will be referenced by their unique identifier in the CSV
+- Each product can have multiple images associated with it
 - Image paths will follow a structured convention: `/products/{catalog_id}/{product_sku}/{image_name}`
 - Supported formats: JPG, PNG, WebP
 - Maximum image size: 5MB per image
 - Recommended dimensions: 1200x1200px or larger
 - Naming convention: should match the product_sku or follow a consistent pattern
-- Image uploads will be processed individually or in small batches through the API
+- Image uploads will be processed through the dedicated "Upload Images" interface
 - All image operations will use standardized API responses
+- NO image references or paths are included in the CSV upload
 
 ## Implementation Details
 
