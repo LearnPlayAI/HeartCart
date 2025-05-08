@@ -860,7 +860,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const processedFiles = [];
       
       try {
-        for (const file of req.files as Express.Multer.File[]) {
+        for (const file of validFiles) {
           // With multer memory storage, file is already in memory as a buffer
           const fileBuffer = file.buffer;
           
@@ -877,12 +877,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const baseName = path.basename(file.originalname, fileExt);
           const expectedFileName = `${baseName}_${timestamp}${fileExt}`;
           
+          // Optimize the image before storing (if it's a supported format)
+          let optimizedBuffer = fileBuffer;
+          let contentType = file.mimetype;
+          
+          // Only optimize images (not other file types that might be uploaded)
+          if (file.mimetype.startsWith('image/')) {
+            try {
+              // Process the image with Sharp to optimize it
+              const { data: processedBuffer } = await imageService.processImage(fileBuffer, {
+                format: 'webp', // Convert to WebP for better compression
+                quality: 85     // Good quality but smaller size
+              });
+              
+              optimizedBuffer = processedBuffer;
+              contentType = 'image/webp';
+              console.log(`Optimized image: ${file.originalname} (saved ${Math.round((1 - processedBuffer.length / fileBuffer.length) * 100)}% in size)`);
+            } catch (optimizeError) {
+              console.error(`Failed to optimize image ${file.originalname}:`, optimizeError);
+              // Continue with original buffer if optimization fails
+            }
+          }
+          
           // Upload to Object Storage with product ID in the path
           const { url, objectKey } = await objectStore.uploadTempFile(
-            fileBuffer,
-            expectedFileName,
+            optimizedBuffer,
+            expectedFileName.replace(fileExt, '.webp'), // Use WebP extension
             productId, // Pass product ID to create correct folder structure
-            file.mimetype
+            contentType
           );
           
           // Add a delay after upload to ensure Replit Object Storage has propagated the file
@@ -908,16 +930,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
         
+        // Return success response with validation results and processed files
         return res.status(200).json({
           success: true,
-          files: processedFiles
+          files: processedFiles,
+          validation: {
+            totalFiles: req.files.length,
+            validFiles: validFiles.length,
+            invalidFiles: req.files.length - validFiles.length,
+            results: validationResults
+          }
         });
       } catch (error: any) {
         console.error('Error processing uploaded files:', error);
         return res.status(500).json({
           success: false,
-          message: 'Error processing uploaded files',
-          error: error.message || 'Unknown error'
+          error: {
+            message: 'Error processing uploaded files',
+            code: "SERVER_ERROR",
+            details: {
+              error: error.message || 'Unknown error',
+              partialResults: processedFiles.length > 0 ? processedFiles : undefined,
+              validation: validationResults.length > 0 ? validationResults : undefined
+            }
+          }
         });
       }
     });
@@ -943,24 +979,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Handle moving images from temporary to permanent storage
-  app.post('/api/products/images/move', isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+  app.post('/api/products/images/move', isAuthenticated, async (req: Request, res: Response) => {
     const user = req.user as any;
     
     if (user.role !== 'admin') {
-      return res.status(403).json({ message: "Only administrators can manage product images" });
+      return res.status(403).json({ 
+        success: false,
+        error: {
+          message: "Only administrators can manage product images",
+          code: "FORBIDDEN"
+        }
+      });
     }
     
     const { sourceKey, productId } = req.body;
     
     if (!sourceKey || !productId) {
       return res.status(400).json({ 
-        message: 'Source key and product ID are required',
-        success: false
+        success: false,
+        error: {
+          message: 'Source key and product ID are required',
+          code: "VALIDATION_ERROR"
+        }
       });
     }
     
     try {
       console.log(`Moving file from temporary storage: ${sourceKey} to product ${productId}`);
+      
+      // Verify that the source file exists first
+      const sourceExists = await objectStore.exists(sourceKey);
+      if (!sourceExists) {
+        return res.status(404).json({
+          success: false,
+          error: {
+            message: 'Source file not found in temporary storage',
+            code: "NOT_FOUND"
+          }
+        });
+      }
+      
+      // Process the image before moving it (optimize and validate)
+      try {
+        // Get file buffer for processing
+        const imageBuffer = await objectStore.downloadAsBuffer(sourceKey);
+        
+        // Validate the image
+        const validationResult = await imageService.validateImage(imageBuffer, path.basename(sourceKey));
+        if (!validationResult.valid) {
+          return res.status(400).json({
+            success: false,
+            error: {
+              message: 'Image validation failed',
+              code: "VALIDATION_ERROR",
+              details: validationResult
+            }
+          });
+        }
+        
+        // Try to optimize the image if it's a supported format
+        let optimizedKey = sourceKey; // Default to original
+        if (validationResult.details.format) {
+          try {
+            const { data: processedBuffer } = await imageService.processImage(imageBuffer, {
+              format: 'webp', // Convert to WebP for better compression
+              quality: 85     // Good quality but smaller size
+            });
+            
+            // Upload optimized version
+            const ext = path.extname(sourceKey);
+            const baseName = path.basename(sourceKey, ext);
+            optimizedKey = `${path.dirname(sourceKey)}/${baseName}.webp`;
+            
+            await objectStore.uploadFromBuffer(optimizedKey, processedBuffer, { contentType: 'image/webp' });
+            
+            console.log(`Created optimized version at ${optimizedKey}`);
+            
+            // If the optimized version was created successfully, use it as the source for moving
+            sourceKey = optimizedKey;
+          } catch (optimizeError) {
+            console.error(`Failed to optimize image before moving:`, optimizeError);
+            // Continue with original file if optimization fails
+          }
+        }
+      } catch (processError) {
+        console.error(`Error processing image before moving:`, processError);
+        // Continue with the move if processing fails
+      }
       
       // Move file from temp to product folder
       const result = await objectStore.moveFromTemp(sourceKey, parseInt(productId));
@@ -969,17 +1074,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       return res.json({
         success: true,
-        url: result.url,
-        objectKey: result.objectKey
+        data: {
+          url: result.url,
+          objectKey: result.objectKey,
+          productId: parseInt(productId)
+        }
       });
     } catch (error: any) {
       console.error(`Error moving file ${sourceKey} to product ${productId}:`, error);
       return res.status(500).json({
-        message: error.message || 'Failed to move file from temporary storage',
-        success: false
+        success: false,
+        error: {
+          message: error.message || 'Failed to move file from temporary storage',
+          code: "SERVER_ERROR"
+        }
       });
     }
-  }));
+  });
   
   app.get(
     "/api/products/:productId/images",
@@ -1157,6 +1268,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
   );
   
   // IMAGE PROCESSING ROUTES
+  
+  // Validate an image before upload
+  app.post(
+    "/api/images/validate",
+    isAuthenticated,
+    (req: Request, res: Response, next: NextFunction) => {
+      // Use multer to handle the file upload
+      upload.single('image')(req, res, (err) => {
+        if (err) {
+          console.error('Multer error:', err);
+          return res.status(400).json({
+            success: false,
+            error: {
+              message: 'File upload error',
+              code: 'UPLOAD_ERROR',
+              details: err.message
+            }
+          });
+        }
+        
+        next();
+      });
+    },
+    async (req: Request, res: Response) => {
+      const user = req.user as any;
+      
+      if (user.role !== 'admin') {
+        return res.status(403).json({
+          success: false,
+          error: {
+            message: "Only administrators can validate images",
+            code: "FORBIDDEN"
+          }
+        });
+      }
+      
+      // Check if file was received
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            message: 'No image file provided',
+            code: "VALIDATION_ERROR"
+          }
+        });
+      }
+      
+      try {
+        // Get the file buffer and validate it
+        const fileBuffer = req.file.buffer;
+        
+        if (!fileBuffer || fileBuffer.length === 0) {
+          return res.status(400).json({
+            success: false,
+            error: {
+              message: 'Empty file received',
+              code: "VALIDATION_ERROR"
+            }
+          });
+        }
+        
+        // Perform validation
+        const validationResult = await imageService.validateImage(
+          fileBuffer, 
+          req.file.originalname
+        );
+        
+        // Return validation result
+        return res.status(200).json({
+          success: true,
+          filename: req.file.originalname,
+          validation: validationResult
+        });
+      } catch (error: any) {
+        console.error('Error validating image:', error);
+        return res.status(500).json({
+          success: false,
+          error: {
+            message: 'Error validating image',
+            code: "SERVER_ERROR",
+            details: error.message || 'Unknown error'
+          }
+        });
+      }
+    }
+  );
   
   // Optimize an image for web display
   app.post(
