@@ -1221,13 +1221,17 @@ export class DatabaseStorage implements IStorage {
         // Continue with deletion
       }
       
-      try {
+      // Skip product attribute combinations as they might not be needed anymore
+      // Leaving comment for future reference in case this needs to be re-implemented
+      /*try {
         // Delete product attribute combinations
-        await db.delete(productAttributeCombinations).where(eq(productAttributeCombinations.productId, id));
+        if (typeof productAttributeCombinations !== 'undefined') {
+          await db.delete(productAttributeCombinations).where(eq(productAttributeCombinations.productId, id));
+        }
       } catch (combosError) {
         console.error(`Error deleting product attribute combinations for product ${id}:`, combosError);
         // Continue with deletion
-      }
+      }*/
       
       // Finally delete the product itself
       await db.delete(products).where(eq(products.id, id));
