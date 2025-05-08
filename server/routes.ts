@@ -2077,6 +2077,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }),
     withStandardResponse(async (req: Request, res: Response) => {
       const { limit = 10, categoryId } = req.query;
+      const limitNum = Number(limit);
       
       // Check if user is authenticated
       const user = req.isAuthenticated() ? req.user as any : null;
@@ -2094,7 +2095,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               products.push(product);
               
               // Limit the number of products returned
-              if (products.length >= limit) {
+              if (products.length >= limitNum) {
                 break;
               }
             }
@@ -2115,8 +2116,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // or if filtering by category
       // Return popular/featured products as a fallback
       const products = await storage.getFeaturedProducts(
-        limit as number, 
-        categoryId ? (categoryId as number) : undefined
+        limitNum,
+        categoryId ? Number(categoryId) : undefined
       );
       
       return {
