@@ -28,6 +28,7 @@ import registerAttributeRoutes from "./attribute-routes";
 import registerProductAttributeRoutes from "./attribute-routes-product";
 import attributeDiscountRoutes from "./attribute-discount-routes";
 import pricingRoutes from "./pricing-routes";
+import batchUploadRoutes from "./batch-upload-routes";
 import { validateRequest, idSchema } from './validation-middleware';
 import { 
   productsQuerySchema,
@@ -2333,6 +2334,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register pricing routes
   app.use('/api', pricingRoutes);
+  
+  // Register batch upload routes for mass product upload
+  app.use('/api/batch-upload', batchUploadRoutes);
 
   const httpServer = createServer(app);
   return httpServer;
