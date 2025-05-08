@@ -144,7 +144,7 @@ export class BatchUploadService {
       // Update batch status to processing
       await this.updateBatchStatus(batchId, BATCH_STATUSES.PROCESSING, {
         fileName: file.path,
-        file_original_name: file.originalname,
+        originalFilename: file.originalname,
       });
 
       // Parse and process the CSV file
@@ -163,9 +163,11 @@ export class BatchUploadService {
         fs.unlinkSync(file.path);
       }
 
+      const updatedBatch = await this.getBatchUpload(batchId);
+      
       return {
         success: results.success,
-        data: await this.getBatchUpload(batchId),
+        data: updatedBatch as BatchUpload,
         ...(results.success ? {} : {
           error: {
             message: 'Batch processing completed with errors',
@@ -174,14 +176,16 @@ export class BatchUploadService {
           }
         })
       };
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error processing CSV file:', error);
+      
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       
       // Log the system error
       await this.logBatchError({
         batchId,
         errorType: ERROR_TYPES.SYSTEM,
-        errorMessage: `System error: ${error.message}`,
+        errorMessage: `System error: ${errorMessage}`,
         severity: ERROR_SEVERITY.ERROR,
       });
 
@@ -198,7 +202,7 @@ export class BatchUploadService {
         error: {
           message: 'Failed to process CSV file',
           code: 'BATCH_PROCESSING_FAILED',
-          details: error.message
+          details: errorMessage
         }
       };
     }
@@ -238,22 +242,25 @@ export class BatchUploadService {
     });
     
     try {
+      // Save reference to class instance
+      const self = this;
+      
       // Process each row in the CSV file within a transaction
       await pipeline(
         fileStream,
         parser,
-        async function* (source) {
+        async function* (source: AsyncIterable<CsvRowData>) {
           for await (const row of source) {
             totalRecords++;
             
             try {
               // Validate the row data
-              const validationResult = await this.validateRowData(row, batch.catalogId);
+              const validationResult = await self.validateRowData(row, batch.catalogId);
               
               if (!validationResult.isValid) {
                 // Log validation errors
                 for (const error of validationResult.errors) {
-                  await this.logBatchError({
+                  await self.logBatchError({
                     batchId,
                     rowNumber: totalRecords,
                     errorType: ERROR_TYPES.VALIDATION,
@@ -278,10 +285,10 @@ export class BatchUploadService {
               const result = await db.transaction(async (tx) => {
                 try {
                   // Extract and prepare data for product creation
-                  const productData = await this.prepareProductData(row, batch.catalogId);
+                  const productData = await self.prepareProductData(row, batch.catalogId);
                   
                   // Process attributes (handle comma-separated values)
-                  const attributeValues = this.extractAttributeValues(row);
+                  const attributeValues = self.extractAttributeValues(row);
                   
                   // Create the product
                   const [product] = await tx
@@ -291,13 +298,14 @@ export class BatchUploadService {
                   
                   // Process and save attribute values
                   if (attributeValues.length > 0) {
-                    await this.processAttributeValues(tx, product.id, attributeValues);
+                    await self.processAttributeValues(tx, product.id, attributeValues);
                   }
                   
                   return { success: true, productId: product.id };
-                } catch (error) {
+                } catch (error: unknown) {
+                  const errorMessage = error instanceof Error ? error.message : 'Unknown error';
                   console.error('Transaction error:', error);
-                  return { success: false, error };
+                  return { success: false, error: { message: errorMessage } };
                 }
               });
               
@@ -305,41 +313,47 @@ export class BatchUploadService {
                 successRecords++;
               } else {
                 failedRecords++;
-                await this.logBatchError({
+                const errorMessage = typeof result.error === 'object' && result.error !== null && 'message' in result.error
+                  ? String(result.error.message) 
+                  : 'Unknown processing error';
+                
+                await self.logBatchError({
                   batchId,
                   rowNumber: totalRecords,
                   errorType: ERROR_TYPES.PROCESSING,
-                  errorMessage: result.error?.message || 'Unknown processing error',
+                  errorMessage,
                   severity: ERROR_SEVERITY.ERROR,
                   rawData: row,
                 });
                 errors.push({
                   row: totalRecords,
-                  error: result.error?.message || 'Unknown processing error',
+                  error: errorMessage,
                 });
               }
               
               processedRecords++;
               yield result;
-            } catch (error) {
+            } catch (error: unknown) {
               console.error('Row processing error:', error);
               failedRecords++;
-              await this.logBatchError({
+              const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+              
+              await self.logBatchError({
                 batchId,
                 rowNumber: totalRecords,
                 errorType: ERROR_TYPES.SYSTEM,
-                errorMessage: `System error: ${error.message}`,
+                errorMessage: `System error: ${errorMessage}`,
                 severity: ERROR_SEVERITY.ERROR,
                 rawData: row,
               });
               errors.push({
                 row: totalRecords,
-                error: error.message,
+                error: errorMessage,
               });
-              yield { success: false, row: totalRecords, error: error.message };
+              yield { success: false, row: totalRecords, error: errorMessage };
             }
           }
-        }.bind(this)
+        }
       );
       
       return {
@@ -350,8 +364,9 @@ export class BatchUploadService {
         failedRecords,
         errors: errors.length > 0 ? errors : undefined,
       };
-    } catch (error) {
-      console.error('CSV processing error:', error);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('CSV processing error:', errorMessage);
       throw error;
     } finally {
       // Ensure file stream is closed
@@ -561,7 +576,7 @@ export class BatchUploadService {
       name: row.product_name,
       slug: this.slugify(row.product_sku),
       description: row.product_description,
-      shortDescription: row.short_description || null,
+      // Remove shortDescription as it's not in the InsertProduct type
       categoryId,
       catalogId: actualCatalogId,
       price: Number(row.regular_price),
