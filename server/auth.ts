@@ -9,6 +9,8 @@ import { User as SchemaUser } from "@shared/schema";
 import { rateLimit } from "express-rate-limit";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
+import { sendSuccess, sendError } from "./api-response";
+import { withStandardResponse } from "./response-wrapper";
 
 const PostgresSessionStore = connectPg(session);
 
@@ -130,72 +132,84 @@ export function setupAuth(app: Express): void {
   });
 
   // Registration endpoint
-  app.post("/api/register", async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      // Check if username already exists
-      const existingUser = await storage.getUserByUsername(req.body.username);
-      if (existingUser) {
-        return res.status(400).json({ message: "Username already exists" });
-      }
+  app.post("/api/register", withStandardResponse(async (req: Request, res: Response, next: NextFunction) => {
+    // Check if username already exists
+    const existingUser = await storage.getUserByUsername(req.body.username);
+    if (existingUser) {
+      sendError(res, "Username already exists", 400);
+      return null;
+    }
 
-      // Check if email already exists
-      const existingEmail = await storage.getUserByEmail(req.body.email);
-      if (existingEmail) {
-        return res.status(400).json({ message: "Email already exists" });
-      }
+    // Check if email already exists
+    const existingEmail = await storage.getUserByEmail(req.body.email);
+    if (existingEmail) {
+      sendError(res, "Email already exists", 400);
+      return null;
+    }
 
-      // Hash password
-      const hashedPassword = await hashPassword(req.body.password);
+    // Hash password
+    const hashedPassword = await hashPassword(req.body.password);
 
-      // Create new user
-      const user = await storage.createUser({
-        ...req.body,
-        password: hashedPassword
-      });
+    // Create new user
+    const user = await storage.createUser({
+      ...req.body,
+      password: hashedPassword
+    });
 
-      // Auto-login after registration
+    // Auto-login after registration
+    return new Promise((resolve, reject) => {
       req.login(user as Express.User, (err) => {
         if (err) {
-          return next(err);
+          reject(err);
+          return;
         }
         // Return user data (excluding password)
         const { password, ...userData } = user;
-        return res.status(201).json(userData);
+        res.status(201); // Set status code for created
+        resolve(userData);
       });
-    } catch (error) {
-      next(error);
-    }
-  });
+    });
+  }));
 
   // Login endpoint
-  app.post("/api/login", loginLimiter, (req: Request, res: Response, next: NextFunction) => {
-    passport.authenticate("local", (err: Error, user: Express.User | false | null, info: any) => {
-      if (err) {
-        return next(err);
-      }
-      if (!user) {
-        return res.status(401).json({ message: info.message || "Authentication failed" });
-      }
-      req.login(user, (err) => {
+  app.post("/api/login", loginLimiter, withStandardResponse(async (req: Request, res: Response, next: NextFunction) => {
+    return new Promise((resolve, reject) => {
+      passport.authenticate("local", (err: Error, user: Express.User | false | null, info: any) => {
         if (err) {
-          return next(err);
+          reject(err);
+          return;
         }
-        // Return user data (excluding password)
-        const { password, ...userData } = user;
-        return res.status(200).json(userData);
-      });
-    })(req, res, next);
-  });
+        if (!user) {
+          sendError(res, info.message || "Authentication failed", 401);
+          resolve(null);
+          return;
+        }
+        req.login(user, (err) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+          // Return user data (excluding password)
+          const { password, ...userData } = user;
+          resolve(userData);
+        });
+      })(req, res, next);
+    });
+  }));
 
   // Logout endpoint
-  app.post("/api/logout", (req: Request, res: Response) => {
-    req.logout((err) => {
-      if (err) {
-        return res.status(500).json({ message: "Logout failed" });
-      }
-      res.status(200).json({ message: "Logged out successfully" });
+  app.post("/api/logout", withStandardResponse(async (req: Request, res: Response) => {
+    return new Promise((resolve, reject) => {
+      req.logout((err) => {
+        if (err) {
+          sendError(res, "Logout failed", 500);
+          resolve(null);
+          return;
+        }
+        resolve({ message: "Logged out successfully" });
+      });
     });
-  });
+  }));
 
   // Get current user endpoint
   app.get("/api/user", (req: Request, res: Response) => {
