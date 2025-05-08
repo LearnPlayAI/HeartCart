@@ -101,13 +101,14 @@ const ProductListing = () => {
   const { data: categoriesResponse } = useQuery<{success: boolean, data: Category[]}>({
     queryKey: ['/api/categories'],
   });
-  const categories = categoriesResponse?.data || [];
+  const categories = categoriesResponse?.success ? categoriesResponse.data : [];
   
   // Fetch products
-  const { data: productsResponse, isLoading: isLoadingProducts } = useQuery<{success: boolean, data: Product[]}>({
+  const { data: productsResponse, isLoading: isLoadingProducts } = useQuery<{success: boolean, data: Product[], meta?: { total?: number, totalPages?: number }}>({
     queryKey: ['/api/products', { limit, offset: (page - 1) * limit }],
   });
-  const products = productsResponse?.data || [];
+  const products = productsResponse?.success ? productsResponse.data : [];
+  const totalPages = productsResponse?.meta?.totalPages || 1;
   
   // Fetch filterable attributes based on selected category
   const { data: filterableAttributesResponse, isLoading: isLoadingAttributes } = useQuery<{success: boolean, data: (CategoryAttribute & { options: AttributeOption[], attribute: Attribute })[]}>({
@@ -117,7 +118,7 @@ const ProductListing = () => {
     ],
     enabled: !!products,
   });
-  const filterableAttributes = filterableAttributesResponse?.data || [];
+  const filterableAttributes = filterableAttributesResponse?.success ? filterableAttributesResponse.data : [];
   
   // Update URL with filters
   useEffect(() => {
@@ -319,7 +320,7 @@ const ProductListing = () => {
     queryKey: ['/api/products/attribute-values'],
     enabled: !!products && attributeFilters.length > 0,
   });
-  const productAttributeValues = productAttributeValuesResponse?.data || [];
+  const productAttributeValues = productAttributeValuesResponse?.success ? productAttributeValuesResponse.data : [];
   
   // Update active filters to include attribute filters
   useEffect(() => {
@@ -938,26 +939,28 @@ const ProductListing = () => {
                   </div>
                 )}
                 
-                {products && products.length > filteredProducts.length && (
-                  <div className="flex justify-center mt-8">
-                    <Button 
-                      variant="outline"
-                      className="border-[#FF69B4] text-[#FF69B4] hover:bg-[#FF69B4] hover:text-white mr-2"
-                      disabled={page === 1}
-                      onClick={() => setPage(prev => Math.max(prev - 1, 1))}
-                    >
-                      Previous
-                    </Button>
-                    <Button 
-                      variant="outline"
-                      className="border-[#FF69B4] text-[#FF69B4] hover:bg-[#FF69B4] hover:text-white"
-                      disabled={filteredProducts.length < limit}
-                      onClick={() => setPage(prev => prev + 1)}
-                    >
-                      Next
-                    </Button>
-                  </div>
-                )}
+                {/* Pagination */}
+                <div className="flex justify-center mt-8">
+                  <Button 
+                    variant="outline"
+                    className="border-[#FF69B4] text-[#FF69B4] hover:bg-[#FF69B4] hover:text-white mr-2"
+                    disabled={page === 1}
+                    onClick={() => setPage(prev => Math.max(prev - 1, 1))}
+                  >
+                    Previous
+                  </Button>
+                  <span className="flex items-center mx-4 text-sm text-gray-600">
+                    Page {page} of {totalPages}
+                  </span>
+                  <Button 
+                    variant="outline"
+                    className="border-[#FF69B4] text-[#FF69B4] hover:bg-[#FF69B4] hover:text-white"
+                    disabled={page >= totalPages}
+                    onClick={() => setPage(prev => Math.min(prev + 1, totalPages))}
+                  >
+                    Next
+                  </Button>
+                </div>
               </>
             ) : (
               <div className="bg-white rounded-lg shadow-md p-8 text-center">

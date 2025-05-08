@@ -54,73 +54,43 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
   const { toast } = useToast();
 
   // Fetch product details
-  const { data: productFromSlug, isLoading: isLoadingProductFromSlug } = useQuery({
+  const { data: productFromSlugResponse, isLoading: isLoadingProductFromSlug } = useQuery<{success: boolean, data: any}>({
     queryKey: ['/api/products/slug', productSlug],
-    queryFn: async () => {
-      const response = await fetch(`/api/products/slug/${productSlug}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch product');
-      }
-      return response.json();
-    },
     enabled: !!productSlug && open,
   });
   
   // Fetch product details by ID
-  const { data: productFromId, isLoading: isLoadingProductFromId } = useQuery({
+  const { data: productFromIdResponse, isLoading: isLoadingProductFromId } = useQuery<{success: boolean, data: any}>({
     queryKey: ['/api/products/id', productId],
-    queryFn: async () => {
-      const response = await fetch(`/api/products/${productId}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch product');
-      }
-      return response.json();
-    },
     enabled: !!productId && open,
   });
   
   // Use whichever product data is available
+  const productFromId = productFromIdResponse?.success ? productFromIdResponse.data : null;
+  const productFromSlug = productFromSlugResponse?.success ? productFromSlugResponse.data : null;
   const product = productFromId || productFromSlug;
   const isLoadingProduct = isLoadingProductFromId || isLoadingProductFromSlug;
 
   // Fetch category attributes
-  const { data: categoryAttributes, isLoading: isLoadingAttributes } = useQuery({
+  const { data: categoryAttributesResponse, isLoading: isLoadingAttributes } = useQuery<{success: boolean, data: CategoryAttribute[]}>({
     queryKey: ['/api/products/attributes-for-category', product?.categoryId],
-    queryFn: async () => {
-      const response = await fetch(`/api/products/attributes-for-category/${product.categoryId}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch category attributes');
-      }
-      return response.json();
-    },
     enabled: !!product?.categoryId && open,
   });
+  const categoryAttributes = categoryAttributesResponse?.success ? categoryAttributesResponse.data : [];
 
   // Fetch product attribute values
-  const { data: productAttributesData, isLoading: isLoadingProductAttributes } = useQuery({
+  const { data: productAttributesDataResponse, isLoading: isLoadingProductAttributes } = useQuery<{success: boolean, data: ProductAttribute[]}>({
     queryKey: ['/api/products', product?.id, 'attributes'],
-    queryFn: async () => {
-      const response = await fetch(`/api/products/${product.id}/attributes`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch product attributes');
-      }
-      return response.json();
-    },
     enabled: !!product?.id && open,
   });
+  const productAttributesData = productAttributesDataResponse?.success ? productAttributesDataResponse.data : [];
 
   // Fetch product combinations
-  const { data: combinations, isLoading: isLoadingCombinations } = useQuery({
+  const { data: combinationsResponse, isLoading: isLoadingCombinations } = useQuery<{success: boolean, data: ProductAttributeCombination[]}>({
     queryKey: ['/api/products', product?.id, 'combinations'],
-    queryFn: async () => {
-      const response = await fetch(`/api/products/${product.id}/combinations`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch product combinations');
-      }
-      return response.json();
-    },
     enabled: !!product?.id && open,
   });
+  const combinations = combinationsResponse?.success ? combinationsResponse.data : [];
 
   // Process product attributes
   useEffect(() => {
