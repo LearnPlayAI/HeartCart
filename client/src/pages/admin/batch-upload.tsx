@@ -99,7 +99,7 @@ import { formatDistanceToNow } from "date-fns";
 const createBatchUploadSchema = z.object({
   name: z.string().min(3, { message: "Name must be at least 3 characters" }),
   description: z.string().optional(),
-  catalogId: z.string().optional(),
+  catalogId: z.string().optional().transform(val => val ? parseInt(val) : undefined),
 });
 
 // Form schema for uploading a CSV file
@@ -357,7 +357,7 @@ function CreateBatchUploadForm({
       await onSubmit({
         name: data.name,
         description: data.description || '',
-        catalogId: data.catalogId,
+        catalogId: data.catalogId ? parseInt(data.catalogId) : undefined,
       });
       onClose();
     } catch (error) {
@@ -565,7 +565,7 @@ function UploadCsvForm({
                           onClick={(e) => {
                             e.stopPropagation();
                             setFile(null);
-                            form.setValue('file', undefined);
+                            form.setValue('file', null as any);
                           }}
                         >
                           <X className="h-4 w-4 mr-1" />
@@ -666,7 +666,7 @@ export default function BatchUploadPage() {
   const handleViewErrors = async (batchId: number) => {
     try {
       const errors = await getBatchUploadErrors(batchId);
-      const batch = batchUploads?.find(b => b.id === batchId) || null;
+      const batch = Array.isArray(batchUploads) ? batchUploads.find(b => b.id === batchId) : null;
       
       setCurrentErrors(errors);
       setCurrentBatch(batch);
@@ -855,7 +855,7 @@ export default function BatchUploadPage() {
             <div className="flex justify-center items-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
             </div>
-          ) : batchUploads && batchUploads.length > 0 ? (
+          ) : Array.isArray(batchUploads) && batchUploads.length > 0 ? (
             <div className="grid grid-cols-1 gap-4">
               {batchUploads.map((batch) => (
                 <BatchUploadListItem
