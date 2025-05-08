@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRoute, Link } from 'wouter';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet';
@@ -132,7 +132,15 @@ const ProductDetailView = ({
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { addItem } = useCart();
-  const { calculatePriceAdjustments } = useAttributeDiscounts();
+  const { calculatePriceAdjustments: calculatePriceAdjustmentsOriginal } = useAttributeDiscounts();
+  
+  // Memoize the price adjustment calculation to prevent re-renders
+  const calculatePriceAdjustments = useCallback(
+    async (productId: number, selectedAttrs: Record<string, any>, qty: number = 1) => {
+      return await calculatePriceAdjustmentsOriginal(productId, selectedAttrs, qty);
+    },
+    [calculatePriceAdjustmentsOriginal]
+  );
   
   // Error handling effect
   useEffect(() => {
@@ -311,36 +319,37 @@ const ProductDetailView = ({
     }
   }, [selectedAttributes, attributeValues, product, productAttributes, quantity, calculatePriceAdjustments]);
   
-  // Handle quantity change
-  const handleQuantityChange = (newQuantity: number) => {
+  // Handle quantity change (memoized to prevent recreating on each render)
+  const handleQuantityChange = useCallback((newQuantity: number) => {
     if (newQuantity > 0 && newQuantity <= 10) {
       setQuantity(newQuantity);
     }
-  };
+  }, []);
   
-  // Handle attribute changes
-  const handleAttributeChange = (attributeId: number, value: string) => {
+  // Handle attribute changes (memoized to prevent recreating on each render)
+  const handleAttributeChange = useCallback((attributeId: number, value: string) => {
     setSelectedAttributes(prev => ({
       ...prev,
       [attributeId]: value
     }));
-  };
+  }, []);
   
-  // Handle thumbnail click to change main image
-  const handleThumbnailClick = (image: string) => {
+  // Handle thumbnail click to change main image (memoized to prevent re-renders)
+  const handleThumbnailClick = useCallback((image: string) => {
     setCurrentImage(image);
-  };
+  }, []);
   
   // Open image carousel modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [carouselIndex, setCarouselIndex] = useState(0);
   
-  const openImageModal = (index: number) => {
+  // Memoize modal handling functions
+  const openImageModal = useCallback((index: number) => {
     setCarouselIndex(index);
     setIsModalOpen(true);
-  };
+  }, []);
   
-  const navigateCarousel = (direction: 'prev' | 'next') => {
+  const navigateCarousel = useCallback((direction: 'prev' | 'next') => {
     if (!product || !product.additionalImages) return;
     
     const totalImages = product.additionalImages.length;
@@ -349,10 +358,10 @@ const ProductDetailView = ({
     } else {
       setCarouselIndex(prev => (prev - 1 + totalImages) % totalImages);
     }
-  };
+  }, [product]);
   
-  // Add to cart handler
-  const handleAddToCart = () => {
+  // Add to cart handler (memoized to prevent re-renders)
+  const handleAddToCart = useCallback(() => {
     if (!product) return;
     
     // Create a combination hash from selected attributes (for cart item identification)
@@ -412,10 +421,10 @@ const ProductDetailView = ({
       description: `${quantity} x ${product.name} has been added to your cart.`,
       duration: 2000,
     });
-  };
+  }, [product, selectedAttributes, productAttributes, attributeOptions, currentPrice, quantity, priceAdjustments, addItem, toast]);
   
-  // Render star ratings
-  const renderStars = (rating: number | null = 0) => {
+  // Render star ratings (memoized to prevent re-renders)
+  const renderStars = useCallback((rating: number | null = 0) => {
     const stars = [];
     const actualRating = rating || 0;
     const fullStars = Math.floor(actualRating);
@@ -435,7 +444,7 @@ const ProductDetailView = ({
     }
     
     return stars;
-  };
+  }, []);
   
   // Loading state
   if (isLoading) {
