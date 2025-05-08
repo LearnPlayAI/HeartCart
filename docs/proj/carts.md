@@ -20,11 +20,23 @@ This approach works but may lead to inconsistencies and makes the codebase harde
 - [x] Document the current approach to discount calculations and price adjustments
 - [x] Evaluate the pros and cons of the current implementation
 
-#### Task 1.2: Define Strategy for Cart Persistence [NOT STARTED]
-- [ ] Decide on persistence approach:
-  - Option A: Expand database schema to store discount information
-  - Option B: Keep calculations client-side but improve documentation and consistency
-- [ ] Document the selected approach with justification
+#### Task 1.2: Define Strategy for Cart Persistence [COMPLETED]
+- [x] Decide on persistence approach: **Option A: Full Database Persistence**
+- [x] Document the selected approach with justification
+
+**Implementation Decision:**
+We will implement Option A: Full Database Persistence. This means:
+1. All discount information will be stored in the database
+2. No cart data will be persisted only in client-side memory
+3. The database schema will be extended to include discount fields
+4. This ensures data consistency and reliability across sessions and devices
+
+**Justification:**
+- Data consistency: Storing all information in the database ensures consistency
+- Session independence: Users can access their cart from any device with accurate pricing
+- Audit capability: Historical record of applied discounts provides better tracking
+- Checkout integrity: Ensures the final price at checkout matches what was displayed in the cart
+- Reliability: Prevents data loss if client-side state is cleared
 
 ### Phase 2: Schema and Type Updates
 
@@ -62,27 +74,14 @@ This approach works but may lead to inconsistencies and makes the codebase harde
 - [ ] Update checkout.tsx to ensure proper discount handling
 - [ ] Improve price display components to clearly show original price, discounts, and final price
 
-### Phase 5: Testing and Validation
+### Phase 5: Documentation and Cleanup
 
-#### Task 5.1: Create Test Cases [NOT STARTED]
-- [ ] Develop test scenarios for different attribute combinations and discount rules
-- [ ] Create test data covering edge cases in the discount system
-- [ ] Document expected behavior for each test case
-
-#### Task 5.2: System Integration Testing [NOT STARTED]
-- [ ] Test full cart flow from product selection to checkout
-- [ ] Verify discount persistence behavior matches documentation
-- [ ] Test cart synchronization between sessions
-- [ ] Validate behavior when discount rules change while items are in cart
-
-### Phase 6: Documentation and Cleanup
-
-#### Task 6.1: Code Documentation [NOT STARTED]
+#### Task 5.1: Code Documentation [NOT STARTED]
 - [ ] Add comprehensive comments explaining the cart discount calculation flow
 - [ ] Document the persistence strategy in relevant files
 - [ ] Update API documentation to reflect the implementation
 
-#### Task 6.2: Final Review and Cleanup [NOT STARTED]
+#### Task 5.2: Final Review and Cleanup [NOT STARTED]
 - [ ] Remove any debug code or temporary workarounds
 - [ ] Ensure consistent naming conventions across the codebase
 - [ ] Verify all edge cases are properly handled
