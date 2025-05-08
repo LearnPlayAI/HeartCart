@@ -1911,13 +1911,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // GLOBAL ATTRIBUTES ROUTES - Removed as part of attribute system redesign
-
-  // GLOBAL ATTRIBUTE OPTIONS ROUTES - Removed as part of attribute system redesign
-
-  // PRODUCT GLOBAL ATTRIBUTES ADMIN ROUTES - Removed as part of attribute system redesign
-
-  // Public routes for accessing product global attributes - Removed as part of attribute system redesign
+  // Register new attribute system routes
+  registerAttributeRoutes(app);
+  registerProductAttributeRoutes(app);
 
   const httpServer = createServer(app);
   return httpServer;
