@@ -90,11 +90,13 @@ function OrderDetails({ order }: { order: OrderWithItems }) {
         body: JSON.stringify({ status }),
       });
       
-      if (!response.ok) {
-        throw new Error('Failed to update order status');
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.error?.message || 'Failed to update order status');
       }
       
-      return await response.json();
+      return result.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
@@ -320,7 +322,7 @@ export default function AdminOrders() {
   const { formatShortDate } = useDateFormat();
 
   // Fetch all orders
-  const { data: orders, isLoading } = useQuery<OrderWithItems[]>({
+  const { data: ordersResponse, isLoading } = useQuery<{ success: boolean; data: OrderWithItems[] }>({
     queryKey: ["/api/admin/orders"],
     queryFn: async () => {
       const response = await fetch("/api/admin/orders");
@@ -328,6 +330,8 @@ export default function AdminOrders() {
       return await response.json();
     },
   });
+  
+  const orders = ordersResponse?.success ? ordersResponse.data : [];
 
   // Apply filters
   const filteredOrders = orders?.filter((order) => {
