@@ -1099,30 +1099,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
   );
   
   // Generate thumbnails for an image
-  app.post("/api/images/thumbnails", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
-    const user = req.user as any;
-    
-    if (user.role !== 'admin') {
-      return res.status(403).json({ message: "Only administrators can generate thumbnails" });
-    }
-    
-    const { objectKey, sizes } = req.body;
-    
-    if (!objectKey || typeof objectKey !== 'string') {
-      return res.status(400).json({ message: "Object key is required" });
-    }
-    
-    try {
+  app.post(
+    "/api/images/thumbnails", 
+    isAuthenticated, 
+    validateRequest({
+      body: z.object({
+        objectKey: z.string().min(1, "Object key is required"),
+        sizes: z.array(z.number().positive()).optional()
+      })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const user = req.user as any;
+      
+      if (user.role !== 'admin') {
+        throw new ForbiddenError("Only administrators can generate thumbnails");
+      }
+      
+      const { objectKey, sizes } = req.body;
+      
       // Check if the image exists
       const exists = await objectStore.exists(objectKey);
       if (!exists) {
-        return res.status(404).json({ message: "Image not found" });
+        throw new NotFoundError("Image not found", "image");
       }
       
       // Generate thumbnails
       const thumbnails = await imageService.generateThumbnails(
         objectKey,
-        sizes || undefined
+        sizes
       );
       
       res.json({
@@ -1131,49 +1135,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
         originalKey: objectKey,
         count: Object.keys(thumbnails).length
       });
-    } catch (error: any) {
-      console.error('Thumbnail generation error:', error);
-      res.status(500).json({ 
-        message: "Failed to generate thumbnails", 
-        error: error.message || 'Unknown error'
-      });
-    }
-  }));
+    })
+  );
   
   // Resize an image with custom dimensions
-  app.post("/api/images/resize", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
-    const user = req.user as any;
-    
-    if (user.role !== 'admin') {
-      return res.status(403).json({ message: "Only administrators can resize images" });
-    }
-    
-    const { objectKey, width, height, fit, format, quality } = req.body;
-    
-    if (!objectKey || typeof objectKey !== 'string') {
-      return res.status(400).json({ message: "Object key is required" });
-    }
-    
-    if (!width && !height) {
-      return res.status(400).json({ message: "At least one dimension (width or height) is required" });
-    }
-    
-    try {
+  app.post(
+    "/api/images/resize", 
+    isAuthenticated, 
+    validateRequest({
+      body: z.object({
+        objectKey: z.string().min(1, "Object key is required"),
+        width: z.coerce.number().positive().optional(),
+        height: z.coerce.number().positive().optional(),
+        fit: z.enum(['cover', 'contain', 'fill', 'inside', 'outside']).optional(),
+        format: z.enum(['jpeg', 'png', 'webp', 'avif']).optional(),
+        quality: z.coerce.number().min(1).max(100).optional()
+      }).refine(data => data.width !== undefined || data.height !== undefined, {
+        message: "At least one dimension (width or height) is required",
+        path: ["dimensions"]
+      })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const user = req.user as any;
+      
+      if (user.role !== 'admin') {
+        throw new ForbiddenError("Only administrators can resize images");
+      }
+      
+      const { objectKey, width, height, fit, format, quality } = req.body;
+      
       // Check if the image exists
       const exists = await objectStore.exists(objectKey);
       if (!exists) {
-        return res.status(404).json({ message: "Image not found" });
+        throw new NotFoundError("Image not found", "image");
       }
       
       // Resize the image
       const result = await imageService.resizeImage(
         objectKey,
         {
-          width: width ? parseInt(width) : undefined,
-          height: height ? parseInt(height) : undefined,
-          fit: fit as 'cover' | 'contain' | 'fill' | 'inside' | 'outside' | undefined,
-          format: format as 'jpeg' | 'png' | 'webp' | 'avif' | undefined,
-          quality: quality ? parseInt(quality) : undefined
+          width,
+          height,
+          fit,
+          format,
+          quality
         }
       );
       
@@ -1182,42 +1187,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...result,
         originalKey: objectKey
       });
-    } catch (error: any) {
-      console.error('Image resize error:', error);
-      res.status(500).json({ 
-        message: "Failed to resize image", 
-        error: error.message || 'Unknown error'
-      });
-    }
-  }));
+    })
+  );
   
   // AI SERVICE ROUTES
   
   // Remove image background using Gemini AI
-  app.post("/api/ai/remove-background", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
-    const user = req.user as any;
-    
-    if (user.role !== 'admin') {
-      return res.status(403).json({ message: "Only administrators can use AI features" });
-    }
-    
-    const { imageUrl } = req.body;
-    
-    if (!imageUrl || typeof imageUrl !== 'string') {
-      return res.status(400).json({ message: "Image URL is required" });
-    }
-    
-    try {
+  app.post(
+    "/api/ai/remove-background", 
+    isAuthenticated, 
+    validateRequest({
+      body: z.object({
+        imageUrl: z.string().min(1, "Image URL is required"),
+        productImageId: z.coerce.number().positive().optional()
+      })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const user = req.user as any;
+      
+      if (user.role !== 'admin') {
+        throw new ForbiddenError("Only administrators can use AI features");
+      }
+      
+      const { imageUrl, productImageId } = req.body;
+      
       const resultImageBase64 = await removeImageBackground(imageUrl);
       
       // If this is for a specific product image, update it
-      if (req.body.productImageId) {
-        const imageId = parseInt(req.body.productImageId);
-        
+      if (productImageId) {
         // Extract the base64 data and content type
         const matches = resultImageBase64.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
         if (!matches || matches.length !== 3) {
-          return res.status(400).json({ message: "Invalid base64 image format from AI service" });
+          throw new BadRequestError("Invalid base64 image format from AI service");
         }
         
         const contentType = matches[1];
@@ -1227,7 +1228,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Generate a unique filename
         const timestamp = Date.now();
         const extension = contentType.split('/')[1] || 'png';
-        const filename = `${timestamp}_${imageId}_bg_removed.${extension}`;
+        const filename = `${timestamp}_${productImageId}_bg_removed.${extension}`;
         const objectKey = `products/bg_removed/${filename}`;
         
         // Upload to object storage
@@ -1236,10 +1237,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Generate public URL
         const publicUrl = objectStore.getPublicUrl(objectKey);
         
+        // Check if the product image exists
+        const imageExists = await storage.getProductImageById(productImageId);
+        if (!imageExists) {
+          throw new NotFoundError("Product image not found", "productImage");
+        }
+        
         // Update the product image with background removed URL
-        await storage.updateProductImage(imageId, {
+        await storage.updateProductImage(productImageId, {
           bgRemovedUrl: publicUrl,
-          bgRemovedObjectKey: objectKey
+          bgRemovedObjectKey: objectKey,
+          hasBgRemoved: true
         });
         
         return res.json({ 
@@ -1254,161 +1262,150 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: true, 
         imageUrl: resultImageBase64 
       });
-    } catch (error: any) {
-      console.error('Background removal error:', error);
-      res.status(500).json({ 
-        message: "Failed to remove background", 
-        error: error.message || 'Unknown error'
-      });
-    }
-  }));
+    })
+  );
   
   // Generate product tags using AI
-  app.post("/api/ai/generate-tags", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
-    const user = req.user as any;
-    
-    if (user.role !== 'admin') {
-      return res.status(403).json({ message: "Only administrators can use AI features" });
-    }
-    
-    const { imageUrl, productName, productDescription } = req.body;
-    
-    if (!imageUrl || typeof imageUrl !== 'string') {
-      return res.status(400).json({ message: "Image URL is required" });
-    }
-    
-    if (!productName || typeof productName !== 'string') {
-      return res.status(400).json({ message: "Product name is required" });
-    }
-    
-    try {
+  app.post(
+    "/api/ai/generate-tags", 
+    isAuthenticated, 
+    validateRequest({
+      body: z.object({
+        imageUrl: z.string().min(1, "Image URL is required"),
+        productName: z.string().min(1, "Product name is required"),
+        productDescription: z.string().optional().default('')
+      })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const user = req.user as any;
+      
+      if (user.role !== 'admin') {
+        throw new ForbiddenError("Only administrators can use AI features");
+      }
+      
+      const { imageUrl, productName, productDescription } = req.body;
+      
       const tags = await generateProductTags(
         imageUrl, 
         productName, 
-        productDescription || ''
+        productDescription
       );
       
       res.json({ success: true, tags });
-    } catch (error: any) {
-      console.error('Tag generation error:', error);
-      res.status(500).json({ 
-        message: "Failed to generate tags", 
-        error: error.message || 'Unknown error'
-      });
-    }
-  }));
+    })
+  );
   
   // Analyze product image for auto-fill suggestions
-  app.post("/api/ai/analyze-product", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
-    const user = req.user as any;
-    
-    if (user.role !== 'admin') {
-      return res.status(403).json({ message: "Only administrators can use AI features" });
-    }
-    
-    const { imageUrl, productName } = req.body;
-    
-    if (!imageUrl || typeof imageUrl !== 'string') {
-      return res.status(400).json({ message: "Image URL is required" });
-    }
-
-    if (!productName || typeof productName !== 'string') {
-      return res.status(400).json({ message: "Product name is required" });
-    }
-    
-    try {
+  app.post(
+    "/api/ai/analyze-product", 
+    isAuthenticated, 
+    validateRequest({
+      body: z.object({
+        imageUrl: z.string().min(1, "Image URL is required"),
+        productName: z.string().min(1, "Product name is required")
+      })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const user = req.user as any;
+      
+      if (user.role !== 'admin') {
+        throw new ForbiddenError("Only administrators can use AI features");
+      }
+      
+      const { imageUrl, productName } = req.body;
+      
       const analysis = await analyzeProductImage(imageUrl, productName);
       res.json({ success: true, ...analysis });
-    } catch (error: any) {
-      console.error('Product analysis error:', error);
-      res.status(500).json({ 
-        message: "Failed to analyze product", 
-        error: error.message || 'Unknown error'
-      });
-    }
-  }));
+    })
+  );
 
   // AI price suggestion endpoint
-  app.post("/api/ai/suggest-price", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
-    const user = req.user as any;
-    
-    if (user.role !== 'admin') {
-      return res.status(403).json({ message: "Only administrators can use AI features" });
-    }
-    
-    const { costPrice, productName, categoryName, categoryId } = req.body;
-    
-    if (!costPrice || !productName) {
-      return res.status(400).json({ message: "Cost price and product name are required" });
-    }
-    
-    // Validate cost price is a number
-    const costPriceNum = Number(costPrice);
-    if (isNaN(costPriceNum)) {
-      return res.status(400).json({ message: "Cost price must be a valid number" });
-    }
-    
-    // Validate categoryId if provided
-    let categoryIdNum: number | undefined = undefined;
-    if (categoryId) {
-      categoryIdNum = Number(categoryId);
-      if (isNaN(categoryIdNum)) {
-        return res.status(400).json({ message: "Category ID must be a valid number" });
+  app.post(
+    "/api/ai/suggest-price", 
+    isAuthenticated, 
+    validateRequest({
+      body: z.object({
+        costPrice: z.coerce.number().positive("Cost price must be a positive number"),
+        productName: z.string().min(1, "Product name is required"),
+        categoryName: z.string().optional(),
+        categoryId: z.coerce.number().positive().optional()
+      })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const user = req.user as any;
+      
+      if (user.role !== 'admin') {
+        throw new ForbiddenError("Only administrators can use AI features");
       }
-    }
-    
-    try {
-      const suggestion = await suggestPrice(costPriceNum, productName, categoryName, categoryIdNum);
+      
+      const { costPrice, productName, categoryName, categoryId } = req.body;
+      
+      // If categoryId is provided, check if it exists
+      if (categoryId) {
+        const category = await storage.getCategoryById(categoryId);
+        if (!category) {
+          throw new NotFoundError("Category not found", "category");
+        }
+      }
+      
+      const suggestion = await suggestPrice(costPrice, productName, categoryName, categoryId);
       res.json({ success: true, ...suggestion });
-    } catch (error: any) {
-      console.error('Price suggestion error:', error);
-      res.status(500).json({ 
-        message: "Failed to suggest price", 
-        error: error.message || 'Unknown error'
-      });
-    }
-  }));
+    })
+  );
   
   // AI MODEL SETTINGS ROUTES
   
   // Get all available AI models
-  app.get("/api/admin/ai/models", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
-    const user = req.user as any;
-    
-    // Check if user is admin
-    if (user.role !== 'admin') {
-      return res.status(403).json({ message: "Only administrators can manage AI settings" });
-    }
-    
-    // Get all available models
-    const models = getAvailableAiModels();
-    
-    // Get current model
-    const currentModel = await getCurrentAiModelSetting();
-    
-    res.json({
-      available: models,
-      current: currentModel.modelName,
-      isDefault: currentModel.isDefault
-    });
-  }));
+  app.get(
+    "/api/admin/ai/models", 
+    isAuthenticated, 
+    asyncHandler(async (req: Request, res: Response) => {
+      const user = req.user as any;
+      
+      // Check if user is admin
+      if (user.role !== 'admin') {
+        throw new ForbiddenError("Only administrators can manage AI settings");
+      }
+      
+      // Get all available models
+      const models = getAvailableAiModels();
+      
+      // Get current model
+      const currentModel = await getCurrentAiModelSetting();
+      
+      res.json({
+        available: models,
+        current: currentModel.modelName,
+        isDefault: currentModel.isDefault
+      });
+    })
+  );
   
   // Update current AI model
-  app.post("/api/admin/ai/models", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
-    const user = req.user as any;
-    
-    // Check if user is admin
-    if (user.role !== 'admin') {
-      return res.status(403).json({ message: "Only administrators can manage AI settings" });
-    }
-    
-    const { modelName } = req.body;
-    
-    if (!modelName || typeof modelName !== 'string') {
-      return res.status(400).json({ message: "Model name is required" });
-    }
-    
-    try {
+  app.post(
+    "/api/admin/ai/models", 
+    isAuthenticated, 
+    validateRequest({
+      body: z.object({
+        modelName: z.string().min(1, "Model name is required")
+      })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const user = req.user as any;
+      
+      // Check if user is admin
+      if (user.role !== 'admin') {
+        throw new ForbiddenError("Only administrators can manage AI settings");
+      }
+      
+      const { modelName } = req.body;
+      
+      // Validate that the model name is in the available models list
+      const availableModels = getAvailableAiModels();
+      if (!availableModels.includes(modelName)) {
+        throw new BadRequestError(`Model '${modelName}' is not available. Available models: ${availableModels.join(', ')}`);
+      }
+      
       const success = await updateAiModel(modelName);
       
       if (success) {
@@ -1422,272 +1419,527 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: `Model ${modelName} was saved but could not be initialized. Will try again on next server restart.`
         });
       }
-    } catch (error: any) {
-      console.error('Error updating AI model:', error);
-      res.status(500).json({ 
-        success: false, 
-        message: "Failed to update AI model",
-        error: error.message || 'Unknown error'
-      });
-    }
-  }));
+    })
+  );
   
   // Get all AI settings
-  app.get("/api/admin/ai/settings", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
-    const user = req.user as any;
-    
-    // Check if user is admin
-    if (user.role !== 'admin') {
-      return res.status(403).json({ message: "Only administrators can manage AI settings" });
-    }
-    
-    const settings = await storage.getAllAiSettings();
-    res.json(settings);
-  }));
+  app.get(
+    "/api/admin/ai/settings", 
+    isAuthenticated, 
+    asyncHandler(async (req: Request, res: Response) => {
+      const user = req.user as any;
+      
+      // Check if user is admin
+      if (user.role !== 'admin') {
+        throw new ForbiddenError("Only administrators can manage AI settings");
+      }
+      
+      const settings = await storage.getAllAiSettings();
+      res.json(settings);
+    })
+  );
 
   // CART ROUTES
-  app.get("/api/cart", handleErrors(async (req: Request, res: Response) => {
-    if (!req.isAuthenticated()) {
-      // For non-authenticated users, return empty cart
-      return res.json([]);
-    }
-    const user = req.user as any;
-    const cartItems = await storage.getCartItemsWithProducts(user.id);
-    res.json(cartItems);
-  }));
+  app.get(
+    "/api/cart",
+    asyncHandler(async (req: Request, res: Response) => {
+      if (!req.isAuthenticated()) {
+        // For non-authenticated users, return empty cart
+        return res.json([]);
+      }
+      const user = req.user as any;
+      const cartItems = await storage.getCartItemsWithProducts(user.id);
+      res.json(cartItems);
+    })
+  );
 
-  app.post("/api/cart", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
-    const user = req.user as any;
-    const cartItemData = insertCartItemSchema.parse({
-      ...req.body,
-      userId: user.id,
-    });
-    
-    const cartItem = await storage.addToCart(cartItemData);
-    res.status(201).json(cartItem);
-  }));
+  app.post(
+    "/api/cart", 
+    isAuthenticated, 
+    validateRequest({
+      body: z.object({
+        productId: z.coerce.number().positive("Product ID is required"),
+        quantity: z.coerce.number().int().positive("Quantity must be a positive integer"),
+        attributeValues: z.array(z.object({
+          attributeId: z.coerce.number().positive(),
+          optionId: z.coerce.number().positive().optional(),
+          textValue: z.string().optional(),
+          numericValue: z.coerce.number().optional(),
+          dateValue: z.coerce.date().optional()
+        })).optional().default([])
+      })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const user = req.user as any;
+      
+      // Check if product exists
+      const product = await storage.getProductById(req.body.productId);
+      if (!product) {
+        throw new NotFoundError("Product not found", "product");
+      }
+      
+      // Check if product is active
+      if (!product.isActive) {
+        throw new BadRequestError("Cannot add inactive product to cart");
+      }
+      
+      // Add user ID to the cart item data
+      const cartItemData = {
+        ...req.body,
+        userId: user.id,
+      };
+      
+      const cartItem = await storage.addToCart(cartItemData);
+      res.status(201).json(cartItem);
+    })
+  );
 
-  app.put("/api/cart/:id", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
-    const id = parseInt(req.params.id);
-    const { quantity } = req.body;
-    
-    if (quantity === undefined) {
-      return res.status(400).json({ message: "Quantity is required" });
-    }
-    
-    const updatedItem = await storage.updateCartItemQuantity(id, quantity);
-    
-    if (!updatedItem && quantity > 0) {
-      return res.status(404).json({ message: "Cart item not found" });
-    }
-    
-    res.json({ success: true, item: updatedItem });
-  }));
+  app.put(
+    "/api/cart/:id", 
+    isAuthenticated, 
+    validateRequest({
+      params: z.object({
+        id: z.coerce.number().positive("Cart item ID is required")
+      }),
+      body: z.object({
+        quantity: z.coerce.number().int().min(0, "Quantity must be a non-negative integer")
+      })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const { id } = req.params;
+      const { quantity } = req.body;
+      
+      // Check if cart item exists and belongs to the user
+      const user = req.user as any;
+      const cartItem = await storage.getCartItemById(id);
+      
+      if (!cartItem) {
+        throw new NotFoundError("Cart item not found", "cartItem");
+      }
+      
+      if (cartItem.userId !== user.id) {
+        throw new ForbiddenError("Cannot update cart item that doesn't belong to you");
+      }
+      
+      // If quantity is 0, remove the item
+      if (quantity === 0) {
+        await storage.removeFromCart(id);
+        return res.json({ success: true, removed: true });
+      }
+      
+      // Update the quantity
+      const updatedItem = await storage.updateCartItemQuantity(id, quantity);
+      res.json({ success: true, item: updatedItem });
+    })
+  );
 
-  app.delete("/api/cart/:id", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
-    const id = parseInt(req.params.id);
-    await storage.removeFromCart(id);
-    res.json({ success: true });
-  }));
+  app.delete(
+    "/api/cart/:id", 
+    isAuthenticated, 
+    validateRequest({
+      params: z.object({
+        id: z.coerce.number().positive("Cart item ID is required")
+      })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const { id } = req.params;
+      
+      // Check if cart item exists and belongs to the user
+      const user = req.user as any;
+      const cartItem = await storage.getCartItemById(id);
+      
+      if (cartItem && cartItem.userId !== user.id) {
+        throw new ForbiddenError("Cannot delete cart item that doesn't belong to you");
+      }
+      
+      await storage.removeFromCart(id);
+      res.json({ success: true });
+    })
+  );
 
-  app.delete("/api/cart", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
-    const user = req.user as any;
-    await storage.clearCart(user.id);
-    res.json({ success: true });
-  }));
+  app.delete(
+    "/api/cart", 
+    isAuthenticated, 
+    asyncHandler(async (req: Request, res: Response) => {
+      const user = req.user as any;
+      await storage.clearCart(user.id);
+      res.json({ success: true });
+    })
+  );
 
   // ORDER ROUTES
-  app.post("/api/orders", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
-    const user = req.user as any;
-    const { order, items } = req.body;
-    
-    const orderData = insertOrderSchema.parse({
-      ...order,
-      userId: user.id,
-    });
-    
-    // Validate order items
-    const orderItems = items.map((item: any) => insertOrderItemSchema.parse(item));
-    
-    const newOrder = await storage.createOrder(orderData, orderItems);
-    res.status(201).json(newOrder);
-  }));
-
-  app.get("/api/orders", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
-    const user = req.user as any;
-    const orders = await storage.getOrdersByUser(user.id);
-    res.json(orders);
-  }));
-
-  app.get("/api/orders/:id", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
-    const id = parseInt(req.params.id);
-    const order = await storage.getOrderById(id);
-    
-    if (!order) {
-      return res.status(404).json({ message: "Order not found" });
-    }
-    
-    // Check if the order belongs to the authenticated user or user is admin
-    const user = req.user as any;
-    if (order.userId !== user.id && user.role !== 'admin') {
-      return res.status(403).json({ message: "Forbidden" });
-    }
-    
-    res.json(order);
-  }));
-  
-  // Update order status (admin-only)
-  app.patch("/api/orders/:id/status", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
-    const id = parseInt(req.params.id);
-    const { status } = req.body;
-    
-    // Validate status
-    const validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
-    if (!validStatuses.includes(status)) {
-      return res.status(400).json({ message: "Invalid status value" });
-    }
-    
-    // Check if user is admin
-    const user = req.user as any;
-    if (user.role !== 'admin') {
-      return res.status(403).json({ message: "Only admins can update order status" });
-    }
-    
-    // Get the order
-    const order = await storage.getOrderById(id);
-    if (!order) {
-      return res.status(404).json({ message: "Order not found" });
-    }
-    
-    // Update the status
-    const updatedOrder = await storage.updateOrderStatus(id, status);
-    if (!updatedOrder) {
-      return res.status(500).json({ message: "Failed to update order status" });
-    }
-    
-    res.json(updatedOrder);
-  }));
-  
-  // Admin-only route to get all orders (must be above the /api/orders/:id route due to route matching order)
-  app.get("/api/admin/orders", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
-    const user = req.user as any;
-    
-    // Check if user is admin
-    if (user.role !== 'admin') {
-      return res.status(403).json({ message: "Access denied" });
-    }
-    
-    // Get all orders
-    const orders = await storage.getOrdersByUser(null); // Simplified approach using existing method
-    
-    res.json(orders);
-  }));
-
-  // AI RECOMMENDATION ROUTES - Available to all users (logged in or not)
-  app.get("/api/recommendations", handleErrors(async (req: Request, res: Response) => {
-    // Check if user is authenticated
-    const user = req.isAuthenticated() ? req.user as any : null;
-    
-    if (user) {
-      // Get personalized recommendations for authenticated users
-      const recommendations = await storage.getRecommendationsForUser(user.id);
+  app.post(
+    "/api/orders", 
+    isAuthenticated, 
+    validateRequest({
+      body: z.object({
+        order: z.object({
+          shippingAddress: z.string().min(1, "Shipping address is required"),
+          billingAddress: z.string().min(1, "Billing address is required"),
+          paymentMethod: z.enum(["credit_card", "paypal", "bank_transfer", "cash_on_delivery"], {
+            errorMap: () => ({ message: "Invalid payment method" })
+          }),
+          shippingMethod: z.enum(["standard", "express", "overnight"], {
+            errorMap: () => ({ message: "Invalid shipping method" })
+          }),
+          notes: z.string().optional(),
+          total: z.coerce.number().min(0, "Total must be a non-negative number"),
+          discountCode: z.string().optional(),
+          discountAmount: z.coerce.number().min(0, "Discount amount must be a non-negative number").optional(),
+          shippingCost: z.coerce.number().min(0, "Shipping cost must be a non-negative number")
+        }),
+        items: z.array(
+          z.object({
+            productId: z.coerce.number().positive("Product ID is required"),
+            quantity: z.coerce.number().int().positive("Quantity must be a positive integer"),
+            priceAtPurchase: z.coerce.number().min(0, "Price must be a non-negative number"),
+            attributeValues: z.array(z.any()).optional()
+          })
+        ).min(1, "At least one item is required")
+      })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const user = req.user as any;
+      const { order, items } = req.body;
       
-      if (recommendations && recommendations.productIds) {
-        // Get product details for recommended products
-        const products = [];
-        for (const productId of recommendations.productIds) {
-          const product = await storage.getProductById(productId);
-          if (product) {
-            products.push(product);
-          }
+      // Validate that the cart is not empty
+      const userCart = await storage.getCartItemsWithProducts(user.id);
+      if (!userCart || userCart.length === 0) {
+        throw new BadRequestError("Cannot create an order with an empty cart");
+      }
+      
+      // Validate that all products in the order exist and are active
+      for (const item of items) {
+        const product = await storage.getProductById(item.productId);
+        if (!product) {
+          throw new NotFoundError(`Product with ID ${item.productId} not found`, "product");
         }
         
-        return res.json({
-          products,
-          reason: recommendations.reason,
-          timestamp: recommendations.createdAt
-        });
+        if (!product.isActive) {
+          throw new BadRequestError(`Product "${product.name}" is no longer available`);
+        }
       }
-    }
-    
-    // For non-authenticated users or users without recommendations
-    // Return popular/featured products as a fallback
-    const products = await storage.getFeaturedProducts(10);
-    
-    return res.json({
-      products,
-      reason: "Popular products you might like",
-      timestamp: new Date()
-    });
-  }));
+      
+      // Create the order with the user ID
+      const orderData = {
+        ...order,
+        userId: user.id,
+        status: "pending" // Default status for new orders
+      };
+      
+      const newOrder = await storage.createOrder(orderData, items);
+      
+      // Clear the user's cart after successful order creation
+      await storage.clearCart(user.id);
+      
+      res.status(201).json(newOrder);
+    })
+  );
+
+  app.get(
+    "/api/orders", 
+    isAuthenticated, 
+    validateRequest({
+      query: z.object({
+        status: z.enum(['pending', 'processing', 'shipped', 'delivered', 'cancelled']).optional(),
+        limit: z.coerce.number().int().positive().optional().default(20),
+        offset: z.coerce.number().int().min(0).optional().default(0)
+      }).optional()
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const user = req.user as any;
+      const { status, limit, offset } = req.query;
+      
+      const orders = await storage.getOrdersByUser(user.id, status as string | undefined, limit as number, offset as number);
+      res.json(orders);
+    })
+  );
+
+  // Admin-only route to get all orders (must be above the /api/orders/:id route due to route matching order)
+  app.get(
+    "/api/admin/orders", 
+    isAuthenticated, 
+    validateRequest({
+      query: z.object({
+        status: z.enum(['pending', 'processing', 'shipped', 'delivered', 'cancelled']).optional(),
+        userId: z.coerce.number().positive().optional(),
+        limit: z.coerce.number().int().positive().optional().default(20),
+        offset: z.coerce.number().int().min(0).optional().default(0)
+      }).optional()
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const user = req.user as any;
+      
+      // Check if user is admin
+      if (user.role !== 'admin') {
+        throw new ForbiddenError("Only administrators can access all orders");
+      }
+      
+      const { status, userId, limit, offset } = req.query;
+      
+      // Get all orders with optional filtering
+      const orders = await storage.getOrdersByUser(
+        userId ? (userId as number) : null, 
+        status as string | undefined,
+        limit as number,
+        offset as number
+      );
+      
+      res.json(orders);
+    })
+  );
+
+  app.get(
+    "/api/orders/:id", 
+    isAuthenticated, 
+    validateRequest({
+      params: z.object({
+        id: z.coerce.number().positive("Order ID is required")
+      })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const { id } = req.params;
+      const order = await storage.getOrderById(id);
+      
+      if (!order) {
+        throw new NotFoundError("Order not found", "order");
+      }
+      
+      // Check if the order belongs to the authenticated user or user is admin
+      const user = req.user as any;
+      if (order.userId !== user.id && user.role !== 'admin') {
+        throw new ForbiddenError("You are not authorized to view this order");
+      }
+      
+      res.json(order);
+    })
+  );
+  
+  // Update order status (admin-only)
+  app.patch(
+    "/api/orders/:id/status", 
+    isAuthenticated, 
+    validateRequest({
+      params: z.object({
+        id: z.coerce.number().positive("Order ID is required")
+      }),
+      body: z.object({
+        status: z.enum(['pending', 'processing', 'shipped', 'delivered', 'cancelled'], {
+          errorMap: () => ({ message: "Invalid status value. Must be one of: pending, processing, shipped, delivered, cancelled" })
+        })
+      })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const { id } = req.params;
+      const { status } = req.body;
+      
+      // Check if user is admin
+      const user = req.user as any;
+      if (user.role !== 'admin') {
+        throw new ForbiddenError("Only administrators can update order status");
+      }
+      
+      // Get the order
+      const order = await storage.getOrderById(id);
+      if (!order) {
+        throw new NotFoundError("Order not found", "order");
+      }
+      
+      // Update the status
+      const updatedOrder = await storage.updateOrderStatus(id, status);
+      if (!updatedOrder) {
+        throw new InternalServerError("Failed to update order status");
+      }
+      
+      res.json(updatedOrder);
+    })
+  );
+
+  // AI RECOMMENDATION ROUTES - Available to all users (logged in or not)
+  app.get(
+    "/api/recommendations",
+    validateRequest({
+      query: z.object({
+        limit: z.coerce.number().int().positive().optional().default(10),
+        categoryId: z.coerce.number().positive().optional()
+      }).optional()
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const { limit = 10, categoryId } = req.query;
+      
+      // Check if user is authenticated
+      const user = req.isAuthenticated() ? req.user as any : null;
+      
+      if (user) {
+        // Get personalized recommendations for authenticated users
+        const recommendations = await storage.getRecommendationsForUser(user.id);
+        
+        if (recommendations && recommendations.productIds && recommendations.productIds.length > 0) {
+          // Get product details for recommended products
+          const products = [];
+          for (const productId of recommendations.productIds) {
+            const product = await storage.getProductById(productId);
+            if (product && product.isActive) {
+              products.push(product);
+              
+              // Limit the number of products returned
+              if (products.length >= limit) {
+                break;
+              }
+            }
+          }
+          
+          // If we have recommendations, return them
+          if (products.length > 0) {
+            return res.json({
+              products,
+              reason: recommendations.reason,
+              timestamp: recommendations.createdAt
+            });
+          }
+        }
+      }
+      
+      // For non-authenticated users, users without recommendations,
+      // or if filtering by category
+      // Return popular/featured products as a fallback
+      const products = await storage.getFeaturedProducts(
+        limit as number, 
+        categoryId ? (categoryId as number) : undefined
+      );
+      
+      return res.json({
+        products,
+        reason: categoryId 
+          ? `Popular products in this category`
+          : "Popular products you might like",
+        timestamp: new Date()
+      });
+    })
+  );
 
   // PRICING MANAGEMENT ROUTES - For admin use only
   
   // Get all pricing settings
-  app.get("/api/admin/pricing", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
-    const user = req.user as any;
-    
-    // Check if user is admin
-    if (user.role !== 'admin') {
-      return res.status(403).json({ message: "Access denied" });
-    }
-    
-    const pricingSettings = await storage.getAllPricingSettings();
-    res.json(pricingSettings);
-  }));
+  app.get(
+    "/api/admin/pricing", 
+    isAuthenticated, 
+    asyncHandler(async (req: Request, res: Response) => {
+      const user = req.user as any;
+      
+      // Check if user is admin
+      if (user.role !== 'admin') {
+        throw new ForbiddenError("Only administrators can access pricing settings");
+      }
+      
+      const pricingSettings = await storage.getAllPricingSettings();
+      res.json(pricingSettings);
+    })
+  );
   
   // Get default markup percentage
-  app.get("/api/pricing/default-markup", handleErrors(async (req: Request, res: Response) => {
-    const defaultMarkup = await storage.getDefaultMarkupPercentage();
-    res.json({ markupPercentage: defaultMarkup, isSet: defaultMarkup !== null });
-  }));
+  app.get(
+    "/api/pricing/default-markup", 
+    asyncHandler(async (req: Request, res: Response) => {
+      const defaultMarkup = await storage.getDefaultMarkupPercentage();
+      res.json({ markupPercentage: defaultMarkup, isSet: defaultMarkup !== null });
+    })
+  );
   
   // Get pricing for a specific category
-  app.get("/api/pricing/category/:categoryId", handleErrors(async (req: Request, res: Response) => {
-    const categoryId = parseInt(req.params.categoryId);
-    const pricing = await storage.getPricingByCategoryId(categoryId);
-    
-    if (!pricing) {
-      const defaultMarkup = await storage.getDefaultMarkupPercentage();
-      return res.json({ 
-        categoryId,
-        markupPercentage: defaultMarkup,
-        description: defaultMarkup === null 
-          ? "No pricing rule set for this category or globally" 
-          : "Default pricing (category-specific pricing not set)"
-      });
-    }
-    
-    res.json(pricing);
-  }));
+  app.get(
+    "/api/pricing/category/:categoryId", 
+    validateRequest({
+      params: z.object({
+        categoryId: z.coerce.number().positive("Category ID is required")
+      })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const { categoryId } = req.params;
+      
+      // Validate that the category exists
+      const category = await storage.getCategoryById(categoryId);
+      if (!category) {
+        throw new NotFoundError("Category not found", "category");
+      }
+      
+      const pricing = await storage.getPricingByCategoryId(categoryId);
+      
+      if (!pricing) {
+        const defaultMarkup = await storage.getDefaultMarkupPercentage();
+        return res.json({ 
+          categoryId,
+          markupPercentage: defaultMarkup,
+          description: defaultMarkup === null 
+            ? "No pricing rule set for this category or globally" 
+            : "Default pricing (category-specific pricing not set)"
+        });
+      }
+      
+      res.json(pricing);
+    })
+  );
   
   // Create or update pricing for a category
-  app.post("/api/admin/pricing", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
-    const user = req.user as any;
-    
-    // Check if user is admin
-    if (user.role !== 'admin') {
-      return res.status(403).json({ message: "Access denied" });
-    }
-    
-    const pricingData = insertPricingSchema.parse(req.body);
-    const result = await storage.createOrUpdatePricing(pricingData);
-    res.status(201).json(result);
-  }));
+  app.post(
+    "/api/admin/pricing", 
+    isAuthenticated, 
+    validateRequest({
+      body: z.object({
+        categoryId: z.coerce.number().positive("Category ID is required"),
+        markupPercentage: z.coerce.number().min(0, "Markup percentage must be a non-negative number"),
+        description: z.string().optional()
+      })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const user = req.user as any;
+      
+      // Check if user is admin
+      if (user.role !== 'admin') {
+        throw new ForbiddenError("Only administrators can manage pricing settings");
+      }
+      
+      // Check if the category exists
+      if (req.body.categoryId !== 0) { // 0 is allowed for default/global pricing
+        const category = await storage.getCategoryById(req.body.categoryId);
+        if (!category) {
+          throw new NotFoundError("Category not found", "category");
+        }
+      }
+      
+      const result = await storage.createOrUpdatePricing(req.body);
+      res.status(201).json(result);
+    })
+  );
   
   // Delete pricing setting
-  app.delete("/api/admin/pricing/:id", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
-    const user = req.user as any;
-    
-    // Check if user is admin
-    if (user.role !== 'admin') {
-      return res.status(403).json({ message: "Access denied" });
-    }
-    
-    const id = parseInt(req.params.id);
-    await storage.deletePricing(id);
-    res.json({ success: true });
-  }));
+  app.delete(
+    "/api/admin/pricing/:id", 
+    isAuthenticated, 
+    validateRequest({
+      params: z.object({
+        id: z.coerce.number().positive("Pricing ID is required")
+      })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const user = req.user as any;
+      const { id } = req.params;
+      
+      // Check if user is admin
+      if (user.role !== 'admin') {
+        throw new ForbiddenError("Only administrators can delete pricing settings");
+      }
+      
+      // Check if the pricing setting exists
+      const pricing = await storage.getPricingById(id);
+      if (!pricing) {
+        throw new NotFoundError("Pricing setting not found", "pricing");
+      }
+      
+      await storage.deletePricing(id);
+      res.json({ success: true });
+    })
+  );
 
   // SUPPLIER ROUTES
   app.get("/api/suppliers", handleErrors(async (req: Request, res: Response) => {
