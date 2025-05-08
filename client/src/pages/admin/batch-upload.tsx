@@ -74,7 +74,6 @@ import {
   AlertCircle,
   ArrowUpDown,
   Check, 
-  CheckCircle2,
   Clock, 
   Download, 
   Eye, 
@@ -355,13 +354,11 @@ function CreateBatchUploadForm({
 
   const handleSubmit = async (data: z.infer<typeof createBatchUploadSchema>) => {
     try {
-      const formattedData = {
+      await onSubmit({
         name: data.name,
         description: data.description || '',
-        catalogId: data.catalogId ? parseInt(data.catalogId) : undefined,
-      };
-      
-      await onSubmit(formattedData);
+        catalogId: data.catalogId,
+      });
       onClose();
     } catch (error) {
       // Error handling is done in the mutation
@@ -553,7 +550,7 @@ function UploadCsvForm({
                   <div className="flex flex-col items-center justify-center space-y-2 text-center">
                     {file ? (
                       <>
-                        <CheckCircle2 className="h-8 w-8 text-green-500" />
+                        <Check className="h-8 w-8 text-green-500" />
                         <div className="space-y-1">
                           <p className="text-sm font-medium">{file.name}</p>
                           <p className="text-xs text-muted-foreground">
@@ -591,7 +588,7 @@ function UploadCsvForm({
               </FormControl>
               <FormDescription>
                 <div className="flex items-center space-x-1 text-xs">
-                  <InfoIcon className="h-3 w-3 text-muted-foreground" />
+                  <Info className="h-3 w-3 text-muted-foreground" />
                   <span>
                     Need a template? <a 
                       href="/api/batch-upload/template" 
