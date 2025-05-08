@@ -99,20 +99,31 @@ const ProductListing = () => {
   const limit = 20;
   
   // Fetch categories
-  const { data: categoriesResponse } = useQuery<StandardApiResponse<Category[]>>({
+  const { 
+    data: categoriesResponse, 
+    error: categoriesError 
+  } = useQuery<StandardApiResponse<Category[]>>({
     queryKey: ['/api/categories'],
   });
   const categories = categoriesResponse?.success ? categoriesResponse.data : [];
   
   // Fetch products
-  const { data: productsResponse, isLoading: isLoadingProducts } = useQuery<StandardApiResponse<Product[], { total?: number, totalPages?: number }>>({
+  const { 
+    data: productsResponse, 
+    isLoading: isLoadingProducts,
+    error: productsError
+  } = useQuery<StandardApiResponse<Product[], { total?: number, totalPages?: number }>>({
     queryKey: ['/api/products', { limit, offset: (page - 1) * limit }],
   });
   const products = productsResponse?.success ? productsResponse.data : [];
   const totalPages = productsResponse?.meta?.totalPages || 1;
   
   // Fetch filterable attributes based on selected category
-  const { data: filterableAttributesResponse, isLoading: isLoadingAttributes } = useQuery<StandardApiResponse<(CategoryAttribute & { options: AttributeOption[], attribute: Attribute })[]>>({
+  const { 
+    data: filterableAttributesResponse, 
+    isLoading: isLoadingAttributes,
+    error: attributesError
+  } = useQuery<StandardApiResponse<(CategoryAttribute & { options: AttributeOption[], attribute: Attribute })[]>>({
     queryKey: [selectedCategory ? 
       `/api/categories/${selectedCategory}/filterable-attributes` : 
       '/api/products/filterable-attributes'
@@ -120,6 +131,26 @@ const ProductListing = () => {
     enabled: !!products,
   });
   const filterableAttributes = filterableAttributesResponse?.success ? filterableAttributesResponse.data : [];
+  
+  // Handle API errors
+  useEffect(() => {
+    const errors = [
+      { error: categoriesError, name: 'categories' },
+      { error: productsError, name: 'products' },
+      { error: attributesError, name: 'product attributes' }
+    ].filter(item => item.error);
+    
+    if (errors.length > 0) {
+      errors.forEach(({ error, name }) => {
+        console.error(`Error fetching ${name}:`, error);
+        toast({
+          title: `Failed to load ${name}`,
+          description: error instanceof Error ? error.message : "An unexpected error occurred",
+          variant: "destructive",
+        });
+      });
+    }
+  }, [categoriesError, productsError, attributesError, toast]);
   
   // Update URL with filters
   useEffect(() => {
@@ -309,7 +340,10 @@ const ProductListing = () => {
   };
   
   // Fetch product attribute values for filtering
-  const { data: productAttributeValuesResponse } = useQuery<StandardApiResponse<{
+  const { 
+    data: productAttributeValuesResponse,
+    error: attributeValuesError
+  } = useQuery<StandardApiResponse<{
     productId: number;
     attributeId: number;
     optionId: number | null;
@@ -319,6 +353,18 @@ const ProductListing = () => {
     enabled: !!products && attributeFilters.length > 0,
   });
   const productAttributeValues = productAttributeValuesResponse?.success ? productAttributeValuesResponse.data : [];
+  
+  // Handle attribute values error
+  useEffect(() => {
+    if (attributeValuesError) {
+      console.error('Error fetching product attribute values:', attributeValuesError);
+      toast({
+        title: "Failed to load product attributes",
+        description: attributeValuesError instanceof Error ? attributeValuesError.message : "An unexpected error occurred",
+        variant: "destructive",
+      });
+    }
+  }, [attributeValuesError, toast]);
   
   // Update active filters to include attribute filters
   useEffect(() => {
