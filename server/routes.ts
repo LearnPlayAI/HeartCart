@@ -612,7 +612,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       try {
-        const products = await storage.getFeaturedProducts(limit as number, options);
+        const products = await storage.getFeaturedProducts(Number(limit), options);
         return products;
       } catch (error) {
         logger.error('Error fetching featured products', { error });
