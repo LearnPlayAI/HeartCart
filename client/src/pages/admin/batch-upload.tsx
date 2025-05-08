@@ -6,7 +6,7 @@ import { Helmet } from "react-helmet";
 import { useCatalogs } from "@/hooks/use-catalogs";
 import { useBatchUploads, BatchUpload, BatchUploadError } from "@/hooks/use-batch-uploads";
 import { useAuth } from "@/hooks/use-auth";
-import AdminLayout from "@/components/layouts/admin-layout";
+import AdminLayout from "@/components/admin/layout";
 import { 
   Dialog, 
   DialogContent, 
