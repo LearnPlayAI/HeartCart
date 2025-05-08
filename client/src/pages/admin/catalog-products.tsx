@@ -499,7 +499,7 @@ export default function CatalogProducts() {
   const [selectedProducts, setSelectedProducts] = useState<number[]>([]);
 
   // Query for the catalog details
-  const { data: catalog, isLoading: catalogLoading } = useQuery<Catalog>({
+  const { data: catalogResponse, isLoading: catalogLoading } = useQuery({
     queryKey: [`/api/catalogs/${catalogId}`],
     queryFn: async () => {
       const response = await fetch(`/api/catalogs/${catalogId}`);
@@ -509,13 +509,16 @@ export default function CatalogProducts() {
       return response.json();
     }
   });
+  
+  // Extract catalog data from the standardized response
+  const catalog = catalogResponse?.data;
 
   // Query for products belonging to this catalog
   const { 
-    data: products, 
+    data: productsResponse, 
     isLoading: productsLoading,
     refetch: refetchProducts
-  } = useQuery<Product[]>({
+  } = useQuery({
     queryKey: [`/api/catalogs/${catalogId}/products`, searchQuery, showInactiveProducts],
     queryFn: async () => {
       const response = await fetch(
@@ -527,6 +530,9 @@ export default function CatalogProducts() {
       return response.json();
     }
   });
+  
+  // Extract products data from the standardized response
+  const products = productsResponse?.data || [];
 
   // Delete product mutation
   const { mutate: deleteProduct, isPending: isDeleting } = useMutation({

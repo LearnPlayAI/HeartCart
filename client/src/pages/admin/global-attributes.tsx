@@ -76,17 +76,20 @@ function GlobalAttributesPage() {
 
   // Fetch global attributes
   const {
-    data: attributes,
+    data: attributesResponse,
     isLoading: attributesLoading,
     error: attributesError,
   } = useQuery({
     queryKey: ["/api/attributes"],
     retry: 1,
   });
+  
+  // Extract the attributes data from the standardized response
+  const attributes = attributesResponse?.data || [];
 
   // Fetch attribute options when an attribute is selected
   const {
-    data: options,
+    data: optionsResponse,
     isLoading: optionsLoading,
     error: optionsError,
   } = useQuery({
@@ -94,6 +97,9 @@ function GlobalAttributesPage() {
     enabled: !!selectedAttribute?.id,
     retry: 1,
   });
+  
+  // Extract the options data from the standardized response
+  const options = optionsResponse?.data || [];
 
   // Create attribute mutation
   const createAttributeMutation = useMutation({
