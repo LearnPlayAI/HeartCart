@@ -548,7 +548,7 @@ const ProductListing = () => {
               <SlidersHorizontal className="h-5 w-5 text-gray-500" />
             </div>
             
-            <Accordion type="multiple" defaultValue={['categories', 'price', 'availability', 'rating', 'more']}>
+            <Accordion type="multiple" defaultValue={['categories', 'price', 'availability', 'rating', 'attributes', 'more']}>
               <AccordionItem value="categories">
                 <AccordionTrigger>Categories</AccordionTrigger>
                 <AccordionContent>
@@ -665,6 +665,44 @@ const ProductListing = () => {
                   </RadioGroup>
                 </AccordionContent>
               </AccordionItem>
+              
+              {/* Product Attributes */}
+              {filterableAttributes && filterableAttributes.length > 0 && (
+                <AccordionItem value="attributes">
+                  <AccordionTrigger>Product Attributes</AccordionTrigger>
+                  <AccordionContent>
+                    <div className="space-y-4">
+                      {filterableAttributes.map(attribute => (
+                        <div key={attribute.id} className="space-y-2">
+                          <h3 className="text-sm font-medium">{getAttributeDisplayName(attribute)}</h3>
+                          <div className="space-y-1.5">
+                            {attribute.options.map(option => (
+                              <div key={option.id} className="flex items-center space-x-2">
+                                <Checkbox 
+                                  id={`attr-${attribute.id}-${option.id}`}
+                                  checked={isAttributeOptionSelected(attribute.id, option.value)}
+                                  onCheckedChange={(checked) => handleAttributeFilterChange(
+                                    attribute.id,
+                                    getAttributeDisplayName(attribute),
+                                    option.value,
+                                    checked as boolean
+                                  )}
+                                />
+                                <label 
+                                  htmlFor={`attr-${attribute.id}-${option.id}`} 
+                                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                >
+                                  {option.value}
+                                </label>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              )}
               
               <AccordionItem value="more">
                 <AccordionTrigger>More Filters</AccordionTrigger>
