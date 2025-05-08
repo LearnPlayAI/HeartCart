@@ -256,7 +256,7 @@ export class BatchUploadService {
             
             try {
               // Validate the row data
-              const validationResult = await self.validateRowData(row, batch.catalogId);
+              const validationResult = await self.validateRowData(row, batch.catalogId || undefined);
               
               if (!validationResult.isValid) {
                 // Log validation errors
@@ -286,7 +286,7 @@ export class BatchUploadService {
               const result = await db.transaction(async (tx) => {
                 try {
                   // Extract and prepare data for product creation
-                  const productData = await self.prepareProductData(row, batch.catalogId);
+                  const productData = await self.prepareProductData(row, batch.catalogId || undefined);
                   
                   // Process attributes (handle comma-separated values)
                   const attributeValues = self.extractAttributeValues(row);
@@ -542,7 +542,7 @@ export class BatchUploadService {
    */
   private async prepareProductData(row: CsvRowData, catalogId?: number): Promise<InsertProduct> {
     // Handle category
-    let categoryId: number | null = null;
+    let categoryId: number | undefined = undefined;
     if (row.category_id && !isNaN(Number(row.category_id))) {
       categoryId = Number(row.category_id);
     } else if (row.category_name) {
@@ -555,7 +555,7 @@ export class BatchUploadService {
     }
     
     // Handle catalog
-    let actualCatalogId: number | null = catalogId || null;
+    let actualCatalogId: number | undefined = catalogId;
     if (!actualCatalogId) {
       if (row.catalog_id && !isNaN(Number(row.catalog_id))) {
         actualCatalogId = Number(row.catalog_id);
@@ -576,16 +576,16 @@ export class BatchUploadService {
     const productData: InsertProduct = {
       name: row.product_name,
       slug: this.slugify(row.product_sku),
-      description: row.product_description,
-      categoryId: categoryId || undefined,
-      catalogId: actualCatalogId || undefined,
-      price: Number(row.regular_price),
-      costPrice: Number(row.cost_price),
-      salePrice: row.sale_price ? Number(row.sale_price) : undefined,
-      discount: row.discount_percentage ? Number(row.discount_percentage) : undefined,
+      description: row.product_description || undefined,
+      categoryId, // Already properly handled above
+      catalogId: actualCatalogId,
+      price: Number(row.regular_price) || 0, // Ensure price doesn't become NaN
+      costPrice: Number(row.cost_price) || 0, // Ensure costPrice doesn't become NaN
+      salePrice: row.sale_price ? Number(row.sale_price) || undefined : undefined,
+      discount: row.discount_percentage ? Number(row.discount_percentage) || undefined : undefined,
       isActive: row.status !== 'draft',
       isFeatured: row.featured === 'true',
-      weight: row.weight ? Number(row.weight) : undefined,
+      weight: row.weight ? Number(row.weight) || undefined : undefined,
       dimensions: row.dimensions || undefined,
       tags,
       supplier: row.supplier_name || undefined,
@@ -684,7 +684,7 @@ export class BatchUploadService {
       // Process each attribute value
       for (const value of attrValue.values) {
         // Find or create attribute option
-        let attributeOptionId: number | null = null;
+        let attributeOptionId: number | undefined = undefined;
         
         const [existingOption] = await tx
           .select()
@@ -712,7 +712,7 @@ export class BatchUploadService {
         }
         
         // Find or create product attribute option
-        let productAttributeOptionId: number | null = null;
+        let productAttributeOptionId: number | undefined = undefined;
         
         const [existingProductOption] = await tx
           .select()
@@ -926,13 +926,13 @@ export class BatchUploadService {
         .select()
         .from(batchUploads)
         .where(eq(batchUploads.userId, userId))
-        .orderBy(batchUploads.createdAt);
+        .orderBy(desc(batchUploads.createdAt));
     }
     
     return await db
       .select()
       .from(batchUploads)
-      .orderBy(batchUploads.createdAt);
+      .orderBy(desc(batchUploads.createdAt));
   }
 
   /**
