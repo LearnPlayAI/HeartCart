@@ -487,7 +487,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get(
     "/api/products/:id", 
     validateRequest({ params: idParamSchema }),
-    asyncHandler(async (req: Request, res: Response) => {
+    withStandardResponse(async (req: Request, res: Response) => {
       const id = Number(req.params.id);
       
       const user = req.user as any;
@@ -504,7 +504,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw new NotFoundError(`Product with ID ${id} not found`, 'product');
       }
       
-      res.json(product);
+      return product;
     })
   );
   
@@ -598,7 +598,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     validateRequest({
       query: featuredProductsQuerySchema
     }),
-    asyncHandler(async (req: Request, res: Response) => {
+    withStandardResponse(async (req: Request, res: Response) => {
       const { limit } = req.query;
       
       const user = req.user as any;
@@ -611,7 +611,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       try {
         const products = await storage.getFeaturedProducts(limit as number, options);
-        res.json(products);
+        return products;
       } catch (error) {
         logger.error('Error fetching featured products', { error });
         throw new AppError(
@@ -633,7 +633,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     validateRequest({
       query: flashDealsQuerySchema
     }),
-    asyncHandler(async (req: Request, res: Response) => {
+    withStandardResponse(async (req: Request, res: Response) => {
       const { limit } = req.query;
       
       const user = req.user as any;
@@ -646,7 +646,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       try {
         const products = await storage.getFlashDeals(limit as number, options);
-        res.json(products);
+        return products;
       } catch (error) {
         logger.error('Error fetching flash deals', { error });
         throw new AppError(
@@ -670,7 +670,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     validateRequest({
       query: searchQuerySchema
     }),
-    asyncHandler(async (req: Request, res: Response) => {
+    withStandardResponse(async (req: Request, res: Response) => {
       const { q: query, limit, offset } = req.query;
       
       const user = req.user as any;
@@ -682,7 +682,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       const products = await storage.searchProducts(query as string, limit as number, offset as number, options);
-      res.json(products);
+      return products;
     })
   );
   
@@ -690,7 +690,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     "/api/products", 
     isAuthenticated, 
     validateRequest({ body: createProductSchema }),
-    asyncHandler(async (req: Request, res: Response) => {
+    withStandardResponse(async (req: Request, res: Response) => {
       const user = req.user as any;
       
       // Check if user is admin
@@ -701,7 +701,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create the product with validated data
       const product = await storage.createProduct(req.body);
       
-      res.status(201).json(product);
+      res.status(201);
+      return product;
     })
   );
 
@@ -880,10 +881,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get(
     "/api/products/:productId/images",
     validateRequest({ params: productIdParamSchema }),
-    asyncHandler(async (req: Request, res: Response) => {
+    withStandardResponse(async (req: Request, res: Response) => {
       const productId = Number(req.params.productId);
       const images = await storage.getProductImages(productId);
-      res.json(images);
+      return images;
     })
   );
   
@@ -894,7 +895,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       params: productIdParamSchema,
       body: createProductImageSchema
     }),
-    asyncHandler(async (req: Request, res: Response) => {
+    withStandardResponse(async (req: Request, res: Response) => {
       const user = req.user as any;
       
       if (user.role !== 'admin') {
@@ -903,70 +904,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const productId = Number(req.params.productId);
     
-    // If object key is already provided, just create the image record
-    if (req.body.objectKey && req.body.url) {
-      // Create product image record directly from provided URL and objectKey
-      const imageData = {
-        productId,
-        url: req.body.url,
-        objectKey: req.body.objectKey,
-        isMain: req.body.isMain || false,
-        sortOrder: req.body.sortOrder || 0,
-        hasBgRemoved: req.body.hasBgRemoved || false,
-        bgRemovedUrl: req.body.bgRemovedUrl || null,
-        bgRemovedObjectKey: req.body.bgRemovedObjectKey || null
-      };
-      
-      const image = await storage.createProductImage(imageData);
-      return res.status(201).json(image);
-    }
-    
-    // If the image has a base64 data URL, store it in object storage
-    if (req.body.url && req.body.url.startsWith('data:')) {
-      // Extract the base64 data and content type
-      const matches = req.body.url.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-      if (!matches || matches.length !== 3) {
-        throw new BadRequestError("Invalid base64 image format");
+      // If object key is already provided, just create the image record
+      if (req.body.objectKey && req.body.url) {
+        // Create product image record directly from provided URL and objectKey
+        const imageData = {
+          productId,
+          url: req.body.url,
+          objectKey: req.body.objectKey,
+          isMain: req.body.isMain || false,
+          sortOrder: req.body.sortOrder || 0,
+          hasBgRemoved: req.body.hasBgRemoved || false,
+          bgRemovedUrl: req.body.bgRemovedUrl || null,
+          bgRemovedObjectKey: req.body.bgRemovedObjectKey || null
+        };
+        
+        const image = await storage.createProductImage(imageData);
+        res.status(201);
+        return image;
       }
       
-      const contentType = matches[1];
-      const base64Data = matches[2];
-      const buffer = Buffer.from(base64Data, 'base64');
+      // If the image has a base64 data URL, store it in object storage
+      if (req.body.url && req.body.url.startsWith('data:')) {
+        // Extract the base64 data and content type
+        const matches = req.body.url.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+        if (!matches || matches.length !== 3) {
+          throw new BadRequestError("Invalid base64 image format");
+        }
+        
+        const contentType = matches[1];
+        const base64Data = matches[2];
+        const buffer = Buffer.from(base64Data, 'base64');
+        
+        // Generate a unique filename
+        const timestamp = Date.now();
+        const extension = contentType.split('/')[1] || 'jpg';
+        const filename = `${timestamp}_${productId}.${extension}`;
+        const objectKey = `products/${productId}/${filename}`;
+        
+        // Upload to object storage
+        await objectStore.uploadFromBuffer(objectKey, buffer, { contentType });
+        
+        // Generate public URL
+        const publicUrl = objectStore.getPublicUrl(objectKey);
+        
+        // Prepare the image data
+        const imageData = {
+          productId,
+          url: publicUrl,
+          objectKey: objectKey,
+          isMain: req.body.isMain || false,
+          sortOrder: req.body.sortOrder || 0,
+          hasBgRemoved: false,
+          bgRemovedUrl: null,
+          bgRemovedObjectKey: null
+        };
+        
+        // Create the product image record
+        const image = await storage.createProductImage(imageData);
+        res.status(201);
+        return image;
+      }
       
-      // Generate a unique filename
-      const timestamp = Date.now();
-      const extension = contentType.split('/')[1] || 'jpg';
-      const filename = `${timestamp}_${productId}.${extension}`;
-      const objectKey = `products/${productId}/${filename}`;
-      
-      // Upload to object storage
-      await objectStore.uploadFromBuffer(objectKey, buffer, { contentType });
-      
-      // Generate public URL
-      const publicUrl = objectStore.getPublicUrl(objectKey);
-      
-      // Prepare the image data
-      const imageData = {
-        productId,
-        url: publicUrl,
-        objectKey: objectKey,
-        isMain: req.body.isMain || false,
-        sortOrder: req.body.sortOrder || 0,
-        hasBgRemoved: false,
-        bgRemovedUrl: null,
-        bgRemovedObjectKey: null
-      };
-      
-      // Create the product image record
-      const image = await storage.createProductImage(imageData);
-      return res.status(201).json(image);
-    }
-    
-    // Handle case where we didn't get a base64 image URL or object key
-    throw new BadRequestError(
-      "Invalid image data. Please provide either a base64 data URL or an object key and URL."
-    );
-  }));
+      // Handle case where we didn't get a base64 image URL or object key
+      throw new BadRequestError(
+        "Invalid image data. Please provide either a base64 data URL or an object key and URL."
+      );
+    }));
   
   app.put(
     "/api/products/images/:imageId", 
@@ -975,7 +978,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       params: idParamSchema,
       body: updateProductImageSchema
     }),
-    asyncHandler(async (req: Request, res: Response) => {
+    withStandardResponse(async (req: Request, res: Response) => {
       const user = req.user as any;
       
       if (user.role !== 'admin') {
@@ -989,7 +992,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw new NotFoundError("Image not found", "productImage");
       }
       
-      res.json(updatedImage);
+      return updatedImage;
     })
   );
   
@@ -999,7 +1002,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     validateRequest({
       params: idParamSchema
     }),
-    asyncHandler(async (req: Request, res: Response) => {
+    withStandardResponse(async (req: Request, res: Response) => {
       const user = req.user as any;
       
       if (user.role !== 'admin') {
@@ -1013,7 +1016,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw new NotFoundError("Image not found", "productImage");
       }
       
-      res.json({ success: true });
+      return { success: true };
     })
   );
   
@@ -1030,7 +1033,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
       })
     }),
-    asyncHandler(async (req: Request, res: Response) => {
+    withStandardResponse(async (req: Request, res: Response) => {
       const user = req.user as any;
       
       if (user.role !== 'admin') {
@@ -1046,7 +1049,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw new NotFoundError("Failed to set main image. Image or product not found.", "productImage");
       }
       
-      res.json({ success: true });
+      return { success: true };
     })
   );
   
@@ -1281,7 +1284,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         productDescription: z.string().optional().default('')
       })
     }),
-    asyncHandler(async (req: Request, res: Response) => {
+    withStandardResponse(async (req: Request, res: Response) => {
       const user = req.user as any;
       
       if (user.role !== 'admin') {
@@ -1296,7 +1299,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         productDescription
       );
       
-      res.json({ success: true, tags });
+      return { tags };
     })
   );
   
@@ -1310,7 +1313,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         productName: z.string().min(1, "Product name is required")
       })
     }),
-    asyncHandler(async (req: Request, res: Response) => {
+    withStandardResponse(async (req: Request, res: Response) => {
       const user = req.user as any;
       
       if (user.role !== 'admin') {
@@ -1320,7 +1323,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { imageUrl, productName } = req.body;
       
       const analysis = await analyzeProductImage(imageUrl, productName);
-      res.json({ success: true, ...analysis });
+      return analysis;
     })
   );
 
@@ -1336,7 +1339,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         categoryId: z.coerce.number().positive().optional()
       })
     }),
-    asyncHandler(async (req: Request, res: Response) => {
+    withStandardResponse(async (req: Request, res: Response) => {
       const user = req.user as any;
       
       if (user.role !== 'admin') {
@@ -1354,7 +1357,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const suggestion = await suggestPrice(costPrice, productName, categoryName, categoryId);
-      res.json({ success: true, ...suggestion });
+      return suggestion;
     })
   );
   
@@ -1364,7 +1367,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get(
     "/api/admin/ai/models", 
     isAuthenticated, 
-    asyncHandler(async (req: Request, res: Response) => {
+    withStandardResponse(async (req: Request, res: Response) => {
       const user = req.user as any;
       
       // Check if user is admin
@@ -1378,11 +1381,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get current model
       const currentModel = await getCurrentAiModelSetting();
       
-      res.json({
+      return {
         available: models,
         current: currentModel.modelName,
         isDefault: currentModel.isDefault
-      });
+      };
     })
   );
   
@@ -1395,7 +1398,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         modelName: z.string().min(1, "Model name is required")
       })
     }),
-    asyncHandler(async (req: Request, res: Response) => {
+    withStandardResponse(async (req: Request, res: Response) => {
       const user = req.user as any;
       
       // Check if user is admin
@@ -1414,15 +1417,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const success = await updateAiModel(modelName);
       
       if (success) {
-        res.json({ 
-          success: true, 
+        return { 
           message: `Successfully updated AI model to: ${modelName}`
-        });
+        };
       } else {
-        res.status(200).json({ 
-          success: false, 
+        // Still return a 200 but indicate that initialization failed in the response
+        // The standard response wrapper will set success: true, but we include additional info
+        return { 
+          initialized: false,
           message: `Model ${modelName} was saved but could not be initialized. Will try again on next server restart.`
-        });
+        };
       }
     })
   );
@@ -1431,7 +1435,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get(
     "/api/admin/ai/settings", 
     isAuthenticated, 
-    asyncHandler(async (req: Request, res: Response) => {
+    withStandardResponse(async (req: Request, res: Response) => {
       const user = req.user as any;
       
       // Check if user is admin
@@ -1440,21 +1444,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const settings = await storage.getAllAiSettings();
-      res.json(settings);
+      return settings;
     })
   );
 
   // CART ROUTES
   app.get(
     "/api/cart",
-    asyncHandler(async (req: Request, res: Response) => {
+    withStandardResponse(async (req: Request, res: Response) => {
       if (!req.isAuthenticated()) {
         // For non-authenticated users, return empty cart
-        return res.json([]);
+        return [];
       }
       const user = req.user as any;
       const cartItems = await storage.getCartItemsWithProducts(user.id);
-      res.json(cartItems);
+      return cartItems;
     })
   );
 
@@ -1474,7 +1478,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })).optional().default([])
       })
     }),
-    asyncHandler(async (req: Request, res: Response) => {
+    withStandardResponse(async (req: Request, res: Response) => {
       const user = req.user as any;
       
       // Check if product exists
@@ -1495,7 +1499,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       const cartItem = await storage.addToCart(cartItemData);
-      res.status(201).json(cartItem);
+      // Set status code to 201 Created
+      res.status(201);
+      return cartItem;
     })
   );
 
@@ -1510,7 +1516,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         quantity: z.coerce.number().int().min(0, "Quantity must be a non-negative integer")
       })
     }),
-    asyncHandler(async (req: Request, res: Response) => {
+    withStandardResponse(async (req: Request, res: Response) => {
       const { id } = req.params;
       const { quantity } = req.body;
       
@@ -1529,12 +1535,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // If quantity is 0, remove the item
       if (quantity === 0) {
         await storage.removeFromCart(id);
-        return res.json({ success: true, removed: true });
+        return { removed: true };
       }
       
       // Update the quantity
       const updatedItem = await storage.updateCartItemQuantity(id, quantity);
-      res.json({ success: true, item: updatedItem });
+      return { item: updatedItem };
     })
   );
 
@@ -1546,7 +1552,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         id: z.coerce.number().positive("Cart item ID is required")
       })
     }),
-    asyncHandler(async (req: Request, res: Response) => {
+    withStandardResponse(async (req: Request, res: Response) => {
       const { id } = req.params;
       
       // Check if cart item exists and belongs to the user
@@ -1558,17 +1564,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       await storage.removeFromCart(id);
-      res.json({ success: true });
+      return { removed: true };
     })
   );
 
   app.delete(
     "/api/cart", 
     isAuthenticated, 
-    asyncHandler(async (req: Request, res: Response) => {
+    withStandardResponse(async (req: Request, res: Response) => {
       const user = req.user as any;
       await storage.clearCart(user.id);
-      res.json({ success: true });
+      return { cleared: true };
     })
   );
 
@@ -1603,7 +1609,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ).min(1, "At least one item is required")
       })
     }),
-    asyncHandler(async (req: Request, res: Response) => {
+    withStandardResponse(async (req: Request, res: Response) => {
       const user = req.user as any;
       const { order, items } = req.body;
       
@@ -1637,7 +1643,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Clear the user's cart after successful order creation
       await storage.clearCart(user.id);
       
-      res.status(201).json(newOrder);
+      // Set status code to 201 Created
+      res.status(201);
+      return newOrder;
     })
   );
 
@@ -1651,12 +1659,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         offset: z.coerce.number().int().min(0).optional().default(0)
       }).optional()
     }),
-    asyncHandler(async (req: Request, res: Response) => {
+    withStandardResponse(async (req: Request, res: Response) => {
       const user = req.user as any;
       const { status, limit, offset } = req.query;
       
       const orders = await storage.getOrdersByUser(user.id, status as string | undefined, limit as number, offset as number);
-      res.json(orders);
+      return orders;
     })
   );
 
@@ -1672,7 +1680,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         offset: z.coerce.number().int().min(0).optional().default(0)
       }).optional()
     }),
-    asyncHandler(async (req: Request, res: Response) => {
+    withStandardResponse(async (req: Request, res: Response) => {
       const user = req.user as any;
       
       // Check if user is admin
@@ -1690,7 +1698,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         offset as number
       );
       
-      res.json(orders);
+      return orders;
     })
   );
 
@@ -1702,7 +1710,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         id: z.coerce.number().positive("Order ID is required")
       })
     }),
-    asyncHandler(async (req: Request, res: Response) => {
+    withStandardResponse(async (req: Request, res: Response) => {
       const { id } = req.params;
       const order = await storage.getOrderById(id);
       
@@ -1716,7 +1724,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw new ForbiddenError("You are not authorized to view this order");
       }
       
-      res.json(order);
+      return order;
     })
   );
   
@@ -1734,7 +1742,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
       })
     }),
-    asyncHandler(async (req: Request, res: Response) => {
+    withStandardResponse(async (req: Request, res: Response) => {
       const { id } = req.params;
       const { status } = req.body;
       
@@ -1756,7 +1764,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw new InternalServerError("Failed to update order status");
       }
       
-      res.json(updatedOrder);
+      return updatedOrder;
     })
   );
 
@@ -1769,7 +1777,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         categoryId: z.coerce.number().positive().optional()
       }).optional()
     }),
-    asyncHandler(async (req: Request, res: Response) => {
+    withStandardResponse(async (req: Request, res: Response) => {
       const { limit = 10, categoryId } = req.query;
       
       // Check if user is authenticated
@@ -1796,11 +1804,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // If we have recommendations, return them
           if (products.length > 0) {
-            return res.json({
+            return {
               products,
               reason: recommendations.reason,
               timestamp: recommendations.createdAt
-            });
+            };
           }
         }
       }
@@ -1813,13 +1821,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         categoryId ? (categoryId as number) : undefined
       );
       
-      return res.json({
+      return {
         products,
         reason: categoryId 
           ? `Popular products in this category`
           : "Popular products you might like",
         timestamp: new Date()
-      });
+      };
     })
   );
 
@@ -1829,7 +1837,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get(
     "/api/admin/pricing", 
     isAuthenticated, 
-    asyncHandler(async (req: Request, res: Response) => {
+    withStandardResponse(async (req: Request, res: Response) => {
       const user = req.user as any;
       
       // Check if user is admin
@@ -1838,16 +1846,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const pricingSettings = await storage.getAllPricingSettings();
-      res.json(pricingSettings);
+      return pricingSettings;
     })
   );
   
   // Get default markup percentage
   app.get(
     "/api/pricing/default-markup", 
-    asyncHandler(async (req: Request, res: Response) => {
+    withStandardResponse(async (req: Request, res: Response) => {
       const defaultMarkup = await storage.getDefaultMarkupPercentage();
-      res.json({ markupPercentage: defaultMarkup, isSet: defaultMarkup !== null });
+      return { markupPercentage: defaultMarkup, isSet: defaultMarkup !== null };
     })
   );
   
@@ -1859,7 +1867,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         categoryId: z.coerce.number().positive("Category ID is required")
       })
     }),
-    asyncHandler(async (req: Request, res: Response) => {
+    withStandardResponse(async (req: Request, res: Response) => {
       const { categoryId } = req.params;
       
       // Validate that the category exists
@@ -1872,16 +1880,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!pricing) {
         const defaultMarkup = await storage.getDefaultMarkupPercentage();
-        return res.json({ 
+        return { 
           categoryId,
           markupPercentage: defaultMarkup,
           description: defaultMarkup === null 
             ? "No pricing rule set for this category or globally" 
             : "Default pricing (category-specific pricing not set)"
-        });
+        };
       }
       
-      res.json(pricing);
+      return pricing;
     })
   );
   
@@ -1896,7 +1904,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         description: z.string().optional()
       })
     }),
-    asyncHandler(async (req: Request, res: Response) => {
+    withStandardResponse(async (req: Request, res: Response) => {
       const user = req.user as any;
       
       // Check if user is admin
@@ -1913,8 +1921,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const result = await storage.createOrUpdatePricing(req.body);
-      res.status(201).json(result);
-    })
+      return result;
+    }, 201)
   );
   
   // Delete pricing setting
@@ -1926,7 +1934,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         id: z.coerce.number().positive("Pricing ID is required")
       })
     }),
-    asyncHandler(async (req: Request, res: Response) => {
+    withStandardResponse(async (req: Request, res: Response) => {
       const user = req.user as any;
       const { id } = req.params;
       
@@ -1942,12 +1950,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       await storage.deletePricing(id);
-      res.json({ success: true });
+      return { success: true };
     })
   );
 
   // SUPPLIER ROUTES
-  app.get("/api/suppliers", handleErrors(async (req: Request, res: Response) => {
+  app.get("/api/suppliers", withStandardResponse(async (req: Request, res: Response) => {
     // For admin users, show all suppliers regardless of active status
     // For regular users, only show active suppliers
     const user = req.user as any;
@@ -1955,39 +1963,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const activeOnly = isAdmin ? false : req.query.activeOnly !== 'false';
     
     const suppliers = await storage.getAllSuppliers(activeOnly);
-    res.json(suppliers);
+    return suppliers;
   }));
 
-  app.get("/api/suppliers/:id", handleErrors(async (req: Request, res: Response) => {
+  app.get("/api/suppliers/:id", withStandardResponse(async (req: Request, res: Response) => {
     const id = parseInt(req.params.id);
     const supplier = await storage.getSupplierById(id);
     
     if (!supplier) {
-      res.status(404).json({ message: "Supplier not found" });
-      return;
+      throw new NotFoundError("Supplier not found", "supplier");
     }
     
-    res.json(supplier);
+    return supplier;
   }));
 
-  app.post("/api/suppliers", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+  app.post("/api/suppliers", isAuthenticated, withStandardResponse(async (req: Request, res: Response) => {
     const user = req.user as any;
     
     if (user.role !== 'admin') {
-      return res.status(403).json({ message: "Only administrators can manage suppliers" });
+      throw new ForbiddenError("Only administrators can manage suppliers");
     }
     
     const supplierData = insertSupplierSchema.parse(req.body);
     const supplier = await storage.createSupplier(supplierData);
     
-    res.status(201).json(supplier);
-  }));
+    return supplier;
+  }, 201));
 
-  app.put("/api/suppliers/:id", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+  app.put("/api/suppliers/:id", isAuthenticated, withStandardResponse(async (req: Request, res: Response) => {
     const user = req.user as any;
     
     if (user.role !== 'admin') {
-      return res.status(403).json({ message: "Only administrators can manage suppliers" });
+      throw new ForbiddenError("Only administrators can manage suppliers");
     }
     
     const id = parseInt(req.params.id);
@@ -1995,8 +2002,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const supplier = await storage.updateSupplier(id, supplierData);
     
     if (!supplier) {
-      res.status(404).json({ message: "Supplier not found" });
-      return;
+      throw new NotFoundError("Supplier not found", "supplier");
     }
     
     // If 'isActive' property was changed to inactive, cascade to catalogs and products
@@ -2018,28 +2024,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Supplier ${id} marked inactive: updated ${supplierCatalogs.length} catalogs and ${totalProductsUpdated} products to inactive`);
     }
     
-    res.json(supplier);
+    return supplier;
   }));
 
-  app.delete("/api/suppliers/:id", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+  app.delete("/api/suppliers/:id", isAuthenticated, withStandardResponse(async (req: Request, res: Response) => {
     const user = req.user as any;
     
     if (user.role !== 'admin') {
-      return res.status(403).json({ message: "Only administrators can manage suppliers" });
+      throw new ForbiddenError("Only administrators can manage suppliers");
     }
     
     const id = parseInt(req.params.id);
     const success = await storage.deleteSupplier(id);
     
-    if (success) {
-      res.json({ success: true });
-    } else {
-      res.status(404).json({ message: "Supplier not found" });
+    if (!success) {
+      throw new NotFoundError("Supplier not found", "supplier");
     }
+    
+    return { message: "Supplier deleted successfully" };
   }));
 
   // CATALOG ROUTES
-  app.get("/api/catalogs", handleErrors(async (req: Request, res: Response) => {
+  app.get("/api/catalogs", withStandardResponse(async (req: Request, res: Response) => {
     // For admin users, show all catalogs regardless of active status
     // For regular users, only show active catalogs
     const user = req.user as any;
@@ -2047,22 +2053,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const activeOnly = isAdmin ? false : req.query.activeOnly !== 'false';
     
     const catalogs = await storage.getAllCatalogs(activeOnly);
-    res.json(catalogs);
+    return catalogs;
   }));
 
-  app.get("/api/catalogs/:id", handleErrors(async (req: Request, res: Response) => {
+  app.get("/api/catalogs/:id", withStandardResponse(async (req: Request, res: Response) => {
     const id = parseInt(req.params.id);
     const catalog = await storage.getCatalogById(id);
     
     if (!catalog) {
-      res.status(404).json({ message: "Catalog not found" });
-      return;
+      throw new NotFoundError("Catalog not found", "catalog");
     }
     
-    res.json(catalog);
+    return catalog;
   }));
 
-  app.get("/api/suppliers/:supplierId/catalogs", handleErrors(async (req: Request, res: Response) => {
+  app.get("/api/suppliers/:supplierId/catalogs", withStandardResponse(async (req: Request, res: Response) => {
     const supplierId = parseInt(req.params.supplierId);
     // For admin users, show all catalogs regardless of active status
     // For regular users, only show active catalogs
@@ -2071,27 +2076,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const activeOnly = isAdmin ? false : req.query.activeOnly !== 'false';
     
     const catalogs = await storage.getCatalogsBySupplierId(supplierId, activeOnly);
-    res.json(catalogs);
+    return catalogs;
   }));
 
-  app.post("/api/catalogs", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+  app.post("/api/catalogs", isAuthenticated, withStandardResponse(async (req: Request, res: Response) => {
     const user = req.user as any;
     
     if (user.role !== 'admin') {
-      return res.status(403).json({ message: "Only administrators can manage catalogs" });
+      throw new ForbiddenError("Only administrators can manage catalogs");
     }
     
     const catalogData = insertCatalogSchema.parse(req.body);
     const catalog = await storage.createCatalog(catalogData);
     
-    res.status(201).json(catalog);
-  }));
+    return catalog;
+  }, 201));
 
-  app.put("/api/catalogs/:id", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+  app.put("/api/catalogs/:id", isAuthenticated, withStandardResponse(async (req: Request, res: Response) => {
     const user = req.user as any;
     
     if (user.role !== 'admin') {
-      return res.status(403).json({ message: "Only administrators can manage catalogs" });
+      throw new ForbiddenError("Only administrators can manage catalogs");
     }
     
     const id = parseInt(req.params.id);
@@ -2099,8 +2104,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const catalog = await storage.updateCatalog(id, catalogData);
     
     if (!catalog) {
-      res.status(404).json({ message: "Catalog not found" });
-      return;
+      throw new NotFoundError("Catalog not found");
     }
     
     // If 'isActive' property was changed, update all products in this catalog
@@ -2109,31 +2113,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Updated isActive status for ${updateResult} products in catalog ${id} to ${catalogData.isActive}`);
     }
     
-    res.json(catalog);
+    return catalog;
   }));
 
-  app.delete("/api/catalogs/:id", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+  app.delete("/api/catalogs/:id", isAuthenticated, withStandardResponse(async (req: Request, res: Response) => {
     const user = req.user as any;
     
     if (user.role !== 'admin') {
-      return res.status(403).json({ message: "Only administrators can manage catalogs" });
+      throw new ForbiddenError("Only administrators can manage catalogs");
     }
     
     const id = parseInt(req.params.id);
     const success = await storage.deleteCatalog(id);
     
-    if (success) {
-      // When a catalog is deleted (marked inactive), also mark all its products as inactive
-      const productsUpdated = await storage.bulkUpdateCatalogProducts(id, { isActive: false });
-      console.log(`Catalog ${id} deleted: marked ${productsUpdated} products as inactive`);
-      
-      res.json({ success: true });
-    } else {
-      res.status(404).json({ message: "Catalog not found" });
+    if (!success) {
+      throw new NotFoundError("Catalog not found");
     }
+    
+    // When a catalog is deleted (marked inactive), also mark all its products as inactive
+    const productsUpdated = await storage.bulkUpdateCatalogProducts(id, { isActive: false });
+    console.log(`Catalog ${id} deleted: marked ${productsUpdated} products as inactive`);
+    
+    return { success: true, message: "Catalog successfully deleted" };
   }));
 
-  app.get("/api/catalogs/:catalogId/products", handleErrors(async (req: Request, res: Response) => {
+  app.get("/api/catalogs/:catalogId/products", withStandardResponse(async (req: Request, res: Response) => {
     const catalogId = parseInt(req.params.catalogId);
     // For admin users, show all products regardless of active status
     // For regular users, only show active products
@@ -2145,73 +2149,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
     
     const products = await storage.getProductsByCatalogId(catalogId, activeOnly, limit, offset);
-    res.json(products);
+    return products;
   }));
 
-  app.put("/api/catalogs/:catalogId/products/bulk", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+  app.put("/api/catalogs/:catalogId/products/bulk", isAuthenticated, withStandardResponse(async (req: Request, res: Response) => {
     const user = req.user as any;
     
     if (user.role !== 'admin') {
-      return res.status(403).json({ message: "Only administrators can manage catalog products" });
+      throw new ForbiddenError("Only administrators can manage catalog products");
     }
     
     const catalogId = parseInt(req.params.catalogId);
     const updateData = insertProductSchema.partial().parse(req.body);
     
     const count = await storage.bulkUpdateCatalogProducts(catalogId, updateData);
-    res.json({ 
-      success: true, 
+    return { 
       message: `Updated ${count} products in catalog`,
       count 
-    });
+    };
   }));
 
   // Quick edit product endpoint
-  app.patch("/api/products/:id/quick-edit", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+  app.patch("/api/products/:id/quick-edit", isAuthenticated, withStandardResponse(async (req: Request, res: Response) => {
     const user = req.user as any;
     
     if (user.role !== 'admin') {
-      return res.status(403).json({ message: "Only administrators can update products" });
+      throw new ForbiddenError("Only administrators can update products");
     }
     
     const productId = parseInt(req.params.id);
     
     if (isNaN(productId)) {
-      return res.status(400).json({ message: "Invalid product ID" });
+      throw new BadRequestError("Invalid product ID");
     }
     
     const { name, price, listPrice, sku, stockQuantity, isActive } = req.body;
     
     // Validate required fields
     if (!name || name.trim().length < 3) {
-      return res.status(400).json({ message: "Product name must be at least 3 characters" });
+      throw new ValidationError("Product name must be at least 3 characters");
     }
     
     if (typeof price !== 'number' || price <= 0) {
-      return res.status(400).json({ message: "Price must be a positive number" });
+      throw new ValidationError("Price must be a positive number");
     }
     
     if (listPrice !== undefined && (typeof listPrice !== 'number' || listPrice < 0)) {
-      return res.status(400).json({ message: "List price must be a non-negative number" });
+      throw new ValidationError("List price must be a non-negative number");
     }
     
     if (!sku || sku.trim() === '') {
-      return res.status(400).json({ message: "SKU is required" });
+      throw new ValidationError("SKU is required");
     }
     
     if (typeof stockQuantity !== 'number' || stockQuantity < 0 || !Number.isInteger(stockQuantity)) {
-      return res.status(400).json({ message: "Stock quantity must be a non-negative integer" });
+      throw new ValidationError("Stock quantity must be a non-negative integer");
     }
     
     if (typeof isActive !== 'boolean') {
-      return res.status(400).json({ message: "Active status must be a boolean" });
+      throw new ValidationError("Active status must be a boolean");
     }
     
     // Get the existing product to check if it exists
     const existingProduct = await storage.getProductById(productId);
     
     if (!existingProduct) {
-      return res.status(404).json({ message: "Product not found" });
+      throw new NotFoundError("Product not found");
     }
     
     // Update the product
@@ -2224,36 +2227,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       isActive
     });
     
-    res.json({ 
-      success: true, 
+    return { 
       message: "Product updated successfully",
       product: updatedProduct
-    });
+    };
   }));
 
   // PATCH endpoint to reorder products in a catalog
-  app.patch("/api/catalogs/:id/products/reorder", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+  app.patch("/api/catalogs/:id/products/reorder", isAuthenticated, withStandardResponse(async (req: Request, res: Response) => {
     const user = req.user as any;
     
     if (user.role !== 'admin') {
-      return res.status(403).json({ message: "Only administrators can reorder catalog products" });
+      throw new ForbiddenError("Only administrators can reorder catalog products");
     }
     
     const catalogId = parseInt(req.params.id);
     const { productIds } = req.body;
     
     if (!Array.isArray(productIds)) {
-      return res.status(400).json({ message: "productIds must be an array of product IDs" });
+      throw new ValidationError("productIds must be an array of product IDs");
     }
     
     // Update the display order for each product
     const result = await storage.updateProductDisplayOrder(catalogId, productIds);
     
-    res.json({ 
-      success: true, 
+    return { 
       message: `Updated display order for ${result.count} products`,
       count: result.count
-    });
+    };
   }));
   
   // Object storage file access endpoint - using reliable buffer-based approach
