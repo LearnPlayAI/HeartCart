@@ -193,6 +193,12 @@ export const catalogs = pgTable("catalogs", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// =============================================================================
+// DEPRECATED ATTRIBUTE TABLES - Commented out as part of attribute system redesign
+// These tables have been dropped from the database but code is preserved for reference
+// =============================================================================
+
+/*
 // Global Attributes - for defining attributes that can be used across any product
 export const globalAttributes = pgTable("global_attributes", {
   id: serial("id").primaryKey(),
@@ -301,6 +307,7 @@ export const productGlobalAttributeOptions = pgTable("product_global_attribute_o
     productAttributeOptionUnique: unique().on(table.productAttributeId, table.optionId),
   };
 });
+*/
 
 // Create insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
@@ -385,6 +392,11 @@ export const insertCatalogSchema = createInsertSchema(catalogs).omit({
   endDate: z.string().or(z.date()).nullable().optional(),
 });
 
+// =============================================================================
+// DEPRECATED ATTRIBUTE INSERT SCHEMAS - Commented out as part of attribute system redesign
+// =============================================================================
+
+/*
 // Global Attributes insert schema
 export const insertGlobalAttributeSchema = createInsertSchema(globalAttributes).omit({
   id: true,
@@ -438,6 +450,7 @@ export const insertProductGlobalAttributeOptionSchema = createInsertSchema(produ
   id: true,
   createdAt: true,
 });
+*/
 
 // Export types
 export type User = typeof users.$inferSelect;
@@ -476,6 +489,11 @@ export type InsertSupplier = z.infer<typeof insertSupplierSchema>;
 export type Catalog = typeof catalogs.$inferSelect;
 export type InsertCatalog = z.infer<typeof insertCatalogSchema>;
 
+// =============================================================================
+// DEPRECATED ATTRIBUTE TYPES - Commented out as part of attribute system redesign
+// =============================================================================
+
+/*
 export type GlobalAttribute = typeof globalAttributes.$inferSelect;
 export type InsertGlobalAttribute = z.infer<typeof insertGlobalAttributeSchema>;
 
@@ -499,6 +517,7 @@ export type InsertProductGlobalAttribute = z.infer<typeof insertProductGlobalAtt
 
 export type ProductGlobalAttributeOption = typeof productGlobalAttributeOptions.$inferSelect;
 export type InsertProductGlobalAttributeOption = z.infer<typeof insertProductGlobalAttributeOptionSchema>;
+*/
 
 // Define all table relations after all tables and types are defined
 export const categoriesRelations = relations(categories, ({ one, many }) => ({
@@ -544,6 +563,11 @@ export const suppliersRelations = relations(suppliers, ({ many }) => ({
   catalogs: many(catalogs)
 }));
 
+// =============================================================================
+// DEPRECATED ATTRIBUTE RELATIONS - Commented out as part of attribute system redesign
+// =============================================================================
+
+/*
 export const globalAttributesRelations = relations(globalAttributes, ({ many }) => ({
   options: many(globalAttributeOptions)
 }));
@@ -569,3 +593,4 @@ export const productAttributeValuesRelations = relations(productAttributeValues,
     references: [globalAttributes.id]
   })
 }));
+*/

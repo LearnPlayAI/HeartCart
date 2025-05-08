@@ -1915,12 +1915,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // PRODUCT GLOBAL ATTRIBUTES ADMIN ROUTES - Removed as part of attribute system redesign
 
-  // Public routes for accessing product global attributes (non-admin)
-  app.get("/api/products/:productId/global-attributes", handleErrors(async (req: Request, res: Response) => {
-    const { productId } = req.params;
-    const attributes = await storage.getGlobalAttributesWithOptionsForProduct(parseInt(productId));
-    res.json(attributes);
-  }));
+  // Public routes for accessing product global attributes - Removed as part of attribute system redesign
 
   const httpServer = createServer(app);
   return httpServer;
