@@ -79,8 +79,21 @@ const CartDrawer = () => {
                   />
                   <div className="ml-3 flex-1">
                     <h4 className="font-medium text-sm text-gray-800 mb-1">{item.product.name}</h4>
-                    <div className="text-[#FF69B4] font-bold text-sm">
-                      {formatCurrency((item.product.salePrice || item.product.price) + (item.priceAdjustment || 0))}
+                    <div className="text-[#FF69B4] font-bold text-sm flex items-center gap-2">
+                      {item.itemPrice ? (
+                        <>
+                          {formatCurrency(item.itemPrice)} 
+                          
+                          {/* Show original price if there are discounts */}
+                          {item.discounts && item.discounts.totalAdjustment > 0 && (
+                            <span className="text-gray-500 line-through text-xs">
+                              {formatCurrency((item.product.salePrice || item.product.price) + (item.priceAdjustment || 0))}
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        formatCurrency((item.product.salePrice || item.product.price) + (item.priceAdjustment || 0))
+                      )}
                     </div>
                     
                     {/* Display selected attributes */}
@@ -92,6 +105,18 @@ const CartDrawer = () => {
                             <span>{selection.displayValue || selection.value}</span>
                           </div>
                         ))}
+                      </div>
+                    )}
+                    
+                    {/* Display discount information */}
+                    {item.discounts && item.discounts.totalAdjustment > 0 && (
+                      <div className="mt-1 text-xs text-pink-600">
+                        <div className="flex items-center gap-1">
+                          <TagIcon className="h-3 w-3" />
+                          <span className="font-medium">
+                            Savings: {formatCurrency(item.discounts.totalAdjustment)}
+                          </span>
+                        </div>
                       </div>
                     )}
                     

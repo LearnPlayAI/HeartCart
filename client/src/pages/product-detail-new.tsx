@@ -322,13 +322,25 @@ const ProductDetailView = ({
       });
     }
     
+    // Apply price adjustments and discounts
+    const basePrice = product.salePrice || product.price;
+    const attributePriceAdjustment = currentPrice !== null ? currentPrice - basePrice : 0;
+    
+    // Create the cart item with discount information
     const cartItem = {
       productId: product.id,
       product,
       quantity,
       combinationHash: combinationHash || null,
       selectedAttributes: Object.keys(formattedAttributes).length > 0 ? formattedAttributes : null,
-      priceAdjustment: currentPrice !== null ? currentPrice - (product.salePrice || product.price) : 0
+      priceAdjustment: attributePriceAdjustment,
+      // Include discount information
+      discounts: priceAdjustments ? {
+        adjustments: priceAdjustments.adjustments,
+        totalAdjustment: priceAdjustments.totalAdjustment
+      } : null,
+      // Store the final price for the item
+      itemPrice: currentPrice !== null ? currentPrice : basePrice
     };
     
     addItem(cartItem);
@@ -619,9 +631,39 @@ const ProductDetailView = ({
                 
                 {currentPrice !== null && currentPrice !== (product.salePrice || product.price) && (
                   <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-md">
-                    <span className="text-green-700 font-medium">
-                      Selected configuration price: {formatCurrency(currentPrice)}
-                    </span>
+                    <div className="flex justify-between items-center">
+                      <span className="text-green-700 font-medium">
+                        Selected configuration price:
+                      </span>
+                      <span className="text-green-800 font-bold">
+                        {formatCurrency(currentPrice)}
+                      </span>
+                    </div>
+
+                    {/* Display attribute discount details if available */}
+                    {priceAdjustments && priceAdjustments.adjustments.length > 0 && (
+                      <div className="mt-2 pt-2 border-t border-green-200">
+                        <h4 className="text-xs font-semibold text-green-800 mb-1">Applied Discounts:</h4>
+                        <ul className="space-y-1">
+                          {priceAdjustments.adjustments.map((adjustment, idx) => (
+                            <li key={idx} className="text-xs flex justify-between text-green-700">
+                              <span>{adjustment.ruleName}</span>
+                              <span className="font-medium">
+                                {adjustment.discountType === 'percentage' 
+                                  ? `${adjustment.discountValue}% off` 
+                                  : `-${formatCurrency(adjustment.appliedValue)}`}
+                              </span>
+                            </li>
+                          ))}
+                          {priceAdjustments.totalAdjustment > 0 && (
+                            <li className="text-xs font-semibold flex justify-between text-green-800 pt-1 border-t border-green-200 mt-1">
+                              <span>Total Savings:</span>
+                              <span>{formatCurrency(priceAdjustments.totalAdjustment)}</span>
+                            </li>
+                          )}
+                        </ul>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
