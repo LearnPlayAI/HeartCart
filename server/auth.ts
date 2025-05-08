@@ -212,22 +212,23 @@ export function setupAuth(app: Express): void {
   }));
 
   // Get current user endpoint
-  app.get("/api/user", (req: Request, res: Response) => {
+  app.get("/api/user", withStandardResponse(async (req: Request, res: Response) => {
     if (!req.isAuthenticated()) {
       // Return null instead of error for non-authenticated users
       // This allows the client to handle both authenticated and non-authenticated states 
       // without throwing errors
-      return res.json(null);
+      return null;
     }
     // Return user data (excluding password)
     const { password, ...userData } = req.user as Express.User;
-    res.json(userData);
-  });
+    return userData;
+  }));
 
   // Middleware to protect routes - requires authentication
   app.use("/api/protected/*", (req: Request, res: Response, next: NextFunction) => {
     if (!req.isAuthenticated()) {
-      return res.status(401).json({ message: "Authentication required" });
+      sendError(res, "Authentication required", 401);
+      return;
     }
     next();
   });
@@ -235,16 +236,18 @@ export function setupAuth(app: Express): void {
   // Middleware to protect admin routes - requires admin role
   app.use("/api/admin/*", (req: Request, res: Response, next: NextFunction) => {
     if (!req.isAuthenticated()) {
-      return res.status(401).json({ message: "Authentication required" });
+      sendError(res, "Authentication required", 401);
+      return;
     }
     if (req.user?.role !== 'admin') {
-      return res.status(403).json({ message: "Admin access required" });
+      sendError(res, "Admin access required", 403);
+      return;
     }
     next();
   });
 
   // No longer using CSRF protection
-  app.get("/api/csrf-token", (req: Request, res: Response) => {
-    res.json({ message: "CSRF protection disabled" });
-  });
+  app.get("/api/csrf-token", withStandardResponse(async (req: Request, res: Response) => {
+    return { message: "CSRF protection disabled" };
+  }));
 }
