@@ -50,6 +50,8 @@ import {
   AppError,
   ErrorCode
 } from "./error-handler";
+import { sendSuccess, sendError } from './api-response';
+import { responseWrapperMiddleware, withStandardResponse, createPaginatedResponse } from './response-wrapper';
 import * as z from "zod"; // For schema validation
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -74,6 +76,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Set up authentication with our new auth module
   setupAuth(app);
+  
+  // Apply response wrapper middleware to standardize API responses
+  app.use(responseWrapperMiddleware);
   
   // Mount file routes for serving files from Object Storage
   app.use('/api/files', fileRoutes);
@@ -106,7 +111,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   };
 
   // CATEGORY ROUTES
-  app.get("/api/categories", handleErrors(async (req: Request, res: Response) => {
+  app.get("/api/categories", withStandardResponse(async (req: Request, res: Response) => {
     const { parentId, level, orderBy } = req.query;
     const user = req.user as any;
     const isAdmin = user && user.role === 'admin';
@@ -133,10 +138,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     const categories = await storage.getAllCategories(options);
-    res.json(categories);
+    return categories;
   }));
 
-  app.get("/api/categories/:slug", asyncHandler(async (req: Request, res: Response) => {
+  app.get("/api/categories/:slug", withStandardResponse(async (req: Request, res: Response) => {
     const { slug } = req.params;
     const user = req.user as any;
     const isAdmin = user && user.role === 'admin';
@@ -148,19 +153,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       throw new NotFoundError(`Category with slug '${slug}' not found`, 'category');
     }
     
-    res.json(category);
+    return category;
   }));
   
-  app.get("/api/categories/main/with-children", handleErrors(async (req: Request, res: Response) => {
+  app.get("/api/categories/main/with-children", withStandardResponse(async (req: Request, res: Response) => {
     const user = req.user as any;
     const isAdmin = user && user.role === 'admin';
     
     const options = { includeInactive: isAdmin };
     const mainCategoriesWithChildren = await storage.getMainCategoriesWithChildren(options);
-    res.json(mainCategoriesWithChildren);
+    return mainCategoriesWithChildren;
   }));
   
-  app.get("/api/categories/:id/with-children", asyncHandler(async (req: Request, res: Response) => {
+  app.get("/api/categories/:id/with-children", withStandardResponse(async (req: Request, res: Response) => {
     const categoryId = parseInt(req.params.id);
     const user = req.user as any;
     const isAdmin = user && user.role === 'admin';
@@ -177,7 +182,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       throw new NotFoundError(`Category with ID ${categoryId} not found`, 'category');
     }
     
-    res.json(categoryWithChildren);
+    return categoryWithChildren;
   }));
 
   // Use validation middleware to validate requests
@@ -348,7 +353,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // PRODUCT ROUTES
   app.get("/api/products", 
     validateRequest({ query: productsQuerySchema }),
-    asyncHandler(async (req: Request, res: Response) => {
+    withStandardResponse(async (req: Request, res: Response) => {
       const { limit, offset, category: categoryId, search } = req.query;
       
       const user = req.user as any;
@@ -366,7 +371,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         search as string | undefined, 
         options
       );
-      res.json(products);
+      return products;
     }));
   
   // Create bulk update status schema
@@ -409,7 +414,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get(
     "/api/products/slug/:slug", 
     validateRequest({ params: productSlugParamSchema }),
-    asyncHandler(async (req: Request, res: Response) => {
+    withStandardResponse(async (req: Request, res: Response) => {
       const { slug } = req.params;
       
       const user = req.user as any;
@@ -426,7 +431,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw new NotFoundError(`Product with slug '${slug}' not found`, 'product');
       }
       
-      res.json(product);
+      return product;
     })
   );
 
