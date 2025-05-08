@@ -5,7 +5,7 @@ import { useDropzone } from "react-dropzone";
 import { cn } from "@/lib/utils";
 import * as z from "zod";
 import { Helmet } from "react-helmet";
-import { useCatalogs } from "@/hooks/use-catalogs";
+import { useCatalogs, Catalog } from "@/hooks/use-catalogs";
 import { useBatchUploads, BatchUpload, BatchUploadError } from "@/hooks/use-batch-uploads";
 import { useAuth } from "@/hooks/use-auth";
 import AdminLayout from "@/components/admin/layout";
@@ -424,7 +424,7 @@ function CreateBatchUploadForm({
                 </FormControl>
                 <SelectContent>
                   <SelectItem value="">No catalog (use default)</SelectItem>
-                  {catalogs?.map((catalog) => (
+                  {catalogs?.map((catalog: Catalog) => (
                     <SelectItem key={catalog.id} value={catalog.id.toString()}>
                       {catalog.name}
                     </SelectItem>

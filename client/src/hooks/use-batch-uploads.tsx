@@ -47,11 +47,7 @@ export function useBatchUploads() {
     refetch: refetchBatchUploads,
   } = useQuery({
     queryKey: ["/api/batch-upload"],
-    queryFn: async () => {
-      const response = await apiRequest("GET", "/api/batch-upload");
-      const data = await response.json();
-      return data.data;
-    },
+    queryFn: getQueryFn({ on401: "throw" }),
   });
 
   const {
