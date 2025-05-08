@@ -16,6 +16,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { CategorySidebarDrawer } from '@/components/ui/category-sidebar-drawer';
 import ProductSearch from '@/components/ui/product-search';
+import { StandardApiResponse } from "@/types/api";
 
 type Category = {
   id: number;
@@ -43,9 +44,11 @@ const Header = () => {
     });
   };
   
-  const { data: categories } = useQuery<Category[]>({
+  const { data: categoriesResponse } = useQuery<StandardApiResponse<Category[]>>({
     queryKey: ['/api/categories'],
   });
+  
+  const categories = categoriesResponse?.success ? categoriesResponse.data : [];
   
   return (
     <header className="sticky top-0 z-50 bg-white shadow-md">

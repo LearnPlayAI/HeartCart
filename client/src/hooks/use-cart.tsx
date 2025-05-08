@@ -4,6 +4,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Product } from '@shared/schema';
 import { CartItemWithDiscounts, CartSummary } from '@/types/cart.types';
+import { StandardApiResponse } from '@/types/api';
 
 // CartContextType defines the shape of the cart context
 type CartContextType = {
