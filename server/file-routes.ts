@@ -2,6 +2,8 @@ import express, { Request, Response, NextFunction } from 'express';
 import path from 'path';
 import { isAuthenticated, isAdmin } from './auth-middleware';
 import { objectStore, STORAGE_FOLDERS } from './object-store';
+import { sendSuccess, sendError } from './api-response';
+import { withStandardResponse } from './response-wrapper';
 
 const router = express.Router();
 
@@ -17,7 +19,7 @@ router.get('/:path(*)', async (req: Request, res: Response) => {
     const exists = await objectStore.exists(filePath);
     if (!exists) {
       console.error(`File not found: ${filePath}`);
-      return res.status(404).json({ error: 'File not found' });
+      return sendError(res, 'File not found', 404);
     }
     
     // Get file data
@@ -34,7 +36,7 @@ router.get('/:path(*)', async (req: Request, res: Response) => {
     res.send(fileData);
   } catch (error) {
     console.error('Error serving file:', error);
-    res.status(500).json({ error: 'Error serving file' });
+    sendError(res, 'Error serving file', 500);
   }
 });
 
@@ -50,7 +52,7 @@ router.get('/object-storage/:folder/:subfolder/:filename', async (req: Request, 
     res.redirect(`/api/files/${filePath}`);
   } catch (error) {
     console.error('Error in legacy file redirect:', error);
-    res.status(500).json({ error: 'Error serving file' });
+    sendError(res, 'Error serving file', 500);
   }
 });
 
@@ -66,7 +68,7 @@ router.get('/temp/:productId/:filename', async (req: Request, res: Response) => 
     const exists = await objectStore.exists(filePath);
     if (!exists) {
       console.error(`Temp file not found: ${filePath}`);
-      return res.status(404).json({ error: 'File not found' });
+      return sendError(res, 'File not found', 404);
     }
     
     // Get file data
@@ -80,7 +82,7 @@ router.get('/temp/:productId/:filename', async (req: Request, res: Response) => 
     res.send(fileData);
   } catch (error) {
     console.error('Error serving temp file:', error);
-    res.status(500).json({ error: 'Error serving file' });
+    sendError(res, 'Error serving file', 500);
   }
 });
 
