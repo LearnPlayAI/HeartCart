@@ -192,35 +192,35 @@ This ensures consistent error handling, pagination support, and predictable resp
   - [x] Implement efficient Object Store path generation by catalog and product
 
 ### Phase 6: Integration and Testing
-- [x] Integrate with existing product management systems
+- [ ] Integrate with existing product management systems
   - [x] Connect with product CRUD operations for multi-value attributes
   - [x] Integrate with existing attribute management
-  - [x] Add hooks into catalog management system
+  - [ ] Add hooks into catalog management system
   - [x] Implement consistent transaction handling
   - [ ] Create admin audit trail for mass operations
 
-- [x] Implement catalog creation/selection logic
+- [ ] Implement catalog creation/selection logic
   - [x] Build catalog selection interface
-  - [x] Add new catalog creation during import
+  - [ ] Add new catalog creation during import
   - [x] Implement catalog assignment validation
   - [ ] Create catalog capacity checks
   - [ ] Add catalog permission validation
 
-- [x] Add bulk processing with progress tracking
+- [ ] Add bulk processing with progress tracking
   - [x] Implement background job processing for multi-value attribute parsing
   - [x] Create real-time progress tracking
   - [ ] Build cancellation capability for long processes
   - [ ] Add resumable processing for large batches
-  - [x] Develop detailed process logging
+  - [ ] Develop detailed process logging
 
 - [ ] Create comprehensive test suite with multi-category sample data
-  - [x] Build automated validation tests for comma-separated attribute values
-  - [x] Create sample datasets with mixed product types and multiple attribute values
+  - [ ] Build automated validation tests for comma-separated attribute values
+  - [ ] Create sample datasets with mixed product types and multiple attribute values
   - [ ] Implement integration tests across category boundaries
   - [ ] Add stress tests for large multi-category datasets
   - [ ] Create edge case test scenarios for attribute combinations
 
-- [x] Add support for duplicate detection
+- [ ] Add support for duplicate detection
   - [x] Implement SKU uniqueness validation
   - [ ] Create duplicate detection across fields and attribute combinations
   - [ ] Add conflict resolution options
@@ -228,35 +228,35 @@ This ensures consistent error handling, pagination support, and predictable resp
   - [ ] Design merge strategies for duplicates
 
 ### Phase 7: UI/UX Refinement
-- [x] Create step-by-step wizard interface
+- [ ] Create step-by-step wizard interface
   - [x] Design multi-step upload workflow
   - [x] Implement intuitive navigation between steps
   - [ ] Add contextual help at each step
   - [x] Create responsive design for all device sizes
   - [ ] Implement accessibility features
 
-- [x] Implement detailed error reporting and guidance
+- [ ] Implement detailed error reporting and guidance
   - [x] Create user-friendly error messages for attribute value formats
   - [x] Design visual error indicators in the interface
-  - [x] Add context-specific help for common errors with multi-value attributes
+  - [ ] Add context-specific help for common errors with multi-value attributes
   - [ ] Implement inline correction suggestions
   - [ ] Create exportable error reports
 
-- [x] Add downloadable template generation
+- [ ] Add downloadable template generation
   - [x] Build dynamic template generator by catalog
-  - [x] Create universal templates supporting multiple product categories
-  - [x] Add sample data options demonstrating multi-value attributes
+  - [ ] Create universal templates supporting multiple product categories
+  - [ ] Add sample data options demonstrating multi-value attributes
   - [ ] Implement template versioning system
   - [ ] Create comprehensive tutorial resources for catalog-centric uploads
 
-- [x] Develop success/failure summaries with actions
+- [ ] Develop success/failure summaries with actions
   - [x] Design clear success/failure indicators
-  - [x] Create detailed result summaries highlighting attribute value issues
+  - [ ] Create detailed result summaries highlighting attribute value issues
   - [ ] Implement actionable error resolution options
   - [x] Add notification system for completed processes
   - [ ] Create exportable result reports
 
-- [x] Add batch history and management features
+- [ ] Add batch history and management features
   - [x] Create batch history dashboard
   - [x] Implement batch status tracking
   - [ ] Add batch retry functionality
