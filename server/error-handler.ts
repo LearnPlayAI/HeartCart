@@ -8,9 +8,23 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
-import { PostgresError } from '@neondatabase/serverless';
 import { createSASTDate } from '@shared/date-utils';
 import { logger } from './logger';
+
+// Define a PostgresError interface to handle database errors
+interface PostgresError extends Error {
+  code: string;
+  detail?: string;
+  hint?: string;
+  position?: string;
+  internalQuery?: string;
+  table?: string;
+  column?: string;
+  dataType?: string;
+  constraint?: string;
+  schema?: string;
+  severity?: string;
+}
 
 /**
  * Standard API error response structure
@@ -205,12 +219,14 @@ export function createErrorResponse(
     statusCode = 400;
     message = 'Validation error: Invalid request data';
     details = includeDetails ? formatZodError(error) : undefined;
-  } else if (error instanceof PostgresError) {
-    const dbError = new DatabaseError('Database error', error);
+  } else if (error instanceof Error && 'code' in error && typeof (error as any).code === 'string') {
+    // Handle PostgresError using duck typing since it's an interface
+    const pgError = error as PostgresError;
+    const dbError = new DatabaseError('Database error', pgError);
     code = dbError.code;
     statusCode = dbError.statusCode;
     message = 'A database error occurred';
-    details = includeDetails ? { pgError: error.code, pgMessage: error.message } : undefined;
+    details = includeDetails ? { pgError: pgError.code, pgMessage: pgError.message } : undefined;
   } else {
     // Unhandled error - log full details but return generic message
     logger.error('Unhandled error:', error);
