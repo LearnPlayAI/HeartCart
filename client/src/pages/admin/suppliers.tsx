@@ -68,7 +68,7 @@ export default function AdminSuppliers() {
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
   
   // Query suppliers from API - set queryKey to include a parameter forcing inactive suppliers to be shown
-  const { data: suppliers, isLoading, refetch } = useQuery<Supplier[]>({
+  const { data: suppliersResponse, isLoading, refetch } = useQuery<{ success: boolean, data: Supplier[], error?: { message: string } }>({
     queryKey: ["/api/suppliers", searchQuery],
     queryFn: async () => {
       // Add explicit query parameter to force showing inactive suppliers for admins
@@ -76,9 +76,18 @@ export default function AdminSuppliers() {
       if (!response.ok) {
         throw new Error("Failed to fetch suppliers");
       }
-      return response.json();
+      
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error?.message || "Failed to fetch suppliers");
+      }
+      
+      return result;
     }
   });
+  
+  // Extract data from standardized response
+  const suppliers = suppliersResponse?.data;
 
   // CRUD operations
   const [, navigate] = useLocation();
@@ -103,7 +112,13 @@ export default function AdminSuppliers() {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || "Failed to delete supplier");
       }
-      return await response.json();
+      
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error?.message || "Failed to delete supplier");
+      }
+      
+      return result;
     },
     onSuccess: () => {
       toast({
@@ -229,19 +244,24 @@ export default function AdminSuppliers() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem 
-                            onClick={() => handleEditSupplier(supplier)}
-                          >
-                            <Edit className="mr-2 h-4 w-4" />
-                            Edit
+                          <DropdownMenuItem asChild>
+                            <div 
+                              className="flex items-center cursor-pointer"
+                              onClick={() => handleEditSupplier(supplier)}
+                            >
+                              <Edit className="mr-2 h-4 w-4" />
+                              Edit
+                            </div>
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem 
-                            className="text-red-600"
-                            onClick={() => handleDeleteClick(supplier)}
-                          >
-                            <Trash className="mr-2 h-4 w-4" />
-                            Delete
+                          <DropdownMenuItem asChild>
+                            <div 
+                              className="flex items-center cursor-pointer text-red-600"
+                              onClick={() => handleDeleteClick(supplier)}
+                            >
+                              <Trash className="mr-2 h-4 w-4" />
+                              Delete
+                            </div>
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
