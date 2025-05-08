@@ -1,0 +1,6 @@
+
+fixing line 567:
+const existingProduct = await storage.getProductById(productId);
+
+to:
+const existingProduct = await storage.getProductById(productId, { includeInactive: true });

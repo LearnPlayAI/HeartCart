@@ -564,7 +564,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const productId = Number(req.params.id);
       
       // Get the existing product to check if it exists
-      const existingProduct = await storage.getProductById(productId);
+      const existingProduct = await storage.getProductById(productId, { includeInactive: true });
       
       if (!existingProduct) {
         throw new NotFoundError(`Product with ID ${productId} not found`, 'product');
