@@ -882,171 +882,205 @@ export async function registerRoutes(app: Express): Promise<Server> {
     })
   );
   
-  app.post("/api/products/:productId/images", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
-    const user = req.user as any;
-    
-    if (user.role !== 'admin') {
-      return res.status(403).json({ message: "Only administrators can manage product images" });
-    }
-    
-    const productId = parseInt(req.params.productId);
+  app.post(
+    "/api/products/:productId/images", 
+    isAuthenticated,
+    validateRequest({
+      params: productIdParamSchema,
+      body: createProductImageSchema
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const user = req.user as any;
+      
+      if (user.role !== 'admin') {
+        throw new ForbiddenError("Only administrators can manage product images");
+      }
+      
+      const productId = Number(req.params.productId);
     
     // If object key is already provided, just create the image record
     if (req.body.objectKey && req.body.url) {
-      try {
-        // Create product image record directly from provided URL and objectKey
-        const imageData = {
-          productId,
-          url: req.body.url,
-          objectKey: req.body.objectKey,
-          isMain: req.body.isMain || false,
-          alt: req.body.alt || '',
-        };
-        
-        const image = await storage.createProductImage(imageData);
-        return res.status(201).json(image);
-      } catch (error: any) {
-        console.error('Error creating image record:', error);
-        return res.status(500).json({ 
-          message: "Failed to create image record",
-          error: error.message || 'Unknown error'
-        });
-      }
+      // Create product image record directly from provided URL and objectKey
+      const imageData = {
+        productId,
+        url: req.body.url,
+        objectKey: req.body.objectKey,
+        isMain: req.body.isMain || false,
+        sortOrder: req.body.sortOrder || 0,
+        hasBgRemoved: req.body.hasBgRemoved || false,
+        bgRemovedUrl: req.body.bgRemovedUrl || null,
+        bgRemovedObjectKey: req.body.bgRemovedObjectKey || null
+      };
+      
+      const image = await storage.createProductImage(imageData);
+      return res.status(201).json(image);
     }
     
     // If the image has a base64 data URL, store it in object storage
     if (req.body.url && req.body.url.startsWith('data:')) {
-      try {
-        // Extract the base64 data and content type
-        const matches = req.body.url.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-        if (!matches || matches.length !== 3) {
-          return res.status(400).json({ message: "Invalid base64 image format" });
-        }
-        
-        const contentType = matches[1];
-        const base64Data = matches[2];
-        const buffer = Buffer.from(base64Data, 'base64');
-        
-        // Generate a unique filename
-        const timestamp = Date.now();
-        const extension = contentType.split('/')[1] || 'jpg';
-        const filename = `${timestamp}_${productId}.${extension}`;
-        const objectKey = `products/${productId}/${filename}`;
-        
-        // Upload to object storage
-        await objectStore.uploadFromBuffer(objectKey, buffer, { contentType });
-        
-        // Generate public URL
-        const publicUrl = objectStore.getPublicUrl(objectKey);
-        
-        // Prepare the image data
-        const imageData = {
-          productId,
-          url: publicUrl,
-          objectKey: objectKey,
-          isMain: req.body.isMain || false,
-          alt: req.body.alt || '',
-          bgRemovedUrl: publicUrl,
-          bgRemovedObjectKey: objectKey
-        };
-        
-        // Create the product image record
-        const image = await storage.createProductImage(imageData);
-        return res.status(201).json(image);
-      } catch (error: any) {
-        console.error('Error uploading image to object storage:', error);
-        return res.status(500).json({ 
-          message: "Failed to upload image",
-          error: error.message || 'Unknown error'
-        });
+      // Extract the base64 data and content type
+      const matches = req.body.url.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+      if (!matches || matches.length !== 3) {
+        throw new BadRequestError("Invalid base64 image format");
       }
+      
+      const contentType = matches[1];
+      const base64Data = matches[2];
+      const buffer = Buffer.from(base64Data, 'base64');
+      
+      // Generate a unique filename
+      const timestamp = Date.now();
+      const extension = contentType.split('/')[1] || 'jpg';
+      const filename = `${timestamp}_${productId}.${extension}`;
+      const objectKey = `products/${productId}/${filename}`;
+      
+      // Upload to object storage
+      await objectStore.uploadFromBuffer(objectKey, buffer, { contentType });
+      
+      // Generate public URL
+      const publicUrl = objectStore.getPublicUrl(objectKey);
+      
+      // Prepare the image data
+      const imageData = {
+        productId,
+        url: publicUrl,
+        objectKey: objectKey,
+        isMain: req.body.isMain || false,
+        sortOrder: req.body.sortOrder || 0,
+        hasBgRemoved: false,
+        bgRemovedUrl: null,
+        bgRemovedObjectKey: null
+      };
+      
+      // Create the product image record
+      const image = await storage.createProductImage(imageData);
+      return res.status(201).json(image);
     }
     
-    // Handle case where we didn't get a base64 image URL
-    return res.status(400).json({ 
-      message: "Invalid image data", 
-      details: "Please provide an image as a base64 data URL"
-    });
+    // Handle case where we didn't get a base64 image URL or object key
+    throw new BadRequestError(
+      "Invalid image data. Please provide either a base64 data URL or an object key and URL."
+    );
   }));
   
-  app.put("/api/products/images/:imageId", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
-    const user = req.user as any;
-    
-    if (user.role !== 'admin') {
-      return res.status(403).json({ message: "Only administrators can manage product images" });
-    }
-    
-    const imageId = parseInt(req.params.imageId);
-    const updatedImage = await storage.updateProductImage(imageId, req.body);
-    
-    if (!updatedImage) {
-      return res.status(404).json({ message: "Image not found" });
-    }
-    
-    res.json(updatedImage);
-  }));
+  app.put(
+    "/api/products/images/:imageId", 
+    isAuthenticated, 
+    validateRequest({
+      params: idParamSchema,
+      body: updateProductImageSchema
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const user = req.user as any;
+      
+      if (user.role !== 'admin') {
+        throw new ForbiddenError("Only administrators can manage product images");
+      }
+      
+      const imageId = Number(req.params.imageId);
+      const updatedImage = await storage.updateProductImage(imageId, req.body);
+      
+      if (!updatedImage) {
+        throw new NotFoundError("Image not found", "productImage");
+      }
+      
+      res.json(updatedImage);
+    })
+  );
   
-  app.delete("/api/products/images/:imageId", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
-    const user = req.user as any;
-    
-    if (user.role !== 'admin') {
-      return res.status(403).json({ message: "Only administrators can manage product images" });
-    }
-    
-    const imageId = parseInt(req.params.imageId);
-    const result = await storage.deleteProductImage(imageId);
-    
-    res.json({ success: result });
-  }));
+  app.delete(
+    "/api/products/images/:imageId", 
+    isAuthenticated, 
+    validateRequest({
+      params: idParamSchema
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const user = req.user as any;
+      
+      if (user.role !== 'admin') {
+        throw new ForbiddenError("Only administrators can manage product images");
+      }
+      
+      const imageId = Number(req.params.imageId);
+      const result = await storage.deleteProductImage(imageId);
+      
+      if (!result) {
+        throw new NotFoundError("Image not found", "productImage");
+      }
+      
+      res.json({ success: true });
+    })
+  );
   
-  app.put("/api/products/:productId/images/:imageId/main", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
-    const user = req.user as any;
-    
-    if (user.role !== 'admin') {
-      return res.status(403).json({ message: "Only administrators can manage product images" });
-    }
-    
-    const productId = parseInt(req.params.productId);
-    const imageId = parseInt(req.params.imageId);
-    
-    const result = await storage.setMainProductImage(productId, imageId);
-    
-    if (!result) {
-      return res.status(404).json({ message: "Failed to set main image" });
-    }
-    
-    res.json({ success: true });
-  }));
+  app.put(
+    "/api/products/:productId/images/:imageId/main", 
+    isAuthenticated, 
+    validateRequest({
+      params: z.object({
+        productId: z.string().refine(val => !isNaN(Number(val)), {
+          message: "Product ID must be a valid number"
+        }),
+        imageId: z.string().refine(val => !isNaN(Number(val)), {
+          message: "Image ID must be a valid number"
+        })
+      })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const user = req.user as any;
+      
+      if (user.role !== 'admin') {
+        throw new ForbiddenError("Only administrators can manage product images");
+      }
+      
+      const productId = Number(req.params.productId);
+      const imageId = Number(req.params.imageId);
+      
+      const result = await storage.setMainProductImage(productId, imageId);
+      
+      if (!result) {
+        throw new NotFoundError("Failed to set main image. Image or product not found.", "productImage");
+      }
+      
+      res.json({ success: true });
+    })
+  );
   
   // IMAGE PROCESSING ROUTES
   
   // Optimize an image for web display
-  app.post("/api/images/optimize", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
-    const user = req.user as any;
-    
-    if (user.role !== 'admin') {
-      return res.status(403).json({ message: "Only administrators can use image optimization" });
-    }
-    
-    const { objectKey, quality, format } = req.body;
-    
-    if (!objectKey || typeof objectKey !== 'string') {
-      return res.status(400).json({ message: "Object key is required" });
-    }
-    
-    try {
+  app.post(
+    "/api/images/optimize", 
+    isAuthenticated, 
+    validateRequest({
+      body: z.object({
+        objectKey: z.string().min(1, "Object key is required"),
+        quality: z.string().or(z.number()).optional().transform(val => 
+          val ? Number(val) : undefined
+        ),
+        format: z.enum(['jpeg', 'png', 'webp', 'avif']).optional()
+      })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const user = req.user as any;
+      
+      if (user.role !== 'admin') {
+        throw new ForbiddenError("Only administrators can use image optimization");
+      }
+      
+      const { objectKey, quality, format } = req.body;
+      
       // Check if the image exists
       const exists = await objectStore.exists(objectKey);
       if (!exists) {
-        return res.status(404).json({ message: "Image not found" });
+        throw new NotFoundError("Image not found", "image");
       }
       
       // Optimize the image
       const result = await imageService.optimizeImage(
         objectKey,
         { 
-          quality: quality ? parseInt(quality) : undefined,
-          format: format as 'jpeg' | 'png' | 'webp' | 'avif' | undefined
+          quality,
+          format
         }
       );
       
@@ -1061,14 +1095,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         optimizedKey: result.objectKey,
         sizeReduction: `${sizeReduction}%`
       });
-    } catch (error: any) {
-      console.error('Image optimization error:', error);
-      res.status(500).json({ 
-        message: "Failed to optimize image", 
-        error: error.message || 'Unknown error'
-      });
-    }
-  }));
+    })
+  );
   
   // Generate thumbnails for an image
   app.post("/api/images/thumbnails", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
