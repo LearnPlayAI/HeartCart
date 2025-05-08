@@ -254,190 +254,261 @@ export class DatabaseStorage implements IStorage {
   }
   // User operations
   async getUser(id: number): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user;
+    try {
+      const [user] = await db.select().from(users).where(eq(users.id, id));
+      return user;
+    } catch (error) {
+      console.error(`Error fetching user ${id}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
-    return user;
+    try {
+      const [user] = await db.select().from(users).where(eq(users.username, username));
+      return user;
+    } catch (error) {
+      console.error(`Error fetching user by username "${username}":`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.email, email));
-    return user;
+    try {
+      const [user] = await db.select().from(users).where(eq(users.email, email));
+      return user;
+    } catch (error) {
+      console.error(`Error fetching user by email "${email}":`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
   }
 
   async createUser(user: InsertUser): Promise<User> {
-    const [newUser] = await db.insert(users).values(user).returning();
-    return newUser;
+    try {
+      const [newUser] = await db.insert(users).values(user).returning();
+      return newUser;
+    } catch (error) {
+      console.error(`Error creating user with username "${user.username}":`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
   }
 
   async updateUser(id: number, userData: Partial<InsertUser>): Promise<User | undefined> {
-    const [updatedUser] = await db
-      .update(users)
-      .set(userData)
-      .where(eq(users.id, id))
-      .returning();
-    return updatedUser;
+    try {
+      const [updatedUser] = await db
+        .update(users)
+        .set(userData)
+        .where(eq(users.id, id))
+        .returning();
+      return updatedUser;
+    } catch (error) {
+      console.error(`Error updating user ${id}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
   }
 
   // Category operations
   async getAllCategories(options?: { includeInactive?: boolean, parentId?: number | null, level?: number, orderBy?: 'name' | 'displayOrder' }): Promise<Category[]> {
-    let query = db.select().from(categories);
-    
-    // Apply filters
-    const conditions: SQL<unknown>[] = [];
-    
-    if (!options?.includeInactive) {
-      conditions.push(eq(categories.isActive, true));
-    }
-    
-    if (options?.parentId !== undefined) {
-      if (options.parentId === null) {
-        conditions.push(isNull(categories.parentId));
-      } else {
-        conditions.push(eq(categories.parentId, options.parentId));
+    try {
+      let query = db.select().from(categories);
+      
+      // Apply filters
+      const conditions: SQL<unknown>[] = [];
+      
+      if (!options?.includeInactive) {
+        conditions.push(eq(categories.isActive, true));
       }
+      
+      if (options?.parentId !== undefined) {
+        if (options.parentId === null) {
+          conditions.push(isNull(categories.parentId));
+        } else {
+          conditions.push(eq(categories.parentId, options.parentId));
+        }
+      }
+      
+      if (options?.level !== undefined) {
+        conditions.push(eq(categories.level, options.level));
+      }
+      
+      if (conditions.length > 0) {
+        query = query.where(and(...conditions));
+      }
+      
+      // Apply ordering
+      if (options?.orderBy === 'name') {
+        query = query.orderBy(asc(categories.name));
+      } else {
+        // Default to displayOrder if not specified or if displayOrder is specified
+        query = query.orderBy(asc(categories.displayOrder), asc(categories.name));
+      }
+      
+      return await query;
+    } catch (error) {
+      console.error(`Error fetching all categories:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
-    
-    if (options?.level !== undefined) {
-      conditions.push(eq(categories.level, options.level));
-    }
-    
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions));
-    }
-    
-    // Apply ordering
-    if (options?.orderBy === 'name') {
-      query = query.orderBy(asc(categories.name));
-    } else {
-      // Default to displayOrder if not specified or if displayOrder is specified
-      query = query.orderBy(asc(categories.displayOrder), asc(categories.name));
-    }
-    
-    return await query;
   }
 
   async getCategoryById(id: number, options?: { includeInactive?: boolean }): Promise<Category | undefined> {
-    // Build conditions
-    const conditions: SQL<unknown>[] = [eq(categories.id, id)];
-    
-    // Only filter by isActive if we're not including inactive categories
-    if (!options?.includeInactive) {
-      conditions.push(eq(categories.isActive, true));
-    }
-    
-    const [category] = await db
-      .select()
-      .from(categories)
-      .where(and(...conditions));
+    try {
+      // Build conditions
+      const conditions: SQL<unknown>[] = [eq(categories.id, id)];
       
-    return category;
+      // Only filter by isActive if we're not including inactive categories
+      if (!options?.includeInactive) {
+        conditions.push(eq(categories.isActive, true));
+      }
+      
+      const [category] = await db
+        .select()
+        .from(categories)
+        .where(and(...conditions));
+        
+      return category;
+    } catch (error) {
+      console.error(`Error fetching category ${id}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
   }
 
   async getCategoryBySlug(slug: string, options?: { includeInactive?: boolean }): Promise<Category | undefined> {
-    // Build conditions
-    const conditions: SQL<unknown>[] = [eq(categories.slug, slug)];
-    
-    // Only filter by isActive if we're not including inactive categories
-    if (!options?.includeInactive) {
-      conditions.push(eq(categories.isActive, true));
-    }
-    
-    const [category] = await db
-      .select()
-      .from(categories)
-      .where(and(...conditions));
+    try {
+      // Build conditions
+      const conditions: SQL<unknown>[] = [eq(categories.slug, slug)];
       
-    return category;
+      // Only filter by isActive if we're not including inactive categories
+      if (!options?.includeInactive) {
+        conditions.push(eq(categories.isActive, true));
+      }
+      
+      const [category] = await db
+        .select()
+        .from(categories)
+        .where(and(...conditions));
+        
+      return category;
+    } catch (error) {
+      console.error(`Error fetching category by slug "${slug}":`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
   }
   
   async getCategoryWithChildren(categoryId: number, options?: { includeInactive?: boolean }): Promise<{ category: Category, children: Category[] } | undefined> {
-    // Build conditions for parent category
-    const categoryConditions: SQL<unknown>[] = [eq(categories.id, categoryId)];
-    
-    // Only filter by isActive if we're not including inactive categories
-    if (!options?.includeInactive) {
-      categoryConditions.push(eq(categories.isActive, true));
+    try {
+      // Build conditions for parent category
+      const categoryConditions: SQL<unknown>[] = [eq(categories.id, categoryId)];
+      
+      // Only filter by isActive if we're not including inactive categories
+      if (!options?.includeInactive) {
+        categoryConditions.push(eq(categories.isActive, true));
+      }
+      
+      // Get the category
+      const [category] = await db
+        .select()
+        .from(categories)
+        .where(and(...categoryConditions));
+      
+      if (!category) {
+        return undefined;
+      }
+      
+      // Build conditions for children
+      const childrenConditions: SQL<unknown>[] = [eq(categories.parentId, categoryId)];
+      
+      // Only filter by isActive if we're not including inactive categories
+      if (!options?.includeInactive) {
+        childrenConditions.push(eq(categories.isActive, true));
+      }
+      
+      // Get the children
+      const children = await db
+        .select()
+        .from(categories)
+        .where(and(...childrenConditions))
+        .orderBy(asc(categories.displayOrder), asc(categories.name));
+      
+      return { category, children };
+    } catch (error) {
+      console.error(`Error fetching category ${categoryId} with children:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
-    
-    // Get the category
-    const [category] = await db
-      .select()
-      .from(categories)
-      .where(and(...categoryConditions));
-    
-    if (!category) {
-      return undefined;
-    }
-    
-    // Build conditions for children
-    const childrenConditions: SQL<unknown>[] = [eq(categories.parentId, categoryId)];
-    
-    // Only filter by isActive if we're not including inactive categories
-    if (!options?.includeInactive) {
-      childrenConditions.push(eq(categories.isActive, true));
-    }
-    
-    // Get the children
-    const children = await db
-      .select()
-      .from(categories)
-      .where(and(...childrenConditions))
-      .orderBy(asc(categories.displayOrder), asc(categories.name));
-    
-    return { category, children };
   }
   
   async getMainCategoriesWithChildren(options?: { includeInactive?: boolean }): Promise<Array<{ category: Category, children: Category[] }>> {
-    // Get all main categories (level 0)
-    const mainCategories = await this.getAllCategories({ 
-      level: 0,
-      includeInactive: options?.includeInactive 
-    });
-    
-    // For each main category, get its children
-    const result = await Promise.all(
-      mainCategories.map(async (category) => {
-        // Build conditions
-        const conditions: SQL<unknown>[] = [eq(categories.parentId, category.id)];
-        
-        // Add visibility condition if not including inactive categories
-        if (!options?.includeInactive) {
-          conditions.push(eq(categories.isActive, true));
-        }
-        
-        const children = await db
-          .select()
-          .from(categories)
-          .where(and(...conditions))
-          .orderBy(asc(categories.displayOrder), asc(categories.name));
-        
-        return { category, children };
-      })
-    );
-    
-    return result;
+    try {
+      // Get all main categories (level 0)
+      const mainCategories = await this.getAllCategories({ 
+        level: 0,
+        includeInactive: options?.includeInactive 
+      });
+      
+      // For each main category, get its children
+      const result = await Promise.all(
+        mainCategories.map(async (category) => {
+          try {
+            // Build conditions
+            const conditions: SQL<unknown>[] = [eq(categories.parentId, category.id)];
+            
+            // Add visibility condition if not including inactive categories
+            if (!options?.includeInactive) {
+              conditions.push(eq(categories.isActive, true));
+            }
+            
+            const children = await db
+              .select()
+              .from(categories)
+              .where(and(...conditions))
+              .orderBy(asc(categories.displayOrder), asc(categories.name));
+            
+            return { category, children };
+          } catch (childError) {
+            console.error(`Error fetching children for category ${category.id}:`, childError);
+            // Return the category with an empty children array to avoid failing the entire request
+            return { category, children: [] };
+          }
+        })
+      );
+      
+      return result;
+    } catch (error) {
+      console.error(`Error fetching main categories with children:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
   }
 
   async createCategory(category: InsertCategory): Promise<Category> {
-    const [newCategory] = await db.insert(categories).values(category).returning();
-    return newCategory;
+    try {
+      const [newCategory] = await db.insert(categories).values(category).returning();
+      return newCategory;
+    } catch (error) {
+      console.error(`Error creating category with name "${category.name}":`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
   }
   
   async updateCategory(id: number, categoryData: Partial<InsertCategory>): Promise<Category | undefined> {
-    const [updatedCategory] = await db
-      .update(categories)
-      .set(categoryData)
-      .where(eq(categories.id, id))
-      .returning();
-    return updatedCategory;
+    try {
+      const [updatedCategory] = await db
+        .update(categories)
+        .set(categoryData)
+        .where(eq(categories.id, id))
+        .returning();
+      return updatedCategory;
+    } catch (error) {
+      console.error(`Error updating category ${id}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
   }
   
   async updateCategoryDisplayOrder(id: number, displayOrder: number): Promise<Category | undefined> {
-    return this.updateCategory(id, { displayOrder });
+    try {
+      return this.updateCategory(id, { displayOrder });
+    } catch (error) {
+      console.error(`Error updating display order for category ${id}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
   }
 
   // Product operations
@@ -448,321 +519,421 @@ export class DatabaseStorage implements IStorage {
     search?: string,
     options?: { includeInactive?: boolean, includeCategoryInactive?: boolean }
   ): Promise<Product[]> {
-    // Create conditions array
-    const conditions: SQL<unknown>[] = [];
-    
-    // Only filter active products if not explicitly including inactive ones
-    if (!options?.includeInactive) {
-      conditions.push(eq(products.isActive, true));
-    }
-    
-    // Add category filter if provided
-    if (categoryId) {
-      conditions.push(eq(products.categoryId, categoryId));
+    try {
+      // Create conditions array
+      const conditions: SQL<unknown>[] = [];
       
-      // If we're not including products with inactive categories,
-      // add a join to check if the category is active
-      if (!options?.includeCategoryInactive) {
-        // First get the specified category to check if it's active
-        const categoryQuery = db.select()
-          .from(categories)
+      // Only filter active products if not explicitly including inactive ones
+      if (!options?.includeInactive) {
+        conditions.push(eq(products.isActive, true));
+      }
+      
+      // Add category filter if provided
+      if (categoryId) {
+        conditions.push(eq(products.categoryId, categoryId));
+        
+        // If we're not including products with inactive categories,
+        // add a join to check if the category is active
+        if (!options?.includeCategoryInactive) {
+          try {
+            // First get the specified category to check if it's active
+            const categoryQuery = db.select()
+              .from(categories)
+              .where(and(
+                eq(categories.id, categoryId),
+                eq(categories.isActive, true)
+              ));
+              
+            const [category] = await categoryQuery;
+            
+            // If category doesn't exist or is inactive, return empty array
+            if (!category) {
+              return [];
+            }
+          } catch (categoryError) {
+            console.error(`Error checking if category ${categoryId} is active:`, categoryError);
+            throw categoryError; // Rethrow so the route handler can catch it and send a proper error response
+          }
+        }
+      } else if (!options?.includeCategoryInactive) {
+        try {
+          // If we're not filtering by category but we need to exclude products
+          // from inactive categories, we need to join with the categories table
+          const query = db.select({
+            product: products
+          })
+          .from(products)
+          .innerJoin(categories, eq(products.categoryId, categories.id))
           .where(and(
-            eq(categories.id, categoryId),
+            ...conditions,
             eq(categories.isActive, true)
           ));
           
-        const [category] = await categoryQuery;
-        
-        // If category doesn't exist or is inactive, return empty array
-        if (!category) {
-          return [];
+          // Apply search filter if provided
+          if (search) {
+            const searchTerm = `%${search}%`;
+            query.where(
+              or(
+                like(products.name, searchTerm),
+                like(products.description || '', searchTerm)
+              )
+            );
+          }
+          
+          const result = await query.limit(limit).offset(offset);
+          const productList = result.map(row => row.product);
+          
+          // Enrich products with main image URLs
+          return await this.enrichProductsWithMainImage(productList);
+        } catch (joinError) {
+          console.error('Error querying products with active categories:', joinError);
+          throw joinError; // Rethrow so the route handler can catch it and send a proper error response
         }
       }
-    } else if (!options?.includeCategoryInactive) {
-      // If we're not filtering by category but we need to exclude products
-      // from inactive categories, we need to join with the categories table
-      const query = db.select({
-        product: products
-      })
-      .from(products)
-      .innerJoin(categories, eq(products.categoryId, categories.id))
-      .where(and(
-        ...conditions,
-        eq(categories.isActive, true)
-      ));
       
-      // Apply search filter if provided
-      if (search) {
-        const searchTerm = `%${search}%`;
-        query.where(
-          or(
-            like(products.name, searchTerm),
-            like(products.description || '', searchTerm)
-          )
-        );
+      // If we got here, we're either including products with inactive categories
+      // or we filtered by a specific category that is active
+      
+      try {
+        // Apply base conditions
+        let query = db
+          .select()
+          .from(products);
+          
+        if (conditions.length > 0) {
+          query = query.where(and(...conditions));
+        }
+        
+        // Add search condition if provided
+        if (search) {
+          const searchTerm = `%${search}%`;
+          query = query.where(
+            or(
+              like(products.name, searchTerm),
+              like(products.description || '', searchTerm)
+            )
+          );
+        }
+        
+        const productList = await query.limit(limit).offset(offset);
+        
+        // Enrich products with main image URLs
+        return await this.enrichProductsWithMainImage(productList);
+      } catch (queryError) {
+        console.error('Error querying products:', queryError);
+        throw queryError; // Rethrow so the route handler can catch it and send a proper error response
       }
-      
-      const result = await query.limit(limit).offset(offset);
-      const productList = result.map(row => row.product);
-      
-      // Enrich products with main image URLs
-      return await this.enrichProductsWithMainImage(productList);
+    } catch (error) {
+      console.error(`Error getting all products with filters:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
-    
-    // If we got here, we're either including products with inactive categories
-    // or we filtered by a specific category that is active
-    
-    // Apply base conditions
-    let query = db
-      .select()
-      .from(products);
-      
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions));
-    }
-    
-    // Add search condition if provided
-    if (search) {
-      const searchTerm = `%${search}%`;
-      query = query.where(
-        or(
-          like(products.name, searchTerm),
-          like(products.description || '', searchTerm)
-        )
-      );
-    }
-    
-    const productList = await query.limit(limit).offset(offset);
-    
-    // Enrich products with main image URLs
-    return await this.enrichProductsWithMainImage(productList);
   }
 
   async getProductById(id: number, options?: { includeInactive?: boolean, includeCategoryInactive?: boolean }): Promise<Product | undefined> {
-    // Create conditions array
-    const conditions: SQL<unknown>[] = [eq(products.id, id)];
-    
-    // Only filter active products if not explicitly including inactive ones
-    if (!options?.includeInactive) {
-      conditions.push(eq(products.isActive, true));
-    }
-    
-    // Get the product
-    const [product] = await db
-      .select()
-      .from(products)
-      .where(and(...conditions));
+    try {
+      // Create conditions array
+      const conditions: SQL<unknown>[] = [eq(products.id, id)];
       
-    if (!product) {
-      return undefined;
-    }
-    
-    // Check category visibility if needed
-    if (!options?.includeCategoryInactive) {
-      const [category] = await db
-        .select()
-        .from(categories)
-        .where(and(
-          eq(categories.id, product.categoryId),
-          eq(categories.isActive, true)
-        ));
-      
-      // If category doesn't exist or is inactive, return undefined
-      if (!category) {
-        return options?.includeInactive ? product : undefined;
+      // Only filter active products if not explicitly including inactive ones
+      if (!options?.includeInactive) {
+        conditions.push(eq(products.isActive, true));
       }
+      
+      // Get the product
+      const [product] = await db
+        .select()
+        .from(products)
+        .where(and(...conditions));
+        
+      if (!product) {
+        return undefined;
+      }
+      
+      // Check category visibility if needed
+      if (!options?.includeCategoryInactive) {
+        try {
+          const [category] = await db
+            .select()
+            .from(categories)
+            .where(and(
+              eq(categories.id, product.categoryId),
+              eq(categories.isActive, true)
+            ));
+          
+          // If category doesn't exist or is inactive, return undefined
+          if (!category) {
+            return options?.includeInactive ? product : undefined;
+          }
+        } catch (categoryError) {
+          console.error(`Error checking if category ${product.categoryId} for product ${id} is active:`, categoryError);
+          throw categoryError; // Rethrow so the route handler can catch it and send a proper error response
+        }
+      }
+      
+      // Enrich product with main image URL
+      const enrichedProducts = await this.enrichProductsWithMainImage([product]);
+      return enrichedProducts[0];
+    } catch (error) {
+      console.error(`Error getting product ${id}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
-    
-    // Enrich product with main image URL
-    const enrichedProducts = await this.enrichProductsWithMainImage([product]);
-    return enrichedProducts[0];
   }
 
   async getProductBySlug(slug: string, options?: { includeInactive?: boolean, includeCategoryInactive?: boolean }): Promise<Product | undefined> {
-    // Create conditions array
-    const conditions: SQL<unknown>[] = [eq(products.slug, slug)];
-    
-    // Only filter active products if not explicitly including inactive ones
-    if (!options?.includeInactive) {
-      conditions.push(eq(products.isActive, true));
-    }
-    
-    // Get the product
-    const [product] = await db
-      .select()
-      .from(products)
-      .where(and(...conditions));
+    try {
+      // Create conditions array
+      const conditions: SQL<unknown>[] = [eq(products.slug, slug)];
       
-    if (!product) {
-      return undefined;
-    }
-    
-    // Check category visibility if needed
-    if (!options?.includeCategoryInactive) {
-      const [category] = await db
-        .select()
-        .from(categories)
-        .where(and(
-          eq(categories.id, product.categoryId),
-          eq(categories.isActive, true)
-        ));
-      
-      // If category doesn't exist or is inactive, return undefined
-      if (!category) {
-        return options?.includeInactive ? product : undefined;
+      // Only filter active products if not explicitly including inactive ones
+      if (!options?.includeInactive) {
+        conditions.push(eq(products.isActive, true));
       }
+      
+      // Get the product
+      const [product] = await db
+        .select()
+        .from(products)
+        .where(and(...conditions));
+        
+      if (!product) {
+        return undefined;
+      }
+      
+      // Check category visibility if needed
+      if (!options?.includeCategoryInactive) {
+        try {
+          const [category] = await db
+            .select()
+            .from(categories)
+            .where(and(
+              eq(categories.id, product.categoryId),
+              eq(categories.isActive, true)
+            ));
+          
+          // If category doesn't exist or is inactive, return undefined
+          if (!category) {
+            return options?.includeInactive ? product : undefined;
+          }
+        } catch (categoryError) {
+          console.error(`Error checking if category ${product.categoryId} for product with slug "${slug}" is active:`, categoryError);
+          throw categoryError; // Rethrow so the route handler can catch it and send a proper error response
+        }
+      }
+      
+      // Enrich product with main image URL
+      const enrichedProducts = await this.enrichProductsWithMainImage([product]);
+      return enrichedProducts[0];
+    } catch (error) {
+      console.error(`Error getting product by slug "${slug}":`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
-    
-    // Enrich product with main image URL
-    const enrichedProducts = await this.enrichProductsWithMainImage([product]);
-    return enrichedProducts[0];
   }
 
   async getProductsByCategory(categoryId: number, limit = 20, offset = 0, options?: { includeInactive?: boolean, includeCategoryInactive?: boolean }): Promise<Product[]> {
-    // Check if the category exists and is active (if needed)
-    if (!options?.includeCategoryInactive) {
-      const [category] = await db
-        .select()
-        .from(categories)
-        .where(and(
-          eq(categories.id, categoryId),
-          eq(categories.isActive, true)
-        ));
-      
-      // If category is inactive or doesn't exist, return empty array
-      if (!category) {
-        return [];
+    try {
+      // Check if the category exists and is active (if needed)
+      if (!options?.includeCategoryInactive) {
+        try {
+          const [category] = await db
+            .select()
+            .from(categories)
+            .where(and(
+              eq(categories.id, categoryId),
+              eq(categories.isActive, true)
+            ));
+          
+          // If category is inactive or doesn't exist, return empty array
+          if (!category) {
+            return [];
+          }
+        } catch (categoryError) {
+          console.error(`Error checking if category ${categoryId} is active:`, categoryError);
+          throw categoryError; // Rethrow so the route handler can catch it and send a proper error response
+        }
       }
-    }
-    
-    // Create conditions array
-    const conditions: SQL<unknown>[] = [eq(products.categoryId, categoryId)];
-    
-    // Only filter active products if not explicitly including inactive ones
-    if (!options?.includeInactive) {
-      conditions.push(eq(products.isActive, true));
-    }
-    
-    const productList = await db
-      .select()
-      .from(products)
-      .where(and(...conditions))
-      .limit(limit)
-      .offset(offset);
       
-    // Enrich products with main image URLs
-    return await this.enrichProductsWithMainImage(productList);
+      try {
+        // Create conditions array
+        const conditions: SQL<unknown>[] = [eq(products.categoryId, categoryId)];
+        
+        // Only filter active products if not explicitly including inactive ones
+        if (!options?.includeInactive) {
+          conditions.push(eq(products.isActive, true));
+        }
+        
+        const productList = await db
+          .select()
+          .from(products)
+          .where(and(...conditions))
+          .limit(limit)
+          .offset(offset);
+          
+        // Enrich products with main image URLs
+        return await this.enrichProductsWithMainImage(productList);
+      } catch (productsError) {
+        console.error(`Error fetching products for category ${categoryId}:`, productsError);
+        throw productsError; // Rethrow so the route handler can catch it and send a proper error response
+      }
+    } catch (error) {
+      console.error(`Error in getProductsByCategory for category ${categoryId}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
   }
 
   async getFeaturedProducts(limit = 10, options?: { includeInactive?: boolean, includeCategoryInactive?: boolean }): Promise<Product[]> {
-    let productList: Product[] = [];
-    
-    if (!options?.includeCategoryInactive) {
-      // For featured products, we need to join with categories to check if category is active
-      const query = db.select({
-        product: products
-      })
-      .from(products)
-      .innerJoin(categories, eq(products.categoryId, categories.id))
-      .where(and(
-        eq(products.isFeatured, true),
-        options?.includeInactive ? sql`1=1` : eq(products.isActive, true),
-        eq(categories.isActive, true)
-      ))
-      .limit(limit);
+    try {
+      let productList: Product[] = [];
       
-      const result = await query;
-      productList = result.map(row => row.product);
-    } else {
-      // If we don't need to check category visibility, use simpler query
-      productList = await db
-        .select()
-        .from(products)
-        .where(and(
-          eq(products.isFeatured, true),
-          options?.includeInactive ? sql`1=1` : eq(products.isActive, true)
-        ))
-        .limit(limit);
+      if (!options?.includeCategoryInactive) {
+        try {
+          // For featured products, we need to join with categories to check if category is active
+          const query = db.select({
+            product: products
+          })
+          .from(products)
+          .innerJoin(categories, eq(products.categoryId, categories.id))
+          .where(and(
+            eq(products.isFeatured, true),
+            options?.includeInactive ? sql`1=1` : eq(products.isActive, true),
+            eq(categories.isActive, true)
+          ))
+          .limit(limit);
+          
+          const result = await query;
+          productList = result.map(row => row.product);
+        } catch (joinError) {
+          console.error('Error fetching featured products with active categories:', joinError);
+          throw joinError; // Rethrow so the route handler can catch it and send a proper error response
+        }
+      } else {
+        try {
+          // If we don't need to check category visibility, use simpler query
+          productList = await db
+            .select()
+            .from(products)
+            .where(and(
+              eq(products.isFeatured, true),
+              options?.includeInactive ? sql`1=1` : eq(products.isActive, true)
+            ))
+            .limit(limit);
+        } catch (queryError) {
+          console.error('Error fetching featured products:', queryError);
+          throw queryError; // Rethrow so the route handler can catch it and send a proper error response
+        }
+      }
+      
+      // Enrich products with main image URLs
+      return await this.enrichProductsWithMainImage(productList);
+    } catch (error) {
+      console.error('Error in getFeaturedProducts:', error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
-    
-    // Enrich products with main image URLs
-    return await this.enrichProductsWithMainImage(productList);
   }
 
   async getFlashDeals(limit = 6, options?: { includeInactive?: boolean, includeCategoryInactive?: boolean }): Promise<Product[]> {
-    const now = new Date();
-    let productList: Product[] = [];
-    
-    if (!options?.includeCategoryInactive) {
-      // For flash deals, we need to join with categories to check if category is active
-      const query = db.select({
-        product: products
-      })
-      .from(products)
-      .innerJoin(categories, eq(products.categoryId, categories.id))
-      .where(and(
-        eq(products.isFlashDeal, true),
-        options?.includeInactive ? sql`1=1` : eq(products.isActive, true),
-        eq(categories.isActive, true),
-        sql`${products.flashDealEnd} > ${now}`
-      ))
-      .limit(limit);
+    try {
+      const now = new Date();
+      let productList: Product[] = [];
       
-      const result = await query;
-      productList = result.map(row => row.product);
-    } else {
-      // If we don't need to check category visibility, use simpler query
-      productList = await db
-        .select()
-        .from(products)
-        .where(and(
-          eq(products.isFlashDeal, true),
-          options?.includeInactive ? sql`1=1` : eq(products.isActive, true),
-          sql`${products.flashDealEnd} > ${now}`
-        ))
-        .limit(limit);
+      if (!options?.includeCategoryInactive) {
+        try {
+          // For flash deals, we need to join with categories to check if category is active
+          const query = db.select({
+            product: products
+          })
+          .from(products)
+          .innerJoin(categories, eq(products.categoryId, categories.id))
+          .where(and(
+            eq(products.isFlashDeal, true),
+            options?.includeInactive ? sql`1=1` : eq(products.isActive, true),
+            eq(categories.isActive, true),
+            sql`${products.flashDealEnd} > ${now}`
+          ))
+          .limit(limit);
+          
+          const result = await query;
+          productList = result.map(row => row.product);
+        } catch (joinError) {
+          console.error('Error fetching flash deals with active categories:', joinError);
+          throw joinError; // Rethrow so the route handler can catch it and send a proper error response
+        }
+      } else {
+        try {
+          // If we don't need to check category visibility, use simpler query
+          productList = await db
+            .select()
+            .from(products)
+            .where(and(
+              eq(products.isFlashDeal, true),
+              options?.includeInactive ? sql`1=1` : eq(products.isActive, true),
+              sql`${products.flashDealEnd} > ${now}`
+            ))
+            .limit(limit);
+        } catch (queryError) {
+          console.error('Error fetching flash deals:', queryError);
+          throw queryError; // Rethrow so the route handler can catch it and send a proper error response
+        }
+      }
+      
+      // Enrich products with main image URLs
+      return await this.enrichProductsWithMainImage(productList);
+    } catch (error) {
+      console.error('Error in getFlashDeals:', error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
-    
-    // Enrich products with main image URLs
-    return await this.enrichProductsWithMainImage(productList);
   }
 
   async searchProducts(query: string, limit = 20, offset = 0, options?: { includeInactive?: boolean, includeCategoryInactive?: boolean }): Promise<Product[]> {
-    const searchTerm = `%${query}%`;
-    let productList: Product[] = [];
-    
-    if (!options?.includeCategoryInactive) {
-      // For search, we need to join with categories to check if category is active
-      const searchQuery = db.select({
-        product: products
-      })
-      .from(products)
-      .innerJoin(categories, eq(products.categoryId, categories.id))
-      .where(and(
-        options?.includeInactive ? sql`1=1` : eq(products.isActive, true),
-        eq(categories.isActive, true),
-        like(products.name, searchTerm)
-      ))
-      .limit(limit)
-      .offset(offset);
+    try {
+      const searchTerm = `%${query}%`;
+      let productList: Product[] = [];
       
-      const result = await searchQuery;
-      productList = result.map(row => row.product);
-    } else {
-      // If we don't need to check category visibility, use simpler query
-      productList = await db
-        .select()
-        .from(products)
-        .where(and(
-          options?.includeInactive ? sql`1=1` : eq(products.isActive, true),
-          like(products.name, searchTerm)
-        ))
-        .limit(limit)
-        .offset(offset);
+      if (!options?.includeCategoryInactive) {
+        try {
+          // For search, we need to join with categories to check if category is active
+          const searchQuery = db.select({
+            product: products
+          })
+          .from(products)
+          .innerJoin(categories, eq(products.categoryId, categories.id))
+          .where(and(
+            options?.includeInactive ? sql`1=1` : eq(products.isActive, true),
+            eq(categories.isActive, true),
+            like(products.name, searchTerm)
+          ))
+          .limit(limit)
+          .offset(offset);
+          
+          const result = await searchQuery;
+          productList = result.map(row => row.product);
+        } catch (joinError) {
+          console.error(`Error searching products with active categories for query "${query}":`, joinError);
+          throw joinError; // Rethrow so the route handler can catch it and send a proper error response
+        }
+      } else {
+        try {
+          // If we don't need to check category visibility, use simpler query
+          productList = await db
+            .select()
+            .from(products)
+            .where(and(
+              options?.includeInactive ? sql`1=1` : eq(products.isActive, true),
+              like(products.name, searchTerm)
+            ))
+            .limit(limit)
+            .offset(offset);
+        } catch (queryError) {
+          console.error(`Error searching products for query "${query}":`, queryError);
+          throw queryError; // Rethrow so the route handler can catch it and send a proper error response
+        }
+      }
+      
+      // Enrich products with main image URLs
+      return await this.enrichProductsWithMainImage(productList);
+    } catch (error) {
+      console.error(`Error in searchProducts for query "${query}":`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
-    
-    // Enrich products with main image URLs
-    return await this.enrichProductsWithMainImage(productList);
   }
 
   async createProduct(product: InsertProduct): Promise<Product> {
@@ -798,225 +969,373 @@ export class DatabaseStorage implements IStorage {
 
   // Cart operations
   async getCartItemById(id: number): Promise<CartItem | undefined> {
-    const [item] = await db
-      .select()
-      .from(cartItems)
-      .where(eq(cartItems.id, id));
-    return item;
+    try {
+      const [item] = await db
+        .select()
+        .from(cartItems)
+        .where(eq(cartItems.id, id));
+      return item;
+    } catch (error) {
+      console.error(`Error fetching cart item with ID ${id}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
   }
   
   async getCartItems(userId: number): Promise<CartItem[]> {
-    return await db
-      .select()
-      .from(cartItems)
-      .where(eq(cartItems.userId, userId));
+    try {
+      return await db
+        .select()
+        .from(cartItems)
+        .where(eq(cartItems.userId, userId));
+    } catch (error) {
+      console.error(`Error fetching cart items for user ${userId}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
   }
 
   async getCartItemsWithProducts(userId: number): Promise<(CartItem & { product: Product })[]> {
-    const items = await db
-      .select()
-      .from(cartItems)
-      .where(eq(cartItems.userId, userId));
-    
-    const result: (CartItem & { product: Product })[] = [];
-    
-    for (const item of items) {
-      const [product] = await db
+    try {
+      const items = await db
         .select()
-        .from(products)
-        .where(eq(products.id, item.productId));
-        
-      if (product) {
-        // Enrich product with main image URL
-        const enrichedProducts = await this.enrichProductsWithMainImage([product]);
-        
-        result.push({
-          ...item,
-          product: enrichedProducts[0]
-        });
+        .from(cartItems)
+        .where(eq(cartItems.userId, userId));
+      
+      const result: (CartItem & { product: Product })[] = [];
+      
+      for (const item of items) {
+        try {
+          const [product] = await db
+            .select()
+            .from(products)
+            .where(eq(products.id, item.productId));
+            
+          if (product) {
+            try {
+              // Enrich product with main image URL
+              const enrichedProducts = await this.enrichProductsWithMainImage([product]);
+              
+              result.push({
+                ...item,
+                product: enrichedProducts[0]
+              });
+            } catch (enrichError) {
+              console.error(`Error enriching product ${product.id} with images for cart item ${item.id}:`, enrichError);
+              // Continue to next item but don't rethrow as we want to return whatever items we successfully retrieved
+            }
+          }
+        } catch (productError) {
+          console.error(`Error fetching product ${item.productId} for cart item ${item.id}:`, productError);
+          // Continue to next item but don't rethrow as we want to return whatever items we successfully retrieved
+        }
       }
+      
+      return result;
+    } catch (error) {
+      console.error(`Error in getCartItemsWithProducts for user ${userId}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
-    
-    return result;
   }
 
   async addToCart(cartItem: InsertCartItem): Promise<CartItem> {
-    // Check if the item with same combination is already in the cart
-    const query = and(
-      eq(cartItems.userId, cartItem.userId),
-      eq(cartItems.productId, cartItem.productId)
-    );
-    
-    // Add combination check if a combination is selected
-    const fullQuery = cartItem.combinationHash 
-      ? and(query, eq(cartItems.combinationHash, cartItem.combinationHash))
-      : query;
-    
-    const [existingItem] = await db
-      .select()
-      .from(cartItems)
-      .where(fullQuery);
-    
-    if (existingItem) {
-      // Update quantity
-      const [updatedItem] = await db
-        .update(cartItems)
-        .set({ quantity: existingItem.quantity + cartItem.quantity })
-        .where(eq(cartItems.id, existingItem.id))
-        .returning();
-      return updatedItem;
-    } else {
-      // Insert new item
-      const [newItem] = await db.insert(cartItems).values(cartItem).returning();
-      return newItem;
+    try {
+      // Check if the item with same combination is already in the cart
+      const query = and(
+        eq(cartItems.userId, cartItem.userId),
+        eq(cartItems.productId, cartItem.productId)
+      );
+      
+      // Add combination check if a combination is selected
+      const fullQuery = cartItem.combinationHash 
+        ? and(query, eq(cartItems.combinationHash, cartItem.combinationHash))
+        : query;
+      
+      try {
+        const [existingItem] = await db
+          .select()
+          .from(cartItems)
+          .where(fullQuery);
+        
+        if (existingItem) {
+          try {
+            // Update quantity
+            const [updatedItem] = await db
+              .update(cartItems)
+              .set({ quantity: existingItem.quantity + cartItem.quantity })
+              .where(eq(cartItems.id, existingItem.id))
+              .returning();
+            return updatedItem;
+          } catch (updateError) {
+            console.error(`Error updating quantity for existing cart item ${existingItem.id}:`, updateError);
+            throw updateError; // Rethrow so the route handler can catch it and send a proper error response
+          }
+        } else {
+          try {
+            // Insert new item
+            const [newItem] = await db.insert(cartItems).values(cartItem).returning();
+            return newItem;
+          } catch (insertError) {
+            console.error('Error inserting new item into cart:', insertError);
+            throw insertError; // Rethrow so the route handler can catch it and send a proper error response
+          }
+        }
+      } catch (queryError) {
+        console.error('Error checking if item already exists in cart:', queryError);
+        throw queryError; // Rethrow so the route handler can catch it and send a proper error response
+      }
+    } catch (error) {
+      console.error('Error in addToCart:', error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
   }
 
   async updateCartItemQuantity(id: number, quantity: number): Promise<CartItem | undefined> {
-    if (quantity <= 0) {
-      await db.delete(cartItems).where(eq(cartItems.id, id));
-      return undefined;
+    try {
+      if (quantity <= 0) {
+        try {
+          await db.delete(cartItems).where(eq(cartItems.id, id));
+          return undefined;
+        } catch (deleteError) {
+          console.error(`Error deleting cart item ${id} with quantity ${quantity}:`, deleteError);
+          throw deleteError; // Rethrow so the route handler can catch it and send a proper error response
+        }
+      }
+      
+      try {
+        const [updatedItem] = await db
+          .update(cartItems)
+          .set({ quantity })
+          .where(eq(cartItems.id, id))
+          .returning();
+        return updatedItem;
+      } catch (updateError) {
+        console.error(`Error updating quantity for cart item ${id} to ${quantity}:`, updateError);
+        throw updateError; // Rethrow so the route handler can catch it and send a proper error response
+      }
+    } catch (error) {
+      console.error(`Error in updateCartItemQuantity for item ${id}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
-    
-    const [updatedItem] = await db
-      .update(cartItems)
-      .set({ quantity })
-      .where(eq(cartItems.id, id))
-      .returning();
-    return updatedItem;
   }
 
   async removeFromCart(id: number): Promise<boolean> {
-    const result = await db.delete(cartItems).where(eq(cartItems.id, id));
-    return true;
+    try {
+      await db.delete(cartItems).where(eq(cartItems.id, id));
+      return true;
+    } catch (error) {
+      console.error(`Error removing item ${id} from cart:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
   }
 
   async clearCart(userId: number): Promise<boolean> {
-    const result = await db.delete(cartItems).where(eq(cartItems.userId, userId));
-    return true;
+    try {
+      await db.delete(cartItems).where(eq(cartItems.userId, userId));
+      return true;
+    } catch (error) {
+      console.error(`Error clearing cart for user ${userId}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
   }
 
   // Order operations
   async createOrder(order: InsertOrder, items: InsertOrderItem[]): Promise<Order> {
-    // Create the order
-    const [newOrder] = await db.insert(orders).values(order).returning();
-    
-    // Add order items with attribute combination data
-    for (const item of items) {
-      await db.insert(orderItems).values({
-        ...item,
-        orderId: newOrder.id
-      });
-      
-      // If this item has a combination, update the product's sold count
-      if (item.productId) {
-        await db
-          .update(products)
-          .set({
-            soldCount: sql`${products.soldCount} + ${item.quantity}`
-          })
-          .where(eq(products.id, item.productId));
-      }
-    }
-    
-    // Clear the cart
-    await this.clearCart(order.userId);
-    
-    return newOrder;
-  }
-
-  async getOrdersByUser(userId: number | null): Promise<Order[]> {
-    // If userId is null, return all orders (admin function)
-    if (userId === null) {
-      return await db
-        .select()
-        .from(orders)
-        .orderBy(desc(orders.createdAt));
-    }
-    
-    // Return orders for specific user
-    return await db
-      .select()
-      .from(orders)
-      .where(eq(orders.userId, userId))
-      .orderBy(desc(orders.createdAt));
-  }
-
-  async getOrderById(id: number): Promise<(Order & { items: (OrderItem & { product: Product; attributeDetails?: any })[] }) | undefined> {
-    const [order] = await db
-      .select()
-      .from(orders)
-      .where(eq(orders.id, id));
-    
-    if (!order) return undefined;
-    
-    const orderItemsList = await db
-      .select()
-      .from(orderItems)
-      .where(eq(orderItems.orderId, id));
-    
-    const items: (OrderItem & { product: Product; attributeDetails?: any })[] = [];
-    
-    for (const item of orderItemsList) {
-      const [product] = await db
-        .select()
-        .from(products)
-        .where(eq(products.id, item.productId));
-      
-      if (product) {
-        // Enrich product with main image URL
-        const enrichedProducts = await this.enrichProductsWithMainImage([product]);
-        const enrichedProduct = enrichedProducts[0];
+    try {
+      // Create the order
+      try {
+        const [newOrder] = await db.insert(orders).values(order).returning();
         
-        let attributeDetails = undefined;
-        
-        // If there's a combination, get more details
-        if (item.combinationId) {
-          const [combination] = await db
-            .select()
-            .from(productAttributeCombinations)
-            .where(eq(productAttributeCombinations.id, item.combinationId));
+        // Add order items with attribute combination data
+        for (const item of items) {
+          try {
+            await db.insert(orderItems).values({
+              ...item,
+              orderId: newOrder.id
+            });
             
-          if (combination) {
-            // Get category attributes - COMMENTED OUT as part of attribute system redesign
-            // const categoryAttributes = await this.getCategoryAttributes(enrichedProduct.categoryId);
-            
-            attributeDetails = {
-              combination,
-              attributes: item.selectedAttributes
-              // categoryAttributes removed as part of attribute system redesign
-            };
+            // If this item has a combination, update the product's sold count
+            if (item.productId) {
+              try {
+                await db
+                  .update(products)
+                  .set({
+                    soldCount: sql`${products.soldCount} + ${item.quantity}`
+                  })
+                  .where(eq(products.id, item.productId));
+              } catch (updateError) {
+                console.error(`Error updating sold count for product ${item.productId}:`, updateError);
+                // Continue processing other items instead of halting the entire order process
+              }
+            }
+          } catch (itemError) {
+            console.error(`Error inserting order item for order ${newOrder.id}:`, itemError);
+            // Continue processing other items instead of halting the entire order process
           }
         }
         
-        items.push({
-          ...item,
-          product: enrichedProduct,
-          attributeDetails
-        });
+        // Clear the cart
+        try {
+          await this.clearCart(order.userId);
+        } catch (cartError) {
+          console.error(`Error clearing cart for user ${order.userId} after order creation:`, cartError);
+          // Don't throw here as the order is already created
+        }
+        
+        return newOrder;
+      } catch (orderInsertError) {
+        console.error('Error creating new order:', orderInsertError);
+        throw orderInsertError; // Rethrow so the route handler can catch it and send a proper error response
       }
+    } catch (error) {
+      console.error('Error in createOrder:', error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
-    
-    return {
-      ...order,
-      items
-    };
+  }
+
+  async getOrdersByUser(userId: number | null): Promise<Order[]> {
+    try {
+      // If userId is null, return all orders (admin function)
+      if (userId === null) {
+        try {
+          return await db
+            .select()
+            .from(orders)
+            .orderBy(desc(orders.createdAt));
+        } catch (adminOrdersError) {
+          console.error('Error fetching all orders (admin function):', adminOrdersError);
+          throw adminOrdersError; // Rethrow so the route handler can catch it and send a proper error response
+        }
+      }
+      
+      // Return orders for specific user
+      try {
+        return await db
+          .select()
+          .from(orders)
+          .where(eq(orders.userId, userId))
+          .orderBy(desc(orders.createdAt));
+      } catch (userOrdersError) {
+        console.error(`Error fetching orders for user ${userId}:`, userOrdersError);
+        throw userOrdersError; // Rethrow so the route handler can catch it and send a proper error response
+      }
+    } catch (error) {
+      console.error(`Error in getOrdersByUser for ${userId === null ? 'admin' : 'user ' + userId}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
+  }
+
+  async getOrderById(id: number): Promise<(Order & { items: (OrderItem & { product: Product; attributeDetails?: any })[] }) | undefined> {
+    try {
+      const [order] = await db
+        .select()
+        .from(orders)
+        .where(eq(orders.id, id));
+      
+      if (!order) return undefined;
+      
+      try {
+        const orderItemsList = await db
+          .select()
+          .from(orderItems)
+          .where(eq(orderItems.orderId, id));
+        
+        const items: (OrderItem & { product: Product; attributeDetails?: any })[] = [];
+        
+        for (const item of orderItemsList) {
+          try {
+            const [product] = await db
+              .select()
+              .from(products)
+              .where(eq(products.id, item.productId));
+            
+            if (product) {
+              try {
+                // Enrich product with main image URL
+                const enrichedProducts = await this.enrichProductsWithMainImage([product]);
+                const enrichedProduct = enrichedProducts[0];
+                
+                let attributeDetails = undefined;
+                
+                // If there's a combination, get more details
+                if (item.combinationId) {
+                  try {
+                    const [combination] = await db
+                      .select()
+                      .from(productAttributeCombinations)
+                      .where(eq(productAttributeCombinations.id, item.combinationId));
+                      
+                    if (combination) {
+                      // Get category attributes - COMMENTED OUT as part of attribute system redesign
+                      // const categoryAttributes = await this.getCategoryAttributes(enrichedProduct.categoryId);
+                      
+                      attributeDetails = {
+                        combination,
+                        attributes: item.selectedAttributes
+                        // categoryAttributes removed as part of attribute system redesign
+                      };
+                    }
+                  } catch (combinationError) {
+                    console.error(`Error fetching attribute combination ${item.combinationId} for order item ${item.id}:`, combinationError);
+                    // Continue without attribute details
+                  }
+                }
+                
+                items.push({
+                  ...item,
+                  product: enrichedProduct,
+                  attributeDetails
+                });
+              } catch (enrichError) {
+                console.error(`Error enriching product ${product.id} with images for order item ${item.id}:`, enrichError);
+                // Add the item with the basic product info
+                items.push({
+                  ...item,
+                  product: product
+                });
+              }
+            }
+          } catch (productError) {
+            console.error(`Error fetching product ${item.productId} for order item ${item.id}:`, productError);
+            // Continue to next order item
+          }
+        }
+        
+        return {
+          ...order,
+          items
+        };
+      } catch (itemsError) {
+        console.error(`Error fetching order items for order ${id}:`, itemsError);
+        // Return order without items
+        return {
+          ...order,
+          items: []
+        };
+      }
+    } catch (error) {
+      console.error(`Error in getOrderById for order ${id}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
   }
   
   async updateOrderStatus(id: number, status: string): Promise<Order | undefined> {
-    const now = new Date();
-    
-    // Update the order with the new status and updatedAt timestamp
-    const [updatedOrder] = await db
-      .update(orders)
-      .set({ 
-        status, 
-        updatedAt: now 
-      })
-      .where(eq(orders.id, id))
-      .returning();
-    
-    return updatedOrder;
+    try {
+      const now = new Date();
+      
+      // Update the order with the new status and updatedAt timestamp
+      const [updatedOrder] = await db
+        .update(orders)
+        .set({ 
+          status, 
+          updatedAt: now 
+        })
+        .where(eq(orders.id, id))
+        .returning();
+      
+      return updatedOrder;
+    } catch (error) {
+      console.error(`Error updating status to "${status}" for order ${id}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
   }
   
   // Product Image operations
