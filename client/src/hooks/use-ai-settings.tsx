@@ -18,14 +18,14 @@ type AISettings = {
 };
 
 export function useAIModels() {
-  return useQuery<AIModelsResponse>({
+  return useQuery<{ success: boolean, data: AIModelsResponse }>({
     queryKey: ["/api/admin/ai/models"],
     throwOnError: true,
   });
 }
 
 export function useAISettings() {
-  return useQuery<AISettings[]>({
+  return useQuery<{ success: boolean, data: AISettings[] }>({
     queryKey: ["/api/admin/ai/settings"],
     throwOnError: true,
   });

@@ -16,7 +16,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 
 export default function AISettingsPage() {
-  const { data: aiModels, isLoading: isLoadingModels, error: aiModelsError } = useAIModels();
+  const { data: aiModelsResponse, isLoading: isLoadingModels, error: aiModelsError } = useAIModels();
+  const aiModels = aiModelsResponse?.data;
   const updateModelMutation = useUpdateAIModel();
 
   const handleModelChange = (modelName: string) => {
@@ -92,11 +93,11 @@ export default function AISettingsPage() {
                           <SelectValue placeholder="Select a model" />
                         </SelectTrigger>
                         <SelectContent>
-                          {aiModels?.available.map((model) => (
+                          {aiModels?.available?.map((model) => (
                             <SelectItem key={model} value={model}>
                               <div className="flex items-center">
                                 <span>{model}</span>
-                                {model === aiModels.current && (
+                                {model === aiModels?.current && (
                                   <CheckCircle2 className="ml-2 h-4 w-4 text-green-500" />
                                 )}
                               </div>
