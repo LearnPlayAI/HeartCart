@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link, useLocation } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
-import { Search, User, ShoppingCart, LogIn, UserPlus, LogOut, ChevronDown, LayoutDashboard } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import { User, ShoppingCart, LogIn, UserPlus, LogOut, ChevronDown, LayoutDashboard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { 
   DropdownMenu, 
@@ -16,6 +15,7 @@ import { useCart } from '@/hooks/use-cart';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { CategorySidebarDrawer } from '@/components/ui/category-sidebar-drawer';
+import ProductSearch from '@/components/ui/product-search';
 
 type Category = {
   id: number;
@@ -24,7 +24,6 @@ type Category = {
 };
 
 const Header = () => {
-  const [searchQuery, setSearchQuery] = useState('');
   const [, navigate] = useLocation();
   const { cartItems, openCart } = useCart();
   const { user, logoutMutation } = useAuth();
@@ -48,13 +47,6 @@ const Header = () => {
     queryKey: ['/api/categories'],
   });
   
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
-    }
-  };
-  
   return (
     <header className="sticky top-0 z-50 bg-white shadow-md">
       <div className="container mx-auto px-4">
@@ -67,23 +59,13 @@ const Header = () => {
           
           {/* Search bar - desktop */}
           <div className="hidden md:flex items-center flex-1 mx-4">
-            <form onSubmit={handleSearchSubmit} className="relative w-full max-w-xl mx-auto">
-              <Input
-                type="text"
+            <div className="w-full max-w-xl mx-auto">
+              <ProductSearch
+                size="md"
+                variant="default"
                 placeholder="Search for products..."
-                className="w-full py-2 px-4 pr-10 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#FF69B4] focus:border-transparent"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
               />
-              <Button 
-                type="submit"
-                variant="ghost" 
-                size="icon"
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[#FF69B4]"
-              >
-                <Search />
-              </Button>
-            </form>
+            </div>
           </div>
           
           {/* Navigation Icons */}
@@ -173,23 +155,11 @@ const Header = () => {
         
         {/* Mobile search bar */}
         <div className="md:hidden pb-3">
-          <form onSubmit={handleSearchSubmit} className="relative w-full">
-            <Input
-              type="text"
-              placeholder="Search for products..."
-              className="w-full py-2 px-4 pr-10 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#FF69B4] focus:border-transparent"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            <Button 
-              type="submit"
-              variant="ghost" 
-              size="icon"
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[#FF69B4]"
-            >
-              <Search />
-            </Button>
-          </form>
+          <ProductSearch
+            size="sm"
+            variant="default"
+            placeholder="Search for products..."
+          />
         </div>
       </div>
       

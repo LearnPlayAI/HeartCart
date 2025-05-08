@@ -3,6 +3,8 @@ import { useLocation, Link } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet';
 import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 import { 
   Select, 
   SelectContent, 
@@ -13,7 +15,9 @@ import {
 import { Card, CardContent } from '@/components/ui/card';
 import { Search as SearchIcon, Filter } from 'lucide-react';
 import ProductCard from '@/components/product/product-card';
+import ProductSearch from '@/components/ui/product-search';
 import type { Product } from '@shared/schema';
+import type { StandardApiResponse } from '@/types/api';
 
 const SearchResults = () => {
   const [location] = useLocation();
@@ -23,10 +27,18 @@ const SearchResults = () => {
   const [page, setPage] = useState(1);
   const limit = 20;
   
-  const { data: products, isLoading, isFetching } = useQuery<Product[]>({
+  const { 
+    data: response,
+    isLoading, 
+    isFetching,
+    error
+  } = useQuery<StandardApiResponse<Product[]>>({
     queryKey: [`/api/search?q=${query}`, { limit, offset: (page - 1) * limit }],
     enabled: query.length > 0,
   });
+  
+  // Extract products from standardized API response
+  const products = response?.success ? response.data : [];
   
   // Reset page when query changes
   useEffect(() => {
@@ -80,6 +92,28 @@ const SearchResults = () => {
           </p>
         </div>
         
+        {/* Show error if there is one */}
+        {error && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>
+              {response?.error?.message || 'An error occurred while searching for products. Please try again.'}
+            </AlertDescription>
+          </Alert>
+        )}
+        
+        {/* Refined search bar */}
+        <div className="mb-6">
+          <ProductSearch 
+            size="md"
+            variant="outlined"
+            initialQuery={query}
+            placeholder="Refine your search..."
+            className="mb-3"
+          />
+        </div>
+        
         {/* Sort Options */}
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center">
@@ -117,6 +151,22 @@ const SearchResults = () => {
               </div>
             ))}
           </div>
+        ) : error ? (
+          <Card>
+            <CardContent className="flex flex-col items-center py-8">
+              <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
+              <h2 className="text-xl font-medium mb-2">Error performing search</h2>
+              <p className="text-gray-600 mb-6 text-center">
+                We encountered an error while searching for products.<br />
+                Please try again or browse our categories.
+              </p>
+              <Button asChild>
+                <Link href="/">
+                  Continue Shopping
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
         ) : sortedProducts.length > 0 ? (
           <>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
@@ -153,7 +203,7 @@ const SearchResults = () => {
               </p>
               <Button asChild>
                 <Link href="/">
-                  <a>Continue Shopping</a>
+                  Continue Shopping
                 </Link>
               </Button>
             </CardContent>
