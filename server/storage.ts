@@ -10,7 +10,17 @@ import {
   pricing, type Pricing, type InsertPricing,
   aiSettings, type AiSetting, type InsertAiSetting,
   suppliers, type Supplier, type InsertSupplier,
-  catalogs, type Catalog, type InsertCatalog
+  catalogs, type Catalog, type InsertCatalog,
+  // New attribute system imports
+  attributes, type Attribute, type InsertAttribute,
+  attributeOptions, type AttributeOption, type InsertAttributeOption,
+  catalogAttributes, type CatalogAttribute, type InsertCatalogAttribute,
+  catalogAttributeOptions, type CatalogAttributeOption, type InsertCatalogAttributeOption,
+  categoryAttributes, type CategoryAttribute, type InsertCategoryAttribute,
+  categoryAttributeOptions, type CategoryAttributeOption, type InsertCategoryAttributeOption,
+  productAttributes, type ProductAttribute, type InsertProductAttribute,
+  productAttributeOptions, type ProductAttributeOption, type InsertProductAttributeOption,
+  productAttributeValues, type ProductAttributeValue, type InsertProductAttributeValue
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, like, and, desc, asc, sql, inArray, isNull, not, or, SQL } from "drizzle-orm";
@@ -102,7 +112,78 @@ export interface IStorage {
   bulkUpdateCatalogProducts(catalogId: number, updateData: Partial<InsertProduct>): Promise<number>;
   updateProductDisplayOrder(catalogId: number, productIds: number[]): Promise<{ count: number }>;
   
-  // Attribute operations were removed as part of system redesign
+  // Attribute system operations
+  // Core attribute operations
+  getAllAttributes(): Promise<Attribute[]>;
+  getAttributeById(id: number): Promise<Attribute | undefined>;
+  getAttributeByName(name: string): Promise<Attribute | undefined>;
+  createAttribute(attribute: InsertAttribute): Promise<Attribute>;
+  updateAttribute(id: number, attributeData: Partial<InsertAttribute>): Promise<Attribute | undefined>;
+  deleteAttribute(id: number): Promise<boolean>;
+  
+  // Attribute options operations
+  getAttributeOptions(attributeId: number): Promise<AttributeOption[]>;
+  getAttributeOptionById(id: number): Promise<AttributeOption | undefined>;
+  createAttributeOption(option: InsertAttributeOption): Promise<AttributeOption>;
+  updateAttributeOption(id: number, optionData: Partial<InsertAttributeOption>): Promise<AttributeOption | undefined>;
+  deleteAttributeOption(id: number): Promise<boolean>;
+  updateAttributeOptionsOrder(attributeId: number, optionIds: number[]): Promise<boolean>;
+
+  // Catalog attribute operations
+  getCatalogAttributes(catalogId: number): Promise<(CatalogAttribute & { attribute: Attribute })[]>;
+  getCatalogAttributeById(id: number): Promise<(CatalogAttribute & { attribute: Attribute }) | undefined>;
+  createCatalogAttribute(catalogAttribute: InsertCatalogAttribute): Promise<CatalogAttribute>;
+  updateCatalogAttribute(id: number, catalogAttributeData: Partial<InsertCatalogAttribute>): Promise<CatalogAttribute | undefined>;
+  deleteCatalogAttribute(id: number): Promise<boolean>;
+  
+  // Catalog attribute options operations
+  getCatalogAttributeOptions(catalogAttributeId: number): Promise<(CatalogAttributeOption & { baseOption?: AttributeOption })[]>;
+  getCatalogAttributeOptionById(id: number): Promise<CatalogAttributeOption | undefined>;
+  createCatalogAttributeOption(option: InsertCatalogAttributeOption): Promise<CatalogAttributeOption>;
+  updateCatalogAttributeOption(id: number, optionData: Partial<InsertCatalogAttributeOption>): Promise<CatalogAttributeOption | undefined>;
+  deleteCatalogAttributeOption(id: number): Promise<boolean>;
+  updateCatalogAttributeOptionsOrder(catalogAttributeId: number, optionIds: number[]): Promise<boolean>;
+  
+  // Category attribute operations
+  getCategoryAttributes(categoryId: number): Promise<(CategoryAttribute & { attribute: Attribute })[]>;
+  getCategoryAttributeById(id: number): Promise<(CategoryAttribute & { attribute: Attribute }) | undefined>;
+  createCategoryAttribute(categoryAttribute: InsertCategoryAttribute): Promise<CategoryAttribute>;
+  updateCategoryAttribute(id: number, categoryAttributeData: Partial<InsertCategoryAttribute>): Promise<CategoryAttribute | undefined>;
+  deleteCategoryAttribute(id: number): Promise<boolean>;
+  
+  // Category attribute options operations
+  getCategoryAttributeOptions(categoryAttributeId: number): Promise<(CategoryAttributeOption & { baseOption?: AttributeOption, catalogOption?: CatalogAttributeOption })[]>;
+  getCategoryAttributeOptionById(id: number): Promise<CategoryAttributeOption | undefined>;
+  createCategoryAttributeOption(option: InsertCategoryAttributeOption): Promise<CategoryAttributeOption>;
+  updateCategoryAttributeOption(id: number, optionData: Partial<InsertCategoryAttributeOption>): Promise<CategoryAttributeOption | undefined>;
+  deleteCategoryAttributeOption(id: number): Promise<boolean>;
+  updateCategoryAttributeOptionsOrder(categoryAttributeId: number, optionIds: number[]): Promise<boolean>;
+  
+  // Product attribute operations
+  getProductAttributes(productId: number): Promise<(ProductAttribute & { attribute: Attribute })[]>;
+  getProductAttributeById(id: number): Promise<(ProductAttribute & { attribute: Attribute }) | undefined>;
+  createProductAttribute(productAttribute: InsertProductAttribute): Promise<ProductAttribute>;
+  updateProductAttribute(id: number, productAttributeData: Partial<InsertProductAttribute>): Promise<ProductAttribute | undefined>;
+  deleteProductAttribute(id: number): Promise<boolean>;
+  
+  // Product attribute options operations
+  getProductAttributeOptions(productAttributeId: number): Promise<(ProductAttributeOption & { 
+    baseOption?: AttributeOption, 
+    catalogOption?: CatalogAttributeOption,
+    categoryOption?: CategoryAttributeOption
+  })[]>;
+  getProductAttributeOptionById(id: number): Promise<ProductAttributeOption | undefined>;
+  createProductAttributeOption(option: InsertProductAttributeOption): Promise<ProductAttributeOption>;
+  updateProductAttributeOption(id: number, optionData: Partial<InsertProductAttributeOption>): Promise<ProductAttributeOption | undefined>;
+  deleteProductAttributeOption(id: number): Promise<boolean>;
+  updateProductAttributeOptionsOrder(productAttributeId: number, optionIds: number[]): Promise<boolean>;
+  
+  // Product attribute values operations
+  getProductAttributeValues(productId: number): Promise<ProductAttributeValue[]>;
+  getProductAttributeValueById(id: number): Promise<ProductAttributeValue | undefined>;
+  createProductAttributeValue(value: InsertProductAttributeValue): Promise<ProductAttributeValue>;
+  updateProductAttributeValue(id: number, valueData: Partial<InsertProductAttributeValue>): Promise<ProductAttributeValue | undefined>;
+  deleteProductAttributeValue(id: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2088,6 +2169,275 @@ export class DatabaseStorage implements IStorage {
     }));
   }
   */
+
+  // ==================================================================================
+  // ATTRIBUTE SYSTEM IMPLEMENTATION
+  // ==================================================================================
+  
+  // Core attribute operations
+  async getAllAttributes(): Promise<Attribute[]> {
+    return await db
+      .select()
+      .from(attributes)
+      .orderBy(asc(attributes.name));
+  }
+  
+  async getAttributeById(id: number): Promise<Attribute | undefined> {
+    const [attribute] = await db
+      .select()
+      .from(attributes)
+      .where(eq(attributes.id, id));
+    return attribute;
+  }
+  
+  async getAttributeByName(name: string): Promise<Attribute | undefined> {
+    const [attribute] = await db
+      .select()
+      .from(attributes)
+      .where(eq(attributes.name, name));
+    return attribute;
+  }
+  
+  async createAttribute(attribute: InsertAttribute): Promise<Attribute> {
+    const [newAttribute] = await db
+      .insert(attributes)
+      .values(attribute)
+      .returning();
+    return newAttribute;
+  }
+  
+  async updateAttribute(id: number, attributeData: Partial<InsertAttribute>): Promise<Attribute | undefined> {
+    const [updatedAttribute] = await db
+      .update(attributes)
+      .set(attributeData)
+      .where(eq(attributes.id, id))
+      .returning();
+    return updatedAttribute;
+  }
+  
+  async deleteAttribute(id: number): Promise<boolean> {
+    try {
+      await db
+        .delete(attributes)
+        .where(eq(attributes.id, id));
+      return true;
+    } catch (error) {
+      console.error("Error deleting attribute:", error);
+      return false;
+    }
+  }
+  
+  // Attribute options operations
+  async getAttributeOptions(attributeId: number): Promise<AttributeOption[]> {
+    return await db
+      .select()
+      .from(attributeOptions)
+      .where(eq(attributeOptions.attributeId, attributeId))
+      .orderBy(asc(attributeOptions.sortOrder));
+  }
+  
+  async getAttributeOptionById(id: number): Promise<AttributeOption | undefined> {
+    const [option] = await db
+      .select()
+      .from(attributeOptions)
+      .where(eq(attributeOptions.id, id));
+    return option;
+  }
+  
+  async createAttributeOption(option: InsertAttributeOption): Promise<AttributeOption> {
+    const [newOption] = await db
+      .insert(attributeOptions)
+      .values(option)
+      .returning();
+    return newOption;
+  }
+  
+  async updateAttributeOption(id: number, optionData: Partial<InsertAttributeOption>): Promise<AttributeOption | undefined> {
+    const [updatedOption] = await db
+      .update(attributeOptions)
+      .set(optionData)
+      .where(eq(attributeOptions.id, id))
+      .returning();
+    return updatedOption;
+  }
+  
+  async deleteAttributeOption(id: number): Promise<boolean> {
+    try {
+      await db
+        .delete(attributeOptions)
+        .where(eq(attributeOptions.id, id));
+      return true;
+    } catch (error) {
+      console.error("Error deleting attribute option:", error);
+      return false;
+    }
+  }
+  
+  async updateAttributeOptionsOrder(attributeId: number, optionIds: number[]): Promise<boolean> {
+    try {
+      // Start a transaction
+      await db.transaction(async (tx) => {
+        // Update the sort order for each option
+        for (let i = 0; i < optionIds.length; i++) {
+          await tx
+            .update(attributeOptions)
+            .set({ sortOrder: i })
+            .where(and(
+              eq(attributeOptions.id, optionIds[i]),
+              eq(attributeOptions.attributeId, attributeId)
+            ));
+        }
+      });
+      return true;
+    } catch (error) {
+      console.error("Error updating attribute options order:", error);
+      return false;
+    }
+  }
+  
+  // Catalog attribute operations
+  async getCatalogAttributes(catalogId: number): Promise<(CatalogAttribute & { attribute: Attribute })[]> {
+    const result = await db
+      .select({
+        catalogAttribute: catalogAttributes,
+        attribute: attributes
+      })
+      .from(catalogAttributes)
+      .innerJoin(attributes, eq(catalogAttributes.attributeId, attributes.id))
+      .where(eq(catalogAttributes.catalogId, catalogId))
+      .orderBy(asc(catalogAttributes.sortOrder));
+    
+    return result.map(row => ({
+      ...row.catalogAttribute,
+      attribute: row.attribute
+    }));
+  }
+  
+  async getCatalogAttributeById(id: number): Promise<(CatalogAttribute & { attribute: Attribute }) | undefined> {
+    const result = await db
+      .select({
+        catalogAttribute: catalogAttributes,
+        attribute: attributes
+      })
+      .from(catalogAttributes)
+      .innerJoin(attributes, eq(catalogAttributes.attributeId, attributes.id))
+      .where(eq(catalogAttributes.id, id));
+    
+    if (result.length === 0) {
+      return undefined;
+    }
+    
+    return {
+      ...result[0].catalogAttribute,
+      attribute: result[0].attribute
+    };
+  }
+  
+  async createCatalogAttribute(catalogAttribute: InsertCatalogAttribute): Promise<CatalogAttribute> {
+    const [newCatalogAttribute] = await db
+      .insert(catalogAttributes)
+      .values(catalogAttribute)
+      .returning();
+    return newCatalogAttribute;
+  }
+  
+  async updateCatalogAttribute(id: number, catalogAttributeData: Partial<InsertCatalogAttribute>): Promise<CatalogAttribute | undefined> {
+    const [updatedCatalogAttribute] = await db
+      .update(catalogAttributes)
+      .set(catalogAttributeData)
+      .where(eq(catalogAttributes.id, id))
+      .returning();
+    return updatedCatalogAttribute;
+  }
+  
+  async deleteCatalogAttribute(id: number): Promise<boolean> {
+    try {
+      await db
+        .delete(catalogAttributes)
+        .where(eq(catalogAttributes.id, id));
+      return true;
+    } catch (error) {
+      console.error("Error deleting catalog attribute:", error);
+      return false;
+    }
+  }
+  
+  // Catalog attribute options operations
+  async getCatalogAttributeOptions(catalogAttributeId: number): Promise<(CatalogAttributeOption & { baseOption?: AttributeOption })[]> {
+    const result = await db
+      .select({
+        catalogOption: catalogAttributeOptions,
+        baseOption: attributeOptions
+      })
+      .from(catalogAttributeOptions)
+      .leftJoin(attributeOptions, eq(catalogAttributeOptions.baseOptionId, attributeOptions.id))
+      .where(eq(catalogAttributeOptions.catalogAttributeId, catalogAttributeId))
+      .orderBy(asc(catalogAttributeOptions.sortOrder));
+    
+    return result.map(row => ({
+      ...row.catalogOption,
+      baseOption: row.baseOption || undefined
+    }));
+  }
+  
+  async getCatalogAttributeOptionById(id: number): Promise<CatalogAttributeOption | undefined> {
+    const [option] = await db
+      .select()
+      .from(catalogAttributeOptions)
+      .where(eq(catalogAttributeOptions.id, id));
+    return option;
+  }
+  
+  async createCatalogAttributeOption(option: InsertCatalogAttributeOption): Promise<CatalogAttributeOption> {
+    const [newOption] = await db
+      .insert(catalogAttributeOptions)
+      .values(option)
+      .returning();
+    return newOption;
+  }
+  
+  async updateCatalogAttributeOption(id: number, optionData: Partial<InsertCatalogAttributeOption>): Promise<CatalogAttributeOption | undefined> {
+    const [updatedOption] = await db
+      .update(catalogAttributeOptions)
+      .set(optionData)
+      .where(eq(catalogAttributeOptions.id, id))
+      .returning();
+    return updatedOption;
+  }
+  
+  async deleteCatalogAttributeOption(id: number): Promise<boolean> {
+    try {
+      await db
+        .delete(catalogAttributeOptions)
+        .where(eq(catalogAttributeOptions.id, id));
+      return true;
+    } catch (error) {
+      console.error("Error deleting catalog attribute option:", error);
+      return false;
+    }
+  }
+  
+  async updateCatalogAttributeOptionsOrder(catalogAttributeId: number, optionIds: number[]): Promise<boolean> {
+    try {
+      // Start a transaction
+      await db.transaction(async (tx) => {
+        // Update the sort order for each option
+        for (let i = 0; i < optionIds.length; i++) {
+          await tx
+            .update(catalogAttributeOptions)
+            .set({ sortOrder: i })
+            .where(and(
+              eq(catalogAttributeOptions.id, optionIds[i]),
+              eq(catalogAttributeOptions.catalogAttributeId, catalogAttributeId)
+            ));
+        }
+      });
+      return true;
+    } catch (error) {
+      console.error("Error updating catalog attribute options order:", error);
+      return false;
+    }
+  }
 }
 
 export const storage = new DatabaseStorage();
