@@ -93,21 +93,69 @@ In each phase below, both client and server-side changes must be made in tandem 
 - **Status**: Not Started
 - **Description**: Address issues in the existing Drizzle ORM schema
 - **Tasks**:
-  - Correct TypeScript errors in schema definitions
-  - Standardize relationship definitions
-  - Fix inconsistent column naming conventions
-  - Ensure schema validation consistency
-  - Update schema documentation
+  - **Shared**: Correct TypeScript errors in schema definitions
+  - **Server**: Standardize relationship definitions
+  - **Server**: Fix inconsistent column naming conventions
+  - **Server**: Ensure schema validation consistency
+  - **Documentation**: Update schema documentation
 
-#### 2.3. Create Utility Function Library
+#### 2.3. Timezone Standardization
+- **Status**: Not Started
+- **Description**: Implement SAST (UTC+2) timezone handling throughout the application
+- **Tasks**:
+  - **Server**: Install pg-timezone package to handle timezone conversion
+  - **Server**: Configure PostgreSQL connection with SAST timezone settings:
+    ```typescript
+    // Example configuration for db.ts
+    import { Pool, neonConfig } from '@neondatabase/serverless';
+    import { drizzle } from 'drizzle-orm/neon-serverless';
+    import ws from "ws";
+    import pgTimezone from 'pg-timezone';
+    
+    // Apply timezone patches to PostgreSQL driver
+    pgTimezone.register();
+    
+    // Configure database connection with SAST timezone
+    neonConfig.webSocketConstructor = ws;
+    const pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      // Set timezone to Africa/Johannesburg (SAST)
+      timezone: 'Africa/Johannesburg'
+    });
+    ```
+  - **Server**: Update date/time column types in schema.ts to use timestamptz
+  - **Server**: Create date/time utility functions that ensure SAST timezone:
+    ```typescript
+    // Example utility in shared/date-utils.ts
+    export function createSASTDate(date?: Date): Date {
+      const now = date || new Date();
+      // Ensure date is in SAST timezone (UTC+2)
+      return new Date(now.toLocaleString('en-US', { timeZone: 'Africa/Johannesburg' }));
+    }
+    ```
+  - **Client**: Create standardized date formatting functions that respect SAST:
+    ```typescript
+    // Example client utility
+    export function formatSASTDateTime(date: Date): string {
+      return date.toLocaleString('en-ZA', { 
+        timeZone: 'Africa/Johannesburg',
+        dateStyle: 'medium', 
+        timeStyle: 'short' 
+      });
+    }
+    ```
+  - **Testing**: Add test cases to verify correct timezone handling
+
+#### 2.4. Create Utility Function Library
 - **Status**: Not Started
 - **Description**: Build standardized utility functions
 - **Tasks**:
-  - Create date/time manipulation utilities
-  - Implement string formatting helpers
-  - Standardize number formatting functions
-  - Build validation helper functions
-  - Create data transformation utilities
+  - **Shared**: Create date/time manipulation utilities with SAST timezone support
+  - **Client**: Implement consistent date/time formatting for display
+  - **Server**: Create standardized date/time handling for database operations
+  - **Shared**: Implement string and number formatting helpers
+  - **Shared**: Build validation helper functions
+  - **Shared**: Create data transformation utilities
 
 ### Phase 3: API and Data Layer Standardization
 
