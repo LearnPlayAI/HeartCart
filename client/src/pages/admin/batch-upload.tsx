@@ -122,6 +122,12 @@ function getStatusBadge(status: string) {
       return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">Failed</Badge>;
     case 'cancelled':
       return <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200">Cancelled</Badge>;
+    case 'paused':
+      return <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">Paused</Badge>;
+    case 'resumable':
+      return <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">Resumable</Badge>;
+    case 'retrying':
+      return <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200">Retrying</Badge>;
     default:
       return <Badge variant="outline">{status}</Badge>;
   }
@@ -249,6 +255,12 @@ function BatchUploadListItem({
         </div>
         <div className="flex space-x-2">
           {/* Batch operation buttons based on status */}
+          {/* Upload file button for pending batches without files */}
+          {status === 'pending' && !batch.fileOriginalName && onUpload && (
+            <Button variant="outline" size="sm" onClick={() => onUpload(batch.id)} title="Upload CSV file">
+              <Upload className="h-4 w-4 text-blue-500" />
+            </Button>
+          )}
           {isProcessing && onPause && (
             <Button variant="outline" size="sm" onClick={onPause} title="Pause processing">
               <Pause className="h-4 w-4" />
