@@ -165,150 +165,187 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(categoryWithChildren);
   }));
 
-  app.post("/api/categories", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+  app.post("/api/categories", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
     const user = req.user as any;
     
     // Check if user is admin
     if (user.role !== 'admin') {
-      return res.status(403).json({ message: "Only administrators can create categories" });
+      throw new ForbiddenError("Only administrators can create categories");
     }
     
-    const categoryData = insertCategorySchema.parse(req.body);
-    const category = await storage.createCategory(categoryData);
-    
-    res.status(201).json(category);
+    try {
+      const categoryData = insertCategorySchema.parse(req.body);
+      const category = await storage.createCategory(categoryData);
+      
+      res.status(201).json(category);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        throw new ValidationError("Invalid category data", error.format());
+      }
+      throw error;
+    }
   }));
 
-  app.put("/api/categories/:id", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+  app.put("/api/categories/:id", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
     const user = req.user as any;
     
     // Check if user is admin
     if (user.role !== 'admin') {
-      return res.status(403).json({ message: "Only administrators can update categories" });
+      throw new ForbiddenError("Only administrators can update categories");
     }
     
     const { id } = req.params;
     const categoryId = parseInt(id);
     
-    // Validate the data
-    const categoryData = insertCategorySchema.partial().parse(req.body);
-    
-    // Update the category
-    const category = await storage.updateCategory(categoryId, categoryData);
-    
-    if (!category) {
-      return res.status(404).json({ message: "Category not found" });
+    if (isNaN(categoryId)) {
+      throw new BadRequestError("Invalid category ID");
     }
     
-    res.json(category);
+    try {
+      // Validate the data
+      const categoryData = insertCategorySchema.partial().parse(req.body);
+      
+      // Update the category
+      const category = await storage.updateCategory(categoryId, categoryData);
+      
+      if (!category) {
+        throw new NotFoundError(`Category with ID ${categoryId} not found`, 'category');
+      }
+      
+      res.json(category);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        throw new ValidationError("Invalid category data", error.format());
+      }
+      throw error;
+    }
   }));
   
-  app.put("/api/categories/:id/display-order", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+  app.put("/api/categories/:id/display-order", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
     const user = req.user as any;
     
     // Check if user is admin
     if (user.role !== 'admin') {
-      return res.status(403).json({ message: "Only administrators can update category order" });
+      throw new ForbiddenError("Only administrators can update category order");
     }
     
     const { id } = req.params;
     const categoryId = parseInt(id);
+    
+    if (isNaN(categoryId)) {
+      throw new BadRequestError("Invalid category ID");
+    }
+    
     const { displayOrder } = req.body;
     
     if (typeof displayOrder !== 'number') {
-      return res.status(400).json({ message: "Display order must be a number" });
+      throw new ValidationError("Display order must be a number");
     }
     
     // Update the category display order
     const category = await storage.updateCategoryDisplayOrder(categoryId, displayOrder);
     
     if (!category) {
-      return res.status(404).json({ message: "Category not found" });
+      throw new NotFoundError(`Category with ID ${categoryId} not found`, 'category');
     }
     
     res.json(category);
   }));
 
-  app.put("/api/categories/:id/visibility", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+  app.put("/api/categories/:id/visibility", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
     const user = req.user as any;
     
     // Check if user is admin
     if (user.role !== 'admin') {
-      return res.status(403).json({ message: "Only administrators can update category visibility" });
+      throw new ForbiddenError("Only administrators can update category visibility");
     }
     
     const { id } = req.params;
     const categoryId = parseInt(id);
+    
+    if (isNaN(categoryId)) {
+      throw new BadRequestError("Invalid category ID");
+    }
+    
     const { isActive, cascade = true } = req.body;
     
     if (typeof isActive !== 'boolean') {
-      return res.status(400).json({ message: "isActive must be a boolean value" });
+      throw new ValidationError("isActive must be a boolean value");
     }
     
     // Update the category's visibility
     const category = await storage.updateCategory(categoryId, { isActive });
     
     if (!category) {
-      return res.status(404).json({ message: "Category not found" });
+      throw new NotFoundError(`Category with ID ${categoryId} not found`, 'category');
     }
     
     // Initialize counters for response
     let updatedProductCount = 0;
     let updatedSubcategoryCount = 0;
     
-    // If cascade is true and this is a parent category, update all its subcategories
-    if (cascade && category.level === 0) {
-      // Get all subcategories for this parent
-      const subcategories = await storage.getAllCategories({
-        parentId: categoryId,
-        includeInactive: true // Include all subcategories regardless of their current status
-      });
-      
-      // Update each subcategory's visibility
-      for (const subcategory of subcategories) {
-        await storage.updateCategory(subcategory.id, { isActive });
-        updatedSubcategoryCount++;
-        
-        // Get and update products in this subcategory
-        const subcategoryProducts = await storage.getProductsByCategory(subcategory.id, undefined, undefined, {
-          includeInactive: true,
-          includeCategoryInactive: true
+    try {
+      // If cascade is true and this is a parent category, update all its subcategories
+      if (cascade && category.level === 0) {
+        // Get all subcategories for this parent
+        const subcategories = await storage.getAllCategories({
+          parentId: categoryId,
+          includeInactive: true // Include all subcategories regardless of their current status
         });
         
-        // Update each product's isActive status
-        for (const product of subcategoryProducts) {
-          await storage.updateProduct(product.id, {
-            isActive: isActive
+        // Update each subcategory's visibility
+        for (const subcategory of subcategories) {
+          await storage.updateCategory(subcategory.id, { isActive });
+          updatedSubcategoryCount++;
+          
+          // Get and update products in this subcategory
+          const subcategoryProducts = await storage.getProductsByCategory(subcategory.id, undefined, undefined, {
+            includeInactive: true,
+            includeCategoryInactive: true
           });
-          updatedProductCount++;
+          
+          // Update each product's isActive status
+          for (const product of subcategoryProducts) {
+            await storage.updateProduct(product.id, {
+              isActive: isActive
+            });
+            updatedProductCount++;
+          }
         }
+        
+        logger.info(`Cascaded visibility status to ${updatedSubcategoryCount} subcategories of category ${categoryId}`);
       }
       
-      console.log(`Cascaded visibility status to ${updatedSubcategoryCount} subcategories of category ${categoryId}`);
-    }
-    
-    // Update products directly in this category
-    const categoryProducts = await storage.getProductsByCategory(categoryId, undefined, undefined, {
-      includeInactive: true,
-      includeCategoryInactive: true
-    });
-    
-    // Update each product's isActive status to match category's visibility
-    for (const product of categoryProducts) {
-      await storage.updateProduct(product.id, {
-        isActive: isActive
+      // Update products directly in this category
+      const categoryProducts = await storage.getProductsByCategory(categoryId, undefined, undefined, {
+        includeInactive: true,
+        includeCategoryInactive: true
       });
-      updatedProductCount++;
+      
+      // Update each product's isActive status to match category's visibility
+      for (const product of categoryProducts) {
+        await storage.updateProduct(product.id, {
+          isActive: isActive
+        });
+        updatedProductCount++;
+      }
+      
+      logger.info(`Updated visibility status for ${updatedProductCount} products in category ${categoryId} to: ${isActive}`);
+      
+      res.json({
+        ...category,
+        productsUpdated: updatedProductCount,
+        subcategoriesUpdated: updatedSubcategoryCount,
+        cascaded: cascade
+      });
+    } catch (error) {
+      logger.error('Error updating category visibility:', { error, categoryId, isActive });
+      throw new AppError(
+        "An error occurred while updating category visibility. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500
+      );
     }
-    
-    console.log(`Updated visibility status for ${updatedProductCount} products in category ${categoryId} to: ${isActive}`);
-    
-    res.json({
-      ...category,
-      productsUpdated: updatedProductCount,
-      subcategoriesUpdated: updatedSubcategoryCount,
-      cascaded: cascade
-    });
   }));
 
   // CATEGORY ATTRIBUTE ROUTES - Removed as part of attribute system redesign
@@ -318,11 +355,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // CATEGORY ATTRIBUTE OPTIONS ROUTES - Removed as part of attribute system redesign
 
   // PRODUCT ROUTES
-  app.get("/api/products", handleErrors(async (req: Request, res: Response) => {
+  app.get("/api/products", asyncHandler(async (req: Request, res: Response) => {
     const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
     const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
     const categoryId = req.query.category ? parseInt(req.query.category as string) : undefined;
     const search = req.query.search as string | undefined;
+    
+    // Validate numeric parameters
+    if (limit < 0 || isNaN(limit)) {
+      throw new ValidationError("Limit must be a non-negative number");
+    }
+    
+    if (offset < 0 || isNaN(offset)) {
+      throw new ValidationError("Offset must be a non-negative number");
+    }
+    
+    if (categoryId !== undefined && isNaN(categoryId)) {
+      throw new BadRequestError("Category ID must be a number");
+    }
     
     const user = req.user as any;
     const isAdmin = user && user.role === 'admin';
@@ -337,35 +387,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }));
   
   // Bulk update product status endpoint
-  app.post("/api/products/bulk-update-status", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+  app.post("/api/products/bulk-update-status", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
     const user = req.user as any;
     
     // Check if user is admin
     if (user.role !== 'admin') {
-      return res.status(403).json({ message: "Only administrators can update product status" });
+      throw new ForbiddenError("Only administrators can update product status");
     }
     
     const { productIds, isActive } = req.body;
     
     if (!Array.isArray(productIds) || productIds.length === 0) {
-      return res.status(400).json({ message: "Product IDs array is required" });
+      throw new ValidationError("Product IDs array is required");
     }
     
     if (typeof isActive !== 'boolean') {
-      return res.status(400).json({ message: "isActive must be a boolean value" });
+      throw new ValidationError("isActive must be a boolean value");
     }
     
-    const updatedCount = await storage.bulkUpdateProductStatus(productIds, isActive);
-    res.json({ 
-      success: true, 
-      count: updatedCount,
-      message: `${updatedCount} products ${isActive ? 'activated' : 'deactivated'} successfully` 
-    });
+    try {
+      const updatedCount = await storage.bulkUpdateProductStatus(productIds, isActive);
+      res.json({ 
+        success: true, 
+        count: updatedCount,
+        message: `${updatedCount} products ${isActive ? 'activated' : 'deactivated'} successfully` 
+      });
+    } catch (error) {
+      logger.error('Error updating product status:', { error, productIds, isActive });
+      throw new AppError(
+        "An error occurred while updating product status. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500
+      );
+    }
   }));
 
   // Specific route patterns must be defined before generic patterns with path parameters
-  app.get("/api/products/slug/:slug", handleErrors(async (req: Request, res: Response) => {
+  app.get("/api/products/slug/:slug", asyncHandler(async (req: Request, res: Response) => {
     const { slug } = req.params;
+    
+    if (!slug || typeof slug !== 'string') {
+      throw new BadRequestError("Valid product slug is required");
+    }
     
     const user = req.user as any;
     const isAdmin = user && user.role === 'admin';
@@ -378,24 +441,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const product = await storage.getProductBySlug(slug, options);
     
     if (!product) {
-      res.status(404).json({ message: "Product not found" });
-      return;
+      throw new NotFoundError(`Product with slug '${slug}' not found`, 'product');
     }
     
     res.json(product);
   }));
 
-  app.get("/api/products/category/:categoryId", handleErrors(async (req: Request, res: Response) => {
+  app.get("/api/products/category/:categoryId", asyncHandler(async (req: Request, res: Response) => {
     const categoryId = parseInt(req.params.categoryId);
     
     // Validate categoryId is a number
     if (isNaN(categoryId)) {
-      res.status(400).json({ message: "Invalid category ID" });
-      return;
+      throw new BadRequestError("Invalid category ID");
     }
     
     const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
     const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
+    
+    // Validate numeric parameters
+    if (limit < 0 || isNaN(limit)) {
+      throw new ValidationError("Limit must be a non-negative number");
+    }
+    
+    if (offset < 0 || isNaN(offset)) {
+      throw new ValidationError("Offset must be a non-negative number");
+    }
     
     const user = req.user as any;
     const isAdmin = user && user.role === 'admin';
@@ -405,8 +475,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       includeCategoryInactive: isAdmin 
     };
     
-    const products = await storage.getProductsByCategory(categoryId, limit, offset, options);
-    res.json(products);
+    try {
+      // Check if category exists
+      const category = await storage.getCategoryById(categoryId);
+      if (!category) {
+        throw new NotFoundError(`Category with ID ${categoryId} not found`, 'category');
+      }
+      
+      const products = await storage.getProductsByCategory(categoryId, limit, offset, options);
+      res.json(products);
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
+      logger.error('Error fetching products by category', { error, categoryId });
+      throw new AppError(
+        "Failed to fetch products for the specified category",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500
+      );
+    }
   }));
   
   // Product attributes-for-category route - removed as part of attribute system redesign
