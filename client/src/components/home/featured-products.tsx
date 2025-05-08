@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import ProductCard from '@/components/product/product-card';
@@ -14,12 +14,19 @@ const FeaturedProductsSection = () => {
     data: Product[];
   }
   
-  const { data: response, isLoading, isFetching } = useQuery<ApiResponse>({
+  const { data: response, isLoading, isFetching, error } = useQuery<ApiResponse>({
     queryKey: ['/api/featured-products', { limit, offset: (page - 1) * limit }],
   });
   
   // Extract the featured products from the standardized response
-  const featuredProducts = response?.data || [];
+  const featuredProducts = response?.success ? response.data : [];
+  
+  // Handle error state gracefully
+  useEffect(() => {
+    if (error) {
+      console.error('Error fetching featured products:', error);
+    }
+  }, [error]);
   
   const loadMore = () => {
     setPage(prev => prev + 1);
@@ -43,8 +50,26 @@ const FeaturedProductsSection = () => {
               </div>
             </div>
           ))
+        ) : error ? (
+          // Show error state
+          <div className="col-span-full py-8 text-center">
+            <div className="text-red-500 mb-2">Failed to load featured products</div>
+            <Button 
+              variant="outline"
+              className="border-[#FF69B4] text-[#FF69B4] hover:bg-[#FF69B4] hover:text-white"
+              onClick={() => window.location.reload()}
+            >
+              Retry
+            </Button>
+          </div>
+        ) : featuredProducts.length === 0 ? (
+          // Show empty state
+          <div className="col-span-full py-8 text-center text-gray-500">
+            No featured products available at the moment
+          </div>
         ) : (
-          featuredProducts?.map((product) => (
+          // Show products
+          featuredProducts.map((product) => (
             <ProductCard
               key={product.id}
               product={product}
@@ -55,16 +80,18 @@ const FeaturedProductsSection = () => {
         )}
       </div>
       
-      <div className="flex justify-center mt-6">
-        <Button 
-          variant="outline"
-          className="border-[#FF69B4] text-[#FF69B4] hover:bg-[#FF69B4] hover:text-white"
-          onClick={loadMore}
-          disabled={isFetching}
-        >
-          {isFetching ? 'Loading...' : 'Load More Products'}
-        </Button>
-      </div>
+      {!isLoading && !error && featuredProducts.length > 0 && (
+        <div className="flex justify-center mt-6">
+          <Button 
+            variant="outline"
+            className="border-[#FF69B4] text-[#FF69B4] hover:bg-[#FF69B4] hover:text-white"
+            onClick={loadMore}
+            disabled={isFetching}
+          >
+            {isFetching ? 'Loading...' : 'Load More Products'}
+          </Button>
+        </div>
+      )}
     </section>
   );
 };

@@ -276,7 +276,7 @@ All client and server-side components must be completely updated to match the ne
   - ✓ Document API response patterns
 
 #### 3.4. Front-end Component Standardization for API Integration
-- **Status**: Partially Completed
+- **Status**: In Progress (60% Complete)
 - **Description**: Update all front-end components to use standardized API responses
 - **Tasks**:
   - [x] Standardize front-end cart interaction components:
@@ -299,12 +299,13 @@ All client and server-side components must be completely updated to match the ne
   - [ ] Standardize product components:
     - [x] Update product-listing.tsx to use standardized API responses
     - [ ] Standardize product-detail-new.tsx for consistent API integration
-    - [ ] Update product-card.tsx component for API consistency
+    - [x] Update product-card.tsx component for API consistency
+    - [x] Update quick-view-modal.tsx to fix infinite loop and standardize API handling
     - [ ] Standardize product-grid.tsx component for pagination handling
   - [ ] Standardize home page components:
     - [ ] Update categories-showcase.tsx for standardized API responses
     - [ ] Standardize flash-deals.tsx component for API consistency
-    - [ ] Update featured-products.tsx for standardized responses
+    - [x] Update featured-products.tsx for standardized responses
   - [ ] Standardize shared components:
     - [ ] Update ui/category-sidebar.tsx for API response consistency
     - [ ] Standardize ui/product-search.tsx component
@@ -317,6 +318,7 @@ All client and server-side components must be completely updated to match the ne
     - [ ] Update use-auth.tsx for standardized API integration
     - [ ] Standardize use-products.tsx hook for consistent response handling
     - [ ] Update use-categories.tsx for standardized responses
+    - [x] Update use-attribute-discounts.tsx for standardized API responses
     - [ ] Standardize use-ai-settings.tsx for API consistency
 
 ### Phase 4: Authentication and Authorization
