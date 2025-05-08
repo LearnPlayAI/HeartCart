@@ -128,7 +128,7 @@ export const productImages = pgTable("product_images", {
   bgRemovedObjectKey: text("bg_removed_object_key"),
   // Note: 'alt' field removed as it doesn't exist in the database
   sortOrder: integer("sort_order").default(0),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 // AI Recommendations table
@@ -138,7 +138,7 @@ export const aiRecommendations = pgTable("ai_recommendations", {
   productIds: integer("product_ids").array(),
   reason: text("reason"),
   aiResponse: jsonb("ai_response"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 // Pricing settings table for category-specific markup percentages
@@ -147,8 +147,8 @@ export const pricing = pgTable("pricing", {
   categoryId: integer("category_id").references(() => categories.id),
   markupPercentage: integer("markup_percentage").notNull().default(50),
   description: text("description"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => {
   return {
     categoryUnique: unique().on(table.categoryId),
@@ -161,8 +161,8 @@ export const aiSettings = pgTable("ai_settings", {
   settingName: text("setting_name").notNull().unique(),
   settingValue: text("setting_value").notNull(),
   description: text("description"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 // Suppliers table
@@ -179,8 +179,8 @@ export const suppliers = pgTable("suppliers", {
   logo: text("logo"),
   website: varchar("website", { length: 255 }),
   isActive: boolean("is_active").default(true).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 // Catalogs table
@@ -193,10 +193,10 @@ export const catalogs = pgTable("catalogs", {
   isActive: boolean("is_active").default(true).notNull(),
   coverImage: text("cover_image"),
   tags: text("tags").array(),
-  startDate: timestamp("start_date"),
-  endDate: timestamp("end_date"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  startDate: timestamp("start_date", { withTimezone: true }),
+  endDate: timestamp("end_date", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 // =============================================================================
@@ -218,8 +218,8 @@ export const attributes = pgTable("attributes", {
   isSwatch: boolean("is_swatch").default(false), // Is this attribute shown as a swatch (color/texture)?
   displayInProductSummary: boolean("display_in_product_summary").default(false), // Show in product list summaries?
   sortOrder: integer("sort_order").default(0),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => {
   return {
     nameUnique: unique().on(table.name),
@@ -234,8 +234,8 @@ export const attributeOptions = pgTable("attribute_options", {
   displayValue: varchar("display_value", { length: 255 }).notNull(),
   metadata: jsonb("metadata"), // Additional data like hex code for colors, image URL for texture, etc.
   sortOrder: integer("sort_order").default(0),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => {
   return {
     attrOptionUnique: unique().on(table.attributeId, table.value),
@@ -252,8 +252,8 @@ export const catalogAttributes = pgTable("catalog_attributes", {
   isRequired: boolean("is_required"), // Override the base attribute's isRequired flag
   isFilterable: boolean("is_filterable"), // Override the base attribute's isFilterable flag
   sortOrder: integer("sort_order").default(0),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => {
   return {
     catalogAttrUnique: unique().on(table.catalogId, table.attributeId),
