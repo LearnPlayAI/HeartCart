@@ -74,6 +74,7 @@ import {
   AlertCircle,
   ArrowUpDown,
   Check, 
+  CheckCircle as CheckIcon,
   Clock, 
   Download, 
   Eye, 
@@ -93,7 +94,7 @@ import {
   X
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
 
 // Form schema for creating a new batch upload
 const createBatchUploadSchema = z.object({
@@ -208,19 +209,35 @@ function BatchUploadListItem({
           </div>
         </div>
         
-        {isProcessing && (
+        {(isProcessing || isPaused || isRetrying) && (
           <div className="mb-3">
             <div className="flex justify-between items-center mb-1">
-              <span className="text-xs text-gray-500">Processing progress</span>
+              <span className="text-xs text-gray-500">
+                {isProcessing ? "Processing progress" : 
+                 isPaused ? "Paused at" : 
+                 "Retry progress"}
+              </span>
               <span className="text-xs font-medium">
                 {batch.processedRecords || 0} / {batch.totalRecords || 0} records
               </span>
             </div>
-            <Progress value={progress} className="h-2" />
+            <Progress 
+              value={progress} 
+              className={cn(
+                "h-2",
+                isPaused && "opacity-60"
+              )} 
+            />
+            {isPaused && (
+              <p className="text-xs text-amber-600 mt-1">
+                Processing paused at record {batch.lastProcessedRow || batch.processedRecords || 0}.
+                Click the resume button to continue.
+              </p>
+            )}
           </div>
         )}
         
-        {(isComplete || isFailed) && (
+        {(isComplete || isFailed || isCancelled) && (
           <div className="grid grid-cols-3 gap-2 mb-3">
             <div className="text-center p-2 bg-gray-50 rounded">
               <p className="text-xs text-gray-500">Total</p>
@@ -235,6 +252,28 @@ function BatchUploadListItem({
               <p className="text-lg font-medium text-red-600">{batch.errorCount || 0}</p>
             </div>
           </div>
+        )}
+        
+        {isCancelled && (
+          <Alert className="mt-2">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Processing cancelled</AlertTitle>
+            <AlertDescription>
+              This batch was cancelled on {batch.canceledAt && 
+                format(new Date(batch.canceledAt), 'PPp')}
+            </AlertDescription>
+          </Alert>
+        )}
+        
+        {isComplete && (
+          <Alert className="mt-2 bg-green-50 border-green-200 text-green-800">
+            <CheckIcon className="h-4 w-4" />
+            <AlertTitle>Processing complete</AlertTitle>
+            <AlertDescription>
+              Batch completed on {batch.completedAt && 
+                format(new Date(batch.completedAt), 'PPp')}
+            </AlertDescription>
+          </Alert>
         )}
         
         {isFailed && batch.errorCount && batch.errorCount > 0 && (
