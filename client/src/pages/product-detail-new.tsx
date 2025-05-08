@@ -129,7 +129,7 @@ const ProductDetailView = ({
   const [quantity, setQuantity] = useState(1);
   const [selectedAttributes, setSelectedAttributes] = useState<{[key: number]: string}>({});
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
-  const [selectedCombination, setSelectedCombination] = useState<ProductAttributeCombination | null>(null);
+  const [selectedAttributeValues, setSelectedAttributeValues] = useState<ProductAttributeValue[]>([]);
   const [currentImage, setCurrentImage] = useState<string | null>(null);
   
   // Get related products based on category
@@ -138,21 +138,21 @@ const ProductDetailView = ({
     enabled: !!product?.categoryId,
   });
   
-  // Get category attributes
-  const { data: categoryAttributes } = useQuery<CategoryAttribute[]>({
-    queryKey: ['/api/category-attributes', product?.categoryId],
-    enabled: !!product?.categoryId,
-  });
-  
-  // Get attribute options for each attribute
-  const { data: productAttributes } = useQuery<{[key: number]: CategoryAttributeOption[]}>({
+  // Get product attributes (includes product-specific attributes as well as inherited ones)
+  const { data: productAttributes } = useQuery<CategoryAttribute[]>({
     queryKey: ['/api/products', product?.id, 'attributes'],
     enabled: !!product?.id,
   });
   
-  // Get product attribute combinations
-  const { data: combinations } = useQuery<ProductAttributeCombination[]>({
-    queryKey: ['/api/products', product?.id, 'combinations'],
+  // Get product attribute options
+  const { data: attributeOptions } = useQuery<{ [key: number]: ProductAttributeOption[] }>({
+    queryKey: ['/api/products', product?.id, 'attribute-options'],
+    enabled: !!product?.id && !!productAttributes?.length,
+  });
+  
+  // Get product attribute values for combinations
+  const { data: attributeValues } = useQuery<ProductAttributeValue[]>({
+    queryKey: ['/api/products', product?.id, 'attribute-values'],
     enabled: !!product?.id,
   });
   
@@ -165,40 +165,45 @@ const ProductDetailView = ({
 
   // Effect to update price when attributes are selected
   useEffect(() => {
-    if (!product) return;
+    if (!product || !attributeValues || !productAttributes) return;
     
-    // Check if all attributes have been selected
-    const allSelected = categoryAttributes?.every(attr => selectedAttributes[attr.id]) || false;
+    // Check if all required attributes have been selected
+    const requiredAttributes = productAttributes.filter(attr => attr.isRequired);
+    const allRequiredSelected = requiredAttributes.length === 0 || 
+      requiredAttributes.every(attr => selectedAttributes[attr.id]);
     
-    if (allSelected && categoryAttributes && categoryAttributes.length > 0) {
-      // Create a combination hash from selected attributes
-      const combinationParts = Object.entries(selectedAttributes)
-        .map(([attrId, value]) => `${attrId}:${value}`)
-        .sort()
-        .join('|');
-      
-      // Find matching combination
-      const matchingCombination = combinations?.find(c => c.combinationHash === combinationParts);
-      
-      if (matchingCombination) {
-        // Calculate adjusted price
-        const basePrice = product.salePrice || product.price;
-        const priceAdjustment = matchingCombination.priceAdjustment 
-          ? Number(matchingCombination.priceAdjustment) 
-          : 0;
-        const adjustedPrice = Number(basePrice) + priceAdjustment;
+    if (allRequiredSelected && Object.keys(selectedAttributes).length > 0) {
+      // Find matching attribute values with price adjustments
+      const selectedAttrValues = attributeValues.filter(value => {
+        // Match attribute values that correspond to selected attributes
+        const attrId = value.attributeId;
+        const selectedOptionId = selectedAttributes[attrId];
         
-        setCurrentPrice(adjustedPrice);
-        setSelectedCombination(matchingCombination);
-      } else {
-        setCurrentPrice(null);
-        setSelectedCombination(null);
-      }
+        return selectedOptionId && 
+          (value.optionId === parseInt(selectedOptionId) || 
+           value.textValue === selectedOptionId);
+      });
+      
+      // Calculate total price adjustment from all selected attribute values
+      let totalPriceAdjustment = 0;
+      
+      selectedAttrValues.forEach(value => {
+        if (value.priceAdjustment) {
+          totalPriceAdjustment += parseFloat(value.priceAdjustment);
+        }
+      });
+      
+      // Apply price adjustment to base price
+      const basePrice = product.salePrice || product.price;
+      const adjustedPrice = Number(basePrice) + totalPriceAdjustment;
+      
+      setCurrentPrice(adjustedPrice);
+      setSelectedAttributeValues(selectedAttrValues);
     } else {
       setCurrentPrice(null);
-      setSelectedCombination(null);
+      setSelectedAttributeValues([]);
     }
-  }, [selectedAttributes, combinations, product, categoryAttributes]);
+  }, [selectedAttributes, attributeValues, product, productAttributes]);
   
   // Handle quantity change
   const handleQuantityChange = (newQuantity: number) => {
@@ -244,12 +249,18 @@ const ProductDetailView = ({
   const handleAddToCart = () => {
     if (!product) return;
     
+    // Create a combination hash from selected attributes (for cart item identification)
+    const combinationHash = Object.entries(selectedAttributes)
+      .map(([attrId, value]) => `${attrId}:${value}`)
+      .sort()
+      .join('|');
+    
     const cartItem = {
       productId: product.id,
       product,
       quantity,
-      combinationId: selectedCombination?.id,
-      combinationHash: selectedCombination?.combinationHash,
+      selectedAttributeValues,
+      combinationHash,
       selectedAttributes,
       adjustedPrice: currentPrice || product.salePrice || product.price
     };
@@ -473,48 +484,72 @@ const ProductDetailView = ({
             <Separator className="my-4" />
             
             {/* Attribute Selection */}
-            {categoryAttributes && categoryAttributes.length > 0 && productAttributes && (
+            {productAttributes && productAttributes.length > 0 && attributeOptions && (
               <div className="space-y-4 mb-6">
-                <h3 className="text-lg font-semibold">Options</h3>
+                <h3 className="text-lg font-semibold">Product Options</h3>
                 
-                {categoryAttributes.map(attribute => (
-                  <div key={attribute.id} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <label className="font-medium text-sm">{attribute.name}</label>
+                {productAttributes.map(attribute => {
+                  // Get options for this attribute
+                  const options = attributeOptions[attribute.id] || [];
+                  
+                  // Skip if no options available
+                  if (options.length === 0 && attribute.type !== 'text') return null;
+                  
+                  return (
+                    <div key={attribute.id} className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center">
+                          <label className="font-medium text-sm">{attribute.name}</label>
+                          {attribute.isRequired && (
+                            <span className="text-red-500 ml-1">*</span>
+                          )}
+                        </div>
+                        
+                        {selectedAttributes[attribute.id] && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge variant="outline" className="ml-2">
+                                  {selectedAttributes[attribute.id]}
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Selected value</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                      </div>
                       
-                      {selectedAttributes[attribute.id] && (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Badge variant="outline" className="ml-2">
-                                {selectedAttributes[attribute.id]}
-                              </Badge>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Selected value</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                      {/* Display different input types based on attribute type */}
+                      {attribute.type === 'select' && (
+                        <Select 
+                          value={selectedAttributes[attribute.id] || ''}
+                          onValueChange={value => handleAttributeChange(attribute.id, value)}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder={`Select ${attribute.name}`} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {options.map(option => (
+                              <SelectItem key={option.id} value={option.id.toString()}>
+                                {option.displayValue || option.value}
+                                {option.priceAdjustment && parseFloat(option.priceAdjustment) !== 0 && (
+                                  <span className="ml-2 text-sm text-gray-500">
+                                    ({parseFloat(option.priceAdjustment) > 0 ? '+' : ''}
+                                    {formatCurrency(parseFloat(option.priceAdjustment))})
+                                  </span>
+                                )}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       )}
+                      
+                      {/* Add more attribute types here as needed */}
                     </div>
-                    
-                    <Select 
-                      value={selectedAttributes[attribute.id] || ''}
-                      onValueChange={value => handleAttributeChange(attribute.id, value)}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder={`Select ${attribute.name}`} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {productAttributes[attribute.id]?.map(option => (
-                          <SelectItem key={option.id} value={option.value}>
-                            {option.displayValue || option.value}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                ))}
+                  );
+                })}
                 
                 {currentPrice !== null && currentPrice !== (product.salePrice || product.price) && (
                   <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-md">
