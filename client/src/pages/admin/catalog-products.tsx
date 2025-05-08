@@ -962,6 +962,7 @@ export default function CatalogProducts() {
                 <TableHead>Category</TableHead>
                 <TableHead>Price</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Images</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -974,7 +975,7 @@ export default function CatalogProducts() {
                   >
                     {productsLoading ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-10">
+                        <TableCell colSpan={8} className="text-center py-10">
                           <div className="flex justify-center">
                             <Loader2 className="h-8 w-8 animate-spin text-pink-500" />
                           </div>
