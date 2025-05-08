@@ -714,6 +714,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // PRODUCT IMAGE ROUTES
   
+  // Validate image before upload
+  app.post(
+    "/api/images/validate", 
+    isAuthenticated, 
+    upload.single('image'), 
+    asyncHandler(async (req: Request, res: Response) => {
+      const user = req.user as any;
+      
+      if (user.role !== 'admin') {
+        throw new ForbiddenError("Only administrators can validate images");
+      }
+      
+      // Check if file exists
+      if (!req.file || !req.file.buffer) {
+        throw new ValidationError("No image file provided");
+      }
+      
+      // Validate the image
+      const validationResult = await imageService.validateImage(
+        req.file.buffer,
+        req.file.originalname
+      );
+      
+      // Return validation result
+      return {
+        success: validationResult.valid,
+        validation: validationResult,
+        recommendations: validationResult.valid 
+          ? [] 
+          : [
+              "Ensure image dimensions are at least 200x200 pixels",
+              "Use JPG, PNG or WebP format only",
+              "Keep file size under 5MB",
+              "Recommended dimensions are 1200x1200 pixels"
+            ]
+      };
+    })
+  );
+  
   // Temporary image upload endpoint for product creation
   app.post('/api/products/images/temp', isAuthenticated, (req: Request, res: Response, next: NextFunction) => {
     console.log('Temp image upload - Request headers:', req.headers);
@@ -733,13 +772,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = req.user as any;
       
       if (user.role !== 'admin') {
-        return res.status(403).json({ message: "Only administrators can upload images" });
+        return res.status(403).json({ 
+          success: false,
+          error: {
+            message: "Only administrators can upload images",
+            code: "FORBIDDEN"
+          } 
+        });
       }
       
       console.log('Received files:', req.files);
       
       if (!req.files || !Array.isArray(req.files) || req.files.length === 0) {
-        return res.status(400).json({ message: 'No files uploaded' });
+        return res.status(400).json({ 
+          success: false,
+          error: {
+            message: 'No files uploaded',
+            code: "VALIDATION_ERROR"
+          } 
+        });
+      }
+      
+      // Perform validation on each file
+      const validationResults = [];
+      const validFiles = [];
+      
+      for (const file of req.files as Express.Multer.File[]) {
+        if (!file.buffer || file.buffer.length === 0) {
+          validationResults.push({
+            filename: file.originalname,
+            valid: false,
+            errors: ["Empty file received"]
+          });
+          continue;
+        }
+        
+        try {
+          // Validate the image
+          const validationResult = await imageService.validateImage(file.buffer, file.originalname);
+          validationResults.push({
+            filename: file.originalname,
+            ...validationResult
+          });
+          
+          // If valid, add to the list of files to process
+          if (validationResult.valid) {
+            validFiles.push(file);
+          }
+        } catch (error) {
+          console.error(`Error validating file ${file.originalname}:`, error);
+          validationResults.push({
+            filename: file.originalname,
+            valid: false,
+            errors: [`Error validating file: ${error.message || 'Unknown error'}`],
+            warnings: [],
+            details: {}
+          });
+        }
+      }
+      
+      // If no valid files, return validation errors
+      if (validFiles.length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            message: 'No valid files to upload',
+            code: "VALIDATION_ERROR",
+            details: validationResults
+          }
+        });
       }
       
       // Get productId if provided, otherwise use 'pending'

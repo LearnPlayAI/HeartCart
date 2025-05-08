@@ -1,6 +1,7 @@
 import sharp from 'sharp';
 import path from 'path';
 import { objectStore, STORAGE_FOLDERS } from './object-store';
+import { NotFoundError, ValidationError } from './errors';
 
 /**
  * Configuration for image resizing operations
@@ -33,9 +34,180 @@ export const THUMBNAIL_SIZES = {
 };
 
 /**
+ * Image validation constants
+ */
+export const IMAGE_VALIDATION = {
+  MAX_SIZE_BYTES: 5 * 1024 * 1024, // 5MB maximum file size
+  MIN_DIMENSIONS: { width: 200, height: 200 },
+  RECOMMENDED_DIMENSIONS: { width: 1200, height: 1200 },
+  ALLOWED_FORMATS: ['jpeg', 'jpg', 'png', 'webp'],
+  QUALITY_THRESHOLD: 70 // Minimum quality score (0-100)
+};
+
+/**
+ * Image validation results interface
+ */
+export interface ImageValidationResult {
+  valid: boolean;
+  errors: string[];
+  warnings: string[];
+  details: {
+    format?: string;
+    size?: number;
+    dimensions?: { width: number; height: number };
+    qualityScore?: number;
+  };
+}
+
+/**
  * Service for image processing and manipulation
  */
 export class ImageService {
+  /**
+   * Validate an image file buffer
+   */
+  async validateImage(
+    buffer: Buffer, 
+    filename: string
+  ): Promise<ImageValidationResult> {
+    const result: ImageValidationResult = {
+      valid: true,
+      errors: [],
+      warnings: [],
+      details: {}
+    };
+    
+    // Validate file size
+    const fileSize = buffer.length;
+    result.details.size = fileSize;
+    
+    if (fileSize > IMAGE_VALIDATION.MAX_SIZE_BYTES) {
+      result.valid = false;
+      result.errors.push(`File size exceeds maximum allowed (${(IMAGE_VALIDATION.MAX_SIZE_BYTES / (1024 * 1024)).toFixed(1)}MB)`);
+    }
+    
+    // Get file extension and validate format
+    const ext = path.extname(filename).toLowerCase().replace('.', '');
+    result.details.format = ext;
+    
+    if (!IMAGE_VALIDATION.ALLOWED_FORMATS.includes(ext)) {
+      result.valid = false;
+      result.errors.push(`File format "${ext}" is not supported. Allowed formats: ${IMAGE_VALIDATION.ALLOWED_FORMATS.join(', ')}`);
+    }
+    
+    try {
+      // Use sharp to get image metadata
+      const metadata = await sharp(buffer).metadata();
+      
+      // Validate dimensions
+      if (metadata.width && metadata.height) {
+        result.details.dimensions = {
+          width: metadata.width,
+          height: metadata.height
+        };
+        
+        if (metadata.width < IMAGE_VALIDATION.MIN_DIMENSIONS.width || 
+            metadata.height < IMAGE_VALIDATION.MIN_DIMENSIONS.height) {
+          result.valid = false;
+          result.errors.push(`Image dimensions (${metadata.width}x${metadata.height}) are below minimum required (${IMAGE_VALIDATION.MIN_DIMENSIONS.width}x${IMAGE_VALIDATION.MIN_DIMENSIONS.height})`);
+        }
+        
+        if (metadata.width < IMAGE_VALIDATION.RECOMMENDED_DIMENSIONS.width || 
+            metadata.height < IMAGE_VALIDATION.RECOMMENDED_DIMENSIONS.height) {
+          result.warnings.push(`Image dimensions (${metadata.width}x${metadata.height}) are below recommended (${IMAGE_VALIDATION.RECOMMENDED_DIMENSIONS.width}x${IMAGE_VALIDATION.RECOMMENDED_DIMENSIONS.height})`);
+        }
+      } else {
+        result.valid = false;
+        result.errors.push('Unable to determine image dimensions');
+      }
+      
+      // Estimate image quality (basic implementation)
+      // For a real implementation, use a proper image quality assessment library
+      const qualityScore = this.estimateImageQuality(buffer, metadata);
+      result.details.qualityScore = qualityScore;
+      
+      if (qualityScore < IMAGE_VALIDATION.QUALITY_THRESHOLD) {
+        result.warnings.push(`Image quality score (${qualityScore}) is below recommended threshold (${IMAGE_VALIDATION.QUALITY_THRESHOLD})`);
+      }
+      
+    } catch (error) {
+      result.valid = false;
+      result.errors.push(`Invalid image file: ${error.message || 'Unknown error processing image'}`);
+    }
+    
+    return result;
+  }
+  
+  /**
+   * Validate an image in the Object Store
+   */
+  async validateStoredImage(objectKey: string): Promise<ImageValidationResult> {
+    try {
+      // Check if file exists
+      const exists = await objectStore.exists(objectKey);
+      if (!exists) {
+        throw new NotFoundError(`Image not found in Object Store: ${objectKey}`);
+      }
+      
+      // Get the file
+      const { data: buffer } = await objectStore.getFileAsBuffer(objectKey);
+      
+      // Perform validation
+      return this.validateImage(buffer, path.basename(objectKey));
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
+      
+      return {
+        valid: false,
+        errors: [`Failed to validate image: ${error.message || 'Unknown error'}`],
+        warnings: [],
+        details: {}
+      };
+    }
+  }
+  
+  /**
+   * Estimate image quality (simplified implementation)
+   * This is a basic approach - a real implementation would use more sophisticated algorithms
+   */
+  private estimateImageQuality(buffer: Buffer, metadata: sharp.Metadata): number {
+    // A simple heuristic based on file size relative to dimensions
+    // This is a very basic placeholder - real quality assessment is much more complex
+    if (!metadata.width || !metadata.height || !metadata.format) {
+      return 50; // Default middle score if we can't calculate
+    }
+    
+    const totalPixels = metadata.width * metadata.height;
+    const bitsPerPixel = (buffer.length * 8) / totalPixels;
+    
+    // Very naive quality scoring based on bits per pixel
+    // This is just a placeholder - real image quality assessment should use
+    // more sophisticated algorithms considering compression artifacts, noise, etc.
+    let qualityScore = 0;
+    
+    switch (metadata.format.toLowerCase()) {
+      case 'jpeg':
+      case 'jpg':
+        // For JPEG, higher bpp generally means better quality
+        qualityScore = Math.min(100, Math.max(0, bitsPerPixel * 4));
+        break;
+      case 'png':
+        // PNGs are lossless so generally higher quality
+        qualityScore = Math.min(100, Math.max(70, bitsPerPixel * 2));
+        break;
+      case 'webp':
+        // WebP similar scoring to JPEG but with better efficiency
+        qualityScore = Math.min(100, Math.max(0, bitsPerPixel * 5));
+        break;
+      default:
+        qualityScore = 50; // Default middle score for unknown formats
+    }
+    
+    return Math.round(qualityScore);
+  }
+
   /**
    * Process image with Sharp and return buffer
    */
