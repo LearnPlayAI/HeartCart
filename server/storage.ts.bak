@@ -10,7 +10,15 @@ import {
   pricing, type Pricing, type InsertPricing,
   aiSettings, type AiSetting, type InsertAiSetting,
   suppliers, type Supplier, type InsertSupplier,
-  catalogs, type Catalog, type InsertCatalog
+  catalogs, type Catalog, type InsertCatalog,
+  categoryAttributes, type CategoryAttribute, type InsertCategoryAttribute,
+  categoryAttributeOptions, type CategoryAttributeOption, type InsertCategoryAttributeOption,
+  productAttributeValues, type ProductAttributeValue, type InsertProductAttributeValue,
+  productAttributeCombinations, type ProductAttributeCombination, type InsertProductAttributeCombination,
+  globalAttributes, type GlobalAttribute, type InsertGlobalAttribute,
+  globalAttributeOptions, type GlobalAttributeOption, type InsertGlobalAttributeOption,
+  productGlobalAttributes, type ProductGlobalAttribute, type InsertProductGlobalAttribute,
+  productGlobalAttributeOptions, type ProductGlobalAttributeOption, type InsertProductGlobalAttributeOption
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, like, and, desc, asc, sql, inArray, isNull, not, or, SQL } from "drizzle-orm";
@@ -102,7 +110,61 @@ export interface IStorage {
   bulkUpdateCatalogProducts(catalogId: number, updateData: Partial<InsertProduct>): Promise<number>;
   updateProductDisplayOrder(catalogId: number, productIds: number[]): Promise<{ count: number }>;
   
-  // Attribute operations were removed as part of system redesign
+  // Category Attribute operations
+  getCategoryAttributes(categoryId: number): Promise<CategoryAttribute[]>;
+  getCategoryAttributeById(id: number): Promise<CategoryAttribute | undefined>;
+  createCategoryAttribute(attribute: InsertCategoryAttribute): Promise<CategoryAttribute>;
+  updateCategoryAttribute(id: number, attributeData: Partial<InsertCategoryAttribute>): Promise<CategoryAttribute | undefined>;
+  deleteCategoryAttribute(id: number): Promise<boolean>;
+  
+  // Category Attribute Option operations
+  getCategoryAttributeOptions(attributeId: number): Promise<CategoryAttributeOption[]>;
+  createCategoryAttributeOption(option: InsertCategoryAttributeOption): Promise<CategoryAttributeOption>;
+  updateCategoryAttributeOption(id: number, optionData: Partial<InsertCategoryAttributeOption>): Promise<CategoryAttributeOption | undefined>;
+  deleteCategoryAttributeOption(id: number): Promise<boolean>;
+  
+  // Product Attribute Value operations
+  getProductAttributeValues(productId: number): Promise<ProductAttributeValue[]>;
+  getProductAttributeValuesByAttributeId(productId: number, attributeId: number): Promise<ProductAttributeValue | undefined>;
+  createProductAttributeValue(attributeValue: InsertProductAttributeValue): Promise<ProductAttributeValue>;
+  updateProductAttributeValue(id: number, valueData: Partial<InsertProductAttributeValue>): Promise<ProductAttributeValue | undefined>;
+  deleteProductAttributeValue(id: number): Promise<boolean>;
+  
+  // Product Attribute Combination operations
+  getProductAttributeCombinations(productId: number): Promise<ProductAttributeCombination[]>;
+  getProductAttributeCombinationByHash(productId: number, combinationHash: string): Promise<ProductAttributeCombination | undefined>;
+  createProductAttributeCombination(combination: InsertProductAttributeCombination): Promise<ProductAttributeCombination>;
+  updateProductAttributeCombination(id: number, combinationData: Partial<InsertProductAttributeCombination>): Promise<ProductAttributeCombination | undefined>;
+  deleteProductAttributeCombination(id: number): Promise<boolean>;
+  
+  // Global Attribute operations
+  getAllGlobalAttributes(): Promise<GlobalAttribute[]>;
+  getGlobalAttributeById(id: number): Promise<GlobalAttribute | undefined>;
+  createGlobalAttribute(attribute: InsertGlobalAttribute): Promise<GlobalAttribute>;
+  updateGlobalAttribute(id: number, attributeData: Partial<InsertGlobalAttribute>): Promise<GlobalAttribute | undefined>;
+  deleteGlobalAttribute(id: number): Promise<boolean>;
+  
+  // Global Attribute Option operations
+  getGlobalAttributeOptions(attributeId: number): Promise<GlobalAttributeOption[]>;
+  createGlobalAttributeOption(option: InsertGlobalAttributeOption): Promise<GlobalAttributeOption>;
+  updateGlobalAttributeOption(id: number, optionData: Partial<InsertGlobalAttributeOption>): Promise<GlobalAttributeOption | undefined>;
+  deleteGlobalAttributeOption(id: number): Promise<boolean>;
+  
+  // Product Global Attribute operations
+  getProductGlobalAttributes(productId: number): Promise<(ProductGlobalAttribute & { attribute: GlobalAttribute, options: GlobalAttributeOption[] })[]>;
+  addGlobalAttributeToProduct(productId: number, attributeId: number): Promise<ProductGlobalAttribute>;
+  removeGlobalAttributeFromProduct(productId: number, attributeId: number): Promise<boolean>;
+  
+  // Product Global Attribute Option operations
+  getProductGlobalAttributeOptions(productAttributeId: number): Promise<ProductGlobalAttributeOption[]>;
+  getGlobalAttributeOptionsForProduct(productAttributeId: number): Promise<ProductGlobalAttributeOption[]>;
+  addGlobalAttributeOptionToProduct(productAttributeId: number, optionId: number): Promise<ProductGlobalAttributeOption>;
+  removeGlobalAttributeOptionFromProduct(productAttributeId: number, optionId: number): Promise<boolean>;
+  getGlobalAttributesWithOptionsForProduct(productId: number): Promise<{ 
+    attribute: GlobalAttribute; 
+    productAttributeId: number;
+    selectedOptions: GlobalAttributeOption[] 
+  }[]>;
 }
 
 export class DatabaseStorage implements IStorage {
