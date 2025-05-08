@@ -1,3 +1,8 @@
+// THIS FILE IS TEMPORARILY EMPTY DURING ATTRIBUTES SYSTEM REDESIGN
+// All attribute type definitions have been commented out and will be replaced
+// in Phase 2 of the attribute system implementation.
+
+/*
 import type { 
   GlobalAttribute, 
   GlobalAttributeOption, 
@@ -33,3 +38,4 @@ export interface CartGlobalAttribute {
   value: string;
   displayValue: string;
 }
+*/

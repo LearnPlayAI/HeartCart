@@ -83,30 +83,10 @@ const CartDrawer = () => {
                       {formatCurrency((item.product.salePrice || item.product.price) + (item.priceAdjustment || 0))}
                     </div>
                     
-                    {/* Selected attributes */}
-                    {item.selectedAttributes && Object.keys(item.selectedAttributes).length > 0 && (
-                      <div className="mt-1 mb-2">
-                        {/* Display category attributes */}
-                        {Object.entries(item.selectedAttributes as Record<string, string>).map(([key, value], index) => (
-                          <div key={index} className="flex text-xs text-gray-600">
-                            <span className="font-medium mr-1">{key}:</span>
-                            <span>{value}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    {/* Attribute display code removed during system redesign */}
                     
-                    {/* Global attributes */}
-                    {item.globalAttributes && item.globalAttributes.length > 0 && (
-                      <div className="mt-1 mb-2">
-                        {item.globalAttributes.map((attr, index) => (
-                          <div key={index} className="flex text-xs text-gray-600">
-                            <span className="font-medium mr-1">{attr.displayName || attr.name}:</span>
-                            <span>{attr.displayValue || attr.value}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    {/* Note: selectedAttributes and globalAttributes rendering has been 
+                         temporarily removed during the attribute system redesign */}
                     
                     <div className="flex items-center mt-2">
                       <Button 

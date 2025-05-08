@@ -1,78 +1,15 @@
-import { useState } from "react";
-import { AdminLayout } from "@/components/admin/layout";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  CardFooter,
-} from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
-import { Trash2, Edit, Plus, ArrowLeft, Save, X } from "lucide-react";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import * as z from "zod";
-import { GlobalAttribute, GlobalAttributeOption } from "@shared/schema";
-import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
+import { AttributeRedesignPlaceholder } from "@/components/admin/attribute-redesign-placeholder";
 
-const attributeFormSchema = z.object({
-  name: z.string().min(2, {
-    message: "Name must be at least 2 characters.",
-  }),
-  displayName: z.string().min(2, {
-    message: "Display name must be at least 2 characters.",
-  }),
-  description: z.string().optional(),
-  attributeType: z.enum(["select", "color", "text", "number", "boolean"]),
-  isRequired: z.boolean().default(false),
-  isFilterable: z.boolean().default(false),
-  sortOrder: z.number().default(0),
-});
-
-const optionFormSchema = z.object({
-  value: z.string().min(1, {
-    message: "Value must be at least 1 character.",
-  }),
-  displayValue: z.string().min(1, {
-    message: "Display value must be at least 1 character.",
-  }),
-  attributeId: z.number(),
-  sortOrder: z.number().default(0),
-});
-
+/**
+ * Global attributes page - temporarily disabled during attribute system redesign
+ */
 export default function GlobalAttributesPage() {
+  return (
+    <AttributeRedesignPlaceholder
+      title="Global Attributes Management"
+      description="We are rebuilding the attribute system to improve performance and user experience. The global attributes management page is temporarily unavailable during this upgrade process."
+    />
+  );
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedAttribute, setSelectedAttribute] = useState<GlobalAttribute | null>(null);
