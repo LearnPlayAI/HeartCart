@@ -214,15 +214,16 @@ function ProductAttributesPage() {
         body: JSON.stringify(newAttribute),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
+      const result = await response.json();
+      
+      if (!result.success) {
         throw new ApiError(
-          errorData.message || "Failed to add attribute to product",
+          result.error?.message || "Failed to add attribute to product",
           response.status
         );
       }
 
-      return await response.json();
+      return result.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/products", productId, "attributes"] });
@@ -252,15 +253,16 @@ function ProductAttributesPage() {
         body: JSON.stringify(data),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
+      const result = await response.json();
+      
+      if (!result.success) {
         throw new ApiError(
-          errorData.message || "Failed to update product attribute",
+          result.error?.message || "Failed to update product attribute",
           response.status
         );
       }
 
-      return await response.json();
+      return result.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/products", productId, "attributes"] });
@@ -286,15 +288,16 @@ function ProductAttributesPage() {
         method: "DELETE",
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
+      const result = await response.json();
+      
+      if (!result.success) {
         throw new ApiError(
-          errorData.message || "Failed to delete product attribute",
+          result.error?.message || "Failed to delete product attribute",
           response.status
         );
       }
 
-      return true;
+      return result.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/products", productId, "attributes"] });
@@ -328,15 +331,16 @@ function ProductAttributesPage() {
         body: JSON.stringify(newOption),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
+      const result = await response.json();
+      
+      if (!result.success) {
         throw new ApiError(
-          errorData.message || "Failed to create option",
+          result.error?.message || "Failed to create option",
           response.status
         );
       }
 
-      return await response.json();
+      return result.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ 
@@ -371,15 +375,16 @@ function ProductAttributesPage() {
         body: JSON.stringify(data),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
+      const result = await response.json();
+      
+      if (!result.success) {
         throw new ApiError(
-          errorData.message || "Failed to update option",
+          result.error?.message || "Failed to update option",
           response.status
         );
       }
 
-      return await response.json();
+      return result.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ 
@@ -410,15 +415,16 @@ function ProductAttributesPage() {
         method: "DELETE",
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
+      const result = await response.json();
+      
+      if (!result.success) {
         throw new ApiError(
-          errorData.message || "Failed to delete option",
+          result.error?.message || "Failed to delete option",
           response.status
         );
       }
 
-      return true;
+      return result.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ 
@@ -451,15 +457,16 @@ function ProductAttributesPage() {
         body: JSON.stringify(newValue),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
+      const result = await response.json();
+      
+      if (!result.success) {
         throw new ApiError(
-          errorData.message || "Failed to create attribute value",
+          result.error?.message || "Failed to create attribute value",
           response.status
         );
       }
 
-      return await response.json();
+      return result.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/products", productId, "attribute-values"] });
@@ -490,15 +497,16 @@ function ProductAttributesPage() {
         body: JSON.stringify(data),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
+      const result = await response.json();
+      
+      if (!result.success) {
         throw new ApiError(
-          errorData.message || "Failed to update attribute value",
+          result.error?.message || "Failed to update attribute value",
           response.status
         );
       }
 
-      return await response.json();
+      return result.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/products", productId, "attribute-values"] });
@@ -524,15 +532,16 @@ function ProductAttributesPage() {
         method: "DELETE",
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
+      const result = await response.json();
+      
+      if (!result.success) {
         throw new ApiError(
-          errorData.message || "Failed to delete attribute value",
+          result.error?.message || "Failed to delete attribute value",
           response.status
         );
       }
 
-      return true;
+      return result.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/products", productId, "attribute-values"] });
@@ -565,15 +574,16 @@ function ProductAttributesPage() {
         body: JSON.stringify({ optionIds }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
+      const result = await response.json();
+      
+      if (!result.success) {
         throw new ApiError(
-          errorData.message || "Failed to reorder options",
+          result.error?.message || "Failed to reorder options",
           response.status
         );
       }
 
-      return await response.json();
+      return result.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ 
