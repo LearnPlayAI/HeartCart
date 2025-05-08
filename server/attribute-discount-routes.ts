@@ -48,158 +48,117 @@ router.get("/attribute-discount-rules/category/:categoryId", handleErrors(async 
 }));
 
 // Get attribute discount rules by catalog
-router.get("/attribute-discount-rules/catalog/:catalogId", async (req, res) => {
-  try {
-    const catalogId = parseInt(req.params.catalogId);
-    if (isNaN(catalogId)) {
-      return res.status(400).json({ error: "Invalid catalog ID" });
-    }
-    
-    const rules = await storage.getAttributeDiscountRulesByCatalog(catalogId);
-    res.json(rules);
-  } catch (error) {
-    console.error("Error fetching catalog attribute discount rules:", error);
-    res.status(500).json({ error: "Failed to fetch catalog attribute discount rules" });
+router.get("/attribute-discount-rules/catalog/:catalogId", handleErrors(async (req: Request, res: Response) => {
+  const catalogId = parseInt(req.params.catalogId);
+  if (isNaN(catalogId)) {
+    return sendError(res, "Invalid catalog ID", 400, "INVALID_ID");
   }
-});
+  
+  const rules = await storage.getAttributeDiscountRulesByCatalog(catalogId);
+  sendSuccess(res, rules);
+}));
 
 // Get attribute discount rules by attribute
-router.get("/attribute-discount-rules/attribute/:attributeId", async (req, res) => {
-  try {
-    const attributeId = parseInt(req.params.attributeId);
-    if (isNaN(attributeId)) {
-      return res.status(400).json({ error: "Invalid attribute ID" });
-    }
-    
-    const rules = await storage.getAttributeDiscountRulesByAttribute(attributeId);
-    res.json(rules);
-  } catch (error) {
-    console.error("Error fetching attribute discount rules by attribute:", error);
-    res.status(500).json({ error: "Failed to fetch attribute discount rules by attribute" });
+router.get("/attribute-discount-rules/attribute/:attributeId", handleErrors(async (req: Request, res: Response) => {
+  const attributeId = parseInt(req.params.attributeId);
+  if (isNaN(attributeId)) {
+    return sendError(res, "Invalid attribute ID", 400, "INVALID_ID");
   }
-});
+  
+  const rules = await storage.getAttributeDiscountRulesByAttribute(attributeId);
+  sendSuccess(res, rules);
+}));
 
 // Get a single attribute discount rule by ID
-router.get("/attribute-discount-rules/:id", async (req, res) => {
-  try {
-    const ruleId = parseInt(req.params.id);
-    if (isNaN(ruleId)) {
-      return res.status(400).json({ error: "Invalid rule ID" });
-    }
-    
-    const rule = await storage.getAttributeDiscountRule(ruleId);
-    if (!rule) {
-      return res.status(404).json({ error: "Attribute discount rule not found" });
-    }
-    
-    res.json(rule);
-  } catch (error) {
-    console.error("Error fetching attribute discount rule:", error);
-    res.status(500).json({ error: "Failed to fetch attribute discount rule" });
+router.get("/attribute-discount-rules/:id", handleErrors(async (req: Request, res: Response) => {
+  const ruleId = parseInt(req.params.id);
+  if (isNaN(ruleId)) {
+    return sendError(res, "Invalid rule ID", 400, "INVALID_ID");
   }
-});
+  
+  const rule = await storage.getAttributeDiscountRule(ruleId);
+  if (!rule) {
+    return sendError(res, "Attribute discount rule not found", 404, "NOT_FOUND");
+  }
+  
+  sendSuccess(res, rule);
+}));
 
 // Create a new attribute discount rule
-router.post("/attribute-discount-rules", async (req, res) => {
-  try {
-    const payload = insertAttributeDiscountRuleSchema.parse(req.body);
-    
-    // Handle date conversion
-    if (payload.startDate && typeof payload.startDate === 'string') {
-      payload.startDate = new Date(payload.startDate);
-    }
-    
-    if (payload.endDate && typeof payload.endDate === 'string') {
-      payload.endDate = new Date(payload.endDate);
-    }
-    
-    const rule = await storage.createAttributeDiscountRule(payload);
-    res.status(201).json(rule);
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: error.errors });
-    }
-    console.error("Error creating attribute discount rule:", error);
-    res.status(500).json({ error: "Failed to create attribute discount rule" });
+router.post("/attribute-discount-rules", handleErrors(async (req: Request, res: Response) => {
+  const payload = insertAttributeDiscountRuleSchema.parse(req.body);
+  
+  // Handle date conversion
+  if (payload.startDate && typeof payload.startDate === 'string') {
+    payload.startDate = new Date(payload.startDate);
   }
-});
+  
+  if (payload.endDate && typeof payload.endDate === 'string') {
+    payload.endDate = new Date(payload.endDate);
+  }
+  
+  const rule = await storage.createAttributeDiscountRule(payload);
+  sendSuccess(res, rule, 201);
+}));
 
 // Update an attribute discount rule
-router.put("/attribute-discount-rules/:id", async (req, res) => {
-  try {
-    const ruleId = parseInt(req.params.id);
-    if (isNaN(ruleId)) {
-      return res.status(400).json({ error: "Invalid rule ID" });
-    }
-    
-    const payload = insertAttributeDiscountRuleSchema.parse(req.body);
-    
-    // Handle date conversion
-    if (payload.startDate && typeof payload.startDate === 'string') {
-      payload.startDate = new Date(payload.startDate);
-    }
-    
-    if (payload.endDate && typeof payload.endDate === 'string') {
-      payload.endDate = new Date(payload.endDate);
-    }
-    
-    const existingRule = await storage.getAttributeDiscountRule(ruleId);
-    if (!existingRule) {
-      return res.status(404).json({ error: "Attribute discount rule not found" });
-    }
-    
-    const updatedRule = await storage.updateAttributeDiscountRule(ruleId, payload);
-    res.json(updatedRule);
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: error.errors });
-    }
-    console.error("Error updating attribute discount rule:", error);
-    res.status(500).json({ error: "Failed to update attribute discount rule" });
+router.put("/attribute-discount-rules/:id", handleErrors(async (req: Request, res: Response) => {
+  const ruleId = parseInt(req.params.id);
+  if (isNaN(ruleId)) {
+    return sendError(res, "Invalid rule ID", 400, "INVALID_ID");
   }
-});
+  
+  const payload = insertAttributeDiscountRuleSchema.parse(req.body);
+  
+  // Handle date conversion
+  if (payload.startDate && typeof payload.startDate === 'string') {
+    payload.startDate = new Date(payload.startDate);
+  }
+  
+  if (payload.endDate && typeof payload.endDate === 'string') {
+    payload.endDate = new Date(payload.endDate);
+  }
+  
+  const existingRule = await storage.getAttributeDiscountRule(ruleId);
+  if (!existingRule) {
+    return sendError(res, "Attribute discount rule not found", 404, "NOT_FOUND");
+  }
+  
+  const updatedRule = await storage.updateAttributeDiscountRule(ruleId, payload);
+  sendSuccess(res, updatedRule);
+}));
 
 // Delete an attribute discount rule
-router.delete("/attribute-discount-rules/:id", async (req, res) => {
-  try {
-    const ruleId = parseInt(req.params.id);
-    if (isNaN(ruleId)) {
-      return res.status(400).json({ error: "Invalid rule ID" });
-    }
-    
-    const existingRule = await storage.getAttributeDiscountRule(ruleId);
-    if (!existingRule) {
-      return res.status(404).json({ error: "Attribute discount rule not found" });
-    }
-    
-    await storage.deleteAttributeDiscountRule(ruleId);
-    res.status(204).send();
-  } catch (error) {
-    console.error("Error deleting attribute discount rule:", error);
-    res.status(500).json({ error: "Failed to delete attribute discount rule" });
+router.delete("/attribute-discount-rules/:id", handleErrors(async (req: Request, res: Response) => {
+  const ruleId = parseInt(req.params.id);
+  if (isNaN(ruleId)) {
+    return sendError(res, "Invalid rule ID", 400, "INVALID_ID");
   }
-});
+  
+  const existingRule = await storage.getAttributeDiscountRule(ruleId);
+  if (!existingRule) {
+    return sendError(res, "Attribute discount rule not found", 404, "NOT_FOUND");
+  }
+  
+  await storage.deleteAttributeDiscountRule(ruleId);
+  res.status(204).send();
+}));
 
 // Calculate price adjustments based on selected attributes and product
-router.post("/attribute-discount-rules/calculate", async (req, res) => {
-  try {
-    const { productId, selectedAttributes, quantity = 1 } = req.body;
-    
-    if (!productId || !selectedAttributes) {
-      return res.status(400).json({ error: "Product ID and selected attributes are required" });
-    }
-    
-    const adjustments = await storage.calculateAttributeBasedPriceAdjustments(
-      productId,
-      selectedAttributes,
-      quantity
-    );
-    
-    res.json(adjustments);
-  } catch (error) {
-    console.error("Error calculating price adjustments:", error);
-    res.status(500).json({ error: "Failed to calculate price adjustments" });
+router.post("/attribute-discount-rules/calculate", handleErrors(async (req: Request, res: Response) => {
+  const { productId, selectedAttributes, quantity = 1 } = req.body;
+  
+  if (!productId || !selectedAttributes) {
+    return sendError(res, "Product ID and selected attributes are required", 400, "MISSING_REQUIRED_FIELDS");
   }
-});
+  
+  const adjustments = await storage.calculateAttributeBasedPriceAdjustments(
+    productId,
+    selectedAttributes,
+    quantity
+  );
+  
+  sendSuccess(res, adjustments);
+}));
 
 export default router;
