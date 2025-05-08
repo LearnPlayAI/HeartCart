@@ -82,52 +82,47 @@ import {
   Attribute, 
   AttributeOption, 
   CatalogAttribute,
-  CatalogAttributeOption,
-  CategoryAttribute,
-  CategoryAttributeOption
+  CatalogAttributeOption 
 } from "@/types/attribute-types";
 
 interface AttributeWithSelection extends Attribute {
   isSelected?: boolean;
-  catalogAttributeId?: number | null;
 }
 
-function CategoryAttributesPage() {
+function CatalogAttributesPage() {
   const { toast } = useToast();
-  const { categoryId } = useParams<{ categoryId: string }>();
-  const [selectedAttribute, setSelectedAttribute] = useState<CategoryAttribute | null>(null);
+  const { id: catalogId } = useParams<{ id: string }>();
+  const [selectedAttribute, setSelectedAttribute] = useState<CatalogAttribute | null>(null);
   const [attributeDialogOpen, setAttributeDialogOpen] = useState(false);
   const [optionDialogOpen, setOptionDialogOpen] = useState(false);
   const [optionMetadataDialogOpen, setOptionMetadataDialogOpen] = useState(false);
   const [confirmDeleteDialogOpen, setConfirmDeleteDialogOpen] = useState(false);
   const [attributeSelectOpen, setAttributeSelectOpen] = useState(false);
-  const [selectedOption, setSelectedOption] = useState<CategoryAttributeOption | null>(null);
+  const [selectedOption, setSelectedOption] = useState<CatalogAttributeOption | null>(null);
   const [optionMetadata, setOptionMetadata] = useState<string>("");
   const [optionFormMode, setOptionFormMode] = useState<"create" | "edit">("create");
   const [itemToDelete, setItemToDelete] = useState<{ type: 'attribute' | 'option', id: number } | null>(null);
   const [selectedGlobalAttributes, setSelectedGlobalAttributes] = useState<AttributeWithSelection[]>([]);
-  const [selectedTab, setSelectedTab] = useState<"global" | "catalog">("global");
-  const [selectedCatalogId, setSelectedCatalogId] = useState<string>("");
 
-  // Fetch category info
+  // Fetch catalog info
   const {
-    data: category,
-    isLoading: categoryLoading,
-    error: categoryError,
+    data: catalog,
+    isLoading: catalogLoading,
+    error: catalogError,
   } = useQuery({
-    queryKey: ["/api/categories", categoryId],
-    enabled: !!categoryId,
+    queryKey: ["/api/catalogs", catalogId],
+    enabled: !!catalogId,
     retry: 1,
   });
 
-  // Fetch category attributes
+  // Fetch catalog attributes
   const {
-    data: categoryAttributes,
-    isLoading: categoryAttributesLoading,
-    error: categoryAttributesError,
+    data: catalogAttributes,
+    isLoading: catalogAttributesLoading,
+    error: catalogAttributesError,
   } = useQuery({
-    queryKey: ["/api/categories", categoryId, "attributes"],
-    enabled: !!categoryId,
+    queryKey: ["/api/catalogs", catalogId, "attributes"],
+    enabled: !!catalogId,
     retry: 1,
   });
 
@@ -141,66 +136,39 @@ function CategoryAttributesPage() {
     retry: 1,
   });
 
-  // Fetch all catalogs
-  const {
-    data: catalogs,
-    isLoading: catalogsLoading,
-    error: catalogsError,
-  } = useQuery({
-    queryKey: ["/api/catalogs"],
-    retry: 1,
-  });
-
-  // Fetch catalog attributes when a catalog is selected
-  const {
-    data: catalogAttributes,
-    isLoading: catalogAttributesLoading,
-    error: catalogAttributesError,
-  } = useQuery({
-    queryKey: ["/api/catalogs", selectedCatalogId, "attributes"],
-    enabled: !!selectedCatalogId && selectedCatalogId !== "",
-    retry: 1,
-  });
-
-  // Fetch attribute options when a category attribute is selected
+  // Fetch attribute options when a catalog attribute is selected
   const {
     data: options,
     isLoading: optionsLoading,
     error: optionsError,
   } = useQuery({
-    queryKey: ["/api/categories", categoryId, "attributes", selectedAttribute?.attributeId, "options"],
-    enabled: !!selectedAttribute?.attributeId && !!categoryId,
+    queryKey: ["/api/catalogs", catalogId, "attributes", selectedAttribute?.attributeId, "options"],
+    enabled: !!selectedAttribute?.attributeId && !!catalogId,
     retry: 1,
   });
 
-  // Update list of global attributes for selection, marking those already added to the category
+  // Update list of global attributes for selection, marking those already added to the catalog
   useEffect(() => {
-    if (globalAttributes && categoryAttributes) {
-      const updatedGlobalAttributes = globalAttributes.map((attr: Attribute) => {
-        const existingAttr = categoryAttributes.find(
-          (catAttr: CategoryAttribute) => catAttr.attributeId === attr.id
-        );
-        
-        return {
-          ...attr,
-          isSelected: !!existingAttr,
-          catalogAttributeId: existingAttr?.catalogAttributeId || null
-        };
-      });
+    if (globalAttributes && catalogAttributes) {
+      const updatedGlobalAttributes = globalAttributes.map((attr: Attribute) => ({
+        ...attr,
+        isSelected: catalogAttributes.some(
+          (catAttr: CatalogAttribute) => catAttr.attributeId === attr.id
+        ),
+      }));
       setSelectedGlobalAttributes(updatedGlobalAttributes);
     }
-  }, [globalAttributes, categoryAttributes]);
+  }, [globalAttributes, catalogAttributes]);
 
-  // Add category attribute mutation
-  const addCategoryAttributeMutation = useMutation({
+  // Add catalog attribute mutation
+  const addCatalogAttributeMutation = useMutation({
     mutationFn: async (newAttribute: {
       attributeId: number;
-      catalogAttributeId?: number | null;
       overrideDisplayName?: string | null;
       isRequired?: boolean;
       sortOrder?: number;
     }) => {
-      const response = await fetch(`/api/categories/${categoryId}/attributes`, {
+      const response = await fetch(`/api/catalogs/${catalogId}/attributes`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -211,7 +179,7 @@ function CategoryAttributesPage() {
       if (!response.ok) {
         const errorData = await response.json();
         throw new ApiError(
-          errorData.message || "Failed to add attribute to category",
+          errorData.message || "Failed to add attribute to catalog",
           response.status
         );
       }
@@ -219,26 +187,26 @@ function CategoryAttributesPage() {
       return await response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/categories", categoryId, "attributes"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/catalogs", catalogId, "attributes"] });
       toast({
-        title: "Attribute added to category successfully",
+        title: "Attribute added to catalog successfully",
         variant: "default",
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Failed to add attribute to category",
+        title: "Failed to add attribute to catalog",
         description: error.message,
         variant: "destructive",
       });
     },
   });
 
-  // Update category attribute mutation
-  const updateCategoryAttributeMutation = useMutation({
-    mutationFn: async (updatedAttribute: Partial<CategoryAttribute> & { id: number }) => {
+  // Update catalog attribute mutation
+  const updateCatalogAttributeMutation = useMutation({
+    mutationFn: async (updatedAttribute: Partial<CatalogAttribute> & { id: number }) => {
       const { id, ...data } = updatedAttribute;
-      const response = await fetch(`/api/categories/${categoryId}/attributes/${id}`, {
+      const response = await fetch(`/api/catalogs/${catalogId}/attributes/${id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -249,7 +217,7 @@ function CategoryAttributesPage() {
       if (!response.ok) {
         const errorData = await response.json();
         throw new ApiError(
-          errorData.message || "Failed to update category attribute",
+          errorData.message || "Failed to update catalog attribute",
           response.status
         );
       }
@@ -257,33 +225,33 @@ function CategoryAttributesPage() {
       return await response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/categories", categoryId, "attributes"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/catalogs", catalogId, "attributes"] });
       setAttributeDialogOpen(false);
       toast({
-        title: "Category attribute updated successfully",
+        title: "Catalog attribute updated successfully",
         variant: "default",
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Failed to update category attribute",
+        title: "Failed to update catalog attribute",
         description: error.message,
         variant: "destructive",
       });
     },
   });
 
-  // Delete category attribute mutation
-  const deleteCategoryAttributeMutation = useMutation({
+  // Delete catalog attribute mutation
+  const deleteCatalogAttributeMutation = useMutation({
     mutationFn: async (id: number) => {
-      const response = await fetch(`/api/categories/${categoryId}/attributes/${id}`, {
+      const response = await fetch(`/api/catalogs/${catalogId}/attributes/${id}`, {
         method: "DELETE",
       });
 
       if (!response.ok) {
         const errorData = await response.json();
         throw new ApiError(
-          errorData.message || "Failed to delete category attribute",
+          errorData.message || "Failed to delete catalog attribute",
           response.status
         );
       }
@@ -291,18 +259,18 @@ function CategoryAttributesPage() {
       return true;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/categories", categoryId, "attributes"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/catalogs", catalogId, "attributes"] });
       setSelectedAttribute(null);
       setConfirmDeleteDialogOpen(false);
       setItemToDelete(null);
       toast({
-        title: "Attribute removed from category successfully",
+        title: "Attribute removed from catalog successfully",
         variant: "default",
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Failed to remove attribute from category",
+        title: "Failed to remove attribute from catalog",
         description: error.message,
         variant: "destructive",
       });
@@ -311,10 +279,10 @@ function CategoryAttributesPage() {
 
   // Create option mutation
   const createOptionMutation = useMutation({
-    mutationFn: async (newOption: Omit<CategoryAttributeOption, "id">) => {
+    mutationFn: async (newOption: Omit<CatalogAttributeOption, "id">) => {
       if (!selectedAttribute) return null;
 
-      const response = await fetch(`/api/categories/${categoryId}/attributes/${selectedAttribute.attributeId}/options`, {
+      const response = await fetch(`/api/catalogs/${catalogId}/attributes/${selectedAttribute.attributeId}/options`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -334,7 +302,7 @@ function CategoryAttributesPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ 
-        queryKey: ["/api/categories", categoryId, "attributes", selectedAttribute?.attributeId, "options"] 
+        queryKey: ["/api/catalogs", catalogId, "attributes", selectedAttribute?.attributeId, "options"] 
       });
       setOptionDialogOpen(false);
       toast({
@@ -353,11 +321,11 @@ function CategoryAttributesPage() {
 
   // Update option mutation
   const updateOptionMutation = useMutation({
-    mutationFn: async (updatedOption: Partial<CategoryAttributeOption> & { id: number }) => {
+    mutationFn: async (updatedOption: Partial<CatalogAttributeOption> & { id: number }) => {
       if (!selectedAttribute) return null;
       
       const { id, ...data } = updatedOption;
-      const response = await fetch(`/api/categories/${categoryId}/attributes/${selectedAttribute.attributeId}/options/${id}`, {
+      const response = await fetch(`/api/catalogs/${catalogId}/attributes/${selectedAttribute.attributeId}/options/${id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -377,7 +345,7 @@ function CategoryAttributesPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ 
-        queryKey: ["/api/categories", categoryId, "attributes", selectedAttribute?.attributeId, "options"] 
+        queryKey: ["/api/catalogs", catalogId, "attributes", selectedAttribute?.attributeId, "options"] 
       });
       setOptionDialogOpen(false);
       setOptionMetadataDialogOpen(false);
@@ -400,7 +368,7 @@ function CategoryAttributesPage() {
     mutationFn: async (id: number) => {
       if (!selectedAttribute) return null;
 
-      const response = await fetch(`/api/categories/${categoryId}/attributes/${selectedAttribute.attributeId}/options/${id}`, {
+      const response = await fetch(`/api/catalogs/${catalogId}/attributes/${selectedAttribute.attributeId}/options/${id}`, {
         method: "DELETE",
       });
 
@@ -416,7 +384,7 @@ function CategoryAttributesPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ 
-        queryKey: ["/api/categories", categoryId, "attributes", selectedAttribute?.attributeId, "options"] 
+        queryKey: ["/api/catalogs", catalogId, "attributes", selectedAttribute?.attributeId, "options"] 
       });
       setConfirmDeleteDialogOpen(false);
       setItemToDelete(null);
@@ -439,7 +407,7 @@ function CategoryAttributesPage() {
     mutationFn: async (optionIds: number[]) => {
       if (!selectedAttribute) return null;
 
-      const response = await fetch(`/api/categories/${categoryId}/attributes/${selectedAttribute.attributeId}/options/reorder`, {
+      const response = await fetch(`/api/catalogs/${catalogId}/attributes/${selectedAttribute.attributeId}/options/reorder`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -459,7 +427,7 @@ function CategoryAttributesPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ 
-        queryKey: ["/api/categories", categoryId, "attributes", selectedAttribute?.attributeId, "options"] 
+        queryKey: ["/api/catalogs", catalogId, "attributes", selectedAttribute?.attributeId, "options"] 
       });
       toast({
         title: "Options reordered successfully",
@@ -489,7 +457,7 @@ function CategoryAttributesPage() {
       sortOrder: parseInt(formData.get("sortOrder") as string) || 0,
     };
     
-    updateCategoryAttributeMutation.mutate(attributeData);
+    updateCatalogAttributeMutation.mutate(attributeData);
   };
 
   // Handle option form submission
@@ -498,12 +466,11 @@ function CategoryAttributesPage() {
     const formData = new FormData(e.currentTarget);
     
     const optionData = {
-      categoryAttributeId: selectedAttribute?.id || 0,
+      catalogAttributeId: selectedAttribute?.id || 0,
       value: formData.get("value") as string,
       displayValue: formData.get("displayValue") as string,
       sortOrder: parseInt(formData.get("sortOrder") as string) || 0,
       baseOptionId: formData.get("baseOptionId") ? parseInt(formData.get("baseOptionId") as string) : null,
-      catalogOptionId: formData.get("catalogOptionId") ? parseInt(formData.get("catalogOptionId") as string) : null,
       metadata: selectedOption?.metadata || null,
     };
     
@@ -517,8 +484,8 @@ function CategoryAttributesPage() {
     }
   };
 
-  // Handle global attribute selection
-  const handleGlobalAttributeSelection = (attributeId: number, isSelected: boolean) => {
+  // Handle attribute selection
+  const handleAttributeSelection = (attributeId: number, isSelected: boolean) => {
     if (isSelected) {
       // Deselect attribute
       const updatedAttributes = selectedGlobalAttributes.map(attr => 
@@ -534,36 +501,18 @@ function CategoryAttributesPage() {
     }
   };
 
-  // Handle catalog attribute selection
-  const handleCatalogAttributeSelection = (attribute: CatalogAttribute, isSelected: boolean) => {
-    if (isSelected) {
-      // Deselect catalog attribute
-      const updatedAttributes = selectedGlobalAttributes.map(attr => 
-        attr.id === attribute.attributeId ? { ...attr, isSelected: false, catalogAttributeId: null } : attr
-      );
-      setSelectedGlobalAttributes(updatedAttributes);
-    } else {
-      // Select catalog attribute
-      const updatedAttributes = selectedGlobalAttributes.map(attr => 
-        attr.id === attribute.attributeId ? { ...attr, isSelected: true, catalogAttributeId: attribute.id } : attr
-      );
-      setSelectedGlobalAttributes(updatedAttributes);
-    }
-  };
-
   // Handle saving selected attributes
   const handleSaveSelectedAttributes = () => {
     const newlySelectedAttributes = selectedGlobalAttributes.filter(
-      attr => attr.isSelected && !categoryAttributes?.some(
-        (catAttr: CategoryAttribute) => catAttr.attributeId === attr.id
+      attr => attr.isSelected && !catalogAttributes?.some(
+        (catAttr: CatalogAttribute) => catAttr.attributeId === attr.id
       )
     );
 
-    // Add each newly selected attribute to the category
+    // Add each newly selected attribute to the catalog
     newlySelectedAttributes.forEach(attr => {
-      addCategoryAttributeMutation.mutate({
+      addCatalogAttributeMutation.mutate({
         attributeId: attr.id,
-        catalogAttributeId: attr.catalogAttributeId || null,
         overrideDisplayName: null,
         isRequired: attr.isRequired,
         sortOrder: 0,
@@ -574,7 +523,7 @@ function CategoryAttributesPage() {
   };
 
   // Handle opening the attribute dialog for editing an existing attribute
-  const handleEditAttribute = (attribute: CategoryAttribute) => {
+  const handleEditAttribute = (attribute: CatalogAttribute) => {
     setSelectedAttribute(attribute);
     setAttributeDialogOpen(true);
   };
@@ -587,7 +536,7 @@ function CategoryAttributesPage() {
   };
 
   // Handle opening the option dialog for editing an existing option
-  const handleEditOption = (option: CategoryAttributeOption) => {
+  const handleEditOption = (option: CatalogAttributeOption) => {
     setSelectedOption(option);
     setOptionFormMode("edit");
     setOptionDialogOpen(true);
@@ -604,14 +553,14 @@ function CategoryAttributesPage() {
     if (!itemToDelete) return;
     
     if (itemToDelete.type === 'attribute') {
-      deleteCategoryAttributeMutation.mutate(itemToDelete.id);
+      deleteCatalogAttributeMutation.mutate(itemToDelete.id);
     } else if (itemToDelete.type === 'option') {
       deleteOptionMutation.mutate(itemToDelete.id);
     }
   };
 
   // Handle opening the metadata dialog
-  const handleEditMetadata = (option: CategoryAttributeOption) => {
+  const handleEditMetadata = (option: CatalogAttributeOption) => {
     setSelectedOption(option);
     setOptionMetadata(JSON.stringify(option.metadata || {}, null, 2));
     setOptionMetadataDialogOpen(true);
@@ -638,14 +587,14 @@ function CategoryAttributesPage() {
   };
 
   // Handle selecting an attribute to view its options
-  const handleSelectAttribute = (attribute: CategoryAttribute) => {
+  const handleSelectAttribute = (attribute: CatalogAttribute) => {
     setSelectedAttribute(
       selectedAttribute?.id === attribute.id ? null : attribute
     );
   };
 
-  // Loading state for the category
-  if (categoryLoading || categoryAttributesLoading) {
+  // Loading state for the attributes
+  if (catalogLoading || catalogAttributesLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -653,13 +602,13 @@ function CategoryAttributesPage() {
     );
   }
 
-  // Error state for the category
-  if (categoryError || categoryAttributesError) {
+  // Error state for the catalog
+  if (catalogError || catalogAttributesError) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 min-h-screen">
-        <h1 className="text-2xl font-bold text-destructive">Error Loading Category</h1>
-        <p>{((categoryError || categoryAttributesError) as Error).message}</p>
-        <Button onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/categories", categoryId] })}>
+        <h1 className="text-2xl font-bold text-destructive">Error Loading Catalog</h1>
+        <p>{((catalogError || catalogAttributesError) as Error).message}</p>
+        <Button onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/catalogs", catalogId] })}>
           Retry
         </Button>
       </div>
@@ -669,25 +618,25 @@ function CategoryAttributesPage() {
   return (
     <>
       <Helmet>
-        <title>Category Attributes | TeeMeYou Admin</title>
+        <title>Catalog Attributes | TeeMeYou Admin</title>
       </Helmet>
 
       <div className="container mx-auto py-8">
         <div className="flex items-center mb-8">
           <Button variant="ghost" className="mr-2" asChild>
-            <a href="/admin/categories">
+            <a href={`/admin/catalogs/${catalogId}/edit`}>
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Categories
+              Back to Catalog
             </a>
           </Button>
           <ChevronRight className="mx-2 h-4 w-4 text-muted-foreground" />
-          <h1 className="text-3xl font-bold">Attributes for {category?.name}</h1>
+          <h1 className="text-3xl font-bold">Attributes for {catalog?.name}</h1>
         </div>
 
         <div className="flex items-center justify-between mb-6">
           <p className="text-muted-foreground">
-            Manage attributes and their options for the '{category?.name}' category.
-            These attributes will be inherited by all products in this category.
+            Manage attributes and their options for the '{catalog?.name}' catalog.
+            These attributes can be inherited by products within this catalog.
           </p>
           <Button onClick={() => setAttributeSelectOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
@@ -698,7 +647,7 @@ function CategoryAttributesPage() {
         {/* Attributes List */}
         <Card>
           <CardHeader>
-            <CardTitle>Category Attributes</CardTitle>
+            <CardTitle>Catalog Attributes</CardTitle>
             <CardDescription>
               Click on an attribute to view and manage its options
             </CardDescription>
@@ -713,19 +662,18 @@ function CategoryAttributesPage() {
                     <TableHead>Type</TableHead>
                     <TableHead className="text-center">Required</TableHead>
                     <TableHead className="text-center">Sort Order</TableHead>
-                    <TableHead className="text-center">Source</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {categoryAttributes?.length === 0 ? (
+                  {catalogAttributes?.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                        No attributes found for this category. Add attributes to get started.
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                        No attributes found for this catalog. Add attributes to get started.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    categoryAttributes?.map((attribute: CategoryAttribute) => (
+                    catalogAttributes?.map((attribute: CatalogAttribute) => (
                       <TableRow 
                         key={attribute.id}
                         className={selectedAttribute?.id === attribute.id ? "bg-muted/50" : ""}
@@ -740,10 +688,7 @@ function CategoryAttributesPage() {
                           </Button>
                         </TableCell>
                         <TableCell>
-                          {attribute.overrideDisplayName || 
-                            attribute.catalogAttribute?.overrideDisplayName || 
-                            attribute.attribute?.displayName || 
-                            "Unknown"}
+                          {attribute.overrideDisplayName || attribute.attribute?.displayName || "Unknown"}
                           {attribute.overrideDisplayName && (
                             <Badge variant="outline" className="ml-2">Overridden</Badge>
                           )}
@@ -756,13 +701,6 @@ function CategoryAttributesPage() {
                         </TableCell>
                         <TableCell className="text-center">
                           {attribute.sortOrder}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {attribute.catalogAttributeId ? (
-                            <Badge variant="secondary">Catalog</Badge>
-                          ) : (
-                            <Badge>Global</Badge>
-                          )}
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end space-x-2">
@@ -798,12 +736,10 @@ function CategoryAttributesPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>
-                    Options for {selectedAttribute.overrideDisplayName || 
-                                selectedAttribute.catalogAttribute?.overrideDisplayName || 
-                                selectedAttribute.attribute?.displayName}
+                    Options for {selectedAttribute.overrideDisplayName || selectedAttribute.attribute?.displayName}
                   </CardTitle>
                   <CardDescription>
-                    Manage the available options for this attribute in this category
+                    Manage the available options for this attribute in this catalog
                   </CardDescription>
                 </div>
                 <Button onClick={handleNewOption}>
@@ -819,7 +755,7 @@ function CategoryAttributesPage() {
                 </div>
               ) : options?.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground border rounded-md">
-                  No category-specific options found for this attribute. Add options to customize this attribute for this category.
+                  No catalog-specific options found for this attribute. Add options to customize this attribute for this catalog.
                 </div>
               ) : (
                 <div className="rounded-md border">
@@ -829,24 +765,24 @@ function CategoryAttributesPage() {
                         <TableHead className="w-[60px]">Order</TableHead>
                         <TableHead>Value</TableHead>
                         <TableHead>Display Value</TableHead>
-                        <TableHead>Source</TableHead>
+                        <TableHead>Based On</TableHead>
                         <TableHead className="w-[150px]">Metadata</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {options?.map((option: CategoryAttributeOption) => (
+                      {options?.map((option: CatalogAttributeOption) => (
                         <TableRow key={option.id}>
                           <TableCell>{option.sortOrder}</TableCell>
                           <TableCell className="font-medium">{option.value}</TableCell>
                           <TableCell>{option.displayValue}</TableCell>
                           <TableCell>
-                            {option.catalogOption ? (
-                              <Badge variant="secondary">Catalog</Badge>
-                            ) : option.baseOption ? (
-                              <Badge>Global</Badge>
+                            {option.baseOption ? (
+                              <Badge variant="outline">
+                                {option.baseOption.value}
+                              </Badge>
                             ) : (
-                              <Badge variant="outline">Custom</Badge>
+                              <span className="text-muted-foreground text-sm">Custom</span>
                             )}
                           </TableCell>
                           <TableCell>
@@ -895,9 +831,9 @@ function CategoryAttributesPage() {
         <Dialog open={attributeDialogOpen} onOpenChange={setAttributeDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Edit Category Attribute</DialogTitle>
+              <DialogTitle>Edit Catalog Attribute</DialogTitle>
               <DialogDescription>
-                Customize how this attribute appears in this category
+                Customize how this attribute appears in this catalog
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleAttributeSubmit}>
@@ -911,7 +847,7 @@ function CategoryAttributesPage() {
                       disabled
                     />
                     <p className="text-xs text-muted-foreground">
-                      Base attribute from the {selectedAttribute?.catalogAttributeId ? "catalog" : "global"} attribute library
+                      Base attribute from the global attribute library
                     </p>
                   </div>
                 </div>
@@ -921,11 +857,11 @@ function CategoryAttributesPage() {
                   <Input
                     id="overrideDisplayName"
                     name="overrideDisplayName"
-                    placeholder={selectedAttribute?.catalogAttribute?.overrideDisplayName || selectedAttribute?.attribute?.displayName || ""}
+                    placeholder={selectedAttribute?.attribute?.displayName || ""}
                     defaultValue={selectedAttribute?.overrideDisplayName || ""}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Leave empty to use the {selectedAttribute?.catalogAttributeId ? "catalog" : "global"} display name
+                    Leave empty to use the global display name: {selectedAttribute?.attribute?.displayName}
                   </p>
                 </div>
 
@@ -935,7 +871,7 @@ function CategoryAttributesPage() {
                     name="isRequired"
                     defaultChecked={selectedAttribute?.isRequired || false} 
                   />
-                  <Label htmlFor="isRequired">Required for products in this category</Label>
+                  <Label htmlFor="isRequired">Required for products in this catalog</Label>
                 </div>
 
                 <div className="space-y-2">
@@ -960,9 +896,9 @@ function CategoryAttributesPage() {
                 </Button>
                 <Button
                   type="submit"
-                  disabled={updateCategoryAttributeMutation.isPending}
+                  disabled={updateCatalogAttributeMutation.isPending}
                 >
-                  {updateCategoryAttributeMutation.isPending && (
+                  {updateCatalogAttributeMutation.isPending && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
                   Save Changes
@@ -987,53 +923,28 @@ function CategoryAttributesPage() {
             </DialogHeader>
             <form onSubmit={handleOptionSubmit}>
               <div className="grid gap-4 py-4">
-                {selectedAttribute?.catalogAttributeId ? (
-                  <div className="space-y-2">
-                    <Label htmlFor="catalogOptionId">Catalog Option (Optional)</Label>
-                    <Select 
-                      name="catalogOptionId" 
-                      defaultValue={selectedOption?.catalogOptionId?.toString() || ""}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a catalog option or leave empty" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">Custom Option (No Catalog Base)</SelectItem>
-                        {selectedAttribute?.catalogAttribute?.options?.map((option: CatalogAttributeOption) => (
-                          <SelectItem key={option.id} value={option.id.toString()}>
-                            {option.displayValue} ({option.value})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">
-                      Base this option on a catalog option, or leave empty to create a custom option
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <Label htmlFor="baseOptionId">Global Option (Optional)</Label>
-                    <Select 
-                      name="baseOptionId" 
-                      defaultValue={selectedOption?.baseOptionId?.toString() || ""}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a global option or leave empty" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">Custom Option (No Base)</SelectItem>
-                        {selectedAttribute?.attribute?.options?.map((option: AttributeOption) => (
-                          <SelectItem key={option.id} value={option.id.toString()}>
-                            {option.displayValue} ({option.value})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">
-                      Base this option on a global option, or leave empty to create a custom option
-                    </p>
-                  </div>
-                )}
+                <div className="space-y-2">
+                  <Label htmlFor="baseOptionId">Base Global Option (Optional)</Label>
+                  <Select 
+                    name="baseOptionId" 
+                    defaultValue={selectedOption?.baseOptionId?.toString() || ""}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a global option or leave empty for custom" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Custom Option (No Base)</SelectItem>
+                      {selectedAttribute?.attribute?.options?.map((option: AttributeOption) => (
+                        <SelectItem key={option.id} value={option.id.toString()}>
+                          {option.displayValue} ({option.value})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Base this option on a global option, or leave empty to create a custom option for this catalog
+                  </p>
+                </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="value">Value</Label>
@@ -1170,7 +1081,7 @@ function CategoryAttributesPage() {
               <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
               <AlertDialogDescription>
                 {itemToDelete?.type === 'attribute'
-                  ? "Are you sure you want to remove this attribute from the category? This action cannot be undone and will also delete all associated category-specific options."
+                  ? "Are you sure you want to remove this attribute from the catalog? This action cannot be undone and will also delete all associated catalog-specific options."
                   : "Are you sure you want to delete this option? This action cannot be undone."}
               </AlertDialogDescription>
             </AlertDialogHeader>
@@ -1180,10 +1091,10 @@ function CategoryAttributesPage() {
                 onClick={handleConfirmDelete}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 disabled={
-                  deleteCategoryAttributeMutation.isPending || deleteOptionMutation.isPending
+                  deleteCatalogAttributeMutation.isPending || deleteOptionMutation.isPending
                 }
               >
-                {(deleteCategoryAttributeMutation.isPending || deleteOptionMutation.isPending) && (
+                {(deleteCatalogAttributeMutation.isPending || deleteOptionMutation.isPending) && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
                 Delete
@@ -1194,204 +1105,64 @@ function CategoryAttributesPage() {
 
         {/* Attribute Selection Sheet */}
         <Sheet open={attributeSelectOpen} onOpenChange={setAttributeSelectOpen}>
-          <SheetContent className="md:max-w-xl">
+          <SheetContent className="sm:max-w-md">
             <SheetHeader>
-              <SheetTitle>Add Attributes to Category</SheetTitle>
+              <SheetTitle>Add Attributes to Catalog</SheetTitle>
               <SheetDescription>
-                Select attributes to add to this category
+                Select global attributes to add to this catalog
               </SheetDescription>
             </SheetHeader>
-            
-            <div className="mt-6">
-              <Tabs 
-                onValueChange={(value) => setSelectedTab(value as "global" | "catalog")}
-                value={selectedTab}
-              >
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="global">From Global Attributes</TabsTrigger>
-                  <TabsTrigger value="catalog">From Catalogs</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="global" className="mt-4">
-                  <div className="rounded-md border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-[50px]"></TableHead>
-                          <TableHead>Name</TableHead>
-                          <TableHead>Type</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {globalAttributesLoading ? (
-                          <TableRow>
-                            <TableCell colSpan={3} className="text-center py-4">
-                              <Loader2 className="h-5 w-5 animate-spin mx-auto" />
-                            </TableCell>
-                          </TableRow>
-                        ) : selectedGlobalAttributes.length === 0 ? (
-                          <TableRow>
-                            <TableCell colSpan={3} className="text-center py-4 text-muted-foreground">
-                              No global attributes found
-                            </TableCell>
-                          </TableRow>
-                        ) : (
-                          selectedGlobalAttributes
-                            .filter(attr => !categoryAttributes?.some(
-                              (catAttr: CategoryAttribute) => 
-                                catAttr.attributeId === attr.id && catAttr.catalogAttributeId === null
-                            ))
-                            .map((attribute) => (
-                              <TableRow key={attribute.id}>
-                                <TableCell>
-                                  <button 
-                                    type="button"
-                                    className={`flex items-center justify-center h-5 w-5 rounded-full border ${
-                                      attribute.isSelected && attribute.catalogAttributeId === null
-                                        ? 'bg-primary text-primary-foreground border-primary' 
-                                        : 'border-input'
-                                    }`}
-                                    onClick={() => handleGlobalAttributeSelection(attribute.id, 
-                                      attribute.isSelected && attribute.catalogAttributeId === null)}
-                                  >
-                                    {attribute.isSelected && attribute.catalogAttributeId === null && <Check className="h-3 w-3" />}
-                                  </button>
-                                </TableCell>
-                                <TableCell>
-                                  <div className="font-medium">{attribute.displayName}</div>
-                                  <div className="text-xs text-muted-foreground">{attribute.name}</div>
-                                </TableCell>
-                                <TableCell>
-                                  <Badge variant="outline">{attribute.attributeType}</Badge>
-                                </TableCell>
-                              </TableRow>
-                            ))
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="catalog" className="mt-4">
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="catalogSelect">Select Catalog</Label>
-                      <Select 
-                        onValueChange={(value) => setSelectedCatalogId(value)}
-                        value={selectedCatalogId}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a catalog" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {catalogsLoading ? (
-                            <div className="flex justify-center p-2">
-                              <Loader2 className="h-5 w-5 animate-spin" />
-                            </div>
-                          ) : catalogs?.length === 0 ? (
-                            <div className="p-2 text-center text-muted-foreground">
-                              No catalogs found
-                            </div>
-                          ) : (
-                            catalogs?.map((catalog: any) => (
-                              <SelectItem key={catalog.id} value={catalog.id.toString()}>
-                                {catalog.name}
-                              </SelectItem>
-                            ))
-                          )}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    {selectedCatalogId && (
-                      <div className="rounded-md border">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead className="w-[50px]"></TableHead>
-                              <TableHead>Name</TableHead>
-                              <TableHead>Type</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {catalogAttributesLoading ? (
-                              <TableRow>
-                                <TableCell colSpan={3} className="text-center py-4">
-                                  <Loader2 className="h-5 w-5 animate-spin mx-auto" />
-                                </TableCell>
-                              </TableRow>
-                            ) : !catalogAttributes || catalogAttributes.length === 0 ? (
-                              <TableRow>
-                                <TableCell colSpan={3} className="text-center py-4 text-muted-foreground">
-                                  No attributes found in this catalog
-                                </TableCell>
-                              </TableRow>
-                            ) : (
-                              catalogAttributes.map((attribute: CatalogAttribute) => {
-                                const isAlreadySelected = categoryAttributes?.some(
-                                  (catAttr: CategoryAttribute) => 
-                                    catAttr.attributeId === attribute.attributeId && 
-                                    catAttr.catalogAttributeId === attribute.id
-                                );
-                                
-                                const isSelectedInOtherSource = categoryAttributes?.some(
-                                  (catAttr: CategoryAttribute) => 
-                                    catAttr.attributeId === attribute.attributeId && 
-                                    catAttr.catalogAttributeId !== attribute.id
-                                );
-                                
-                                if (isAlreadySelected) return null;
-                                
-                                const globalAttribute = selectedGlobalAttributes.find(
-                                  (attr) => attr.id === attribute.attributeId
-                                );
-                                
-                                if (!globalAttribute) return null;
-                                
-                                const isSelected = globalAttribute.isSelected && 
-                                                  globalAttribute.catalogAttributeId === attribute.id;
-                                
-                                return (
-                                  <TableRow key={attribute.id} className={isSelectedInOtherSource ? "opacity-50" : ""}>
-                                    <TableCell>
-                                      <button 
-                                        type="button"
-                                        className={`flex items-center justify-center h-5 w-5 rounded-full border ${
-                                          isSelected 
-                                            ? 'bg-primary text-primary-foreground border-primary' 
-                                            : 'border-input'
-                                        }`}
-                                        onClick={() => handleCatalogAttributeSelection(attribute, isSelected)}
-                                        disabled={isSelectedInOtherSource}
-                                      >
-                                        {isSelected && <Check className="h-3 w-3" />}
-                                      </button>
-                                    </TableCell>
-                                    <TableCell>
-                                      <div className="font-medium">
-                                        {attribute.overrideDisplayName || attribute.attribute?.displayName}
-                                        {isSelectedInOtherSource && (
-                                          <Badge variant="outline" className="ml-2">Already added</Badge>
-                                        )}
-                                      </div>
-                                      <div className="text-xs text-muted-foreground">{attribute.attribute?.name}</div>
-                                    </TableCell>
-                                    <TableCell>
-                                      <Badge variant="outline">{attribute.attribute?.attributeType}</Badge>
-                                    </TableCell>
-                                  </TableRow>
-                                );
-                              }).filter(Boolean)
-                            )}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    )}
-                  </div>
-                </TabsContent>
-              </Tabs>
+            <div className="mt-6 border rounded-md">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[50px]"></TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Type</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {globalAttributesLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-center py-4">
+                        <Loader2 className="h-5 w-5 animate-spin mx-auto" />
+                      </TableCell>
+                    </TableRow>
+                  ) : selectedGlobalAttributes.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-center py-4 text-muted-foreground">
+                        No global attributes found
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    selectedGlobalAttributes.map((attribute) => (
+                      <TableRow key={attribute.id}>
+                        <TableCell>
+                          <button 
+                            type="button"
+                            className={`flex items-center justify-center h-5 w-5 rounded-full border ${
+                              attribute.isSelected 
+                                ? 'bg-primary text-primary-foreground border-primary' 
+                                : 'border-input'
+                            }`}
+                            onClick={() => handleAttributeSelection(attribute.id, attribute.isSelected)}
+                          >
+                            {attribute.isSelected && <Check className="h-3 w-3" />}
+                          </button>
+                        </TableCell>
+                        <TableCell>
+                          <div className="font-medium">{attribute.displayName}</div>
+                          <div className="text-xs text-muted-foreground">{attribute.name}</div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{attribute.attributeType}</Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
             </div>
-            
             <div className="mt-6 flex justify-end gap-2">
               <Button 
                 variant="outline" 
@@ -1401,9 +1172,9 @@ function CategoryAttributesPage() {
               </Button>
               <Button 
                 onClick={handleSaveSelectedAttributes}
-                disabled={addCategoryAttributeMutation.isPending}
+                disabled={addCatalogAttributeMutation.isPending}
               >
-                {addCategoryAttributeMutation.isPending && (
+                {addCatalogAttributeMutation.isPending && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
                 Add Selected
@@ -1416,4 +1187,4 @@ function CategoryAttributesPage() {
   );
 }
 
-export default CategoryAttributesPage;
+export default CatalogAttributesPage;
