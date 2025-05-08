@@ -152,32 +152,65 @@ const ProductDetailView = ({
   } | null>(null);
   
   // Get related products based on category
-  const { data: relatedProductsResponse } = useQuery<StandardApiResponse<Product[]>>({
+  const { 
+    data: relatedProductsResponse,
+    error: relatedProductsError
+  } = useQuery<StandardApiResponse<Product[]>>({
     queryKey: ['/api/products/category', product?.categoryId, { limit: 5 }],
     enabled: !!product?.categoryId,
   });
   const relatedProducts = relatedProductsResponse?.success ? relatedProductsResponse.data : [];
   
   // Get product attributes (includes product-specific attributes as well as inherited ones)
-  const { data: productAttributesResponse } = useQuery<StandardApiResponse<CategoryAttribute[]>>({
+  const { 
+    data: productAttributesResponse,
+    error: productAttributesError
+  } = useQuery<StandardApiResponse<CategoryAttribute[]>>({
     queryKey: ['/api/products', product?.id, 'attributes'],
     enabled: !!product?.id,
   });
   const productAttributes = productAttributesResponse?.success ? productAttributesResponse.data : [];
   
   // Get product attribute options
-  const { data: attributeOptionsResponse } = useQuery<StandardApiResponse<{ [key: number]: ProductAttributeOption[] }>>({
+  const { 
+    data: attributeOptionsResponse,
+    error: attributeOptionsError
+  } = useQuery<StandardApiResponse<{ [key: number]: ProductAttributeOption[] }>>({
     queryKey: ['/api/products', product?.id, 'attribute-options'],
     enabled: !!product?.id && !!productAttributes?.length,
   });
   const attributeOptions = attributeOptionsResponse?.success ? attributeOptionsResponse.data : {};
   
   // Get product attribute values for combinations
-  const { data: attributeValuesResponse } = useQuery<StandardApiResponse<ProductAttributeValue[]>>({
+  const { 
+    data: attributeValuesResponse,
+    error: attributeValuesError
+  } = useQuery<StandardApiResponse<ProductAttributeValue[]>>({
     queryKey: ['/api/products', product?.id, 'attribute-values'],
     enabled: !!product?.id,
   });
   const attributeValues = attributeValuesResponse?.success ? attributeValuesResponse.data : [];
+  
+  // Handle secondary query errors
+  useEffect(() => {
+    const errors = [
+      { error: relatedProductsError, name: 'related products' },
+      { error: productAttributesError, name: 'product attributes' },
+      { error: attributeOptionsError, name: 'attribute options' },
+      { error: attributeValuesError, name: 'attribute values' }
+    ].filter(item => item.error);
+    
+    if (errors.length > 0) {
+      errors.forEach(({ error, name }) => {
+        console.error(`Error fetching ${name}:`, error);
+        toast({
+          title: `Failed to load ${name}`,
+          description: error instanceof Error ? error.message : "An unexpected error occurred",
+          variant: "destructive",
+        });
+      });
+    }
+  }, [relatedProductsError, productAttributesError, attributeOptionsError, attributeValuesError, toast]);
   
   // Effect to set initial image on component mount or when product changes
   useEffect(() => {
@@ -404,15 +437,36 @@ const ProductDetailView = ({
   }
   
   // Error state
+  useEffect(() => {
+    if (error) {
+      console.error('Error fetching product details:', error);
+      toast({
+        title: "Failed to load product details",
+        description: error instanceof Error ? error.message : "An unexpected error occurred",
+        variant: "destructive",
+      });
+    }
+  }, [error, toast]);
+  
   if (error || !product) {
     return (
       <div className="container mx-auto px-4 py-8">
         <Card>
           <CardContent className="p-6">
-            <h1 className="text-2xl font-bold text-gray-900 mb-4">Product Not Found</h1>
+            <h1 className="text-2xl font-bold text-gray-900 mb-4">
+              {error ? "Error Loading Product" : "Product Not Found"}
+            </h1>
             <p className="text-gray-600 mb-4">
-              The product you're looking for doesn't exist or has been removed.
+              {error 
+                ? "We encountered an error while trying to load this product. Please try again later."
+                : "The product you're looking for doesn't exist or has been removed."
+              }
             </p>
+            {error && (
+              <p className="text-sm text-red-500 mb-4">
+                {error instanceof Error ? error.message : "An unexpected error occurred"}
+              </p>
+            )}
             <Button asChild>
               <Link href="/">Go back to home</Link>
             </Button>
