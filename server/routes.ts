@@ -28,7 +28,17 @@ import registerAttributeRoutes from "./attribute-routes";
 import registerProductAttributeRoutes from "./attribute-routes-product";
 import attributeDiscountRoutes from "./attribute-discount-routes";
 import { validateRequest, idSchema } from './validation-middleware';
-import { createCategorySchema, updateCategorySchema } from '@shared/validation-schemas';
+import { 
+  productsQuerySchema,
+  productSlugParamSchema,
+  categoryIdParamSchema,
+  idParamSchema,
+  productIdParamSchema,
+  createCategorySchema, 
+  updateCategorySchema,
+  createProductSchema,
+  updateProductSchema
+} from '@shared/validation-schemas';
 import { 
   asyncHandler, 
   BadRequestError, 
@@ -334,36 +344,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // CATEGORY ATTRIBUTE OPTIONS ROUTES - Removed as part of attribute system redesign
 
   // PRODUCT ROUTES
-  app.get("/api/products", asyncHandler(async (req: Request, res: Response) => {
-    const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
-    const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
-    const categoryId = req.query.category ? parseInt(req.query.category as string) : undefined;
-    const search = req.query.search as string | undefined;
-    
-    // Validate numeric parameters
-    if (limit < 0 || isNaN(limit)) {
-      throw new ValidationError("Limit must be a non-negative number");
-    }
-    
-    if (offset < 0 || isNaN(offset)) {
-      throw new ValidationError("Offset must be a non-negative number");
-    }
-    
-    if (categoryId !== undefined && isNaN(categoryId)) {
-      throw new BadRequestError("Category ID must be a number");
-    }
-    
-    const user = req.user as any;
-    const isAdmin = user && user.role === 'admin';
-    
-    const options = { 
-      includeInactive: isAdmin, 
-      includeCategoryInactive: isAdmin 
-    };
-    
-    const products = await storage.getAllProducts(limit, offset, categoryId, search, options);
-    res.json(products);
-  }));
+  app.get("/api/products", 
+    validateRequest({ query: productsQuerySchema }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const { limit, offset, category: categoryId, search } = req.query;
+      
+      const user = req.user as any;
+      const isAdmin = user && user.role === 'admin';
+      
+      const options = { 
+        includeInactive: isAdmin, 
+        includeCategoryInactive: isAdmin 
+      };
+      
+      const products = await storage.getAllProducts(
+        Number(limit), 
+        Number(offset), 
+        categoryId ? Number(categoryId) : undefined, 
+        search as string | undefined, 
+        options
+      );
+      res.json(products);
+    }));
   
   // Create bulk update status schema
   const bulkUpdateStatusSchema = z.object({
@@ -402,182 +404,182 @@ export async function registerRoutes(app: Express): Promise<Server> {
   );
 
   // Specific route patterns must be defined before generic patterns with path parameters
-  app.get("/api/products/slug/:slug", asyncHandler(async (req: Request, res: Response) => {
-    const { slug } = req.params;
-    
-    if (!slug || typeof slug !== 'string') {
-      throw new BadRequestError("Valid product slug is required");
-    }
-    
-    const user = req.user as any;
-    const isAdmin = user && user.role === 'admin';
-    
-    const options = { 
-      includeInactive: isAdmin, 
-      includeCategoryInactive: isAdmin 
-    };
-    
-    const product = await storage.getProductBySlug(slug, options);
-    
-    if (!product) {
-      throw new NotFoundError(`Product with slug '${slug}' not found`, 'product');
-    }
-    
-    res.json(product);
-  }));
-
-  app.get("/api/products/category/:categoryId", asyncHandler(async (req: Request, res: Response) => {
-    const categoryId = parseInt(req.params.categoryId);
-    
-    // Validate categoryId is a number
-    if (isNaN(categoryId)) {
-      throw new BadRequestError("Invalid category ID");
-    }
-    
-    const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
-    const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
-    
-    // Validate numeric parameters
-    if (limit < 0 || isNaN(limit)) {
-      throw new ValidationError("Limit must be a non-negative number");
-    }
-    
-    if (offset < 0 || isNaN(offset)) {
-      throw new ValidationError("Offset must be a non-negative number");
-    }
-    
-    const user = req.user as any;
-    const isAdmin = user && user.role === 'admin';
-    
-    const options = { 
-      includeInactive: isAdmin, 
-      includeCategoryInactive: isAdmin 
-    };
-    
-    try {
-      // Check if category exists
-      const category = await storage.getCategoryById(categoryId);
-      if (!category) {
-        throw new NotFoundError(`Category with ID ${categoryId} not found`, 'category');
+  app.get(
+    "/api/products/slug/:slug", 
+    validateRequest({ params: productSlugParamSchema }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const { slug } = req.params;
+      
+      const user = req.user as any;
+      const isAdmin = user && user.role === 'admin';
+      
+      const options = { 
+        includeInactive: isAdmin, 
+        includeCategoryInactive: isAdmin 
+      };
+      
+      const product = await storage.getProductBySlug(slug, options);
+      
+      if (!product) {
+        throw new NotFoundError(`Product with slug '${slug}' not found`, 'product');
       }
       
-      const products = await storage.getProductsByCategory(categoryId, limit, offset, options);
-      res.json(products);
-    } catch (error) {
-      if (error instanceof NotFoundError) {
-        throw error;
+      res.json(product);
+    })
+  );
+
+  app.get(
+    "/api/products/category/:categoryId", 
+    validateRequest({
+      params: categoryIdParamSchema,
+      query: productsQuerySchema
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const categoryId = Number(req.params.categoryId);
+      const { limit, offset } = req.query;
+      
+      const user = req.user as any;
+      const isAdmin = user && user.role === 'admin';
+      
+      const options = { 
+        includeInactive: isAdmin, 
+        includeCategoryInactive: isAdmin 
+      };
+      
+      try {
+        // Check if category exists
+        const category = await storage.getCategoryById(categoryId);
+        if (!category) {
+          throw new NotFoundError(`Category with ID ${categoryId} not found`, 'category');
+        }
+        
+        const products = await storage.getProductsByCategory(
+          categoryId, 
+          Number(limit), 
+          Number(offset), 
+          options
+        );
+        res.json(products);
+      } catch (error) {
+        if (error instanceof NotFoundError) {
+          throw error;
+        }
+        logger.error('Error fetching products by category', { error, categoryId });
+        throw new AppError(
+          "Failed to fetch products for the specified category",
+          ErrorCode.INTERNAL_SERVER_ERROR,
+          500
+        );
       }
-      logger.error('Error fetching products by category', { error, categoryId });
-      throw new AppError(
-        "Failed to fetch products for the specified category",
-        ErrorCode.INTERNAL_SERVER_ERROR,
-        500
-      );
-    }
-  }));
+    })
+  );
   
   // Product attributes-for-category route - removed as part of attribute system redesign
   
   // Generic route for product by ID must come after more specific routes
-  app.get("/api/products/:id", asyncHandler(async (req: Request, res: Response) => {
-    const id = parseInt(req.params.id);
-    
-    // Validate id is a number
-    if (isNaN(id)) {
-      throw new BadRequestError("Invalid product ID");
-    }
-    
-    const user = req.user as any;
-    const isAdmin = user && user.role === 'admin';
-    
-    const options = { 
-      includeInactive: isAdmin, 
-      includeCategoryInactive: isAdmin 
-    };
-    
-    const product = await storage.getProductById(id, options);
-    
-    if (!product) {
-      throw new NotFoundError(`Product with ID ${id} not found`, 'product');
-    }
-    
-    res.json(product);
-  }));
+  app.get(
+    "/api/products/:id", 
+    validateRequest({ params: idParamSchema }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const id = Number(req.params.id);
+      
+      const user = req.user as any;
+      const isAdmin = user && user.role === 'admin';
+      
+      const options = { 
+        includeInactive: isAdmin, 
+        includeCategoryInactive: isAdmin 
+      };
+      
+      const product = await storage.getProductById(id, options);
+      
+      if (!product) {
+        throw new NotFoundError(`Product with ID ${id} not found`, 'product');
+      }
+      
+      res.json(product);
+    })
+  );
   
   // Full update of a product
-  app.put("/api/products/:id", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
-    const user = req.user as any;
-    
-    // Check if user is admin
-    if (user.role !== 'admin') {
-      throw new ForbiddenError("Only administrators can update products");
-    }
-    
-    const productId = parseInt(req.params.id);
-    
-    if (isNaN(productId)) {
-      throw new BadRequestError("Invalid product ID");
-    }
-    
-    // Get the existing product to check if it exists
-    const existingProduct = await storage.getProductById(productId);
-    
-    if (!existingProduct) {
-      throw new NotFoundError(`Product with ID ${productId} not found`, 'product');
-    }
-    
-    // Remove properties that shouldn't be updated directly
-    const updateData = { ...req.body };
-    delete updateData.id;
-    delete updateData.createdAt;
-    delete updateData.updatedAt;
-    
-    // Update the product
-    const updatedProduct = await storage.updateProduct(productId, updateData);
-    
-    res.json(updatedProduct);
-  }));
+  app.put(
+    "/api/products/:id", 
+    isAuthenticated, 
+    validateRequest({
+      params: idParamSchema,
+      body: updateProductSchema
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const user = req.user as any;
+      
+      // Check if user is admin
+      if (user.role !== 'admin') {
+        throw new ForbiddenError("Only administrators can update products");
+      }
+      
+      const productId = Number(req.params.id);
+      
+      // Get the existing product to check if it exists
+      const existingProduct = await storage.getProductById(productId);
+      
+      if (!existingProduct) {
+        throw new NotFoundError(`Product with ID ${productId} not found`, 'product');
+      }
+      
+      // Remove properties that shouldn't be updated directly
+      const updateData = { ...req.body };
+      delete updateData.id;
+      delete updateData.createdAt;
+      delete updateData.updatedAt;
+      
+      // Update the product
+      const updatedProduct = await storage.updateProduct(productId, updateData);
+      
+      res.json(updatedProduct);
+    })
+  );
   
   // Delete a product endpoint
-  app.delete("/api/products/:id", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
-    const user = req.user as any;
-    
-    // Check if user is admin
-    if (user.role !== 'admin') {
-      throw new ForbiddenError("Only administrators can delete products");
-    }
-    
-    const productId = parseInt(req.params.id);
-    
-    if (isNaN(productId)) {
-      throw new BadRequestError("Invalid product ID");
-    }
-    
-    // Get the existing product to check if it exists
-    const existingProduct = await storage.getProductById(productId);
-    
-    if (!existingProduct) {
-      throw new NotFoundError(`Product with ID ${productId} not found`, 'product');
-    }
-    
-    try {
-      // Delete the product and all associated data
-      const success = await storage.deleteProduct(productId);
+  app.delete(
+    "/api/products/:id", 
+    isAuthenticated, 
+    validateRequest({ params: idParamSchema }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const user = req.user as any;
       
-      res.json({ 
-        success, 
-        message: `Product "${existingProduct.name}" was successfully deleted along with all associated images and data.` 
-      });
-    } catch (error) {
-      // Since we're using asyncHandler, this will be caught and handled properly
-      logger.error('Error deleting product:', { error, productId });
-      throw new AppError(
-        "An error occurred while deleting the product. Please try again.",
-        ErrorCode.INTERNAL_SERVER_ERROR,
-        500
-      );
-    }
-  }));
+      // Check if user is admin
+      if (user.role !== 'admin') {
+        throw new ForbiddenError("Only administrators can delete products");
+      }
+      
+      const productId = Number(req.params.id);
+      
+      // Get the existing product to check if it exists
+      const existingProduct = await storage.getProductById(productId);
+      
+      if (!existingProduct) {
+        throw new NotFoundError(`Product with ID ${productId} not found`, 'product');
+      }
+      
+      try {
+        // Delete the product and all associated data
+        const success = await storage.deleteProduct(productId);
+        
+        res.json({ 
+          success, 
+          message: `Product "${existingProduct.name}" was successfully deleted along with all associated images and data.` 
+        });
+      } catch (error) {
+        // Since we're using asyncHandler, this will be caught and handled properly
+        logger.error('Error deleting product:', { error, productId });
+        throw new AppError(
+          "An error occurred while deleting the product. Please try again.",
+          ErrorCode.INTERNAL_SERVER_ERROR,
+          500
+        );
+      }
+    })
+  );
 
   // Create featured products query schema
   const featuredProductsQuerySchema = z.object({
@@ -677,29 +679,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     })
   );
   
-  app.post("/api/products", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
-    const user = req.user as any;
-    
-    // Check if user is admin
-    if (user.role !== 'admin') {
-      throw new ForbiddenError("Only administrators can create products");
-    }
-    
-    // Validate the product data
-    try {
-      const productData = insertProductSchema.parse(req.body);
+  app.post(
+    "/api/products", 
+    isAuthenticated, 
+    validateRequest({ body: createProductSchema }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const user = req.user as any;
       
-      // Create the product
-      const product = await storage.createProduct(productData);
+      // Check if user is admin
+      if (user.role !== 'admin') {
+        throw new ForbiddenError("Only administrators can create products");
+      }
+      
+      // Create the product with validated data
+      const product = await storage.createProduct(req.body);
       
       res.status(201).json(product);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        throw new ValidationError("Invalid product data", error.flatten());
-      }
-      throw error;
-    }
-  }));
+    })
+  );
 
   // PRODUCT ATTRIBUTE ROUTES - Removed as part of attribute system redesign
 
@@ -873,11 +870,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }));
   
-  app.get("/api/products/:productId/images", handleErrors(async (req: Request, res: Response) => {
-    const productId = parseInt(req.params.productId);
-    const images = await storage.getProductImages(productId);
-    res.json(images);
-  }));
+  app.get(
+    "/api/products/:productId/images",
+    validateRequest({ params: productIdParamSchema }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const productId = Number(req.params.productId);
+      const images = await storage.getProductImages(productId);
+      res.json(images);
+    })
+  );
   
   app.post("/api/products/:productId/images", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
     const user = req.user as any;

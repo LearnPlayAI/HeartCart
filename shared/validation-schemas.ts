@@ -75,6 +75,16 @@ export const productFilterSchema = z.object({
 });
 
 /**
+ * Simple products list query validation schema
+ */
+export const productsQuerySchema = z.object({
+  limit: z.coerce.number().int().min(0).default(20),
+  offset: z.coerce.number().int().min(0).default(0),
+  category: z.coerce.number().int().positive().optional(),
+  search: z.string().trim().optional()
+});
+
+/**
  * Cart-related validation schemas
  */
 export const addToCartSchema = insertCartItemSchema;
@@ -138,6 +148,18 @@ export const idParamSchema = z.object({
 
 export const slugParamSchema = z.object({
   slug: z.string().min(1)
+});
+
+export const categoryIdParamSchema = z.object({
+  categoryId: z.coerce.number().int().positive()
+});
+
+export const productIdParamSchema = z.object({
+  productId: z.coerce.number().int().positive()
+});
+
+export const productSlugParamSchema = z.object({
+  slug: z.string().min(1).max(200)
 });
 
 export const paginationSchema = z.object({
