@@ -65,7 +65,8 @@ const ProductsExample = () => {
   
   // Handle category change
   const handleCategoryChange = (value: string) => {
-    setSelectedCategory(value);
+    // If "all" is selected, set selectedCategory to null
+    setSelectedCategory(value === 'all' ? null : value);
     setPage(1);
   };
   
@@ -105,12 +106,12 @@ const ProductsExample = () => {
               {/* Category Filter */}
               <div className="mb-6">
                 <h3 className="font-medium mb-2">Category</h3>
-                <Select value={selectedCategory || ''} onValueChange={handleCategoryChange}>
+                <Select value={selectedCategory || 'all'} onValueChange={handleCategoryChange}>
                   <SelectTrigger>
                     <SelectValue placeholder="All Categories" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Categories</SelectItem>
+                    <SelectItem value="all">All Categories</SelectItem>
                     {categories?.map(category => (
                       <SelectItem key={category.id} value={category.id.toString()}>
                         {category.name}
