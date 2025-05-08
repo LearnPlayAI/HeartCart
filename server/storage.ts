@@ -2678,8 +2678,8 @@ export class DatabaseStorage implements IStorage {
         .where(eq(categoryAttributeOptions.id, id));
       return true;
     } catch (error) {
-      console.error("Error deleting category attribute option:", error);
-      return false;
+      console.error(`Error deleting category attribute option ${id}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
   }
   
@@ -2767,8 +2767,8 @@ export class DatabaseStorage implements IStorage {
         .where(eq(productAttributes.id, id));
       return true;
     } catch (error) {
-      console.error("Error deleting product attribute:", error);
-      return false;
+      console.error(`Error deleting product attribute ${id}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
   }
   
@@ -2832,8 +2832,8 @@ export class DatabaseStorage implements IStorage {
         .where(eq(productAttributeOptions.id, id));
       return true;
     } catch (error) {
-      console.error("Error deleting product attribute option:", error);
-      return false;
+      console.error(`Error deleting product attribute option ${id}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
   }
   
@@ -2854,8 +2854,8 @@ export class DatabaseStorage implements IStorage {
       });
       return true;
     } catch (error) {
-      console.error("Error updating product attribute options order:", error);
-      return false;
+      console.error(`Error updating product attribute options order for attributeId ${productAttributeId}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
   }
   
@@ -2900,8 +2900,8 @@ export class DatabaseStorage implements IStorage {
         .where(eq(productAttributeValues.id, id));
       return true;
     } catch (error) {
-      console.error("Error deleting product attribute value:", error);
-      return false;
+      console.error(`Error deleting product attribute value ${id}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
   }
 
@@ -3005,8 +3005,8 @@ export class DatabaseStorage implements IStorage {
         .where(eq(attributeDiscountRules.id, id));
       return true;
     } catch (error) {
-      console.error("Error deleting attribute discount rule:", error);
-      return false;
+      console.error(`Error deleting attribute discount rule ${id}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
   }
 
