@@ -269,8 +269,8 @@ export const catalogAttributeOptions = pgTable("catalog_attribute_options", {
   baseOptionId: integer("base_option_id").references(() => attributeOptions.id), // May link to a base option, or null if custom
   metadata: jsonb("metadata"), // Additional data
   sortOrder: integer("sort_order").default(0),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => {
   return {
     catalogAttrOptionUnique: unique().on(table.catalogAttributeId, table.value),
@@ -289,8 +289,8 @@ export const categoryAttributes = pgTable("category_attributes", {
   isFilterable: boolean("is_filterable"),
   inheritFromParent: boolean("inherit_from_parent").default(false), // Whether to inherit from parent category
   sortOrder: integer("sort_order").default(0),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => {
   return {
     categoryAttrUnique: unique().on(table.categoryId, table.attributeId),
@@ -307,8 +307,8 @@ export const categoryAttributeOptions = pgTable("category_attribute_options", {
   catalogOptionId: integer("catalog_option_id").references(() => catalogAttributeOptions.id),
   metadata: jsonb("metadata"),
   sortOrder: integer("sort_order").default(0),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => {
   return {
     categoryAttrOptionUnique: unique().on(table.categoryAttributeId, table.value),
@@ -325,8 +325,8 @@ export const productAttributes = pgTable("product_attributes", {
   overrideDescription: text("override_description"),
   isRequired: boolean("is_required"),
   sortOrder: integer("sort_order").default(0),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => {
   return {
     productAttrUnique: unique().on(table.productId, table.attributeId),
@@ -345,8 +345,8 @@ export const productAttributeOptions = pgTable("product_attribute_options", {
   priceAdjustment: decimal("price_adjustment", { precision: 10, scale: 2 }).default("0"),
   metadata: jsonb("metadata"),
   sortOrder: integer("sort_order").default(0),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => {
   return {
     productAttrOptionUnique: unique().on(table.productAttributeId, table.value),
@@ -360,12 +360,12 @@ export const productAttributeValues = pgTable("product_attribute_values", {
   attributeId: integer("attribute_id").notNull().references(() => attributes.id, { onDelete: "cascade" }),
   optionId: integer("option_id").references(() => productAttributeOptions.id), // For select/radio/color types
   textValue: text("text_value"), // For text/textarea types
-  dateValue: timestamp("date_value"), // For date types
+  dateValue: timestamp("date_value", { withTimezone: true }), // For date types
   numericValue: decimal("numeric_value", { precision: 10, scale: 2 }), // For numeric types
   priceAdjustment: decimal("price_adjustment", { precision: 10, scale: 2 }).default("0"),
   sortOrder: integer("sort_order").default(0),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 // Create insert schemas
@@ -809,11 +809,11 @@ export const attributeDiscountRules = pgTable("attribute_discount_rules", {
   categoryId: integer("category_id").references(() => categories.id),
   catalogId: integer("catalog_id").references(() => catalogs.id),
   minQuantity: integer("min_quantity").default(1),
-  startDate: timestamp("start_date"),
-  endDate: timestamp("end_date"),
+  startDate: timestamp("start_date", { withTimezone: true }),
+  endDate: timestamp("end_date", { withTimezone: true }),
   isActive: boolean("is_active").default(true).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 // Attribute discount rules relations
