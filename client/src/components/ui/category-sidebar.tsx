@@ -29,12 +29,19 @@ export function CategorySidebar({ className, onCategorySelect }: CategorySidebar
   }
   
   // Fetch main categories with their children using the new API endpoint
-  const { data: response, isLoading } = useQuery<ApiResponse>({
+  const { data: response, isLoading, error } = useQuery<ApiResponse>({
     queryKey: ["/api/categories/main/with-children"],
   });
   
   // Extract the categories with children from the standardized response
-  const categoriesWithChildren = response?.data || [];
+  const categoriesWithChildren = response?.success ? response.data : [];
+  
+  // Log any errors that occur during data fetching
+  React.useEffect(() => {
+    if (error) {
+      console.error("Error fetching categories:", error);
+    }
+  }, [error]);
   
   // Extract the category slug from the current URL if we're on a category page
   const categorySlug = location.startsWith("/category/") 
@@ -89,6 +96,17 @@ export function CategorySidebar({ className, onCategorySelect }: CategorySidebar
                 )}
               </div>
             ))}
+          </div>
+        ) : error ? (
+          // Show error state
+          <div className="p-4 flex flex-col items-center justify-center">
+            <div className="text-red-500 mb-2 text-sm">Failed to load categories</div>
+            <button 
+              className="px-3 py-1 text-xs rounded-md border border-pink-600 text-pink-600 hover:bg-pink-50 transition-colors"
+              onClick={() => window.location.reload()}
+            >
+              Retry
+            </button>
           </div>
         ) : !categoriesWithChildren || categoriesWithChildren.length === 0 ? (
           <div className="p-4 text-sm text-muted-foreground">No categories found</div>
