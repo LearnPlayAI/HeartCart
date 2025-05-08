@@ -24,12 +24,19 @@ const FlashDealsSection = () => {
     data: Product[];
   }
   
-  const { data: response, isLoading } = useQuery<ApiResponse>({
+  const { data: response, isLoading, error } = useQuery<ApiResponse>({
     queryKey: ['/api/flash-deals'],
   });
   
   // Extract the flash deals from the standardized response
-  const flashDeals = response?.data || [];
+  const flashDeals = response?.success ? response.data : [];
+  
+  // Handle error state gracefully
+  React.useEffect(() => {
+    if (error) {
+      console.error('Error fetching flash deals:', error);
+    }
+  }, [error]);
   
   return (
     <section className="mb-8 bg-white rounded-lg shadow-md overflow-hidden">
@@ -58,8 +65,20 @@ const FlashDealsSection = () => {
                 </div>
               </Card>
             ))
-          ) : (
-            flashDeals?.map((product) => {
+          ) : error ? (
+            // Show error state
+            <div className="col-span-full py-8 text-center">
+              <div className="text-red-500 mb-2">Failed to load flash deals</div>
+              <button 
+                className="px-4 py-2 rounded-md border border-[#FF69B4] text-[#FF69B4] hover:bg-[#FF69B4] hover:text-white transition-colors"
+                onClick={() => window.location.reload()}
+              >
+                Retry
+              </button>
+            </div>
+          ) : flashDeals.length > 0 ? (
+            // Show flash deals
+            flashDeals.map((product) => {
               // Using product ID for deterministic soldPercentage to avoid re-renders 
               const soldPercentage = React.useMemo(() => {
                 // Using product.id to generate a consistent sold percentage for a product
@@ -75,6 +94,12 @@ const FlashDealsSection = () => {
                 />
               );
             })
+          ) : (
+            // Show empty state
+            <div className="col-span-full text-center py-8">
+              <div className="text-gray-500 mb-2">No flash deals available at the moment</div>
+              <div className="text-sm text-gray-400">Check back later for exciting deals!</div>
+            </div>
           )}
         </div>
       </div>

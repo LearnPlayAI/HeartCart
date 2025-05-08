@@ -30,12 +30,19 @@ const CategoriesShowcase = () => {
     data: Category[];
   }
   
-  const { data: response, isLoading } = useQuery<ApiResponse>({
+  const { data: response, isLoading, error } = useQuery<ApiResponse>({
     queryKey: ['/api/categories'],
   });
   
   // Extract the categories from the standardized response
-  const categories = response?.data || [];
+  const categories = response?.success ? response.data : [];
+  
+  // Handle error state gracefully
+  React.useEffect(() => {
+    if (error) {
+      console.error('Error fetching categories:', error);
+    }
+  }, [error]);
   
   return (
     <section className="mb-8 bg-white rounded-lg shadow-md p-4">
@@ -50,8 +57,20 @@ const CategoriesShowcase = () => {
               <div className="h-3 bg-gray-200 rounded w-16"></div>
             </div>
           ))
-        ) : (
-          categories?.map((category) => (
+        ) : error ? (
+          // Show error state
+          <div className="col-span-full py-8 text-center">
+            <div className="text-red-500 mb-2">Failed to load categories</div>
+            <button 
+              className="px-4 py-2 rounded-md border border-[#FF69B4] text-[#FF69B4] hover:bg-[#FF69B4] hover:text-white transition-colors"
+              onClick={() => window.location.reload()}
+            >
+              Retry
+            </button>
+          </div>
+        ) : categories.length > 0 ? (
+          // Show categories
+          categories.map((category) => (
             <Link key={category.id} href={`/category/${category.slug}`} className="category-pill flex flex-col items-center p-3 rounded-lg hover:bg-gray-50 transition-colors duration-200">
               <div className="w-14 h-14 rounded-full bg-[#FFC0CB] flex items-center justify-center mb-2">
                 {categoryIcons[category.name] || <MoreHorizontal className="text-[#FF69B4] text-xl" />}
@@ -59,16 +78,19 @@ const CategoriesShowcase = () => {
               <span className="text-sm text-center font-medium">{category.name}</span>
             </Link>
           ))
-        )}
-        
-        {/* Fallback "More" category if no data */}
-        {!isLoading && (!categories || categories.length === 0) && (
-          <Link href="/categories" className="category-pill flex flex-col items-center p-3 rounded-lg hover:bg-gray-50 transition-colors duration-200">
-            <div className="w-14 h-14 rounded-full bg-[#FFC0CB] flex items-center justify-center mb-2">
-              <MoreHorizontal className="text-[#FF69B4] text-xl" />
+        ) : (
+          // Show empty state with "All Categories" fallback
+          <div className="col-span-full">
+            <div className="text-gray-500 text-center mb-4">No categories available</div>
+            <div className="flex justify-center">
+              <Link href="/categories" className="category-pill flex flex-col items-center p-3 rounded-lg hover:bg-gray-50 transition-colors duration-200">
+                <div className="w-14 h-14 rounded-full bg-[#FFC0CB] flex items-center justify-center mb-2">
+                  <MoreHorizontal className="text-[#FF69B4] text-xl" />
+                </div>
+                <span className="text-sm text-center font-medium">All Categories</span>
+              </Link>
             </div>
-            <span className="text-sm text-center font-medium">All Categories</span>
-          </Link>
+          </div>
         )}
       </div>
     </section>

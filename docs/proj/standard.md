@@ -302,9 +302,9 @@ All client and server-side components must be completely updated to match the ne
     - [x] Update product-card.tsx component for API consistency
     - [x] Update quick-view-modal.tsx to fix infinite loop and standardize API handling
     - [ ] Standardize product-grid.tsx component for pagination handling
-  - [ ] Standardize home page components:
-    - [ ] Update categories-showcase.tsx for standardized API responses
-    - [ ] Standardize flash-deals.tsx component for API consistency
+  - [x] Standardize home page components:
+    - [x] Update categories-showcase.tsx for standardized API responses
+    - [x] Standardize flash-deals.tsx component for API consistency
     - [x] Update featured-products.tsx for standardized responses
   - [ ] Standardize shared components:
     - [ ] Update ui/category-sidebar.tsx for API response consistency
