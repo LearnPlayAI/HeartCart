@@ -256,7 +256,7 @@ All client and server-side components must be completely updated to match the ne
   - ✓ Document validation requirements
 
 #### 3.3. API Response Standardization
-- **Status**: In Progress (85% Complete)
+- **Status**: In Progress (90% Complete)
 - **Description**: Create consistent response structure for all API endpoints
 - **Tasks**:
   - ✓ Define standard response format
@@ -266,11 +266,55 @@ All client and server-side components must be completely updated to match the ne
   - ✓ Complete implementation for supplier endpoints (GET, POST, PUT, DELETE)
   - ✓ Complete implementation for catalog endpoints (GET, POST, PUT, DELETE)
   - ✓ Complete implementation for catalog products, product quick edit, and product reordering
+  - ✓ Complete implementation for attribute discount rule endpoints (GET, POST, PUT, DELETE)
   - ✓ Update cart endpoints to use standardized response format
   - ✓ Update front-end cart hooks to handle standardized API responses
   - ✓ Update AdminSuppliers component to handle standardized responses
-  - ▶ Working on remaining API endpoints (auth, attributes, etc.)
+  - ▶ Working on remaining API endpoints (auth, pricing, etc.)
   - Document API response patterns
+
+#### 3.4. Front-end Component Standardization for API Integration
+- **Status**: Not Started
+- **Description**: Update all front-end components to use standardized API responses
+- **Tasks**:
+  - [ ] Standardize front-end cart interaction components:
+    - [ ] Update use-cart.tsx hook to handle standardized API responses
+    - [ ] Standardize cart-item.tsx component for consistent API integration
+    - [ ] Update cart-sidebar.tsx for standardized response handling
+  - [ ] Standardize admin components:
+    - [ ] Update admin/products.tsx to use standardized API responses
+    - [ ] Update admin/product-edit.tsx for consistent API integration
+    - [ ] Standardize admin/catalogs.tsx for updated API responses
+    - [ ] Update admin/add-catalog.tsx and edit-catalog.tsx components
+    - [ ] Standardize admin/suppliers.tsx for API response consistency
+    - [ ] Update admin/add-supplier.tsx and edit-supplier.tsx components
+    - [ ] Standardize admin/categories.tsx for API consistency
+    - [ ] Update admin/category-attributes.tsx for standardized responses
+    - [ ] Standardize admin/product-attributes.tsx component
+    - [ ] Update admin/pricing.tsx for API response consistency
+    - [ ] Standardize admin/orders.tsx for better error handling
+  - [ ] Standardize product components:
+    - [ ] Update product-listing.tsx to use standardized API responses
+    - [ ] Standardize product-detail-new.tsx for consistent API integration
+    - [ ] Update product-card.tsx component for API consistency
+    - [ ] Standardize product-grid.tsx component for pagination handling
+  - [ ] Standardize home page components:
+    - [ ] Update categories-showcase.tsx for standardized API responses
+    - [ ] Standardize flash-deals.tsx component for API consistency
+    - [ ] Update featured-products.tsx for standardized responses
+  - [ ] Standardize shared components:
+    - [ ] Update ui/category-sidebar.tsx for API response consistency
+    - [ ] Standardize ui/product-search.tsx component
+    - [ ] Update layout components for consistent API integration
+  - [ ] Standardize authentication-related components:
+    - [ ] Update login-form.tsx for standardized API responses
+    - [ ] Standardize registration-form.tsx for consistent error handling
+    - [ ] Update auth-page.tsx for standardized API integration
+  - [ ] Standardize hooks and utilities:
+    - [ ] Update use-auth.tsx for standardized API integration
+    - [ ] Standardize use-products.tsx hook for consistent response handling
+    - [ ] Update use-categories.tsx for standardized responses
+    - [ ] Standardize use-ai-settings.tsx for API consistency
 
 ### Phase 4: Authentication and Authorization
 
