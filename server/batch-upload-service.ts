@@ -987,11 +987,27 @@ export class BatchUploadService {
 
   /**
    * Cancel a batch upload
+   * @param batchId - The ID of the batch upload to cancel
+   * @returns A standard API response with the updated batch upload or error details
    */
   async cancelBatchUpload(batchId: number): Promise<StandardApiResponse<BatchUpload>> {
+    // Input validation
+    if (!batchId || isNaN(batchId) || batchId <= 0) {
+      console.error(`Invalid batch ID provided for cancellation: ${batchId}`);
+      return {
+        success: false,
+        error: {
+          message: 'Invalid batch upload ID',
+          code: 'INVALID_BATCH_ID',
+        }
+      };
+    }
+    
     try {
+      // Get batch with validation
       const batch = await this.getBatchUpload(batchId);
       if (!batch) {
+        console.warn(`Attempted to cancel non-existent batch with ID ${batchId}`);
         return {
           success: false,
           error: {
@@ -1001,27 +1017,69 @@ export class BatchUploadService {
         };
       }
       
-      // Only allow cancellation of batches that are in processing, pending, or paused state
-      if (![BATCH_STATUSES.PROCESSING, BATCH_STATUSES.PENDING, BATCH_STATUSES.PAUSED].includes(batch.status)) {
+      // State validation - only allow cancellation of batches that are in processing, pending, or paused state
+      const cancelableStates = [BATCH_STATUSES.PROCESSING, BATCH_STATUSES.PENDING, BATCH_STATUSES.PAUSED];
+      if (!cancelableStates.includes(batch.status)) {
+        console.warn(`Attempted to cancel batch ${batchId} in invalid state: ${batch.status}`);
         return {
           success: false,
           error: {
-            message: `Cannot cancel batch in ${batch.status} status`,
+            message: `Cannot cancel batch in ${batch.status} status. Batch must be in one of these states: ${cancelableStates.join(', ')}`,
             code: 'INVALID_BATCH_STATE',
           }
         };
       }
       
-      await this.updateBatchStatus(batchId, BATCH_STATUSES.CANCELLED);
+      // Log the cancellation action
+      console.log(`Cancelling batch upload ${batchId} (previous status: ${batch.status})`);
       
-      const updatedBatch = await this.getBatchUpload(batchId);
-      return {
-        success: true,
-        data: updatedBatch as BatchUpload
-      };
+      try {
+        // Update batch status to cancelled
+        await this.updateBatchStatus(batchId, BATCH_STATUSES.CANCELLED, {
+          completedAt: new Date(), // Add completion timestamp for cancelled batch
+        });
+        
+        // Log the system event for audit trail
+        await this.logBatchError({
+          batchId,
+          errorType: ERROR_TYPES.SYSTEM,
+          errorMessage: `Batch was manually cancelled while in ${batch.status} state`,
+          severity: ERROR_SEVERITY.INFO, // This is an informational message, not an error
+        });
+        
+        // Get updated batch for response
+        const updatedBatch = await this.getBatchUpload(batchId);
+        if (!updatedBatch) {
+          throw new Error(`Failed to retrieve updated batch after cancellation`);
+        }
+        
+        console.log(`Successfully cancelled batch upload ${batchId}`);
+        return {
+          success: true,
+          data: updatedBatch
+        };
+      } catch (updateError) {
+        // Handle errors during the update operation
+        const updateErrorMessage = updateError instanceof Error ? updateError.message : 'Unknown update error';
+        console.error(`Error updating batch status during cancellation: ${updateErrorMessage}`);
+        throw updateError; // Re-throw to be caught by the outer catch block
+      }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('Error cancelling batch:', error);
+      console.error(`Error cancelling batch ${batchId}:`, error);
+      
+      // Attempt to log the error to the database for the batch
+      try {
+        await this.logBatchError({
+          batchId,
+          errorType: ERROR_TYPES.SYSTEM,
+          errorMessage: `Failed to cancel batch: ${errorMessage}`,
+          severity: ERROR_SEVERITY.ERROR,
+        });
+      } catch (logError) {
+        // Just log to console if we can't log to the database
+        console.error(`Failed to log batch cancellation error: ${logError}`);
+      }
       
       return {
         success: false,
@@ -1036,11 +1094,27 @@ export class BatchUploadService {
   
   /**
    * Pause a batch upload
+   * @param batchId - The ID of the batch upload to pause
+   * @returns A standard API response with the updated batch upload or error details
    */
   async pauseBatchUpload(batchId: number): Promise<StandardApiResponse<BatchUpload>> {
+    // Input validation
+    if (!batchId || isNaN(batchId) || batchId <= 0) {
+      console.error(`Invalid batch ID provided for pausing: ${batchId}`);
+      return {
+        success: false,
+        error: {
+          message: 'Invalid batch upload ID',
+          code: 'INVALID_BATCH_ID',
+        }
+      };
+    }
+    
     try {
+      // Get batch with validation
       const batch = await this.getBatchUpload(batchId);
       if (!batch) {
+        console.warn(`Attempted to pause non-existent batch with ID ${batchId}`);
         return {
           success: false,
           error: {
@@ -1050,30 +1124,70 @@ export class BatchUploadService {
         };
       }
       
-      // Only allow pausing of batches that are in processing state
+      // State validation - only allow pausing of batches that are in processing state
       if (batch.status !== BATCH_STATUSES.PROCESSING) {
+        console.warn(`Attempted to pause batch ${batchId} in invalid state: ${batch.status}`);
         return {
           success: false,
           error: {
-            message: `Cannot pause batch in ${batch.status} status`,
+            message: `Cannot pause batch in ${batch.status} status. Batch must be in ${BATCH_STATUSES.PROCESSING} state.`,
             code: 'INVALID_BATCH_STATE',
           }
         };
       }
       
-      // Update the batch status to paused, and store the last processed row
-      await this.updateBatchStatus(batchId, BATCH_STATUSES.PAUSED, {
-        lastProcessedRow: batch.processedRecords || 0
-      });
+      // Log the pause action
+      console.log(`Pausing batch upload ${batchId} (current progress: ${batch.processedRecords || 0}/${batch.totalRecords || 0} records)`);
       
-      const updatedBatch = await this.getBatchUpload(batchId);
-      return {
-        success: true,
-        data: updatedBatch as BatchUpload
-      };
+      try {
+        // Update the batch status to paused, and store the last processed row
+        // This ensures we can resume from the correct position later
+        await this.updateBatchStatus(batchId, BATCH_STATUSES.PAUSED, {
+          lastProcessedRow: batch.processedRecords || 0,
+          pausedAt: new Date() // Add timestamp for when the batch was paused
+        });
+        
+        // Log the system event for audit trail
+        await this.logBatchError({
+          batchId,
+          errorType: ERROR_TYPES.SYSTEM,
+          errorMessage: `Batch was manually paused at row ${batch.processedRecords || 0}`,
+          severity: ERROR_SEVERITY.INFO, // This is an informational message, not an error
+        });
+        
+        // Get updated batch for response
+        const updatedBatch = await this.getBatchUpload(batchId);
+        if (!updatedBatch) {
+          throw new Error(`Failed to retrieve updated batch after pausing`);
+        }
+        
+        console.log(`Successfully paused batch upload ${batchId}`);
+        return {
+          success: true,
+          data: updatedBatch
+        };
+      } catch (updateError) {
+        // Handle errors during the update operation
+        const updateErrorMessage = updateError instanceof Error ? updateError.message : 'Unknown update error';
+        console.error(`Error updating batch status during pause: ${updateErrorMessage}`);
+        throw updateError; // Re-throw to be caught by the outer catch block
+      }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('Error pausing batch:', error);
+      console.error(`Error pausing batch ${batchId}:`, error);
+      
+      // Attempt to log the error to the database for the batch
+      try {
+        await this.logBatchError({
+          batchId,
+          errorType: ERROR_TYPES.SYSTEM,
+          errorMessage: `Failed to pause batch: ${errorMessage}`,
+          severity: ERROR_SEVERITY.ERROR,
+        });
+      } catch (logError) {
+        // Just log to console if we can't log to the database
+        console.error(`Failed to log batch pause error: ${logError}`);
+      }
       
       return {
         success: false,
