@@ -796,6 +796,39 @@ export const productAttributeValuesRelations = relations(productAttributeValues,
   })
 }));
 
+// Batch upload tables - for mass product upload tracking
+export const batchUploads = pgTable("batch_uploads", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  userId: integer("user_id").references(() => users.id),
+  totalRecords: integer("total_records").default(0),
+  processedRecords: integer("processed_records").default(0),
+  successRecords: integer("success_records").default(0),
+  failedRecords: integer("failed_records").default(0),
+  status: text("status").notNull().default("pending"), // pending, processing, completed, failed
+  catalogId: integer("catalog_id").references(() => catalogs.id),
+  originalFilename: text("original_filename"),
+  tempFilePath: text("temp_file_path"),
+  errorLog: jsonb("error_log").default([]),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+});
+
+// Batch upload error logs for detailed error tracking
+export const batchUploadErrors = pgTable("batch_upload_errors", {
+  id: serial("id").primaryKey(),
+  batchId: integer("batch_id").references(() => batchUploads.id, { onDelete: "cascade" }).notNull(),
+  rowNumber: integer("row_number"),
+  errorType: text("error_type").notNull(), // validation, processing, db, etc.
+  errorMessage: text("error_message").notNull(),
+  severity: text("severity").default("error"), // error, warning
+  rawData: jsonb("raw_data"), // The raw CSV row data
+  field: text("field"), // The specific field that caused the error
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
 // Attribute-based discount rules
 export const attributeDiscountRules = pgTable("attribute_discount_rules", {
   id: serial("id").primaryKey(),
@@ -852,3 +885,47 @@ export const insertAttributeDiscountRuleSchema = createInsertSchema(attributeDis
 
 export type AttributeDiscountRule = typeof attributeDiscountRules.$inferSelect;
 export type InsertAttributeDiscountRule = z.infer<typeof insertAttributeDiscountRuleSchema>;
+
+// Create insert schema for batch uploads
+export const insertBatchUploadSchema = createInsertSchema(batchUploads).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  completedAt: true,
+  processedRecords: true,
+  successRecords: true,
+  failedRecords: true,
+  errorLog: true,
+});
+
+// Create insert schema for batch upload errors
+export const insertBatchUploadErrorSchema = createInsertSchema(batchUploadErrors).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Export batch upload types
+export type BatchUpload = typeof batchUploads.$inferSelect;
+export type InsertBatchUpload = z.infer<typeof insertBatchUploadSchema>;
+export type BatchUploadError = typeof batchUploadErrors.$inferSelect;
+export type InsertBatchUploadError = z.infer<typeof insertBatchUploadErrorSchema>;
+
+// Define batch upload relations
+export const batchUploadsRelations = relations(batchUploads, ({ one, many }) => ({
+  user: one(users, {
+    fields: [batchUploads.userId],
+    references: [users.id]
+  }),
+  catalog: one(catalogs, {
+    fields: [batchUploads.catalogId],
+    references: [catalogs.id]
+  }),
+  errors: many(batchUploadErrors)
+}));
+
+export const batchUploadErrorsRelations = relations(batchUploadErrors, ({ one }) => ({
+  batchUpload: one(batchUploads, {
+    fields: [batchUploadErrors.batchId],
+    references: [batchUploads.id]
+  })
+}));
