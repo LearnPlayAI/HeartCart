@@ -12,6 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StandardApiResponse } from '@/types/api';
+import { Product } from '@shared/schema';
 
 interface ProductAttribute {
   id: number;
@@ -55,13 +56,21 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
   const { toast } = useToast();
 
   // Fetch product details
-  const { data: productFromSlugResponse, isLoading: isLoadingProductFromSlug } = useQuery<{success: boolean, data: any}>({
+  const { 
+    data: productFromSlugResponse, 
+    isLoading: isLoadingProductFromSlug,
+    error: productSlugError
+  } = useQuery<StandardApiResponse<Product>>({
     queryKey: ['/api/products/slug', productSlug],
     enabled: !!productSlug && open,
   });
   
   // Fetch product details by ID
-  const { data: productFromIdResponse, isLoading: isLoadingProductFromId } = useQuery<{success: boolean, data: any}>({
+  const { 
+    data: productFromIdResponse, 
+    isLoading: isLoadingProductFromId,
+    error: productIdError
+  } = useQuery<StandardApiResponse<Product>>({
     queryKey: ['/api/products/id', productId],
     enabled: !!productId && open,
   });
@@ -71,27 +80,76 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
   const productFromSlug = productFromSlugResponse?.success ? productFromSlugResponse.data : null;
   const product = productFromId || productFromSlug;
   const isLoadingProduct = isLoadingProductFromId || isLoadingProductFromSlug;
+  const productError = productIdError || productSlugError;
+  
+  // Log error to console for debugging
+  useEffect(() => {
+    if (productError) {
+      console.error('Error fetching product details:', productError);
+      toast({
+        title: "Error loading product",
+        description: "There was a problem loading the product details. Please try again.",
+        variant: "destructive",
+      });
+    }
+  }, [productError, toast]);
 
   // Fetch category attributes
-  const { data: categoryAttributesResponse, isLoading: isLoadingAttributes } = useQuery<{success: boolean, data: CategoryAttribute[]}>({
+  const { 
+    data: categoryAttributesResponse, 
+    isLoading: isLoadingAttributes,
+    error: categoryAttributesError 
+  } = useQuery<StandardApiResponse<CategoryAttribute[]>>({
     queryKey: ['/api/products/attributes-for-category', product?.categoryId],
     enabled: !!product?.categoryId && open,
   });
   const categoryAttributes = categoryAttributesResponse?.success ? categoryAttributesResponse.data : [];
 
   // Fetch product attribute values
-  const { data: productAttributesDataResponse, isLoading: isLoadingProductAttributes } = useQuery<{success: boolean, data: ProductAttribute[]}>({
+  const { 
+    data: productAttributesDataResponse, 
+    isLoading: isLoadingProductAttributes,
+    error: productAttributesError
+  } = useQuery<StandardApiResponse<ProductAttribute[]>>({
     queryKey: ['/api/products', product?.id, 'attributes'],
     enabled: !!product?.id && open,
   });
   const productAttributesData = productAttributesDataResponse?.success ? productAttributesDataResponse.data : [];
 
   // Fetch product combinations
-  const { data: combinationsResponse, isLoading: isLoadingCombinations } = useQuery<{success: boolean, data: ProductAttributeCombination[]}>({
+  const { 
+    data: combinationsResponse, 
+    isLoading: isLoadingCombinations,
+    error: combinationsError
+  } = useQuery<StandardApiResponse<ProductAttributeCombination[]>>({
     queryKey: ['/api/products', product?.id, 'combinations'],
     enabled: !!product?.id && open,
   });
   const combinations = combinationsResponse?.success ? combinationsResponse.data : [];
+  
+  // Log any attribute-related errors
+  useEffect(() => {
+    if (categoryAttributesError) {
+      console.error('Error loading category attributes:', categoryAttributesError);
+    }
+    
+    if (productAttributesError) {
+      console.error('Error loading product attributes:', productAttributesError);
+    }
+    
+    if (combinationsError) {
+      console.error('Error loading product combinations:', combinationsError);
+    }
+    
+    // Show toast only once if any of these errors occur
+    if (categoryAttributesError || productAttributesError || combinationsError) {
+      toast({
+        title: "Error loading product options",
+        description: "There was a problem loading some product options. Some features may be limited.",
+        variant: "destructive",
+      });
+    }
+  }, [categoryAttributesError, productAttributesError, combinationsError, toast]);
 
   // Process product attributes
   useEffect(() => {
