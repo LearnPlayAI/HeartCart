@@ -116,58 +116,68 @@ function ProductAttributesPage() {
 
   // Fetch product info
   const {
-    data: product,
+    data: productResponse,
     isLoading: productLoading,
     error: productError,
-  } = useQuery({
+  } = useQuery<{ success: boolean; data: any }>({
     queryKey: ["/api/products", productId],
     enabled: !!productId,
     retry: 1,
   });
+  
+  const product = productResponse?.success ? productResponse.data : undefined;
 
   // Fetch product attributes
   const {
-    data: productAttributes,
+    data: productAttributesResponse,
     isLoading: productAttributesLoading,
     error: productAttributesError,
-  } = useQuery({
+  } = useQuery<{ success: boolean; data: any }>({
     queryKey: ["/api/products", productId, "attributes"],
     enabled: !!productId,
     retry: 1,
   });
+  
+  const productAttributes = productAttributesResponse?.success ? productAttributesResponse.data : undefined;
 
   // Fetch attribute values
   const {
-    data: attributeValues,
+    data: attributeValuesResponse,
     isLoading: attributeValuesLoading,
     error: attributeValuesError,
-  } = useQuery({
+  } = useQuery<{ success: boolean; data: any }>({
     queryKey: ["/api/products", productId, "attribute-values"],
     enabled: !!productId,
     retry: 1,
   });
+  
+  const attributeValues = attributeValuesResponse?.success ? attributeValuesResponse.data : undefined;
 
   // Fetch category attributes for the product's category
   const {
-    data: categoryAttributes,
+    data: categoryAttributesResponse,
     isLoading: categoryAttributesLoading,
     error: categoryAttributesError,
-  } = useQuery({
+  } = useQuery<{ success: boolean; data: any }>({
     queryKey: ["/api/categories", product?.categoryId, "attributes"],
     enabled: !!product?.categoryId,
     retry: 1,
   });
+  
+  const categoryAttributes = categoryAttributesResponse?.success ? categoryAttributesResponse.data : undefined;
 
   // Fetch attribute options when a product attribute is selected
   const {
-    data: options,
+    data: optionsResponse,
     isLoading: optionsLoading,
     error: optionsError,
-  } = useQuery({
+  } = useQuery<{ success: boolean; data: any }>({
     queryKey: ["/api/products", productId, "attributes", selectedAttribute?.attributeId, "options"],
     enabled: !!selectedAttribute?.attributeId && !!productId,
     retry: 1,
   });
+  
+  const options = optionsResponse?.success ? optionsResponse.data : undefined;
 
   // Update list of category attributes for selection, marking those already added to the product
   useEffect(() => {

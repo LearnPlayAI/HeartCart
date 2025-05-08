@@ -287,12 +287,12 @@ All client and server-side components must be completely updated to match the ne
     - [x] Update admin/products.tsx to use standardized API responses
     - [x] Update admin/product-edit.tsx for consistent API integration
     - [x] Update admin/product-form-wizard.tsx to handle standardized API responses
-    - [ ] Standardize admin/catalogs.tsx for updated API responses
-    - [ ] Update admin/add-catalog.tsx and edit-catalog.tsx components
-    - [ ] Standardize admin/suppliers.tsx for API response consistency
-    - [ ] Update admin/add-supplier.tsx and edit-supplier.tsx components
-    - [ ] Standardize admin/categories.tsx for API consistency
-    - [ ] Update admin/category-attributes.tsx for standardized responses
+    - [x] Standardize admin/catalogs.tsx for updated API responses
+    - [x] Update admin/add-catalog.tsx and edit-catalog.tsx components
+    - [x] Standardize admin/suppliers.tsx for API response consistency
+    - [x] Update admin/add-supplier.tsx and edit-supplier.tsx components
+    - [x] Standardize admin/categories.tsx for API consistency
+    - [x] Update admin/category-attributes.tsx for standardized responses
     - [ ] Standardize admin/product-attributes.tsx component
     - [ ] Update admin/pricing.tsx for API response consistency
     - [ ] Standardize admin/orders.tsx for better error handling
