@@ -134,6 +134,18 @@ const ProductDetailView = ({
   const { addItem } = useCart();
   const { calculatePriceAdjustments } = useAttributeDiscounts();
   
+  // Error handling effect
+  useEffect(() => {
+    if (error) {
+      console.error('Error fetching product details:', error);
+      toast({
+        title: "Failed to load product details",
+        description: error instanceof Error ? error.message : "An unexpected error occurred",
+        variant: "destructive",
+      });
+    }
+  }, [error, toast]);
+  
   // Local state
   const [quantity, setQuantity] = useState(1);
   const [selectedAttributes, setSelectedAttributes] = useState<{[key: number]: string}>({});
@@ -437,17 +449,6 @@ const ProductDetailView = ({
   }
   
   // Error state
-  useEffect(() => {
-    if (error) {
-      console.error('Error fetching product details:', error);
-      toast({
-        title: "Failed to load product details",
-        description: error instanceof Error ? error.message : "An unexpected error occurred",
-        variant: "destructive",
-      });
-    }
-  }, [error, toast]);
-  
   if (error || !product) {
     return (
       <div className="container mx-auto px-4 py-8">
