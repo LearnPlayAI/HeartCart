@@ -276,7 +276,7 @@ All client and server-side components must be completely updated to match the ne
   - ✓ Document API response patterns
 
 #### 3.4. Front-end Component Standardization for API Integration
-- **Status**: Completed (100%)
+- **Status**: In Progress (90%)
 - **Description**: Update all front-end components to use standardized API responses
 - **Tasks**:
   - [x] Standardize front-end cart interaction components:
@@ -296,11 +296,15 @@ All client and server-side components must be completely updated to match the ne
     - [x] Standardize admin/product-attributes.tsx component
     - [x] Update admin/pricing.tsx for API response consistency
     - [x] Standardize admin/orders.tsx for better error handling
-  - [x] Standardize product components:
+  - [ ] Standardize product components:
     - [x] Update product-listing.tsx to use standardized API responses
-    - [x] Standardize product-detail-new.tsx for consistent API integration
+    - [ ] Standardize product-detail-new.tsx for consistent API integration
+      - [x] Updated API response handling with standardized format
+      - [x] Fixed SelectItem components to use non-empty values
+      - [ ] Resolving "Maximum update depth exceeded" issue in useEffect for price calculations
+      - [ ] Implement memoized callbacks for price adjustment calculations
     - [x] Update product-card.tsx component for API consistency
-    - [x] Update quick-view-modal.tsx to fix infinite loop and standardize API handling
+    - [ ] Update quick-view-modal.tsx to fix infinite loop and standardize API handling
     - [x] Standardize product-grid.tsx component for pagination handling
   - [x] Standardize home page components:
     - [x] Update categories-showcase.tsx for standardized API responses
