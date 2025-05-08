@@ -1822,7 +1822,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check if cart item exists and belongs to the user
       const user = req.user as any;
-      const cartItem = await storage.getCartItemById(id);
+      const cartItem = await storage.getCartItemById(Number(id));
       
       if (!cartItem) {
         throw new NotFoundError("Cart item not found", "cartItem");
@@ -1834,12 +1834,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // If quantity is 0, remove the item
       if (quantity === 0) {
-        await storage.removeFromCart(id);
+        await storage.removeFromCart(Number(id));
         return { removed: true };
       }
       
       // Update the quantity
-      const updatedItem = await storage.updateCartItemQuantity(id, quantity);
+      const updatedItem = await storage.updateCartItemQuantity(Number(id), quantity);
       return { item: updatedItem };
     })
   );
@@ -1863,7 +1863,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw new ForbiddenError("Cannot delete cart item that doesn't belong to you");
       }
       
-      await storage.removeFromCart(id);
+      await storage.removeFromCart(Number(id));
       return { removed: true };
     })
   );
