@@ -1857,7 +1857,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check if cart item exists and belongs to the user
       const user = req.user as any;
-      const cartItem = await storage.getCartItemById(id);
+      const cartItem = await storage.getCartItemById(Number(id));
       
       if (cartItem && cartItem.userId !== user.id) {
         throw new ForbiddenError("Cannot delete cart item that doesn't belong to you");
@@ -1961,9 +1961,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }),
     withStandardResponse(async (req: Request, res: Response) => {
       const user = req.user as any;
-      const { status, limit, offset } = req.query;
+      const { status, limit = 20, offset = 0 } = req.query;
       
-      const orders = await storage.getOrdersByUser(user.id, status as string | undefined, limit as number, offset as number);
+      const orders = await storage.getOrdersByUser(user.id, status as string | undefined);
       return orders;
     })
   );
@@ -1988,14 +1988,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw new ForbiddenError("Only administrators can access all orders");
       }
       
-      const { status, userId, limit, offset } = req.query;
+      const { status, userId, limit = 20, offset = 0 } = req.query;
       
       // Get all orders with optional filtering
       const orders = await storage.getOrdersByUser(
-        userId ? (userId as number) : null, 
-        status as string | undefined,
-        limit as number,
-        offset as number
+        userId ? Number(userId) : null, 
+        status as string | undefined
       );
       
       return orders;
@@ -2012,7 +2010,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }),
     withStandardResponse(async (req: Request, res: Response) => {
       const { id } = req.params;
-      const order = await storage.getOrderById(id);
+      const order = await storage.getOrderById(Number(id));
       
       if (!order) {
         throw new NotFoundError("Order not found", "order");
@@ -2053,15 +2051,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Get the order
-      const order = await storage.getOrderById(id);
+      const order = await storage.getOrderById(Number(id));
       if (!order) {
         throw new NotFoundError("Order not found", "order");
       }
       
       // Update the status
-      const updatedOrder = await storage.updateOrderStatus(id, status);
+      const updatedOrder = await storage.updateOrderStatus(Number(id), status);
       if (!updatedOrder) {
-        throw new InternalServerError("Failed to update order status");
+        throw new Error("Failed to update order status");
       }
       
       return updatedOrder;
@@ -2171,12 +2169,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { categoryId } = req.params;
       
       // Validate that the category exists
-      const category = await storage.getCategoryById(categoryId);
+      const category = await storage.getCategoryById(Number(categoryId));
       if (!category) {
         throw new NotFoundError("Category not found", "category");
       }
       
-      const pricing = await storage.getPricingByCategoryId(categoryId);
+      const pricing = await storage.getPricingByCategoryId(Number(categoryId));
       
       if (!pricing) {
         const defaultMarkup = await storage.getDefaultMarkupPercentage();
@@ -2244,12 +2242,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Check if the pricing setting exists
-      const pricing = await storage.getPricingById(id);
+      const pricing = await storage.getPricingById(Number(id));
       if (!pricing) {
         throw new NotFoundError("Pricing setting not found", "pricing");
       }
       
-      await storage.deletePricing(id);
+      await storage.deletePricing(Number(id));
       return { success: true };
     })
   );
