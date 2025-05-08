@@ -235,8 +235,11 @@ export class BatchUploadService {
 
   /**
    * Parse and process a CSV file
+   * @param batchId The ID of the batch upload
+   * @param filePath The path to the CSV file
+   * @param startRow The row to start processing from (for resuming)
    */
-  private async parseAndProcessCsv(batchId: number, filePath: string): Promise<{
+  private async parseAndProcessCsv(batchId: number, filePath: string, startRow: number = 0): Promise<{
     success: boolean;
     totalRecords: number;
     processedRecords: number;
@@ -275,8 +278,16 @@ export class BatchUploadService {
         fileStream,
         parser,
         async function* (source: AsyncIterable<CsvRowData>) {
+          let rowCount = 0;
+          
           for await (const row of source) {
+            rowCount++;
             totalRecords++;
+            
+            // Skip rows until we reach the startRow (for resuming)
+            if (startRow > 0 && rowCount <= startRow) {
+              continue;
+            }
             
             try {
               // Validate the row data
