@@ -41,19 +41,25 @@ export default function PricingPage() {
   const [defaultMarkup, setDefaultMarkup] = useState<number | null>(null); // No default
 
   // Fetch all categories
-  const { data: categories, isLoading: categoriesLoading } = useQuery<Category[]>({
+  const { data: categoriesResponse, isLoading: categoriesLoading } = useQuery<{success: boolean, data: Category[]}>({
     queryKey: ["/api/categories"],
   });
+  
+  const categories = categoriesResponse?.data || [];
 
   // Fetch all pricing settings
-  const { data: pricingSettings, isLoading: pricingLoading } = useQuery<PricingSetting[]>({
+  const { data: pricingSettingsResponse, isLoading: pricingLoading } = useQuery<{success: boolean, data: PricingSetting[]}>({
     queryKey: ["/api/admin/pricing"],
   });
+  
+  const pricingSettings = pricingSettingsResponse?.data || [];
 
   // Fetch default markup percentage
-  const { data: defaultMarkupData } = useQuery<{ markupPercentage: number | null, isSet: boolean }>({
+  const { data: defaultMarkupResponse } = useQuery<{ success: boolean, data: { markupPercentage: number | null, isSet: boolean } }>({
     queryKey: ["/api/pricing/default-markup"]
   });
+  
+  const defaultMarkupData = defaultMarkupResponse?.data;
   
   // Update default markup when data is loaded
   useEffect(() => {
@@ -66,7 +72,11 @@ export default function PricingPage() {
   const createMutation = useMutation({
     mutationFn: async (data: { categoryId: number; markupPercentage: number }) => {
       const response = await apiRequest("POST", "/api/admin/pricing", data);
-      return response.json();
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error?.message || "Failed to save markup");
+      }
+      return result.data;
     },
     onSuccess: () => {
       toast({
@@ -89,7 +99,12 @@ export default function PricingPage() {
   // Delete a pricing setting
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      await apiRequest("DELETE", `/api/admin/pricing/${id}`);
+      const response = await apiRequest("DELETE", `/api/admin/pricing/${id}`);
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error?.message || "Failed to delete markup");
+      }
+      return result.data;
     },
     onSuccess: () => {
       toast({

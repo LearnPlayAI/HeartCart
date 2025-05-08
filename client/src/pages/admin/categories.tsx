@@ -289,7 +289,11 @@ export default function AdminCategories() {
         throw new Error("Failed to update category visibility");
       }
 
-      return await response.json();
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error?.message || "Failed to update category visibility");
+      }
+      return result.data;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
