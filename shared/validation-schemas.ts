@@ -118,6 +118,13 @@ export const createProductAttributeValueSchema = insertProductAttributeValueSche
 export const updateProductAttributeValueSchema = insertProductAttributeValueSchema.partial();
 
 /**
+ * Product Image validation schemas
+ */
+export const createProductImageSchema = insertProductImageSchema;
+
+export const updateProductImageSchema = insertProductImageSchema.partial();
+
+/**
  * Supplier-related validation schemas
  */
 export const createSupplierSchema = insertSupplierSchema;

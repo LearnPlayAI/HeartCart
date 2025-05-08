@@ -37,7 +37,9 @@ import {
   createCategorySchema, 
   updateCategorySchema,
   createProductSchema,
-  updateProductSchema
+  updateProductSchema,
+  createProductImageSchema,
+  updateProductImageSchema
 } from '@shared/validation-schemas';
 import { 
   asyncHandler, 
