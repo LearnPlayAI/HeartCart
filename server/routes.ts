@@ -2330,6 +2330,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register attribute discount rules routes
   app.use('/api', attributeDiscountRoutes);
+  
+  // Register pricing routes
+  app.use('/api', pricingRoutes);
 
   const httpServer = createServer(app);
   return httpServer;
