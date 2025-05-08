@@ -10,6 +10,7 @@ import { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
 import { createSASTDate } from '@shared/date-utils';
 import { logger } from './logger';
+import { StandardApiResponse, sendError } from './api-response';
 
 // Define a PostgresError interface to handle database errors
 interface PostgresError extends Error {
@@ -274,20 +275,45 @@ export function errorHandlerMiddleware(
     });
   }
   
-  // Create standardized error response
-  const errorResponse = createErrorResponse(error, req);
+  // Determine error details
+  let code = ErrorCode.UNKNOWN_ERROR;
+  let statusCode = 500;
+  let message = 'An unexpected error occurred';
+  let details: unknown = undefined;
   
-  // Send response
-  const statusCode = error instanceof AppError ? error.statusCode : 500;
-  res.status(statusCode).json(errorResponse);
+  const includeDetails = process.env.NODE_ENV !== 'production';
+  
+  // Handle known error types
+  if (error instanceof AppError) {
+    code = error.code;
+    statusCode = error.statusCode;
+    message = error.message;
+    details = includeDetails ? error.details : undefined;
+  } else if (error instanceof ZodError) {
+    code = ErrorCode.VALIDATION_ERROR;
+    statusCode = 400;
+    message = 'Validation error: Invalid request data';
+    details = includeDetails ? formatZodError(error) : undefined;
+  } else if (error instanceof Error && 'code' in error && typeof (error as any).code === 'string') {
+    // Handle PostgresError using duck typing since it's an interface
+    const pgError = error as PostgresError;
+    const dbError = new DatabaseError('Database error', pgError);
+    code = dbError.code;
+    statusCode = dbError.statusCode;
+    message = 'A database error occurred';
+    details = includeDetails ? { pgError: pgError.code, pgMessage: pgError.message } : undefined;
+  }
+  
+  // Use the standardized API response format
+  sendError(res, message, statusCode, code, details);
 }
 
 /**
  * Handle 404 (Not Found) errors for undefined routes
  */
 export function notFoundMiddleware(req: Request, res: Response, next: NextFunction): void {
-  const error = new NotFoundError(`Route not found: ${req.method} ${req.path}`);
-  next(error);
+  const message = `Route not found: ${req.method} ${req.path}`;
+  sendError(res, message, 404, ErrorCode.NOT_FOUND);
 }
 
 /**
