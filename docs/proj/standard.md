@@ -276,7 +276,7 @@ All client and server-side components must be completely updated to match the ne
   - ✓ Document API response patterns
 
 #### 3.4. Front-end Component Standardization for API Integration
-- **Status**: In Progress (80% Complete)
+- **Status**: In Progress (85% Complete)
 - **Description**: Update all front-end components to use standardized API responses
 - **Tasks**:
   - [x] Standardize front-end cart interaction components:
@@ -316,6 +316,11 @@ All client and server-side components must be completely updated to match the ne
     - [ ] Update auth-page.tsx for standardized API integration
   - [ ] Standardize hooks and utilities:
     - [ ] Update use-auth.tsx for standardized API integration
+    
+  **Latest Progress (May 2025):**
+  - Updated product-listing.tsx to use StandardApiResponse type consistently for all API queries
+  - Applied StandardApiResponse type to categories, products, filterable attributes, and product attribute values queries
+  - Next tasks: Complete standardization of product-detail-new.tsx, product-grid.tsx, layout components, and authentication components
     - [ ] Standardize use-products.tsx hook for consistent response handling
     - [ ] Update use-categories.tsx for standardized responses
     - [x] Update use-attribute-discounts.tsx for standardized API responses
