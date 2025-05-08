@@ -1618,6 +1618,13 @@ export class DatabaseStorage implements IStorage {
     return { count };
   }
 
+  // ===============================================================
+  // ATTRIBUTES SYSTEM - COMMENTED OUT (PHASE 1 OF REDESIGN)
+  // This entire section is temporarily commented out as part of the
+  // attribute system redesign effort. These methods will be replaced
+  // with a new implementation in a future phase.
+  // ===============================================================
+  /*
   // Category Attribute operations
   async getCategoryAttributes(categoryId: number): Promise<(CategoryAttribute & { categoryName?: string })[]> {
     // First get the category name
@@ -2080,6 +2087,7 @@ export class DatabaseStorage implements IStorage {
       selectedOptions: productAttr.options
     }));
   }
+  */
 }
 
 export const storage = new DatabaseStorage();
