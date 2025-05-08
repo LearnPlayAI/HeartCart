@@ -99,8 +99,8 @@ export function useAttributeDiscounts() {
     };
   };
 
-  // Calculate price adjustments
-  const calculatePriceAdjustments = async (
+  // Calculate price adjustments - memoized to prevent re-creation on each render
+  const calculatePriceAdjustments = useCallback(async (
     productId: number,
     selectedAttributes: Record<string, any>,
     quantity: number = 1
@@ -137,7 +137,7 @@ export function useAttributeDiscounts() {
       
       return { adjustments: [], totalAdjustment: 0 };
     }
-  };
+  }, [toast, setError]);
 
   // Create discount rule
   const createDiscountRule = useMutation({
