@@ -25,6 +25,7 @@ import fileRoutes from "./file-routes";
 import uploadHandlers from "./upload-handlers";
 import registerAttributeRoutes from "./attribute-routes";
 import registerProductAttributeRoutes from "./attribute-routes-product";
+import attributeDiscountRoutes from "./attribute-discount-routes";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Use memory storage for file uploads to avoid local filesystem
@@ -1914,6 +1915,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register new attribute system routes
   registerAttributeRoutes(app);
   registerProductAttributeRoutes(app);
+  
+  // Register attribute discount rules routes
+  app.use('/api', attributeDiscountRoutes);
 
   const httpServer = createServer(app);
   return httpServer;

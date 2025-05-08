@@ -79,7 +79,8 @@ export const cartItems = pgTable("cart_items", {
   productId: integer("product_id").references(() => products.id),
   quantity: integer("quantity").notNull().default(1),
   combinationHash: text("combination_hash"),
-  combinationId: integer("combination_id").references(() => productAttributeCombinations.id),
+  // Remove reference to non-existent table
+  combinationId: integer("combination_id"),
   selectedAttributes: jsonb("selected_attributes").default({}),
   priceAdjustment: doublePrecision("price_adjustment").default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -105,7 +106,8 @@ export const orderItems = pgTable("order_items", {
   quantity: integer("quantity").notNull(),
   price: doublePrecision("price").notNull(),
   combinationHash: text("combination_hash"),
-  combinationId: integer("combination_id").references(() => productAttributeCombinations.id),
+  // Remove reference to non-existent table
+  combinationId: integer("combination_id"),
   selectedAttributes: jsonb("selected_attributes").default({}),
   priceAdjustment: doublePrecision("price_adjustment").default(0),
 });

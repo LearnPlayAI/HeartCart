@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { storage } from "./storage";
-import { insertAttributeDiscountRuleSchema } from "@shared/schema";
+import { attributeDiscountRules, insertAttributeDiscountRuleSchema } from "@shared/schema";
 import { z } from "zod";
 
 const router = Router();
