@@ -20,7 +20,9 @@ import {
   categoryAttributeOptions, type CategoryAttributeOption, type InsertCategoryAttributeOption,
   productAttributes, type ProductAttribute, type InsertProductAttribute,
   productAttributeOptions, type ProductAttributeOption, type InsertProductAttributeOption,
-  productAttributeValues, type ProductAttributeValue, type InsertProductAttributeValue
+  productAttributeValues, type ProductAttributeValue, type InsertProductAttributeValue,
+  // Attribute discount rules
+  attributeDiscountRules, type AttributeDiscountRule, type InsertAttributeDiscountRule
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, like, and, desc, asc, sql, inArray, isNull, not, or, SQL } from "drizzle-orm";
@@ -184,6 +186,27 @@ export interface IStorage {
   createProductAttributeValue(value: InsertProductAttributeValue): Promise<ProductAttributeValue>;
   updateProductAttributeValue(id: number, valueData: Partial<InsertProductAttributeValue>): Promise<ProductAttributeValue | undefined>;
   deleteProductAttributeValue(id: number): Promise<boolean>;
+  
+  // Attribute discount rules operations
+  getAllAttributeDiscountRules(): Promise<AttributeDiscountRule[]>;
+  getAttributeDiscountRule(id: number): Promise<AttributeDiscountRule | undefined>;
+  getAttributeDiscountRulesByProduct(productId: number): Promise<AttributeDiscountRule[]>;
+  getAttributeDiscountRulesByCategory(categoryId: number): Promise<AttributeDiscountRule[]>;
+  getAttributeDiscountRulesByCatalog(catalogId: number): Promise<AttributeDiscountRule[]>;
+  getAttributeDiscountRulesByAttribute(attributeId: number): Promise<AttributeDiscountRule[]>;
+  createAttributeDiscountRule(rule: InsertAttributeDiscountRule): Promise<AttributeDiscountRule>;
+  updateAttributeDiscountRule(id: number, ruleData: Partial<InsertAttributeDiscountRule>): Promise<AttributeDiscountRule | undefined>;
+  deleteAttributeDiscountRule(id: number): Promise<boolean>;
+  calculateAttributeBasedPriceAdjustments(productId: number, selectedAttributes: Record<string, any>, quantity?: number): Promise<{
+    adjustments: Array<{
+      ruleId: number,
+      ruleName: string,
+      discountType: string,
+      discountValue: number,
+      appliedValue: number
+    }>,
+    totalAdjustment: number
+  }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2787,6 +2810,212 @@ export class DatabaseStorage implements IStorage {
       console.error("Error deleting product attribute value:", error);
       return false;
     }
+  }
+
+  // Attribute discount rules operations
+  async getAllAttributeDiscountRules(): Promise<AttributeDiscountRule[]> {
+    return await db
+      .select()
+      .from(attributeDiscountRules)
+      .orderBy(asc(attributeDiscountRules.name));
+  }
+
+  async getAttributeDiscountRule(id: number): Promise<AttributeDiscountRule | undefined> {
+    const [rule] = await db
+      .select()
+      .from(attributeDiscountRules)
+      .where(eq(attributeDiscountRules.id, id));
+    return rule;
+  }
+
+  async getAttributeDiscountRulesByProduct(productId: number): Promise<AttributeDiscountRule[]> {
+    const rules = await db
+      .select()
+      .from(attributeDiscountRules)
+      .where(
+        and(
+          eq(attributeDiscountRules.productId, productId),
+          eq(attributeDiscountRules.isActive, true)
+        )
+      )
+      .orderBy(asc(attributeDiscountRules.name));
+
+    return rules;
+  }
+
+  async getAttributeDiscountRulesByCategory(categoryId: number): Promise<AttributeDiscountRule[]> {
+    const rules = await db
+      .select()
+      .from(attributeDiscountRules)
+      .where(
+        and(
+          eq(attributeDiscountRules.categoryId, categoryId),
+          eq(attributeDiscountRules.isActive, true)
+        )
+      )
+      .orderBy(asc(attributeDiscountRules.name));
+
+    return rules;
+  }
+
+  async getAttributeDiscountRulesByCatalog(catalogId: number): Promise<AttributeDiscountRule[]> {
+    const rules = await db
+      .select()
+      .from(attributeDiscountRules)
+      .where(
+        and(
+          eq(attributeDiscountRules.catalogId, catalogId),
+          eq(attributeDiscountRules.isActive, true)
+        )
+      )
+      .orderBy(asc(attributeDiscountRules.name));
+
+    return rules;
+  }
+
+  async getAttributeDiscountRulesByAttribute(attributeId: number): Promise<AttributeDiscountRule[]> {
+    const rules = await db
+      .select()
+      .from(attributeDiscountRules)
+      .where(
+        and(
+          eq(attributeDiscountRules.attributeId, attributeId),
+          eq(attributeDiscountRules.isActive, true)
+        )
+      )
+      .orderBy(asc(attributeDiscountRules.name));
+
+    return rules;
+  }
+
+  async createAttributeDiscountRule(rule: InsertAttributeDiscountRule): Promise<AttributeDiscountRule> {
+    const [newRule] = await db
+      .insert(attributeDiscountRules)
+      .values(rule)
+      .returning();
+    return newRule;
+  }
+
+  async updateAttributeDiscountRule(id: number, ruleData: Partial<InsertAttributeDiscountRule>): Promise<AttributeDiscountRule | undefined> {
+    const [updatedRule] = await db
+      .update(attributeDiscountRules)
+      .set(ruleData)
+      .where(eq(attributeDiscountRules.id, id))
+      .returning();
+    return updatedRule;
+  }
+
+  async deleteAttributeDiscountRule(id: number): Promise<boolean> {
+    try {
+      await db
+        .delete(attributeDiscountRules)
+        .where(eq(attributeDiscountRules.id, id));
+      return true;
+    } catch (error) {
+      console.error("Error deleting attribute discount rule:", error);
+      return false;
+    }
+  }
+
+  async calculateAttributeBasedPriceAdjustments(
+    productId: number, 
+    selectedAttributes: Record<string, any>, 
+    quantity: number = 1
+  ): Promise<{
+    adjustments: Array<{
+      ruleId: number,
+      ruleName: string,
+      discountType: string,
+      discountValue: number,
+      appliedValue: number
+    }>,
+    totalAdjustment: number
+  }> {
+    // Get product details
+    const product = await this.getProductById(productId);
+    if (!product) {
+      throw new Error("Product not found");
+    }
+
+    // Get all active discount rules that apply to this product
+    const directRules = await this.getAttributeDiscountRulesByProduct(productId);
+    
+    // Get category-based rules
+    const categoryRules = product.categoryId 
+      ? await this.getAttributeDiscountRulesByCategory(product.categoryId)
+      : [];
+    
+    // Get catalog-based rules
+    const catalogRules = product.catalogId
+      ? await this.getAttributeDiscountRulesByCatalog(product.catalogId)
+      : [];
+    
+    // Combine all rules
+    const allRules = [...directRules, ...categoryRules, ...catalogRules];
+    
+    // Get attribute IDs from selected attributes
+    const attributeIds = Object.keys(selectedAttributes).map(key => parseInt(key));
+    
+    // Filter rules based on attribute IDs and selected options
+    const applicableRules = allRules.filter(rule => {
+      // Filter by attribute ID
+      if (!attributeIds.includes(rule.attributeId)) {
+        return false;
+      }
+      
+      // If rule has optionId, check if it matches the selected option
+      if (rule.optionId) {
+        const selectedOption = selectedAttributes[rule.attributeId.toString()];
+        if (typeof selectedOption === 'object' && selectedOption.optionId !== rule.optionId) {
+          return false;
+        } else if (typeof selectedOption === 'number' && selectedOption !== rule.optionId) {
+          return false;
+        }
+      }
+      
+      // Check quantity threshold
+      if (rule.minQuantity && quantity < rule.minQuantity) {
+        return false;
+      }
+      
+      // Check date range
+      const now = new Date();
+      if (rule.startDate && new Date(rule.startDate) > now) {
+        return false;
+      }
+      if (rule.endDate && new Date(rule.endDate) < now) {
+        return false;
+      }
+      
+      return true;
+    });
+    
+    // Calculate adjustments
+    const adjustments = applicableRules.map(rule => {
+      let appliedValue = 0;
+      
+      if (rule.discountType === 'percentage') {
+        appliedValue = product.price * (rule.discountValue / 100);
+      } else { // 'fixed'
+        appliedValue = parseFloat(rule.discountValue.toString());
+      }
+      
+      return {
+        ruleId: rule.id,
+        ruleName: rule.name,
+        discountType: rule.discountType,
+        discountValue: parseFloat(rule.discountValue.toString()),
+        appliedValue: appliedValue
+      };
+    });
+    
+    // Calculate total adjustment
+    const totalAdjustment = adjustments.reduce((sum, adjustment) => sum + adjustment.appliedValue, 0);
+    
+    return {
+      adjustments,
+      totalAdjustment
+    };
   }
 }
 

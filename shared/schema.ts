@@ -789,3 +789,60 @@ export const productAttributeValuesRelations = relations(productAttributeValues,
     references: [productAttributeOptions.id]
   })
 }));
+
+// Attribute-based discount rules
+export const attributeDiscountRules = pgTable("attribute_discount_rules", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  discountType: text("discount_type").notNull().default("percentage"), // 'percentage', 'fixed'
+  discountValue: decimal("discount_value", { precision: 10, scale: 2 }).notNull(),
+  attributeId: integer("attribute_id").references(() => attributes.id).notNull(),
+  optionId: integer("option_id").references(() => attributeOptions.id),
+  productId: integer("product_id").references(() => products.id),
+  categoryId: integer("category_id").references(() => categories.id),
+  catalogId: integer("catalog_id").references(() => catalogs.id),
+  minQuantity: integer("min_quantity").default(1),
+  startDate: timestamp("start_date"),
+  endDate: timestamp("end_date"),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Attribute discount rules relations
+export const attributeDiscountRulesRelations = relations(attributeDiscountRules, ({ one }) => ({
+  attribute: one(attributes, {
+    fields: [attributeDiscountRules.attributeId],
+    references: [attributes.id]
+  }),
+  attributeOption: one(attributeOptions, {
+    fields: [attributeDiscountRules.optionId],
+    references: [attributeOptions.id]
+  }),
+  product: one(products, {
+    fields: [attributeDiscountRules.productId],
+    references: [products.id]
+  }),
+  category: one(categories, {
+    fields: [attributeDiscountRules.categoryId],
+    references: [categories.id]
+  }),
+  catalog: one(catalogs, {
+    fields: [attributeDiscountRules.catalogId],
+    references: [catalogs.id]
+  })
+}));
+
+// Create insert schema for attribute discount rules
+export const insertAttributeDiscountRuleSchema = createInsertSchema(attributeDiscountRules).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+}).extend({
+  startDate: z.string().or(z.date()).optional(),
+  endDate: z.string().or(z.date()).nullable().optional(),
+});
+
+export type AttributeDiscountRule = typeof attributeDiscountRules.$inferSelect;
+export type InsertAttributeDiscountRule = z.infer<typeof insertAttributeDiscountRuleSchema>;
