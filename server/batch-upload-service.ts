@@ -59,6 +59,7 @@ export const ERROR_TYPES = {
 export const ERROR_SEVERITY = {
   ERROR: 'error',
   WARNING: 'warning',
+  INFO: 'info', // Adding INFO level for audit and log messages that aren't errors
 };
 
 // Types
@@ -1201,12 +1202,28 @@ export class BatchUploadService {
   }
   
   /**
-   * Resume a batch upload
+   * Resume a batch upload that was previously paused
+   * @param batchId - The ID of the batch upload to resume
+   * @returns A standard API response with the updated batch upload or error details
    */
   async resumeBatchUpload(batchId: number): Promise<StandardApiResponse<BatchUpload>> {
+    // Input validation
+    if (!batchId || isNaN(batchId) || batchId <= 0) {
+      console.error(`Invalid batch ID provided for resuming: ${batchId}`);
+      return {
+        success: false,
+        error: {
+          message: 'Invalid batch upload ID',
+          code: 'INVALID_BATCH_ID',
+        }
+      };
+    }
+    
     try {
+      // Get batch with validation
       const batch = await this.getBatchUpload(batchId);
       if (!batch) {
+        console.warn(`Attempted to resume non-existent batch with ID ${batchId}`);
         return {
           success: false,
           error: {
@@ -1216,72 +1233,152 @@ export class BatchUploadService {
         };
       }
       
-      // Only allow resuming of batches that are in paused or resumable state
-      if (![BATCH_STATUSES.PAUSED, BATCH_STATUSES.RESUMABLE].includes(batch.status)) {
+      // State validation - only allow resuming of batches that are in paused or resumable state
+      const resumableStates = [BATCH_STATUSES.PAUSED, BATCH_STATUSES.RESUMABLE];
+      if (!resumableStates.includes(batch.status)) {
+        console.warn(`Attempted to resume batch ${batchId} in invalid state: ${batch.status}`);
         return {
           success: false,
           error: {
-            message: `Cannot resume batch in ${batch.status} status`,
+            message: `Cannot resume batch in ${batch.status} status. Batch must be in one of these states: ${resumableStates.join(', ')}`,
             code: 'INVALID_BATCH_STATE',
           }
         };
       }
       
-      // Make sure the file exists
-      if (!batch.fileName || !fs.existsSync(batch.fileName)) {
+      // Check for CSV file existence
+      if (!batch.fileName) {
+        console.error(`No file path associated with batch ID ${batchId}`);
+        await this.logBatchError({
+          batchId,
+          errorType: ERROR_TYPES.SYSTEM,
+          errorMessage: 'Cannot resume batch: No file path stored with batch',
+          severity: ERROR_SEVERITY.ERROR,
+        });
+        
         return {
           success: false,
           error: {
-            message: 'CSV file no longer exists',
+            message: 'No CSV file associated with this batch',
+            code: 'FILE_PATH_MISSING',
+          }
+        };
+      }
+      
+      if (!fs.existsSync(batch.fileName)) {
+        console.error(`CSV file not found for batch ID ${batchId}: ${batch.fileName}`);
+        await this.logBatchError({
+          batchId,
+          errorType: ERROR_TYPES.SYSTEM,
+          errorMessage: `Cannot resume batch: File not found at ${batch.fileName}`,
+          severity: ERROR_SEVERITY.ERROR,
+        });
+        
+        return {
+          success: false,
+          error: {
+            message: 'CSV file no longer exists on the server',
             code: 'FILE_NOT_FOUND',
           }
         };
       }
       
-      // Update batch status to processing
-      await this.updateBatchStatus(batchId, BATCH_STATUSES.PROCESSING);
+      // Log the resume action
+      console.log(`Resuming batch upload ${batchId} from row ${batch.lastProcessedRow || 0}`);
       
-      // Process the CSV file from the last processed row
-      const results = await this.parseAndProcessCsv(
-        batchId, 
-        batch.fileName, 
-        batch.lastProcessedRow || 0
-      );
-      
-      // Update batch status based on results
-      await this.updateBatchStatus(batchId, results.success ? BATCH_STATUSES.COMPLETED : BATCH_STATUSES.FAILED, {
-        totalRecords: (batch.totalRecords || 0) + results.totalRecords,
-        processedRecords: (batch.processedRecords || 0) + results.processedRecords,
-        successCount: (batch.successCount || 0) + results.successRecords,
-        errorCount: (batch.errorCount || 0) + results.failedRecords,
-      });
-      
-      const updatedBatch = await this.getBatchUpload(batchId);
-      return {
-        success: results.success,
-        data: updatedBatch as BatchUpload,
-        ...(results.success ? {} : {
-          error: {
-            message: 'Batch resume completed with errors',
-            code: 'BATCH_RESUME_ERRORS',
-            details: results.errors
-          }
-        })
-      };
+      try {
+        // Update batch status to processing before starting
+        await this.updateBatchStatus(batchId, BATCH_STATUSES.PROCESSING, {
+          resumedAt: new Date(), // Add timestamp for when the batch was resumed
+        });
+        
+        // Log the system event for audit trail
+        await this.logBatchError({
+          batchId,
+          errorType: ERROR_TYPES.SYSTEM,
+          errorMessage: `Batch is being resumed from row ${batch.lastProcessedRow || 0}`,
+          severity: ERROR_SEVERITY.INFO,
+        });
+        
+        // Process the CSV file from the last processed row
+        // This handles the actual data processing and product creation
+        const results = await this.parseAndProcessCsv(
+          batchId, 
+          batch.fileName, 
+          batch.lastProcessedRow || 0
+        );
+        
+        // Calculate the final batch statistics
+        const totalRecords = (batch.totalRecords || 0) + results.totalRecords;
+        const processedRecords = (batch.processedRecords || 0) + results.processedRecords;
+        const successCount = (batch.successCount || 0) + results.successRecords;
+        const errorCount = (batch.errorCount || 0) + results.failedRecords;
+        
+        // Determine final status and update batch with stats
+        const finalStatus = results.success ? BATCH_STATUSES.COMPLETED : BATCH_STATUSES.FAILED;
+        await this.updateBatchStatus(batchId, finalStatus, {
+          totalRecords,
+          processedRecords,
+          successCount,
+          errorCount,
+          completedAt: finalStatus === BATCH_STATUSES.COMPLETED ? new Date() : undefined
+        });
+        
+        console.log(`Resume completed for batch ${batchId}: ${processedRecords}/${totalRecords} records processed, ${successCount} succeeded, ${errorCount} failed`);
+        
+        // Log completion event
+        await this.logBatchError({
+          batchId,
+          errorType: ERROR_TYPES.SYSTEM,
+          errorMessage: `Resume completed with status: ${finalStatus}. Stats: ${processedRecords}/${totalRecords} processed, ${successCount} successful, ${errorCount} errors.`,
+          severity: results.success ? ERROR_SEVERITY.INFO : ERROR_SEVERITY.WARNING,
+        });
+        
+        // Get the updated batch for the response
+        const updatedBatch = await this.getBatchUpload(batchId);
+        if (!updatedBatch) {
+          throw new Error(`Failed to retrieve updated batch after resuming`);
+        }
+        
+        return {
+          success: results.success,
+          data: updatedBatch,
+          ...(results.success ? {} : {
+            error: {
+              message: 'Batch resume completed with errors',
+              code: 'BATCH_RESUME_ERRORS',
+              details: results.errors
+            }
+          })
+        };
+      } catch (processingError) {
+        // Handle errors during the processing operation
+        const errorMessage = processingError instanceof Error ? processingError.message : 'Unknown processing error';
+        console.error(`Error processing batch during resume: ${errorMessage}`);
+        throw processingError; // Re-throw to be caught by the outer catch block
+      }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('Error resuming batch:', error);
+      console.error(`Error resuming batch ${batchId}:`, error);
       
-      // Log the system error
-      await this.logBatchError({
-        batchId,
-        errorType: ERROR_TYPES.SYSTEM,
-        errorMessage: `Resume error: ${errorMessage}`,
-        severity: ERROR_SEVERITY.ERROR,
-      });
-      
-      // Update batch status to failed
-      await this.updateBatchStatus(batchId, BATCH_STATUSES.FAILED);
+      // Attempt to log the error to the database for the batch
+      try {
+        // Log the system error
+        await this.logBatchError({
+          batchId,
+          errorType: ERROR_TYPES.SYSTEM,
+          errorMessage: `Resume error: ${errorMessage}`,
+          severity: ERROR_SEVERITY.ERROR,
+        });
+        
+        // Update batch status to failed
+        await this.updateBatchStatus(batchId, BATCH_STATUSES.FAILED, {
+          failedAt: new Date()
+        });
+      } catch (logError) {
+        // Just log to console if we can't log to the database
+        console.error(`Failed to log batch resumption error: ${logError}`);
+      }
       
       return {
         success: false,
@@ -1295,12 +1392,28 @@ export class BatchUploadService {
   }
   
   /**
-   * Retry a failed batch upload
+   * Retry a failed batch upload from scratch
+   * @param batchId - The ID of the batch upload to retry
+   * @returns A standard API response with the updated batch upload or error details
    */
   async retryBatchUpload(batchId: number): Promise<StandardApiResponse<BatchUpload>> {
+    // Input validation
+    if (!batchId || isNaN(batchId) || batchId <= 0) {
+      console.error(`Invalid batch ID provided for retry: ${batchId}`);
+      return {
+        success: false,
+        error: {
+          message: 'Invalid batch upload ID',
+          code: 'INVALID_BATCH_ID',
+        }
+      };
+    }
+    
     try {
+      // Get batch with validation
       const batch = await this.getBatchUpload(batchId);
       if (!batch) {
+        console.warn(`Attempted to retry non-existent batch with ID ${batchId}`);
         return {
           success: false,
           error: {
@@ -1310,23 +1423,50 @@ export class BatchUploadService {
         };
       }
       
-      // Only allow retrying of batches that are in failed state
+      // State validation - only allow retrying of batches that are in failed state
       if (batch.status !== BATCH_STATUSES.FAILED) {
+        console.warn(`Attempted to retry batch ${batchId} in invalid state: ${batch.status}`);
         return {
           success: false,
           error: {
-            message: `Cannot retry batch in ${batch.status} status`,
+            message: `Cannot retry batch in ${batch.status} status. Batch must be in ${BATCH_STATUSES.FAILED} state.`,
             code: 'INVALID_BATCH_STATE',
           }
         };
       }
       
-      // Make sure the file exists
-      if (!batch.fileName || !fs.existsSync(batch.fileName)) {
+      // Check for CSV file existence
+      if (!batch.fileName) {
+        console.error(`No file path associated with batch ID ${batchId}`);
+        await this.logBatchError({
+          batchId,
+          errorType: ERROR_TYPES.SYSTEM,
+          errorMessage: 'Cannot retry batch: No file path stored with batch',
+          severity: ERROR_SEVERITY.ERROR,
+        });
+        
         return {
           success: false,
           error: {
-            message: 'CSV file no longer exists',
+            message: 'No CSV file associated with this batch',
+            code: 'FILE_PATH_MISSING',
+          }
+        };
+      }
+      
+      if (!fs.existsSync(batch.fileName)) {
+        console.error(`CSV file not found for batch ID ${batchId}: ${batch.fileName}`);
+        await this.logBatchError({
+          batchId,
+          errorType: ERROR_TYPES.SYSTEM,
+          errorMessage: `Cannot retry batch: File not found at ${batch.fileName}`,
+          severity: ERROR_SEVERITY.ERROR,
+        });
+        
+        return {
+          success: false,
+          error: {
+            message: 'CSV file no longer exists on the server',
             code: 'FILE_NOT_FOUND',
           }
         };
@@ -1335,54 +1475,105 @@ export class BatchUploadService {
       // Increment retry count
       const retryCount = (batch.retryCount || 0) + 1;
       
-      // Update batch status to retrying
-      await this.updateBatchStatus(batchId, BATCH_STATUSES.RETRYING, {
-        retryCount,
-        processedRecords: 0,
-        successCount: 0,
-        errorCount: 0
-      });
+      console.log(`Retrying batch upload ${batchId} (attempt #${retryCount})`);
       
-      // Clear previous errors for this batch
-      await db.delete(batchUploadErrors).where(eq(batchUploadErrors.batchId, batchId));
-      
-      // Process the CSV file
-      const results = await this.parseAndProcessCsv(batchId, batch.fileName);
-      
-      // Update batch status based on results
-      await this.updateBatchStatus(batchId, results.success ? BATCH_STATUSES.COMPLETED : BATCH_STATUSES.FAILED, {
-        totalRecords: results.totalRecords,
-        processedRecords: results.processedRecords,
-        successCount: results.successRecords,
-        errorCount: results.failedRecords,
-      });
-      
-      const updatedBatch = await this.getBatchUpload(batchId);
-      return {
-        success: results.success,
-        data: updatedBatch as BatchUpload,
-        ...(results.success ? {} : {
-          error: {
-            message: 'Batch retry completed with errors',
-            code: 'BATCH_RETRY_ERRORS',
-            details: results.errors
-          }
-        })
-      };
+      try {
+        // Update batch status to retrying with reset counters
+        await this.updateBatchStatus(batchId, BATCH_STATUSES.RETRYING, {
+          retryCount,
+          processedRecords: 0,
+          successCount: 0,
+          errorCount: 0,
+          startedAt: new Date(), // Reset start time for this retry attempt
+        });
+        
+        // Log the retry event for audit trail
+        await this.logBatchError({
+          batchId,
+          errorType: ERROR_TYPES.SYSTEM,
+          errorMessage: `Starting retry attempt #${retryCount}`,
+          severity: ERROR_SEVERITY.INFO,
+        });
+        
+        // Clear previous errors for this batch to start fresh
+        try {
+          await db.delete(batchUploadErrors).where(eq(batchUploadErrors.batchId, batchId));
+          console.log(`Cleared previous errors for batch ${batchId}`);
+        } catch (clearError) {
+          console.error(`Failed to clear previous errors for batch ${batchId}:`, clearError);
+          // Continue despite error - we'll log new errors anyway
+        }
+        
+        // Process the CSV file from the beginning
+        // Retry processes the entire file from scratch, ignoring previous progress
+        const results = await this.parseAndProcessCsv(batchId, batch.fileName);
+        
+        // Determine final status and update batch with stats
+        const finalStatus = results.success ? BATCH_STATUSES.COMPLETED : BATCH_STATUSES.FAILED;
+        await this.updateBatchStatus(batchId, finalStatus, {
+          totalRecords: results.totalRecords,
+          processedRecords: results.processedRecords,
+          successCount: results.successRecords,
+          errorCount: results.failedRecords,
+          completedAt: finalStatus === BATCH_STATUSES.COMPLETED ? new Date() : undefined,
+          failedAt: finalStatus === BATCH_STATUSES.FAILED ? new Date() : undefined
+        });
+        
+        console.log(`Retry completed for batch ${batchId}: ${results.processedRecords}/${results.totalRecords} records processed, ${results.successRecords} succeeded, ${results.failedRecords} failed`);
+        
+        // Log completion event
+        await this.logBatchError({
+          batchId,
+          errorType: ERROR_TYPES.SYSTEM,
+          errorMessage: `Retry #${retryCount} completed with status: ${finalStatus}. Stats: ${results.processedRecords}/${results.totalRecords} processed, ${results.successRecords} successful, ${results.failedRecords} errors.`,
+          severity: results.success ? ERROR_SEVERITY.INFO : ERROR_SEVERITY.WARNING,
+        });
+        
+        // Get updated batch for response
+        const updatedBatch = await this.getBatchUpload(batchId);
+        if (!updatedBatch) {
+          throw new Error(`Failed to retrieve updated batch after retry`);
+        }
+        
+        return {
+          success: results.success,
+          data: updatedBatch,
+          ...(results.success ? {} : {
+            error: {
+              message: `Batch retry attempt #${retryCount} completed with errors`,
+              code: 'BATCH_RETRY_ERRORS',
+              details: results.errors
+            }
+          })
+        };
+      } catch (processingError) {
+        // Handle errors during the processing operation
+        const errorMessage = processingError instanceof Error ? processingError.message : 'Unknown processing error';
+        console.error(`Error processing batch during retry: ${errorMessage}`);
+        throw processingError; // Re-throw to be caught by the outer catch block
+      }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('Error retrying batch:', error);
+      console.error(`Error retrying batch ${batchId}:`, error);
       
-      // Log the system error
-      await this.logBatchError({
-        batchId,
-        errorType: ERROR_TYPES.SYSTEM,
-        errorMessage: `Retry error: ${errorMessage}`,
-        severity: ERROR_SEVERITY.ERROR,
-      });
-      
-      // Update batch status to failed
-      await this.updateBatchStatus(batchId, BATCH_STATUSES.FAILED);
+      // Attempt to log the error to the database for the batch
+      try {
+        // Log the system error
+        await this.logBatchError({
+          batchId,
+          errorType: ERROR_TYPES.SYSTEM,
+          errorMessage: `Retry error: ${errorMessage}`,
+          severity: ERROR_SEVERITY.ERROR,
+        });
+        
+        // Update batch status to failed
+        await this.updateBatchStatus(batchId, BATCH_STATUSES.FAILED, {
+          failedAt: new Date()
+        });
+      } catch (logError) {
+        // Just log to console if we can't log to the database
+        console.error(`Failed to log batch retry error: ${logError}`);
+      }
       
       return {
         success: false,
