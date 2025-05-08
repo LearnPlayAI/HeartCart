@@ -107,7 +107,7 @@ export default function AISettingsPage() {
                       </Select>
                     </div>
                     <Button 
-                      onClick={() => aiModels?.current && handleModelChange(aiModels.current)}
+                      onClick={() => aiModels?.current && handleModelChange(aiModels?.current)}
                       disabled={updateModelMutation.isPending || !aiModels?.current}
                       className="min-w-32"
                     >
@@ -125,16 +125,16 @@ export default function AISettingsPage() {
                   <div className="bg-slate-50 p-4 rounded-md space-y-2">
                     <h3 className="font-medium">Available Models</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {aiModels?.available.map((model) => (
+                      {aiModels?.available?.map((model) => (
                         <div 
                           key={model} 
                           className={`border rounded-md p-3 relative ${
-                            model === aiModels.current ? "border-primary bg-pink-50" : "border-gray-200"
+                            model === aiModels?.current ? "border-primary bg-pink-50" : "border-gray-200"
                           }`}
                         >
                           <div className="flex items-center">
                             <span className="font-medium">{model}</span>
-                            {model === aiModels.current && (
+                            {model === aiModels?.current && (
                               <Badge className="ml-2 bg-primary text-white">Active</Badge>
                             )}
                           </div>
