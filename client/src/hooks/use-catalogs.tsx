@@ -24,20 +24,20 @@ export function useCatalogs() {
   // Get all catalogs
   const catalogsQuery = useQuery<Catalog[]>({
     queryKey: ["/api/catalogs"],
-    queryFn: getQueryFn()
+    queryFn: getQueryFn({ on401: "throw" })
   });
 
   // Get catalog by ID
   const getCatalog = (id: number) => useQuery<Catalog>({
     queryKey: ["/api/catalogs", id],
-    queryFn: getQueryFn(),
+    queryFn: getQueryFn({ on401: "throw" }),
     enabled: !!id
   });
 
   // Get catalogs by supplier ID
   const getCatalogsBySupplier = (supplierId: number) => useQuery<Catalog[]>({
     queryKey: ["/api/suppliers", supplierId, "catalogs"],
-    queryFn: getQueryFn(),
+    queryFn: getQueryFn({ on401: "throw" }),
     enabled: !!supplierId
   });
 
