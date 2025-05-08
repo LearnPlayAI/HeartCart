@@ -37,6 +37,7 @@ import CatalogProducts from "@/pages/admin/catalog-products";
 import CategoryAttributes from "@/pages/admin/category-attributes";
 import ProductAttributes from "@/pages/admin/product-attributes";
 import GlobalAttributes from "@/pages/admin/global-attributes";
+import AttributeEditor from "@/pages/admin/attribute-editor";
 
 // Admin-specific protected route
 import { useAuth } from "@/hooks/use-auth";
@@ -115,6 +116,8 @@ function App() {
               <AdminProtectedRoute path="/admin/categories/:categoryId/attributes" component={CategoryAttributes} />
               <AdminProtectedRoute path="/admin/category-attributes/:categoryId" component={CategoryAttributes} />
               <AdminProtectedRoute path="/admin/global-attributes" component={GlobalAttributes} />
+              <AdminProtectedRoute path="/admin/attributes/new" component={AttributeEditor} />
+              <AdminProtectedRoute path="/admin/attributes/:id/edit" component={AttributeEditor} />
               <AdminProtectedRoute path="/admin/pricing" component={AdminPricing} />
               <AdminProtectedRoute path="/admin/orders" component={AdminOrders} />
               <AdminProtectedRoute path="/admin/ai-settings" component={AdminAISettings} />
