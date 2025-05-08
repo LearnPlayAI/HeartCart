@@ -49,6 +49,7 @@ import {
   ProductAttributeValue,
   ProductAttributeOption
 } from '@/types/attribute-types';
+import { StandardApiResponse } from '@/types/api';
 
 // This is a router component that decides which Product Detail implementation to use
 const ProductDetail = () => {
@@ -69,18 +70,12 @@ const ProductDetailBySlug = () => {
   const [, params] = useRoute('/product/:slug');
   const slug = params?.slug;
   
-  // Define the standardized API response type
-  interface ApiResponse {
-    success: boolean;
-    data: Product;
-  }
-  
   // Fetch product by slug
   const { 
     data: response, 
     isLoading, 
     error 
-  } = useQuery<ApiResponse>({
+  } = useQuery<StandardApiResponse<Product>>({
     queryKey: [`/api/products/slug/${slug}`],
     enabled: !!slug,
   });
@@ -102,18 +97,12 @@ const ProductDetailById = () => {
   const [, params] = useRoute('/product/id/:id');
   const id = params?.id ? parseInt(params.id, 10) : undefined;
   
-  // Define the standardized API response type
-  interface ApiResponse {
-    success: boolean;
-    data: Product;
-  }
-  
   // Fetch product by ID
   const { 
     data: response, 
     isLoading, 
     error 
-  } = useQuery<ApiResponse>({
+  } = useQuery<StandardApiResponse<Product>>({
     queryKey: [`/api/products/${id}`],
     enabled: !!id,
   });
@@ -163,28 +152,28 @@ const ProductDetailView = ({
   } | null>(null);
   
   // Get related products based on category
-  const { data: relatedProductsResponse } = useQuery<{ success: boolean, data: Product[] }>({
+  const { data: relatedProductsResponse } = useQuery<StandardApiResponse<Product[]>>({
     queryKey: ['/api/products/category', product?.categoryId, { limit: 5 }],
     enabled: !!product?.categoryId,
   });
   const relatedProducts = relatedProductsResponse?.success ? relatedProductsResponse.data : [];
   
   // Get product attributes (includes product-specific attributes as well as inherited ones)
-  const { data: productAttributesResponse } = useQuery<{ success: boolean, data: CategoryAttribute[] }>({
+  const { data: productAttributesResponse } = useQuery<StandardApiResponse<CategoryAttribute[]>>({
     queryKey: ['/api/products', product?.id, 'attributes'],
     enabled: !!product?.id,
   });
   const productAttributes = productAttributesResponse?.success ? productAttributesResponse.data : [];
   
   // Get product attribute options
-  const { data: attributeOptionsResponse } = useQuery<{ success: boolean, data: { [key: number]: ProductAttributeOption[] } }>({
+  const { data: attributeOptionsResponse } = useQuery<StandardApiResponse<{ [key: number]: ProductAttributeOption[] }>>({
     queryKey: ['/api/products', product?.id, 'attribute-options'],
     enabled: !!product?.id && !!productAttributes?.length,
   });
   const attributeOptions = attributeOptionsResponse?.success ? attributeOptionsResponse.data : {};
   
   // Get product attribute values for combinations
-  const { data: attributeValuesResponse } = useQuery<{ success: boolean, data: ProductAttributeValue[] }>({
+  const { data: attributeValuesResponse } = useQuery<StandardApiResponse<ProductAttributeValue[]>>({
     queryKey: ['/api/products', product?.id, 'attribute-values'],
     enabled: !!product?.id,
   });
