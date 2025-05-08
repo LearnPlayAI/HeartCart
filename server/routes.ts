@@ -13,10 +13,7 @@ import {
   insertProductImageSchema,
   insertPricingSchema,
   insertSupplierSchema,
-  insertCatalogSchema,
-  insertGlobalAttributeSchema,
-  insertGlobalAttributeOptionSchema,
-  insertProductAttributeValueSchema
+  insertCatalogSchema
 } from "@shared/schema";
 import { objectStore, STORAGE_FOLDERS } from "./object-store";
 import { setupAuth } from "./auth";
@@ -310,12 +307,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   }));
 
-  // CATEGORY ATTRIBUTE ROUTES
-  app.get("/api/categories/:categoryId/attributes", handleErrors(async (req: Request, res: Response) => {
-    const categoryId = parseInt(req.params.categoryId);
-    const attributes = await storage.getCategoryAttributes(categoryId);
-    res.json(attributes);
-  }));
+  // CATEGORY ATTRIBUTE ROUTES - Removed as part of attribute system redesign
 
   app.get("/api/category-attributes/:id", handleErrors(async (req: Request, res: Response) => {
     const attributeId = parseInt(req.params.id);
