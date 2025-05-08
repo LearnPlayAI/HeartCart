@@ -823,10 +823,13 @@ export const batchUploads = pgTable("batch_uploads", {
   // Timestamps
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  // Event timestamps
+  startedAt: timestamp("started_at", { withTimezone: true }),
   completedAt: timestamp("completed_at", { withTimezone: true }),
   canceledAt: timestamp("canceled_at", { withTimezone: true }),
   pausedAt: timestamp("paused_at", { withTimezone: true }),
   resumedAt: timestamp("resumed_at", { withTimezone: true }),
+  failedAt: timestamp("failed_at", { withTimezone: true }),
 });
 
 // Batch upload error logs for detailed error tracking
