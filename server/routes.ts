@@ -26,6 +26,16 @@ import uploadHandlers from "./upload-handlers";
 import registerAttributeRoutes from "./attribute-routes";
 import registerProductAttributeRoutes from "./attribute-routes-product";
 import attributeDiscountRoutes from "./attribute-discount-routes";
+import { 
+  asyncHandler, 
+  BadRequestError, 
+  ForbiddenError, 
+  NotFoundError, 
+  ValidationError,
+  AppError,
+  ErrorCode
+} from "./error-handler";
+import * as z from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Use memory storage for file uploads to avoid local filesystem
@@ -63,18 +73,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.redirect(`/api/files/${objectKey}`);
   });
   
-  // Error handling middleware
+  // Error handling middleware - uses the centralized error handling from error-handler.ts
   const handleErrors = (fn: Function) => async (req: Request, res: Response, next: NextFunction) => {
     try {
       await fn(req, res, next);
     } catch (error) {
-      if (error instanceof ZodError) {
-        res.status(400).json({
-          message: "Validation error",
-          errors: error.errors,
-        });
-        return;
-      }
+      // Forward all errors to the centralized error handler
       next(error);
     }
   };
@@ -117,7 +121,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(categories);
   }));
 
-  app.get("/api/categories/:slug", handleErrors(async (req: Request, res: Response) => {
+  app.get("/api/categories/:slug", asyncHandler(async (req: Request, res: Response) => {
     const { slug } = req.params;
     const user = req.user as any;
     const isAdmin = user && user.role === 'admin';
@@ -126,8 +130,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const category = await storage.getCategoryBySlug(slug, options);
     
     if (!category) {
-      res.status(404).json({ message: "Category not found" });
-      return;
+      throw new NotFoundError(`Category with slug '${slug}' not found`, 'category');
     }
     
     res.json(category);
@@ -142,23 +145,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(mainCategoriesWithChildren);
   }));
   
-  app.get("/api/categories/:id/with-children", handleErrors(async (req: Request, res: Response) => {
+  app.get("/api/categories/:id/with-children", asyncHandler(async (req: Request, res: Response) => {
     const categoryId = parseInt(req.params.id);
     const user = req.user as any;
     const isAdmin = user && user.role === 'admin';
     
     // Validate categoryId is a number
     if (isNaN(categoryId)) {
-      res.status(400).json({ message: "Invalid category ID" });
-      return;
+      throw new BadRequestError("Invalid category ID");
     }
     
     const options = { includeInactive: isAdmin };
     const categoryWithChildren = await storage.getCategoryWithChildren(categoryId, options);
     
     if (!categoryWithChildren) {
-      res.status(404).json({ message: "Category not found" });
-      return;
+      throw new NotFoundError(`Category with ID ${categoryId} not found`, 'category');
     }
     
     res.json(categoryWithChildren);
@@ -411,13 +412,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Product attributes-for-category route - removed as part of attribute system redesign
   
   // Generic route for product by ID must come after more specific routes
-  app.get("/api/products/:id", handleErrors(async (req: Request, res: Response) => {
+  app.get("/api/products/:id", asyncHandler(async (req: Request, res: Response) => {
     const id = parseInt(req.params.id);
     
     // Validate id is a number
     if (isNaN(id)) {
-      res.status(400).json({ message: "Invalid product ID" });
-      return;
+      throw new BadRequestError("Invalid product ID");
     }
     
     const user = req.user as any;
@@ -431,33 +431,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const product = await storage.getProductById(id, options);
     
     if (!product) {
-      res.status(404).json({ message: "Product not found" });
-      return;
+      throw new NotFoundError(`Product with ID ${id} not found`, 'product');
     }
     
     res.json(product);
   }));
   
   // Full update of a product
-  app.put("/api/products/:id", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+  app.put("/api/products/:id", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
     const user = req.user as any;
     
     // Check if user is admin
     if (user.role !== 'admin') {
-      return res.status(403).json({ message: "Only administrators can update products" });
+      throw new ForbiddenError("Only administrators can update products");
     }
     
     const productId = parseInt(req.params.id);
     
     if (isNaN(productId)) {
-      return res.status(400).json({ message: "Invalid product ID" });
+      throw new BadRequestError("Invalid product ID");
     }
     
     // Get the existing product to check if it exists
     const existingProduct = await storage.getProductById(productId);
     
     if (!existingProduct) {
-      return res.status(404).json({ message: "Product not found" });
+      throw new NotFoundError(`Product with ID ${productId} not found`, 'product');
     }
     
     // Remove properties that shouldn't be updated directly
@@ -473,25 +472,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }));
   
   // Delete a product endpoint
-  app.delete("/api/products/:id", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+  app.delete("/api/products/:id", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
     const user = req.user as any;
     
     // Check if user is admin
     if (user.role !== 'admin') {
-      return res.status(403).json({ message: "Only administrators can delete products" });
+      throw new ForbiddenError("Only administrators can delete products");
     }
     
     const productId = parseInt(req.params.id);
     
     if (isNaN(productId)) {
-      return res.status(400).json({ message: "Invalid product ID" });
+      throw new BadRequestError("Invalid product ID");
     }
     
     // Get the existing product to check if it exists
     const existingProduct = await storage.getProductById(productId);
     
     if (!existingProduct) {
-      return res.status(404).json({ message: "Product not found" });
+      throw new NotFoundError(`Product with ID ${productId} not found`, 'product');
     }
     
     try {
@@ -503,11 +502,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: `Product "${existingProduct.name}" was successfully deleted along with all associated images and data.` 
       });
     } catch (error) {
-      console.error('Error deleting product:', error);
-      res.status(500).json({ 
-        success: false, 
-        message: "An error occurred while deleting the product. Please try again." 
-      });
+      // Since we're using asyncHandler, this will be caught and handled properly
+      logger.error('Error deleting product:', { error, productId });
+      throw new AppError(
+        "An error occurred while deleting the product. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500
+      );
     }
   }));
 
@@ -541,14 +542,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(products);
   }));
 
-  app.get("/api/search", handleErrors(async (req: Request, res: Response) => {
+  app.get("/api/search", asyncHandler(async (req: Request, res: Response) => {
     const query = req.query.q as string;
     const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
     const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
     
     if (!query) {
-      res.status(400).json({ message: "Search query is required" });
-      return;
+      throw new BadRequestError("Search query is required");
     }
     
     const user = req.user as any;
@@ -563,20 +563,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(products);
   }));
   
-  app.post("/api/products", isAuthenticated, handleErrors(async (req: Request, res: Response) => {
+  app.post("/api/products", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
     const user = req.user as any;
     
     // Check if user is admin
     if (user.role !== 'admin') {
-      return res.status(403).json({ message: "Only administrators can create products" });
+      throw new ForbiddenError("Only administrators can create products");
     }
     
-    const productData = insertProductSchema.parse(req.body);
-    
-    // Create the product
-    const product = await storage.createProduct(productData);
-    
-    res.status(201).json(product);
+    // Validate the product data
+    try {
+      const productData = insertProductSchema.parse(req.body);
+      
+      // Create the product
+      const product = await storage.createProduct(productData);
+      
+      res.status(201).json(product);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        throw new ValidationError("Invalid product data", error.flatten());
+      }
+      throw error;
+    }
   }));
 
   // PRODUCT ATTRIBUTE ROUTES - Removed as part of attribute system redesign

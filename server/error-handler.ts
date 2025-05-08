@@ -152,6 +152,15 @@ export class ForbiddenError extends AppError {
 }
 
 /**
+ * Bad Request error class for invalid input data
+ */
+export class BadRequestError extends AppError {
+  constructor(message: string = 'Invalid request data provided') {
+    super(message, ErrorCode.BAD_REQUEST, 400, undefined, true);
+  }
+}
+
+/**
  * Database error class for database operation failures
  */
 export class DatabaseError extends AppError {
