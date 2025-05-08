@@ -18,9 +18,9 @@ export const users = pgTable("users", {
   country: text("country").default("South Africa"),
   isActive: boolean("is_active").default(true).notNull(),
   role: text("role").default("user").notNull(), // 'user', 'admin', etc.
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-  lastLogin: timestamp("last_login"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  lastLogin: timestamp("last_login", { withTimezone: true }),
 });
 
 // Categories table
@@ -58,7 +58,7 @@ export const products = pgTable("products", {
   isActive: boolean("is_active").default(true).notNull(),
   isFeatured: boolean("is_featured").default(false).notNull(),
   isFlashDeal: boolean("is_flash_deal").default(false).notNull(),
-  flashDealEnd: timestamp("flash_deal_end"),
+  flashDealEnd: timestamp("flash_deal_end", { withTimezone: true }),
   soldCount: integer("sold_count").default(0),
   supplier: text("supplier"),
   freeShipping: boolean("free_shipping").default(false),
