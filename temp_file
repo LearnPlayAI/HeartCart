@@ -163,18 +163,16 @@ const ProductDetailView = ({
   } | null>(null);
   
   // Get related products based on category
-  const { data: relatedProductsResponse } = useQuery<{ success: boolean, data: Product[] }>({
+  const { data: relatedProducts } = useQuery<Product[]>({
     queryKey: ['/api/products/category', product?.categoryId, { limit: 5 }],
     enabled: !!product?.categoryId,
   });
-  const relatedProducts = relatedProductsResponse?.success ? relatedProductsResponse.data : [];
   
   // Get product attributes (includes product-specific attributes as well as inherited ones)
-  const { data: productAttributesResponse } = useQuery<{ success: boolean, data: CategoryAttribute[] }>({
+  const { data: productAttributes } = useQuery<CategoryAttribute[]>({
     queryKey: ['/api/products', product?.id, 'attributes'],
     enabled: !!product?.id,
   });
-  const productAttributes = productAttributesResponse?.success ? productAttributesResponse.data : [];
   
   // Get product attribute options
   const { data: attributeOptions } = useQuery<{ [key: number]: ProductAttributeOption[] }>({
