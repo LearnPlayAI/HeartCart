@@ -9,6 +9,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
+import { useDateFormat } from "@/hooks/use-date-format";
 import {
   Dialog,
   DialogContent,
@@ -76,6 +77,7 @@ interface OrderWithItems {
 function OrderDetails({ order }: { order: OrderWithItems }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { formatShortDate } = useDateFormat();
   
   // Mutation for updating order status
   const updateStatusMutation = useMutation({
@@ -117,7 +119,7 @@ function OrderDetails({ order }: { order: OrderWithItems }) {
         <div>
           <h3 className="text-lg font-semibold">Order #{order.id}</h3>
           <p className="text-sm text-muted-foreground">
-            Placed on {new Date(order.createdAt).toLocaleDateString()} by {order.user.fullName || order.user.username}
+            Placed on {formatShortDate(order.createdAt)} by {order.user.fullName || order.user.username}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -270,7 +272,7 @@ function OrderDetails({ order }: { order: OrderWithItems }) {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Date:</span>
-                  <span>{new Date(order.createdAt).toLocaleDateString()}</span>
+                  <span>{formatShortDate(order.createdAt)}</span>
                 </div>
               </div>
             </CardContent>
@@ -315,6 +317,7 @@ export default function AdminOrders() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [selectedOrder, setSelectedOrder] = useState<OrderWithItems | null>(null);
+  const { formatShortDate } = useDateFormat();
 
   // Fetch all orders
   const { data: orders, isLoading } = useQuery<OrderWithItems[]>({
@@ -418,7 +421,7 @@ export default function AdminOrders() {
                         <div>{order.user?.username || "Unknown"}</div>
                         <div className="flex items-center text-muted-foreground">
                           <CalendarIcon className="mr-1 h-3 w-3" />
-                          {new Date(order.createdAt).toLocaleDateString()}
+                          {formatShortDate(order.createdAt)}
                         </div>
                         <div>
                           <Badge className={statusColors[order.status as keyof typeof statusColors]}>

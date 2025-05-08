@@ -84,6 +84,7 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 const ProfilePage = () => {
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const { formatDate, formatShortDate } = useDateFormat();
   const [authTab, setAuthTab] = useState<'login' | 'register'>('login');
   const [activeTab, setActiveTab] = useState<'orders' | 'profile'>('orders');
   
@@ -513,7 +514,7 @@ const ProfilePage = () => {
                             <TableRow key={order.id}>
                               <TableCell>#{order.id}</TableCell>
                               <TableCell>
-                                {new Date(order.createdAt).toLocaleDateString()}
+                                {formatShortDate(order.createdAt)}
                               </TableCell>
                               <TableCell>
                                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${
