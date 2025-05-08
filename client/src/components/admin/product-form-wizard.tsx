@@ -83,38 +83,44 @@ export default function ProductFormWizard({ productId, catalogId, onSuccess }: P
   const [currentStep, setCurrentStep] = useState(0);
   
   // Fetch categories for the dropdown
-  const { data: categories, isLoading: isLoadingCategories } = useQuery({
+  const { data: categoriesResponse, isLoading: isLoadingCategories } = useQuery<{ success: boolean, data: Category[] }>({
     queryKey: ['/api/categories'],
     queryFn: async () => {
       const res = await fetch('/api/categories');
       if (!res.ok) throw new Error('Failed to fetch categories');
-      return res.json() as Promise<Category[]>;
+      return res.json();
     }
   });
   
+  const categories = categoriesResponse?.data;
+  
   // Fetch product data if editing
-  const { data: product, isLoading: isLoadingProduct } = useQuery({
+  const { data: productResponse, isLoading: isLoadingProduct } = useQuery<{ success: boolean, data: Product }>({
     queryKey: ['/api/products', productId],
     queryFn: async () => {
-      if (!productId) return null;
+      if (!productId) return { success: true, data: null };
       const res = await fetch(`/api/products/${productId}`);
       if (!res.ok) throw new Error('Failed to fetch product');
-      return res.json() as Promise<Product>;
+      return res.json();
     },
     enabled: !!productId,
   });
   
+  const product = productResponse?.data;
+  
   // Fetch catalog data if creating from catalog context
-  const { data: catalog, isLoading: isLoadingCatalog } = useQuery({
+  const { data: catalogResponse, isLoading: isLoadingCatalog } = useQuery<{ success: boolean, data: any }>({
     queryKey: ['/api/catalogs', catalogId],
     queryFn: async () => {
-      if (!catalogId) return null;
+      if (!catalogId) return { success: true, data: null };
       const res = await fetch(`/api/catalogs/${catalogId}`);
       if (!res.ok) throw new Error('Failed to fetch catalog');
       return res.json();
     },
     enabled: !!catalogId && !productId, // Only fetch if creating new product from catalog
   });
+  
+  const catalog = catalogResponse?.data;
   
   // Form setup
   const form = useForm<ProductFormValues>({
@@ -201,7 +207,9 @@ export default function ProductFormWizard({ productId, catalogId, onSuccess }: P
       try {
         const res = await fetch(`/api/products/${productId}/images`);
         if (!res.ok) throw new Error('Failed to fetch product images');
-        const images = await res.json();
+        const response = await res.json();
+        // Extract images data from standardized response
+        const images = response.success ? response.data : [];
         setUploadedImages(images);
       } catch (error) {
         console.error('Error fetching product images:', error);
@@ -234,7 +242,13 @@ export default function ProductFormWizard({ productId, catalogId, onSuccess }: P
       const res = await apiRequest('POST', '/api/products', formattedData);
       return res.json();
     },
-    onSuccess: async (data) => {
+    onSuccess: async (response) => {
+      // Extract the product data from standardized response
+      if (!response.success) {
+        throw new Error(response.error?.message || "Failed to create product");
+      }
+      
+      const data = response.data;
       // First, move any temporary images to permanent storage
       if (uploadedImages.length > 0) {
         try {

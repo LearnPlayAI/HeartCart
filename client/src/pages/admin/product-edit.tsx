@@ -27,10 +27,10 @@ export default function ProductEditPage() {
   // Fetch product data if editing
   const productId = params?.id && !isNewProduct ? parseInt(params.id, 10) : undefined;
   
-  const { data: product, isLoading: productLoading } = useQuery({
+  const { data: productResponse, isLoading: productLoading } = useQuery<{ success: boolean, data: Product }>({
     queryKey: ['/api/products', productId],
     queryFn: async () => {
-      if (!productId) return null;
+      if (!productId) return { success: true, data: null };
       const res = await fetch(`/api/products/${productId}`);
       if (!res.ok) throw new Error('Failed to fetch product');
       return res.json();
@@ -38,17 +38,21 @@ export default function ProductEditPage() {
     enabled: !!productId,
   });
   
+  const product = productResponse?.data;
+  
   // Fetch catalog data if creating from catalog context
-  const { data: catalog, isLoading: catalogLoading } = useQuery({
+  const { data: catalogResponse, isLoading: catalogLoading } = useQuery<{ success: boolean, data: Catalog }>({
     queryKey: ['/api/catalogs', catalogId],
     queryFn: async () => {
-      if (!catalogId) return null;
+      if (!catalogId) return { success: true, data: null };
       const res = await fetch(`/api/catalogs/${catalogId}`);
       if (!res.ok) throw new Error('Failed to fetch catalog');
-      return res.json() as Promise<Catalog>;
+      return res.json();
     },
     enabled: !!catalogId && isNewProduct,
   });
+  
+  const catalog = catalogResponse?.data;
   
   const isLoading = productLoading || (catalogLoading && !!catalogId);
   
