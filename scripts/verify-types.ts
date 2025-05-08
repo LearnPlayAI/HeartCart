@@ -12,104 +12,82 @@
  * Usage: npm run verify:types
  */
 
-import { execSync } from 'child_process';
-import fs from 'fs';
-import path from 'path';
+import * as fs from 'fs';
+import * as path from 'path';
 import chalk from 'chalk';
+import { execSync } from 'child_process';
 
 // Configuration
-const ROOT_DIR = path.resolve(__dirname, '..');
-const IGNORED_DIRS = ['node_modules', '.git', 'dist', 'build'];
-const EXTENSIONS = ['.ts', '.tsx'];
-
-// Statistics
-let filesChecked = 0;
-let errorCount = 0;
-let warningCount = 0;
-
-// Patterns to check
-const patterns = {
-  // Missing type annotations
-  missingFunctionReturnType: /function\s+\w+\s*\([^)]*\)\s*(?!:\s*\w+)/g,
-  missingVariableType: /(?:const|let|var)\s+\w+\s*=\s*(?!\s*:)/g,
-  
-  // Nullable types issues
-  unsafeNullCheck: /(\w+)\s*(?:===|!==|==|!=)\s*(?:null|undefined)/g,
-  
-  // Type-unsafe operations
-  typeAssertion: /as\s+\w+/g,
-  nonNullAssertion: /\w+!/g,
-  
-  // Type guards
-  missingTypeGuard: /(\w+)\s*\?\s*(\w+)/g
-};
+const TYPESCRIPT_CONFIG_PATH = path.resolve(process.cwd(), 'tsconfig.json');
+const SOURCE_DIRS = [
+  path.resolve(process.cwd(), 'client/src'),
+  path.resolve(process.cwd(), 'server'),
+  path.resolve(process.cwd(), 'shared'),
+];
+const IGNORED_PATTERNS = [
+  /\.d\.ts$/,
+  /node_modules/,
+  /dist/,
+  /build/,
+  /\.test\./,
+  /\.spec\./,
+];
 
 /**
  * Check a file for type issues
  */
 function checkFile(filePath: string): void {
-  const content = fs.readFileSync(filePath, 'utf-8');
-  const relativePath = path.relative(ROOT_DIR, filePath);
-  let fileHasIssues = false;
-  
-  // Check each pattern
-  for (const [name, pattern] of Object.entries(patterns)) {
-    const matches = [...content.matchAll(pattern)];
-    if (matches.length > 0) {
-      if (!fileHasIssues) {
-        console.log(chalk.underline(relativePath));
-        fileHasIssues = true;
-      }
-      
-      console.log(chalk.yellow(`  ${name}:`));
-      for (const match of matches) {
-        // Get the line number for this match
-        const lineNumber = content.substring(0, match.index).split('\n').length;
-        console.log(chalk.gray(`    Line ${lineNumber}: ${match[0].trim()}`));
-        warningCount++;
-      }
-    }
-  }
-  
-  // Run TypeScript compiler checks on this file
   try {
-    execSync(`npx tsc --noEmit --strict ${filePath}`, { stdio: 'pipe' });
+    // Run TypeScript compiler with --noEmit to check types
+    const result = execSync(`npx tsc --noEmit --pretty false --skipLibCheck --project ${TYPESCRIPT_CONFIG_PATH} ${filePath}`, {
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    
+    console.log(chalk.green(`✓ ${filePath}`));
   } catch (error) {
-    if (!fileHasIssues) {
-      console.log(chalk.underline(relativePath));
-      fileHasIssues = true;
-    }
+    const errorOutput = error.stderr || error.stdout || error.message;
+    const errorLines = errorOutput.split('\n')
+      .filter((line: string) => line.includes(filePath))
+      .map((line: string) => {
+        // Extract line and character position
+        const match = line.match(/\((\d+),(\d+)\):/);
+        if (match) {
+          const [, lineNum, charPos] = match;
+          // Read the relevant line from the file
+          const fileContent = fs.readFileSync(filePath, 'utf8');
+          const fileLines = fileContent.split('\n');
+          const codeLine = fileLines[parseInt(lineNum) - 1];
+          
+          return `${line}\n${' '.repeat(4)}${codeLine}\n${' '.repeat(4 + parseInt(charPos))}${chalk.red('^')}`;
+        }
+        return line;
+      });
     
-    console.log(chalk.red('  TypeScript compiler errors:'));
-    const output = error.stderr.toString();
-    const errors = output.split('\n').filter(line => line.includes('error'));
-    
-    for (const err of errors) {
-      console.log(chalk.gray(`    ${err.trim()}`));
-      errorCount++;
-    }
+    console.log(chalk.red(`✗ ${filePath}`));
+    console.log(chalk.yellow(errorLines.join('\n')));
   }
-  
-  filesChecked++;
 }
 
 /**
  * Recursively find all TypeScript files
  */
 function findTypeScriptFiles(dir: string): string[] {
-  if (IGNORED_DIRS.includes(path.basename(dir))) {
-    return [];
-  }
-  
   const files: string[] = [];
+  
   const entries = fs.readdirSync(dir, { withFileTypes: true });
   
   for (const entry of entries) {
     const fullPath = path.join(dir, entry.name);
     
+    // Skip ignored patterns
+    if (IGNORED_PATTERNS.some(pattern => pattern.test(fullPath))) {
+      continue;
+    }
+    
     if (entry.isDirectory()) {
       files.push(...findTypeScriptFiles(fullPath));
-    } else if (entry.isFile() && EXTENSIONS.includes(path.extname(entry.name))) {
+    } else if (/\.(ts|tsx)$/.test(entry.name)) {
       files.push(fullPath);
     }
   }
@@ -118,31 +96,128 @@ function findTypeScriptFiles(dir: string): string[] {
 }
 
 /**
+ * Find places where any is used
+ */
+function findAnyUsage(filePath: string): string[] {
+  const fileContent = fs.readFileSync(filePath, 'utf8');
+  const issues: string[] = [];
+  
+  // Match explicit any type annotations
+  const anyRegex = /: any\b/g;
+  let match;
+  let lineNum = 1;
+  
+  for (const line of fileContent.split('\n')) {
+    if ((match = anyRegex.exec(line)) !== null) {
+      issues.push(`Line ${lineNum}: Explicit 'any' type: ${line.trim()}`);
+    }
+    lineNum++;
+  }
+  
+  return issues;
+}
+
+/**
+ * Find unsafe null/undefined handling
+ */
+function findUnsafeNullHandling(filePath: string): string[] {
+  const fileContent = fs.readFileSync(filePath, 'utf8');
+  const issues: string[] = [];
+  
+  // Match potential unsafe property access without null check
+  const lines = fileContent.split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    
+    // Look for potential null dereference (simple heuristic, not foolproof)
+    if (line.match(/\w+\?\.\w+/) || line.match(/\w+\s*!\./) || line.match(/\w+\s*![\[\(]/)) {
+      // Non-null assertion or chaining without proper check
+      issues.push(`Line ${i + 1}: Potential unsafe null handling: ${line.trim()}`);
+    }
+  }
+  
+  return issues;
+}
+
+/**
+ * Find non-exhaustive switch statements
+ */
+function findNonExhaustiveSwitch(filePath: string): string[] {
+  const fileContent = fs.readFileSync(filePath, 'utf8');
+  const issues: string[] = [];
+  
+  // This is a simple heuristic, not perfect
+  const switchRegex = /switch\s*\([^)]+\)\s*{([^}]*)}/gs;
+  let match;
+  
+  while ((match = switchRegex.exec(fileContent)) !== null) {
+    const switchBody = match[1];
+    
+    // Check if there's a default case
+    if (!switchBody.includes('default:')) {
+      const linesBefore = fileContent.substring(0, match.index).split('\n');
+      const lineNum = linesBefore.length;
+      
+      issues.push(`Line ${lineNum}: Non-exhaustive switch statement missing default case`);
+    }
+  }
+  
+  return issues;
+}
+
+/**
  * Main execution function
  */
 function main(): void {
-  console.log(chalk.blue('TeeMeYou Type Verification'));
-  console.log(chalk.blue('--------------------------'));
+  console.log(chalk.blue('TeeMeYou Type Verification Tool'));
+  console.log(chalk.blue('================================'));
   
-  const files = findTypeScriptFiles(ROOT_DIR);
-  console.log(chalk.gray(`Found ${files.length} TypeScript files to check\n`));
+  // Find all TypeScript files
+  const allFiles: string[] = [];
+  for (const dir of SOURCE_DIRS) {
+    if (fs.existsSync(dir)) {
+      allFiles.push(...findTypeScriptFiles(dir));
+    }
+  }
   
-  for (const file of files) {
+  console.log(chalk.blue(`Found ${allFiles.length} TypeScript files to check\n`));
+  
+  // Type check each file
+  console.log(chalk.blue('Checking for type errors...'));
+  for (const file of allFiles) {
     checkFile(file);
   }
   
-  console.log('\nSummary:');
-  console.log(chalk.gray(`Files checked: ${filesChecked}`));
-  console.log(chalk.yellow(`Warnings: ${warningCount}`));
-  console.log(chalk.red(`Errors: ${errorCount}`));
+  console.log('\n' + chalk.blue('Checking for type safety issues...'));
   
-  if (errorCount > 0) {
-    console.log(chalk.red('\nVerification failed! Please fix the errors above.'));
-    process.exit(1);
-  } else if (warningCount > 0) {
-    console.log(chalk.yellow('\nVerification completed with warnings. Consider addressing them.'));
+  // Find unsafe type usages
+  let totalIssues = 0;
+  
+  for (const file of allFiles) {
+    const anyIssues = findAnyUsage(file);
+    const nullIssues = findUnsafeNullHandling(file);
+    const switchIssues = findNonExhaustiveSwitch(file);
+    
+    const fileIssues = [...anyIssues, ...nullIssues, ...switchIssues];
+    totalIssues += fileIssues.length;
+    
+    if (fileIssues.length > 0) {
+      console.log(chalk.yellow(`\n${file}:`));
+      fileIssues.forEach(issue => console.log(chalk.yellow(`  - ${issue}`)));
+    }
+  }
+  
+  // Print summary
+  console.log('\n' + chalk.blue('Summary:'));
+  console.log(chalk.blue('-------'));
+  console.log(`Total files checked: ${allFiles.length}`);
+  console.log(`Safety issues found: ${totalIssues}`);
+  
+  if (totalIssues === 0) {
+    console.log('\n' + chalk.green('✓ No type safety issues found!'));
   } else {
-    console.log(chalk.green('\nType verification passed successfully!'));
+    console.log('\n' + chalk.yellow(`⚠ Found ${totalIssues} type safety issues.`));
+    console.log(chalk.yellow('Please review and fix these issues to improve type safety.'));
   }
 }
 

@@ -1,194 +1,323 @@
 /**
- * Shared type guard utilities for the TeeMeYou application
- * These utilities provide consistent null/undefined handling and type narrowing
+ * TypeScript Type Guards for TeeMeYou
+ * 
+ * This file contains type guard functions that help with runtime type checking
+ * and type narrowing to improve type safety throughout the application.
+ * 
+ * Type guards perform runtime checks that narrow TypeScript types for improved
+ * type safety and help prevent runtime errors caused by unexpected types.
  */
 
 /**
- * Type guard to check if a value is defined (not null or undefined)
+ * Check if a value is defined (not null or undefined)
+ * 
+ * @example
+ * const value: string | null | undefined = getValueFromSomewhere();
+ * if (isDefined(value)) {
+ *   // TypeScript knows value is string here
+ *   console.log(value.length); // Safe
+ * }
  */
 export function isDefined<T>(value: T | null | undefined): value is T {
   return value !== null && value !== undefined;
 }
 
 /**
- * Type guard to check if a value is not defined (is null or undefined)
+ * Check if a value is null
  */
-export function isNotDefined<T>(value: T | null | undefined): value is null | undefined {
-  return value === null || value === undefined;
+export function isNull(value: unknown): value is null {
+  return value === null;
 }
 
 /**
- * Type guard to check if a value is a string
+ * Check if a value is undefined
  */
-export function isString(value: unknown): value is string {
-  return typeof value === 'string';
+export function isUndefined(value: unknown): value is undefined {
+  return value === undefined;
 }
 
 /**
- * Type guard to check if a value is a non-empty string
+ * Check if a value is a non-empty string
+ * 
+ * @example
+ * const value: unknown = getValueFromSomewhere();
+ * if (isNonEmptyString(value)) {
+ *   // TypeScript knows value is string here
+ *   console.log(value.toUpperCase()); // Safe
+ * }
  */
 export function isNonEmptyString(value: unknown): value is string {
-  return isString(value) && value.trim().length > 0;
+  return typeof value === 'string' && value.trim().length > 0;
 }
 
 /**
- * Type guard to check if a value is a number
+ * Check if a value is a valid number (not NaN or Infinity)
+ * 
+ * @example
+ * const value: unknown = getValueFromSomewhere();
+ * if (isValidNumber(value)) {
+ *   // TypeScript knows value is number here
+ *   console.log(value.toFixed(2)); // Safe
+ * }
  */
-export function isNumber(value: unknown): value is number {
-  return typeof value === 'number' && !isNaN(value);
+export function isValidNumber(value: unknown): value is number {
+  return typeof value === 'number' && !isNaN(value) && isFinite(value);
 }
 
 /**
- * Type guard to check if a value is a boolean
+ * Check if a value is a valid integer
  */
-export function isBoolean(value: unknown): value is boolean {
-  return typeof value === 'boolean';
+export function isInteger(value: unknown): value is number {
+  return isValidNumber(value) && Number.isInteger(value);
 }
 
 /**
- * Type guard to check if a value is an array
+ * Check if a value is a valid positive number
  */
-export function isArray<T>(value: unknown): value is Array<T> {
-  return Array.isArray(value);
+export function isPositiveNumber(value: unknown): value is number {
+  return isValidNumber(value) && value > 0;
 }
 
 /**
- * Type guard to check if a value is a non-empty array
+ * Check if a value is a valid non-negative number (zero or positive)
  */
-export function isNonEmptyArray<T>(value: unknown): value is Array<T> {
-  return isArray(value) && value.length > 0;
+export function isNonNegativeNumber(value: unknown): value is number {
+  return isValidNumber(value) && value >= 0;
 }
 
 /**
- * Type guard to check if a value is an object (not null, not an array)
+ * Check if a value is a valid date object (not invalid date)
+ * 
+ * @example
+ * const value: unknown = getValueFromSomewhere();
+ * if (isValidDate(value)) {
+ *   // TypeScript knows value is Date here
+ *   console.log(value.toISOString()); // Safe
+ * }
  */
-export function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-/**
- * Type guard to check if a value is a Date
- */
-export function isDate(value: unknown): value is Date {
+export function isValidDate(value: unknown): value is Date {
   return value instanceof Date && !isNaN(value.getTime());
 }
 
 /**
- * Type guard to check if a value is a function
+ * Check if a value is a plain object (not array, null, etc.)
+ * 
+ * @example
+ * const value: unknown = getValueFromSomewhere();
+ * if (isPlainObject(value)) {
+ *   // TypeScript knows value is Record<string, unknown> here
+ *   const keys = Object.keys(value); // Safe
+ * }
  */
-export function isFunction(value: unknown): value is Function {
-  return typeof value === 'function';
+export function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 /**
- * Type guard to check if a value is a promise
+ * Check if a value is a non-empty array
+ * 
+ * @example
+ * const value: unknown = getValueFromSomewhere();
+ * if (isNonEmptyArray(value)) {
+ *   // TypeScript knows value is unknown[] here
+ *   console.log(value.length); // Safe
+ * }
  */
-export function isPromise<T = unknown>(value: unknown): value is Promise<T> {
-  return isObject(value) && isFunction((value as any).then);
+export function isNonEmptyArray<T>(value: unknown): value is T[] {
+  return Array.isArray(value) && value.length > 0;
 }
 
 /**
- * Type guard that checks if all items in an array satisfy a predicate
+ * Check if a value is a valid array of a specific type
+ * 
+ * @example
+ * const value: unknown = getValueFromSomewhere();
+ * if (isArrayOf(value, isNonEmptyString)) {
+ *   // TypeScript knows value is string[] here
+ *   const upperCaseValues = value.map(v => v.toUpperCase()); // Safe
+ * }
  */
-export function allItemsMatch<T>(
-  array: unknown,
-  predicate: (item: unknown) => item is T
-): array is T[] {
-  return isArray(array) && array.every(predicate);
-}
-
-/**
- * Type guard to check if a value is a record with specific key-value types
- */
-export function isRecord<K extends string | number | symbol, V>(
+export function isArrayOf<T>(
   value: unknown,
-  valueGuard: (val: unknown) => val is V
-): value is Record<K, V> {
-  if (!isObject(value)) return false;
-  
-  return Object.values(value).every(val => valueGuard(val));
+  itemGuard: (item: unknown) => item is T
+): value is T[] {
+  return Array.isArray(value) && value.every(item => itemGuard(item));
 }
 
 /**
- * Safely cast a value to a specific type, returning undefined if the cast fails
+ * Check if a value has a specific property
+ * 
+ * @example
+ * const value: unknown = getValueFromSomewhere();
+ * if (hasProperty(value, 'id')) {
+ *   // TypeScript knows value has an 'id' property
+ *   console.log(value.id); // Safe
+ * }
  */
-export function safeCast<T>(value: unknown, typeGuard: (val: unknown) => val is T): T | undefined {
-  return typeGuard(value) ? value : undefined;
-}
-
-/**
- * Assert that a value is of a specific type, throwing an error if not
- */
-export function assertType<T>(
+export function hasProperty<K extends string>(
   value: unknown,
-  typeGuard: (val: unknown) => val is T,
-  errorMessage = 'Type assertion failed'
-): asserts value is T {
-  if (!typeGuard(value)) {
-    throw new Error(errorMessage);
+  property: K
+): value is { [P in K]: unknown } {
+  return isPlainObject(value) && property in value;
+}
+
+/**
+ * Check if an object has all required properties
+ * 
+ * @example
+ * const value: unknown = getValueFromSomewhere();
+ * if (hasProperties(value, ['id', 'name'])) {
+ *   // TypeScript knows value has both 'id' and 'name' properties
+ *   console.log(value.id, value.name); // Safe
+ * }
+ */
+export function hasProperties<K extends string>(
+  value: unknown,
+  properties: K[]
+): value is { [P in K]: unknown } {
+  if (!isPlainObject(value)) return false;
+  return properties.every(prop => prop in value);
+}
+
+/**
+ * Type guard for checking if a value matches a record structure
+ * with specific property types
+ * 
+ * @example
+ * interface User { id: number; name: string; }
+ * const isUser = makeTypeGuard<User>({
+ *   id: isValidNumber,
+ *   name: isNonEmptyString
+ * });
+ * 
+ * const value: unknown = getValueFromSomewhere();
+ * if (isUser(value)) {
+ *   // TypeScript knows value is User here
+ *   console.log(value.id, value.name); // Safe
+ * }
+ */
+export function makeTypeGuard<T extends Record<string, unknown>>(
+  propertyGuards: {
+    [K in keyof T]: (value: unknown) => boolean;
   }
+) {
+  return (value: unknown): value is T => {
+    if (!isPlainObject(value)) return false;
+    
+    for (const key in propertyGuards) {
+      if (!hasProperty(value, key)) return false;
+      if (!propertyGuards[key](value[key])) return false;
+    }
+    
+    return true;
+  };
 }
 
 /**
- * Ensure a value is defined, throwing an error if undefined or null
+ * Data Model Type Guards
  */
-export function ensureDefined<T>(
-  value: T | null | undefined,
-  errorMessage = 'Value is undefined or null'
-): T {
-  if (value === undefined || value === null) {
-    throw new Error(errorMessage);
-  }
-  return value;
-}
+
+// Import types from schema
+import {
+  User,
+  Product,
+  Category,
+  CartItem,
+  Order,
+  Attribute,
+  Supplier,
+  Catalog
+} from './schema';
 
 /**
- * Convert a nullable value to a default value if null/undefined
+ * Type guard for User objects
  */
-export function withDefault<T>(value: T | null | undefined, defaultValue: T): T {
-  return isDefined(value) ? value : defaultValue;
-}
+export const isUser = makeTypeGuard<User>({
+  id: isInteger,
+  username: isNonEmptyString,
+  email: isNonEmptyString,
+  isActive: (v): v is boolean => typeof v === 'boolean',
+  role: isNonEmptyString,
+  createdAt: isValidDate,
+  updatedAt: isValidDate
+});
 
 /**
- * Type utility to make all properties in a type required (non-nullable)
+ * Type guard for Product objects
  */
-export type Required<T> = {
-  [P in keyof T]-?: T[P];
-};
+export const isProduct = makeTypeGuard<Product>({
+  id: isInteger,
+  name: isNonEmptyString,
+  slug: isNonEmptyString,
+  price: isValidNumber,
+  isActive: (v): v is boolean => typeof v === 'boolean',
+  createdAt: isValidDate
+});
 
 /**
- * Type utility to make all properties in a type potentially undefined
+ * Type guard for Category objects
  */
-export type Nullable<T> = {
-  [P in keyof T]: T[P] | null | undefined;
-};
+export const isCategory = makeTypeGuard<Category>({
+  id: isInteger,
+  name: isNonEmptyString,
+  slug: isNonEmptyString,
+  isActive: (v): v is boolean => typeof v === 'boolean', 
+  level: isNonNegativeNumber,
+  displayOrder: isInteger
+});
 
 /**
- * Type utility for polymorphic result (success or error)
+ * Type guard for CartItem objects
  */
-export type Result<T, E = Error> = 
-  | { success: true; data: T }
-  | { success: false; error: E };
+export const isCartItem = makeTypeGuard<CartItem>({
+  id: isInteger,
+  productId: isInteger,
+  quantity: isPositiveNumber,
+  createdAt: isValidDate
+});
 
 /**
- * Create a success result
+ * Type guard for Order objects
  */
-export function success<T>(data: T): Result<T> {
-  return { success: true, data };
-}
+export const isOrder = makeTypeGuard<Order>({
+  id: isInteger,
+  userId: isInteger,
+  status: isNonEmptyString,
+  totalAmount: isValidNumber,
+  createdAt: isValidDate
+});
 
 /**
- * Create an error result
+ * Type guard for Attribute objects
  */
-export function failure<E = Error>(error: E): Result<never, E> {
-  return { success: false, error };
-}
+export const isAttribute = makeTypeGuard<Attribute>({
+  id: isInteger,
+  name: isNonEmptyString,
+  displayName: isNonEmptyString,
+  attributeType: isNonEmptyString,
+  createdAt: isValidDate,
+  updatedAt: isValidDate
+});
 
 /**
- * Type utility for discriminated union with status field
+ * Type guard for Supplier objects
  */
-export type AsyncStatus<T, E = Error> =
-  | { status: 'idle' }
-  | { status: 'loading' }
-  | { status: 'success'; data: T }
-  | { status: 'error'; error: E };
+export const isSupplier = makeTypeGuard<Supplier>({
+  id: isInteger,
+  name: isNonEmptyString,
+  isActive: (v): v is boolean => typeof v === 'boolean',
+  createdAt: isValidDate,
+  updatedAt: isValidDate
+});
+
+/**
+ * Type guard for Catalog objects
+ */
+export const isCatalog = makeTypeGuard<Catalog>({
+  id: isInteger,
+  name: isNonEmptyString,
+  supplierId: isInteger,
+  isActive: (v): v is boolean => typeof v === 'boolean',
+  createdAt: isValidDate,
+  updatedAt: isValidDate
+});
