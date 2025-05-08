@@ -97,6 +97,7 @@ interface AttributeWithSelection extends Attribute {
 function ProductAttributesPage() {
   const { toast } = useToast();
   const { productId } = useParams<{ productId: string }>();
+  const { formatISODate } = useDateFormat();
   const [selectedAttribute, setSelectedAttribute] = useState<ProductAttribute | null>(null);
   const [attributeDialogOpen, setAttributeDialogOpen] = useState(false);
   const [optionDialogOpen, setOptionDialogOpen] = useState(false);
@@ -1506,7 +1507,7 @@ function ProductAttributesPage() {
                       id="dateValue"
                       name="dateValue"
                       type="date"
-                      defaultValue={selectedAttributeValue?.dateValue ? new Date(selectedAttributeValue.dateValue).toISOString().split('T')[0] : ""}
+                      defaultValue={selectedAttributeValue?.dateValue ? formatISODate(selectedAttributeValue.dateValue) : ""}
                     />
                   </div>
                 ) : selectedAttributeValue?.attribute?.attributeType === 'boolean' ? (
