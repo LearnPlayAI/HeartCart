@@ -297,7 +297,7 @@ All client and server-side components must be completely updated to match the ne
     - [x] Update admin/pricing.tsx for API response consistency
     - [x] Standardize admin/orders.tsx for better error handling
   - [ ] Standardize product components:
-    - [ ] Update product-listing.tsx to use standardized API responses
+    - [x] Update product-listing.tsx to use standardized API responses
     - [ ] Standardize product-detail-new.tsx for consistent API integration
     - [ ] Update product-card.tsx component for API consistency
     - [ ] Standardize product-grid.tsx component for pagination handling
