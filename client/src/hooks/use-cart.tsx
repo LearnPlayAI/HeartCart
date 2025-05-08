@@ -46,8 +46,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
   
   // Get cart items from server with improved typing for discount fields
-  // API now returns { success: true, data: CartItemWithDiscounts[] } format
-  const { data: responseData, isLoading } = useQuery<{ success: boolean, data: CartItemWithDiscounts[] }>({
+  // API now returns StandardApiResponse format
+  const { data: responseData, isLoading } = useQuery<StandardApiResponse<CartItemWithDiscounts[]>>({
     queryKey: ['/api/cart'],
     retry: false,
     gcTime: 0,
@@ -55,8 +55,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   });
   
   // Safe extraction of cart items from the standardized response format
-  // If response is not available or doesn't have data property, fall back to empty array
-  const cartItems = (responseData?.data as CartItemWithDiscounts[] || []);
+  // If response is not available or doesn't have success/data properties, fall back to empty array
+  const cartItems = (responseData?.success ? responseData.data : []);
   
   // Calculate cart summary with persistence approach
   // Since we're using database persistence, the pricing calculations are done server-side
@@ -82,7 +82,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const addToCartMutation = useMutation({
     mutationFn: async (item: Omit<CartItemWithDiscounts, 'id' | 'discountData' | 'totalDiscount' | 'itemPrice'>) => {
       const { product, ...rest } = item;
-      await apiRequest('POST', '/api/cart', rest);
+      const res = await apiRequest('POST', '/api/cart', rest);
+      const data: StandardApiResponse<any> = await res.json();
+      if (!data.success) {
+        throw new Error(data.error?.message || "Failed to add item to cart");
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
@@ -94,7 +98,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     onError: (error) => {
       toast({
         title: "Error",
-        description: "Please log in to add items to your cart",
+        description: error.message || "Please log in to add items to your cart",
         variant: "destructive"
       });
     }
@@ -103,7 +107,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   // Update cart item mutation
   const updateCartMutation = useMutation({
     mutationFn: async ({ id, quantity }: { id: number; quantity: number }) => {
-      await apiRequest('PUT', `/api/cart/${id}`, { quantity });
+      const res = await apiRequest('PUT', `/api/cart/${id}`, { quantity });
+      const data: StandardApiResponse<any> = await res.json();
+      if (!data.success) {
+        throw new Error(data.error?.message || "Failed to update cart item");
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
@@ -111,7 +119,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     onError: (error) => {
       toast({
         title: "Error",
-        description: "Please log in to update your cart",
+        description: error.message || "Please log in to update your cart",
         variant: "destructive"
       });
     }
@@ -120,7 +128,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   // Remove from cart mutation
   const removeFromCartMutation = useMutation({
     mutationFn: async (id: number) => {
-      await apiRequest('DELETE', `/api/cart/${id}`);
+      const res = await apiRequest('DELETE', `/api/cart/${id}`);
+      const data: StandardApiResponse<any> = await res.json();
+      if (!data.success) {
+        throw new Error(data.error?.message || "Failed to remove item from cart");
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
@@ -128,7 +140,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     onError: (error) => {
       toast({
         title: "Error",
-        description: "Please log in to modify your cart",
+        description: error.message || "Please log in to modify your cart",
         variant: "destructive"
       });
     }
@@ -137,7 +149,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   // Clear cart mutation
   const clearCartMutation = useMutation({
     mutationFn: async () => {
-      await apiRequest('DELETE', '/api/cart');
+      const res = await apiRequest('DELETE', '/api/cart');
+      const data: StandardApiResponse<any> = await res.json();
+      if (!data.success) {
+        throw new Error(data.error?.message || "Failed to clear cart");
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
@@ -149,7 +165,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     onError: (error) => {
       toast({
         title: "Error",
-        description: "Please log in to modify your cart",
+        description: error.message || "Please log in to modify your cart",
         variant: "destructive"
       });
     }

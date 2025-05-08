@@ -309,18 +309,21 @@ All client and server-side components must be completely updated to match the ne
   - [x] Standardize shared components:
     - [x] Update ui/category-sidebar.tsx for API response consistency
     - [x] Standardize ui/product-search.tsx component
-    - [ ] Update layout components for consistent API integration
-  - [ ] Standardize authentication-related components:
-    - [ ] Update login-form.tsx for standardized API responses
-    - [ ] Standardize registration-form.tsx for consistent error handling
-    - [ ] Update auth-page.tsx for standardized API integration
-  - [ ] Standardize hooks and utilities:
-    - [ ] Update use-auth.tsx for standardized API integration
+    - [x] Update layout components (header.tsx) for consistent API integration
+  - [x] Standardize authentication-related components:
+    - [x] Update login-form.tsx for standardized API responses
+    - [x] Standardize registration-form.tsx for consistent error handling
+    - [x] Update auth-page.tsx for standardized API integration
+  - [x] Standardize hooks and utilities:
+    - [x] Update use-auth.tsx for standardized API integration
     
   **Latest Progress (May 2025):**
   - Updated product-listing.tsx to use StandardApiResponse type consistently for all API queries
   - Applied StandardApiResponse type to categories, products, filterable attributes, and product attribute values queries
-  - Next tasks: Complete standardization of product-detail-new.tsx, product-grid.tsx, layout components, and authentication components
+  - Standardized authentication components (use-auth.tsx, auth-page.tsx) to handle StandardApiResponse format
+  - Updated layout components (header.tsx) to use StandardApiResponse for categories API
+  - Updated cart system components (use-cart.tsx) to handle StandardApiResponse for cart operations
+  - Next tasks: Complete standardization of product-detail-new.tsx and product-grid.tsx components
     - [ ] Standardize use-products.tsx hook for consistent response handling
     - [ ] Update use-categories.tsx for standardized responses
     - [x] Update use-attribute-discounts.tsx for standardized API responses
