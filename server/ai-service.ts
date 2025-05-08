@@ -549,64 +549,94 @@ export async function analyzeProductImage(imageBase64: string, productName: stri
   marketResearch?: string;
 }> {
   try {
+    // Validate inputs
+    if (!imageBase64) {
+      throw new Error('Image data is required for product analysis');
+    }
+    
+    if (!productName) {
+      throw new Error('Product name is required for analysis');
+    }
+    
     let imageData: string;
     
     // Check if imageBase64 is a URL or a base64 string
     if (imageBase64.startsWith('http')) {
-      // If it's a URL, we can still process it with the Gemini 1.5 Flash multimodal model
-      // by sending the URL directly in the prompt
-      console.log("Using image URL directly with Gemini 1.5 multimodal capabilities");
-      
-      // Create a multimodal request that includes the image URL and product name
-      const textResult = await geminiProVision.generateContent([
-        {
-          text: `Analyze this product (image URL: ${imageBase64}) and provide the following details formatted as JSON for a South African e-commerce store:
-          1. "description": A detailed product description (max 100 words) that includes materials, features, and benefits
-          2. "category": A single likely product category (e.g., Bedding, Home Decor, Kitchen, etc.)
-          3. "brand": A likely brand name based on product type
-          4. "tags": An array of 5-7 relevant tags (each 1-3 words)
-          5. "costPrice": Estimated wholesale/cost price in South African Rand (ZAR)
-          6. "price": Suggested retail price in South African Rand (ZAR) with appropriate markup
-          7. "marketResearch": A brief summary of current market prices for similar products in South Africa (3-4 sentences)
-          
-          The product name is: "${productName}"
-          
-          Important: Research current market prices for similar products in South Africa to provide realistic price estimates.
-          Specifically look at what similar products cost in South African stores like Mr Price Home, Woolworths, @Home, and Takealot.
-          
-          Format the response as valid JSON only, with no additional text.`
-        }
-      ]);
-      
-      const textResponse = await textResult.response;
-      const responseText = textResponse.text();
-      
       try {
-        const jsonResponse = JSON.parse(responseText);
-        return {
-          suggestedName: productName, // Use the provided product name
-          suggestedDescription: jsonResponse.description,
-          suggestedCategory: jsonResponse.category,
-          suggestedBrand: jsonResponse.brand,
-          suggestedTags: jsonResponse.tags,
-          suggestedCostPrice: jsonResponse.costPrice ? Number(jsonResponse.costPrice) : undefined,
-          suggestedPrice: jsonResponse.price ? Number(jsonResponse.price) : undefined,
-          marketResearch: jsonResponse.marketResearch
-        };
-      } catch (jsonError) {
-        console.error('Failed to parse text-only JSON response:', jsonError);
-        return {
-          suggestedName: productName,
-          suggestedDescription: "",
-          suggestedCategory: "",
-          suggestedBrand: "",
-          suggestedTags: []
-        };
+        // If it's a URL, we can still process it with the Gemini 1.5 Flash multimodal model
+        // by sending the URL directly in the prompt
+        console.log(`Using image URL directly with Gemini 1.5 multimodal capabilities for product "${productName}"`);
+        
+        // Create a multimodal request that includes the image URL and product name
+        const textResult = await geminiProVision.generateContent([
+          {
+            text: `Analyze this product (image URL: ${imageBase64}) and provide the following details formatted as JSON for a South African e-commerce store:
+            1. "description": A detailed product description (max 100 words) that includes materials, features, and benefits
+            2. "category": A single likely product category (e.g., Bedding, Home Decor, Kitchen, etc.)
+            3. "brand": A likely brand name based on product type
+            4. "tags": An array of 5-7 relevant tags (each 1-3 words)
+            5. "costPrice": Estimated wholesale/cost price in South African Rand (ZAR)
+            6. "price": Suggested retail price in South African Rand (ZAR) with appropriate markup
+            7. "marketResearch": A brief summary of current market prices for similar products in South Africa (3-4 sentences)
+            
+            The product name is: "${productName}"
+            
+            Important: Research current market prices for similar products in South Africa to provide realistic price estimates.
+            Specifically look at what similar products cost in South African stores like Mr Price Home, Woolworths, @Home, and Takealot.
+            
+            Format the response as valid JSON only, with no additional text.`
+          }
+        ]);
+        
+        const textResponse = await textResult.response;
+        const responseText = textResponse.text();
+        
+        try {
+          const jsonResponse = JSON.parse(responseText);
+          
+          // Validate response structure with detailed logging
+          if (!jsonResponse.description) {
+            console.warn(`Missing description in AI analysis for product "${productName}" with URL image`);
+          }
+          
+          if (!jsonResponse.category) {
+            console.warn(`Missing category in AI analysis for product "${productName}" with URL image`);
+          }
+          
+          if (!jsonResponse.tags || !Array.isArray(jsonResponse.tags)) {
+            console.warn(`Missing or invalid tags in AI analysis for product "${productName}" with URL image`);
+          }
+          
+          return {
+            suggestedName: productName, // Use the provided product name
+            suggestedDescription: jsonResponse.description || "",
+            suggestedCategory: jsonResponse.category || "",
+            suggestedBrand: jsonResponse.brand || "",
+            suggestedTags: Array.isArray(jsonResponse.tags) ? jsonResponse.tags : [],
+            suggestedCostPrice: jsonResponse.costPrice ? Number(jsonResponse.costPrice) : undefined,
+            suggestedPrice: jsonResponse.price ? Number(jsonResponse.price) : undefined,
+            marketResearch: jsonResponse.marketResearch || ""
+          };
+        } catch (jsonError) {
+          console.error(`Failed to parse text-only JSON response for product "${productName}":`, jsonError);
+          console.error(`Raw response: ${responseText.substring(0, 200)}...`);
+          return {
+            suggestedName: productName,
+            suggestedDescription: "",
+            suggestedCategory: "",
+            suggestedBrand: "",
+            suggestedTags: []
+          };
+        }
+      } catch (urlAnalysisError) {
+        console.error(`Error analyzing product "${productName}" with URL image:`, urlAnalysisError);
+        throw new Error(`Failed to analyze URL image: ${urlAnalysisError instanceof Error ? urlAnalysisError.message : 'Unknown error'}`);
       }
     }
     
     try {
       // Extract content type and convert to buffer
+      console.log(`Processing image data for product "${productName}"`);
       const imageBuffer = base64ToBuffer(imageBase64);
       
       // Resize image to reduce processing time and convert to PNG format
@@ -617,23 +647,98 @@ export async function analyzeProductImage(imageBase64: string, productName: stri
       
       // Create prompt
       imageData = bufferToBase64(resizedImageBuffer, 'image/png');
+      console.log(`Successfully processed image for product "${productName}" to base64`);
     } catch (imageError) {
-      console.warn('Image processing failed:', imageError);
+      console.error(`Image processing failed for product "${productName}":`, imageError);
       
       // If image processing fails, fall back to text-only analysis using the product name
-      console.log("Falling back to text-only analysis due to image processing failure");
+      console.log(`Falling back to text-only analysis for product "${productName}" due to image processing failure`);
       
-      // Create a text-only request using Gemini 1.5 Flash's multimodal capabilities
-      const textResult = await geminiProVision.generateContent([
+      try {
+        // Create a text-only request using Gemini 1.5 Flash's multimodal capabilities
+        const textResult = await geminiProVision.generateContent([
+          {
+            text: `Analyze this product and provide the following details formatted as JSON for a South African e-commerce store:
+            1. "description": A detailed product description (max 100 words) including materials, features, and benefits
+            2. "category": A single likely product category (e.g., Bedding, Home Decor, Kitchen, etc.)
+            3. "brand": A likely brand name based on product type
+            4. "tags": An array of 5-7 relevant tags (each 1-3 words)
+            5. "costPrice": Estimated wholesale/cost price in South African Rand (ZAR)
+            6. "price": Suggested retail price in South African Rand (ZAR) with appropriate markup
+            7. "marketResearch": Brief summary of current market prices for similar products in South Africa (3-4 sentences)
+            
+            The product name is: "${productName}"
+            
+            Important: Research current market prices for similar products in South Africa to provide realistic price estimates.
+            Specifically look at what similar products cost in South African stores like Mr Price Home, Woolworths, @Home, and Takealot.
+            
+            Format the response as valid JSON only, with no additional text.`
+          }
+        ]);
+        
+        try {
+          const textResponse = await textResult.response;
+          const responseText = textResponse.text();
+          
+          const jsonResponse = JSON.parse(responseText);
+          
+          // Validate response structure with detailed logging
+          if (!jsonResponse.description) {
+            console.warn(`Missing description in text-only AI analysis for product "${productName}"`);
+          }
+          
+          if (!jsonResponse.category) {
+            console.warn(`Missing category in text-only AI analysis for product "${productName}"`);
+          }
+          
+          if (!jsonResponse.tags || !Array.isArray(jsonResponse.tags)) {
+            console.warn(`Missing or invalid tags in text-only AI analysis for product "${productName}"`);
+          }
+          
+          return {
+            suggestedName: productName,
+            suggestedDescription: jsonResponse.description || "",
+            suggestedCategory: jsonResponse.category || "",
+            suggestedBrand: jsonResponse.brand || "",
+            suggestedTags: Array.isArray(jsonResponse.tags) ? jsonResponse.tags : [],
+            suggestedCostPrice: jsonResponse.costPrice ? Number(jsonResponse.costPrice) : undefined,
+            suggestedPrice: jsonResponse.price ? Number(jsonResponse.price) : undefined,
+            marketResearch: jsonResponse.marketResearch || ""
+          };
+        } catch (jsonError) {
+          console.error(`Failed to parse text-only JSON response for product "${productName}":`, jsonError);
+          console.error(`Raw text-only response: ${responseText?.substring(0, 200)}...`);
+          // If all else fails, return just the product name as a fallback
+          return {
+            suggestedName: productName,
+            suggestedDescription: "",
+            suggestedCategory: "",
+            suggestedBrand: "",
+            suggestedTags: []
+          };
+        }
+      } catch (textAnalysisError) {
+        console.error(`Error in text-only analysis fallback for product "${productName}":`, textAnalysisError);
+        throw new Error(`Failed to analyze product via text-only fallback: ${textAnalysisError instanceof Error ? textAnalysisError.message : 'Unknown model error'}`);
+      }
+    }
+    
+    try {
+      // Create the generation request using multimodal capabilities of Gemini 1.5
+      // This will analyze both the image and the text (product name)
+      console.log(`Making multimodal Gemini AI request for product "${productName}" with processed image`);
+      
+      const result = await geminiProVision.generateContent([
         {
-          text: `Analyze this product and provide the following details formatted as JSON for a South African e-commerce store:
-          1. "description": A detailed product description (max 100 words) including materials, features, and benefits
-          2. "category": A single likely product category (e.g., Bedding, Home Decor, Kitchen, etc.)
-          3. "brand": A likely brand name based on product type
-          4. "tags": An array of 5-7 relevant tags (each 1-3 words)
-          5. "costPrice": Estimated wholesale/cost price in South African Rand (ZAR)
-          6. "price": Suggested retail price in South African Rand (ZAR) with appropriate markup
-          7. "marketResearch": Brief summary of current market prices for similar products in South Africa (3-4 sentences)
+          text: `Analyze this product image and provide the following details formatted as JSON for a South African e-commerce store:
+          1. "name": A concise product name (max 10 words) - note that the user provided the name "${productName}"
+          2. "description": A detailed product description (max 100 words) including material, features, and benefits
+          3. "category": A single likely product category (e.g., Bedding, Home Decor, Kitchen, etc.)
+          4. "brand": A likely brand name if visible (otherwise suggest a suitable one)
+          5. "tags": An array of 5-7 relevant tags (each 1-3 words)
+          6. "costPrice": Estimated wholesale/cost price in South African Rand (ZAR)
+          7. "price": Suggested retail price in South African Rand (ZAR) with appropriate markup
+          8. "marketResearch": Brief summary of current market prices for similar products in South Africa (3-4 sentences)
           
           The product name is: "${productName}"
           
@@ -641,109 +746,90 @@ export async function analyzeProductImage(imageBase64: string, productName: stri
           Specifically look at what similar products cost in South African stores like Mr Price Home, Woolworths, @Home, and Takealot.
           
           Format the response as valid JSON only, with no additional text.`
+        },
+        {
+          inlineData: { 
+            data: imageData, 
+            mimeType: 'image/png' 
+          }
         }
       ]);
       
+      // Get the response
+      const response = await result.response;
+      const responseText = response.text();
+      
+      // Parse JSON response
       try {
-        const textResponse = await textResult.response;
-        const responseText = textResponse.text();
+        // First, try to parse the response as-is
+        console.log(`Received AI response for product "${productName}", attempting to parse JSON`);
         
         const jsonResponse = JSON.parse(responseText);
+        
+        // Validate response structure with detailed logging
+        if (!jsonResponse.name) {
+          console.warn(`Missing name in AI analysis result for product "${productName}"`);
+        }
+        
+        if (!jsonResponse.description) {
+          console.warn(`Missing description in AI analysis result for product "${productName}"`);
+        }
+        
+        if (!jsonResponse.category) {
+          console.warn(`Missing category in AI analysis result for product "${productName}"`);
+        }
+        
+        if (!jsonResponse.tags || !Array.isArray(jsonResponse.tags)) {
+          console.warn(`Missing or invalid tags in AI analysis result for product "${productName}"`);
+        }
+        
         return {
-          suggestedName: productName,
+          suggestedName: jsonResponse.name || productName,
           suggestedDescription: jsonResponse.description || "",
           suggestedCategory: jsonResponse.category || "",
           suggestedBrand: jsonResponse.brand || "",
-          suggestedTags: jsonResponse.tags || [],
+          suggestedTags: Array.isArray(jsonResponse.tags) ? jsonResponse.tags : [],
           suggestedCostPrice: jsonResponse.costPrice ? Number(jsonResponse.costPrice) : undefined,
           suggestedPrice: jsonResponse.price ? Number(jsonResponse.price) : undefined,
-          marketResearch: jsonResponse.marketResearch
+          marketResearch: jsonResponse.marketResearch || ""
         };
       } catch (jsonError) {
-        console.error('Failed to parse text-only JSON response:', jsonError);
-        // If all else fails, return just the product name as a fallback
-        return {
-          suggestedName: productName,
-          suggestedDescription: "",
-          suggestedCategory: "",
-          suggestedBrand: "",
-          suggestedTags: []
-        };
-      }
-    }
-    
-    // Create the generation request using multimodal capabilities of Gemini 1.5
-    // This will analyze both the image and the text (product name)
-    const result = await geminiProVision.generateContent([
-      {
-        text: `Analyze this product image and provide the following details formatted as JSON for a South African e-commerce store:
-        1. "name": A concise product name (max 10 words) - note that the user provided the name "${productName}"
-        2. "description": A detailed product description (max 100 words) including material, features, and benefits
-        3. "category": A single likely product category (e.g., Bedding, Home Decor, Kitchen, etc.)
-        4. "brand": A likely brand name if visible (otherwise suggest a suitable one)
-        5. "tags": An array of 5-7 relevant tags (each 1-3 words)
-        6. "costPrice": Estimated wholesale/cost price in South African Rand (ZAR)
-        7. "price": Suggested retail price in South African Rand (ZAR) with appropriate markup
-        8. "marketResearch": Brief summary of current market prices for similar products in South Africa (3-4 sentences)
+        // If direct parsing fails, try to extract JSON from the text
+        console.error(`Failed to parse JSON response for product "${productName}":`, jsonError);
+        console.log(`Attempting to extract JSON from raw text response for product "${productName}"`);
         
-        The product name is: "${productName}"
-        
-        Important: Research current market prices for similar products in South Africa to provide realistic price estimates.
-        Specifically look at what similar products cost in South African stores like Mr Price Home, Woolworths, @Home, and Takealot.
-        
-        Format the response as valid JSON only, with no additional text.`
-      },
-      {
-        inlineData: { 
-          data: imageData, 
-          mimeType: 'image/png' 
+        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const jsonStr = jsonMatch[0];
+          try {
+            const extractedJson = JSON.parse(jsonStr);
+            
+            console.log(`Successfully extracted and parsed JSON from text for product "${productName}"`);
+            
+            return {
+              suggestedName: extractedJson.name || productName,
+              suggestedDescription: extractedJson.description || "",
+              suggestedCategory: extractedJson.category || "",
+              suggestedBrand: extractedJson.brand || "",
+              suggestedTags: Array.isArray(extractedJson.tags) ? extractedJson.tags : [],
+              suggestedCostPrice: extractedJson.costPrice ? Number(extractedJson.costPrice) : undefined,
+              suggestedPrice: extractedJson.price ? Number(extractedJson.price) : undefined,
+              marketResearch: extractedJson.marketResearch || ""
+            };
+          } catch (extractError) {
+            console.error(`Failed to parse extracted JSON for product "${productName}":`, extractError);
+            console.error(`Raw extracted text: ${jsonStr.substring(0, 200)}...`);
+            throw new Error(`Failed to parse extracted JSON: ${extractError instanceof Error ? extractError.message : 'Unknown parsing error'}`);
+          }
+        } else {
+          console.error(`No valid JSON pattern found in response for product "${productName}"`);
+          console.error(`Raw response first 200 chars: ${responseText.substring(0, 200)}...`);
+          throw new Error(`No valid JSON found in AI response for product "${productName}"`);
         }
       }
-    ]);
-    
-    // Get the response
-    const response = await result.response;
-    const responseText = response.text();
-    
-    // Parse JSON response
-    try {
-      // First, try to parse the response as-is
-      const jsonResponse = JSON.parse(responseText);
-      return {
-        suggestedName: jsonResponse.name,
-        suggestedDescription: jsonResponse.description,
-        suggestedCategory: jsonResponse.category,
-        suggestedBrand: jsonResponse.brand,
-        suggestedTags: jsonResponse.tags,
-        suggestedCostPrice: jsonResponse.costPrice ? Number(jsonResponse.costPrice) : undefined,
-        suggestedPrice: jsonResponse.price ? Number(jsonResponse.price) : undefined,
-        marketResearch: jsonResponse.marketResearch
-      };
-    } catch (jsonError) {
-      // If direct parsing fails, try to extract JSON from the text
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const jsonStr = jsonMatch[0];
-        try {
-          const extractedJson = JSON.parse(jsonStr);
-          return {
-            suggestedName: extractedJson.name,
-            suggestedDescription: extractedJson.description,
-            suggestedCategory: extractedJson.category,
-            suggestedBrand: extractedJson.brand,
-            suggestedTags: extractedJson.tags,
-            suggestedCostPrice: extractedJson.costPrice ? Number(extractedJson.costPrice) : undefined,
-            suggestedPrice: extractedJson.price ? Number(extractedJson.price) : undefined,
-            marketResearch: extractedJson.marketResearch
-          };
-        } catch (extractError) {
-          console.error('Failed to parse extracted JSON:', extractError);
-          throw new Error('Failed to parse extracted JSON');
-        }
-      } else {
-        console.error('No valid JSON found in response');
-        throw new Error('No valid JSON found in response');
-      }
+    } catch (aiRequestError) {
+      console.error(`AI request failed for product "${productName}":`, aiRequestError);
+      throw new Error(`AI analysis request failed: ${aiRequestError instanceof Error ? aiRequestError.message : 'Unknown AI processing error'}`);
     }
   } catch (error) {
     console.error('Product analysis failed:', error);
