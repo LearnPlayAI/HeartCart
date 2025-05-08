@@ -41,82 +41,62 @@ export function useAttributeDiscounts() {
 
   // Get all discount rules
   const {
-    data: discountRules,
+    data: discountRulesResponse,
     isLoading: discountRulesLoading,
     refetch: refetchDiscountRules,
   } = useQuery({
     queryKey: ['/api/attribute-discount-rules'],
-    queryFn: async () => {
-      const response = await fetch('/api/attribute-discount-rules');
-      if (!response.ok) {
-        throw new Error('Failed to fetch attribute discount rules');
-      }
-      return response.json() as Promise<AttributeDiscountRule[]>;
-    },
+    // Using standardized response format
   });
+  
+  const discountRules = discountRulesResponse?.success ? discountRulesResponse.data : [];
 
   // Get discount rules by product
   const useProductDiscountRules = (productId: number | undefined) => {
-    return useQuery({
+    const { data: response } = useQuery<{ success: boolean, data: AttributeDiscountRule[] }>({
       queryKey: ['/api/attribute-discount-rules/product', productId],
-      queryFn: async () => {
-        if (!productId) return [];
-        const response = await fetch(`/api/attribute-discount-rules/product/${productId}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch product discount rules');
-        }
-        return response.json() as Promise<AttributeDiscountRule[]>;
-      },
       enabled: !!productId,
     });
+    
+    return {
+      data: response?.success ? response.data : []
+    };
   };
 
   // Get discount rules by category
   const useCategoryDiscountRules = (categoryId: number | undefined) => {
-    return useQuery({
+    const { data: response } = useQuery<{ success: boolean, data: AttributeDiscountRule[] }>({
       queryKey: ['/api/attribute-discount-rules/category', categoryId],
-      queryFn: async () => {
-        if (!categoryId) return [];
-        const response = await fetch(`/api/attribute-discount-rules/category/${categoryId}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch category discount rules');
-        }
-        return response.json() as Promise<AttributeDiscountRule[]>;
-      },
       enabled: !!categoryId,
     });
+    
+    return {
+      data: response?.success ? response.data : []
+    };
   };
 
   // Get discount rules by catalog
   const useCatalogDiscountRules = (catalogId: number | undefined) => {
-    return useQuery({
+    const { data: response } = useQuery<{ success: boolean, data: AttributeDiscountRule[] }>({
       queryKey: ['/api/attribute-discount-rules/catalog', catalogId],
-      queryFn: async () => {
-        if (!catalogId) return [];
-        const response = await fetch(`/api/attribute-discount-rules/catalog/${catalogId}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch catalog discount rules');
-        }
-        return response.json() as Promise<AttributeDiscountRule[]>;
-      },
       enabled: !!catalogId,
     });
+    
+    return {
+      data: response?.success ? response.data : []
+    };
   };
 
   // Get discount rules by attribute
   const useAttributeDiscountRules = (attributeId: number | undefined) => {
-    return useQuery({
+    const { data: response } = useQuery<{ success: boolean, data: AttributeDiscountRule[] }>({
       queryKey: ['/api/attribute-discount-rules/attribute', attributeId],
-      queryFn: async () => {
-        if (!attributeId) return [];
-        const response = await fetch(`/api/attribute-discount-rules/attribute/${attributeId}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch attribute-specific discount rules');
-        }
-        return response.json() as Promise<AttributeDiscountRule[]>;
-      },
       enabled: !!attributeId,
     });
+    
+    return {
+      data: response?.success ? response.data : []
+    };
   };
 
   // Calculate price adjustments
@@ -134,10 +114,17 @@ export function useAttributeDiscounts() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to calculate price adjustments');
+        throw new Error(errorData.error?.message || errorData.error || 'Failed to calculate price adjustments');
       }
 
-      return await response.json();
+      const result = await response.json();
+      
+      // Check for standardized API response format
+      if (!result.success) {
+        throw new Error(result.error?.message || 'Failed to calculate price adjustments');
+      }
+      
+      return result.data;
     } catch (err: any) {
       const error = err instanceof Error ? err : new Error(err?.message || 'Unknown error');
       setError(error);

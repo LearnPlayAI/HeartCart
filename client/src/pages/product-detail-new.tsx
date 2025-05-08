@@ -177,16 +177,18 @@ const ProductDetailView = ({
   const productAttributes = productAttributesResponse?.success ? productAttributesResponse.data : [];
   
   // Get product attribute options
-  const { data: attributeOptions } = useQuery<{ [key: number]: ProductAttributeOption[] }>({
+  const { data: attributeOptionsResponse } = useQuery<{ success: boolean, data: { [key: number]: ProductAttributeOption[] } }>({
     queryKey: ['/api/products', product?.id, 'attribute-options'],
     enabled: !!product?.id && !!productAttributes?.length,
   });
+  const attributeOptions = attributeOptionsResponse?.success ? attributeOptionsResponse.data : {};
   
   // Get product attribute values for combinations
-  const { data: attributeValues } = useQuery<ProductAttributeValue[]>({
+  const { data: attributeValuesResponse } = useQuery<{ success: boolean, data: ProductAttributeValue[] }>({
     queryKey: ['/api/products', product?.id, 'attribute-values'],
     enabled: !!product?.id,
   });
+  const attributeValues = attributeValuesResponse?.success ? attributeValuesResponse.data : [];
   
   // Effect to set initial image on component mount or when product changes
   useEffect(() => {
