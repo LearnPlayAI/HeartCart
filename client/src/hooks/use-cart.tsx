@@ -45,15 +45,17 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
   
   // Get cart items from server with improved typing for discount fields
-  const { data, isLoading } = useQuery<CartItemWithDiscounts[]>({
+  // API now returns { success: true, data: CartItemWithDiscounts[] } format
+  const { data: responseData, isLoading } = useQuery<{ success: boolean, data: CartItemWithDiscounts[] }>({
     queryKey: ['/api/cart'],
     retry: false,
     gcTime: 0,
     staleTime: 0,
   });
   
-  // Safe type casting with fallback to empty array
-  const cartItems = (data as CartItemWithDiscounts[] || []);
+  // Safe extraction of cart items from the standardized response format
+  // If response is not available or doesn't have data property, fall back to empty array
+  const cartItems = (responseData?.data as CartItemWithDiscounts[] || []);
   
   // Calculate cart summary with persistence approach
   // Since we're using database persistence, the pricing calculations are done server-side
