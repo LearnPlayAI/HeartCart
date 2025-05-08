@@ -79,7 +79,7 @@ export default function AdminCatalogs() {
   const [selectedCatalog, setSelectedCatalog] = useState<Catalog | null>(null);
 
   // Query catalogs from API
-  const { data: catalogs, isLoading, refetch } = useQuery<Catalog[]>({
+  const { data: catalogsResponse, isLoading, refetch } = useQuery<{ success: boolean, data: Catalog[], error?: { message: string } }>({
     queryKey: ["/api/catalogs", searchQuery],
     queryFn: async () => {
       // Add explicit query parameter to force showing inactive catalogs for admins
@@ -87,9 +87,18 @@ export default function AdminCatalogs() {
       if (!response.ok) {
         throw new Error("Failed to fetch catalogs");
       }
-      return response.json();
+      
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error?.message || "Failed to fetch catalogs");
+      }
+      
+      return result;
     }
   });
+  
+  // Extract data from standardized response
+  const catalogs = catalogsResponse?.data;
 
   // CRUD operations
   const [, navigate] = useLocation();
@@ -114,7 +123,13 @@ export default function AdminCatalogs() {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || "Failed to delete catalog");
       }
-      return await response.json();
+      
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error?.message || "Failed to delete catalog");
+      }
+      
+      return result;
     },
     onSuccess: () => {
       toast({
@@ -288,25 +303,33 @@ export default function AdminCatalogs() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={() => navigate(`/admin/catalogs/${catalog.id}/products`)}>
-                            <ShoppingBag className="mr-2 h-4 w-4" />
-                            Manage Products
+                          <DropdownMenuItem asChild>
+                            <div onClick={() => navigate(`/admin/catalogs/${catalog.id}/products`)} className="flex items-center cursor-pointer">
+                              <ShoppingBag className="mr-2 h-4 w-4" />
+                              Manage Products
+                            </div>
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => navigate(`/admin/catalogs/${catalog.id}`)}>
-                            <Eye className="mr-2 h-4 w-4" />
-                            View
+                          <DropdownMenuItem asChild>
+                            <div onClick={() => navigate(`/admin/catalogs/${catalog.id}`)} className="flex items-center cursor-pointer">
+                              <Eye className="mr-2 h-4 w-4" />
+                              View
+                            </div>
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleEditCatalog(catalog)}>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Edit
+                          <DropdownMenuItem asChild>
+                            <div onClick={() => handleEditCatalog(catalog)} className="flex items-center cursor-pointer">
+                              <Edit className="mr-2 h-4 w-4" />
+                              Edit
+                            </div>
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            className="text-red-600"
-                            onClick={() => handleDeleteClick(catalog)}
-                          >
-                            <Trash className="mr-2 h-4 w-4" />
-                            Delete
+                          <DropdownMenuItem asChild>
+                            <div 
+                              className="flex items-center cursor-pointer text-red-600"
+                              onClick={() => handleDeleteClick(catalog)}
+                            >
+                              <Trash className="mr-2 h-4 w-4" />
+                              Delete
+                            </div>
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
