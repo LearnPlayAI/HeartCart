@@ -2,8 +2,8 @@ import { Router, Request, Response } from "express";
 import { storage } from "./storage";
 import { z } from "zod";
 import { sendSuccess, sendError } from "./api-response";
-import { isAuthenticated } from "./routes";
-import { NotFoundError, ForbiddenError } from "./custom-errors";
+import { isAuthenticated, isAdmin } from "./auth-middleware";
+import { NotFoundError, ForbiddenError } from "./error-handler";
 
 const router = Router();
 
@@ -26,14 +26,7 @@ const handleErrors = (fn: Function) => async (req: Request, res: Response) => {
   }
 };
 
-// Middleware to check if user is admin
-const isAdmin = (req: Request, res: Response, next: Function) => {
-  const user = req.user as any;
-  if (!user || user.role !== 'admin') {
-    return sendError(res, "Only administrators can access this resource", 403, "FORBIDDEN");
-  }
-  next();
-};
+// We're using isAdmin middleware imported from auth-middleware.ts
 
 // Get all pricing settings
 router.get("/admin/pricing", isAuthenticated, isAdmin, handleErrors(async (req: Request, res: Response) => {

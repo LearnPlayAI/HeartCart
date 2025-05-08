@@ -38,6 +38,7 @@ export interface IStorage {
   
   // Category operations
   getAllCategories(options?: { includeInactive?: boolean, parentId?: number | null, level?: number, orderBy?: 'name' | 'displayOrder' }): Promise<Category[]>;
+  getCategoryById(id: number, options?: { includeInactive?: boolean }): Promise<Category | undefined>;
   getCategoryBySlug(slug: string, options?: { includeInactive?: boolean }): Promise<Category | undefined>;
   getCategoryWithChildren(categoryId: number, options?: { includeInactive?: boolean }): Promise<{ category: Category, children: Category[] } | undefined>;
   getMainCategoriesWithChildren(options?: { includeInactive?: boolean }): Promise<Array<{ category: Category, children: Category[] }>>;
@@ -86,6 +87,7 @@ export interface IStorage {
 
   // Pricing operations
   getPricingByCategoryId(categoryId: number): Promise<Pricing | undefined>;
+  getPricingById(id: number): Promise<Pricing | undefined>;
   getAllPricingSettings(): Promise<Pricing[]>;
   createOrUpdatePricing(pricing: InsertPricing): Promise<Pricing>;
   deletePricing(id: number): Promise<boolean>;
@@ -316,6 +318,23 @@ export class DatabaseStorage implements IStorage {
     }
     
     return await query;
+  }
+
+  async getCategoryById(id: number, options?: { includeInactive?: boolean }): Promise<Category | undefined> {
+    // Build conditions
+    const conditions: SQL<unknown>[] = [eq(categories.id, id)];
+    
+    // Only filter by isActive if we're not including inactive categories
+    if (!options?.includeInactive) {
+      conditions.push(eq(categories.isActive, true));
+    }
+    
+    const [category] = await db
+      .select()
+      .from(categories)
+      .where(and(...conditions));
+      
+    return category;
   }
 
   async getCategoryBySlug(slug: string, options?: { includeInactive?: boolean }): Promise<Category | undefined> {
@@ -1225,6 +1244,15 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(pricing)
       .where(eq(pricing.categoryId, categoryId));
+    
+    return pricingSetting;
+  }
+  
+  async getPricingById(id: number): Promise<Pricing | undefined> {
+    const [pricingSetting] = await db
+      .select()
+      .from(pricing)
+      .where(eq(pricing.id, id));
     
     return pricingSetting;
   }
