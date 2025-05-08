@@ -21,7 +21,7 @@ router.get("/pricing/default-markup", withStandardResponse(async () => {
 
 // Get pricing for a specific category
 router.get("/pricing/category/:categoryId", withStandardResponse(async (req: Request) => {
-  const categoryId = parseInt(req.params.categoryId);
+  const categoryId = Number(req.params.categoryId);
   if (isNaN(categoryId)) {
     throw new Error("Invalid category ID");
   }
@@ -71,7 +71,7 @@ router.post("/admin/pricing", isAuthenticated, isAdmin, withStandardResponse(asy
 
 // Delete pricing setting
 router.delete("/admin/pricing/:id", isAuthenticated, isAdmin, withStandardResponse(async (req: Request, res: Response) => {
-  const id = parseInt(req.params.id);
+  const id = Number(req.params.id);
   if (isNaN(id)) {
     throw new Error("Invalid pricing ID");
   }
@@ -89,7 +89,7 @@ router.delete("/admin/pricing/:id", isAuthenticated, isAdmin, withStandardRespon
 
 // Get pricing setting by ID
 router.get("/admin/pricing/:id", isAuthenticated, isAdmin, withStandardResponse(async (req: Request) => {
-  const id = parseInt(req.params.id);
+  const id = Number(req.params.id);
   if (isNaN(id)) {
     throw new Error("Invalid pricing ID");
   }

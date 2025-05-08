@@ -647,7 +647,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       try {
-        const products = await storage.getFlashDeals(limit as number, options);
+        const products = await storage.getFlashDeals(Number(limit), options);
         return products;
       } catch (error) {
         logger.error('Error fetching flash deals', { error });
@@ -683,7 +683,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         includeCategoryInactive: isAdmin 
       };
       
-      const products = await storage.searchProducts(query as string, limit as number, offset as number, options);
+      const products = await storage.searchProducts(query as string, Number(limit), Number(offset), options);
       return products;
     })
   );
