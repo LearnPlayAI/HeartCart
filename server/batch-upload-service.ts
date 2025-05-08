@@ -143,8 +143,8 @@ export class BatchUploadService {
 
       // Update batch status to processing
       await this.updateBatchStatus(batchId, BATCH_STATUSES.PROCESSING, {
-        tempFilePath: file.path,
-        originalFilename: file.originalname,
+        fileName: file.path,
+        file_original_name: file.originalname,
       });
 
       // Parse and process the CSV file
@@ -154,8 +154,8 @@ export class BatchUploadService {
       await this.updateBatchStatus(batchId, results.success ? BATCH_STATUSES.COMPLETED : BATCH_STATUSES.FAILED, {
         totalRecords: results.totalRecords || 0,
         processedRecords: results.processedRecords || 0,
-        successRecords: results.successRecords || 0,
-        failedRecords: results.failedRecords || 0,
+        successCount: results.successRecords || 0,
+        errorCount: results.failedRecords || 0,
       });
 
       // Clean up temporary file
