@@ -247,7 +247,16 @@ router.post('/:id/retry', isAdmin, handleErrors(async (req: Request, res: Respon
  * @access Admin only
  */
 router.get('/template', isAdmin, handleErrors(async (req: Request, res: Response) => {
-  const catalogId = req.query.catalogId ? parseInt(req.query.catalogId as string) : undefined;
+  let catalogId: number | undefined = undefined;
+  
+  if (req.query.catalogId && req.query.catalogId !== 'none') {
+    const parsedId = parseInt(req.query.catalogId as string);
+    // Only use the parsed ID if it's a valid number
+    if (!isNaN(parsedId)) {
+      catalogId = parsedId;
+    }
+  }
+  
   const csvContent = await batchUploadService.generateTemplateCsv(catalogId);
   
   res.setHeader('Content-Type', 'text/csv');
@@ -262,11 +271,24 @@ router.get('/template', isAdmin, handleErrors(async (req: Request, res: Response
  * @access Admin only
  */
 router.get('/template/:catalogId', isAdmin, handleErrors(async (req: Request, res: Response) => {
-  const catalogId = parseInt(req.params.catalogId);
+  let catalogId: number | undefined = undefined;
+  
+  if (req.params.catalogId && req.params.catalogId !== 'none') {
+    const parsedId = parseInt(req.params.catalogId);
+    // Only use the parsed ID if it's a valid number
+    if (!isNaN(parsedId)) {
+      catalogId = parsedId;
+    }
+  }
+  
   const csvContent = await batchUploadService.generateTemplateCsv(catalogId);
   
+  const fileName = catalogId 
+    ? `catalog_${catalogId}_template_${Date.now()}.csv`
+    : `product_upload_template_${Date.now()}.csv`;
+    
   res.setHeader('Content-Type', 'text/csv');
-  res.setHeader('Content-Disposition', `attachment; filename="catalog_${catalogId}_template_${Date.now()}.csv"`);
+  res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
   
   return res.send(csvContent);
 }));

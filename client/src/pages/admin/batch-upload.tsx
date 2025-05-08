@@ -100,7 +100,7 @@ import { formatDistanceToNow, format } from "date-fns";
 const createBatchUploadSchema = z.object({
   name: z.string().min(3, { message: "Name must be at least 3 characters" }),
   description: z.string().optional(),
-  catalogId: z.string().optional().transform(val => val ? parseInt(val) : undefined),
+  catalogId: z.string().optional().transform(val => val && val !== 'none' ? parseInt(val) : undefined),
 });
 
 // Form schema for uploading a CSV file
@@ -399,7 +399,7 @@ function CreateBatchUploadForm({
     defaultValues: {
       name: '',
       description: '',
-      catalogId: '',
+      catalogId: 'none',
     },
   });
 
@@ -408,7 +408,7 @@ function CreateBatchUploadForm({
       await onSubmit({
         name: data.name,
         description: data.description || '',
-        catalogId: data.catalogId ? parseInt(data.catalogId) : undefined,
+        catalogId: data.catalogId && data.catalogId !== 'none' ? parseInt(data.catalogId) : undefined,
       });
       onClose();
     } catch (error) {
@@ -474,8 +474,8 @@ function CreateBatchUploadForm({
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="">No catalog (use default)</SelectItem>
-                  {catalogs?.map((catalog: Catalog) => (
+                  <SelectItem value="none">No catalog (use default)</SelectItem>
+                  {Array.isArray(catalogs) && catalogs.map((catalog: Catalog) => (
                     <SelectItem key={catalog.id} value={catalog.id.toString()}>
                       {catalog.name}
                     </SelectItem>
