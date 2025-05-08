@@ -82,7 +82,11 @@ import {
   X, 
   RefreshCw, 
   ArrowUpDown,
-  HelpCircle
+  HelpCircle,
+  Pause,
+  Play,
+  StopCircle,
+  RotateCcw
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
@@ -132,15 +136,32 @@ function getErrorSeverityBadge(severity: string) {
   }
 }
 
-function BatchUploadListItem({ batch, onDelete, onViewErrors, onRefresh }: { 
+function BatchUploadListItem({ 
+  batch, 
+  onDelete, 
+  onViewErrors, 
+  onRefresh,
+  onCancel,
+  onPause,
+  onResume,
+  onRetry
+}: { 
   batch: BatchUpload; 
   onDelete: () => void;
   onViewErrors: () => void;
   onRefresh: () => void;
+  onCancel?: () => void;
+  onPause?: () => void;
+  onResume?: () => void;
+  onRetry?: () => void;
 }) {
-  const isComplete = batch.status.toLowerCase() === 'completed';
-  const isFailed = batch.status.toLowerCase() === 'failed';
-  const isProcessing = batch.status.toLowerCase() === 'processing';
+  const status = batch.status.toLowerCase();
+  const isComplete = status === 'completed';
+  const isFailed = status === 'failed';
+  const isProcessing = status === 'processing';
+  const isPaused = status === 'paused';
+  const isCancelled = status === 'cancelled';
+  const isRetrying = status === 'retrying';
   
   const progress = batch.totalRecords && batch.processedRecords
     ? Math.round((batch.processedRecords / batch.totalRecords) * 100)
@@ -221,16 +242,49 @@ function BatchUploadListItem({ batch, onDelete, onViewErrors, onRefresh }: {
           }
         </div>
         <div className="flex space-x-2">
+          {/* Batch operation buttons based on status */}
+          {isProcessing && onPause && (
+            <Button variant="outline" size="sm" onClick={onPause} title="Pause processing">
+              <Pause className="h-4 w-4" />
+            </Button>
+          )}
+          {isProcessing && onCancel && (
+            <Button variant="outline" size="sm" onClick={onCancel} title="Cancel processing">
+              <StopCircle className="h-4 w-4 text-red-500" />
+            </Button>
+          )}
+          {isPaused && onResume && (
+            <Button variant="outline" size="sm" onClick={onResume} title="Resume processing">
+              <Play className="h-4 w-4 text-green-500" />
+            </Button>
+          )}
+          {isFailed && onRetry && (
+            <Button variant="outline" size="sm" onClick={onRetry} title="Retry failed batch">
+              <RotateCcw className="h-4 w-4 text-blue-500" />
+            </Button>
+          )}
+          
+          {/* View errors button */}
           {batch.errorCount && batch.errorCount > 0 && (
             <Button variant="outline" size="sm" onClick={onViewErrors}>
               <Eye className="h-4 w-4 mr-1" />
               View Errors
             </Button>
           )}
-          <Button variant="ghost" size="sm" onClick={onRefresh}>
+          
+          {/* Refresh status button */}
+          <Button variant="ghost" size="sm" onClick={onRefresh} title="Refresh status">
             <RefreshCw className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="sm" onClick={onDelete}>
+          
+          {/* Delete button */}
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={onDelete} 
+            title="Delete batch upload"
+            disabled={isProcessing || isRetrying}
+          >
             <Trash2 className="h-4 w-4 text-red-500" />
           </Button>
         </div>
