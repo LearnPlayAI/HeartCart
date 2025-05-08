@@ -240,10 +240,10 @@ const ProductDetailView = ({
   
   // Effect to set initial image on component mount or when product changes
   useEffect(() => {
-    if (product?.imageUrl) {
+    if (product?.imageUrl && !currentImage) {
       setCurrentImage(product.imageUrl);
     }
-  }, [product]);
+  }, [product, currentImage]);
 
   // Effect to update price when attributes are selected or quantity changes
   useEffect(() => {
