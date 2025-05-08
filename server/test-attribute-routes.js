@@ -5,7 +5,7 @@
  * Usage: node server/test-attribute-routes.js
  */
 
-const fetch = require('node-fetch');
+import fetch from 'node-fetch';
 
 // Base URL for API requests
 const BASE_URL = 'http://localhost:5000';
@@ -207,3 +207,6 @@ async function testAttributeRoutes() {
 
 // Run the tests
 testAttributeRoutes().catch(console.error);
+
+// Add type: module flag to run this script
+// Or run with: node --experimental-modules server/test-attribute-routes.js
