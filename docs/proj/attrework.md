@@ -112,10 +112,11 @@ We'll implement a structure with the following main tables:
   - ✓ Display attributes in cart/checkout views
   - ✓ Include attribute selections in order data
 
-- [ ] **Task 4.4: Inventory and Pricing Integration** (Not Started)
-  - Implement price adjustments based on attribute selections
-  - Create attribute-specific inventory tracking (if needed)
-  - Add attribute-based discount rules
+- [x] **Task 4.4: Inventory and Pricing Integration** (Complete)
+  - ✓ Implement price adjustments based on attribute selections
+  - ✓ Create attribute-specific pricing mechanism
+  - ✓ Add attribute-based discount rules
+  - ✓ Display discount information in product details and cart
 
 ### Phase 5: Testing and Optimization
 
