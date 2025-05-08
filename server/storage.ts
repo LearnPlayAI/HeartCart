@@ -1326,8 +1326,13 @@ export class DatabaseStorage implements IStorage {
   }
   
   async deletePricing(id: number): Promise<boolean> {
-    await db.delete(pricing).where(eq(pricing.id, id));
-    return true;
+    try {
+      await db.delete(pricing).where(eq(pricing.id, id));
+      return true;
+    } catch (error) {
+      console.error(`Error deleting pricing ${id}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
   }
   
   async getDefaultMarkupPercentage(): Promise<number | null> {
@@ -1435,16 +1440,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteSupplier(id: number): Promise<boolean> {
-    // We use soft deletion by setting isActive to false
-    const [updatedSupplier] = await db
-      .update(suppliers)
-      .set({ 
-        isActive: false,
-        updatedAt: new Date()
-      })
-      .where(eq(suppliers.id, id))
-      .returning();
-    return !!updatedSupplier;
+    try {
+      // We use soft deletion by setting isActive to false
+      const [updatedSupplier] = await db
+        .update(suppliers)
+        .set({ 
+          isActive: false,
+          updatedAt: new Date()
+        })
+        .where(eq(suppliers.id, id))
+        .returning();
+      return !!updatedSupplier;
+    } catch (error) {
+      console.error(`Error soft-deleting supplier ${id}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
   }
 
   // Catalog operations
@@ -1694,16 +1704,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteCatalog(id: number): Promise<boolean> {
-    // We use soft deletion by setting isActive to false
-    const [updatedCatalog] = await db
-      .update(catalogs)
-      .set({ 
-        isActive: false,
-        updatedAt: new Date()
-      })
-      .where(eq(catalogs.id, id))
-      .returning();
-    return !!updatedCatalog;
+    try {
+      // We use soft deletion by setting isActive to false
+      const [updatedCatalog] = await db
+        .update(catalogs)
+        .set({ 
+          isActive: false,
+          updatedAt: new Date()
+        })
+        .where(eq(catalogs.id, id))
+        .returning();
+      return !!updatedCatalog;
+    } catch (error) {
+      console.error(`Error soft-deleting catalog ${id}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
   }
 
   async getProductsByCatalogId(catalogId: number, activeOnly = true, limit = 20, offset = 0): Promise<(Product & { categoryName?: string })[]> {
@@ -1982,10 +1997,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteProductAttributeCombination(id: number): Promise<boolean> {
-    await db
-      .delete(productAttributeCombinations)
-      .where(eq(productAttributeCombinations.id, id));
-    return true;
+    try {
+      await db
+        .delete(productAttributeCombinations)
+        .where(eq(productAttributeCombinations.id, id));
+      return true;
+    } catch (error) {
+      console.error(`Error deleting product attribute combination ${id}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
   }
   
   // Global Attribute operations
