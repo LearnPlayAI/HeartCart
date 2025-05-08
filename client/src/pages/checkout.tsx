@@ -556,22 +556,10 @@ const CheckoutPage = () => {
                         {/* Selected attributes */}
                         {item.selectedAttributes && Object.keys(item.selectedAttributes).length > 0 && (
                           <div className="mt-1 mb-1">
-                            {Object.entries(item.selectedAttributes as Record<string, string>).map(([key, value], index) => (
-                              <div key={index} className="flex text-xs text-gray-600">
-                                <span className="font-medium mr-1">{key}:</span>
-                                <span>{value}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                        
-                        {/* Global attributes */}
-                        {item.globalAttributes && item.globalAttributes.length > 0 && (
-                          <div className="mt-1 mb-1">
-                            {item.globalAttributes.map((attr, index) => (
-                              <div key={index} className="flex text-xs text-gray-600">
-                                <span className="font-medium mr-1">{attr.displayName || attr.name}:</span>
-                                <span>{attr.displayValue || attr.value}</span>
+                            {Object.entries(item.selectedAttributes as Record<string, any>).map(([attrId, selection]) => (
+                              <div key={attrId} className="flex text-xs text-gray-600">
+                                <span className="font-medium mr-1">{selection.attributeName}:</span>
+                                <span>{selection.displayValue || selection.value}</span>
                               </div>
                             ))}
                           </div>
