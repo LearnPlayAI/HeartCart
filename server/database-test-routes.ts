@@ -287,9 +287,10 @@ export function registerDatabaseTestRoutes(app: Express): void {
       
       // Compare actual tables with expected tables
       const missingTables = expectedTableNames.filter(table => !tables.includes(table));
+      // Include 'session' table as an unexpected table since it's not in the schema.ts definition
+      // but don't include Drizzle's internal tables
       const unexpectedTables = tables.filter(table => 
         !expectedTableNames.includes(table) && 
-        table !== 'session' && 
         !table.includes('drizzle')
       );
       
