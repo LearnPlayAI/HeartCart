@@ -4779,6 +4779,76 @@ export class DatabaseStorage implements IStorage {
   }
   
   /**
+   * Get all users in the system
+   * Used for API testing to discover available user IDs
+   * @returns Array of all users
+   */
+  async getAllUsers(): Promise<User[]> {
+    try {
+      const result = await db.query.users.findMany({
+        orderBy: [asc(users.id)]
+      });
+      return result || [];
+    } catch (error) {
+      logger.error('Error fetching all users', { error });
+      return [];
+    }
+  }
+  
+  /**
+   * Get a product with a valid slug for API testing purposes
+   * @returns A product with a valid slug or undefined if none exists
+   */
+  async getProductWithSlug(): Promise<Product | undefined> {
+    try {
+      const result = await db.query.products.findFirst({
+        where: and(
+          not(isNull(products.slug)),
+          products.isActive.equals(true)
+        )
+      });
+      return result;
+    } catch (error) {
+      logger.error('Error fetching product with slug', { error });
+      return undefined;
+    }
+  }
+  
+  /**
+   * Get all orders in the system
+   * Used for API testing to discover available order IDs
+   * @returns Array of all orders
+   */
+  async getAllOrders(): Promise<Order[]> {
+    try {
+      const result = await db.query.orders.findMany({
+        orderBy: [desc(orders.createdAt)]
+      });
+      return result || [];
+    } catch (error) {
+      logger.error('Error fetching all orders', { error });
+      return [];
+    }
+  }
+  
+  /**
+   * Get all catalogs in the system
+   * Used for API testing to discover available catalog IDs
+   * @returns Array of all catalogs
+   */
+  async getAllCatalogs(): Promise<Catalog[]> {
+    try {
+      const result = await db.query.catalogs.findMany({
+        orderBy: [asc(catalogs.id)]
+      });
+      return result || [];
+    } catch (error) {
+      logger.error('Error fetching all catalogs', { error });
+      return [];
+    }
+  }
+  
+  /**
    * Session store for authentication - this is initialized in the constructor
    */
   readonly sessionStore: any;
