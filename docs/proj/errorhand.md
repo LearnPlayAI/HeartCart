@@ -140,7 +140,7 @@ The following operations need to be updated to follow this pattern:
    - 🔄 Product attribute operations (create, read, update, delete)
    - 🔄 Product attribute options operations (create, read, update, delete, reorder)
    - 🔄 Product attribute values operations (create, read, update, delete)
-   - ❌ Attribute discount rules operations
+   - ✅ Attribute discount rules operations (get all, get by ID, get by product/catalog/category/attribute, create, update, delete, calculate price)
 
 2. **Attribute Value Operations** - 🔄 IN PROGRESS
    - ✅ Verify input validation is consistent
