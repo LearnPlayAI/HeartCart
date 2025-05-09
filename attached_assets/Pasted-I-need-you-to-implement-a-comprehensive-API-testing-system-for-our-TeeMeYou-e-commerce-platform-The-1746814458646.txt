@@ -1,0 +1,33 @@
+I need you to implement a comprehensive API testing system for our TeeMeYou e-commerce platform. The system should test our ACTUAL application API endpoints, similar to how our database-tests page works.
+
+Here are the specific requirements:
+
+1. Backend Implementation:
+   - Create an API test routes file similar to database-test-routes.ts that runs tests against our ACTUAL application API endpoints
+   - The tests should verify our real API endpoints' functionality, validation, error handling, and performance
+   - Tests should include basic CRUD operations, validation tests, authorization tests, and edge cases
+   - Each test should return a standardized response format with test status, results, and any failed tests
+
+2. Frontend Implementation:
+   - Create an API Tests page at client/src/pages/developer/api-tests.tsx that follows the same UI pattern as database-tests.tsx
+   - Implement a tabbed interface with categories like "Endpoint Availability", "Response Validation", "Authentication & Authorization", "Error Handling", and "Performance"
+   - Each tab should display detailed test results with proper status indicators (passed/failed/warning)
+   - Include the ability to run individual tests or all tests at once
+   - Show meaningful summaries and visualizations of test results
+
+3. Integration Requirements:
+   - Use the existing application's API endpoints - DO NOT create dummy endpoints
+   - Leverage our actual authorization middleware and validation systems
+   - Use our existing queryClient setup for making API requests
+   - Ensure the tests validate our real business logic and constraints
+
+4. Test Coverage:
+   - Test product-related endpoints (GET/POST/PUT/DELETE)
+   - Test user authentication endpoints
+   - Test shopping cart functionality
+   - Test order processing endpoints
+   - Test catalog and category endpoints
+
+Remember, the goal is to test our REAL application, not to build mock tests. The tests should provide actionable insights about our API's functionality, security, and performance that we can actually use to improve our application.
+
+Please implement this similarly to how our database-tests page is structured, with both backend routes and frontend display components.
