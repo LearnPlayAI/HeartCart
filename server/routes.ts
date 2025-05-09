@@ -2323,14 +2323,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // CART ROUTES
   app.get(
     "/api/cart",
-    withStandardResponse(async (req: Request, res: Response) => {
-      if (!req.isAuthenticated()) {
-        // For non-authenticated users, return empty cart
-        return [];
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        if (!req.isAuthenticated()) {
+          // For non-authenticated users, return empty cart
+          return res.json({
+            success: true,
+            data: []
+          });
+        }
+        
+        const user = req.user as any;
+        const cartItems = await storage.getCartItemsWithProducts(user.id);
+        
+        return res.json({
+          success: true,
+          data: cartItems,
+          meta: {
+            count: cartItems.length,
+            totalItems: cartItems.reduce((sum, item) => sum + (item.quantity || 0), 0)
+          }
+        });
+      } catch (error) {
+        // Log detailed error information
+        logger.error('Error retrieving cart items', { 
+          error, 
+          userId: req.user ? (req.user as any).id : 'unauthenticated' 
+        });
+        
+        // Return generic error
+        throw new AppError(
+          "Failed to retrieve cart items.",
+          ErrorCode.INTERNAL_SERVER_ERROR,
+          500,
+          { originalError: error }
+        );
       }
-      const user = req.user as any;
-      const cartItems = await storage.getCartItemsWithProducts(user.id);
-      return cartItems;
     })
   );
 
@@ -2350,30 +2378,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })).optional().default([])
       })
     }),
-    withStandardResponse(async (req: Request, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const user = req.user as any;
+      const { productId, quantity, attributeValues } = req.body;
       
-      // Check if product exists
-      const product = await storage.getProductById(req.body.productId);
-      if (!product) {
-        throw new NotFoundError("Product not found", "product");
+      try {
+        // Check if product exists
+        const product = await storage.getProductById(productId);
+        if (!product) {
+          throw new NotFoundError(`Product with ID ${productId} not found`, "product");
+        }
+        
+        // Check if product is active
+        if (!product.isActive) {
+          throw new BadRequestError(`Cannot add inactive product "${product.name}" to cart`);
+        }
+        
+        // Add user ID to the cart item data
+        const cartItemData = {
+          productId,
+          quantity,
+          attributeValues,
+          userId: user.id,
+        };
+        
+        const cartItem = await storage.addToCart(cartItemData);
+        
+        // Set status code to 201 Created
+        res.status(201).json({
+          success: true,
+          data: cartItem,
+          message: `Added ${quantity} of product "${product.name}" to your cart.`
+        });
+      } catch (error) {
+        // Log detailed error information with context
+        logger.error('Error adding item to cart', { 
+          error, 
+          userId: user.id,
+          productId: req.body.productId
+        });
+        
+        // Check for specific error types
+        if (error instanceof NotFoundError || error instanceof BadRequestError) {
+          throw error;
+        }
+        
+        // Return generic error for unexpected issues
+        throw new AppError(
+          "Failed to add item to cart. Please try again.",
+          ErrorCode.INTERNAL_SERVER_ERROR,
+          500,
+          { originalError: error }
+        );
       }
-      
-      // Check if product is active
-      if (!product.isActive) {
-        throw new BadRequestError("Cannot add inactive product to cart");
-      }
-      
-      // Add user ID to the cart item data
-      const cartItemData = {
-        ...req.body,
-        userId: user.id,
-      };
-      
-      const cartItem = await storage.addToCart(cartItemData);
-      // Set status code to 201 Created
-      res.status(201);
-      return cartItem;
     })
   );
 
@@ -2388,31 +2445,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
         quantity: z.coerce.number().int().min(0, "Quantity must be a non-negative integer")
       })
     }),
-    withStandardResponse(async (req: Request, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const { id } = req.params;
       const { quantity } = req.body;
-      
-      // Check if cart item exists and belongs to the user
+      const cartItemId = Number(id);
       const user = req.user as any;
-      const cartItem = await storage.getCartItemById(Number(id));
       
-      if (!cartItem) {
-        throw new NotFoundError("Cart item not found", "cartItem");
+      try {
+        // Check if cart item exists and belongs to the user
+        const cartItem = await storage.getCartItemById(cartItemId);
+        
+        if (!cartItem) {
+          throw new NotFoundError(`Cart item with ID ${cartItemId} not found`, "cartItem");
+        }
+        
+        if (cartItem.userId !== user.id) {
+          throw new ForbiddenError(`Cannot update cart item ${cartItemId} that doesn't belong to you`);
+        }
+        
+        // Handle quantity of 0 by removing the item
+        if (quantity === 0) {
+          await storage.removeFromCart(cartItemId);
+          
+          return res.json({
+            success: true,
+            data: { removed: true },
+            message: "Item removed from cart"
+          });
+        }
+        
+        // Update the quantity
+        const updatedItem = await storage.updateCartItemQuantity(cartItemId, quantity);
+        
+        // Get product details for meaningful response message
+        const product = await storage.getProductById(updatedItem.productId);
+        const productName = product ? product.name : `Product #${updatedItem.productId}`;
+        
+        return res.json({
+          success: true,
+          data: { item: updatedItem },
+          message: `Updated quantity of "${productName}" to ${quantity}`
+        });
+      } catch (error) {
+        // Log detailed error information with context
+        logger.error('Error updating cart item', { 
+          error, 
+          userId: user.id,
+          cartItemId
+        });
+        
+        // Check for specific error types
+        if (error instanceof NotFoundError || error instanceof ForbiddenError) {
+          throw error;
+        }
+        
+        // Return generic error for unexpected issues
+        throw new AppError(
+          "Failed to update cart item. Please try again.",
+          ErrorCode.INTERNAL_SERVER_ERROR,
+          500,
+          { originalError: error }
+        );
       }
-      
-      if (cartItem.userId !== user.id) {
-        throw new ForbiddenError("Cannot update cart item that doesn't belong to you");
-      }
-      
-      // If quantity is 0, remove the item
-      if (quantity === 0) {
-        await storage.removeFromCart(Number(id));
-        return { removed: true };
-      }
-      
-      // Update the quantity
-      const updatedItem = await storage.updateCartItemQuantity(Number(id), quantity);
-      return { item: updatedItem };
     })
   );
 
@@ -2424,29 +2518,101 @@ export async function registerRoutes(app: Express): Promise<Server> {
         id: z.coerce.number().positive("Cart item ID is required")
       })
     }),
-    withStandardResponse(async (req: Request, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const { id } = req.params;
-      
-      // Check if cart item exists and belongs to the user
+      const cartItemId = Number(id);
       const user = req.user as any;
-      const cartItem = await storage.getCartItemById(Number(id));
       
-      if (cartItem && cartItem.userId !== user.id) {
-        throw new ForbiddenError("Cannot delete cart item that doesn't belong to you");
+      try {
+        // Check if cart item exists and belongs to the user
+        const cartItem = await storage.getCartItemById(cartItemId);
+        
+        // If cart item doesn't exist, return success (idempotent delete)
+        if (!cartItem) {
+          return res.json({
+            success: true,
+            data: { removed: true },
+            message: "Cart item already removed"
+          });
+        }
+        
+        // Validate ownership
+        if (cartItem.userId !== user.id) {
+          throw new ForbiddenError(`Cannot delete cart item ${cartItemId} that doesn't belong to you`);
+        }
+        
+        // Get product details for meaningful response message
+        const product = await storage.getProductById(cartItem.productId);
+        const productName = product ? product.name : `Product #${cartItem.productId}`;
+        
+        // Remove the item
+        await storage.removeFromCart(cartItemId);
+        
+        return res.json({
+          success: true,
+          data: { removed: true },
+          message: `Removed "${productName}" from your cart`
+        });
+      } catch (error) {
+        // Log detailed error information with context
+        logger.error('Error removing cart item', { 
+          error, 
+          userId: user.id,
+          cartItemId
+        });
+        
+        // Check for specific error types
+        if (error instanceof ForbiddenError) {
+          throw error;
+        }
+        
+        // Return generic error for unexpected issues
+        throw new AppError(
+          "Failed to remove item from cart. Please try again.",
+          ErrorCode.INTERNAL_SERVER_ERROR,
+          500,
+          { originalError: error }
+        );
       }
-      
-      await storage.removeFromCart(Number(id));
-      return { removed: true };
     })
   );
 
   app.delete(
     "/api/cart", 
     isAuthenticated, 
-    withStandardResponse(async (req: Request, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const user = req.user as any;
-      await storage.clearCart(user.id);
-      return { cleared: true };
+      
+      try {
+        // Get cart items count before clearing for meaningful response
+        const cartItems = await storage.getCartItemsWithProducts(user.id);
+        const itemCount = cartItems.length;
+        
+        // Clear the cart
+        await storage.clearCart(user.id);
+        
+        return res.json({
+          success: true,
+          data: { cleared: true },
+          message: itemCount > 0 
+            ? `Successfully cleared ${itemCount} items from your cart` 
+            : "Cart was already empty"
+        });
+      } catch (error) {
+        // Log detailed error information with context
+        logger.error('Error clearing cart', { 
+          error, 
+          userId: user.id
+        });
+        
+        // Return generic error for unexpected issues
+        throw new AppError(
+          "Failed to clear your cart. Please try again.",
+          ErrorCode.INTERNAL_SERVER_ERROR,
+          500,
+          { originalError: error }
+        );
+      }
     })
   );
 
@@ -2481,43 +2647,100 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ).min(1, "At least one item is required")
       })
     }),
-    withStandardResponse(async (req: Request, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const user = req.user as any;
       const { order, items } = req.body;
       
-      // Validate that the cart is not empty
-      const userCart = await storage.getCartItemsWithProducts(user.id);
-      if (!userCart || userCart.length === 0) {
-        throw new BadRequestError("Cannot create an order with an empty cart");
-      }
-      
-      // Validate that all products in the order exist and are active
-      for (const item of items) {
-        const product = await storage.getProductById(item.productId);
-        if (!product) {
-          throw new NotFoundError(`Product with ID ${item.productId} not found`, "product");
+      try {
+        // Validate that the cart is not empty
+        const userCart = await storage.getCartItemsWithProducts(user.id);
+        if (!userCart || userCart.length === 0) {
+          throw new BadRequestError("Cannot create an order with an empty cart");
         }
         
-        if (!product.isActive) {
-          throw new BadRequestError(`Product "${product.name}" is no longer available`);
+        // Validate that all products in the order exist and are active
+        const unavailableProducts = [];
+        
+        for (const item of items) {
+          const product = await storage.getProductById(item.productId);
+          if (!product) {
+            throw new NotFoundError(`Product with ID ${item.productId} not found`, "product");
+          }
+          
+          if (!product.isActive) {
+            unavailableProducts.push(product.name);
+          }
         }
+        
+        if (unavailableProducts.length > 0) {
+          throw new BadRequestError(
+            `The following products are no longer available: ${unavailableProducts.join(', ')}`,
+            'productAvailability'
+          );
+        }
+        
+        // Create the order with the user ID
+        const orderData = {
+          ...order,
+          userId: user.id,
+          status: "pending" // Default status for new orders
+        };
+        
+        // Create the order (storage layer wraps this in a transaction)
+        const newOrder = await storage.createOrder(orderData, items);
+        
+        try {
+          // Clear the user's cart after successful order creation
+          await storage.clearCart(user.id);
+        } catch (cartError) {
+          // Log but don't fail the order if cart clearing fails
+          logger.error('Failed to clear cart after order creation', { 
+            error: cartError, 
+            userId: user.id,
+            orderId: newOrder.id
+          });
+        }
+        
+        // Set status code to 201 Created and return response
+        return res.status(201).json({
+          success: true,
+          data: newOrder,
+          message: `Order #${newOrder.id} created successfully. Thank you for your purchase!`
+        });
+      } catch (error) {
+        // Log detailed error information with context
+        logger.error('Error creating order', { 
+          error, 
+          userId: user.id,
+          orderDetails: {
+            total: order.total,
+            itemCount: items.length
+          }
+        });
+        
+        // Check for specific error types
+        if (error instanceof NotFoundError || error instanceof BadRequestError) {
+          throw error;
+        }
+        
+        // Handle possible payment processing errors
+        if (error instanceof Error && error.message.includes('payment')) {
+          throw new AppError(
+            "Payment processing failed. Please try again or use a different payment method.",
+            ErrorCode.PAYMENT_PROCESSING_ERROR,
+            400,
+            { originalError: error }
+          );
+        }
+        
+        // Return generic error for unexpected issues
+        throw new AppError(
+          "Failed to create your order. Please try again.",
+          ErrorCode.INTERNAL_SERVER_ERROR,
+          500,
+          { originalError: error }
+        );
       }
-      
-      // Create the order with the user ID
-      const orderData = {
-        ...order,
-        userId: user.id,
-        status: "pending" // Default status for new orders
-      };
-      
-      const newOrder = await storage.createOrder(orderData, items);
-      
-      // Clear the user's cart after successful order creation
-      await storage.clearCart(user.id);
-      
-      // Set status code to 201 Created
-      res.status(201);
-      return newOrder;
     })
   );
 
@@ -2531,12 +2754,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         offset: z.coerce.number().int().min(0).optional().default(0)
       }).optional()
     }),
-    withStandardResponse(async (req: Request, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const user = req.user as any;
       const { status, limit = 20, offset = 0 } = req.query;
       
-      const orders = await storage.getOrdersByUser(user.id, status as string | undefined);
-      return orders;
+      try {
+        // Get orders for the authenticated user
+        const orders = await storage.getOrdersByUser(
+          user.id, 
+          status as string | undefined,
+          { limit: Number(limit), offset: Number(offset) }
+        );
+        
+        return res.json({
+          success: true,
+          data: orders,
+          meta: {
+            count: orders.length,
+            status: status || 'all'
+          }
+        });
+      } catch (error) {
+        // Log detailed error information with context
+        logger.error('Error retrieving user orders', { 
+          error, 
+          userId: user.id, 
+          filters: { status, limit, offset }
+        });
+        
+        // Return generic error
+        throw new AppError(
+          "Failed to retrieve your orders. Please try again.",
+          ErrorCode.INTERNAL_SERVER_ERROR,
+          500,
+          { originalError: error }
+        );
+      }
     })
   );
 
@@ -2552,7 +2805,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         offset: z.coerce.number().int().min(0).optional().default(0)
       }).optional()
     }),
-    withStandardResponse(async (req: Request, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const user = req.user as any;
       
       // Check if user is admin
@@ -2562,13 +2815,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const { status, userId, limit = 20, offset = 0 } = req.query;
       
-      // Get all orders with optional filtering
-      const orders = await storage.getOrdersByUser(
-        userId ? Number(userId) : null, 
-        status as string | undefined
-      );
-      
-      return orders;
+      try {
+        // Get all orders with optional filtering
+        const orders = await storage.getOrdersByUser(
+          userId ? Number(userId) : null, 
+          status as string | undefined,
+          { limit: Number(limit), offset: Number(offset) }
+        );
+        
+        // Get total count for pagination
+        let totalOrderCount = 0;
+        try {
+          totalOrderCount = await storage.getOrderCount(
+            userId ? Number(userId) : null, 
+            status as string | undefined
+          );
+        } catch (countError) {
+          logger.warn('Failed to get order count', { 
+            error: countError,
+            filters: { userId, status }
+          });
+          // Don't fail the entire request just for count
+        }
+        
+        return res.json({
+          success: true,
+          data: orders,
+          meta: {
+            count: orders.length,
+            total: totalOrderCount,
+            page: Math.floor(Number(offset) / Number(limit)) + 1,
+            pages: Math.ceil(totalOrderCount / Number(limit)),
+            filters: {
+              status: status || 'all',
+              userId: userId || 'all'
+            }
+          }
+        });
+      } catch (error) {
+        // Log detailed error information with context
+        logger.error('Error retrieving admin orders', { 
+          error, 
+          adminId: user.id, 
+          filters: { status, userId, limit, offset }
+        });
+        
+        // Return generic error
+        throw new AppError(
+          "Failed to retrieve orders. Please try again.",
+          ErrorCode.INTERNAL_SERVER_ERROR,
+          500,
+          { originalError: error }
+        );
+      }
     })
   );
 
@@ -2580,21 +2879,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
         id: z.coerce.number().positive("Order ID is required")
       })
     }),
-    withStandardResponse(async (req: Request, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const { id } = req.params;
-      const order = await storage.getOrderById(Number(id));
-      
-      if (!order) {
-        throw new NotFoundError("Order not found", "order");
-      }
-      
-      // Check if the order belongs to the authenticated user or user is admin
+      const orderId = Number(id);
       const user = req.user as any;
-      if (order.userId !== user.id && user.role !== 'admin') {
-        throw new ForbiddenError("You are not authorized to view this order");
-      }
       
-      return order;
+      try {
+        // Get the order
+        const order = await storage.getOrderById(orderId);
+        
+        if (!order) {
+          throw new NotFoundError(`Order with ID ${orderId} not found`, "order");
+        }
+        
+        // Check if the order belongs to the authenticated user or user is admin
+        if (order.userId !== user.id && user.role !== 'admin') {
+          throw new ForbiddenError("You are not authorized to view this order");
+        }
+        
+        // Get order items
+        const orderItems = await storage.getOrderItems(orderId);
+        
+        return res.json({
+          success: true,
+          data: {
+            ...order,
+            items: orderItems
+          }
+        });
+      } catch (error) {
+        // Log detailed error information with context
+        logger.error('Error retrieving order by ID', { 
+          error, 
+          userId: user.id,
+          orderId
+        });
+        
+        // Check for specific error types
+        if (error instanceof NotFoundError || error instanceof ForbiddenError) {
+          throw error;
+        }
+        
+        // Return generic error for unexpected issues
+        throw new AppError(
+          "Failed to retrieve order details. Please try again.",
+          ErrorCode.INTERNAL_SERVER_ERROR,
+          500,
+          { originalError: error }
+        );
+      }
     })
   );
   
@@ -2612,29 +2945,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
       })
     }),
-    withStandardResponse(async (req: Request, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const { id } = req.params;
       const { status } = req.body;
-      
-      // Check if user is admin
+      const orderId = Number(id);
       const user = req.user as any;
-      if (user.role !== 'admin') {
-        throw new ForbiddenError("Only administrators can update order status");
-      }
       
-      // Get the order
-      const order = await storage.getOrderById(Number(id));
-      if (!order) {
-        throw new NotFoundError("Order not found", "order");
+      try {
+        // Check if user is admin
+        if (user.role !== 'admin') {
+          throw new ForbiddenError("Only administrators can update order status");
+        }
+        
+        // Get the order to verify it exists and capture previous status
+        const order = await storage.getOrderById(orderId);
+        if (!order) {
+          throw new NotFoundError(`Order with ID ${orderId} not found`, "order");
+        }
+        
+        const previousStatus = order.status;
+        
+        // Update the status
+        const updatedOrder = await storage.updateOrderStatus(orderId, status);
+        if (!updatedOrder) {
+          throw new AppError(
+            "Failed to update order status.",
+            ErrorCode.DATABASE_ERROR,
+            500
+          );
+        }
+        
+        return res.json({
+          success: true,
+          data: updatedOrder,
+          message: `Order #${orderId} status changed from "${previousStatus}" to "${status}" successfully.`
+        });
+      } catch (error) {
+        // Log detailed error information with context
+        logger.error('Error updating order status', { 
+          error, 
+          userId: user.id,
+          adminId: user.id, 
+          orderId,
+          newStatus: status
+        });
+        
+        // Check for specific error types
+        if (error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof AppError) {
+          throw error;
+        }
+        
+        // Return generic error for unexpected issues
+        throw new AppError(
+          "Failed to update the order status. Please try again.",
+          ErrorCode.INTERNAL_SERVER_ERROR,
+          500,
+          { originalError: error }
+        );
       }
-      
-      // Update the status
-      const updatedOrder = await storage.updateOrderStatus(Number(id), status);
-      if (!updatedOrder) {
-        throw new Error("Failed to update order status");
-      }
-      
-      return updatedOrder;
     })
   );
 
@@ -2647,58 +3015,111 @@ export async function registerRoutes(app: Express): Promise<Server> {
         categoryId: z.coerce.number().positive().optional()
       }).optional()
     }),
-    withStandardResponse(async (req: Request, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const { limit = 10, categoryId } = req.query;
       const limitNum = Number(limit);
       
       // Check if user is authenticated
       const user = req.isAuthenticated() ? req.user as any : null;
+      const userId = user ? user.id : null;
       
-      if (user) {
-        // Get personalized recommendations for authenticated users
-        const recommendations = await storage.getRecommendationsForUser(user.id);
+      try {
+        let products = [];
+        let reason = '';
+        let timestamp = new Date();
         
-        if (recommendations && recommendations.productIds && recommendations.productIds.length > 0) {
-          // Get product details for recommended products
-          const products = [];
-          for (const productId of recommendations.productIds) {
-            const product = await storage.getProductById(productId);
-            if (product && product.isActive) {
-              products.push(product);
+        // Try to get personalized recommendations for authenticated users
+        if (user) {
+          try {
+            const recommendations = await storage.getRecommendationsForUser(userId);
+            
+            if (recommendations?.productIds?.length > 0) {
+              // Get product details for recommended products
+              const recommendedProducts = [];
+              for (const productId of recommendations.productIds) {
+                try {
+                  const product = await storage.getProductById(productId);
+                  if (product && product.isActive) {
+                    recommendedProducts.push(product);
+                    
+                    // Limit the number of products returned
+                    if (recommendedProducts.length >= limitNum) {
+                      break;
+                    }
+                  }
+                } catch (productError) {
+                  logger.warn(`Failed to fetch recommended product ${productId}`, { 
+                    error: productError, 
+                    userId,
+                    productId
+                  });
+                  // Continue with other products even if one fails
+                }
+              }
               
-              // Limit the number of products returned
-              if (products.length >= limitNum) {
-                break;
+              // If we have recommendations, use them
+              if (recommendedProducts.length > 0) {
+                products = recommendedProducts;
+                reason = recommendations.reason || 'Based on your preferences';
+                timestamp = recommendations.createdAt || new Date();
               }
             }
-          }
-          
-          // If we have recommendations, return them
-          if (products.length > 0) {
-            return {
-              products,
-              reason: recommendations.reason,
-              timestamp: recommendations.createdAt
-            };
+          } catch (recommendationError) {
+            logger.error('Error fetching personalized recommendations', { 
+              error: recommendationError,
+              userId
+            });
+            // Continue to fallback recommendation
           }
         }
+        
+        // If personalized recommendations failed or weren't available,
+        // use featured/popular products as fallback
+        if (products.length === 0) {
+          try {
+            products = await storage.getFeaturedProducts(
+              limitNum,
+              categoryId ? Number(categoryId) : undefined
+            );
+            
+            reason = categoryId 
+              ? `Popular products in this category`
+              : "Popular products you might like";
+          } catch (featuredError) {
+            logger.error('Error fetching featured products', { 
+              error: featuredError,
+              categoryId
+            });
+            
+            // If everything failed, return an empty array but don't fail the request
+            products = [];
+            reason = 'Discover our products';
+          }
+        }
+        
+        return res.json({
+          success: true,
+          data: {
+            products,
+            reason,
+            timestamp
+          }
+        });
+      } catch (error) {
+        logger.error('Unexpected error in recommendations endpoint', { 
+          error,
+          userId,
+          query: { limit, categoryId }
+        });
+        
+        // Return generic error
+        throw new AppError(
+          "Failed to fetch product recommendations. Please try again.",
+          ErrorCode.INTERNAL_SERVER_ERROR,
+          500,
+          { originalError: error }
+        );
       }
-      
-      // For non-authenticated users, users without recommendations,
-      // or if filtering by category
-      // Return popular/featured products as a fallback
-      const products = await storage.getFeaturedProducts(
-        limitNum,
-        categoryId ? Number(categoryId) : undefined
-      );
-      
-      return {
-        products,
-        reason: categoryId 
-          ? `Popular products in this category`
-          : "Popular products you might like",
-        timestamp: new Date()
-      };
     })
   );
 
@@ -2708,25 +3129,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get(
     "/api/admin/pricing", 
     isAuthenticated, 
-    withStandardResponse(async (req: Request, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const user = req.user as any;
       
-      // Check if user is admin
-      if (user.role !== 'admin') {
-        throw new ForbiddenError("Only administrators can access pricing settings");
+      try {
+        // Check if user is admin
+        if (user.role !== 'admin') {
+          throw new ForbiddenError("Only administrators can access pricing settings");
+        }
+        
+        const pricingSettings = await storage.getAllPricingSettings();
+        
+        return res.json({
+          success: true,
+          data: pricingSettings
+        });
+      } catch (error) {
+        // Log detailed error information with context
+        logger.error('Error retrieving pricing settings', { 
+          error, 
+          userId: user.id
+        });
+        
+        // Check for specific error types
+        if (error instanceof ForbiddenError) {
+          throw error;
+        }
+        
+        // Return generic error for unexpected issues
+        throw new AppError(
+          "Failed to retrieve pricing settings. Please try again.",
+          ErrorCode.INTERNAL_SERVER_ERROR,
+          500,
+          { originalError: error }
+        );
       }
-      
-      const pricingSettings = await storage.getAllPricingSettings();
-      return pricingSettings;
     })
   );
   
   // Get default markup percentage
   app.get(
     "/api/pricing/default-markup", 
-    withStandardResponse(async (req: Request, res: Response) => {
-      const defaultMarkup = await storage.getDefaultMarkupPercentage();
-      return { markupPercentage: defaultMarkup, isSet: defaultMarkup !== null };
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const defaultMarkup = await storage.getDefaultMarkupPercentage();
+        
+        return res.json({
+          success: true,
+          data: { 
+            markupPercentage: defaultMarkup, 
+            isSet: defaultMarkup !== null 
+          }
+        });
+      } catch (error) {
+        // Log detailed error information
+        logger.error('Error retrieving default markup', { error });
+        
+        // Return generic error
+        throw new AppError(
+          "Failed to retrieve default pricing information.",
+          ErrorCode.INTERNAL_SERVER_ERROR,
+          500,
+          { originalError: error }
+        );
+      }
     })
   );
   
@@ -2738,29 +3204,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
         categoryId: z.coerce.number().positive("Category ID is required")
       })
     }),
-    withStandardResponse(async (req: Request, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const { categoryId } = req.params;
+      const categoryIdNum = Number(categoryId);
       
-      // Validate that the category exists
-      const category = await storage.getCategoryById(Number(categoryId));
-      if (!category) {
-        throw new NotFoundError("Category not found", "category");
+      try {
+        // Validate that the category exists
+        const category = await storage.getCategoryById(categoryIdNum);
+        if (!category) {
+          throw new NotFoundError(`Category with ID ${categoryIdNum} not found`, "category");
+        }
+        
+        const pricing = await storage.getPricingByCategoryId(categoryIdNum);
+        
+        let result = pricing;
+        
+        // If category-specific pricing not found, return default markup
+        if (!pricing) {
+          const defaultMarkup = await storage.getDefaultMarkupPercentage();
+          result = { 
+            categoryId: categoryIdNum,
+            markupPercentage: defaultMarkup,
+            description: defaultMarkup === null 
+              ? "No pricing rule set for this category or globally" 
+              : "Default pricing (category-specific pricing not set)",
+            id: 0,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          };
+        }
+        
+        return res.json({
+          success: true,
+          data: result
+        });
+      } catch (error) {
+        // Log detailed error information with context
+        logger.error('Error retrieving category pricing', { 
+          error, 
+          categoryId: categoryIdNum
+        });
+        
+        // Check for specific error types
+        if (error instanceof NotFoundError) {
+          throw error;
+        }
+        
+        // Return generic error for unexpected issues
+        throw new AppError(
+          "Failed to retrieve pricing information for this category.",
+          ErrorCode.INTERNAL_SERVER_ERROR,
+          500,
+          { originalError: error }
+        );
       }
-      
-      const pricing = await storage.getPricingByCategoryId(Number(categoryId));
-      
-      if (!pricing) {
-        const defaultMarkup = await storage.getDefaultMarkupPercentage();
-        return { 
-          categoryId,
-          markupPercentage: defaultMarkup,
-          description: defaultMarkup === null 
-            ? "No pricing rule set for this category or globally" 
-            : "Default pricing (category-specific pricing not set)"
-        };
-      }
-      
-      return pricing;
     })
   );
   
@@ -2775,25 +3272,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
         description: z.string().optional()
       })
     }),
-    withStandardResponse(async (req: Request, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const user = req.user as any;
       
-      // Check if user is admin
-      if (user.role !== 'admin') {
-        throw new ForbiddenError("Only administrators can manage pricing settings");
-      }
-      
-      // Check if the category exists
-      if (req.body.categoryId !== 0) { // 0 is allowed for default/global pricing
-        const category = await storage.getCategoryById(req.body.categoryId);
-        if (!category) {
-          throw new NotFoundError("Category not found", "category");
+      try {
+        // Check if user is admin
+        if (user.role !== 'admin') {
+          throw new ForbiddenError("Only administrators can manage pricing settings");
         }
+        
+        // Check if the category exists
+        if (req.body.categoryId !== 0) { // 0 is allowed for default/global pricing
+          const category = await storage.getCategoryById(req.body.categoryId);
+          if (!category) {
+            throw new NotFoundError(`Category with ID ${req.body.categoryId} not found`, "category");
+          }
+        }
+        
+        const result = await storage.createOrUpdatePricing(req.body);
+        
+        return res.status(201).json({
+          success: true,
+          data: result,
+          message: req.body.categoryId === 0 
+            ? "Default pricing updated successfully" 
+            : `Pricing for category ID ${req.body.categoryId} updated successfully`
+        });
+      } catch (error) {
+        // Log detailed error information with context
+        logger.error('Error creating/updating pricing', { 
+          error, 
+          userId: user.id,
+          pricingData: req.body
+        });
+        
+        // Check for specific error types
+        if (error instanceof NotFoundError || error instanceof ForbiddenError) {
+          throw error;
+        }
+        
+        // Return generic error for unexpected issues
+        throw new AppError(
+          "Failed to update pricing settings. Please try again.",
+          ErrorCode.INTERNAL_SERVER_ERROR,
+          500,
+          { originalError: error }
+        );
       }
-      
-      const result = await storage.createOrUpdatePricing(req.body);
-      return result;
-    }, 201)
+    })
   );
   
   // Delete pricing setting
@@ -2805,114 +3331,332 @@ export async function registerRoutes(app: Express): Promise<Server> {
         id: z.coerce.number().positive("Pricing ID is required")
       })
     }),
-    withStandardResponse(async (req: Request, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const user = req.user as any;
       const { id } = req.params;
+      const pricingId = Number(id);
       
-      // Check if user is admin
-      if (user.role !== 'admin') {
-        throw new ForbiddenError("Only administrators can delete pricing settings");
+      try {
+        // Check if user is admin
+        if (user.role !== 'admin') {
+          throw new ForbiddenError("Only administrators can delete pricing settings");
+        }
+        
+        // Check if the pricing setting exists
+        const pricing = await storage.getPricingById(pricingId);
+        if (!pricing) {
+          throw new NotFoundError(`Pricing setting with ID ${pricingId} not found`, "pricing");
+        }
+        
+        // Prevent deletion of global pricing (categoryId = 0)
+        if (pricing.categoryId === 0) {
+          throw new AppError(
+            "Global default pricing cannot be deleted. Use the update endpoint to modify it instead.",
+            ErrorCode.INVALID_OPERATION,
+            400
+          );
+        }
+        
+        await storage.deletePricing(pricingId);
+        
+        return res.json({
+          success: true,
+          message: `Pricing setting for category ID ${pricing.categoryId} deleted successfully`
+        });
+      } catch (error) {
+        // Log detailed error information with context
+        logger.error('Error deleting pricing setting', { 
+          error, 
+          userId: user.id,
+          pricingId
+        });
+        
+        // Check for specific error types
+        if (error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof AppError) {
+          throw error;
+        }
+        
+        // Return generic error for unexpected issues
+        throw new AppError(
+          "Failed to delete pricing setting. Please try again.",
+          ErrorCode.INTERNAL_SERVER_ERROR,
+          500,
+          { originalError: error }
+        );
       }
-      
-      // Check if the pricing setting exists
-      const pricing = await storage.getPricingById(Number(id));
-      if (!pricing) {
-        throw new NotFoundError("Pricing setting not found", "pricing");
-      }
-      
-      await storage.deletePricing(Number(id));
-      return { success: true };
     })
   );
 
   // SUPPLIER ROUTES
-  app.get("/api/suppliers", withStandardResponse(async (req: Request, res: Response) => {
-    // For admin users, show all suppliers regardless of active status
-    // For regular users, only show active suppliers
-    const user = req.user as any;
-    const isAdmin = user && user.role === 'admin';
-    const activeOnly = isAdmin ? false : req.query.activeOnly !== 'false';
-    
-    const suppliers = await storage.getAllSuppliers(activeOnly);
-    return suppliers;
-  }));
-
-  app.get("/api/suppliers/:id", withStandardResponse(async (req: Request, res: Response) => {
-    const id = parseInt(req.params.id);
-    const supplier = await storage.getSupplierById(id);
-    
-    if (!supplier) {
-      throw new NotFoundError("Supplier not found", "supplier");
-    }
-    
-    return supplier;
-  }));
-
-  app.post("/api/suppliers", isAuthenticated, withStandardResponse(async (req: Request, res: Response) => {
-    const user = req.user as any;
-    
-    if (user.role !== 'admin') {
-      throw new ForbiddenError("Only administrators can manage suppliers");
-    }
-    
-    const supplierData = insertSupplierSchema.parse(req.body);
-    const supplier = await storage.createSupplier(supplierData);
-    
-    return supplier;
-  }, 201));
-
-  app.put("/api/suppliers/:id", isAuthenticated, withStandardResponse(async (req: Request, res: Response) => {
-    const user = req.user as any;
-    
-    if (user.role !== 'admin') {
-      throw new ForbiddenError("Only administrators can manage suppliers");
-    }
-    
-    const id = parseInt(req.params.id);
-    const supplierData = insertSupplierSchema.partial().parse(req.body);
-    const supplier = await storage.updateSupplier(id, supplierData);
-    
-    if (!supplier) {
-      throw new NotFoundError("Supplier not found", "supplier");
-    }
-    
-    // If 'isActive' property was changed to inactive, cascade to catalogs and products
-    if (supplierData.isActive === false) {
-      // First get all catalogs for this supplier
-      const supplierCatalogs = await storage.getCatalogsBySupplierId(id, false); // Get all catalogs, not just active ones
+  app.get("/api/suppliers", asyncHandler(async (req: Request, res: Response) => {
+    try {
+      // For admin users, show all suppliers regardless of active status
+      // For regular users, only show active suppliers
+      const user = req.user as any;
+      const isAdmin = user && user.role === 'admin';
+      const activeOnly = isAdmin ? false : req.query.activeOnly !== 'false';
       
-      // Update each catalog to inactive
-      let totalProductsUpdated = 0;
-      for (const catalog of supplierCatalogs) {
-        // Update catalog to inactive
-        await storage.updateCatalog(catalog.id, { isActive: false });
-        
-        // Update all products in this catalog to inactive
-        const productsUpdated = await storage.bulkUpdateCatalogProducts(catalog.id, { isActive: false });
-        totalProductsUpdated += productsUpdated;
+      const suppliers = await storage.getAllSuppliers(activeOnly);
+      
+      return res.json({
+        success: true,
+        data: suppliers
+      });
+    } catch (error) {
+      // Log detailed error information
+      logger.error('Error retrieving suppliers', { 
+        error,
+        query: req.query
+      });
+      
+      // Return generic error
+      throw new AppError(
+        "Failed to retrieve suppliers. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
+    }
+  }));
+
+  app.get("/api/suppliers/:id", asyncHandler(async (req: Request, res: Response) => {
+    const id = parseInt(req.params.id);
+    
+    try {
+      const supplier = await storage.getSupplierById(id);
+      
+      if (!supplier) {
+        throw new NotFoundError(`Supplier with ID ${id} not found`, "supplier");
       }
       
-      console.log(`Supplier ${id} marked inactive: updated ${supplierCatalogs.length} catalogs and ${totalProductsUpdated} products to inactive`);
+      return res.json({
+        success: true,
+        data: supplier
+      });
+    } catch (error) {
+      // Log detailed error information with context
+      logger.error('Error retrieving supplier by ID', { 
+        error,
+        supplierId: id
+      });
+      
+      // Check for specific error types
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
+      
+      // Return generic error for unexpected issues
+      throw new AppError(
+        "Failed to retrieve supplier details. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
     }
-    
-    return supplier;
   }));
 
-  app.delete("/api/suppliers/:id", isAuthenticated, withStandardResponse(async (req: Request, res: Response) => {
+  app.post("/api/suppliers", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
     const user = req.user as any;
     
-    if (user.role !== 'admin') {
-      throw new ForbiddenError("Only administrators can manage suppliers");
+    try {
+      if (user.role !== 'admin') {
+        throw new ForbiddenError("Only administrators can manage suppliers");
+      }
+      
+      const supplierData = insertSupplierSchema.parse(req.body);
+      
+      // Check if supplier with same name already exists
+      const existingSupplier = await storage.getSupplierByName(supplierData.name);
+      if (existingSupplier) {
+        throw new AppError(
+          `A supplier with the name "${supplierData.name}" already exists`,
+          ErrorCode.DUPLICATE_ENTITY,
+          409
+        );
+      }
+      
+      const supplier = await storage.createSupplier(supplierData);
+      
+      return res.status(201).json({
+        success: true,
+        data: supplier,
+        message: `Supplier "${supplier.name}" created successfully`
+      });
+    } catch (error) {
+      // Log detailed error information with context
+      logger.error('Error creating supplier', { 
+        error,
+        userId: user.id,
+        supplierData: req.body
+      });
+      
+      // Check for specific error types
+      if (error instanceof ForbiddenError || error instanceof AppError || error instanceof z.ZodError) {
+        throw error;
+      }
+      
+      // Return generic error for unexpected issues
+      throw new AppError(
+        "Failed to create supplier. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
     }
-    
+  }));
+
+  app.put("/api/suppliers/:id", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
+    const user = req.user as any;
     const id = parseInt(req.params.id);
-    const success = await storage.deleteSupplier(id);
     
-    if (!success) {
-      throw new NotFoundError("Supplier not found", "supplier");
+    try {
+      if (user.role !== 'admin') {
+        throw new ForbiddenError("Only administrators can manage suppliers");
+      }
+      
+      // Validate request body
+      const supplierData = insertSupplierSchema.partial().parse(req.body);
+      
+      // Check if supplier exists
+      const existingSupplier = await storage.getSupplierById(id);
+      if (!existingSupplier) {
+        throw new NotFoundError(`Supplier with ID ${id} not found`, "supplier");
+      }
+      
+      // If changing the name, check for duplicates
+      if (supplierData.name && supplierData.name !== existingSupplier.name) {
+        const duplicateSupplier = await storage.getSupplierByName(supplierData.name);
+        if (duplicateSupplier && duplicateSupplier.id !== id) {
+          throw new AppError(
+            `A supplier with the name "${supplierData.name}" already exists`,
+            ErrorCode.DUPLICATE_ENTITY,
+            409
+          );
+        }
+      }
+      
+      // Update the supplier
+      const supplier = await storage.updateSupplier(id, supplierData);
+      
+      // If 'isActive' property was changed to inactive, cascade to catalogs and products
+      if (supplierData.isActive === false) {
+        try {
+          // First get all catalogs for this supplier
+          const supplierCatalogs = await storage.getCatalogsBySupplierId(id, false); // Get all catalogs, not just active ones
+          
+          // Update each catalog to inactive
+          let totalProductsUpdated = 0;
+          for (const catalog of supplierCatalogs) {
+            // Update catalog to inactive
+            await storage.updateCatalog(catalog.id, { isActive: false });
+            
+            // Update all products in this catalog to inactive
+            const productsUpdated = await storage.bulkUpdateCatalogProducts(catalog.id, { isActive: false });
+            totalProductsUpdated += productsUpdated;
+          }
+          
+          logger.info(`Supplier ${id} marked inactive: cascaded updates`, { 
+            catalogs: supplierCatalogs.length, 
+            products: totalProductsUpdated 
+          });
+        } catch (cascadeError) {
+          // Log cascade error but don't fail the main operation
+          logger.warn('Error during cascade deactivation of supplier assets', { 
+            error: cascadeError, 
+            supplierId: id
+          });
+        }
+      }
+      
+      return res.json({
+        success: true,
+        data: supplier,
+        message: `Supplier "${supplier.name}" updated successfully`
+      });
+    } catch (error) {
+      // Log detailed error information with context
+      logger.error('Error updating supplier', { 
+        error,
+        userId: user.id,
+        supplierId: id,
+        supplierData: req.body
+      });
+      
+      // Check for specific error types
+      if (error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof AppError || error instanceof z.ZodError) {
+        throw error;
+      }
+      
+      // Return generic error for unexpected issues
+      throw new AppError(
+        "Failed to update supplier. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
     }
+  }));
+
+  app.delete("/api/suppliers/:id", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    const id = parseInt(req.params.id);
     
-    return { message: "Supplier deleted successfully" };
+    try {
+      if (user.role !== 'admin') {
+        throw new ForbiddenError("Only administrators can manage suppliers");
+      }
+      
+      // Check if supplier exists
+      const supplier = await storage.getSupplierById(id);
+      if (!supplier) {
+        throw new NotFoundError(`Supplier with ID ${id} not found`, "supplier");
+      }
+      
+      // Check if supplier has associated catalogs
+      const supplierCatalogs = await storage.getCatalogsBySupplierId(id, false);
+      if (supplierCatalogs.length > 0) {
+        throw new AppError(
+          `Cannot delete supplier "${supplier.name}" because it has ${supplierCatalogs.length} catalogs associated with it. Deactivate the supplier instead.`,
+          ErrorCode.DEPENDENT_ENTITIES_EXIST,
+          409
+        );
+      }
+      
+      const success = await storage.deleteSupplier(id);
+      
+      if (!success) {
+        throw new AppError(
+          "Failed to delete supplier due to a database error.",
+          ErrorCode.DATABASE_ERROR,
+          500
+        );
+      }
+      
+      return res.json({
+        success: true,
+        message: `Supplier "${supplier.name}" deleted successfully`
+      });
+    } catch (error) {
+      // Log detailed error information with context
+      logger.error('Error deleting supplier', { 
+        error,
+        userId: user.id,
+        supplierId: id
+      });
+      
+      // Check for specific error types
+      if (error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof AppError) {
+        throw error;
+      }
+      
+      // Return generic error for unexpected issues
+      throw new AppError(
+        "Failed to delete supplier. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
+    }
   }));
 
   // CATALOG ROUTES
