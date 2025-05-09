@@ -317,7 +317,7 @@ export function registerApiTestRoutes(app: Express): void {
       logger.info('Running API response validation tests');
       
       // Create a base URL for internal requests
-      const baseURL = `http://localhost:${process.env.PORT || 3000}`;
+      const baseURL = `http://localhost:5000`;
       const cookies = req.headers.cookie;
       const headers: Record<string, string> = {};
       
@@ -482,7 +482,7 @@ export function registerApiTestRoutes(app: Express): void {
       logger.info('Running API authentication and authorization tests');
       
       // Create a base URL for internal requests
-      const baseURL = `http://localhost:${process.env.PORT || 3000}`;
+      const baseURL = `http://localhost:5000`;
       
       // Define authentication tests
       const authTests = [
@@ -687,7 +687,7 @@ export function registerApiTestRoutes(app: Express): void {
       logger.info('Running API error handling tests');
       
       // Create a base URL for internal requests
-      const baseURL = `http://localhost:${process.env.PORT || 3000}`;
+      const baseURL = `http://localhost:5000`;
       const cookies = req.headers.cookie;
       const headers: Record<string, string> = {};
       
@@ -847,7 +847,7 @@ export function registerApiTestRoutes(app: Express): void {
       logger.info('Running API performance tests');
       
       // Create a base URL for internal requests
-      const baseURL = `http://localhost:${process.env.PORT || 3000}`;
+      const baseURL = `http://localhost:5000`;
       const cookies = req.headers.cookie;
       const headers: Record<string, string> = {};
       
