@@ -43,6 +43,10 @@ import ProductImages from "@/pages/admin/product-images";
 import BatchUpload from "@/pages/admin/batch-upload";
 import AuthTestDashboard from "@/pages/admin/auth-test-dashboard";
 
+// Developer Pages
+import DeveloperDashboard from "@/pages/developer";
+import { DeveloperProtectedRoute } from "@/lib/developer-protected-route";
+
 // Admin-specific protected route
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -129,6 +133,19 @@ function App() {
               <AdminProtectedRoute path="/admin/ai-settings" component={AdminAISettings} />
               <AdminProtectedRoute path="/admin/batch-upload" component={BatchUpload} />
               <AdminProtectedRoute path="/admin/auth-test" component={AuthTestDashboard} />
+              
+              {/* Developer Routes - No header/footer */}
+              <DeveloperProtectedRoute path="/developer" component={DeveloperDashboard} />
+              <DeveloperProtectedRoute path="/developer/auth-tests" component={DeveloperDashboard} />
+              <DeveloperProtectedRoute path="/developer/database-tests" component={DeveloperDashboard} />
+              <DeveloperProtectedRoute path="/developer/ai-tests" component={DeveloperDashboard} />
+              <DeveloperProtectedRoute path="/developer/storage-tests" component={DeveloperDashboard} />
+              <DeveloperProtectedRoute path="/developer/api-tests" component={DeveloperDashboard} />
+              <DeveloperProtectedRoute path="/developer/ecommerce-tests" component={DeveloperDashboard} />
+              <DeveloperProtectedRoute path="/developer/attribute-tests" component={DeveloperDashboard} />
+              <DeveloperProtectedRoute path="/developer/ui-tests" component={DeveloperDashboard} />
+              <DeveloperProtectedRoute path="/developer/performance-tests" component={DeveloperDashboard} />
+              <DeveloperProtectedRoute path="/developer/debug-console" component={DeveloperDashboard} />
               
               {/* Regular Routes - With header/footer */}
               <Route path="*">
