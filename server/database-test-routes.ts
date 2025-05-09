@@ -254,15 +254,36 @@ export function registerDatabaseTestRoutes(app: Express): void {
       logger.debug('Expected tables from schema:', { expectedTables });
       
       // Extract actual table names from the pgTable definitions
+      // Use a safer approach to extract table names from complex objects
       const expectedTableNames = expectedTables.map(tableKey => {
         const table = (schema as any)[tableKey];
-        return table.name; // Get the actual table name from the schema definition
+        
+        // Direct name property approach
+        if (table && typeof table === 'object' && 'name' in table && typeof table.name === 'string') {
+          return table.name;
+        }
+        
+        // Special case for tables using $ prefix convention
+        if (table && typeof table === 'object' && '$table' in table && 
+            typeof table.$table === 'object' && table.$table && 
+            'name' in table.$table && typeof table.$table.name === 'string') {
+          return table.$table.name;
+        }
+        
+        // Fallback to using the key name itself (converted to snake_case)
+        return tableKey.replace(/([A-Z])/g, '_$1').toLowerCase();
       });
       
-      // To avoid circular reference errors when logging, extract only the string values
-      logger.debug('Expected table names:', { 
-        expectedTableNames: expectedTableNames.map(name => String(name)) 
+      // Enhanced logging for debugging
+      logger.debug('Table name extraction results:', {
+        count: expectedTableNames.length,
+        sampleValues: expectedTableNames.slice(0, 5)
       });
+      
+      // To avoid circular reference errors when logging, log only a few samples
+      logger.debug('First few expected table names for verification:', 
+        expectedTableNames.slice(0, 5).map(name => String(name))
+      );
       
       // Compare actual tables with expected tables
       const missingTables = expectedTableNames.filter(table => !tables.includes(table));
@@ -293,10 +314,31 @@ export function registerDatabaseTestRoutes(app: Express): void {
             client.release();
           }
           
-          // Find the schema key for this table
+          // Find the schema key for this table using a more robust approach
           const schemaKey = expectedTables.find(key => {
             const table = (schema as any)[key];
-            return table && table.name === tableName;
+            
+            // Check direct table.name property first
+            if (table && typeof table === 'object' && 'name' in table && 
+                typeof table.name === 'string' && table.name === tableName) {
+              return true;
+            }
+            
+            // Check table.$table.name if exists
+            if (table && typeof table === 'object' && '$table' in table && 
+                typeof table.$table === 'object' && table.$table && 
+                'name' in table.$table && typeof table.$table.name === 'string' && 
+                table.$table.name === tableName) {
+              return true;
+            }
+            
+            // Compare snake_case version of key with tableName
+            const keyToTableName = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+            if (keyToTableName === tableName) {
+              return true;
+            }
+            
+            return false;
           });
           
           // Get expected columns from our Drizzle schema
@@ -311,19 +353,84 @@ export function registerDatabaseTestRoutes(app: Express): void {
             };
           }
           
-          const expectedColumns = Object.keys(tableSchema).filter(key => 
-            typeof tableSchema[key] === 'object' && !key.startsWith('$')
-          );
+          // Extract column information using a more robust approach
+          const columnMap: Record<string, string> = {};
           
-          const missingColumns = expectedColumns.filter(col => 
-            !actualColumns.some(actualCol => actualCol.column_name === tableSchema[col].name)
-          );
+          // First get the column names using various strategies
+          const expectedColumns: string[] = [];
           
-          const extraColumns = actualColumns.filter(col => 
-            !expectedColumns.some(expectedCol => 
-              tableSchema[expectedCol].name === col.column_name
-            )
-          ).map(col => col.column_name);
+          // Strategy 1: Direct properties that are objects with a name
+          Object.keys(tableSchema).forEach(key => {
+            // Skip special properties
+            if (key.startsWith('$') || 
+                ['relations', 'relationName', '_', 'schema'].includes(key)) {
+              return;
+            }
+            
+            const column = tableSchema[key];
+            
+            // Most common case: column object with name property
+            if (typeof column === 'object' && column !== null && 'name' in column) {
+              const colName = column.name;
+              if (typeof colName === 'string') {
+                expectedColumns.push(key); 
+                columnMap[key] = colName;
+              }
+            }
+          });
+          
+          // Strategy 2: Handle special case for $columns property (used in some Drizzle versions)
+          if (tableSchema.$columns && typeof tableSchema.$columns === 'object') {
+            Object.keys(tableSchema.$columns).forEach(key => {
+              // Skip if already added
+              if (expectedColumns.includes(key)) return;
+              
+              const column = tableSchema.$columns[key];
+              
+              if (typeof column === 'object' && column !== null && 'name' in column) {
+                const colName = column.name;
+                if (typeof colName === 'string') {
+                  expectedColumns.push(key);
+                  columnMap[key] = colName;
+                }
+              }
+            });
+          }
+          
+          // Strategy 3: Check columns property too (another Drizzle pattern)
+          if (tableSchema.columns && typeof tableSchema.columns === 'object') {
+            Object.keys(tableSchema.columns).forEach(key => {
+              // Skip if already added
+              if (expectedColumns.includes(key)) return;
+              
+              const column = tableSchema.columns[key];
+              
+              if (typeof column === 'object' && column !== null && 'name' in column) {
+                const colName = column.name;
+                if (typeof colName === 'string') {
+                  expectedColumns.push(key);
+                  columnMap[key] = colName;
+                }
+              }
+            });
+          }
+          
+          logger.debug(`Table ${tableName}: Found ${expectedColumns.length} columns in schema`, {
+            tableName,
+            columnMap
+          });
+          
+          // Compare expected and actual columns
+          const missingColumns = expectedColumns.filter(col => {
+            const colName = columnMap[col]; // Get the DB column name
+            return !actualColumns.some(actualCol => actualCol.column_name === colName);
+          });
+          
+          const extraColumns = actualColumns.filter(col => {
+            const colName = col.column_name;
+            // Check if this actual column exists in our expected columns
+            return !Object.values(columnMap).some(expectedColName => expectedColName === colName);
+          }).map(col => col.column_name);
           
           return {
             tableName,
