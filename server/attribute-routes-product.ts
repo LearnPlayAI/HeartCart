@@ -26,17 +26,30 @@ import {
  * Register all category and product attribute-related routes
  */
 export default function registerProductAttributeRoutes(app: Express) {
-  const handleErrors = (fn: Function) => async (req: Request, res: Response) => {
+  // Use asyncHandler instead of custom handleErrors function
+  const handleErrors = (fn: Function) => asyncHandler(async (req: Request, res: Response) => {
     try {
       await fn(req, res);
     } catch (error) {
       if (error instanceof ZodError) {
-        return sendError(res, "Validation error", 400, "VALIDATION_ERROR", error.errors);
+        throw new ValidationError("Validation error", error.errors.map(err => ({
+          field: err.path.join('.'),
+          message: err.message
+        })));
       }
-      console.error("Error in product attribute route:", error);
-      return sendError(res, "Internal server error", 500, "SERVER_ERROR");
+      
+      // Log error with context information
+      logger.error("Error in product attribute route:", {
+        error,
+        path: req.path,
+        method: req.method,
+        userId: req.user?.id,
+      });
+      
+      // Rethrow error for the global error handler
+      throw error;
     }
-  };
+  });
 
   // New endpoint to get filterable attributes for product listings
   app.get("/api/categories/:categoryId/filterable-attributes", 
