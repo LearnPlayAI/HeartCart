@@ -431,7 +431,7 @@ export async function generateProductTags(
           ]);
         
         const textResponse = await textOnlyResult.response;
-        const responseText = textResponse.text();
+        const responseText = await textResponse.text();
         
         // Parse comma-separated tags
         const tags = responseText
