@@ -864,6 +864,9 @@ export async function analyzeProductImage(imageBase64: string, productName: stri
   suggestedPrice?: number;
   marketResearch?: string;
 }> {
+  // Define responseTextOuter at the function scope level so it's accessible in all catch blocks
+  let responseTextOuter = "";
+  
   try {
     // Validate inputs
     if (!imageBase64) {
