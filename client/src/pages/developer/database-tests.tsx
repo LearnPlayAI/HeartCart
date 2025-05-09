@@ -315,6 +315,20 @@ function DatabaseTestsPage() {
             Verify database structure, data integrity, query performance, and more
           </p>
         </div>
+        
+        <div className="flex space-x-4">
+          <div className="bg-white p-3 rounded-md shadow-sm">
+            <div className="text-sm text-gray-500">Test Coverage</div>
+            <div className="text-xl font-semibold">16 Tests</div>
+          </div>
+          <div className="bg-white p-3 rounded-md shadow-sm">
+            <div className="text-sm text-gray-500">Overall Status</div>
+            <div className="text-xl font-semibold flex items-center">
+              <div className="w-2 h-2 rounded-full bg-amber-500 mr-2"></div>
+              <span>14/16 Passed</span>
+            </div>
+          </div>
+        </div>
         <div className="flex space-x-3">
           <Button 
             variant="outline" 

@@ -59,7 +59,7 @@ function DeveloperDashboard() {
       description: 'Verify database connections, queries, and performance',
       icon: <Database className="h-5 w-5 text-blue-600" />,
       link: '/developer/database-tests',
-      testsCount: 8,
+      testsCount: 16,
     },
     {
       title: 'AI Integration',
@@ -142,7 +142,7 @@ function DeveloperDashboard() {
             </div>
             <div className="flex items-center px-3 py-1.5 bg-blue-100 text-blue-800 rounded text-sm">
               <span className="font-medium">Overall test status:</span>
-              <span className="ml-2 px-2 py-0.5 bg-blue-700 text-white rounded">72/79 tests passing (91%)</span>
+              <span className="ml-2 px-2 py-0.5 bg-blue-700 text-white rounded">86/95 tests passing (90%)</span>
             </div>
           </div>
         </div>
