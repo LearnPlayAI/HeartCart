@@ -4723,10 +4723,27 @@ export class DatabaseStorage implements IStorage {
    */
   async getUserCount(): Promise<number> {
     try {
+      logger.info('Attempting to count users');
       const result = await db.select({ count: sql<number>`count(*)` }).from(users);
-      return result[0]?.count || 0;
+      const count = result[0]?.count;
+      logger.info('User count retrieved successfully', { count });
+      
+      // Explicitly check if the count is a number to ensure proper type handling
+      if (typeof count !== 'number') {
+        logger.error('User count is not a number', { 
+          count, 
+          type: typeof count, 
+          resultObject: JSON.stringify(result) 
+        });
+        return 0;
+      }
+      
+      return count;
     } catch (error) {
-      logger.error('Error counting users', { error });
+      logger.error('Error counting users', { 
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      });
       return 0;
     }
   }
