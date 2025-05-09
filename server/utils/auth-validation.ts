@@ -1,155 +1,196 @@
 /**
  * Authentication Validation Utilities
  * 
- * This module provides utilities for validating authentication-related data
- * such as passwords, usernames, and other credentials.
+ * This module provides centralized utilities for validating authentication credentials,
+ * password strength, and user access throughout the application.
  */
 
+import { z } from "zod";
 import { logger } from "../logger";
 
+// Minimum requirements for password security
+const MIN_PASSWORD_LENGTH = 8;
+const REQUIRES_UPPERCASE = true;
+const REQUIRES_LOWERCASE = true;
+const REQUIRES_NUMBER = true;
+const REQUIRES_SPECIAL = true;
+
 /**
- * Validates password against security requirements
+ * Validate if credentials are non-empty and properly formatted
+ * @param username - The username or email to validate
  * @param password - The password to validate
- * @returns True if the password meets all requirements, false otherwise
+ * @returns Object containing validation result and any error message
+ */
+export function validateCredentialFields(username: string, password: string): { 
+  valid: boolean; 
+  error?: string; 
+} {
+  // Check for empty or whitespace-only values
+  if (!username || username.trim() === '') {
+    return {
+      valid: false,
+      error: "Username/email is required"
+    };
+  }
+  
+  if (!password || password.trim() === '') {
+    return {
+      valid: false,
+      error: "Password is required"
+    };
+  }
+  
+  // Email format validation
+  if (username.includes('@')) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(username)) {
+      return {
+        valid: false,
+        error: "Invalid email format"
+      };
+    }
+  }
+  
+  return { valid: true };
+}
+
+/**
+ * Validate password strength according to security requirements
+ * @param password - The password to validate
+ * @returns Boolean indicating if password meets requirements
  */
 export function validatePassword(password: string): boolean {
-  try {
-    if (!password) {
-      return false;
-    }
-
-    // Minimum length requirement (8 characters)
-    if (password.length < 8) {
-      return false;
-    }
-
-    // Must contain at least one uppercase letter
-    if (!/[A-Z]/.test(password)) {
-      return false;
-    }
-
-    // Must contain at least one lowercase letter
-    if (!/[a-z]/.test(password)) {
-      return false;
-    }
-
-    // Must contain at least one digit
-    if (!/\d/.test(password)) {
-      return false;
-    }
-
-    // Must contain at least one special character
-    if (!/[^A-Za-z0-9]/.test(password)) {
-      return false;
-    }
-
-    return true;
-  } catch (error) {
-    logger.error('Error validating password format', { error });
+  if (!password || password.length < MIN_PASSWORD_LENGTH) {
     return false;
   }
+  
+  // Check for required character types
+  const hasUppercase = REQUIRES_UPPERCASE ? /[A-Z]/.test(password) : true;
+  const hasLowercase = REQUIRES_LOWERCASE ? /[a-z]/.test(password) : true;
+  const hasNumber = REQUIRES_NUMBER ? /[0-9]/.test(password) : true;
+  const hasSpecial = REQUIRES_SPECIAL ? /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password) : true;
+  
+  return hasUppercase && hasLowercase && hasNumber && hasSpecial;
 }
 
 /**
- * Validates email format
- * @param email - The email to validate
- * @returns True if the email format is valid, false otherwise
+ * Get detailed password validation results with specific feedback
+ * @param password - The password to validate
+ * @returns Object with validation results and specific feedback
  */
-export function validateEmail(email: string): boolean {
-  try {
-    if (!email) {
-      return false;
-    }
-    
-    // Basic email validation regex
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return false;
-    }
-    
-    return true;
-  } catch (error) {
-    logger.error('Error validating email format', { error });
-    return false;
-  }
+export function getPasswordValidationDetails(password: string): {
+  valid: boolean;
+  length: boolean;
+  uppercase: boolean;
+  lowercase: boolean;
+  number: boolean;
+  special: boolean;
+  feedback: string[];
+} {
+  const length = password?.length >= MIN_PASSWORD_LENGTH;
+  const uppercase = REQUIRES_UPPERCASE ? /[A-Z]/.test(password || '') : true;
+  const lowercase = REQUIRES_LOWERCASE ? /[a-z]/.test(password || '') : true;
+  const number = REQUIRES_NUMBER ? /[0-9]/.test(password || '') : true;
+  const special = REQUIRES_SPECIAL ? /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password || '') : true;
+  
+  const valid = length && uppercase && lowercase && number && special;
+  
+  const feedback = [];
+  if (!length) feedback.push(`Password must be at least ${MIN_PASSWORD_LENGTH} characters`);
+  if (!uppercase && REQUIRES_UPPERCASE) feedback.push('Password must include at least one uppercase letter');
+  if (!lowercase && REQUIRES_LOWERCASE) feedback.push('Password must include at least one lowercase letter');
+  if (!number && REQUIRES_NUMBER) feedback.push('Password must include at least one number');
+  if (!special && REQUIRES_SPECIAL) feedback.push('Password must include at least one special character');
+  
+  return {
+    valid,
+    length,
+    uppercase,
+    lowercase,
+    number,
+    special,
+    feedback
+  };
 }
 
 /**
- * Validates username format
- * @param username - The username to validate
- * @returns True if the username format is valid, false otherwise
+ * Schema for login credentials validation using Zod
  */
-export function validateUsername(username: string): boolean {
-  try {
-    if (!username) {
-      return false;
-    }
-    
-    // Username must be between 3 and 20 characters
-    if (username.length < 3 || username.length > 20) {
-      return false;
-    }
-    
-    // Only allow alphanumeric characters, underscore, and hyphen
-    if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
-      return false;
-    }
-    
-    return true;
-  } catch (error) {
-    logger.error('Error validating username format', { error });
-    return false;
-  }
-}
+export const loginSchema = z.object({
+  email: z.string().trim().min(1, "Email is required").email("Invalid email format"),
+  password: z.string().min(1, "Password is required")
+});
 
 /**
- * Validates phone number format
- * @param phoneNumber - The phone number to validate
- * @returns True if the phone number format is valid, false otherwise
+ * Schema for user registration with comprehensive validation
  */
-export function validatePhoneNumber(phoneNumber: string): boolean {
-  try {
-    if (!phoneNumber) {
-      return true; // Phone number is optional
-    }
-    
-    // Allow only digits, spaces, parentheses, plus sign, and hyphens
-    if (!/^[0-9\s()+\-]+$/.test(phoneNumber)) {
-      return false;
-    }
-    
-    // Minimum digits requirement (at least 7 digits)
-    const digitsOnly = phoneNumber.replace(/\D/g, '');
-    if (digitsOnly.length < 7) {
-      return false;
-    }
-    
-    return true;
-  } catch (error) {
-    logger.error('Error validating phone number format', { error });
-    return false;
-  }
-}
+export const registrationSchema = z.object({
+  username: z.string().trim().min(3, "Username must be at least 3 characters").max(20, "Username must be at most 20 characters")
+    .regex(/^[a-zA-Z0-9_]+$/, "Username can only contain letters, numbers, and underscores"),
+  email: z.string().trim().min(1, "Email is required").email("Invalid email format"),
+  password: z.string().min(MIN_PASSWORD_LENGTH, `Password must be at least ${MIN_PASSWORD_LENGTH} characters`)
+    .refine(password => REQUIRES_UPPERCASE ? /[A-Z]/.test(password) : true, {
+      message: "Password must include at least one uppercase letter"
+    })
+    .refine(password => REQUIRES_LOWERCASE ? /[a-z]/.test(password) : true, {
+      message: "Password must include at least one lowercase letter"
+    })
+    .refine(password => REQUIRES_NUMBER ? /[0-9]/.test(password) : true, {
+      message: "Password must include at least one number"
+    })
+    .refine(password => REQUIRES_SPECIAL ? /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password) : true, {
+      message: "Password must include at least one special character"
+    }),
+  confirmPassword: z.string().min(1, "Confirm password is required"),
+  fullName: z.string().optional(),
+  acceptTerms: z.boolean().refine(val => val === true, {
+    message: "You must accept the terms and conditions"
+  })
+}).refine(data => data.password === data.confirmPassword, {
+  message: "Passwords do not match",
+  path: ["confirmPassword"]
+});
 
 /**
- * Validates postal code format
- * @param postalCode - The postal code to validate
- * @returns True if the postal code format is valid, false otherwise
+ * Schema for password reset requests
  */
-export function validatePostalCode(postalCode: string): boolean {
-  try {
-    if (!postalCode) {
-      return true; // Postal code is optional
-    }
-    
-    // Basic South African postal code validation (4 digits)
-    if (!/^\d{4}$/.test(postalCode)) {
-      return false;
-    }
-    
-    return true;
-  } catch (error) {
-    logger.error('Error validating postal code format', { error });
-    return false;
+export const passwordResetRequestSchema = z.object({
+  email: z.string().trim().min(1, "Email is required").email("Invalid email format")
+});
+
+/**
+ * Schema for password reset confirmation
+ */
+export const passwordResetSchema = z.object({
+  resetToken: z.string().min(1, "Reset token is required"),
+  password: z.string().min(MIN_PASSWORD_LENGTH, `Password must be at least ${MIN_PASSWORD_LENGTH} characters`)
+    .refine(password => REQUIRES_UPPERCASE ? /[A-Z]/.test(password) : true, {
+      message: "Password must include at least one uppercase letter"
+    })
+    .refine(password => REQUIRES_LOWERCASE ? /[a-z]/.test(password) : true, {
+      message: "Password must include at least one lowercase letter"
+    })
+    .refine(password => REQUIRES_NUMBER ? /[0-9]/.test(password) : true, {
+      message: "Password must include at least one number"
+    })
+    .refine(password => REQUIRES_SPECIAL ? /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password) : true, {
+      message: "Password must include at least one special character"
+    }),
+  confirmPassword: z.string().min(1, "Confirm password is required")
+}).refine(data => data.password === data.confirmPassword, {
+  message: "Passwords do not match",
+  path: ["confirmPassword"]
+});
+
+/**
+ * Log authentication attempts for security monitoring
+ */
+export function logAuthAttempt(eventType: 'login' | 'register' | 'password-reset' | 'logout', 
+                              success: boolean, 
+                              context: Record<string, any>): void {
+  if (success) {
+    logger.info(`Authentication event: ${eventType} successful`, context);
+  } else {
+    logger.warn(`Authentication event: ${eventType} failed`, context);
   }
 }
