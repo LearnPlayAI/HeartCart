@@ -1,8 +1,17 @@
 import { Express, Request, Response } from "express";
-import { ZodError } from "zod";
+import { z, ZodError } from "zod";
 import { storage } from "./storage";
 import { isAdmin } from "./auth-middleware";
 import { sendSuccess, sendError } from "./api-response";
+import { logger } from "./logger";
+import { 
+  AppError, 
+  ErrorCode, 
+  NotFoundError,
+  ForbiddenError,
+  asyncHandler
+} from "./error-handler";
+import { validateRequest } from "./validation-middleware";
 import {
   insertCategoryAttributeSchema,
   insertCategoryAttributeOptionSchema,
@@ -192,46 +201,183 @@ export default function registerProductAttributeRoutes(app: Express) {
   }));
 
   // Product Attribute Routes
-  app.get("/api/products/:productId/attributes", handleErrors(async (req: Request, res: Response) => {
-    const productId = parseInt(req.params.productId);
-    if (isNaN(productId)) {
-      return sendError(res, "Invalid product ID", 400, "INVALID_ID");
-    }
+  app.get("/api/products/:productId/attributes", 
+    validateRequest({ 
+      params: z.object({ 
+        productId: z.string().refine(val => !isNaN(parseInt(val)), { message: "Product ID must be a number" }) 
+      })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const productId = parseInt(req.params.productId);
+        
+        // Verify that the product exists
+        const product = await storage.getProductById(productId);
+        if (!product) {
+          throw new NotFoundError(`Product with ID ${productId} not found`, 'product');
+        }
+        
+        const attributes = await storage.getProductAttributes(productId);
+        
+        logger.debug(`Retrieved ${attributes.length} attributes for product ID ${productId}`);
+        
+        sendSuccess(res, attributes);
+      } catch (error) {
+        logger.error('Error fetching product attributes:', { 
+          error, 
+          productId: req.params.productId,
+          userId: req.user?.id
+        });
+        throw error;
+      }
+    })
+  );
 
-    const attributes = await storage.getProductAttributes(productId);
-    sendSuccess(res, attributes);
-  }));
+  app.post("/api/products/:productId/attributes", 
+    isAdmin, 
+    validateRequest({ 
+      params: z.object({ 
+        productId: z.string().refine(val => !isNaN(parseInt(val)), { message: "Product ID must be a number" }) 
+      }),
+      body: insertProductAttributeSchema.omit({ productId: true })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const productId = parseInt(req.params.productId);
+        
+        // Verify that the product exists
+        const product = await storage.getProductById(productId);
+        if (!product) {
+          throw new NotFoundError(`Product with ID ${productId} not found`, 'product');
+        }
+        
+        // Verify that the attribute exists if attributeId is provided
+        if (req.body.attributeId) {
+          const attribute = await storage.getAttributeById(req.body.attributeId);
+          if (!attribute) {
+            throw new NotFoundError(`Attribute with ID ${req.body.attributeId} not found`, 'attribute');
+          }
+        }
+        
+        // Check if this attribute is already associated with the product
+        if (req.body.attributeId) {
+          const existingAttributes = await storage.getProductAttributes(productId);
+          const alreadyExists = existingAttributes.some(attr => attr.attributeId === req.body.attributeId);
+          
+          if (alreadyExists) {
+            throw new AppError(
+              `Attribute with ID ${req.body.attributeId} is already associated with product ${productId}`,
+              ErrorCode.DUPLICATE_ENTITY,
+              409
+            );
+          }
+        }
+        
+        const attributeData = {
+          ...req.body,
+          productId
+        };
+        
+        const newAttribute = await storage.createProductAttribute(attributeData);
+        
+        logger.info(`Product attribute created`, {
+          productId,
+          attributeId: req.body.attributeId,
+          productAttributeId: newAttribute.id,
+          userId: req.user?.id
+        });
+        
+        sendSuccess(res, newAttribute, 201);
+      } catch (error) {
+        logger.error('Error creating product attribute:', { 
+          error, 
+          productId: req.params.productId,
+          attributeData: req.body,
+          userId: req.user?.id 
+        });
+        throw error;
+      }
+    })
+  );
 
-  app.post("/api/products/:productId/attributes", isAdmin, handleErrors(async (req: Request, res: Response) => {
-    const productId = parseInt(req.params.productId);
-    if (isNaN(productId)) {
-      return sendError(res, "Invalid product ID", 400, "INVALID_ID");
-    }
-
-    const attributeData = insertProductAttributeSchema.parse({
-      ...req.body,
-      productId
-    });
-    
-    const newAttribute = await storage.createProductAttribute(attributeData);
-    sendSuccess(res, newAttribute, 201);
-  }));
-
-  app.put("/api/products/:productId/attributes/:id", isAdmin, handleErrors(async (req: Request, res: Response) => {
-    const id = parseInt(req.params.id);
-    if (isNaN(id)) {
-      return sendError(res, "Invalid attribute ID", 400, "INVALID_ID");
-    }
-
-    const attributeData = insertProductAttributeSchema.partial().parse(req.body);
-    const updatedAttribute = await storage.updateProductAttribute(id, attributeData);
-    
-    if (!updatedAttribute) {
-      return sendError(res, "Product attribute not found", 404, "NOT_FOUND");
-    }
-    
-    sendSuccess(res, updatedAttribute);
-  }));
+  app.put("/api/products/:productId/attributes/:id", 
+    isAdmin, 
+    validateRequest({ 
+      params: z.object({ 
+        productId: z.string().refine(val => !isNaN(parseInt(val)), { message: "Product ID must be a number" }),
+        id: z.string().refine(val => !isNaN(parseInt(val)), { message: "Attribute ID must be a number" }) 
+      }),
+      body: insertProductAttributeSchema.partial()
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const id = parseInt(req.params.id);
+        const productId = parseInt(req.params.productId);
+        
+        // Verify that the product exists
+        const product = await storage.getProductById(productId);
+        if (!product) {
+          throw new NotFoundError(`Product with ID ${productId} not found`, 'product');
+        }
+        
+        // Verify that the product attribute exists
+        const existingAttribute = await storage.getProductAttributeById(id);
+        if (!existingAttribute) {
+          throw new NotFoundError(`Product attribute with ID ${id} not found`, 'product_attribute');
+        }
+        
+        // Verify that the attribute belongs to the specified product
+        if (existingAttribute.productId !== productId) {
+          throw new ForbiddenError(`Product attribute with ID ${id} does not belong to product with ID ${productId}`);
+        }
+        
+        // If attributeId is being updated, verify that the new attribute exists
+        if (req.body.attributeId) {
+          const attribute = await storage.getAttributeById(req.body.attributeId);
+          if (!attribute) {
+            throw new NotFoundError(`Attribute with ID ${req.body.attributeId} not found`, 'attribute');
+          }
+          
+          // Check that the new attribute isn't already associated with this product
+          if (req.body.attributeId !== existingAttribute.attributeId) {
+            const existingAttributes = await storage.getProductAttributes(productId);
+            const alreadyExists = existingAttributes.some(attr => 
+              attr.id !== id && attr.attributeId === req.body.attributeId
+            );
+            
+            if (alreadyExists) {
+              throw new AppError(
+                `Attribute with ID ${req.body.attributeId} is already associated with product ${productId}`,
+                ErrorCode.DUPLICATE_ENTITY,
+                409
+              );
+            }
+          }
+        }
+        
+        const attributeData = req.body;
+        const updatedAttribute = await storage.updateProductAttribute(id, attributeData);
+        
+        logger.info(`Product attribute updated`, {
+          productId,
+          productAttributeId: id,
+          updates: Object.keys(attributeData),
+          userId: req.user?.id
+        });
+        
+        sendSuccess(res, updatedAttribute);
+      } catch (error) {
+        logger.error('Error updating product attribute:', { 
+          error, 
+          productId: req.params.productId,
+          attributeId: req.params.id,
+          attributeData: req.body,
+          userId: req.user?.id 
+        });
+        throw error;
+      }
+    })
+  );
 
   app.delete("/api/products/:productId/attributes/:id", isAdmin, handleErrors(async (req: Request, res: Response) => {
     const id = parseInt(req.params.id);
