@@ -94,56 +94,52 @@ export function registerDatabaseTestRoutes(app: Express): void {
       
       const tableDefs: TableDefinition[] = [];
       
-      // Get all entries exported from schema
-      Object.entries(schema).forEach(([key, value]) => {
-        // Skip any entries with "Relations" in the name (these are relationship definitions)
-        if (key.includes('Relations') || key.includes('Schema')) {
-          return;
+      // Directly extract raw schema exports
+      const schemaExports = Object.keys(schema);
+      logger.debug('Schema exports:', { count: schemaExports.length, keys: schemaExports });
+      
+      // First pass: look for pgTable definitions
+      for (const key of schemaExports) {
+        const value = (schema as any)[key];
+        
+        // Skip anything that's not a potential table
+        if (!value || 
+            typeof value !== 'object' || 
+            key.includes('Relations') || 
+            key.includes('Schema') || 
+            key.includes('Type')) {
+          continue;
         }
         
-        // Check if this is a table definition
-        // Drizzle Tables are objects with special prototype methods and properties
-        if (
-          value && 
-          typeof value === 'object' && 
-          // Must have a name property with string value (table name)
-          'name' in value && 
-          typeof value.name === 'string' &&
-          // The schema should also have an $inferSelect method
-          '$inferSelect' in value
-        ) {
+        // Check for typical pgTable properties
+        if ('name' in value && typeof value.name === 'string') {
+          // This is almost certainly a pgTable definition
           tableDefs.push({
-            variableName: key, 
+            variableName: key,
             tableName: value.name,
             value: value
           });
+          
           logger.debug(`Found table: ${key} with DB name: ${value.name}`);
         }
+      }
+      
+      // Log what we found directly from schema.ts
+      logger.debug('Tables found in schema:', { 
+        count: tableDefs.length, 
+        tables: tableDefs.map(t => `${t.variableName} (${t.tableName})`) 
       });
       
-      // Process detected tables
+      // Process detected tables - only use what we actually detected, no fallbacks
       const detectedTables: string[] = tableDefs.map(t => t.variableName);
       
-      // Use the spread operator to copy all detected tables to our expectedTables array
-      // This is safer than using push in a loop
-      if (detectedTables.length > 0) {
-        logger.debug('Adding detected tables to expectedTables array', { count: detectedTables.length });
-        detectedTables.forEach(table => {
-          if (!expectedTables.includes(table)) {
-            expectedTables.push(table);
-          }
-        });
-      } else {
-        // Fallback to hard-coded table list if detection fails
-        logger.debug('No tables detected via schema analysis, using fallback table list');
-        // Common tables we know exist
-        ['users', 'products', 'categories', 'orders', 'orderItems', 'cartItems']
-          .forEach(table => {
-            if (!expectedTables.includes(table)) {
-              expectedTables.push(table);
-            }
-          });
-      }
+      // Add detected tables to expectedTables array
+      logger.debug('Adding detected tables to expectedTables array', { count: detectedTables.length });
+      detectedTables.forEach(table => {
+        if (!expectedTables.includes(table)) {
+          expectedTables.push(table);
+        }
+      });
       
       // Additional debugging info about the found tables
       logger.debug('Found table definitions:', { 
