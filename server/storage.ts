@@ -1594,39 +1594,25 @@ export class DatabaseStorage implements IStorage {
           try {
             let attributeDetails = undefined;
             
-            // If there's a combination, get more details
-            if (item.combinationId) {
+            // If there are selected attributes, add them to attributeDetails
+            if (item.selectedAttributes) {
               try {
-                const [combination] = await db
-                  .select()
-                  .from(productAttributeCombinations)
-                  .where(eq(productAttributeCombinations.id, item.combinationId));
-                  
-                if (combination) {
-                  attributeDetails = {
-                    combination,
-                    attributes: item.selectedAttributes
-                  };
-                  
-                  logger.debug(`Retrieved attribute details for order item`, {
-                    orderId: id,
-                    orderItemId: item.id,
-                    productId: item.productId,
-                    combinationId: item.combinationId
-                  });
-                } else {
-                  logger.warn(`Attribute combination not found for order item`, {
-                    orderId: id,
-                    orderItemId: item.id,
-                    combinationId: item.combinationId
-                  });
-                }
-              } catch (combinationError) {
-                logger.error(`Error fetching attribute combination for order item`, {
-                  error: combinationError,
+                attributeDetails = {
+                  attributes: item.selectedAttributes,
+                  combinationHash: item.combinationHash
+                };
+                
+                logger.debug(`Retrieved attribute details for order item`, {
                   orderId: id,
                   orderItemId: item.id,
-                  combinationId: item.combinationId
+                  productId: item.productId,
+                  combinationHash: item.combinationHash
+                });
+              } catch (attributeError) {
+                logger.error(`Error processing attribute details for order item`, {
+                  error: attributeError,
+                  orderId: id,
+                  orderItemId: item.id
                 });
                 // Continue without attribute details
               }
@@ -1696,6 +1682,12 @@ export class DatabaseStorage implements IStorage {
     }
   }
   
+  /**
+   * Update the status of an order
+   * @param id The ID of the order to update
+   * @param status The new status value
+   * @returns The updated order or undefined if order not found
+   */
   async updateOrderStatus(id: number, status: string): Promise<Order | undefined> {
     try {
       // First check if the order exists
@@ -1716,33 +1708,45 @@ export class DatabaseStorage implements IStorage {
         const oldStatus = existingOrder.status;
         const now = new Date();
         
-        // Update the order with the new status and updatedAt timestamp
-        const [updatedOrder] = await db
-          .update(orders)
-          .set({ 
-            status, 
-            updatedAt: now 
-          })
-          .where(eq(orders.id, id))
-          .returning();
-        
-        logger.info(`Updated order status`, {
-          orderId: id,
-          oldStatus,
-          newStatus: status,
-          userId: updatedOrder.userId
-        });
-        
-        return updatedOrder;
+        try {
+          // Update the order with the new status and updatedAt timestamp
+          const [updatedOrder] = await db
+            .update(orders)
+            .set({ 
+              status, 
+              updatedAt: now 
+            })
+            .where(eq(orders.id, id))
+            .returning();
+          
+          logger.info(`Updated order status`, {
+            orderId: id,
+            oldStatus,
+            newStatus: status,
+            userId: updatedOrder.userId
+          });
+          
+          return updatedOrder;
+        } catch (updateError) {
+          logger.error(`Error updating order status`, {
+            error: updateError,
+            orderId: id,
+            oldStatus,
+            newStatus: status,
+            userId: existingOrder.userId
+          });
+          throw updateError; // Rethrow for outer error handler to catch
+        }
       } catch (queryError) {
         logger.error(`Error querying order before status update`, {
           error: queryError,
-          orderId: id
+          orderId: id,
+          newStatus: status
         });
-        throw queryError;
+        throw queryError; // Rethrow for outer error handler to catch
       }
     } catch (error) {
-      logger.error(`Error updating order status`, {
+      logger.error(`Error in order status update process`, {
         error,
         orderId: id,
         newStatus: status
