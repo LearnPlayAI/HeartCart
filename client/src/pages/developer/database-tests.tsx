@@ -495,9 +495,19 @@ function DatabaseTestsPage() {
                       <h3 className="text-sm font-medium mb-2">Actual Tables</h3>
                       <div className="text-2xl font-bold">{structureResults.results.actualTables.count}</div>
                       <div className="mt-4 flex flex-wrap gap-2">
-                        {structureResults.results.actualTables.names.map((table, idx) => (
-                          <Badge key={idx} variant="outline">{table}</Badge>
-                        ))}
+                        {structureResults.results.actualTables.names.map((table, idx) => {
+                          // Check if this table is an unexpected table (exists in DB but not in schema)
+                          const isUnexpectedTable = structureResults.results.unexpectedTables.includes(table);
+                          return (
+                            <Badge 
+                              key={idx} 
+                              variant={isUnexpectedTable ? "destructive" : "outline"}
+                              className={isUnexpectedTable ? "font-medium" : ""}
+                            >
+                              {table}
+                            </Badge>
+                          );
+                        })}
                       </div>
                     </Card>
                   </div>
@@ -521,7 +531,7 @@ function DatabaseTestsPage() {
                       <AlertDescription>
                         <div className="mt-2 flex flex-wrap gap-2">
                           {structureResults.results.unexpectedTables.map((table, idx) => (
-                            <Badge key={idx} variant="outline">{table}</Badge>
+                            <Badge key={idx} variant="destructive">{table}</Badge>
                           ))}
                         </div>
                       </AlertDescription>
