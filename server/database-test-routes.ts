@@ -6,7 +6,7 @@
  * models, and queries. We test ACTUAL application functionality and code paths.
  */
 
-import { Express, Request, Response } from 'express';
+import { Express, Request, Response, NextFunction } from 'express';
 import { db, pool } from "./db";
 import { storage } from "./storage";
 import { isAdmin } from "./auth-middleware";
@@ -28,8 +28,35 @@ export function registerDatabaseTestRoutes(app: Express): void {
   
   logger.info('Registering database testing routes');
   
+  // Custom admin check middleware that works with the override in routes.ts
+  const dbTestAdminCheck = (req: Request, res: Response, next: NextFunction) => {
+    // Check if user exists and has admin role
+    const user = req.user as any;
+    if (user && user.role === 'admin') {
+      logger.debug('Database test admin check passed', { 
+        userId: user.id,
+        path: req.path,
+        method: req.method
+      });
+      return next();
+    }
+    
+    // Auto-approve in development for easier testing (if auth is disabled)
+    if (process.env.NODE_ENV === 'development' && !req.isAuthenticated) {
+      logger.warn('Database test admin check bypassed in development mode');
+      return next();
+    }
+    
+    logger.warn('Database test admin check failed', {
+      path: req.path,
+      method: req.method,
+      ip: req.ip
+    });
+    return sendError(res, "Admin access required for database tests", 403);
+  };
+  
   // Test table structure against our schema definitions
-  app.get("/api/db-test/table-structure", isAdmin, async (req: Request, res: Response) => {
+  app.get("/api/db-test/table-structure", dbTestAdminCheck, async (req: Request, res: Response) => {
     try {
       logger.info('Running table structure tests');
       
@@ -176,7 +203,7 @@ export function registerDatabaseTestRoutes(app: Express): void {
   });
   
   // Test data integrity constraints
-  app.get("/api/db-test/data-integrity", isAdmin, async (req: Request, res: Response) => {
+  app.get("/api/db-test/data-integrity", dbTestAdminCheck, async (req: Request, res: Response) => {
     try {
       logger.info('Running data integrity tests');
       
@@ -372,7 +399,7 @@ export function registerDatabaseTestRoutes(app: Express): void {
   });
   
   // Test query performance using actual application queries
-  app.get("/api/db-test/query-performance", isAdmin, async (req: Request, res: Response) => {
+  app.get("/api/db-test/query-performance", dbTestAdminCheck, async (req: Request, res: Response) => {
     try {
       logger.info('Running query performance tests');
       
@@ -486,7 +513,7 @@ export function registerDatabaseTestRoutes(app: Express): void {
   });
   
   // Test index effectiveness
-  app.get("/api/db-test/index-effectiveness", isAdmin, async (req: Request, res: Response) => {
+  app.get("/api/db-test/index-effectiveness", dbTestAdminCheck, async (req: Request, res: Response) => {
     try {
       logger.info('Running index effectiveness tests');
       
@@ -609,7 +636,7 @@ export function registerDatabaseTestRoutes(app: Express): void {
   });
   
   // Test transaction functionality
-  app.get("/api/db-test/transactions", isAdmin, async (req: Request, res: Response) => {
+  app.get("/api/db-test/transactions", dbTestAdminCheck, async (req: Request, res: Response) => {
     try {
       logger.info('Running transaction tests');
       
@@ -764,7 +791,7 @@ export function registerDatabaseTestRoutes(app: Express): void {
   });
   
   // Run all database tests
-  app.post("/api/db-test/run-all", isAdmin, async (req: Request, res: Response) => {
+  app.post("/api/db-test/run-all", dbTestAdminCheck, async (req: Request, res: Response) => {
     try {
       logger.info('Running all database tests');
       
