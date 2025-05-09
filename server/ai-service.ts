@@ -504,7 +504,9 @@ export async function generateProductTags(
         error: aiError,
         errorType: aiError instanceof Error ? aiError.name : typeof aiError,
         errorMessage: aiError instanceof Error ? aiError.message : String(aiError),
-        productId
+        productId,
+        productName,
+        responsePreview: responseTextOuter ? responseTextOuter.substring(0, 100) + '...' : 'No response text available'
       });
       
       // Try one more time with text-only as final fallback
@@ -541,8 +543,12 @@ export async function generateProductTags(
       } catch (finalFallbackError) {
         logger.error('All tag generation attempts failed', {
           productId,
+          productName,
           imageError: aiError,
-          textFallbackError: finalFallbackError
+          textFallbackError: finalFallbackError,
+          textFallbackErrorType: finalFallbackError instanceof Error ? finalFallbackError.name : typeof finalFallbackError,
+          textFallbackErrorMessage: finalFallbackError instanceof Error ? finalFallbackError.message : String(finalFallbackError),
+          responsePreview: responseTextOuter ? responseTextOuter.substring(0, 100) + '...' : 'No response text available'
         });
         throw new Error('Failed to generate tags after multiple attempts: ' + 
           (aiError instanceof Error ? aiError.message : 'AI service error'));
@@ -554,7 +560,8 @@ export async function generateProductTags(
       errorType: error instanceof Error ? error.name : typeof error,
       errorMessage: error instanceof Error ? error.message : String(error),
       productId,
-      productName
+      productName,
+      responsePreview: responseTextOuter ? responseTextOuter.substring(0, 100) + '...' : 'No response text available'
     });
     throw new Error('Failed to generate tags: ' + (error instanceof Error ? error.message : 'Unknown error'));
   }
@@ -878,7 +885,9 @@ export async function updateAiModel(modelName: string): Promise<boolean> {
         errorType: modelError instanceof Error ? modelError.name : typeof modelError,
         errorMessage: modelError instanceof Error ? modelError.message : String(modelError),
         modelName,
-        fallbackModel: 'gemini-1.5-flash'
+        fallbackModel: 'gemini-1.5-flash',
+        responsePreview: responseTextOuter ? responseTextOuter.substring(0, 100) + '...' : 'No response text available',
+        aiModelSettingKey: AI_MODEL_SETTING_KEY
       });
       
       // Fallback to default model if the requested model fails
@@ -1038,7 +1047,9 @@ export async function analyzeProductImage(imageBase64: string, productName: stri
           errorMessage: urlAnalysisError instanceof Error ? urlAnalysisError.message : String(urlAnalysisError),
           productId,
           productName,
-          imageUrlLength: imageBase64.length
+          imageUrlLength: imageBase64.length,
+          responsePreview: responseTextOuter ? responseTextOuter.substring(0, 100) + '...' : 'No response text available',
+          aiModel: await getCurrentAiModel().catch(() => 'unknown')
         });
         
         throw new Error(`Failed to analyze URL image: ${urlAnalysisError instanceof Error ? urlAnalysisError.message : 'Unknown error'}`);
