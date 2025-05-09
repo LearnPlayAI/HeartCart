@@ -554,7 +554,8 @@ export async function suggestPrice(
   costPrice: number,
   productName: string,
   categoryName?: string,
-  categoryId?: number
+  categoryId?: number,
+  productId?: number
 ): Promise<{ suggestedPrice: number; markupPercentage: number; markupSource: string }> {
   try {
     // First, try to get category-specific markup if we have a categoryId
@@ -1238,7 +1239,7 @@ export async function analyzeProductImage(imageBase64: string, productName: stri
           errorMessage: jsonError instanceof Error ? jsonError.message : String(jsonError),
           productId,
           productName,
-          responseLength: responseText.length
+          responseLength: responseTextOuter.length
         });
         
         logger.info(`Attempting to extract JSON from raw text response`, {
@@ -1246,7 +1247,7 @@ export async function analyzeProductImage(imageBase64: string, productName: stri
           productName
         });
         
-        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+        const jsonMatch = responseTextOuter.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
           const jsonStr = jsonMatch[0];
           try {
@@ -1286,8 +1287,8 @@ export async function analyzeProductImage(imageBase64: string, productName: stri
           logger.error(`No valid JSON pattern found in AI response`, {
             productId,
             productName,
-            responseLength: responseText.length,
-            responseSample: responseText.substring(0, 100) + '...'
+            responseLength: responseTextOuter.length,
+            responseSample: responseTextOuter.substring(0, 100) + '...'
           });
           
           throw new Error(`No valid JSON found in AI response for product "${productName}"`);
