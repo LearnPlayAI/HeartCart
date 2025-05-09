@@ -84,7 +84,15 @@ export function registerDatabaseTestRoutes(app: Express): void {
       
       // Find all table definitions in schema.ts by looking for variable declarations with pgTable
       // Example: export const users = pgTable("users", {
-      const tableDefs = [];
+      
+      // Define the interface for table definitions
+      interface TableDefinition {
+        variableName: string;
+        tableName: string;
+        value: any;
+      }
+      
+      const tableDefs: TableDefinition[] = [];
       
       // Get all entries exported from schema
       Object.entries(schema).forEach(([key, value]) => {
@@ -113,8 +121,29 @@ export function registerDatabaseTestRoutes(app: Express): void {
         }
       });
       
-      // Extract the expected table names from the table definitions
-      expectedTables = tableDefs.map(t => t.variableName);
+      // Process detected tables
+      const detectedTables: string[] = tableDefs.map(t => t.variableName);
+      
+      // Use the spread operator to copy all detected tables to our expectedTables array
+      // This is safer than using push in a loop
+      if (detectedTables.length > 0) {
+        logger.debug('Adding detected tables to expectedTables array', { count: detectedTables.length });
+        detectedTables.forEach(table => {
+          if (!expectedTables.includes(table)) {
+            expectedTables.push(table);
+          }
+        });
+      } else {
+        // Fallback to hard-coded table list if detection fails
+        logger.debug('No tables detected via schema analysis, using fallback table list');
+        // Common tables we know exist
+        ['users', 'products', 'categories', 'orders', 'orderItems', 'cartItems']
+          .forEach(table => {
+            if (!expectedTables.includes(table)) {
+              expectedTables.push(table);
+            }
+          });
+      }
       
       // Additional debugging info about the found tables
       logger.debug('Found table definitions:', { 
@@ -337,7 +366,10 @@ export function registerDatabaseTestRoutes(app: Express): void {
                 AND parent.${sql.identifier(fk.foreign_column_name)} IS NULL
             `);
             
-            const orphanedCount = parseInt(testQuery[0]?.orphaned_count?.toString() || '0', 10);
+            // Cast testQuery to a safe type to handle the SQL query results
+            const queryResult = Array.isArray(testQuery) ? testQuery : [];
+            const orphanedCount = queryResult.length > 0 ? 
+              parseInt(String(queryResult[0]?.orphaned_count || 0), 10) : 0;
             
             return {
               constraint: fk.constraint_name,
