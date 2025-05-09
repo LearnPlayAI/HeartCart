@@ -198,7 +198,7 @@ function AuthTestsPage() {
       <div className="bg-gray-50 p-4 rounded-md mb-6 flex flex-wrap gap-4">
         <div className="bg-white p-3 rounded-md shadow-sm">
           <div className="text-sm text-gray-500">Registered Users</div>
-          <div className="text-2xl font-semibold">{userCount?.count || 0}</div>
+          <div className="text-2xl font-semibold">{userCount && userCount.count ? userCount.count : 0}</div>
         </div>
         <div className="bg-white p-3 rounded-md shadow-sm">
           <div className="text-sm text-gray-500">System Status</div>
@@ -238,24 +238,32 @@ function AuthTestsPage() {
                   </div>
                 ) : validationError ? (
                   <div className="text-red-600 py-2">Error: {(validationError as Error).message}</div>
-                ) : validationResults ? (
+                ) : validationResults && validationResults.results ? (
                   <div className="space-y-3">
-                    <div className="flex justify-between items-center p-2 border-b">
-                      <span>Complexity Rules</span>
-                      <TestStatus status={validationResults.results.complexityRules.status} />
-                    </div>
-                    <div className="flex justify-between items-center p-2 border-b">
-                      <span>Length Requirements</span>
-                      <TestStatus status={validationResults.results.lengthRequirements.status} />
-                    </div>
-                    <div className="flex justify-between items-center p-2 border-b">
-                      <span>Special Characters</span>
-                      <TestStatus status={validationResults.results.specialCharacters.status} />
-                    </div>
-                    <div className="flex justify-between items-center p-2">
-                      <span>Common Passwords</span>
-                      <TestStatus status={validationResults.results.commonPasswords.status} />
-                    </div>
+                    {validationResults.results.complexityRules && (
+                      <div className="flex justify-between items-center p-2 border-b">
+                        <span>Complexity Rules</span>
+                        <TestStatus status={validationResults.results.complexityRules.status} />
+                      </div>
+                    )}
+                    {validationResults.results.lengthRequirements && (
+                      <div className="flex justify-between items-center p-2 border-b">
+                        <span>Length Requirements</span>
+                        <TestStatus status={validationResults.results.lengthRequirements.status} />
+                      </div>
+                    )}
+                    {validationResults.results.specialCharacters && (
+                      <div className="flex justify-between items-center p-2 border-b">
+                        <span>Special Characters</span>
+                        <TestStatus status={validationResults.results.specialCharacters.status} />
+                      </div>
+                    )}
+                    {validationResults.results.commonPasswords && (
+                      <div className="flex justify-between items-center p-2">
+                        <span>Common Passwords</span>
+                        <TestStatus status={validationResults.results.commonPasswords.status} />
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="text-gray-500 py-2">No test results available</div>
@@ -298,10 +306,10 @@ function AuthTestsPage() {
                       <p className="text-sm text-gray-500">
                         {validationResults.status === 'passed' 
                           ? 'All password validation tests passed successfully' 
-                          : `${validationResults.failedTests.length} validation tests failed`}
+                          : validationResults.failedTests && `${validationResults.failedTests.length} validation tests failed`}
                       </p>
                     </div>
-                    {validationResults.status === 'failed' && (
+                    {validationResults.status === 'failed' && validationResults.failedTests && (
                       <div className="p-3 bg-red-50 border border-red-200 rounded-md">
                         <h4 className="text-sm font-medium text-red-800 mb-1">Failed Tests:</h4>
                         <ul className="list-disc list-inside text-sm text-red-700">
@@ -337,24 +345,32 @@ function AuthTestsPage() {
                   </div>
                 ) : credentialError ? (
                   <div className="text-red-600 py-2">Error: {(credentialError as Error).message}</div>
-                ) : credentialResults ? (
+                ) : credentialResults && credentialResults.results ? (
                   <div className="space-y-3">
-                    <div className="flex justify-between items-center p-2 border-b">
-                      <span>Valid Login</span>
-                      <TestStatus status={credentialResults.results.validLogin.status} />
-                    </div>
-                    <div className="flex justify-between items-center p-2 border-b">
-                      <span>Invalid Username</span>
-                      <TestStatus status={credentialResults.results.invalidUsername.status} />
-                    </div>
-                    <div className="flex justify-between items-center p-2 border-b">
-                      <span>Invalid Password</span>
-                      <TestStatus status={credentialResults.results.invalidPassword.status} />
-                    </div>
-                    <div className="flex justify-between items-center p-2">
-                      <span>Empty Credentials</span>
-                      <TestStatus status={credentialResults.results.emptyCredentials.status} />
-                    </div>
+                    {credentialResults.results.validLogin && (
+                      <div className="flex justify-between items-center p-2 border-b">
+                        <span>Valid Login</span>
+                        <TestStatus status={credentialResults.results.validLogin.status} />
+                      </div>
+                    )}
+                    {credentialResults.results.invalidUsername && (
+                      <div className="flex justify-between items-center p-2 border-b">
+                        <span>Invalid Username</span>
+                        <TestStatus status={credentialResults.results.invalidUsername.status} />
+                      </div>
+                    )}
+                    {credentialResults.results.invalidPassword && (
+                      <div className="flex justify-between items-center p-2 border-b">
+                        <span>Invalid Password</span>
+                        <TestStatus status={credentialResults.results.invalidPassword.status} />
+                      </div>
+                    )}
+                    {credentialResults.results.emptyCredentials && (
+                      <div className="flex justify-between items-center p-2">
+                        <span>Empty Credentials</span>
+                        <TestStatus status={credentialResults.results.emptyCredentials.status} />
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="text-gray-500 py-2">No test results available</div>
@@ -397,10 +413,10 @@ function AuthTestsPage() {
                       <p className="text-sm text-gray-500">
                         {credentialResults.status === 'passed' 
                           ? 'All credential verification tests passed successfully' 
-                          : `${credentialResults.failedTests.length} verification tests failed`}
+                          : credentialResults.failedTests && `${credentialResults.failedTests.length} verification tests failed`}
                       </p>
                     </div>
-                    {credentialResults.status === 'failed' && (
+                    {credentialResults.status === 'failed' && credentialResults.failedTests && (
                       <div className="p-3 bg-red-50 border border-red-200 rounded-md">
                         <h4 className="text-sm font-medium text-red-800 mb-1">Failed Tests:</h4>
                         <ul className="list-disc list-inside text-sm text-red-700">
