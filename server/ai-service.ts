@@ -197,6 +197,9 @@ async function safeImageProcessing(imageBase64: string): Promise<{ dataUri: stri
  * Process an image to remove its background using Gemini AI
  */
 export async function removeImageBackground(imageBase64: string): Promise<string> {
+  // Define responseTextOuter at the function scope level for error handling
+  let responseTextOuter = "";
+  
   try {
     // Check if imageBase64 is valid
     if (!imageBase64 || typeof imageBase64 !== 'string') {
@@ -244,6 +247,8 @@ export async function removeImageBackground(imageBase64: string): Promise<string
           
           // Get the response
           const response = await result.response;
+          const responseText = await response.text();
+          responseTextOuter = responseText; // Store for error handling
           
           // Check if we got image parts in the response
           if (response.candidates && response.candidates[0]?.content?.parts) {
@@ -272,7 +277,8 @@ export async function removeImageBackground(imageBase64: string): Promise<string
           logger.error('Error during Gemini AI background removal request', {
             error: aiError,
             errorType: aiError instanceof Error ? aiError.name : typeof aiError,
-            errorMessage: aiError instanceof Error ? aiError.message : String(aiError)
+            errorMessage: aiError instanceof Error ? aiError.message : String(aiError),
+            responsePreview: responseTextOuter ? responseTextOuter.substring(0, 100) + '...' : 'No response text available'
           });
           throw aiError; // Re-throw for outer catch
         }
@@ -299,7 +305,8 @@ export async function removeImageBackground(imageBase64: string): Promise<string
     logger.error('Background removal operation failed', {
       error,
       errorType: error instanceof Error ? error.name : typeof error,
-      errorMessage: error instanceof Error ? error.message : String(error)
+      errorMessage: error instanceof Error ? error.message : String(error),
+      responsePreview: responseTextOuter ? responseTextOuter.substring(0, 100) + '...' : 'No response text available'
     });
     
     throw new Error('Failed to remove background: ' + (error instanceof Error ? error.message : 'Unknown error'));
