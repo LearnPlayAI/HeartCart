@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { ZodError } from "zod";
 import { logger } from "./logger";
+import crypto from "crypto";
 import { removeImageBackground, generateProductTags, analyzeProductImage, suggestPrice, getAvailableAiModels, getCurrentAiModelSetting, updateAiModel } from "./ai-service";
 import { imageService, THUMBNAIL_SIZES } from "./image-service";
 import { 
@@ -2383,23 +2384,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { productId, quantity, attributeValues } = req.body;
       
       try {
-        // Check if product exists
+        // Check if product exists with comprehensive error handling
         const product = await storage.getProductById(productId);
         if (!product) {
+          logger.warn(`Attempted to add non-existent product to cart`, {
+            productId,
+            userId: user.id,
+            requestedQuantity: quantity
+          });
           throw new NotFoundError(`Product with ID ${productId} not found`, "product");
         }
         
-        // Check if product is active
+        // Check if product is active with detailed error context
         if (!product.isActive) {
+          logger.warn(`Attempted to add inactive product to cart`, {
+            productId,
+            userId: user.id,
+            productName: product.name,
+            requestedQuantity: quantity
+          });
           throw new BadRequestError(`Cannot add inactive product "${product.name}" to cart`);
         }
         
-        // Add user ID to the cart item data
+        // Verify product availability - TeeMeYou doesn't track stock levels, but in future:
+        // This block could check if the requested quantity exceeds available stock
+        // For now, log the request for potential future implementation
+        logger.debug(`Checking availability for product addition to cart`, {
+          productId,
+          userId: user.id,
+          productName: product.name,
+          catalogId: product.catalogId,
+          requestedQuantity: quantity
+        });
+        
+        // Generate a combination hash if attribute values are provided
+        let combinationHash: string | undefined = undefined;
+        if (attributeValues && attributeValues.length > 0) {
+          try {
+            // Sort attribute values by attributeId for consistent hashing
+            const sortedValues = [...attributeValues].sort((a, b) => a.attributeId - b.attributeId);
+            combinationHash = crypto.createHash('md5')
+              .update(JSON.stringify(sortedValues))
+              .digest('hex');
+              
+            logger.debug(`Generated combination hash for cart item`, {
+              productId,
+              combinationHash,
+              attributeCount: attributeValues.length
+            });
+          } catch (hashError) {
+            logger.error(`Error generating combination hash for cart item`, {
+              error: hashError,
+              productId,
+              attributeValues
+            });
+            // Continue without combination hash in this case
+          }
+        }
+        
+        // Add user ID and combination hash to the cart item data
         const cartItemData = {
           productId,
           quantity,
           attributeValues,
           userId: user.id,
+          combinationHash
         };
         
         const cartItem = await storage.addToCart(cartItemData);
@@ -2452,19 +2501,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = req.user as any;
       
       try {
-        // Check if cart item exists and belongs to the user
+        // Check if cart item exists with comprehensive error handling
         const cartItem = await storage.getCartItemById(cartItemId);
         
         if (!cartItem) {
+          logger.warn(`Attempted to update non-existent cart item`, {
+            cartItemId,
+            userId: user.id,
+            requestedQuantity: quantity
+          });
           throw new NotFoundError(`Cart item with ID ${cartItemId} not found`, "cartItem");
         }
         
+        // Verify ownership with detailed error context
         if (cartItem.userId !== user.id) {
+          logger.warn(`Unauthorized cart item update attempt`, {
+            cartItemId,
+            itemOwnerId: cartItem.userId,
+            requesterId: user.id,
+            requestedQuantity: quantity
+          });
           throw new ForbiddenError(`Cannot update cart item ${cartItemId} that doesn't belong to you`);
         }
         
         // Handle quantity of 0 by removing the item
         if (quantity === 0) {
+          logger.info(`Removing cart item due to zero quantity update`, {
+            cartItemId,
+            userId: user.id,
+            productId: cartItem.productId,
+            previousQuantity: cartItem.quantity
+          });
+          
           await storage.removeFromCart(cartItemId);
           
           return res.json({
@@ -2474,12 +2542,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
         
-        // Update the quantity
+        // Check if product still exists and is active before updating quantity
+        const product = await storage.getProductById(cartItem.productId);
+        if (!product) {
+          logger.warn(`Cart contains non-existent product`, {
+            cartItemId,
+            userId: user.id,
+            productId: cartItem.productId
+          });
+          throw new NotFoundError(`Product in cart (ID: ${cartItem.productId}) no longer exists`, "product");
+        }
+        
+        if (!product.isActive) {
+          logger.warn(`Attempted to update quantity for inactive product in cart`, {
+            cartItemId,
+            userId: user.id,
+            productId: cartItem.productId,
+            productName: product.name,
+            requestedQuantity: quantity
+          });
+          throw new BadRequestError(`Cannot update quantity for inactive product "${product.name}"`);
+        }
+        
+        // Verify stock availability - TeeMeYou doesn't track stock levels, but log for future implementation
+        logger.debug(`Checking availability for cart item update`, {
+          cartItemId,
+          userId: user.id,
+          productId: cartItem.productId,
+          productName: product.name,
+          catalogId: product.catalogId,
+          currentQuantity: cartItem.quantity,
+          requestedQuantity: quantity
+        });
+        
+        // Update the quantity with enhanced context
         const updatedItem = await storage.updateCartItemQuantity(cartItemId, quantity);
         
-        // Get product details for meaningful response message
-        const product = await storage.getProductById(updatedItem.productId);
-        const productName = product ? product.name : `Product #${updatedItem.productId}`;
+        // We already have the product details from our earlier check
+        const productName = product.name;
         
         return res.json({
           success: true,
@@ -2524,11 +2624,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = req.user as any;
       
       try {
-        // Check if cart item exists and belongs to the user
+        // Check if cart item exists with comprehensive error handling (but remain idempotent)
         const cartItem = await storage.getCartItemById(cartItemId);
         
         // If cart item doesn't exist, return success (idempotent delete)
         if (!cartItem) {
+          logger.info(`Attempted to remove non-existent cart item (idempotent operation)`, {
+            cartItemId,
+            userId: user.id
+          });
+          
           return res.json({
             success: true,
             data: { removed: true },
@@ -2536,23 +2641,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
         
-        // Validate ownership
+        // Validate ownership with detailed error context
         if (cartItem.userId !== user.id) {
+          logger.warn(`Unauthorized cart item deletion attempt`, {
+            cartItemId,
+            itemOwnerId: cartItem.userId,
+            requesterId: user.id
+          });
           throw new ForbiddenError(`Cannot delete cart item ${cartItemId} that doesn't belong to you`);
         }
         
-        // Get product details for meaningful response message
-        const product = await storage.getProductById(cartItem.productId);
-        const productName = product ? product.name : `Product #${cartItem.productId}`;
+        // Get product details for meaningful response message and logging
+        try {
+          const product = await storage.getProductById(cartItem.productId);
+          
+          logger.info(`Removing cart item`, {
+            cartItemId,
+            userId: user.id,
+            productId: cartItem.productId,
+            productName: product ? product.name : null,
+            quantity: cartItem.quantity
+          });
+          
+          // Remove the item
+          await storage.removeFromCart(cartItemId);
+          
+          const productName = product ? product.name : `Product #${cartItem.productId}`;
+          return res.json({
+            success: true,
+            data: { removed: true },
+            message: `Removed "${productName}" from your cart`
+          });
+        } catch (productError) {
+          // If we can't get the product info, still remove the cart item but with generic message
+          logger.warn(`Failed to retrieve product info during cart item removal`, {
+            error: productError,
+            cartItemId,
+            userId: user.id,
+            productId: cartItem.productId
+          });
+          
+          // Remove the item anyway
+          await storage.removeFromCart(cartItemId);
         
-        // Remove the item
-        await storage.removeFromCart(cartItemId);
-        
-        return res.json({
-          success: true,
-          data: { removed: true },
-          message: `Removed "${productName}" from your cart`
-        });
+          return res.json({
+            success: true,
+            data: { removed: true },
+            message: `Item removed from your cart`
+          });
+        }
       } catch (error) {
         // Log detailed error information with context
         logger.error('Error removing cart item', { 
@@ -2584,20 +2721,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = req.user as any;
       
       try {
-        // Get cart items count before clearing for meaningful response
-        const cartItems = await storage.getCartItemsWithProducts(user.id);
-        const itemCount = cartItems.length;
-        
-        // Clear the cart
-        await storage.clearCart(user.id);
-        
-        return res.json({
-          success: true,
-          data: { cleared: true },
-          message: itemCount > 0 
-            ? `Successfully cleared ${itemCount} items from your cart` 
-            : "Cart was already empty"
-        });
+        // Get cart items count before clearing for meaningful response and logging
+        try {
+          const cartItems = await storage.getCartItemsWithProducts(user.id);
+          const itemCount = cartItems.length;
+          
+          // Log the cart clear operation with detailed context
+          logger.info(`Clearing entire cart`, {
+            userId: user.id,
+            itemCount,
+            cartItemIds: cartItems.map(item => item.id),
+            productIds: cartItems.map(item => item.productId)
+          });
+          
+          // Clear the cart
+          await storage.clearCart(user.id);
+          
+          return res.json({
+            success: true,
+            data: { cleared: true },
+            message: itemCount > 0 
+              ? `Successfully cleared ${itemCount} items from your cart` 
+              : "Cart was already empty"
+          });
+        } catch (itemsError) {
+          // Log the error but still attempt to clear the cart
+          logger.warn(`Failed to retrieve cart items before clearing`, {
+            error: itemsError,
+            userId: user.id
+          });
+          
+          // Still attempt to clear the cart even if we couldn't get the items
+          await storage.clearCart(user.id);
+          
+          return res.json({
+            success: true,
+            data: { cleared: true },
+            message: "Your cart has been cleared"
+          });
+        }
       } catch (error) {
         // Log detailed error information with context
         logger.error('Error clearing cart', { 
