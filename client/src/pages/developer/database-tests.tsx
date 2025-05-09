@@ -4,7 +4,7 @@ import DeveloperLayout from '@/components/developer/developer-layout';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Database, Shield, Server, TableProperties, GitMerge, Check, X, AlertTriangle, Loader2 } from 'lucide-react';
+import { Database, Shield, Server, TableProperties, GitMerge, Check, X, AlertTriangle, Loader2, HelpCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { getQueryFn, apiRequest, queryClient } from "@/lib/queryClient";
@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 // Define types for test results
 type TestStatus = 'passed' | 'failed' | 'pending' | 'warning';
@@ -545,8 +546,36 @@ function DatabaseTestsPage() {
                         <TableRow>
                           <TableHead>Table</TableHead>
                           <TableHead>Status</TableHead>
-                          <TableHead>Missing Columns</TableHead>
-                          <TableHead>Extra Columns</TableHead>
+                          <TableHead>
+                            <div className="flex items-center">
+                              <span>Missing in Database</span>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span>
+                                    <HelpCircle className="h-4 w-4 ml-1 text-gray-400" />
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs">
+                                  <p>Columns that are defined in schema.ts but missing in the actual database tables</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
+                          </TableHead>
+                          <TableHead>
+                            <div className="flex items-center">
+                              <span>Extra in Database</span>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span>
+                                    <HelpCircle className="h-4 w-4 ml-1 text-gray-400" />
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs">
+                                  <p>Columns that exist in the actual database tables but are not defined in schema.ts</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
+                          </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
