@@ -13,7 +13,7 @@ import { sendSuccess, sendError } from "./api-response";
 import { withStandardResponse } from "./response-wrapper";
 import { logger } from "./logger";
 import { AppError, ErrorCode, ForbiddenError, NotFoundError } from "./error-handler";
-import { isAuthenticated } from "./auth-middleware";
+import { isAuthenticated, isAdmin } from "./auth-middleware";
 
 const PostgresSessionStore = connectPg(session);
 
@@ -86,17 +86,22 @@ function getSessionSecret(): string {
  * @param {Express} app - The Express application
  */
 export function setupAuth(app: Express): void {
+  // Session durations
+  const SESSION_MAX_AGE = 24 * 60 * 60 * 1000; // 24 hours maximum session lifetime
+  const SESSION_IDLE_TIMEOUT = 30 * 60 * 1000; // 30 minutes of inactivity before session expiration
+
   // Configure session settings with improved security
   const sessionSettings: session.SessionOptions = {
     secret: getSessionSecret(),
     resave: false,
     saveUninitialized: false,
     name: 'tmy_session', // Custom name to avoid using default 'connect.sid'
+    rolling: true, // Reset cookie expiration on activity
     cookie: {
       secure: process.env.NODE_ENV === "production", // Require HTTPS in production
       httpOnly: true, // Prevent client-side JS from accessing the cookie
       sameSite: 'lax', // Provides some CSRF protection
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      maxAge: SESSION_MAX_AGE, // Maximum lifetime
       path: '/', // Restrict cookie to root path
     },
     store: new PostgresSessionStore({
@@ -143,14 +148,32 @@ export function setupAuth(app: Express): void {
     done(null, user.id);
   });
 
+  /**
+   * Deserialize user from session - extract user data from db using session id
+   * Improved version with enhanced error logging and recovery mechanism
+   */
   passport.deserializeUser(async (id: number, done) => {
     try {
+      // Try to retrieve user data
       const user = await storage.getUser(id);
+      
+      // If user no longer exists in the database
       if (!user) {
+        logger.warn('Session user not found in database', { userId: id });
         return done(null, false);
       }
+      
+      // Return user data (with proper typing)
       done(null, user as Express.User);
     } catch (error) {
+      // Log detailed error for debugging
+      logger.error('Session deserialization error', { 
+        userId: id, 
+        errorMessage: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined 
+      });
+      
+      // Pass error to the next handler
       done(error);
     }
   });
@@ -248,27 +271,13 @@ export function setupAuth(app: Express): void {
     return userData;
   }));
 
-  // Middleware to protect routes - requires authentication
-  app.use("/api/protected/*", (req: Request, res: Response, next: NextFunction) => {
-    if (!req.isAuthenticated()) {
-      sendError(res, "Authentication required", 401);
-      return;
-    }
-    next();
-  });
+  // Use standardized authentication middleware for protected routes
+  // Uses the centralized authentication check utility 
+  app.use("/api/protected/*", isAuthenticated);
 
-  // Middleware to protect admin routes - requires admin role
-  app.use("/api/admin/*", (req: Request, res: Response, next: NextFunction) => {
-    if (!req.isAuthenticated()) {
-      sendError(res, "Authentication required", 401);
-      return;
-    }
-    if (req.user?.role !== 'admin') {
-      sendError(res, "Admin access required", 403);
-      return;
-    }
-    next();
-  });
+  // Use standardized authorization middleware for admin routes
+  // Uses the centralized authentication and permission check utilities
+  app.use("/api/admin/*", isAdmin);
 
   // No longer using CSRF protection
   app.get("/api/csrf-token", withStandardResponse(async (req: Request, res: Response) => {
