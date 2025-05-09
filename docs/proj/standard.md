@@ -355,14 +355,14 @@ All client and server-side components must be completely updated to match the ne
   - ✓ Document session management approach
 
 #### 4.2. Authentication System Improvements
-- **Status**: In Progress
+- **Status**: In Progress (85% Complete)
 - **Description**: Address issues in the current authentication system
 - **Tasks**:
   - ✓ Fix token validation inconsistencies by using standardized session-based auth with consistent checks
   - ✓ Implement proper error handling for auth failures using standardized error responses
   - ✓ Standardize login flow with improved rate limiting and consistent error handling
   - ✓ Implement tracking of user's last login timestamp
-  - [ ] Standardize registration flow with comprehensive validation and error handling
+  - ✓ Standardize registration flow with comprehensive validation and error handling
   - ✓ Create consistent authentication checks with centralized auth utility (checkAuthentication)
   - [ ] Add proper authentication testing mechanisms
 
@@ -531,6 +531,9 @@ All client and server-side components must be completely updated to match the ne
 - [ ] Verify user login with incorrect credentials fails with proper error
 - [ ] Test user registration with valid data
 - [ ] Test user registration with duplicate username (should show error)
+- [ ] Verify registration enforces password complexity (letter+number requirement)
+- [ ] Verify that last login timestamp updates correctly on login
+- [ ] Verify that last login timestamp updates correctly on registration
 - [ ] Verify logout functionality clears session
 - [ ] Check that protected routes require authentication
 - [ ] Verify admin-only routes are properly restricted
