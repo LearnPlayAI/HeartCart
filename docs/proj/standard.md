@@ -360,7 +360,8 @@ All client and server-side components must be completely updated to match the ne
 - **Tasks**:
   - ✓ Fix token validation inconsistencies by using standardized session-based auth with consistent checks
   - ✓ Implement proper error handling for auth failures using standardized error responses
-  - [x] Standardize login flow with improved rate limiting and consistent error handling
+  - ✓ Standardize login flow with improved rate limiting and consistent error handling
+  - ✓ Implement tracking of user's last login timestamp
   - [ ] Standardize registration flow with comprehensive validation and error handling
   - ✓ Create consistent authentication checks with centralized auth utility (checkAuthentication)
   - [ ] Add proper authentication testing mechanisms

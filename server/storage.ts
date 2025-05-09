@@ -331,7 +331,8 @@ export class DatabaseStorage implements IStorage {
         .where(eq(users.id, id));
       
       // Check if the update was successful
-      return result.rowCount > 0;
+      // Note: rowCount might be null in some PostgreSQL drivers, so we use a safe check
+      return result.rowCount !== null && result.rowCount > 0;
     } catch (error) {
       logger.error(`Error updating last login time for user ${id}:`, { 
         error, 
