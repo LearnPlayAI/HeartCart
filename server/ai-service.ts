@@ -389,7 +389,8 @@ export async function generateProductTags(
           error: textPromptError,
           errorType: textPromptError instanceof Error ? textPromptError.name : typeof textPromptError,
           errorMessage: textPromptError instanceof Error ? textPromptError.message : String(textPromptError),
-          productId
+          productId,
+          responsePreview: responseTextOuter ? responseTextOuter.substring(0, 100) + '...' : 'No response text available'
         });
         throw new Error('Failed to generate tags with text prompt: ' + 
           (textPromptError instanceof Error ? textPromptError.message : 'AI service error'));
