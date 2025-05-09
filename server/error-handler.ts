@@ -80,6 +80,8 @@ export enum ErrorCode {
   INVALID_OPERATION = 'INVALID_OPERATION',
   DEPENDENT_RESOURCES_EXIST = 'DEPENDENT_RESOURCES_EXIST',
   DEPENDENT_ENTITIES_EXIST = 'DEPENDENT_ENTITIES_EXIST',
+  ENTITY_IN_USE = 'ENTITY_IN_USE',
+  DEPENDENCY_EXISTS = 'DEPENDENCY_EXISTS',
   
   // External service errors
   EXTERNAL_SERVICE_ERROR = 'EXTERNAL_SERVICE_ERROR',
@@ -101,14 +103,14 @@ export enum ErrorCode {
  * Base application error class
  */
 export class AppError extends Error {
-  public readonly code: string;
+  public readonly code: ErrorCode;
   public readonly statusCode: number;
   public readonly details?: unknown;
   public readonly isOperational: boolean;
   
   constructor(
     message: string, 
-    code: string = ErrorCode.UNKNOWN_ERROR, 
+    code: ErrorCode = ErrorCode.UNKNOWN_ERROR, 
     statusCode: number = 500, 
     details?: unknown,
     isOperational: boolean = true
@@ -234,7 +236,7 @@ export function createErrorResponse(
   
   // Handle known error types
   if (error instanceof AppError) {
-    code = error.code;
+    code = error.code as ErrorCode;
     statusCode = error.statusCode;
     message = error.message;
     details = includeDetails ? error.details : undefined;
@@ -247,7 +249,7 @@ export function createErrorResponse(
     // Handle PostgresError using duck typing since it's an interface
     const pgError = error as PostgresError;
     const dbError = new DatabaseError('Database error', pgError);
-    code = dbError.code;
+    code = dbError.code as ErrorCode;
     statusCode = dbError.statusCode;
     message = 'A database error occurred';
     details = includeDetails ? { pgError: pgError.code, pgMessage: pgError.message } : undefined;
@@ -299,7 +301,7 @@ export function errorHandlerMiddleware(
   
   // Handle known error types
   if (error instanceof AppError) {
-    code = error.code;
+    code = error.code as ErrorCode;
     statusCode = error.statusCode;
     message = error.message;
     details = includeDetails ? error.details : undefined;
@@ -312,7 +314,7 @@ export function errorHandlerMiddleware(
     // Handle PostgresError using duck typing since it's an interface
     const pgError = error as PostgresError;
     const dbError = new DatabaseError('Database error', pgError);
-    code = dbError.code;
+    code = dbError.code as ErrorCode;
     statusCode = dbError.statusCode;
     message = 'A database error occurred';
     details = includeDetails ? { pgError: pgError.code, pgMessage: pgError.message } : undefined;

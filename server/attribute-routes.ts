@@ -1,5 +1,5 @@
 import { Express, Request, Response, NextFunction } from "express";
-import { ZodError } from "zod";
+import { ZodError, z } from "zod";
 import { storage } from "./storage";
 import { isAdmin } from "./auth-middleware";
 import { logger } from "./logger";
@@ -60,55 +60,176 @@ export default function registerAttributeRoutes(app: Express) {
     sendSuccess(res, attributes);
   }));
 
-  app.get("/api/attributes/:id", handleErrors(async (req: Request, res: Response) => {
+  app.get("/api/attributes/:id", asyncHandler(async (req: Request, res: Response) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
-      return sendError(res, "Invalid attribute ID", 400, "INVALID_ID");
+      throw new BadRequestError(`Invalid attribute ID: ${req.params.id}`);
     }
 
     const attribute = await storage.getAttributeById(id);
     if (!attribute) {
-      return sendError(res, "Attribute not found", 404, "NOT_FOUND");
+      throw new NotFoundError(`Attribute with ID ${id} not found`, 'attribute');
     }
 
     sendSuccess(res, attribute);
   }));
 
-  app.post("/api/attributes", isAdmin, handleErrors(async (req: Request, res: Response) => {
-    const attributeData = insertAttributeSchema.parse(req.body);
-    const newAttribute = await storage.createAttribute(attributeData);
-    sendSuccess(res, newAttribute, 201);
-  }));
+  app.post("/api/attributes", 
+    isAdmin, 
+    validateRequest({ body: insertAttributeSchema }),
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const attributeData = req.body;
+        
+        // Check if attribute with same name already exists
+        const existingAttributes = await storage.getAllAttributes();
+        const nameExists = existingAttributes.some(attr => 
+          attr.name.toLowerCase() === attributeData.name.toLowerCase());
+        
+        if (nameExists) {
+          throw new AppError(
+            `Attribute with name '${attributeData.name}' already exists`,
+            ErrorCode.DUPLICATE_ENTITY,
+            409
+          );
+        }
+        
+        const newAttribute = await storage.createAttribute(attributeData);
+        sendSuccess(res, newAttribute, 201);
+      } catch (error) {
+        logger.error('Error creating attribute:', { 
+          error, 
+          attributeName: req.body.name,
+          userId: req.user?.id 
+        });
+        throw error;
+      }
+    })
+  );
 
-  app.put("/api/attributes/:id", isAdmin, handleErrors(async (req: Request, res: Response) => {
-    const id = parseInt(req.params.id);
-    if (isNaN(id)) {
-      return sendError(res, "Invalid attribute ID", 400, "INVALID_ID");
-    }
+  app.put("/api/attributes/:id", 
+    isAdmin, 
+    validateRequest({ 
+      params: z.object({ id: z.string().refine(val => !isNaN(parseInt(val)), { message: "ID must be a number" }) }),
+      body: insertAttributeSchema.partial()
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const id = parseInt(req.params.id);
+      
+      try {
+        // Check if attribute exists
+        const existingAttribute = await storage.getAttributeById(id);
+        if (!existingAttribute) {
+          throw new NotFoundError(`Attribute with ID ${id} not found`, 'attribute');
+        }
+        
+        // If updating name, check for duplicate names
+        if (req.body.name && req.body.name !== existingAttribute.name) {
+          const allAttributes = await storage.getAllAttributes();
+          const nameExists = allAttributes.some(attr => 
+            attr.id !== id && attr.name.toLowerCase() === req.body.name.toLowerCase());
+          
+          if (nameExists) {
+            throw new AppError(
+              `Attribute with name '${req.body.name}' already exists`,
+              ErrorCode.DUPLICATE_ENTITY,
+              409
+            );
+          }
+        }
+        
+        // Check if attribute is used in products before making certain changes
+        if (req.body.isMultiValue !== undefined && 
+            req.body.isMultiValue !== existingAttribute.isMultiValue) {
+          const attributeUsage = await storage.getAttributeUsageCount(id);
+          if (attributeUsage > 0) {
+            throw new AppError(
+              `Cannot change multi-value setting for attribute that is used by ${attributeUsage} products`,
+              ErrorCode.ENTITY_IN_USE,
+              409
+            );
+          }
+        }
+        
+        const attributeData = req.body;
+        const updatedAttribute = await storage.updateAttribute(id, attributeData);
+        
+        sendSuccess(res, updatedAttribute);
+      } catch (error) {
+        logger.error('Error updating attribute:', { 
+          error, 
+          attributeId: id,
+          updateData: req.body,
+          userId: req.user?.id 
+        });
+        throw error;
+      }
+    })
+  );
 
-    const attributeData = insertAttributeSchema.partial().parse(req.body);
-    const updatedAttribute = await storage.updateAttribute(id, attributeData);
-    
-    if (!updatedAttribute) {
-      return sendError(res, "Attribute not found", 404, "NOT_FOUND");
-    }
-    
-    sendSuccess(res, updatedAttribute);
-  }));
-
-  app.delete("/api/attributes/:id", isAdmin, handleErrors(async (req: Request, res: Response) => {
-    const id = parseInt(req.params.id);
-    if (isNaN(id)) {
-      return sendError(res, "Invalid attribute ID", 400, "INVALID_ID");
-    }
-
-    const success = await storage.deleteAttribute(id);
-    if (!success) {
-      return sendError(res, "Attribute not found or could not be deleted", 404, "NOT_FOUND");
-    }
-    
-    sendSuccess(res, null, 204);
-  }));
+  app.delete("/api/attributes/:id", 
+    isAdmin, 
+    validateRequest({ 
+      params: z.object({ id: z.string().refine(val => !isNaN(parseInt(val)), { message: "ID must be a number" }) })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const id = parseInt(req.params.id);
+      
+      try {
+        // Check if attribute exists
+        const attributeToDelete = await storage.getAttributeById(id);
+        if (!attributeToDelete) {
+          throw new NotFoundError(`Attribute with ID ${id} not found`, 'attribute');
+        }
+        
+        // Check if attribute is used in products
+        const attributeUsage = await storage.getAttributeUsageCount(id);
+        if (attributeUsage > 0) {
+          throw new AppError(
+            `Cannot delete attribute that is used by ${attributeUsage} products. Remove the attribute from all products first.`,
+            ErrorCode.ENTITY_IN_USE,
+            409
+          );
+        }
+        
+        // Check if attribute has options
+        const options = await storage.getAttributeOptions(id);
+        if (options.length > 0) {
+          throw new AppError(
+            `Cannot delete attribute with ${options.length} options. Delete all attribute options first.`,
+            ErrorCode.DEPENDENCY_EXISTS,
+            409
+          );
+        }
+        
+        const success = await storage.deleteAttribute(id);
+        if (!success) {
+          throw new AppError(
+            `Failed to delete attribute with ID ${id}`, 
+            ErrorCode.INTERNAL_SERVER_ERROR,
+            500,
+            { attributeId: id }
+          );
+        }
+        
+        // Log the deletion for audit purposes
+        logger.info(`Attribute deleted`, { 
+          attributeId: id, 
+          attributeName: attributeToDelete.name,
+          userId: req.user?.id 
+        });
+        
+        sendSuccess(res, null, 204);
+      } catch (error) {
+        logger.error('Error deleting attribute:', { 
+          error, 
+          attributeId: id,
+          userId: req.user?.id 
+        });
+        throw error;
+      }
+    })
+  );
 
   // Attribute Options Routes
   app.get("/api/attributes/:attributeId/options", handleErrors(async (req: Request, res: Response) => {
