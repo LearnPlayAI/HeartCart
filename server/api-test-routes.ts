@@ -4,6 +4,9 @@
  * This module adds routes for testing and validating the API system.
  * These routes execute tests against the REAL API endpoints, using EXISTING routes,
  * controllers, and middleware. We test ACTUAL application functionality and code paths.
+ * 
+ * Endpoints are DYNAMICALLY discovered from the Express application stack, ensuring
+ * that ALL routes are tested, even as new endpoints are added to the system.
  */
 
 import { Express, Request, Response, NextFunction } from 'express';
@@ -13,6 +16,7 @@ import { logger } from "./logger";
 import axios from 'axios';
 import { db } from "./db";
 import { storage } from "./storage";
+import { Layer } from 'express';
 
 /**
  * Helper function to create a standardized test result
@@ -65,38 +69,164 @@ export function registerApiTestRoutes(app: Express): void {
     return sendError(res, "Admin access required for API tests", 403);
   };
 
+  /**
+   * Helper function to recursively extract all routes from the Express application
+   * This dynamically discovers all endpoints available in the application
+   */
+  function discoverEndpoints(app: Express): Array<{ method: string; path: string; description: string }> {
+    const endpoints: Array<{ method: string; path: string; description: string }> = [];
+    
+    // Function to process a single layer
+    function processLayer(layer: any, basePath: string = '') {
+      if (layer.route) {
+        // This is a route layer
+        const path = basePath + (layer.route.path || '');
+        
+        // Skip API test routes to avoid circular testing
+        if (path.startsWith('/api/api-test')) {
+          return;
+        }
+        
+        // Get the HTTP methods for this route
+        const methods = Object.keys(layer.route.methods)
+          .filter(method => layer.route.methods[method])
+          .map(method => method.toUpperCase());
+        
+        methods.forEach(method => {
+          const description = generateDescription(path, method);
+          endpoints.push({ method, path, description });
+        });
+      } else if (layer.name === 'router' && layer.handle && layer.handle.stack) {
+        // This is a router - it has a stack of middleware layers
+        const routerPath = (layer.regexp !== /^\\/i) 
+          ? basePath + (layer.regexp.toString().replace('/^', '').replace('\\/?(?=\\/|$)/i', '').replace(/\\\//g, '/'))
+          : basePath;
+        
+        // Process each layer in the router's stack
+        layer.handle.stack.forEach((stackLayer: any) => {
+          processLayer(stackLayer, routerPath);
+        });
+      } else if (layer.name === 'bound dispatch' && layer.handle && layer.handle.stack) {
+        // Handle mounted apps/middlewares
+        const mountPath = (layer.regexp !== /^\\/i)
+          ? basePath + (layer.regexp.toString().replace('/^', '').replace('\\/?(?=\\/|$)/i', '').replace(/\\\//g, '/'))
+          : basePath;
+        
+        layer.handle.stack.forEach((stackLayer: any) => {
+          processLayer(stackLayer, mountPath);
+        });
+      } else if (Array.isArray(layer.handle?.stack)) {
+        // Handle other types of middleware with stacks
+        layer.handle.stack.forEach((stackLayer: any) => {
+          processLayer(stackLayer, basePath);
+        });
+      }
+    }
+    
+    // If we have access to the Express app's _router
+    if ((app as any)._router && (app as any)._router.stack) {
+      (app as any)._router.stack.forEach((layer: any) => {
+        processLayer(layer);
+      });
+    }
+    
+    return endpoints;
+  }
+  
+  /**
+   * Generate a human-readable description for an endpoint based on its path and method
+   */
+  function generateDescription(path: string, method: string): string {
+    // Clean up path parameters
+    const cleanPath = path.replace(/\/:[^/]+/g, '/{id}');
+    const pathSegments = cleanPath.split('/').filter(segment => segment);
+    
+    // Skip API prefix when describing
+    const relevantSegments = pathSegments[0] === 'api' ? pathSegments.slice(1) : pathSegments;
+    
+    if (relevantSegments.length === 0) {
+      return 'Root endpoint';
+    }
+    
+    // Convert to sentence case
+    const resource = relevantSegments[0]
+      .replace(/-/g, ' ')
+      .replace(/^./, str => str.toUpperCase());
+    
+    // Generate description based on method and path pattern
+    switch (method) {
+      case 'GET':
+        if (relevantSegments.length === 1) {
+          return `Get all ${resource.toLowerCase()}`;
+        } else if (relevantSegments[1] === '{id}') {
+          return `Get ${resource.toLowerCase()} by ID`;
+        } else if (relevantSegments.includes('search')) {
+          return `Search ${resource.toLowerCase()}`;
+        } else {
+          return `Get ${relevantSegments.slice(1).join(' ')} for ${resource.toLowerCase()}`;
+        }
+      case 'POST':
+        return `Create new ${resource.toLowerCase()}`;
+      case 'PUT':
+        return `Update ${resource.toLowerCase()}`;
+      case 'DELETE':
+        return `Delete ${resource.toLowerCase()}`;
+      case 'PATCH':
+        return `Partially update ${resource.toLowerCase()}`;
+      default:
+        return `${method} ${cleanPath}`;
+    }
+  }
+
   // Test for API endpoint availability
   app.get("/api/api-test/endpoint-availability", apiTestAdminCheck, async (req: Request, res: Response) => {
     try {
       logger.info('Running API endpoint availability tests');
       
       // Create a base URL for internal requests
-      const baseURL = `http://localhost:${process.env.PORT || 3000}`;
+      const baseURL = `http://localhost:5000`;
       const user = req.user as any;
       const userId = user?.id;
 
-      // Define the endpoints to test
-      const endpointsToTest = [
-        // Product-related endpoints
-        { method: 'GET', path: '/api/products', description: 'Get all products' },
-        { method: 'GET', path: '/api/products/1', description: 'Get product by ID' },
-        { method: 'GET', path: '/api/categories', description: 'Get all categories' },
-        { method: 'GET', path: '/api/suppliers', description: 'Get all suppliers' },
+      // Dynamically discover all endpoints in the Express application
+      const discoveredEndpoints = discoverEndpoints(app);
+      
+      // Filter to only include /api endpoints and exclude test endpoints
+      const apiEndpoints = discoveredEndpoints
+        .filter(endpoint => 
+          endpoint.path.startsWith('/api') && 
+          !endpoint.path.includes('/api/api-test') &&
+          !endpoint.path.includes('/api/auth-test') &&
+          !endpoint.path.includes('/api/database-test')
+        );
+      
+      // Add dynamic parameter replacement for testing
+      const endpointsToTest = apiEndpoints.map(endpoint => {
+        // Replace path parameters with test values
+        let testPath = endpoint.path;
         
-        // User authentication endpoints
-        { method: 'GET', path: '/api/user', description: 'Get current user' },
-        { method: 'GET', path: '/api/csrf-token', description: 'Get CSRF token' },
+        // Replace :id with 1, :uuid with a test UUID, etc.
+        testPath = testPath
+          .replace(/\/:id\b/g, '/1')
+          .replace(/\/:productId\b/g, '/1')
+          .replace(/\/:categoryId\b/g, '/1')
+          .replace(/\/:userId\b/g, '/1')
+          .replace(/\/:orderId\b/g, '/1')
+          .replace(/\/:slug\b/g, '/test-slug');
         
-        // Shopping cart related endpoints
-        { method: 'GET', path: '/api/cart', description: 'Get cart items' },
-        
-        // Order related endpoints
-        { method: 'GET', path: '/api/orders', description: 'Get all orders' },
-        
-        // Catalog and attribute related endpoints
-        { method: 'GET', path: '/api/attributes', description: 'Get all attributes' },
-        { method: 'GET', path: '/api/catalogs', description: 'Get all catalogs' },
-      ];
+        return {
+          method: endpoint.method,
+          path: testPath,
+          description: endpoint.description,
+          originalPath: endpoint.path
+        };
+      });
+      
+      // Log the endpoints for debugging
+      logger.debug('Discovered API endpoints for testing', { 
+        count: endpointsToTest.length,
+        endpoints: endpointsToTest.map(e => `${e.method} ${e.path}`)
+      });
       
       // Execute the tests
       const testResults = await Promise.all(endpointsToTest.map(async (endpoint) => {
