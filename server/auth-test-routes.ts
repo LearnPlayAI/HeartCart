@@ -645,6 +645,27 @@ export function registerAuthTestRoutes(app: Express): void {
     }
   });
   
+  // Test the enhanced validation system (Zod schemas)
+  app.get("/api/auth-test/validation-system", isAdmin, async (req: Request, res: Response) => {
+    try {
+      logger.info('Running enhanced validation system tests');
+      const testResults = await testValidationSystem();
+      
+      logger.info('Validation system tests completed', {
+        status: testResults.status,
+        failedTests: testResults.failedTests
+      });
+      
+      return sendSuccess(res, testResults);
+    } catch (error) {
+      logger.error('Error testing validation system', { 
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      });
+      return sendError(res, "Internal server error", 500);
+    }
+  });
+  
   // Local test endpoint - no authentication required
   // Only available in development mode for basic system testing
   app.get("/api/auth-test/local", async (req: Request, res: Response) => {
