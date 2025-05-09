@@ -39,6 +39,13 @@ export interface IStorage {
   updateUserLastLogin(id: number): Promise<boolean>;
   getUserCount(): Promise<number>;
   hashPassword(password: string): Promise<string>;
+  getAllUsers(): Promise<User[]>;
+  
+  // API Testing support methods
+  getProductWithSlug(): Promise<Product | undefined>;
+  getAllOrders(): Promise<Order[]>;
+  getAllCatalogs(): Promise<Catalog[]>;
+  getAllAttributes(): Promise<Attribute[]>;
   
   // Session store for authentication testing
   sessionStore: any;

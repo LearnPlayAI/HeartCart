@@ -1,0 +1,343 @@
+Endpoint	Method	Description	Status	Response Time	Status Code
+/api/register	POST	Create new register	
+Failed
+1753ms	400
+/api/login	POST	Create new login	
+Failed
+1651ms	400
+/api/users/1	PUT	Update users	
+Failed
+2065ms	500
+/api/files/:path(*)	GET	Get files by ID	
+Failed
+1078ms	404
+/api/files/object-storage/:folder/:subfolder/:filename	GET	Get object-storage {id} {id} {id} for files	
+Failed
+1113ms	404
+/api/files/temp/1/:filename	GET	Get temp {id} {id} for files	
+Failed
+1281ms	404
+/api/upload/products/images/temp	POST	Create new upload	
+Failed
+1646ms	400
+/api/upload/products/1/images	POST	Create new upload	
+Failed
+1638ms	400
+/api/upload/products/images/move	POST	Create new upload	
+Failed
+1642ms	400
+/api/upload/:objectKey(*)	DELETE	Delete upload	
+Failed
+1666ms	404
+/api/categories/test-slug	GET	Get categories by ID	
+Failed
+1882ms	404
+/api/categories	POST	Create new categories	
+Failed
+1619ms	400
+/api/categories/1	PUT	Update categories	
+Failed
+1555ms	500
+/api/categories/1/display-order	PUT	Update categories	
+Failed
+1548ms	400
+/api/categories/1/visibility	PUT	Update categories	
+Failed
+1525ms	400
+/api/products/bulk-update-status	POST	Create new products	
+Failed
+1544ms	400
+/api/products/slug/test-slug	GET	Get slug {id} for products	
+Failed
+2005ms	404
+/api/products/1	GET	Get products by ID	
+Failed
+2110ms	404
+/api/products/1	PUT	Update products	
+Failed
+1786ms	404
+/api/products/1	DELETE	Delete products	
+Failed
+1773ms	404
+/api/search	GET	Get all search	
+Failed
+1422ms	400
+/api/products	POST	Create new products	
+Failed
+1483ms	400
+/api/images/validate	POST	Create new images	
+Failed
+1551ms	400
+/api/products/images/temp	POST	Create new products	
+Failed
+1535ms	400
+/api/products/images/move	POST	Create new products	
+Failed
+1547ms	400
+/api/products/1/images	POST	Create new products	
+Failed
+1533ms	400
+/api/products/images/:imageId	PUT	Update products	
+Failed
+1540ms	400
+/api/products/images/:imageId	DELETE	Delete products	
+Failed
+1527ms	400
+/api/products/1/images/:imageId/main	PUT	Update products	
+Failed
+1529ms	400
+/api/images/validate	POST	Create new images	
+Failed
+1533ms	400
+/api/images/optimize	POST	Create new images	
+Failed
+1535ms	400
+/api/images/thumbnails	POST	Create new images	
+Failed
+1528ms	400
+/api/images/resize	POST	Create new images	
+Failed
+1516ms	400
+/api/ai/remove-background	POST	Create new ai	
+Failed
+1532ms	400
+/api/ai/generate-tags	POST	Create new ai	
+Failed
+1521ms	400
+/api/ai/analyze-product	POST	Create new ai	
+Failed
+1527ms	400
+/api/ai/suggest-price	POST	Create new ai	
+Failed
+1538ms	400
+/api/admin/ai/models	POST	Create new admin	
+Failed
+1532ms	400
+/api/cart	POST	Create new cart	
+Failed
+1433ms	400
+/api/cart/1	PUT	Update cart	
+Failed
+1433ms	400
+/api/orders	POST	Create new orders	
+Failed
+1421ms	400
+/api/orders/1	GET	Get orders by ID	
+Failed
+2225ms	404
+/api/orders/1/status	PATCH	Partially update orders	
+Failed
+1581ms	400
+/api/admin/pricing	POST	Create new admin	
+Failed
+1409ms	400
+/api/admin/pricing/1	DELETE	Delete admin	
+Failed
+1547ms	404
+/api/suppliers	POST	Create new suppliers	
+Failed
+1416ms	400
+/api/suppliers/1	DELETE	Delete suppliers	
+Failed
+1666ms	409
+/api/suppliers/:supplierId/catalogs	GET	Get suppliers by ID	
+Failed
+2264ms	500
+/api/catalogs	POST	Create new catalogs	
+Failed
+1388ms	400
+/api/catalogs/:catalogId/products	GET	Get catalogs by ID	
+Failed
+2278ms	500
+/api/catalogs/:catalogId/products/bulk	PUT	Update catalogs	
+Failed
+1391ms	500
+/api/products/1/quick-edit	PATCH	Partially update products	
+Failed
+1816ms	400
+/api/catalogs/1/products/reorder	PATCH	Partially update catalogs	
+Failed
+1747ms	400
+/api/files/:path(*)	GET	Get files by ID	
+Failed
+1832ms	404
+/api/attributes/1	GET	Get attributes by ID	
+Failed
+2280ms	404
+/api/attributes	POST	Create new attributes	
+Failed
+1236ms	400
+/api/attributes/1	PUT	Update attributes	
+Failed
+1348ms	404
+/api/attributes/1	DELETE	Delete attributes	
+Failed
+1355ms	404
+/api/attributes/:attributeId/options	GET	Get attributes by ID	
+Failed
+1687ms	400
+/api/attributes/:attributeId/options	POST	Create new attributes	
+Failed
+1355ms	400
+/api/attributes/:attributeId/options/1	PUT	Update attributes	
+Failed
+1342ms	400
+/api/attributes/:attributeId/options/1	DELETE	Delete attributes	
+Failed
+1353ms	400
+/api/attributes/:attributeId/options/reorder	POST	Create new attributes	
+Failed
+1233ms	400
+/api/catalogs/:catalogId/attributes	GET	Get catalogs by ID	
+Failed
+1822ms	400
+/api/catalogs/:catalogId/attributes	POST	Create new catalogs	
+Failed
+1315ms	400
+/api/catalogs/:catalogId/attributes/1	PUT	Update catalogs	
+Failed
+1224ms	400
+/api/catalogs/:catalogId/attributes/1	DELETE	Delete catalogs	
+Failed
+1226ms	400
+/api/catalogs/:catalogId/attributes/:attributeId/options	GET	Get catalogs by ID	
+Failed
+1846ms	400
+/api/catalogs/:catalogId/attributes/:attributeId/options	POST	Create new catalogs	
+Failed
+1214ms	400
+/api/catalogs/:catalogId/attributes/:attributeId/options/1	PUT	Update catalogs	
+Failed
+1237ms	400
+/api/catalogs/:catalogId/attributes/:attributeId/options/1	DELETE	Delete catalogs	
+Failed
+1225ms	400
+/api/catalogs/:catalogId/attributes/:attributeId/options/reorder	POST	Create new catalogs	
+Failed
+1223ms	400
+/api/categories/1/attributes	POST	Create new categories	
+Failed
+893ms	401
+/api/categories/1/attributes/1	PUT	Update categories	
+Failed
+881ms	401
+/api/categories/1/attributes/1	DELETE	Delete categories	
+Failed
+893ms	401
+/api/categories/1/attributes/:attributeId/options	GET	Get categories by ID	
+Failed
+1890ms	400
+/api/categories/1/attributes/:attributeId/options	POST	Create new categories	
+Failed
+891ms	401
+/api/categories/1/attributes/:attributeId/options/1	PUT	Update categories	
+Failed
+896ms	401
+/api/categories/1/attributes/:attributeId/options/1	DELETE	Delete categories	
+Failed
+884ms	401
+/api/categories/1/attributes/:attributeId/options/reorder	POST	Create new categories	
+Failed
+873ms	401
+/api/products/1/attributes	GET	Get products by ID	
+Failed
+2382ms	404
+/api/products/1/attributes	POST	Create new products	
+Failed
+884ms	401
+/api/products/1/attributes/1	PUT	Update products	
+Failed
+879ms	401
+/api/products/1/attributes/1	DELETE	Delete products	
+Failed
+870ms	401
+/api/products/1/attributes/:attributeId/options	GET	Get products by ID	
+Failed
+1892ms	400
+/api/products/1/attributes/:attributeId/options	POST	Create new products	
+Failed
+884ms	401
+/api/products/1/attributes/:attributeId/options/1	PUT	Update products	
+Failed
+868ms	401
+/api/products/1/attributes/:attributeId/options/1	DELETE	Delete products	
+Failed
+884ms	401
+/api/products/1/attributes/:attributeId/options/reorder	POST	Create new products	
+Failed
+882ms	401
+/api/products/1/attribute-values	GET	Get products by ID	
+Failed
+2407ms	404
+/api/products/filterable-attributes	GET	Get filterable-attributes for products	
+Failed
+1945ms	400
+/api/products/1/attribute-values	POST	Create new products	
+Failed
+877ms	401
+/api/products/1/attribute-values/1	PUT	Update products	
+Failed
+860ms	401
+/api/products/1/attribute-values/1	DELETE	Delete products	
+Failed
+878ms	401
+/api/attribute-discount-rules/product/1	GET	Get product {id} for attribute discount rules	
+Failed
+2403ms	404
+/api/attribute-discount-rules/catalog/:catalogId	GET	Get catalog {id} for attribute discount rules	
+Failed
+1944ms	400
+/api/attribute-discount-rules/attribute/:attributeId	GET	Get attribute {id} for attribute discount rules	
+Failed
+1934ms	400
+/api/attribute-discount-rules/1	GET	Get attribute discount rules by ID	
+Failed
+2450ms	404
+/api/attribute-discount-rules	POST	Create new attribute discount rules	
+Failed
+871ms	401
+/api/attribute-discount-rules/1	PUT	Update attribute discount rules	
+Failed
+871ms	401
+/api/attribute-discount-rules/1	DELETE	Delete attribute discount rules	
+Failed
+863ms	401
+/api/attribute-discount-rules/calculate	POST	Create new attribute discount rules	
+Failed
+837ms	400
+/api/admin/pricing	POST	Create new admin	
+Failed
+841ms	401
+/api/admin/pricing/1	DELETE	Delete admin	
+Failed
+832ms	401
+/api/admin/pricing/1	GET	Get pricing {id} for admin	
+Failed
+2459ms	500
+/api/batch-upload/start	POST	Create new batch upload	
+Failed
+793ms	401
+/api/batch-upload/1/upload	POST	Create new batch upload	
+Failed
+850ms	401
+/api/batch-upload/1	GET	Get batch upload by ID	
+Failed
+2479ms	404
+/api/batch-upload/1	DELETE	Delete batch upload	
+Failed
+759ms	401
+/api/batch-upload/1/cancel	POST	Create new batch upload	
+Failed
+761ms	401
+/api/batch-upload/1/pause	POST	Create new batch upload	
+Failed
+771ms	401
+/api/batch-upload/1/resume	POST	Create new batch upload	
+Failed
+760ms	401
+/api/batch-upload/1/retry	POST	Create new batch upload	
+Failed
+807ms	401
+/api/batch-upload/template	GET	Get template for batch upload	
+Failed
+2089ms	404

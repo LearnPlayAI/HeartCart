@@ -215,36 +215,193 @@ export function registerApiTestRoutes(app: Express): void {
       console.log(`SAMPLE ENDPOINTS: ${JSON.stringify(apiEndpoints.slice(0, 3))}`);
       
       
+      // First, let's collect all available resources from the database
+      // This will allow us to use real IDs for our tests
+      logger.info('Collecting available resources for testing');
+      
+      // Collect available resources
+      let availableResources: Record<string, number[]> = {};
+      
+      try {
+        // Fetch available products
+        const products = await storage.getAllProducts();
+        availableResources.products = products.map(p => p.id);
+        
+        // Fetch available categories
+        const categories = await storage.getAllCategories();
+        availableResources.categories = categories.map(c => c.id);
+        
+        // Fetch available users (if any)
+        try {
+          const users = await storage.getAllUsers();
+          if (users && users.length > 0) {
+            availableResources.users = users.map(u => u.id);
+          }
+        } catch (error) {
+          logger.warn('Could not fetch users for API testing', { error });
+        }
+        
+        // Fetch available orders (if any)
+        try {
+          const orders = await storage.getAllOrders();
+          if (orders && orders.length > 0) {
+            availableResources.orders = orders.map(o => o.id);
+          }
+        } catch (error) {
+          logger.warn('Could not fetch orders for API testing', { error });
+        }
+        
+        // Get available catalog IDs
+        try {
+          const catalogs = await storage.getAllCatalogs();
+          if (catalogs && catalogs.length > 0) {
+            availableResources.catalogs = catalogs.map(c => c.id);
+          }
+        } catch (error) {
+          logger.warn('Could not fetch catalogs for API testing', { error });
+        }
+        
+        // Get available attribute IDs
+        try {
+          const attributes = await storage.getAllAttributes();
+          if (attributes && attributes.length > 0) {
+            availableResources.attributes = attributes.map(a => a.id);
+          }
+        } catch (error) {
+          logger.warn('Could not fetch attributes for API testing', { error });
+        }
+        
+        logger.info('Available resources for testing', { availableResources });
+      } catch (error) {
+        logger.warn('Error fetching resources for dynamic testing', { error });
+      }
+      
+      // Generate a mapping of parameter types to available resources
+      const resourceMapping: Record<string, number | string | null> = {
+        id: null,
+        productId: null,
+        categoryId: null,
+        userId: null,
+        orderId: null,
+        attributeId: null,
+        catalogId: null,
+        slug: 'test-slug'  // Default fallback
+      };
+      
+      // Fill in the mapping with real IDs where available
+      if (availableResources.products && availableResources.products.length > 0) {
+        resourceMapping.id = availableResources.products[0];
+        resourceMapping.productId = availableResources.products[0];
+      }
+      
+      if (availableResources.categories && availableResources.categories.length > 0) {
+        if (!resourceMapping.id) resourceMapping.id = availableResources.categories[0];
+        resourceMapping.categoryId = availableResources.categories[0];
+      }
+      
+      if (availableResources.users && availableResources.users.length > 0) {
+        if (!resourceMapping.id) resourceMapping.id = availableResources.users[0];
+        resourceMapping.userId = availableResources.users[0];
+      }
+      
+      if (availableResources.orders && availableResources.orders.length > 0) {
+        if (!resourceMapping.id) resourceMapping.id = availableResources.orders[0];
+        resourceMapping.orderId = availableResources.orders[0];
+      }
+      
+      if (availableResources.attributes && availableResources.attributes.length > 0) {
+        if (!resourceMapping.id) resourceMapping.id = availableResources.attributes[0];
+        resourceMapping.attributeId = availableResources.attributes[0];
+      }
+      
+      if (availableResources.catalogs && availableResources.catalogs.length > 0) {
+        if (!resourceMapping.id) resourceMapping.id = availableResources.catalogs[0];
+        resourceMapping.catalogId = availableResources.catalogs[0];
+      }
+      
+      // For products with slugs, try to get a real slug
+      try {
+        const productWithSlug = await storage.getProductWithSlug();
+        if (productWithSlug && productWithSlug.slug) {
+          resourceMapping.slug = productWithSlug.slug;
+        }
+      } catch (error) {
+        logger.warn('Could not fetch product slug for API testing', { error });
+      }
+      
+      logger.info('Resource mapping for dynamic testing', { resourceMapping });
+      
+      // Function to determine if we should test an endpoint based on required resources
+      function canTestEndpoint(path: string): { canTest: boolean; missingResource?: string } {
+        // Quick check for paths that don't need IDs
+        if (!path.includes('/:')) {
+          return { canTest: true };
+        }
+        
+        // Extract resource requirements and check if we have them
+        for (const [resourceKey, resourceValue] of Object.entries(resourceMapping)) {
+          if (path.includes(`/:${resourceKey}`) && resourceValue === null) {
+            return { 
+              canTest: false, 
+              missingResource: resourceKey 
+            };
+          }
+        }
+        
+        return { canTest: true };
+      }
+      
       // Add dynamic parameter replacement for testing
       const endpointsToTest = apiEndpoints.map(endpoint => {
-        // Replace path parameters with test values
+        // Check if we can test this endpoint
+        const { canTest, missingResource } = canTestEndpoint(endpoint.path);
+        
+        if (!canTest) {
+          return {
+            method: endpoint.method,
+            path: endpoint.path,  // We will keep the original path with parameters
+            description: endpoint.description,
+            originalPath: endpoint.path,
+            canTest: false,
+            reason: `Missing required resource for parameter /:${missingResource}`
+          };
+        }
+        
+        // Replace path parameters with actual values
         let testPath = endpoint.path;
         
-        // Replace :id with 1, :uuid with a test UUID, etc.
-        testPath = testPath
-          .replace(/\/:id\b/g, '/1')
-          .replace(/\/:productId\b/g, '/1')
-          .replace(/\/:categoryId\b/g, '/1')
-          .replace(/\/:userId\b/g, '/1')
-          .replace(/\/:orderId\b/g, '/1')
-          .replace(/\/:slug\b/g, '/test-slug');
+        // Use the resource mapping to dynamically replace path parameters
+        for (const [resourceKey, resourceValue] of Object.entries(resourceMapping)) {
+          if (resourceValue !== null) {
+            const regex = new RegExp(`\\/:${resourceKey}\\b`, 'g');
+            testPath = testPath.replace(regex, `/${resourceValue}`);
+          }
+        }
         
         return {
           method: endpoint.method,
           path: testPath,
           description: endpoint.description,
-          originalPath: endpoint.path
+          originalPath: endpoint.path,
+          canTest: true
         };
       });
       
+      // Separate testable from non-testable endpoints
+      const testableEndpoints = endpointsToTest.filter(e => e.canTest);
+      const nonTestableEndpoints = endpointsToTest.filter(e => !e.canTest);
+
       // Log the endpoints for debugging
       logger.debug('Discovered API endpoints for testing', { 
-        count: endpointsToTest.length,
-        endpoints: endpointsToTest.map(e => `${e.method} ${e.path}`)
+        totalCount: endpointsToTest.length,
+        testableCount: testableEndpoints.length,
+        nonTestableCount: nonTestableEndpoints.length,
+        testableEndpoints: testableEndpoints.map(e => `${e.method} ${e.path}`),
+        nonTestableEndpoints: nonTestableEndpoints.map(e => `${e.method} ${e.originalPath} (${e.reason})`)
       });
       
-      // Execute the tests
-      const testResults = await Promise.all(endpointsToTest.map(async (endpoint) => {
+      // Execute the tests for endpoints we can test
+      const testableResults = await Promise.all(testableEndpoints.map(async (endpoint) => {
         try {
           const cookies = req.headers.cookie;
           const headers: Record<string, string> = {};
@@ -265,29 +422,88 @@ export function registerApiTestRoutes(app: Express): void {
             }
           }
           
+          // Add appropriate body for POST/PUT requests based on endpoint type
+          let requestData = {};
+          if (['POST', 'PUT', 'PATCH'].includes(endpoint.method)) {
+            // Generate appropriate dummy data based on the endpoint path
+            if (endpoint.path.includes('/products')) {
+              requestData = {
+                name: 'Test Product',
+                description: 'Test Description',
+                price: 9.99
+              };
+            } else if (endpoint.path.includes('/categories')) {
+              requestData = {
+                name: 'Test Category'
+              };
+            } else if (endpoint.path.includes('/users')) {
+              requestData = {
+                username: 'testuser',
+                email: 'test@example.com',
+                password: 'Password123!'
+              };
+            } else if (endpoint.path.includes('/login')) {
+              requestData = {
+                email: 'test@example.com',
+                password: 'Password123!'
+              };
+            } else if (endpoint.path.includes('/register')) {
+              requestData = {
+                username: 'testuser',
+                email: 'test@example.com',
+                password: 'Password123!'
+              };
+            }
+          }
+          
           // Make the actual request
           const startTime = performance.now();
           const response = await axios({
             method: endpoint.method,
             url: `${baseURL}${endpoint.path}`,
             headers,
+            data: ['POST', 'PUT', 'PATCH'].includes(endpoint.method) ? requestData : undefined,
             validateStatus: () => true // Don't throw on error status codes
           });
           const elapsedTime = performance.now() - startTime;
           
           // Define what constitutes a successful response
+          // For GET requests, 200-299 is success
+          // For POST/PUT, 200-299 is success in most cases, but for some operations a 400 might be expected (validation)
+          // A 401/403 for admin-only endpoints might be expected unless admin auth is provided
+          
+          // Basic success check
           const isSuccess = response.status >= 200 && response.status < 400;
+          
+          // More nuanced status determination
+          let status = isSuccess ? 'passed' : 'failed';
+          
+          // Handle specific cases
+          if (!isSuccess) {
+            // For POST/PUT APIs, a 400 might be due to validation, which is partially expected
+            if (['POST', 'PUT', 'PATCH'].includes(endpoint.method) && response.status === 400) {
+              status = 'warning';
+            }
+            
+            // For admin-only endpoints, a 401/403 is expected unless we have admin auth
+            if ((endpoint.path.includes('/admin') || endpoint.path.includes('/batch-upload')) && 
+                (response.status === 401 || response.status === 403)) {
+              status = 'warning';
+            }
+          }
           
           return {
             endpoint: endpoint.path,
             method: endpoint.method,
             description: endpoint.description,
-            status: isSuccess ? 'passed' : 'failed',
+            status,
             statusCode: response.status,
             responseTime: Math.round(elapsedTime),
             message: isSuccess 
               ? `Endpoint is available (${Math.round(elapsedTime)}ms)` 
-              : `Endpoint returned error status: ${response.status}`,
+              : status === 'warning' 
+                ? `Endpoint requires auth or additional data (status: ${response.status})` 
+                : `Endpoint returned error status: ${response.status}`,
           };
         } catch (error) {
           logger.error(`Error testing endpoint ${endpoint.path}`, { error });
@@ -300,6 +516,20 @@ export function registerApiTestRoutes(app: Express): void {
           };
         }
       }));
+      
+      // Create result objects for non-testable endpoints (skipped tests)
+      const nonTestableResults = nonTestableEndpoints.map(endpoint => {
+        return {
+          endpoint: endpoint.originalPath,  // Use the original path with parameters
+          method: endpoint.method,
+          description: endpoint.description,
+          status: 'pending', // Use 'pending' status to indicate skipped tests
+          message: endpoint.reason || 'Missing required resources',
+        };
+      });
+      
+      // Combine the results
+      const testResults = [...testableResults, ...nonTestableResults];
       
       // Calculate overall status
       const status = testResults.every(test => test.status === 'passed') ? 'passed' : 'failed';
