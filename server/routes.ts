@@ -416,7 +416,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get(
     "/api/products/slug/:slug", 
     validateRequest({ params: productSlugParamSchema }),
-    withStandardResponse(async (req: Request, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const { slug } = req.params;
       
       const user = req.user as any;
@@ -427,13 +427,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         includeCategoryInactive: isAdmin 
       };
       
-      const product = await storage.getProductBySlug(slug, options);
-      
-      if (!product) {
-        throw new NotFoundError(`Product with slug '${slug}' not found`, 'product');
+      try {
+        const product = await storage.getProductBySlug(slug, options);
+        
+        if (!product) {
+          throw new NotFoundError(`Product with slug '${slug}' not found`, 'product');
+        }
+        
+        // Return standardized response format
+        res.json({
+          success: true,
+          data: product
+        });
+      } catch (error) {
+        // Log detailed error for debugging
+        logger.error('Error fetching product by slug', { 
+          error, 
+          slug,
+          isAdminRequest: isAdmin
+        });
+        
+        // If it's a NotFoundError, propagate it
+        if (error instanceof NotFoundError) {
+          throw error;
+        }
+        
+        throw new AppError(
+          "Failed to fetch product details. Please try again later.",
+          ErrorCode.INTERNAL_SERVER_ERROR,
+          500
+        );
       }
-      
-      return product;
     })
   );
 
@@ -1237,10 +1261,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get(
     "/api/products/:productId/images",
     validateRequest({ params: productIdParamSchema }),
-    withStandardResponse(async (req: Request, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const productId = Number(req.params.productId);
-      const images = await storage.getProductImages(productId);
-      return images;
+      
+      try {
+        const images = await storage.getProductImages(productId);
+        
+        // Return standardized response format
+        res.json({
+          success: true,
+          data: images,
+          meta: {
+            total: images.length,
+            productId
+          }
+        });
+      } catch (error) {
+        // Log detailed error for debugging
+        logger.error('Error fetching product images', { 
+          error, 
+          productId
+        });
+        
+        throw new AppError(
+          "Failed to fetch product images. Please try again later.",
+          ErrorCode.INTERNAL_SERVER_ERROR,
+          500
+        );
+      }
     })
   );
   
@@ -1251,7 +1299,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       params: productIdParamSchema,
       body: createProductImageSchema
     }),
-    withStandardResponse(async (req: Request, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const user = req.user as any;
       
       if (user.role !== 'admin') {
@@ -1260,71 +1308,100 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const productId = Number(req.params.productId);
     
-      // If object key is already provided, just create the image record
-      if (req.body.objectKey && req.body.url) {
-        // Create product image record directly from provided URL and objectKey
-        const imageData = {
-          productId,
-          url: req.body.url,
-          objectKey: req.body.objectKey,
-          isMain: req.body.isMain || false,
-          sortOrder: req.body.sortOrder || 0,
-          hasBgRemoved: req.body.hasBgRemoved || false,
-          bgRemovedUrl: req.body.bgRemovedUrl || null,
-          bgRemovedObjectKey: req.body.bgRemovedObjectKey || null
-        };
+      try {
+        let image;
         
-        const image = await storage.createProductImage(imageData);
-        res.status(201);
-        return image;
-      }
-      
-      // If the image has a base64 data URL, store it in object storage
-      if (req.body.url && req.body.url.startsWith('data:')) {
-        // Extract the base64 data and content type
-        const matches = req.body.url.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-        if (!matches || matches.length !== 3) {
-          throw new BadRequestError("Invalid base64 image format");
+        // If object key is already provided, just create the image record
+        if (req.body.objectKey && req.body.url) {
+          // Create product image record directly from provided URL and objectKey
+          const imageData = {
+            productId,
+            url: req.body.url,
+            objectKey: req.body.objectKey,
+            isMain: req.body.isMain || false,
+            sortOrder: req.body.sortOrder || 0,
+            hasBgRemoved: req.body.hasBgRemoved || false,
+            bgRemovedUrl: req.body.bgRemovedUrl || null,
+            bgRemovedObjectKey: req.body.bgRemovedObjectKey || null
+          };
+          
+          image = await storage.createProductImage(imageData);
+        }
+        // If the image has a base64 data URL, store it in object storage
+        else if (req.body.url && req.body.url.startsWith('data:')) {
+          // Extract the base64 data and content type
+          const matches = req.body.url.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+          if (!matches || matches.length !== 3) {
+            throw new BadRequestError("Invalid base64 image format");
+          }
+          
+          const contentType = matches[1];
+          const base64Data = matches[2];
+          const buffer = Buffer.from(base64Data, 'base64');
+          
+          // Generate a unique filename
+          const timestamp = Date.now();
+          const extension = contentType.split('/')[1] || 'jpg';
+          const filename = `${timestamp}_${productId}.${extension}`;
+          const objectKey = `products/${productId}/${filename}`;
+          
+          // Upload to object storage
+          await objectStore.uploadFromBuffer(objectKey, buffer, { contentType });
+          
+          // Generate public URL
+          const publicUrl = objectStore.getPublicUrl(objectKey);
+          
+          // Prepare the image data
+          const imageData = {
+            productId,
+            url: publicUrl,
+            objectKey: objectKey,
+            isMain: req.body.isMain || false,
+            sortOrder: req.body.sortOrder || 0,
+            hasBgRemoved: false,
+            bgRemovedUrl: null,
+            bgRemovedObjectKey: null
+          };
+          
+          // Create the product image record
+          image = await storage.createProductImage(imageData);
+        }
+        else {
+          // Handle case where we didn't get a base64 image URL or object key
+          throw new BadRequestError(
+            "Invalid image data. Please provide either a base64 data URL or an object key and URL."
+          );
         }
         
-        const contentType = matches[1];
-        const base64Data = matches[2];
-        const buffer = Buffer.from(base64Data, 'base64');
-        
-        // Generate a unique filename
-        const timestamp = Date.now();
-        const extension = contentType.split('/')[1] || 'jpg';
-        const filename = `${timestamp}_${productId}.${extension}`;
-        const objectKey = `products/${productId}/${filename}`;
-        
-        // Upload to object storage
-        await objectStore.uploadFromBuffer(objectKey, buffer, { contentType });
-        
-        // Generate public URL
-        const publicUrl = objectStore.getPublicUrl(objectKey);
-        
-        // Prepare the image data
-        const imageData = {
+        // Return standardized response format with 201 status code
+        res.status(201).json({
+          success: true,
+          data: image,
+          message: "Product image created successfully"
+        });
+      } catch (error) {
+        // Log detailed error for debugging
+        logger.error('Error creating product image', { 
+          error, 
           productId,
-          url: publicUrl,
-          objectKey: objectKey,
-          isMain: req.body.isMain || false,
-          sortOrder: req.body.sortOrder || 0,
-          hasBgRemoved: false,
-          bgRemovedUrl: null,
-          bgRemovedObjectKey: null
-        };
+          hasObjectKey: !!req.body.objectKey,
+          hasUrl: !!req.body.url,
+          isBase64: req.body.url?.startsWith('data:')
+        });
         
-        // Create the product image record
-        const image = await storage.createProductImage(imageData);
-        res.status(201);
-        return image;
+        // If it's already a known error type, rethrow it
+        if (error instanceof BadRequestError || 
+            error instanceof ForbiddenError || 
+            error instanceof NotFoundError) {
+          throw error;
+        }
+        
+        throw new AppError(
+          "Failed to create product image. Please try again later.",
+          ErrorCode.INTERNAL_SERVER_ERROR,
+          500
+        );
       }
-      
-      // Handle case where we didn't get a base64 image URL or object key
-      throw new BadRequestError(
-        "Invalid image data. Please provide either a base64 data URL or an object key and URL."
-      );
     }));
   
   app.put(
@@ -1334,7 +1411,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       params: idParamSchema,
       body: updateProductImageSchema
     }),
-    withStandardResponse(async (req: Request, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const user = req.user as any;
       
       if (user.role !== 'admin') {
@@ -1342,13 +1419,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const imageId = Number(req.params.imageId);
-      const updatedImage = await storage.updateProductImage(imageId, req.body);
       
-      if (!updatedImage) {
-        throw new NotFoundError("Image not found", "productImage");
+      try {
+        const updatedImage = await storage.updateProductImage(imageId, req.body);
+        
+        if (!updatedImage) {
+          throw new NotFoundError("Image not found", "productImage");
+        }
+        
+        // Return standardized response format
+        res.json({
+          success: true,
+          data: updatedImage,
+          message: "Product image updated successfully"
+        });
+      } catch (error) {
+        // Log detailed error for debugging
+        logger.error('Error updating product image', { 
+          error, 
+          imageId,
+          updateData: req.body
+        });
+        
+        // If it's a NotFoundError, propagate it
+        if (error instanceof NotFoundError) {
+          throw error;
+        }
+        
+        throw new AppError(
+          "Failed to update product image. Please try again later.",
+          ErrorCode.INTERNAL_SERVER_ERROR,
+          500
+        );
       }
-      
-      return updatedImage;
     })
   );
   
@@ -1358,7 +1461,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     validateRequest({
       params: idParamSchema
     }),
-    withStandardResponse(async (req: Request, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const user = req.user as any;
       
       if (user.role !== 'admin') {
@@ -1366,13 +1469,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const imageId = Number(req.params.imageId);
-      const result = await storage.deleteProductImage(imageId);
       
-      if (!result) {
-        throw new NotFoundError("Image not found", "productImage");
+      try {
+        // Get the image data before deleting it for better error reporting
+        const image = await storage.getProductImageById(imageId);
+        
+        if (!image) {
+          throw new NotFoundError("Image not found", "productImage");
+        }
+        
+        const result = await storage.deleteProductImage(imageId);
+        
+        if (!result) {
+          throw new AppError(
+            `Failed to delete product image with ID ${imageId}`,
+            ErrorCode.INTERNAL_SERVER_ERROR,
+            500
+          );
+        }
+        
+        // Return standardized response format
+        res.json({
+          success: true,
+          message: "Product image deleted successfully",
+          meta: {
+            imageId,
+            productId: image.productId
+          }
+        });
+      } catch (error) {
+        // Log detailed error for debugging
+        logger.error('Error deleting product image', { 
+          error, 
+          imageId
+        });
+        
+        // If it's a NotFoundError, propagate it
+        if (error instanceof NotFoundError) {
+          throw error;
+        }
+        
+        throw new AppError(
+          "Failed to delete product image. Please try again later.",
+          ErrorCode.INTERNAL_SERVER_ERROR,
+          500
+        );
       }
-      
-      return { success: true };
     })
   );
   
@@ -1389,7 +1531,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
       })
     }),
-    withStandardResponse(async (req: Request, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const user = req.user as any;
       
       if (user.role !== 'admin') {
@@ -1399,13 +1541,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const productId = Number(req.params.productId);
       const imageId = Number(req.params.imageId);
       
-      const result = await storage.setMainProductImage(productId, imageId);
-      
-      if (!result) {
-        throw new NotFoundError("Failed to set main image. Image or product not found.", "productImage");
+      try {
+        // Verify product exists
+        const product = await storage.getProductById(productId);
+        if (!product) {
+          throw new NotFoundError(`Product with ID ${productId} not found`, 'product');
+        }
+        
+        // Verify image exists
+        const image = await storage.getProductImageById(imageId);
+        if (!image) {
+          throw new NotFoundError(`Image with ID ${imageId} not found`, 'productImage');
+        }
+        
+        // Verify image belongs to the product
+        if (image.productId !== productId) {
+          throw new BadRequestError(`Image with ID ${imageId} does not belong to product with ID ${productId}`);
+        }
+        
+        const result = await storage.setMainProductImage(productId, imageId);
+        
+        if (!result) {
+          throw new AppError(
+            `Failed to set image ${imageId} as main for product ${productId}`,
+            ErrorCode.INTERNAL_SERVER_ERROR,
+            500
+          );
+        }
+        
+        // Return standardized response format
+        res.json({
+          success: true,
+          message: "Main product image set successfully",
+          meta: {
+            imageId,
+            productId,
+            productName: product.name
+          }
+        });
+      } catch (error) {
+        // Log detailed error for debugging
+        logger.error('Error setting main product image', { 
+          error, 
+          productId,
+          imageId
+        });
+        
+        // If it's already a known error type, rethrow it
+        if (error instanceof NotFoundError || error instanceof BadRequestError) {
+          throw error;
+        }
+        
+        throw new AppError(
+          "Failed to set main product image. Please try again later.",
+          ErrorCode.INTERNAL_SERVER_ERROR,
+          500
+        );
       }
-      
-      return { success: true };
     })
   );
   
@@ -1419,42 +1611,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Use multer to handle the file upload
       upload.single('image')(req, res, (err) => {
         if (err) {
-          console.error('Multer error:', err);
-          return res.status(400).json({
-            success: false,
-            error: {
-              message: 'File upload error',
-              code: 'UPLOAD_ERROR',
-              details: err.message
-            }
-          });
+          logger.error('Multer file upload error', { error: err });
+          throw new BadRequestError(
+            `File upload error: ${err.message}`,
+            'file',
+            { originalError: err }
+          );
         }
         
         next();
       });
     },
-    async (req: Request, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const user = req.user as any;
       
       if (user.role !== 'admin') {
-        return res.status(403).json({
-          success: false,
-          error: {
-            message: "Only administrators can validate images",
-            code: "FORBIDDEN"
-          }
-        });
+        throw new ForbiddenError("Only administrators can validate images");
       }
       
       // Check if file was received
       if (!req.file) {
-        return res.status(400).json({
-          success: false,
-          error: {
-            message: 'No image file provided',
-            code: "VALIDATION_ERROR"
-          }
-        });
+        throw new BadRequestError(
+          'No image file provided', 
+          'file', 
+          { fieldName: 'image' }
+        );
       }
       
       try {
@@ -1462,13 +1643,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const fileBuffer = req.file.buffer;
         
         if (!fileBuffer || fileBuffer.length === 0) {
-          return res.status(400).json({
-            success: false,
-            error: {
-              message: 'Empty file received',
-              code: "VALIDATION_ERROR"
-            }
-          });
+          throw new BadRequestError(
+            'Empty file received', 
+            'file',
+            { fileName: req.file.originalname, fileSize: req.file.size }
+          );
         }
         
         // Perform validation
@@ -1477,24 +1656,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
           req.file.originalname
         );
         
-        // Return validation result
-        return res.status(200).json({
+        // Return validation result with standardized response format
+        res.json({
           success: true,
-          filename: req.file.originalname,
-          validation: validationResult
-        });
-      } catch (error: any) {
-        console.error('Error validating image:', error);
-        return res.status(500).json({
-          success: false,
-          error: {
-            message: 'Error validating image',
-            code: "SERVER_ERROR",
-            details: error.message || 'Unknown error'
+          message: "Image validation successful",
+          data: {
+            filename: req.file.originalname,
+            validation: validationResult
           }
         });
+      } catch (error) {
+        // Log detailed error information
+        logger.error('Error validating image', { 
+          error, 
+          fileName: req.file?.originalname,
+          fileSize: req.file?.size
+        });
+        
+        // Throw properly formatted error
+        throw new AppError(
+          "Failed to validate image. Please check the image format and try again.",
+          ErrorCode.INTERNAL_SERVER_ERROR,
+          500,
+          { originalError: error }
+        );
       }
-    }
+    })
   );
   
   // Optimize an image for web display
@@ -1726,7 +1913,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         productDescription: z.string().optional().default('')
       })
     }),
-    withStandardResponse(async (req: Request, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const user = req.user as any;
       
       if (user.role !== 'admin') {
@@ -1735,13 +1922,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const { imageUrl, productName, productDescription } = req.body;
       
-      const tags = await generateProductTags(
-        imageUrl, 
-        productName, 
-        productDescription
-      );
-      
-      return { tags };
+      try {
+        // Check if the image URL is valid
+        const isValidUrl = await validateImageUrl(imageUrl);
+        if (!isValidUrl) {
+          throw new BadRequestError(
+            "Invalid image URL. Please provide a valid and accessible image URL.", 
+            "imageUrl"
+          );
+        }
+        
+        // Generate tags using AI service
+        const tags = await generateProductTags(
+          imageUrl, 
+          productName, 
+          productDescription
+        );
+        
+        if (!tags || tags.length === 0) {
+          throw new AppError(
+            "Failed to generate tags. AI service returned no results.",
+            ErrorCode.EXTERNAL_SERVICE_ERROR,
+            500
+          );
+        }
+        
+        // Return standardized response format
+        res.json({
+          success: true,
+          message: "Product tags generated successfully", 
+          data: { tags },
+          meta: {
+            productName,
+            tagCount: tags.length
+          }
+        });
+      } catch (error) {
+        // Log the error in detail for debugging
+        logger.error('Error generating product tags with AI', { 
+          error, 
+          productName, 
+          imageUrl
+        });
+        
+        // Handle specific error cases
+        if (error instanceof BadRequestError) {
+          throw error;
+        }
+        
+        // Check if it's a Gemini API-specific error and provide better error messages
+        if (error instanceof Error && error.message.includes('GEMINI_API_KEY')) {
+          throw new AppError(
+            "AI service configuration error. Please contact an administrator.",
+            ErrorCode.EXTERNAL_SERVICE_ERROR,
+            500
+          );
+        }
+        
+        // Generic error fallback
+        throw new AppError(
+          "Failed to generate product tags. The AI service is currently unavailable.",
+          ErrorCode.EXTERNAL_SERVICE_ERROR,
+          500,
+          { originalError: error }
+        );
+      }
     })
   );
   
