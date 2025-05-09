@@ -69,7 +69,7 @@ function AuthTestsPage() {
     refetch: refetchValidation,
   } = useQuery<ValidationTestResults>({
     queryKey: ['/api/auth-test/validate-password'],
-    queryFn: getQueryFn(),
+    queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: selectedTest === 'validation',
   });
 
@@ -81,7 +81,7 @@ function AuthTestsPage() {
     refetch: refetchCredentials,
   } = useQuery<CredentialTestResults>({
     queryKey: ['/api/auth-test/validate-credentials'],
-    queryFn: getQueryFn(),
+    queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: selectedTest === 'credentials',
   });
 
@@ -93,7 +93,7 @@ function AuthTestsPage() {
     refetch: refetchSession,
   } = useQuery<SessionTestResults>({
     queryKey: ['/api/auth-test/session-persistence'],
-    queryFn: getQueryFn(),
+    queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: selectedTest === 'session',
   });
 
@@ -105,7 +105,7 @@ function AuthTestsPage() {
     refetch: refetchSystem,
   } = useQuery<SystemTestResults>({
     queryKey: ['/api/auth-test/system-tests'],
-    queryFn: getQueryFn(),
+    queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: selectedTest === 'system',
   });
 
@@ -144,7 +144,7 @@ function AuthTestsPage() {
   // User count query
   const { data: userCount } = useQuery({
     queryKey: ['/api/auth-test/user-count'],
-    queryFn: getQueryFn(),
+    queryFn: getQueryFn({ on401: "returnNull" }),
   });
 
   // Test status component
@@ -436,24 +436,32 @@ function AuthTestsPage() {
                   </div>
                 ) : sessionError ? (
                   <div className="text-red-600 py-2">Error: {(sessionError as Error).message}</div>
-                ) : sessionResults ? (
+                ) : sessionResults && sessionResults.results ? (
                   <div className="space-y-3">
-                    <div className="flex justify-between items-center p-2 border-b">
-                      <span>Session Persistence</span>
-                      <TestStatus status={sessionResults.results.persistenceTest.status} />
-                    </div>
-                    <div className="flex justify-between items-center p-2 border-b">
-                      <span>Session Refresh</span>
-                      <TestStatus status={sessionResults.results.refreshTest.status} />
-                    </div>
-                    <div className="flex justify-between items-center p-2 border-b">
-                      <span>Session Timeout</span>
-                      <TestStatus status={sessionResults.results.timeoutTest.status} />
-                    </div>
-                    <div className="flex justify-between items-center p-2">
-                      <span>Logout Functionality</span>
-                      <TestStatus status={sessionResults.results.logoutTest.status} />
-                    </div>
+                    {sessionResults.results.persistenceTest && (
+                      <div className="flex justify-between items-center p-2 border-b">
+                        <span>Session Persistence</span>
+                        <TestStatus status={sessionResults.results.persistenceTest.status} />
+                      </div>
+                    )}
+                    {sessionResults.results.refreshTest && (
+                      <div className="flex justify-between items-center p-2 border-b">
+                        <span>Session Refresh</span>
+                        <TestStatus status={sessionResults.results.refreshTest.status} />
+                      </div>
+                    )}
+                    {sessionResults.results.timeoutTest && (
+                      <div className="flex justify-between items-center p-2 border-b">
+                        <span>Session Timeout</span>
+                        <TestStatus status={sessionResults.results.timeoutTest.status} />
+                      </div>
+                    )}
+                    {sessionResults.results.logoutTest && (
+                      <div className="flex justify-between items-center p-2">
+                        <span>Logout Functionality</span>
+                        <TestStatus status={sessionResults.results.logoutTest.status} />
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="text-gray-500 py-2">No test results available</div>
@@ -496,10 +504,10 @@ function AuthTestsPage() {
                       <p className="text-sm text-gray-500">
                         {sessionResults.status === 'passed' 
                           ? 'All session management tests passed successfully' 
-                          : `${sessionResults.failedTests.length} session tests failed`}
+                          : sessionResults.failedTests && `${sessionResults.failedTests.length} session tests failed`}
                       </p>
                     </div>
-                    {sessionResults.status === 'failed' && (
+                    {sessionResults.status === 'failed' && sessionResults.failedTests && (
                       <div className="p-3 bg-red-50 border border-red-200 rounded-md">
                         <h4 className="text-sm font-medium text-red-800 mb-1">Failed Tests:</h4>
                         <ul className="list-disc list-inside text-sm text-red-700">
@@ -535,24 +543,32 @@ function AuthTestsPage() {
                   </div>
                 ) : systemError ? (
                   <div className="text-red-600 py-2">Error: {(systemError as Error).message}</div>
-                ) : systemResults ? (
+                ) : systemResults && systemResults.results ? (
                   <div className="space-y-3">
-                    <div className="flex justify-between items-center p-2 border-b">
-                      <span>Password Validation</span>
-                      <TestStatus status={systemResults.results.passwordValidation.status} />
-                    </div>
-                    <div className="flex justify-between items-center p-2 border-b">
-                      <span>Password Hashing</span>
-                      <TestStatus status={systemResults.results.passwordHashing.status} />
-                    </div>
-                    <div className="flex justify-between items-center p-2 border-b">
-                      <span>User Retrieval</span>
-                      <TestStatus status={systemResults.results.userRetrieval.status} />
-                    </div>
-                    <div className="flex justify-between items-center p-2">
-                      <span>Session Expiry</span>
-                      <TestStatus status={systemResults.results.sessionExpiry.status} />
-                    </div>
+                    {systemResults.results.passwordValidation && (
+                      <div className="flex justify-between items-center p-2 border-b">
+                        <span>Password Validation</span>
+                        <TestStatus status={systemResults.results.passwordValidation.status} />
+                      </div>
+                    )}
+                    {systemResults.results.passwordHashing && (
+                      <div className="flex justify-between items-center p-2 border-b">
+                        <span>Password Hashing</span>
+                        <TestStatus status={systemResults.results.passwordHashing.status} />
+                      </div>
+                    )}
+                    {systemResults.results.userRetrieval && (
+                      <div className="flex justify-between items-center p-2 border-b">
+                        <span>User Retrieval</span>
+                        <TestStatus status={systemResults.results.userRetrieval.status} />
+                      </div>
+                    )}
+                    {systemResults.results.sessionExpiry && (
+                      <div className="flex justify-between items-center p-2">
+                        <span>Session Expiry</span>
+                        <TestStatus status={systemResults.results.sessionExpiry.status} />
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="text-gray-500 py-2">No test results available</div>
@@ -595,10 +611,10 @@ function AuthTestsPage() {
                       <p className="text-sm text-gray-500">
                         {systemResults.status === 'passed' 
                           ? 'All system authentication tests passed successfully' 
-                          : `${systemResults.failedTests.length} system tests failed`}
+                          : systemResults.failedTests && `${systemResults.failedTests.length} system tests failed`}
                       </p>
                     </div>
-                    {systemResults.status === 'failed' && (
+                    {systemResults.status === 'failed' && systemResults.failedTests && (
                       <div className="p-3 bg-red-50 border border-red-200 rounded-md">
                         <h4 className="text-sm font-medium text-red-800 mb-1">Failed Tests:</h4>
                         <ul className="list-disc list-inside text-sm text-red-700">
