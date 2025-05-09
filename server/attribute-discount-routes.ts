@@ -41,113 +41,369 @@ const handleErrors = (fn: Function) => asyncHandler(async (req: Request, res: Re
 });
 
 // Get all attribute discount rules
-router.get("/attribute-discount-rules", handleErrors(async (req: Request, res: Response) => {
-  const rules = await storage.getAllAttributeDiscountRules();
-  sendSuccess(res, rules);
-}));
+router.get("/attribute-discount-rules", 
+  handleErrors(async (req: Request, res: Response) => {
+    try {
+      const rules = await storage.getAllAttributeDiscountRules();
+      
+      logger.debug(`Retrieved ${rules.length} attribute discount rules`);
+      
+      sendSuccess(res, rules);
+    } catch (error) {
+      logger.error('Error fetching all attribute discount rules:', { 
+        error,
+        userId: req.user?.id
+      });
+      throw error;
+    }
+  })
+);
 
 // Get attribute discount rules by product
-router.get("/attribute-discount-rules/product/:productId", handleErrors(async (req: Request, res: Response) => {
-  const productId = parseInt(req.params.productId);
-  if (isNaN(productId)) {
-    return sendError(res, "Invalid product ID", 400, "INVALID_ID");
-  }
-  
-  const rules = await storage.getAttributeDiscountRulesByProduct(productId);
-  sendSuccess(res, rules);
-}));
+router.get("/attribute-discount-rules/product/:productId", 
+  validateRequest({
+    params: z.object({
+      productId: z.string().refine(val => !isNaN(parseInt(val)), { message: "Product ID must be a number" })
+    })
+  }),
+  handleErrors(async (req: Request, res: Response) => {
+    try {
+      const productId = parseInt(req.params.productId);
+      
+      // Verify that the product exists
+      const product = await storage.getProductById(productId);
+      if (!product) {
+        throw new NotFoundError(`Product with ID ${productId} not found`, 'product');
+      }
+      
+      const rules = await storage.getAttributeDiscountRulesByProduct(productId);
+      
+      logger.debug(`Retrieved ${rules.length} attribute discount rules for product ID ${productId}`);
+      
+      sendSuccess(res, rules);
+    } catch (error) {
+      logger.error('Error fetching attribute discount rules by product:', { 
+        error, 
+        productId: req.params.productId,
+        userId: req.user?.id
+      });
+      throw error;
+    }
+  })
+);
 
 // Get attribute discount rules by category
-router.get("/attribute-discount-rules/category/:categoryId", handleErrors(async (req: Request, res: Response) => {
-  const categoryId = parseInt(req.params.categoryId);
-  if (isNaN(categoryId)) {
-    return sendError(res, "Invalid category ID", 400, "INVALID_ID");
-  }
-  
-  const rules = await storage.getAttributeDiscountRulesByCategory(categoryId);
-  sendSuccess(res, rules);
-}));
+router.get("/attribute-discount-rules/category/:categoryId", 
+  validateRequest({
+    params: z.object({
+      categoryId: z.string().refine(val => !isNaN(parseInt(val)), { message: "Category ID must be a number" })
+    })
+  }),
+  handleErrors(async (req: Request, res: Response) => {
+    try {
+      const categoryId = parseInt(req.params.categoryId);
+      
+      // Verify that the category exists
+      const category = await storage.getCategoryById(categoryId);
+      if (!category) {
+        throw new NotFoundError(`Category with ID ${categoryId} not found`, 'category');
+      }
+      
+      const rules = await storage.getAttributeDiscountRulesByCategory(categoryId);
+      
+      logger.debug(`Retrieved ${rules.length} attribute discount rules for category ID ${categoryId}`);
+      
+      sendSuccess(res, rules);
+    } catch (error) {
+      logger.error('Error fetching attribute discount rules by category:', { 
+        error, 
+        categoryId: req.params.categoryId,
+        userId: req.user?.id
+      });
+      throw error;
+    }
+  })
+);
 
 // Get attribute discount rules by catalog
-router.get("/attribute-discount-rules/catalog/:catalogId", handleErrors(async (req: Request, res: Response) => {
-  const catalogId = parseInt(req.params.catalogId);
-  if (isNaN(catalogId)) {
-    return sendError(res, "Invalid catalog ID", 400, "INVALID_ID");
-  }
-  
-  const rules = await storage.getAttributeDiscountRulesByCatalog(catalogId);
-  sendSuccess(res, rules);
-}));
+router.get("/attribute-discount-rules/catalog/:catalogId", 
+  validateRequest({
+    params: z.object({
+      catalogId: z.string().refine(val => !isNaN(parseInt(val)), { message: "Catalog ID must be a number" })
+    })
+  }),
+  handleErrors(async (req: Request, res: Response) => {
+    try {
+      const catalogId = parseInt(req.params.catalogId);
+      
+      // Verify that the catalog exists
+      const catalog = await storage.getCatalogById(catalogId);
+      if (!catalog) {
+        throw new NotFoundError(`Catalog with ID ${catalogId} not found`, 'catalog');
+      }
+      
+      const rules = await storage.getAttributeDiscountRulesByCatalog(catalogId);
+      
+      logger.debug(`Retrieved ${rules.length} attribute discount rules for catalog ID ${catalogId}`);
+      
+      sendSuccess(res, rules);
+    } catch (error) {
+      logger.error('Error fetching attribute discount rules by catalog:', { 
+        error, 
+        catalogId: req.params.catalogId,
+        userId: req.user?.id
+      });
+      throw error;
+    }
+  })
+);
 
 // Get attribute discount rules by attribute
-router.get("/attribute-discount-rules/attribute/:attributeId", handleErrors(async (req: Request, res: Response) => {
-  const attributeId = parseInt(req.params.attributeId);
-  if (isNaN(attributeId)) {
-    return sendError(res, "Invalid attribute ID", 400, "INVALID_ID");
-  }
-  
-  const rules = await storage.getAttributeDiscountRulesByAttribute(attributeId);
-  sendSuccess(res, rules);
-}));
+router.get("/attribute-discount-rules/attribute/:attributeId", 
+  validateRequest({
+    params: z.object({
+      attributeId: z.string().refine(val => !isNaN(parseInt(val)), { message: "Attribute ID must be a number" })
+    })
+  }),
+  handleErrors(async (req: Request, res: Response) => {
+    try {
+      const attributeId = parseInt(req.params.attributeId);
+      
+      // Verify that the attribute exists
+      const attribute = await storage.getAttributeById(attributeId);
+      if (!attribute) {
+        throw new NotFoundError(`Attribute with ID ${attributeId} not found`, 'attribute');
+      }
+      
+      const rules = await storage.getAttributeDiscountRulesByAttribute(attributeId);
+      
+      logger.debug(`Retrieved ${rules.length} attribute discount rules for attribute ID ${attributeId}`);
+      
+      sendSuccess(res, rules);
+    } catch (error) {
+      logger.error('Error fetching attribute discount rules by attribute:', { 
+        error, 
+        attributeId: req.params.attributeId,
+        userId: req.user?.id
+      });
+      throw error;
+    }
+  })
+);
 
 // Get a single attribute discount rule by ID
-router.get("/attribute-discount-rules/:id", handleErrors(async (req: Request, res: Response) => {
-  const ruleId = parseInt(req.params.id);
-  if (isNaN(ruleId)) {
-    return sendError(res, "Invalid rule ID", 400, "INVALID_ID");
-  }
-  
-  const rule = await storage.getAttributeDiscountRule(ruleId);
-  if (!rule) {
-    return sendError(res, "Attribute discount rule not found", 404, "NOT_FOUND");
-  }
-  
-  sendSuccess(res, rule);
-}));
+router.get("/attribute-discount-rules/:id", 
+  validateRequest({
+    params: z.object({
+      id: z.string().refine(val => !isNaN(parseInt(val)), { message: "Rule ID must be a number" })
+    })
+  }),
+  handleErrors(async (req: Request, res: Response) => {
+    try {
+      const ruleId = parseInt(req.params.id);
+      
+      const rule = await storage.getAttributeDiscountRule(ruleId);
+      if (!rule) {
+        throw new NotFoundError(`Attribute discount rule with ID ${ruleId} not found`, 'attribute_discount_rule');
+      }
+      
+      logger.debug(`Retrieved attribute discount rule ID ${ruleId}`);
+      
+      sendSuccess(res, rule);
+    } catch (error) {
+      logger.error('Error fetching attribute discount rule by ID:', { 
+        error, 
+        ruleId: req.params.id,
+        userId: req.user?.id
+      });
+      throw error;
+    }
+  })
+);
 
 // Create a new attribute discount rule
-router.post("/attribute-discount-rules", handleErrors(async (req: Request, res: Response) => {
-  const payload = insertAttributeDiscountRuleSchema.parse(req.body);
-  
-  // Handle date conversion
-  if (payload.startDate && typeof payload.startDate === 'string') {
-    payload.startDate = new Date(payload.startDate);
-  }
-  
-  if (payload.endDate && typeof payload.endDate === 'string') {
-    payload.endDate = new Date(payload.endDate);
-  }
-  
-  const rule = await storage.createAttributeDiscountRule(payload);
-  sendSuccess(res, rule, 201);
-}));
+router.post("/attribute-discount-rules", 
+  isAdmin,
+  validateRequest({
+    body: insertAttributeDiscountRuleSchema
+  }),
+  handleErrors(async (req: Request, res: Response) => {
+    try {
+      const payload = req.body;
+      
+      // Handle date conversion
+      if (payload.startDate && typeof payload.startDate === 'string') {
+        payload.startDate = new Date(payload.startDate);
+      }
+      
+      if (payload.endDate && typeof payload.endDate === 'string') {
+        payload.endDate = new Date(payload.endDate);
+      }
+      
+      // Validate dates
+      if (payload.startDate && payload.endDate && payload.startDate > payload.endDate) {
+        throw new ValidationError("Start date cannot be after end date", "startDate");
+      }
+      
+      // Validate discount range
+      if (payload.discountType === 'percentage' && (payload.discountValue < 0 || payload.discountValue > 100)) {
+        throw new ValidationError("Percentage discount must be between 0 and 100", "discountValue");
+      }
+      
+      if (payload.discountType === 'fixed' && payload.discountValue < 0) {
+        throw new ValidationError("Fixed discount cannot be negative", "discountValue");
+      }
+      
+      // Check if required entities exist
+      if (payload.productId) {
+        const product = await storage.getProductById(payload.productId);
+        if (!product) {
+          throw new NotFoundError(`Product with ID ${payload.productId} not found`, 'product');
+        }
+      }
+      
+      if (payload.categoryId) {
+        const category = await storage.getCategoryById(payload.categoryId);
+        if (!category) {
+          throw new NotFoundError(`Category with ID ${payload.categoryId} not found`, 'category');
+        }
+      }
+      
+      if (payload.catalogId) {
+        const catalog = await storage.getCatalogById(payload.catalogId);
+        if (!catalog) {
+          throw new NotFoundError(`Catalog with ID ${payload.catalogId} not found`, 'catalog');
+        }
+      }
+      
+      if (payload.attributeId) {
+        const attribute = await storage.getAttributeById(payload.attributeId);
+        if (!attribute) {
+          throw new NotFoundError(`Attribute with ID ${payload.attributeId} not found`, 'attribute');
+        }
+      }
+      
+      const rule = await storage.createAttributeDiscountRule(payload);
+      
+      logger.info(`Attribute discount rule created`, {
+        ruleId: rule.id,
+        discountType: rule.discountType,
+        discountValue: rule.discountValue,
+        userId: req.user?.id
+      });
+      
+      sendSuccess(res, rule, 201);
+    } catch (error) {
+      logger.error('Error creating attribute discount rule:', { 
+        error, 
+        payload: req.body,
+        userId: req.user?.id
+      });
+      throw error;
+    }
+  })
+);
 
 // Update an attribute discount rule
-router.put("/attribute-discount-rules/:id", handleErrors(async (req: Request, res: Response) => {
-  const ruleId = parseInt(req.params.id);
-  if (isNaN(ruleId)) {
-    return sendError(res, "Invalid rule ID", 400, "INVALID_ID");
-  }
-  
-  const payload = insertAttributeDiscountRuleSchema.parse(req.body);
-  
-  // Handle date conversion
-  if (payload.startDate && typeof payload.startDate === 'string') {
-    payload.startDate = new Date(payload.startDate);
-  }
-  
-  if (payload.endDate && typeof payload.endDate === 'string') {
-    payload.endDate = new Date(payload.endDate);
-  }
-  
-  const existingRule = await storage.getAttributeDiscountRule(ruleId);
-  if (!existingRule) {
-    return sendError(res, "Attribute discount rule not found", 404, "NOT_FOUND");
-  }
-  
-  const updatedRule = await storage.updateAttributeDiscountRule(ruleId, payload);
-  sendSuccess(res, updatedRule);
-}));
+router.put("/attribute-discount-rules/:id", 
+  isAdmin,
+  validateRequest({
+    params: z.object({
+      id: z.string().refine(val => !isNaN(parseInt(val)), { message: "Rule ID must be a number" })
+    }),
+    body: insertAttributeDiscountRuleSchema
+  }),
+  handleErrors(async (req: Request, res: Response) => {
+    try {
+      const ruleId = parseInt(req.params.id);
+      const payload = req.body;
+      
+      // Handle date conversion
+      if (payload.startDate && typeof payload.startDate === 'string') {
+        payload.startDate = new Date(payload.startDate);
+      }
+      
+      if (payload.endDate && typeof payload.endDate === 'string') {
+        payload.endDate = new Date(payload.endDate);
+      }
+      
+      // Validate dates
+      if (payload.startDate && payload.endDate && payload.startDate > payload.endDate) {
+        throw new ValidationError("Start date cannot be after end date", "startDate");
+      }
+      
+      // Validate discount range
+      if (payload.discountType === 'percentage' && (payload.discountValue < 0 || payload.discountValue > 100)) {
+        throw new ValidationError("Percentage discount must be between 0 and 100", "discountValue");
+      }
+      
+      if (payload.discountType === 'fixed' && payload.discountValue < 0) {
+        throw new ValidationError("Fixed discount cannot be negative", "discountValue");
+      }
+      
+      // Check if rule exists
+      const existingRule = await storage.getAttributeDiscountRule(ruleId);
+      if (!existingRule) {
+        throw new NotFoundError(`Attribute discount rule with ID ${ruleId} not found`, 'attribute_discount_rule');
+      }
+      
+      // Check if required entities exist
+      if (payload.productId) {
+        const product = await storage.getProductById(payload.productId);
+        if (!product) {
+          throw new NotFoundError(`Product with ID ${payload.productId} not found`, 'product');
+        }
+      }
+      
+      if (payload.categoryId) {
+        const category = await storage.getCategoryById(payload.categoryId);
+        if (!category) {
+          throw new NotFoundError(`Category with ID ${payload.categoryId} not found`, 'category');
+        }
+      }
+      
+      if (payload.catalogId) {
+        const catalog = await storage.getCatalogById(payload.catalogId);
+        if (!catalog) {
+          throw new NotFoundError(`Catalog with ID ${payload.catalogId} not found`, 'catalog');
+        }
+      }
+      
+      if (payload.attributeId) {
+        const attribute = await storage.getAttributeById(payload.attributeId);
+        if (!attribute) {
+          throw new NotFoundError(`Attribute with ID ${payload.attributeId} not found`, 'attribute');
+        }
+      }
+      
+      const updatedRule = await storage.updateAttributeDiscountRule(ruleId, payload);
+      if (!updatedRule) {
+        throw new AppError(
+          `Failed to update attribute discount rule with ID ${ruleId}`,
+          ErrorCode.OPERATION_FAILED,
+          500
+        );
+      }
+      
+      logger.info(`Attribute discount rule updated`, {
+        ruleId,
+        discountType: updatedRule.discountType,
+        discountValue: updatedRule.discountValue,
+        userId: req.user?.id
+      });
+      
+      sendSuccess(res, updatedRule);
+    } catch (error) {
+      logger.error('Error updating attribute discount rule:', { 
+        error, 
+        ruleId: req.params.id,
+        payload: req.body,
+        userId: req.user?.id
+      });
+      throw error;
+    }
+  })
+);
 
 // Delete an attribute discount rule
 router.delete("/attribute-discount-rules/:id", 
@@ -198,20 +454,77 @@ router.delete("/attribute-discount-rules/:id",
 );
 
 // Calculate price adjustments based on selected attributes and product
-router.post("/attribute-discount-rules/calculate", handleErrors(async (req: Request, res: Response) => {
-  const { productId, selectedAttributes, quantity = 1 } = req.body;
-  
-  if (!productId || !selectedAttributes) {
-    return sendError(res, "Product ID and selected attributes are required", 400, "MISSING_REQUIRED_FIELDS");
-  }
-  
-  const adjustments = await storage.calculateAttributeBasedPriceAdjustments(
-    productId,
-    selectedAttributes,
-    quantity
-  );
-  
-  sendSuccess(res, adjustments);
-}));
+router.post("/attribute-discount-rules/calculate", 
+  validateRequest({
+    body: z.object({
+      productId: z.number({
+        required_error: "Product ID is required",
+        invalid_type_error: "Product ID must be a number"
+      }),
+      selectedAttributes: z.record(z.array(z.number())).refine(val => Object.keys(val).length > 0, {
+        message: "Selected attributes are required",
+        path: ["selectedAttributes"]
+      }),
+      quantity: z.number().positive().default(1)
+    })
+  }),
+  handleErrors(async (req: Request, res: Response) => {
+    try {
+      const { productId, selectedAttributes, quantity = 1 } = req.body;
+      
+      // Verify that the product exists
+      const product = await storage.getProductById(productId);
+      if (!product) {
+        throw new NotFoundError(`Product with ID ${productId} not found`, 'product');
+      }
+      
+      // Verify that all attribute IDs in selectedAttributes exist
+      const attributeIds = Object.keys(selectedAttributes);
+      for (const attributeId of attributeIds) {
+        const attribute = await storage.getAttributeById(parseInt(attributeId));
+        if (!attribute) {
+          throw new NotFoundError(`Attribute with ID ${attributeId} not found`, 'attribute');
+        }
+        
+        // Verify that all option IDs exist for this attribute
+        const optionIds = selectedAttributes[attributeId];
+        
+        // For now, we trust that the options are valid
+        // This would be enhanced when the proper attribute relation methods are implemented
+        // in the storage class
+        
+        if (optionIds.length === 0) {
+          throw new ValidationError(`No options selected for attribute ID ${attributeId}`, `selectedAttributes.${attributeId}`);
+        }
+        
+        logger.debug(`Attribute ${attributeId} has ${optionIds.length} selected options`);
+      }
+      
+      // Calculate adjustments
+      const adjustments = await storage.calculateAttributeBasedPriceAdjustments(
+        productId,
+        selectedAttributes,
+        quantity
+      );
+      
+      logger.debug(`Calculated price adjustments for product`, {
+        productId,
+        selectedAttributeCount: Object.keys(selectedAttributes).length,
+        adjustments
+      });
+      
+      sendSuccess(res, adjustments);
+    } catch (error) {
+      logger.error('Error calculating attribute-based price adjustments:', { 
+        error, 
+        productId: req.body?.productId,
+        selectedAttributes: req.body?.selectedAttributes,
+        quantity: req.body?.quantity,
+        userId: req.user?.id
+      });
+      throw error;
+    }
+  })
+);
 
 export default router;
