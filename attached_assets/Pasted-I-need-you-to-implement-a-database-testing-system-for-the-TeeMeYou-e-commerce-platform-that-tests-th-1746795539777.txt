@@ -1,0 +1,39 @@
+I need you to implement a database testing system for the TeeMeYou e-commerce platform that tests the REAL existing application functionality. Unlike the auth-tests, we are NOT creating a separate testing system - instead, we need to test the actual databases, tables, and queries used in production code.
+Create a new page at client/src/pages/developer/database-tests.tsx with these key requirements:
+1. Test categories should mirror our actual database usage:
+   - Table Structure Tests (verify our actual schema in PostgreSQL)
+   - Data Integrity Tests (check integrity constraints in our existing tables)
+   - Query Performance Tests (benchmark our ACTUAL live queries we use in the application)
+   - Index Effectiveness Tests (verify our production indexes are working as expected)
+   - Transaction Tests (validate ACID properties in our real transactions)
+2. Implement backend endpoints in server/database-test-routes.ts that:
+   - Execute tests against the REAL database
+   - Use EXISTING database connections, models, and queries
+   - Do NOT create new database code just for testing
+   - Test ACTUAL application functionality and code paths
+3. Critical: All API responses must follow our standardized format:
+{
+success: true,
+data: {
+status: 'passed' | 'failed' | 'pending',
+results: { ... },
+failedTests: string[]
+}
+}
+
+4. For implementation:
+- Reuse the existing database connection from server/db.ts
+- Find and test actual queries from server/storage.ts and other real application code
+- Examine actual database operations and tables used by the application
+- Test indexes that are actually in use, not theoretical ones
+- Use the existing drizzle schema from shared/schema.ts
+5. Ensure the frontend properly handles the standardized API responses:
+- All mutations must wrap results consistently:
+```javascript
+queryClient.setQueryData(['/api/db-test/endpoint'], {
+  success: true,
+  data: data
+});
+Use the exact same pattern as we implemented for auth-tests but focus exclusively on testing REAL application code and database structure. Do not create separate test functions - instead, execute and validate our REAL application database operations.
+
+Remember: The goal is to validate and test our ACTUAL database usage, not to create a theoretical testing framework.
