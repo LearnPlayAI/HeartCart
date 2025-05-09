@@ -194,7 +194,8 @@ function AuthTestsPage() {
       const response = await apiRequest('POST', '/api/auth-test/validate-password', {
         password: 'TestPassword123!',
       });
-      return response.json();
+      const responseJson = await response.json();
+      return responseJson.success && 'data' in responseJson ? responseJson.data : responseJson;
     },
     onSuccess: (data) => {
       // Update the validation results directly instead of refetching
@@ -219,7 +220,8 @@ function AuthTestsPage() {
         email: 'test@example.com',
         password: 'TestPassword123!',
       });
-      return response.json();
+      const responseJson = await response.json();
+      return responseJson.success && 'data' in responseJson ? responseJson.data : responseJson;
     },
     onSuccess: (data) => {
       // Update the credential results directly instead of refetching

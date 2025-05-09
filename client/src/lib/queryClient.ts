@@ -64,7 +64,14 @@ export const getQueryFn: <T>(options: {
     }
 
     await throwIfResNotOk(res);
-    return await res.json();
+    const responseJson = await res.json();
+    
+    // Extract just the data field from our standard API response format
+    if (responseJson && responseJson.success === true && 'data' in responseJson) {
+      return responseJson.data;
+    }
+    
+    return responseJson;
   };
 
 export const queryClient = new QueryClient({
