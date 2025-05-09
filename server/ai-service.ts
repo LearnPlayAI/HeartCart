@@ -33,7 +33,12 @@ async function getCurrentAiModel(): Promise<string> {
     }
     return 'gemini-1.5-flash'; // Default model
   } catch (error) {
-    console.warn('Error fetching AI model setting, using default:', error);
+    logger.warn('Error fetching AI model setting, using default model', {
+      error,
+      errorType: error instanceof Error ? error.name : typeof error,
+      errorMessage: error instanceof Error ? error.message : String(error),
+      defaultModel: 'gemini-1.5-flash'
+    });
     return 'gemini-1.5-flash'; // Default model on error
   }
 }
@@ -46,7 +51,11 @@ geminiProVision = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
 // Initialize with the saved model (will be updated in the initialize function)
 initializeGeminiModel().catch(err => {
-  console.error('Error initializing Gemini model:', err);
+  logger.error('Error initializing Gemini model', {
+    error: err,
+    errorType: err instanceof Error ? err.name : typeof err,
+    errorMessage: err instanceof Error ? err.message : String(err)
+  });
 });
 
 // Function to initialize the model based on saved settings
@@ -55,11 +64,20 @@ async function initializeGeminiModel() {
     // Get the current model from DB or default to gemini-1.5-flash
     const currentModel = await getCurrentAiModel();
     geminiProVision = genAI.getGenerativeModel({ model: currentModel });
-    console.log(`Initialized Gemini AI with model: ${currentModel}`);
+    logger.info(`Initialized Gemini AI with model`, {
+      model: currentModel,
+      isDefault: currentModel === 'gemini-1.5-flash'
+    });
   } catch (error) {
-    console.error('Failed to initialize Gemini model:', error);
+    logger.error('Failed to initialize Gemini model', {
+      error,
+      errorType: error instanceof Error ? error.name : typeof error,
+      errorMessage: error instanceof Error ? error.message : String(error)
+    });
     // We already have the fallback model initialized above
-    console.log('Using default gemini-1.5-flash model');
+    logger.info('Using default Gemini model as fallback', {
+      model: 'gemini-1.5-flash'
+    });
   }
 }
 
@@ -92,6 +110,11 @@ async function safeImageProcessing(imageBase64: string): Promise<{ dataUri: stri
     const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, '');
     const buffer = Buffer.from(base64Data, 'base64');
     
+    logger.debug('Starting image processing', {
+      bufferSize: buffer.length,
+      hasValidData: buffer.length > 0
+    });
+    
     // Try multiple approaches in sequence
     try {
       // First attempt: Process as PNG
@@ -100,12 +123,21 @@ async function safeImageProcessing(imageBase64: string): Promise<{ dataUri: stri
         .png()
         .toBuffer();
       
+      logger.debug('Successfully processed image as PNG', {
+        processedSize: processedBuffer.length,
+        dimensions: '512x512'
+      });
+      
       return {
         dataUri: `data:image/png;base64,${processedBuffer.toString('base64')}`,
         mimeType: 'image/png'
       };
     } catch (pngError) {
-      console.warn('PNG processing failed, trying JPEG format:', pngError);
+      logger.warn('PNG processing failed, trying JPEG format', {
+        error: pngError,
+        errorType: pngError instanceof Error ? pngError.name : typeof pngError,
+        errorMessage: pngError instanceof Error ? pngError.message : String(pngError)
+      });
       
       // Second attempt: Process as JPEG
       try {
@@ -114,18 +146,35 @@ async function safeImageProcessing(imageBase64: string): Promise<{ dataUri: stri
           .jpeg()
           .toBuffer();
         
+        logger.debug('Successfully processed image as JPEG', {
+          processedSize: processedBuffer.length,
+          dimensions: '512x512'
+        });
+        
         return {
           dataUri: `data:image/jpeg;base64,${processedBuffer.toString('base64')}`,
           mimeType: 'image/jpeg'
         };
       } catch (jpegError) {
-        console.warn('JPEG processing failed, trying with original format:', jpegError);
+        logger.warn('JPEG processing failed, trying with original format', {
+          error: jpegError,
+          errorType: jpegError instanceof Error ? jpegError.name : typeof jpegError,
+          errorMessage: jpegError instanceof Error ? jpegError.message : String(jpegError)
+        });
         
         // Third attempt: Process with original format with minimal transformation
         const metadata = await sharp(buffer).metadata();
         const processedBuffer = await sharp(buffer)
           .resize({ width: 512, height: 512, fit: 'inside' })
           .toBuffer();
+        
+        logger.debug('Successfully processed image with original format', {
+          format: metadata.format || 'unknown',
+          processedSize: processedBuffer.length,
+          dimensions: '512x512',
+          originalWidth: metadata.width,
+          originalHeight: metadata.height
+        });
         
         return {
           dataUri: `data:image/${metadata.format || 'jpeg'};base64,${processedBuffer.toString('base64')}`,
@@ -134,7 +183,12 @@ async function safeImageProcessing(imageBase64: string): Promise<{ dataUri: stri
       }
     }
   } catch (error) {
-    console.error('All image processing attempts failed:', error);
+    logger.error('All image processing attempts failed', {
+      error,
+      errorType: error instanceof Error ? error.name : typeof error,
+      errorMessage: error instanceof Error ? error.message : String(error),
+      inputDataLength: imageBase64 ? imageBase64.length : 0
+    });
     return null;
   }
 }
@@ -304,7 +358,7 @@ export async function generateProductTags(
           ]);
         
         const textResponse = await textOnlyResult.response;
-        const responseText = textResponse.text();
+        const responseText = await textResponse.text();
         
         // Parse comma-separated tags
         const tags = responseText
@@ -417,7 +471,7 @@ export async function generateProductTags(
       
       // Get the response
       const response = await result.response;
-      const responseText = response.text();
+      const responseText = await response.text();
       
       // Parse comma-separated tags
       const tags = responseText
