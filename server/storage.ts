@@ -36,6 +36,7 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, userData: Partial<InsertUser>): Promise<User | undefined>;
+  updateUserLastLogin(id: number): Promise<boolean>;
   
   // Category operations
   getAllCategories(options?: { includeInactive?: boolean, parentId?: number | null, level?: number, orderBy?: 'name' | 'displayOrder' }): Promise<Category[]>;
@@ -306,6 +307,41 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error(`Error updating user ${id}:`, error);
       throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
+  }
+  
+  /**
+   * Update the user's last login timestamp to the current date/time
+   * Used for tracking user activity and session management
+   * @param id - The user ID to update
+   * @returns A boolean indicating success or failure
+   */
+  async updateUserLastLogin(id: number): Promise<boolean> {
+    try {
+      // Update lastLogin timestamp to current time
+      const now = new Date();
+      
+      // Update the user record with new login timestamp
+      const result = await db
+        .update(users)
+        .set({ 
+          lastLogin: now,
+          updatedAt: now // Also update the general updatedAt field
+        })
+        .where(eq(users.id, id));
+      
+      // Check if the update was successful
+      return result.rowCount > 0;
+    } catch (error) {
+      logger.error(`Error updating last login time for user ${id}:`, { 
+        error, 
+        userId: id,
+        timestamp: new Date().toISOString()
+      });
+      
+      // We don't throw the error since this is a non-critical operation
+      // Just return false to indicate failure
+      return false;
     }
   }
 

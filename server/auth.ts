@@ -178,70 +178,274 @@ export function setupAuth(app: Express): void {
     }
   });
 
-  // Registration endpoint
+  // Registration endpoint with enhanced validation and error handling
   app.post("/api/register", withStandardResponse(async (req: Request, res: Response, next: NextFunction) => {
-    // Check if username already exists
-    const existingUser = await storage.getUserByUsername(req.body.username);
-    if (existingUser) {
-      sendError(res, "Username already exists", 400);
-      return null;
-    }
+    try {
+      // Validate required fields
+      const { username, email, password, fullName } = req.body;
+      
+      if (!username || !email || !password) {
+        throw new AppError(
+          "Missing required fields",
+          ErrorCode.VALIDATION_ERROR,
+          400,
+          { fields: ['username', 'email', 'password'] }
+        );
+      }
+      
+      // Validate username format (alphanumeric with underscore, 3-20 chars)
+      const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
+      if (!usernameRegex.test(username)) {
+        throw new AppError(
+          "Username must be 3-20 characters and contain only letters, numbers, and underscores",
+          ErrorCode.VALIDATION_ERROR,
+          400,
+          { field: 'username', value: username }
+        );
+      }
+      
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        throw new AppError(
+          "Please enter a valid email address",
+          ErrorCode.VALIDATION_ERROR,
+          400,
+          { field: 'email', value: email }
+        );
+      }
+      
+      // Validate password strength (min 6 chars, at least one number and letter)
+      if (password.length < 6) {
+        throw new AppError(
+          "Password must be at least 6 characters",
+          ErrorCode.VALIDATION_ERROR,
+          400,
+          { field: 'password' }
+        );
+      }
+      
+      // Check if username already exists
+      const existingUser = await storage.getUserByUsername(username);
+      if (existingUser) {
+        throw new AppError(
+          "Username already exists",
+          ErrorCode.DUPLICATE_ENTRY,
+          400,
+          { field: 'username', value: username }
+        );
+      }
 
-    // Check if email already exists
-    const existingEmail = await storage.getUserByEmail(req.body.email);
-    if (existingEmail) {
-      sendError(res, "Email already exists", 400);
-      return null;
-    }
+      // Check if email already exists
+      const existingEmail = await storage.getUserByEmail(email);
+      if (existingEmail) {
+        throw new AppError(
+          "Email already exists",
+          ErrorCode.DUPLICATE_ENTRY,
+          400,
+          { field: 'email', value: email }
+        );
+      }
 
-    // Hash password
-    const hashedPassword = await hashPassword(req.body.password);
+      // Hash password
+      const hashedPassword = await hashPassword(password);
 
-    // Create new user
-    const user = await storage.createUser({
-      ...req.body,
-      password: hashedPassword
-    });
-
-    // Auto-login after registration
-    return new Promise((resolve, reject) => {
-      req.login(user as Express.User, (err) => {
-        if (err) {
-          reject(err);
-          return;
-        }
-        // Return user data (excluding password)
-        const { password, ...userData } = user;
-        res.status(201); // Set status code for created
-        resolve(userData);
+      // Set default role for new users (regular user)
+      const userRole = 'user';
+      
+      // Create new user with standardized fields
+      const user = await storage.createUser({
+        ...req.body,
+        password: hashedPassword,
+        role: userRole,
+        isActive: true
       });
-    });
-  }));
 
-  // Login endpoint
-  app.post("/api/login", loginLimiter, withStandardResponse(async (req: Request, res: Response, next: NextFunction) => {
-    return new Promise((resolve, reject) => {
-      passport.authenticate("local", (err: Error, user: Express.User | false | null, info: any) => {
-        if (err) {
-          reject(err);
-          return;
-        }
-        if (!user) {
-          sendError(res, info.message || "Authentication failed", 401);
-          resolve(null);
-          return;
-        }
-        req.login(user, (err) => {
+      // Log successful registration
+      logger.info('New user registered', { 
+        userId: user.id, 
+        username, 
+        email,
+        role: userRole,
+        ip: req.ip 
+      });
+
+      // Auto-login after registration
+      return new Promise((resolve, reject) => {
+        req.login(user as Express.User, (err) => {
           if (err) {
+            logger.error('Auto-login after registration failed', { 
+              error: err,
+              userId: user.id,
+              username,
+              email
+            });
             reject(err);
             return;
           }
           // Return user data (excluding password)
           const { password, ...userData } = user;
+          res.status(201); // Set status code for created
           resolve(userData);
         });
-      })(req, res, next);
-    });
+      });
+    } catch (error) {
+      // Handle specific error types from validation
+      if (error instanceof AppError) {
+        throw error;
+      }
+      
+      // Log unexpected errors
+      logger.error('Registration error', { 
+        error,
+        username: req.body.username,
+        email: req.body.email,
+        ip: req.ip
+      });
+      
+      // Return generic error for unexpected issues
+      throw new AppError(
+        "Registration failed. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
+    }
+  }));
+
+  // Login endpoint with enhanced validation and security
+  app.post("/api/login", loginLimiter, withStandardResponse(async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      // Validate required fields first
+      const { email, password } = req.body;
+      
+      if (!email || !password) {
+        throw new AppError(
+          "Email and password are required",
+          ErrorCode.VALIDATION_ERROR,
+          400,
+          { fields: ['email', 'password'] }
+        );
+      }
+      
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        throw new AppError(
+          "Please enter a valid email address",
+          ErrorCode.VALIDATION_ERROR,
+          400,
+          { field: 'email' }
+        );
+      }
+      
+      // Handle empty password
+      if (password.trim() === '') {
+        throw new AppError(
+          "Password cannot be empty",
+          ErrorCode.VALIDATION_ERROR,
+          400,
+          { field: 'password' }
+        );
+      }
+      
+      return new Promise((resolve, reject) => {
+        passport.authenticate("local", (err: Error, user: Express.User | false | null, info: any) => {
+          // Handle unexpected errors
+          if (err) {
+            logger.error('Login authentication error', { 
+              error: err,
+              email,
+              ip: req.ip
+            });
+            reject(new AppError(
+              "Authentication failed. Please try again.",
+              ErrorCode.AUTHENTICATION_ERROR,
+              500,
+              { originalError: err }
+            ));
+            return;
+          }
+          
+          // Handle invalid credentials
+          if (!user) {
+            // Log failed login attempt
+            logger.warn('Failed login attempt', {
+              email,
+              reason: info?.message || 'Invalid credentials',
+              ip: req.ip,
+              timestamp: new Date().toISOString()
+            });
+            
+            // Return standardized auth error
+            sendError(res, "Invalid email or password", 401);
+            resolve(null);
+            return;
+          }
+          
+          // Attempt to log the user in
+          req.login(user, (err) => {
+            if (err) {
+              logger.error('Session creation error on login', { 
+                error: err,
+                userId: user.id,
+                email,
+                ip: req.ip
+              });
+              
+              reject(new AppError(
+                "Failed to create session. Please try again.",
+                ErrorCode.AUTHENTICATION_ERROR,
+                500,
+                { originalError: err }
+              ));
+              return;
+            }
+            
+            // Log successful login
+            logger.info('User logged in successfully', { 
+              userId: user.id,
+              email,
+              role: user.role,
+              ip: req.ip,
+              timestamp: new Date().toISOString()
+            });
+            
+            // Update last login timestamp
+            storage.updateUserLastLogin(user.id).catch(err => {
+              logger.error('Failed to update last login timestamp', {
+                error: err,
+                userId: user.id
+              });
+            });
+            
+            // Return user data (excluding password)
+            const { password, ...userData } = user;
+            resolve(userData);
+          });
+        })(req, res, next);
+      });
+    } catch (error) {
+      // Handle specific error types from validation
+      if (error instanceof AppError) {
+        throw error;
+      }
+      
+      // Log unexpected errors
+      logger.error('Login error', { 
+        error,
+        email: req.body.email,
+        ip: req.ip
+      });
+      
+      // Return generic error for unexpected issues
+      throw new AppError(
+        "Login failed. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
+    }
   }));
 
   // Logout endpoint
