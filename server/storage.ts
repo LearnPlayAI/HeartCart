@@ -937,34 +937,44 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createProduct(product: InsertProduct): Promise<Product> {
-    const [newProduct] = await db.insert(products).values(product).returning();
-    return newProduct;
+    try {
+      const [newProduct] = await db.insert(products).values(product).returning();
+      return newProduct;
+    } catch (error) {
+      console.error(`Error creating product "${product.name}":`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
   }
 
   async updateProduct(id: number, productData: Partial<InsertProduct>): Promise<Product | undefined> {
-    // Check if the product exists and get its current catalogId
-    const [existingProduct] = await db
-      .select()
-      .from(products)
-      .where(eq(products.id, id));
-    
-    if (!existingProduct) {
-      return undefined;
-    }
-    
-    // If catalogId is not provided in the update data but exists in the current product,
-    // preserve it to ensure catalog assignments are not lost during updates
-    if (productData.catalogId === undefined && existingProduct.catalogId !== null) {
-      productData.catalogId = existingProduct.catalogId;
-    }
-    
-    const [updatedProduct] = await db
-      .update(products)
-      .set(productData)
-      .where(eq(products.id, id))
-      .returning();
+    try {
+      // Check if the product exists and get its current catalogId
+      const [existingProduct] = await db
+        .select()
+        .from(products)
+        .where(eq(products.id, id));
       
-    return updatedProduct;
+      if (!existingProduct) {
+        return undefined;
+      }
+      
+      // If catalogId is not provided in the update data but exists in the current product,
+      // preserve it to ensure catalog assignments are not lost during updates
+      if (productData.catalogId === undefined && existingProduct.catalogId !== null) {
+        productData.catalogId = existingProduct.catalogId;
+      }
+      
+      const [updatedProduct] = await db
+        .update(products)
+        .set(productData)
+        .where(eq(products.id, id))
+        .returning();
+        
+      return updatedProduct;
+    } catch (error) {
+      console.error(`Error updating product with ID ${id}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
   }
 
   // Cart operations

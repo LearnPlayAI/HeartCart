@@ -692,7 +692,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     "/api/products", 
     isAuthenticated, 
     validateRequest({ body: createProductSchema }),
-    withStandardResponse(async (req: Request, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const user = req.user as any;
       
       // Check if user is admin
@@ -700,11 +700,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw new ForbiddenError("Only administrators can create products");
       }
       
-      // Create the product with validated data
-      const product = await storage.createProduct(req.body);
-      
-      res.status(201);
-      return product;
+      try {
+        // Create the product with validated data
+        const product = await storage.createProduct(req.body);
+        
+        res.status(201).json({
+          success: true,
+          data: product,
+          message: `Product "${product.name}" created successfully`
+        });
+      } catch (error) {
+        // Log the detailed error
+        logger.error('Error creating product:', { error, productData: req.body });
+        
+        throw new AppError(
+          "An error occurred while creating the product. Please try again.",
+          ErrorCode.INTERNAL_SERVER_ERROR,
+          500
+        );
+      }
     })
   );
 
