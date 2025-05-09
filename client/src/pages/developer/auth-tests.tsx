@@ -139,11 +139,16 @@ function AuthTestsPage() {
         apiRequest('POST', '/api/auth-test/system-tests'),
       ]);
       
-      // Parse all responses
-      const validationData = await validationResponse.json();
-      const credentialData = await credentialResponse.json();
-      const sessionData = await sessionResponse.json();
-      const systemData = await systemResponse.json();
+      // Parse all responses and extract data property if present
+      const processResponse = async (response: Response) => {
+        const json = await response.json();
+        return json.success && 'data' in json ? json.data : json;
+      };
+      
+      const validationData = await processResponse(validationResponse);
+      const credentialData = await processResponse(credentialResponse);
+      const sessionData = await processResponse(sessionResponse);
+      const systemData = await processResponse(systemResponse);
       
       return {
         validationData,
@@ -243,7 +248,8 @@ function AuthTestsPage() {
   const sessionMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest('POST', '/api/auth-test/session-persistence');
-      return response.json();
+      const responseJson = await response.json();
+      return responseJson.success && 'data' in responseJson ? responseJson.data : responseJson;
     },
     onSuccess: (data) => {
       // Update the session results directly instead of refetching
@@ -265,7 +271,8 @@ function AuthTestsPage() {
   const systemMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest('POST', '/api/auth-test/system-tests');
-      return response.json();
+      const responseJson = await response.json();
+      return responseJson.success && 'data' in responseJson ? responseJson.data : responseJson;
     },
     onSuccess: (data) => {
       // Update the system results directly instead of refetching
