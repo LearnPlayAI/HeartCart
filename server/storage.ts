@@ -27,6 +27,7 @@ import {
 import { db } from "./db";
 import { eq, like, and, desc, asc, sql, inArray, isNull, not, or, SQL } from "drizzle-orm";
 import { objectStore, STORAGE_FOLDERS } from "./object-store";
+import { logger } from "./logger";
 
 export interface IStorage {
   // User operations
@@ -984,21 +985,40 @@ export class DatabaseStorage implements IStorage {
         .select()
         .from(cartItems)
         .where(eq(cartItems.id, id));
+      
+      logger.debug(`Retrieved cart item by ID`, {
+        cartItemId: id,
+        found: !!item
+      });
+      
       return item;
     } catch (error) {
-      console.error(`Error fetching cart item with ID ${id}:`, error);
+      logger.error(`Error fetching cart item`, {
+        error,
+        cartItemId: id
+      });
       throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
   }
   
   async getCartItems(userId: number): Promise<CartItem[]> {
     try {
-      return await db
+      const items = await db
         .select()
         .from(cartItems)
         .where(eq(cartItems.userId, userId));
+      
+      logger.debug(`Retrieved cart items for user`, {
+        userId,
+        itemCount: items.length
+      });
+      
+      return items;
     } catch (error) {
-      console.error(`Error fetching cart items for user ${userId}:`, error);
+      logger.error(`Error fetching cart items for user`, {
+        error,
+        userId
+      });
       throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
   }
@@ -1009,6 +1029,11 @@ export class DatabaseStorage implements IStorage {
         .select()
         .from(cartItems)
         .where(eq(cartItems.userId, userId));
+      
+      logger.debug(`Retrieved cart items for retrieval with products`, {
+        userId,
+        itemCount: items.length
+      });
       
       const result: (CartItem & { product: Product })[] = [];
       
@@ -1028,20 +1053,47 @@ export class DatabaseStorage implements IStorage {
                 ...item,
                 product: enrichedProducts[0]
               });
+              
+              logger.debug(`Added product to cart results`, {
+                cartItemId: item.id,
+                productId: product.id,
+                productName: product.name
+              });
             } catch (enrichError) {
-              console.error(`Error enriching product ${product.id} with images for cart item ${item.id}:`, enrichError);
+              logger.error(`Error enriching product with images for cart item`, {
+                error: enrichError,
+                productId: product.id,
+                cartItemId: item.id
+              });
               // Continue to next item but don't rethrow as we want to return whatever items we successfully retrieved
             }
+          } else {
+            logger.warn(`Product not found for cart item`, {
+              cartItemId: item.id,
+              productId: item.productId
+            });
           }
         } catch (productError) {
-          console.error(`Error fetching product ${item.productId} for cart item ${item.id}:`, productError);
+          logger.error(`Error fetching product for cart item`, {
+            error: productError,
+            productId: item.productId,
+            cartItemId: item.id
+          });
           // Continue to next item but don't rethrow as we want to return whatever items we successfully retrieved
         }
       }
       
+      logger.debug(`Completed cart items with products retrieval`, {
+        userId,
+        totalItems: result.length
+      });
+      
       return result;
     } catch (error) {
-      console.error(`Error in getCartItemsWithProducts for user ${userId}:`, error);
+      logger.error(`Error retrieving cart items with products`, {
+        error,
+        userId
+      });
       throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
   }
@@ -1068,61 +1120,156 @@ export class DatabaseStorage implements IStorage {
         if (existingItem) {
           try {
             // Update quantity
+            const newQuantity = existingItem.quantity + (cartItem.quantity || 1);
+            
             const [updatedItem] = await db
               .update(cartItems)
-              .set({ quantity: existingItem.quantity + cartItem.quantity })
+              .set({ quantity: newQuantity })
               .where(eq(cartItems.id, existingItem.id))
               .returning();
+              
+            logger.info(`Updated quantity for existing cart item`, {
+              cartItemId: existingItem.id,
+              productId: cartItem.productId,
+              userId: cartItem.userId,
+              oldQuantity: existingItem.quantity,
+              newQuantity: newQuantity
+            });
+              
             return updatedItem;
           } catch (updateError) {
-            console.error(`Error updating quantity for existing cart item ${existingItem.id}:`, updateError);
+            logger.error(`Error updating quantity for existing cart item`, {
+              error: updateError,
+              cartItemId: existingItem.id,
+              productId: cartItem.productId,
+              userId: cartItem.userId
+            });
             throw updateError; // Rethrow so the route handler can catch it and send a proper error response
           }
         } else {
           try {
+            // Set default quantity if not provided
+            const itemToInsert = {
+              ...cartItem,
+              quantity: cartItem.quantity || 1
+            };
+            
             // Insert new item
-            const [newItem] = await db.insert(cartItems).values(cartItem).returning();
+            const [newItem] = await db.insert(cartItems).values(itemToInsert).returning();
+            
+            logger.info(`Added new item to cart`, {
+              cartItemId: newItem.id,
+              productId: cartItem.productId,
+              userId: cartItem.userId,
+              quantity: itemToInsert.quantity,
+              hasCombination: !!cartItem.combinationHash
+            });
+            
             return newItem;
           } catch (insertError) {
-            console.error('Error inserting new item into cart:', insertError);
+            logger.error(`Error inserting new item into cart`, {
+              error: insertError,
+              productId: cartItem.productId,
+              userId: cartItem.userId
+            });
             throw insertError; // Rethrow so the route handler can catch it and send a proper error response
           }
         }
       } catch (queryError) {
-        console.error('Error checking if item already exists in cart:', queryError);
+        logger.error(`Error checking if item already exists in cart`, {
+          error: queryError,
+          userId: cartItem.userId,
+          productId: cartItem.productId
+        });
         throw queryError; // Rethrow so the route handler can catch it and send a proper error response
       }
     } catch (error) {
-      console.error('Error in addToCart:', error);
+      logger.error(`Error adding item to cart`, {
+        error,
+        userId: cartItem.userId,
+        productId: cartItem.productId
+      });
       throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
   }
 
   async updateCartItemQuantity(id: number, quantity: number): Promise<CartItem | undefined> {
     try {
-      if (quantity <= 0) {
-        try {
-          await db.delete(cartItems).where(eq(cartItems.id, id));
-          return undefined;
-        } catch (deleteError) {
-          console.error(`Error deleting cart item ${id} with quantity ${quantity}:`, deleteError);
-          throw deleteError; // Rethrow so the route handler can catch it and send a proper error response
-        }
-      }
-      
+      // First, retrieve the cart item to check if it exists and to log the original quantity
       try {
-        const [updatedItem] = await db
-          .update(cartItems)
-          .set({ quantity })
-          .where(eq(cartItems.id, id))
-          .returning();
-        return updatedItem;
-      } catch (updateError) {
-        console.error(`Error updating quantity for cart item ${id} to ${quantity}:`, updateError);
-        throw updateError; // Rethrow so the route handler can catch it and send a proper error response
+        const [cartItem] = await db
+          .select()
+          .from(cartItems)
+          .where(eq(cartItems.id, id));
+        
+        if (!cartItem) {
+          logger.warn(`Attempted to update non-existent cart item`, {
+            cartItemId: id,
+            requestedQuantity: quantity
+          });
+          return undefined;
+        }
+        
+        if (quantity <= 0) {
+          try {
+            await db.delete(cartItems).where(eq(cartItems.id, id));
+            
+            logger.info(`Deleted cart item due to zero quantity`, {
+              cartItemId: id,
+              productId: cartItem.productId,
+              userId: cartItem.userId,
+              previousQuantity: cartItem.quantity
+            });
+            
+            return undefined;
+          } catch (deleteError) {
+            logger.error(`Error deleting cart item with zero quantity`, {
+              error: deleteError,
+              cartItemId: id,
+              quantity
+            });
+            throw deleteError; // Rethrow so the route handler can catch it and send a proper error response
+          }
+        }
+        
+        try {
+          const [updatedItem] = await db
+            .update(cartItems)
+            .set({ quantity })
+            .where(eq(cartItems.id, id))
+            .returning();
+          
+          logger.info(`Updated cart item quantity`, {
+            cartItemId: id,
+            productId: cartItem.productId,
+            userId: cartItem.userId,
+            previousQuantity: cartItem.quantity,
+            newQuantity: quantity
+          });
+          
+          return updatedItem;
+        } catch (updateError) {
+          logger.error(`Error updating quantity for cart item`, {
+            error: updateError,
+            cartItemId: id,
+            quantity,
+            productId: cartItem.productId
+          });
+          throw updateError; // Rethrow so the route handler can catch it and send a proper error response
+        }
+      } catch (fetchError) {
+        logger.error(`Error fetching cart item before quantity update`, {
+          error: fetchError,
+          cartItemId: id
+        });
+        throw fetchError;
       }
     } catch (error) {
-      console.error(`Error in updateCartItemQuantity for item ${id}:`, error);
+      logger.error(`Error in cart item quantity update operation`, {
+        error,
+        cartItemId: id,
+        requestedQuantity: quantity
+      });
       throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
   }
