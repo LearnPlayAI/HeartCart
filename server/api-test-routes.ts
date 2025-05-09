@@ -220,22 +220,32 @@ export function registerApiTestRoutes(app: Express): void {
       logger.info('Collecting available resources for testing');
       
       // Collect available resources
-      let availableResources: Record<string, number[]> = {};
+      let availableResources: Record<string, Array<number | string>> = {};
       
       try {
         // Fetch available products
         const products = await storage.getAllProducts();
         availableResources.products = products.map(p => p.id);
+        availableResources.productSlugs = products
+          .filter(p => p.slug && p.isActive)
+          .map(p => p.slug as string);
         
         // Fetch available categories
         const categories = await storage.getAllCategories();
         availableResources.categories = categories.map(c => c.id);
+        availableResources.categorySlugs = categories
+          .filter(c => c.slug)
+          .map(c => c.slug as string);
         
         // Fetch available users (if any)
         try {
           const users = await storage.getAllUsers();
           if (users && users.length > 0) {
             availableResources.users = users.map(u => u.id);
+            // Also store usernames for endpoints that use usernames
+            availableResources.usernames = users
+              .filter(u => u.username)
+              .map(u => u.username as string);
           }
         } catch (error) {
           logger.warn('Could not fetch users for API testing', { error });
@@ -271,118 +281,152 @@ export function registerApiTestRoutes(app: Express): void {
           logger.warn('Could not fetch attributes for API testing', { error });
         }
         
-        logger.info('Available resources for testing', { availableResources });
+        logger.info('Available resources for testing', { 
+          resourceCounts: Object.fromEntries(
+            Object.entries(availableResources).map(([key, value]) => [key, Array.isArray(value) ? value.length : 0])
+          )
+        });
       } catch (error) {
         logger.warn('Error fetching resources for dynamic testing', { error });
       }
       
       // Generate a mapping of parameter types to available resources
       const resourceMapping: Record<string, number | string | null> = {
+        // Generic IDs
         id: null,
+        
+        // Resource-specific IDs
         productId: null,
         categoryId: null,
         userId: null,
         orderId: null,
         attributeId: null,
         catalogId: null,
-        slug: 'test-slug'  // Default fallback
+        
+        // Slugs and other string identifiers
+        slug: null,
+        productSlug: null,
+        categorySlug: null,
+        username: null
       };
       
-      // Fill in the mapping with real IDs where available
-      if (availableResources.products && availableResources.products.length > 0) {
-        resourceMapping.id = availableResources.products[0];
-        resourceMapping.productId = availableResources.products[0];
-      }
+      // Map URL parameter types to resource collections
+      // This defines which resource collection to use for each parameter type
+      const parameterToResourceType: Record<string, string> = {
+        // IDs
+        'id': 'products',  // Default to products for generic 'id'
+        'productId': 'products',
+        'categoryId': 'categories',
+        'userId': 'users',
+        'orderId': 'orders',
+        'attributeId': 'attributes', 
+        'catalogId': 'catalogs',
+        
+        // Slugs and string identifiers
+        'slug': 'productSlugs',  // Default to product slugs for generic 'slug'
+        'productSlug': 'productSlugs',
+        'categorySlug': 'categorySlugs',
+        'username': 'usernames'
+      };
       
-      if (availableResources.categories && availableResources.categories.length > 0) {
-        if (!resourceMapping.id) resourceMapping.id = availableResources.categories[0];
-        resourceMapping.categoryId = availableResources.categories[0];
-      }
-      
-      if (availableResources.users && availableResources.users.length > 0) {
-        if (!resourceMapping.id) resourceMapping.id = availableResources.users[0];
-        resourceMapping.userId = availableResources.users[0];
-      }
-      
-      if (availableResources.orders && availableResources.orders.length > 0) {
-        if (!resourceMapping.id) resourceMapping.id = availableResources.orders[0];
-        resourceMapping.orderId = availableResources.orders[0];
-      }
-      
-      if (availableResources.attributes && availableResources.attributes.length > 0) {
-        if (!resourceMapping.id) resourceMapping.id = availableResources.attributes[0];
-        resourceMapping.attributeId = availableResources.attributes[0];
-      }
-      
-      if (availableResources.catalogs && availableResources.catalogs.length > 0) {
-        if (!resourceMapping.id) resourceMapping.id = availableResources.catalogs[0];
-        resourceMapping.catalogId = availableResources.catalogs[0];
-      }
-      
-      // For products with slugs, try to get a real slug
-      try {
-        const productWithSlug = await storage.getProductWithSlug();
-        if (productWithSlug && productWithSlug.slug) {
-          resourceMapping.slug = productWithSlug.slug;
+      // Fill in resource mapping from available resources
+      for (const [paramName, resourceType] of Object.entries(parameterToResourceType)) {
+        if (availableResources[resourceType]?.length > 0) {
+          resourceMapping[paramName] = availableResources[resourceType][0];
         }
-      } catch (error) {
-        logger.warn('Could not fetch product slug for API testing', { error });
+      }
+      
+      // For generic ID parameters, try different resource types in priority order
+      if (!resourceMapping.id) {
+        const idPriorityOrder = ['products', 'categories', 'users', 'orders', 'catalogs', 'attributes'];
+        
+        for (const resourceType of idPriorityOrder) {
+          if (availableResources[resourceType]?.length > 0) {
+            resourceMapping.id = availableResources[resourceType][0] as number;
+            break;
+          }
+        }
+      }
+      
+      // For generic slug parameters, try different slug types in priority order
+      if (!resourceMapping.slug) {
+        const slugPriorityOrder = ['productSlugs', 'categorySlugs'];
+        
+        for (const resourceType of slugPriorityOrder) {
+          if (availableResources[resourceType]?.length > 0) {
+            resourceMapping.slug = availableResources[resourceType][0] as string;
+            break;
+          }
+        }
       }
       
       logger.info('Resource mapping for dynamic testing', { resourceMapping });
       
-      // Function to determine if we should test an endpoint based on required resources
-      function canTestEndpoint(path: string): { canTest: boolean; missingResource?: string } {
-        // Quick check for paths that don't need IDs
-        if (!path.includes('/:')) {
-          return { canTest: true };
-        }
+      // Function to analyze path parameters and determine testability
+      function analyzePath(path: string): { 
+        canTest: boolean; 
+        missingResources: string[]; 
+        requiredParams: string[]; 
+        testPath: string;
+      } {
+        // Extract all parameters from the path
+        const paramRegex = /\/:([a-zA-Z0-9_]+)(?=\/|$)/g;
+        let match;
+        let requiredParams: string[] = [];
+        let missingResources: string[] = [];
+        let testPath = path;
         
-        // Extract resource requirements and check if we have them
-        for (const [resourceKey, resourceValue] of Object.entries(resourceMapping)) {
-          if (path.includes(`/:${resourceKey}`) && resourceValue === null) {
-            return { 
-              canTest: false, 
-              missingResource: resourceKey 
-            };
-          }
-        }
+        // Reset regex state
+        paramRegex.lastIndex = 0;
         
-        return { canTest: true };
-      }
-      
-      // Add dynamic parameter replacement for testing
-      const endpointsToTest = apiEndpoints.map(endpoint => {
-        // Check if we can test this endpoint
-        const { canTest, missingResource } = canTestEndpoint(endpoint.path);
-        
-        if (!canTest) {
-          return {
-            method: endpoint.method,
-            path: endpoint.path,  // We will keep the original path with parameters
-            description: endpoint.description,
-            originalPath: endpoint.path,
-            canTest: false,
-            reason: `Missing required resource for parameter /:${missingResource}`
-          };
-        }
-        
-        // Replace path parameters with actual values
-        let testPath = endpoint.path;
-        
-        // Use the resource mapping to dynamically replace path parameters
-        for (const [resourceKey, resourceValue] of Object.entries(resourceMapping)) {
-          if (resourceValue !== null) {
-            const regex = new RegExp(`\\/:${resourceKey}\\b`, 'g');
-            testPath = testPath.replace(regex, `/${resourceValue}`);
+        // Find all required parameters
+        while ((match = paramRegex.exec(path)) !== null) {
+          const paramName = match[1];
+          requiredParams.push(paramName);
+          
+          // Check if we have a resource for this parameter
+          const paramValue = resourceMapping[paramName];
+          if (paramValue === null) {
+            missingResources.push(paramName);
+          } else {
+            // Replace parameter in test path with actual value
+            const paramRegex = new RegExp(`\\/:${paramName}(?=\\/|$)`, 'g');
+            testPath = testPath.replace(paramRegex, `/${paramValue}`);
           }
         }
         
         return {
+          canTest: missingResources.length === 0,
+          missingResources,
+          requiredParams,
+          testPath
+        };
+      }
+      
+      // Add dynamic parameter replacement for testing
+      const endpointsToTest = apiEndpoints.map(endpoint => {
+        // Analyze the path for parameters
+        const { canTest, missingResources, requiredParams, testPath } = analyzePath(endpoint.path);
+        
+        if (!canTest) {
+          return {
+            method: endpoint.method,
+            path: endpoint.path,  // Keep the original path with parameters
+            description: endpoint.description,
+            originalPath: endpoint.path,
+            canTest: false,
+            requiredParams,
+            missingResources,
+            reason: `Missing resources: ${missingResources.join(', ')}`
+          };
+        }
+        
+        return {
           method: endpoint.method,
-          path: testPath,
+          path: testPath,  // Use the path with parameters replaced
           description: endpoint.description,
           originalPath: endpoint.path,
+          requiredParams,
           canTest: true
         };
       });
@@ -531,22 +575,41 @@ export function registerApiTestRoutes(app: Express): void {
       // Combine the results
       const testResults = [...testableResults, ...nonTestableResults];
       
-      // Calculate overall status
-      const status = testResults.every(test => test.status === 'passed') ? 'passed' : 'failed';
+      // Calculate stats for each status type
+      const passedTests = testResults.filter(test => test.status === 'passed');
+      const failedTests = testResults.filter(test => test.status === 'failed');
+      const warningTests = testResults.filter(test => test.status === 'warning');
+      const pendingTests = testResults.filter(test => test.status === 'pending');
       
-      // Build failed tests list
-      const failedTests = testResults
-        .filter(test => test.status === 'failed')
-        .map(test => `endpoint:${test.method}:${test.endpoint}`);
+      // Calculate overall status based on the priority: failed > warning > pending > passed
+      let status: TestStatus = 'passed';
+      if (failedTests.length > 0) {
+        status = 'failed';
+      } else if (warningTests.length > 0) {
+        status = 'warning';
+      } else if (pendingTests.length > 0) {
+        status = 'pending';
+      }
+      
+      // Get details of failed tests for reporting
+      const failedTestDetails = failedTests.map(test => 
+        `${test.method} ${test.endpoint}: ${test.message}`
+      );
       
       const results = {
         status,
         results: {
           endpointTests: testResults,
-          totalEndpoints: endpointsToTest.length,
-          availableEndpoints: testResults.filter(t => t.status === 'passed').length
+          totalEndpoints: testResults.length,
+          availableEndpoints: passedTests.length,
+          statusCounts: {
+            passed: passedTests.length,
+            failed: failedTests.length,
+            warning: warningTests.length,
+            pending: pendingTests.length
+          }
         },
-        failedTests
+        failedTests: failedTestDetails
       };
       
       console.log('RESULTS FOR ENDPOINT AVAILABILITY TEST:', JSON.stringify(results));
@@ -698,22 +761,40 @@ export function registerApiTestRoutes(app: Express): void {
         }
       }));
       
-      // Calculate overall status
-      const status = testResults.every(test => test.status === 'passed') ? 'passed' : 'failed';
+      // Calculate stats for each status type
+      const passedTests = testResults.filter(test => test.status === 'passed');
+      const failedTests = testResults.filter(test => test.status === 'failed');
+      const warningTests = testResults.filter(test => test.status === 'warning');
+      const pendingTests = testResults.filter(test => test.status === 'pending');
       
-      // Build failed tests list
-      const failedTests = testResults
-        .filter(test => test.status === 'failed')
-        .map(test => `validation:${test.endpoint}`);
+      // Calculate overall status based on the priority: failed > warning > pending > passed
+      let status: TestStatus = 'passed';
+      if (failedTests.length > 0) {
+        status = 'failed';
+      } else if (warningTests.length > 0) {
+        status = 'warning';
+      } else if (pendingTests.length > 0) {
+        status = 'pending';
+      }
+      
+      // Get details of failed tests for reporting
+      const failedTestDetails = failedTests.map(test => 
+        `validation:${test.endpoint}: ${test.message}`
+      );
       
       const results = {
         status,
         results: {
           validationTests: testResults,
           totalTests: validationTests.length,
-          passedTests: testResults.filter(t => t.status === 'passed').length
+          statusCounts: {
+            passed: passedTests.length,
+            failed: failedTests.length,
+            warning: warningTests.length,
+            pending: pendingTests.length
+          }
         },
-        failedTests
+        failedTests: failedTestDetails
       };
       
       return sendSuccess(res, results);
@@ -899,26 +980,40 @@ export function registerApiTestRoutes(app: Express): void {
         }
       }));
       
-      // Calculate overall status
-      const status = testResults.every(test => test.status === 'passed') ? 
-        'passed' : 
-        testResults.some(test => test.status === 'failed') ? 'failed' : 'warning';
+      // Calculate stats for each status type
+      const passedTests = testResults.filter(test => test.status === 'passed');
+      const failedTests = testResults.filter(test => test.status === 'failed');
+      const warningTests = testResults.filter(test => test.status === 'warning');
+      const pendingTests = testResults.filter(test => test.status === 'pending');
       
-      // Build failed tests list
-      const failedTests = testResults
-        .filter(test => test.status === 'failed')
-        .map(test => `auth:${test.method}:${test.endpoint}`);
+      // Calculate overall status based on the priority: failed > warning > pending > passed
+      let status: TestStatus = 'passed';
+      if (failedTests.length > 0) {
+        status = 'failed';
+      } else if (warningTests.length > 0) {
+        status = 'warning';
+      } else if (pendingTests.length > 0) {
+        status = 'pending';
+      }
+      
+      // Get details of failed tests for reporting
+      const failedTestDetails = failedTests.map(test => 
+        `auth:${test.method}:${test.endpoint}: ${test.message}`
+      );
       
       const results = {
         status,
         results: {
           authTests: testResults,
           totalTests: authTests.length,
-          passedTests: testResults.filter(t => t.status === 'passed').length,
-          failedTests: testResults.filter(t => t.status === 'failed').length,
-          warningTests: testResults.filter(t => t.status === 'warning').length
+          statusCounts: {
+            passed: passedTests.length,
+            failed: failedTests.length,
+            warning: warningTests.length,
+            pending: pendingTests.length
+          }
         },
-        failedTests
+        failedTests: failedTestDetails
       };
       
       return sendSuccess(res, results);
@@ -1063,22 +1158,40 @@ export function registerApiTestRoutes(app: Express): void {
         }
       }));
       
-      // Calculate overall status
-      const status = testResults.every(test => test.status === 'passed') ? 'passed' : 'failed';
+      // Calculate stats for each status type
+      const passedTests = testResults.filter(test => test.status === 'passed');
+      const failedTests = testResults.filter(test => test.status === 'failed');
+      const warningTests = testResults.filter(test => test.status === 'warning');
+      const pendingTests = testResults.filter(test => test.status === 'pending');
       
-      // Build failed tests list
-      const failedTests = testResults
-        .filter(test => test.status === 'failed')
-        .map(test => `error:${test.method}:${test.endpoint}`);
+      // Calculate overall status based on the priority: failed > warning > pending > passed
+      let status: TestStatus = 'passed';
+      if (failedTests.length > 0) {
+        status = 'failed';
+      } else if (warningTests.length > 0) {
+        status = 'warning';
+      } else if (pendingTests.length > 0) {
+        status = 'pending';
+      }
+      
+      // Get details of failed tests for reporting
+      const failedTestDetails = failedTests.map(test => 
+        `error:${test.method}:${test.endpoint}: ${test.message}`
+      );
       
       const results = {
         status,
         results: {
           errorTests: testResults,
           totalTests: errorTests.length,
-          passedTests: testResults.filter(t => t.status === 'passed').length
+          statusCounts: {
+            passed: passedTests.length,
+            failed: failedTests.length,
+            warning: warningTests.length,
+            pending: pendingTests.length
+          }
         },
-        failedTests
+        failedTests: failedTestDetails
       };
       
       return sendSuccess(res, results);
@@ -1190,28 +1303,43 @@ export function registerApiTestRoutes(app: Express): void {
         }
       }));
       
-      // Calculate overall status - allow warnings without failing
-      const status = testResults.some(test => test.status === 'failed') ? 'failed' :
-                    testResults.some(test => test.status === 'warning') ? 'warning' : 'passed';
+      // Calculate stats for each status type
+      const passedTests = testResults.filter(test => test.status === 'passed');
+      const failedTests = testResults.filter(test => test.status === 'failed');
+      const warningTests = testResults.filter(test => test.status === 'warning');
+      const pendingTests = testResults.filter(test => test.status === 'pending');
       
-      // Build failed tests list
-      const failedTests = testResults
-        .filter(test => test.status === 'failed')
-        .map(test => `performance:${test.method}:${test.endpoint}`);
+      // Calculate overall status based on the priority: failed > warning > pending > passed
+      let status: TestStatus = 'passed';
+      if (failedTests.length > 0) {
+        status = 'failed';
+      } else if (warningTests.length > 0) {
+        status = 'warning';
+      } else if (pendingTests.length > 0) {
+        status = 'pending';
+      }
+      
+      // Get details of failed tests for reporting
+      const failedTestDetails = failedTests.map(test => 
+        `performance:${test.method}:${test.endpoint}: ${test.message}`
+      );
       
       const results = {
         status,
         results: {
           performanceTests: testResults,
           totalTests: performanceTests.length,
-          passedTests: testResults.filter(t => t.status === 'passed').length,
-          warningTests: testResults.filter(t => t.status === 'warning').length,
-          failedTests: testResults.filter(t => t.status === 'failed').length,
+          statusCounts: {
+            passed: passedTests.length,
+            failed: failedTests.length,
+            warning: warningTests.length,
+            pending: pendingTests.length
+          },
           averageResponseTime: Math.round(
             testResults.reduce((sum, test) => sum + (test.responseTime || 0), 0) / testResults.length
           )
         },
-        failedTests
+        failedTests: failedTestDetails
       };
       
       return sendSuccess(res, results);
@@ -1336,32 +1464,63 @@ export function registerApiTestRoutes(app: Express): void {
         { name: 'performance', data: performanceResults.data }
       ];
       
-      // Calculate overall status
-      const status = allTests.some(test => test.data?.status === 'failed') ? 'failed' :
-                    allTests.some(test => test.data?.status === 'warning') ? 'warning' : 'passed';
+      // Calculate overall status based on the priority: failed > warning > pending > passed
+      let status: TestStatus = 'passed';
+      if (allTests.some(test => test.data?.status === 'failed')) {
+        status = 'failed';
+      } else if (allTests.some(test => test.data?.status === 'warning')) {
+        status = 'warning';
+      } else if (allTests.some(test => test.data?.status === 'pending')) {
+        status = 'pending';
+      }
       
-      // Combine all failed tests
+      // Combine all failed tests for reporting
       const failedTests = allTests.flatMap(test => {
         if (!test.data || !Array.isArray(test.data.failedTests)) return [];
         return test.data.failedTests;
       });
+      
+      // Calculate summary counts for each status
+      const passedTests = allTests.filter(test => test.data?.status === 'passed').length;
+      const warningTests = allTests.filter(test => test.data?.status === 'warning').length;
+      const pendingTests = allTests.filter(test => test.data?.status === 'pending').length;
+      const failedTestsCount = allTests.filter(test => test.data?.status === 'failed').length;
+      
+      // Count total endpoints tested across all test categories
+      const totalEndpointsTested = allTests.reduce((total, test) => {
+        const results = test.data?.results;
+        if (!results) return total;
+        
+        // Add up the totals from each test category
+        if (results.endpointTests) return total + results.endpointTests.length;
+        if (results.validationTests) return total + results.validationTests.length;
+        if (results.authTests) return total + results.authTests.length;  
+        if (results.errorTests) return total + results.errorTests.length;
+        if (results.performanceTests) return total + results.performanceTests.length;
+        
+        return total;
+      }, 0);
       
       // Create the final results object
       const results = {
         status,
         results: {
           endpointAvailability: availabilityResults.data,
-          responseValidation: validationResults.data,
+          responseValidation: validationResults.data, 
           authTests: authResults.data,
           errorHandling: errorResults.data,
           performance: performanceResults.data
         },
         failedTests,
         summary: {
-          totalTests: allTests.length,
-          passedTests: allTests.filter(test => test.data?.status === 'passed').length,
-          warningTests: allTests.filter(test => test.data?.status === 'warning').length,
-          failedTests: allTests.filter(test => test.data?.status === 'failed').length
+          totalTestCategories: allTests.length,
+          totalEndpointsTested: totalEndpointsTested,
+          statusCounts: {
+            passed: passedTests,
+            warning: warningTests,
+            pending: pendingTests,
+            failed: failedTestsCount
+          }
         }
       };
       
