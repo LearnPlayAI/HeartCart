@@ -1004,6 +1004,72 @@ export function registerApiTestRoutes(app: Express): void {
         
       logger.info(`Discovered ${apiEndpoints.length} endpoints for auth testing`);
       
+      // Define resource mapping function to get actual IDs for paths with parameters
+      async function getResourceMapping(): Promise<Record<string, string | null>> {
+        try {
+          // Define the mapping of parameter types to their corresponding values
+          const resourceMap: Record<string, string | null> = {
+            // Default to null (missing) for all params
+            // These will be filled with actual values if available
+            id: null,
+            userId: null,
+            productId: null,
+            categoryId: null,
+            orderId: null,
+            attributeId: null,
+            supplierID: null,
+            supplierId: null, 
+            catalogId: null,
+            batchId: null,
+            ruleId: null,
+            optionId: null,
+          };
+          
+          // Try to get various types of resources from the database
+          
+          // Products
+          const products = await storage.getProducts({}, 1, 1);
+          if (products && products.data.length > 0) {
+            resourceMap.productId = String(products.data[0].id);
+            resourceMap.id = String(products.data[0].id); // Use product ID as generic ID
+          }
+          
+          // Categories
+          const categories = await storage.getCategories({}, 1, 1);
+          if (categories && categories.data.length > 0) {
+            resourceMap.categoryId = String(categories.data[0].id);
+            if (!resourceMap.id) resourceMap.id = String(categories.data[0].id);
+          }
+          
+          // Set fallback values for missing resources
+          // This ensures we have at least something to test with
+          Object.keys(resourceMap).forEach(key => {
+            if (resourceMap[key] === null) {
+              resourceMap[key] = '1'; // Default to ID 1
+            }
+          });
+          
+          return resourceMap;
+        } catch (error) {
+          logger.error('Error fetching resources for API testing', { error });
+          // Return fallback mapping with default values
+          return {
+            id: '1',
+            userId: '1',
+            productId: '1',
+            categoryId: '1',
+            orderId: '1',
+            attributeId: '1',
+            supplierID: '1',
+            supplierId: '1',
+            catalogId: '1',
+            batchId: '1',
+            ruleId: '1',
+            optionId: '1'
+          };
+        }
+      }
+      
       // Collect available resources for parameterized paths
       const resourceMapping = await getResourceMapping();
       
@@ -1422,6 +1488,72 @@ export function registerApiTestRoutes(app: Express): void {
       
       logger.info(`Discovered ${apiEndpoints.length} endpoints for error handling testing`);
       
+      // Define resource mapping function to get actual IDs for paths with parameters
+      async function getResourceMapping(): Promise<Record<string, string | null>> {
+        try {
+          // Define the mapping of parameter types to their corresponding values
+          const resourceMap: Record<string, string | null> = {
+            // Default to null (missing) for all params
+            // These will be filled with actual values if available
+            id: null,
+            userId: null,
+            productId: null,
+            categoryId: null,
+            orderId: null,
+            attributeId: null,
+            supplierID: null,
+            supplierId: null, 
+            catalogId: null,
+            batchId: null,
+            ruleId: null,
+            optionId: null,
+          };
+          
+          // Try to get various types of resources from the database
+          
+          // Products
+          const products = await storage.getProducts({}, 1, 1);
+          if (products && products.data.length > 0) {
+            resourceMap.productId = String(products.data[0].id);
+            resourceMap.id = String(products.data[0].id); // Use product ID as generic ID
+          }
+          
+          // Categories
+          const categories = await storage.getCategories({}, 1, 1);
+          if (categories && categories.data.length > 0) {
+            resourceMap.categoryId = String(categories.data[0].id);
+            if (!resourceMap.id) resourceMap.id = String(categories.data[0].id);
+          }
+          
+          // Set fallback values for missing resources
+          // This ensures we have at least something to test with
+          Object.keys(resourceMap).forEach(key => {
+            if (resourceMap[key] === null) {
+              resourceMap[key] = '1'; // Default to ID 1
+            }
+          });
+          
+          return resourceMap;
+        } catch (error) {
+          logger.error('Error fetching resources for API testing', { error });
+          // Return fallback mapping with default values
+          return {
+            id: '1',
+            userId: '1',
+            productId: '1',
+            categoryId: '1',
+            orderId: '1',
+            attributeId: '1',
+            supplierID: '1',
+            supplierId: '1',
+            catalogId: '1',
+            batchId: '1',
+            ruleId: '1',
+            optionId: '1'
+          };
+        }
+      }
+      
       // Generate error tests dynamically
       const errorTests: any[] = [];
       
@@ -1655,6 +1787,72 @@ export function registerApiTestRoutes(app: Express): void {
         );
       
       logger.info(`Discovered ${apiEndpoints.length} GET endpoints for performance testing`);
+      
+      // Define resource mapping function to get actual IDs for paths with parameters
+      async function getResourceMapping(): Promise<Record<string, string | null>> {
+        try {
+          // Define the mapping of parameter types to their corresponding values
+          const resourceMap: Record<string, string | null> = {
+            // Default to null (missing) for all params
+            // These will be filled with actual values if available
+            id: null,
+            userId: null,
+            productId: null,
+            categoryId: null,
+            orderId: null,
+            attributeId: null,
+            supplierID: null,
+            supplierId: null, 
+            catalogId: null,
+            batchId: null,
+            ruleId: null,
+            optionId: null,
+          };
+          
+          // Try to get various types of resources from the database
+          
+          // Products
+          const products = await storage.getProducts({}, 1, 1);
+          if (products && products.data.length > 0) {
+            resourceMap.productId = String(products.data[0].id);
+            resourceMap.id = String(products.data[0].id); // Use product ID as generic ID
+          }
+          
+          // Categories
+          const categories = await storage.getCategories({}, 1, 1);
+          if (categories && categories.data.length > 0) {
+            resourceMap.categoryId = String(categories.data[0].id);
+            if (!resourceMap.id) resourceMap.id = String(categories.data[0].id);
+          }
+          
+          // Set fallback values for missing resources
+          // This ensures we have at least something to test with
+          Object.keys(resourceMap).forEach(key => {
+            if (resourceMap[key] === null) {
+              resourceMap[key] = '1'; // Default to ID 1
+            }
+          });
+          
+          return resourceMap;
+        } catch (error) {
+          logger.error('Error fetching resources for API testing', { error });
+          // Return fallback mapping with default values
+          return {
+            id: '1',
+            userId: '1',
+            productId: '1',
+            categoryId: '1',
+            orderId: '1',
+            attributeId: '1',
+            supplierID: '1',
+            supplierId: '1',
+            catalogId: '1',
+            batchId: '1',
+            ruleId: '1',
+            optionId: '1'
+          };
+        }
+      }
       
       // Collect available resources for parameterized paths
       const resourceMapping = await getResourceMapping();
