@@ -182,11 +182,14 @@ function AuthTestsPage() {
   });
 
   // User count query with auto-refresh
-  const { data: userCount, refetch: refetchUserCount } = useQuery<{ count: number }>({
+  const { data: userCountResponse, refetch: refetchUserCount } = useQuery<{ success: boolean, data: { count: number } }>({
     queryKey: ['/api/auth-test/user-count'],
     queryFn: getQueryFn({ on401: "returnNull" }),
     staleTime: 0, // Always refetch the latest count
   });
+  
+  // Extract just the count data from the standard response format
+  const userCount = userCountResponse?.success ? userCountResponse.data : undefined;
   
   // Refresh user count when page loads
   React.useEffect(() => {
