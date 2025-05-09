@@ -1787,9 +1787,18 @@ export class DatabaseStorage implements IStorage {
         .where(eq(productImages.productId, productId))
         .orderBy(asc(productImages.sortOrder));
       
+      logger.debug(`Retrieved product images`, {
+        productId,
+        imageCount: result.length,
+        hasMainImage: result.some(img => img.isMain)
+      });
+      
       return result;
     } catch (error) {
-      console.error(`Error fetching images for product ${productId}:`, error);
+      logger.error(`Error retrieving product images`, {
+        error,
+        productId
+      });
       throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
   }
@@ -1819,9 +1828,17 @@ export class DatabaseStorage implements IStorage {
         )
         .orderBy(asc(productImages.sortOrder));
         
+      logger.debug(`Retrieved background-removed product images`, {
+        productId,
+        imageCount: result.length
+      });
+      
       return result;
     } catch (error) {
-      console.error(`Error fetching background-removed images for product ${productId}:`, error);
+      logger.error(`Error retrieving background-removed product images`, {
+        error,
+        productId
+      });
       throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
   }
@@ -1832,9 +1849,25 @@ export class DatabaseStorage implements IStorage {
         .select()
         .from(productImages)
         .where(eq(productImages.id, id));
+      
+      if (!image) {
+        logger.warn(`Product image not found`, { imageId: id });
+        return undefined;
+      }
+      
+      logger.debug(`Retrieved product image by ID`, {
+        imageId: id,
+        productId: image.productId,
+        isMain: image.isMain,
+        hasBgRemoved: image.hasBgRemoved
+      });
+      
       return image;
     } catch (error) {
-      console.error(`Error fetching image with ID ${id}:`, error);
+      logger.error(`Error retrieving product image by ID`, {
+        error,
+        imageId: id
+      });
       throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
   }
@@ -1844,42 +1877,88 @@ export class DatabaseStorage implements IStorage {
       // If this is marked as main image, unset any existing main image
       if (image.isMain && image.productId) {
         try {
-          await db
-            .update(productImages)
-            .set({ isMain: false })
+          // Check if there's currently a main image
+          const [currentMainImage] = await db
+            .select()
+            .from(productImages)
             .where(
               and(
                 eq(productImages.productId, image.productId),
                 eq(productImages.isMain, true)
               )
             );
+          
+          if (currentMainImage) {
+            // Unset existing main image
+            await db
+              .update(productImages)
+              .set({ isMain: false })
+              .where(
+                and(
+                  eq(productImages.productId, image.productId),
+                  eq(productImages.isMain, true)
+                )
+              );
+            
+            logger.debug(`Unset existing main image`, {
+              productId: image.productId,
+              previousMainImageId: currentMainImage.id
+            });
+          }
         } catch (updateError) {
-          console.error(`Error unsetting existing main image for product ${image.productId}:`, updateError);
+          logger.error(`Error unsetting existing main image`, {
+            error: updateError,
+            productId: image.productId
+          });
           throw updateError; // Rethrow so the route handler can catch it and send a proper error response
         }
       }
       
       try {
+        // Insert the new image
         const [newImage] = await db.insert(productImages).values(image).returning();
+        
+        logger.info(`Created new product image`, {
+          imageId: newImage.id,
+          productId: newImage.productId,
+          isMain: newImage.isMain,
+          objectKey: newImage.objectKey
+        });
+        
         return newImage;
       } catch (insertError) {
-        console.error('Error inserting new product image:', insertError);
+        logger.error(`Error inserting new product image`, {
+          error: insertError,
+          productId: image.productId,
+          isMain: image.isMain
+        });
         throw insertError; // Rethrow so the route handler can catch it and send a proper error response
       }
     } catch (error) {
-      console.error('Error in createProductImage:', error);
+      logger.error(`Error in product image creation process`, {
+        error,
+        productId: image.productId
+      });
       throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
   }
 
   async updateProductImage(id: number, imageData: Partial<InsertProductImage>): Promise<ProductImage | undefined> {
     try {
+      // First, verify that the image exists
+      const existingImage = await this.getProductImageById(id);
+      if (!existingImage) {
+        logger.warn(`Cannot update product image that doesn't exist`, { imageId: id });
+        return undefined;
+      }
+      
       // If this is marked as main image, unset any existing main images
       if (imageData.isMain && imageData.productId) {
         try {
-          await db
-            .update(productImages)
-            .set({ isMain: false })
+          // Check if there are any other main images
+          const [currentMainImage] = await db
+            .select()
+            .from(productImages)
             .where(
               and(
                 eq(productImages.productId, imageData.productId),
@@ -1887,45 +1966,132 @@ export class DatabaseStorage implements IStorage {
                 sql`${productImages.id} != ${id}`
               )
             );
+          
+          if (currentMainImage) {
+            // Unset existing main image
+            await db
+              .update(productImages)
+              .set({ isMain: false })
+              .where(
+                and(
+                  eq(productImages.productId, imageData.productId),
+                  eq(productImages.isMain, true),
+                  sql`${productImages.id} != ${id}`
+                )
+              );
+            
+            logger.debug(`Unset existing main image during update`, {
+              productId: imageData.productId,
+              previousMainImageId: currentMainImage.id,
+              newMainImageId: id
+            });
+          }
         } catch (updateError) {
-          console.error(`Error unsetting existing main image for product ${imageData.productId}:`, updateError);
+          logger.error(`Error unsetting existing main image during image update`, {
+            error: updateError,
+            productId: imageData.productId,
+            imageId: id
+          });
           throw updateError; // Rethrow so the route handler can catch it and send a proper error response
         }
       }
       
       try {
+        // Update the image data
         const [updatedImage] = await db
           .update(productImages)
           .set(imageData)
           .where(eq(productImages.id, id))
           .returning();
         
+        if (!updatedImage) {
+          logger.warn(`Product image update failed, no record returned`, { imageId: id });
+          return undefined;
+        }
+        
+        logger.info(`Updated product image`, {
+          imageId: id,
+          productId: updatedImage.productId,
+          isMain: updatedImage.isMain,
+          isBackgroundRemoved: updatedImage.hasBgRemoved
+        });
+        
         return updatedImage;
       } catch (updateError) {
-        console.error(`Error updating product image ${id}:`, updateError);
+        logger.error(`Error updating product image data`, {
+          error: updateError,
+          imageId: id,
+          productId: imageData.productId
+        });
         throw updateError; // Rethrow so the route handler can catch it and send a proper error response
       }
     } catch (error) {
-      console.error(`Error in updateProductImage for image ${id}:`, error);
+      logger.error(`Error in product image update process`, {
+        error,
+        imageId: id
+      });
       throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
   }
 
   async setMainProductImage(productId: number, imageId: number): Promise<boolean> {
     try {
+      // First, verify that the image exists and belongs to the product
+      const image = await this.getProductImageById(imageId);
+      if (!image) {
+        logger.warn(`Cannot set main image - image not found`, { imageId, productId });
+        return false;
+      }
+      
+      if (image.productId !== productId) {
+        logger.warn(`Cannot set main image - image belongs to different product`, { 
+          imageId, 
+          productId,
+          actualProductId: image.productId 
+        });
+        return false;
+      }
+      
+      // Check if already main
+      if (image.isMain) {
+        logger.info(`Image is already set as main`, { imageId, productId });
+        return true;
+      }
+      
       // Unset existing main image
       try {
-        await db
-          .update(productImages)
-          .set({ isMain: false })
+        const [currentMainImage] = await db
+          .select()
+          .from(productImages)
           .where(
             and(
               eq(productImages.productId, productId),
               eq(productImages.isMain, true)
             )
           );
+        
+        if (currentMainImage) {
+          await db
+            .update(productImages)
+            .set({ isMain: false })
+            .where(
+              and(
+                eq(productImages.productId, productId),
+                eq(productImages.isMain, true)
+              )
+            );
+          
+          logger.debug(`Unset existing main image`, {
+            productId,
+            previousMainImageId: currentMainImage.id,
+            newMainImageId: imageId
+          });
+        }
       } catch (unsetError) {
-        console.error(`Error unsetting existing main image for product ${productId}:`, unsetError);
+        logger.error(`Error unsetting existing main image`, {
+          error: unsetError,
+          productId
+        });
         throw unsetError; // Rethrow so the route handler can catch it and send a proper error response
       }
       
@@ -1937,70 +2103,179 @@ export class DatabaseStorage implements IStorage {
           .where(eq(productImages.id, imageId))
           .returning();
         
+        logger.info(`Set image as main`, {
+          productId,
+          imageId,
+          success: !!updatedImage
+        });
+        
         return !!updatedImage;
       } catch (setError) {
-        console.error(`Error setting image ${imageId} as main for product ${productId}:`, setError);
+        logger.error(`Error setting image as main`, {
+          error: setError,
+          productId,
+          imageId
+        });
         throw setError; // Rethrow so the route handler can catch it and send a proper error response
       }
     } catch (error) {
-      console.error(`Error in setMainProductImage for product ${productId} and image ${imageId}:`, error);
+      logger.error(`Error in main product image setting process`, {
+        error,
+        productId,
+        imageId
+      });
       throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
   }
 
   async deleteProductImage(id: number): Promise<boolean> {
     try {
-      const [image] = await db
-        .select()
-        .from(productImages)
-        .where(eq(productImages.id, id));
+      // First check if the image exists
+      const image = await this.getProductImageById(id);
+      
+      if (!image) {
+        // Image already doesn't exist, return success
+        logger.warn(`Cannot delete product image - not found`, { imageId: id });
+        return true; // Idempotent behavior - if it doesn't exist, that's still a successful deletion
+      }
         
-      if (image) {
-        // Delete the image file from object storage if it exists
-        if (image.objectKey) {
-          try {
-            await objectStore.deleteFile(image.objectKey);
-            console.log(`Deleted original image from object storage: ${image.objectKey}`);
-          } catch (error) {
-            console.error(`Error deleting original image from object storage: ${image.objectKey}`, error);
-            // Continue with deletion even if file deletion fails
-          }
+      // Gather info for logging
+      const productId = image.productId;
+      const wasMain = image.isMain;
+      const hadBgRemoved = image.hasBgRemoved;
+      const storageInfo = {
+        originalObjectKey: image.objectKey,
+        bgRemovedObjectKey: image.bgRemovedObjectKey,
+        originalDeleted: false,
+        bgRemovedDeleted: false,
+      };
+      
+      // Delete the image file from object storage if it exists
+      if (image.objectKey) {
+        try {
+          await objectStore.deleteFile(image.objectKey);
+          storageInfo.originalDeleted = true;
+          logger.debug(`Deleted original image from object storage`, {
+            objectKey: image.objectKey,
+            imageId: id,
+            productId
+          });
+        } catch (storageError) {
+          logger.error(`Error deleting original image from object storage`, {
+            error: storageError,
+            objectKey: image.objectKey,
+            imageId: id,
+            productId
+          });
+          // Continue with deletion even if file deletion fails
         }
-        
-        // Delete the background-removed image if it exists
-        if (image.bgRemovedObjectKey) {
-          try {
-            await objectStore.deleteFile(image.bgRemovedObjectKey);
-            console.log(`Deleted bg removed image from object storage: ${image.bgRemovedObjectKey}`);
-          } catch (error) {
-            console.error(`Error deleting bg removed image from object storage: ${image.bgRemovedObjectKey}`, error);
-            // Continue with deletion even if file deletion fails
-          }
+      }
+      
+      // Delete the background-removed image if it exists
+      if (image.bgRemovedObjectKey) {
+        try {
+          await objectStore.deleteFile(image.bgRemovedObjectKey);
+          storageInfo.bgRemovedDeleted = true;
+          logger.debug(`Deleted background-removed image from object storage`, {
+            objectKey: image.bgRemovedObjectKey,
+            imageId: id,
+            productId
+          });
+        } catch (storageError) {
+          logger.error(`Error deleting background-removed image from object storage`, {
+            error: storageError,
+            objectKey: image.bgRemovedObjectKey,
+            imageId: id,
+            productId
+          });
+          // Continue with deletion even if file deletion fails
         }
       }
       
       // Delete the database record
-      await db.delete(productImages).where(eq(productImages.id, id));
-      return true;
+      try {
+        await db.delete(productImages).where(eq(productImages.id, id));
+        
+        logger.info(`Deleted product image`, {
+          imageId: id,
+          productId,
+          wasMain,
+          hadBgRemoved,
+          storageDeleted: {
+            original: storageInfo.originalDeleted,
+            bgRemoved: storageInfo.bgRemovedDeleted
+          }
+        });
+        
+        return true;
+      } catch (dbError) {
+        logger.error(`Error deleting product image from database`, {
+          error: dbError,
+          imageId: id,
+          productId
+        });
+        throw dbError;
+      }
     } catch (error) {
-      console.error(`Error deleting product image ${id}:`, error);
+      logger.error(`Error in product image deletion process`, {
+        error,
+        imageId: id
+      });
       throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
   }
   
   async deleteProduct(id: number): Promise<boolean> {
     try {
-      // First, get all product images to delete them from object storage
-      const productImagesData = await this.getProductImages(id);
+      // First verify that the product exists
+      const [product] = await db
+        .select()
+        .from(products)
+        .where(eq(products.id, id));
+        
+      if (!product) {
+        logger.warn(`Cannot delete product - not found`, { productId: id });
+        return true; // Idempotent behavior - if it doesn't exist, that's still a successful deletion
+      }
       
-      // Delete each image from database and object storage
-      for (const image of productImagesData) {
-        try {
-          await this.deleteProductImage(image.id);
-        } catch (imageError) {
-          console.error(`Error deleting product image ID ${image.id}:`, imageError);
-          // Continue with deletion even if a specific image deletion fails
+      // Create tracking object to monitor deletion progress
+      const deletionStats = {
+        productName: product.name,
+        productSlug: product.slug,
+        catalogId: product.catalogId,
+        imagesTotal: 0,
+        imagesDeleted: 0,
+        orphanedFilesTotal: 0,
+        orphanedFilesDeleted: 0,
+        attributeValuesDeleted: false,
+        productDeleted: false
+      };
+      
+      // First, get all product images to delete them from object storage
+      try {
+        const productImagesData = await this.getProductImages(id);
+        deletionStats.imagesTotal = productImagesData.length;
+        
+        // Delete each image from database and object storage
+        for (const image of productImagesData) {
+          try {
+            await this.deleteProductImage(image.id);
+            deletionStats.imagesDeleted++;
+          } catch (imageError) {
+            logger.error(`Error deleting product image`, {
+              error: imageError,
+              imageId: image.id,
+              productId: id
+            });
+            // Continue with deletion even if a specific image deletion fails
+          }
         }
+      } catch (imagesError) {
+        logger.error(`Error retrieving product images for deletion`, {
+          error: imagesError,
+          productId: id
+        });
+        // Continue with deletion even if image retrieval fails
       }
       
       // Additionally, search for any files in the product's folder that might not be linked in the database
@@ -2008,28 +2283,49 @@ export class DatabaseStorage implements IStorage {
         const productFolderPrefix = `${STORAGE_FOLDERS.PRODUCTS}/${id}/`;
         const filesList = await objectStore.listFiles(productFolderPrefix, true);
         
-        console.log(`Found ${filesList.length} files in product folder ${productFolderPrefix} to delete`);
+        deletionStats.orphanedFilesTotal = filesList.length;
+        logger.debug(`Found orphaned files in product folder to delete`, {
+          productId: id,
+          count: filesList.length,
+          folderPath: productFolderPrefix
+        });
         
         // Delete each file found in the folder
         for (const objectKey of filesList) {
           try {
             await objectStore.deleteFile(objectKey);
-            console.log(`Deleted orphaned file from object storage: ${objectKey}`);
+            deletionStats.orphanedFilesDeleted++;
+            logger.debug(`Deleted orphaned file from object storage`, {
+              objectKey,
+              productId: id
+            });
           } catch (fileError) {
-            console.error(`Error deleting orphaned file ${objectKey}:`, fileError);
+            logger.error(`Error deleting orphaned file from object storage`, {
+              error: fileError,
+              objectKey,
+              productId: id
+            });
             // Continue with deletion even if file deletion fails
           }
         }
       } catch (folderError) {
-        console.error(`Error listing product files for cleanup:`, folderError);
+        logger.error(`Error listing product files for cleanup`, {
+          error: folderError,
+          productId: id
+        });
         // Continue with deletion even if listing fails
       }
       
       try {
         // Delete product attribute values
         await db.delete(productAttributeValues).where(eq(productAttributeValues.productId, id));
+        deletionStats.attributeValuesDeleted = true;
+        logger.debug(`Deleted product attribute values`, { productId: id });
       } catch (attrValuesError) {
-        console.error(`Error deleting product attribute values for product ${id}:`, attrValuesError);
+        logger.error(`Error deleting product attribute values`, {
+          error: attrValuesError,
+          productId: id
+        });
         // Continue with deletion
       }
       
@@ -2045,12 +2341,34 @@ export class DatabaseStorage implements IStorage {
         // Continue with deletion
       }*/
       
-      // Finally delete the product itself
-      await db.delete(products).where(eq(products.id, id));
-      
-      return true;
+      try {
+        // Finally delete the product itself
+        await db.delete(products).where(eq(products.id, id));
+        deletionStats.productDeleted = true;
+        
+        logger.info(`Product successfully deleted`, {
+          productId: id,
+          productName: deletionStats.productName,
+          productSlug: deletionStats.slug,
+          catalogId: deletionStats.catalogId,
+          deletedImages: `${deletionStats.imagesDeleted}/${deletionStats.imagesTotal}`,
+          deletedOrphanedFiles: `${deletionStats.orphanedFilesDeleted}/${deletionStats.orphanedFilesTotal}`,
+          attributeValuesDeleted: deletionStats.attributeValuesDeleted
+        });
+        
+        return true;
+      } catch (deleteError) {
+        logger.error(`Error deleting product record from database`, {
+          error: deleteError,
+          productId: id
+        });
+        throw deleteError;
+      }
     } catch (error) {
-      console.error(`Error deleting product ${id}:`, error);
+      logger.error(`Error in product deletion process`, {
+        error,
+        productId: id
+      });
       throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
   }
@@ -2058,24 +2376,87 @@ export class DatabaseStorage implements IStorage {
   async bulkUpdateProductStatus(productIds: number[], isActive: boolean): Promise<number> {
     try {
       if (productIds.length === 0) {
+        logger.debug(`Bulk status update called with empty product ID list`, {
+          isActive,
+          count: 0
+        });
         return 0;
       }
       
+      // Check which products actually exist (for better error messages and accurate counts)
+      const existingProducts = await db
+        .select({
+          id: products.id,
+          name: products.name,
+          isCurrentlyActive: products.isActive
+        })
+        .from(products)
+        .where(inArray(products.id, productIds));
+      
+      const existingIds = existingProducts.map(p => p.id);
+      const notFoundIds = productIds.filter(id => !existingIds.includes(id));
+      
+      // Log a warning if some products were not found
+      if (notFoundIds.length > 0) {
+        logger.warn(`Some products not found during bulk status update`, {
+          notFoundCount: notFoundIds.length,
+          notFoundIds,
+          requestedCount: productIds.length
+        });
+      }
+      
+      // Early return if no products actually exist
+      if (existingIds.length === 0) {
+        logger.warn(`No products found to update status`, {
+          requestedIds: productIds,
+          isActive
+        });
+        return 0;
+      }
+      
+      // Count products that already have the requested status
+      const alreadyInStatusCount = existingProducts.filter(p => p.isCurrentlyActive === isActive).length;
+      if (alreadyInStatusCount === existingIds.length) {
+        logger.info(`All products already have the requested status`, {
+          isActive,
+          count: existingIds.length
+        });
+        return existingIds.length; // All products already have the requested status
+      }
+      
       try {
-        // Update all products in the list to the new status
+        // Update all existing products in the list to the new status
         await db
           .update(products)
-          .set({ isActive })
-          .where(inArray(products.id, productIds));
+          .set({ 
+            isActive,
+            updatedAt: new Date() 
+          })
+          .where(inArray(products.id, existingIds));
           
-        // Return the number of affected rows
-        return productIds.length;
+        logger.info(`Bulk updated product status`, {
+          isActive,
+          totalProductCount: existingIds.length,
+          alreadyInStatusCount,
+          actuallyUpdatedCount: existingIds.length - alreadyInStatusCount
+        });
+        
+        // Return the number of affected rows (successfully processed)
+        return existingIds.length;
       } catch (updateError) {
-        console.error(`Error updating status to ${isActive ? 'active' : 'inactive'} for ${productIds.length} products:`, updateError);
+        logger.error(`Error updating product status in database`, {
+          error: updateError,
+          isActive,
+          productCount: existingIds.length
+        });
         throw updateError; // Rethrow so the route handler can catch it and send a proper error response
       }
     } catch (error) {
-      console.error(`Error in bulkUpdateProductStatus for ${productIds.length} products:`, error);
+      logger.error(`Error in bulk product status update process`, {
+        error,
+        isActive,
+        productIdCount: productIds.length
+      });
       throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
   }
