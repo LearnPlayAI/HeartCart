@@ -13,6 +13,8 @@ import { sendSuccess, sendError } from "./api-response";
 import { withStandardResponse } from "./response-wrapper";
 import { logger } from "./logger";
 import { AppError, ErrorCode, ForbiddenError, NotFoundError } from "./error-handler";
+import { validateCredentialFields, loginSchema, registrationSchema } from "./utils/auth-validation";
+import { validateRequest, validateAuthRequest } from "./middlewares/validation-middleware";
 import { isAuthenticated, isAdmin } from "./auth-middleware";
 
 const PostgresSessionStore = connectPg(session);
@@ -137,33 +139,48 @@ export function setupAuth(app: Express): void {
       },
       async (email, password, done) => {
         try {
-          // Check for empty credentials first
-          if (!email || !password || email.trim() === '' || password.trim() === '') {
-            logger.warn('Authentication attempt with empty credentials', { 
-              emailEmpty: !email || email.trim() === '',
-              passwordEmpty: !password || password.trim() === ''
+          // Use the centralized credential validation from auth-validation.ts
+          const credentialCheck = validateCredentialFields(email, password);
+          
+          // Check for empty or invalid credentials first
+          if (!credentialCheck.valid) {
+            logger.warn('Authentication attempt with invalid credentials', { 
+              error: credentialCheck.error,
+              email: email || '<empty>'
             });
-            return done(null, false, { message: "Email and password are required" });
+            return done(null, false, { message: credentialCheck.error || "Invalid credentials" });
           }
 
+          // Look up the user in the database
           const user = await storage.getUserByEmail(email);
           if (!user) {
+            // Always use generic messages for security (don't reveal if user exists)
             logger.info('Failed login attempt: user not found', { email });
             return done(null, false, { message: "Invalid email or password" });
           }
 
+          // Verify the password against the stored hash
           const isValid = await comparePasswords(password, user.password);
           if (!isValid) {
-            logger.info('Failed login attempt: invalid password', { email });
+            // Track failed login attempts (could be used for account lockout)
+            logger.info('Failed login attempt: invalid password', { email, userId: user.id });
             return done(null, false, { message: "Invalid email or password" });
           }
 
-          // Update last login time
+          // Update last login time - success!
           await storage.updateUser(user.id, { lastLogin: new Date() });
+          
+          // Log successful login event
           logger.info('Successful login', { userId: user.id, email });
           
+          // Return authenticated user
           return done(null, user as Express.User);
         } catch (error) {
+          // Log unexpected errors for debugging
+          logger.error('Authentication error in LocalStrategy', {
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined
+          });
           return done(error);
         }
       }
@@ -204,70 +221,23 @@ export function setupAuth(app: Express): void {
     }
   });
 
-  // Registration endpoint with enhanced validation and error handling
-  app.post("/api/register", withStandardResponse(async (req: Request, res: Response, next: NextFunction) => {
+  // Registration endpoint with Zod validation and enhanced error handling
+  app.post(
+    "/api/register", 
+    validateAuthRequest(registrationSchema), // Use the Zod validation schema
+    withStandardResponse(async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // Extract and sanitize required fields
-      let { username, email, password, fullName } = req.body;
+      // Body is already validated by the middleware using our registrationSchema
+      // Extract fields directly (trim already handled by Zod schema)
+      const { username, email, password, fullName, confirmPassword } = req.body;
       
-      // Basic sanitization - trim whitespace from all inputs
-      username = username?.trim();
-      email = email?.trim();
-      password = password?.toString(); // Keep password as is, but ensure it's a string
-      fullName = fullName?.trim();
-      
-      if (!username || !email || !password) {
-        throw new AppError(
-          "Missing required fields",
-          ErrorCode.VALIDATION_ERROR,
-          400,
-          { fields: ['username', 'email', 'password'] }
-        );
-      }
-      
-      // Validate username format (alphanumeric with underscore, 3-20 chars)
-      const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
-      if (!usernameRegex.test(username)) {
-        throw new AppError(
-          "Username must be 3-20 characters and contain only letters, numbers, and underscores",
-          ErrorCode.VALIDATION_ERROR,
-          400,
-          { field: 'username', value: username }
-        );
-      }
-      
-      // Validate email format
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        throw new AppError(
-          "Please enter a valid email address",
-          ErrorCode.VALIDATION_ERROR,
-          400,
-          { field: 'email', value: email }
-        );
-      }
-      
-      // Validate password strength (min 6 chars, at least one number and letter)
-      if (password.length < 6) {
-        throw new AppError(
-          "Password must be at least 6 characters",
-          ErrorCode.VALIDATION_ERROR,
-          400,
-          { field: 'password' }
-        );
-      }
-      
-      // Check for at least one letter and one number
-      const hasLetter = /[a-zA-Z]/.test(password);
-      const hasNumber = /[0-9]/.test(password);
-      if (!hasLetter || !hasNumber) {
-        throw new AppError(
-          "Password must contain at least one letter and one number",
-          ErrorCode.VALIDATION_ERROR,
-          400,
-          { field: 'password' }
-        );
-      }
+      // Log registration attempt (without sensitive data)
+      logger.debug('Registration attempt', { 
+        username, 
+        email, 
+        ip: req.ip,
+        timestamp: new Date().toISOString() 
+      });
       
       // Check if username already exists
       const existingUser = await storage.getUserByUsername(username);
@@ -365,41 +335,22 @@ export function setupAuth(app: Express): void {
     }
   }));
 
-  // Login endpoint with enhanced validation and security
-  app.post("/api/login", loginLimiter, withStandardResponse(async (req: Request, res: Response, next: NextFunction) => {
+  // Login endpoint with enhanced validation and security using Zod schemas
+  app.post(
+    "/api/login", 
+    loginLimiter, 
+    validateAuthRequest(loginSchema), // Use the Zod schema validation middleware
+    withStandardResponse(async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // Validate required fields first
+      // Body is already validated by the validateAuthRequest middleware
       const { email, password } = req.body;
       
-      if (!email || !password) {
-        throw new AppError(
-          "Email and password are required",
-          ErrorCode.VALIDATION_ERROR,
-          400,
-          { fields: ['email', 'password'] }
-        );
-      }
-      
-      // Validate email format
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        throw new AppError(
-          "Please enter a valid email address",
-          ErrorCode.VALIDATION_ERROR,
-          400,
-          { field: 'email' }
-        );
-      }
-      
-      // Handle empty password
-      if (password.trim() === '') {
-        throw new AppError(
-          "Password cannot be empty",
-          ErrorCode.VALIDATION_ERROR,
-          400,
-          { field: 'password' }
-        );
-      }
+      // Log the login attempt (without sensitive data)
+      logger.debug('Login attempt', { 
+        email, 
+        ip: req.ip, 
+        timestamp: new Date().toISOString() 
+      });
       
       return new Promise((resolve, reject) => {
         passport.authenticate("local", (err: Error, user: Express.User | false | null, info: any) => {

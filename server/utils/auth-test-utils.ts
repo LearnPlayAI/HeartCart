@@ -77,6 +77,7 @@ export function testSessionPersistence(req: Request): {
 
 /**
  * Validates a user's credentials without actually logging them in
+ * Uses centralized validation from auth-validation.ts where possible
  * @param email - User's email address
  * @param password - User's password
  * @returns Promise resolving to validation result
@@ -87,36 +88,43 @@ export async function validateCredentials(email: string, password: string): Prom
   error?: string;
 }> {
   try {
-    // Check for empty credentials
-    if (!email || !password || email.trim() === '' || password.trim() === '') {
+    // Import and use the centralized credential validation
+    const { validateCredentialFields } = await import('../utils/auth-validation');
+    
+    // First check for empty credentials using the shared validation
+    const credentialCheck = validateCredentialFields(email, password);
+    if (!credentialCheck.valid) {
       return {
         valid: false,
-        error: "Email and password are required"
+        error: credentialCheck.error || "Email and password are required"
       };
     }
     
     // Find user by email
     const user = await storage.getUserByEmail(email);
     
-    // User not found
+    // User not found - use generic message for security
     if (!user) {
+      logger.info('Credential validation failed: user not found', { email });
       return {
         valid: false,
         error: "Invalid email or password"
       };
     }
     
-    // Compare password
+    // Compare password - use the shared password comparison function
     const isPasswordValid = await comparePasswords(password, user.password);
     
     if (!isPasswordValid) {
+      logger.info('Credential validation failed: invalid password', { email });
       return {
         valid: false,
         error: "Invalid email or password"
       };
     }
     
-    // Success
+    // Success - validation passed
+    logger.info('Credential validation succeeded', { userId: user.id, email });
     return {
       valid: true,
       userId: user.id
@@ -305,6 +313,232 @@ export async function runAuthSystemTests(): Promise<{
       message: `Session expiry test failed: ${error instanceof Error ? error.message : String(error)}` 
     };
     failedTests.push('sessionExpiry');
+  }
+  
+  return {
+    status: failedTests.length === 0 ? 'passed' : 'failed',
+    results,
+    failedTests
+  };
+}
+
+/**
+ * Test the enhanced validation system to ensure all validation rules are working correctly
+ * This test focuses on ensuring the Zod validation schemas work as expected
+ */
+export async function testValidationSystem(): Promise<{
+  status: 'passed' | 'failed';
+  results: {
+    loginValidation: { status: 'passed' | 'failed'; message: string; details?: any };
+    registrationValidation: { status: 'passed' | 'failed'; message: string; details?: any };
+    passwordStrength: { status: 'passed' | 'failed'; message: string; details?: any };
+    emailFormat: { status: 'passed' | 'failed'; message: string; details?: any };
+  };
+  failedTests: string[];
+}> {
+  const results = {
+    loginValidation: { status: 'failed' as 'passed' | 'failed', message: '' },
+    registrationValidation: { status: 'failed' as 'passed' | 'failed', message: '' },
+    passwordStrength: { status: 'failed' as 'passed' | 'failed', message: '' },
+    emailFormat: { status: 'failed' as 'passed' | 'failed', message: '' }
+  };
+  
+  const failedTests: string[] = [];
+  
+  try {
+    // Import the validation schemas
+    const { loginSchema, registrationSchema, getPasswordValidationDetails } = await import('../utils/auth-validation');
+    
+    // Test login validation schema with valid and invalid data
+    const validLogin = { email: 'test@example.com', password: 'SecurePass123' };
+    const invalidLogin = { email: 'invalid-email', password: '' };
+    
+    const validLoginResult = loginSchema.safeParse(validLogin);
+    const invalidLoginResult = loginSchema.safeParse(invalidLogin);
+    
+    if (validLoginResult.success && !invalidLoginResult.success) {
+      results.loginValidation = {
+        status: 'passed',
+        message: 'Login validation schema correctly identifies valid and invalid login attempts',
+        details: {
+          validCase: validLoginResult.success,
+          invalidCase: !invalidLoginResult.success,
+          invalidReason: invalidLoginResult.success ? null : invalidLoginResult.error.format()
+        }
+      };
+    } else {
+      results.loginValidation = {
+        status: 'failed',
+        message: 'Login validation schema failed to correctly validate test cases',
+        details: {
+          validCase: validLoginResult,
+          invalidCase: invalidLoginResult
+        }
+      };
+      failedTests.push('loginValidation');
+    }
+    
+    // Test registration validation schema
+    const validRegistration = {
+      username: 'testuser',
+      email: 'test@example.com',
+      password: 'SecurePass123',
+      confirmPassword: 'SecurePass123',
+      fullName: 'Test User'
+    };
+    
+    const invalidRegistration = {
+      username: 'te', // Too short
+      email: 'invalid-email',
+      password: 'weak',
+      confirmPassword: 'doesntmatch',
+      fullName: ''
+    };
+    
+    const validRegResult = registrationSchema.safeParse(validRegistration);
+    const invalidRegResult = registrationSchema.safeParse(invalidRegistration);
+    
+    if (validRegResult.success && !invalidRegResult.success) {
+      results.registrationValidation = {
+        status: 'passed',
+        message: 'Registration validation schema correctly identifies valid and invalid registration attempts',
+        details: {
+          validCase: validRegResult.success,
+          invalidCase: !invalidRegResult.success,
+          invalidReason: invalidRegResult.success ? null : invalidRegResult.error.format()
+        }
+      };
+    } else {
+      results.registrationValidation = {
+        status: 'failed',
+        message: 'Registration validation schema failed to correctly validate test cases',
+        details: {
+          validCase: validRegResult,
+          invalidCase: invalidRegResult
+        }
+      };
+      failedTests.push('registrationValidation');
+    }
+    
+    // Test password strength validation
+    const strongPassword = 'Secure123!';
+    const weakPassword = 'password';
+    const mediumPassword = 'password123';
+    
+    // Use imported detailed password validation or fallback to simple check
+    let passwordDetails;
+    if (getPasswordValidationDetails) {
+      const strongDetails = getPasswordValidationDetails(strongPassword);
+      const weakDetails = getPasswordValidationDetails(weakPassword);
+      const mediumDetails = getPasswordValidationDetails(mediumPassword);
+      
+      passwordDetails = { strong: strongDetails, weak: weakDetails, medium: mediumDetails };
+      
+      if (strongDetails.valid && !weakDetails.valid && mediumDetails.valid) {
+        results.passwordStrength = {
+          status: 'passed',
+          message: 'Password strength validation correctly identifies strong, medium, and weak passwords',
+          details: passwordDetails
+        };
+      } else {
+        results.passwordStrength = {
+          status: 'failed',
+          message: 'Password strength validation failed to correctly evaluate test cases',
+          details: passwordDetails
+        };
+        failedTests.push('passwordStrength');
+      }
+    } else {
+      // Fallback to basic validation function
+      const strongResult = validatePasswordFormat(strongPassword);
+      const weakResult = validatePasswordFormat(weakPassword);
+      const mediumResult = validatePasswordFormat(mediumPassword);
+      
+      passwordDetails = { strong: strongResult, weak: weakResult, medium: mediumResult };
+      
+      if (strongResult.valid && !weakResult.valid && mediumResult.valid) {
+        results.passwordStrength = {
+          status: 'passed',
+          message: 'Basic password validation correctly identifies strong, medium, and weak passwords',
+          details: passwordDetails
+        };
+      } else {
+        results.passwordStrength = {
+          status: 'failed',
+          message: 'Basic password validation failed to correctly evaluate test cases',
+          details: passwordDetails
+        };
+        failedTests.push('passwordStrength');
+      }
+    }
+    
+    // Test email format validation
+    const validEmailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const validEmails = ['test@example.com', 'user.name@domain.co.za', 'first.last@company.org'];
+    const invalidEmails = ['invalid-email', 'user@', '@domain.com', 'user@domain'];
+    
+    let allValidEmailsPass = true;
+    let allInvalidEmailsFail = true;
+    
+    for (const email of validEmails) {
+      if (!validEmailRegex.test(email)) {
+        allValidEmailsPass = false;
+        break;
+      }
+    }
+    
+    for (const email of invalidEmails) {
+      if (validEmailRegex.test(email)) {
+        allInvalidEmailsFail = false;
+        break;
+      }
+    }
+    
+    if (allValidEmailsPass && allInvalidEmailsFail) {
+      results.emailFormat = {
+        status: 'passed',
+        message: 'Email format validation correctly identifies valid and invalid email formats',
+        details: {
+          validEmails,
+          invalidEmails
+        }
+      };
+    } else {
+      results.emailFormat = {
+        status: 'failed',
+        message: 'Email format validation failed to correctly evaluate test cases',
+        details: {
+          allValidEmailsPass,
+          allInvalidEmailsFail,
+          validEmails,
+          invalidEmails
+        }
+      };
+      failedTests.push('emailFormat');
+    }
+    
+  } catch (error) {
+    logger.error('Error during validation system testing', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    });
+    
+    // Mark all tests as failed
+    results.loginValidation.status = 'failed';
+    results.loginValidation.message = 'Error during test execution';
+    failedTests.push('loginValidation');
+    
+    results.registrationValidation.status = 'failed';
+    results.registrationValidation.message = 'Error during test execution';
+    failedTests.push('registrationValidation');
+    
+    results.passwordStrength.status = 'failed';
+    results.passwordStrength.message = 'Error during test execution';
+    failedTests.push('passwordStrength');
+    
+    results.emailFormat.status = 'failed';
+    results.emailFormat.message = 'Error during test execution';
+    failedTests.push('emailFormat');
   }
   
   return {

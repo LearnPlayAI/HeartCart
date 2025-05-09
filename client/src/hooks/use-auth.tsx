@@ -14,7 +14,7 @@ type AuthContextType = {
   isLoading: boolean;
   error: Error | null;
   loginMutation: UseMutationResult<User, Error, LoginData>;
-  logoutMutation: UseMutationResult<void, Error, void>;
+  logoutMutation: UseMutationResult<undefined, Error, void>;
   registerMutation: UseMutationResult<User, Error, InsertUser>;
 };
 
@@ -186,8 +186,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
       
-      // Success whether response was JSON or not
-      return null;
+      // Return void instead of null to match the return type declaration
+      return undefined;
     },
     onSuccess: () => {
       // Clear user data in cache with standardized format
