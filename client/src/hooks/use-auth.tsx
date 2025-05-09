@@ -28,12 +28,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     error,
     isLoading,
     refetch,
-  } = useQuery<StandardApiResponse<User | null>, Error>({
+  } = useQuery<any, Error>({
     queryKey: ["/api/user"],
     queryFn: getQueryFn({ on401: "returnNull" }),
   });
   
-  const user = response?.success ? response.data : null;
+  // Handle the response formats, supporting both standardized and direct data
+  const user = response?.success && 'data' in response 
+    ? response.data 
+    : (response && !('success' in response) ? response : null);
   
   // Session refresh implementation
   const SESSION_REFRESH_INTERVAL = 15 * 60 * 1000; // 15 minutes in milliseconds
@@ -108,14 +111,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
       const res = await apiRequest("POST", "/api/login", credentials);
-      const data: StandardApiResponse<User> = await res.json();
-      if (!data.success) {
-        throw new Error(data.error?.message || "Login failed");
+      const data = await res.json();
+      
+      // Handle standard API response format
+      if ('success' in data) {
+        if (!data.success) {
+          throw new Error(data.error?.message || "Login failed");
+        }
+        return data.data;
       }
-      return data.data;
+      
+      // Handle direct response format (fallback)
+      return data;
     },
     onSuccess: (user: User) => {
+      // Store data in the standardized format for consistency
       queryClient.setQueryData(["/api/user"], { success: true, data: user });
+      
+      // Log login success (dev only)
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Login successful, user data stored in cache');
+      }
     },
     onError: (error: Error) => {
       toast({
@@ -129,13 +145,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const registerMutation = useMutation({
     mutationFn: async (credentials: InsertUser) => {
       const res = await apiRequest("POST", "/api/register", credentials);
-      const data: StandardApiResponse<User> = await res.json();
-      if (!data.success) {
-        throw new Error(data.error?.message || "Registration failed");
+      const data = await res.json();
+      
+      // Handle standard API response format
+      if ('success' in data) {
+        if (!data.success) {
+          throw new Error(data.error?.message || "Registration failed");
+        }
+        return data.data;
       }
-      return data.data;
+      
+      // Handle direct response format (fallback)
+      return data;
     },
     onSuccess: (user: User) => {
+      // Store data in the standardized format for consistency
       queryClient.setQueryData(["/api/user"], { success: true, data: user });
     },
     onError: (error: Error) => {
@@ -150,12 +174,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logoutMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("POST", "/api/logout");
-      const data: StandardApiResponse<void> = await res.json();
-      if (!data.success) {
-        throw new Error(data.error?.message || "Logout failed");
+      
+      // Check if response has content
+      const contentType = res.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const data = await res.json();
+        
+        // Handle standard API response format
+        if ('success' in data && !data.success) {
+          throw new Error(data.error?.message || "Logout failed");
+        }
       }
+      
+      // Success whether response was JSON or not
+      return null;
     },
     onSuccess: () => {
+      // Clear user data in cache with standardized format
       queryClient.setQueryData(["/api/user"], { success: true, data: null });
     },
     onError: (error: Error) => {
