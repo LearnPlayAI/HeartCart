@@ -113,8 +113,13 @@ function AuthTestsPage() {
   const runAllTestsMutation = useMutation({
     mutationFn: async () => {
       await Promise.all([
-        apiRequest('POST', '/api/auth-test/validate-password'),
-        apiRequest('POST', '/api/auth-test/validate-credentials'),
+        apiRequest('POST', '/api/auth-test/validate-password', {
+          password: 'TestPassword123!', // Test password with good complexity
+        }),
+        apiRequest('POST', '/api/auth-test/validate-credentials', {
+          email: 'test@example.com',
+          password: 'TestPassword123!',
+        }),
         apiRequest('POST', '/api/auth-test/session-persistence'),
         apiRequest('POST', '/api/auth-test/system-tests'),
       ]);
@@ -142,9 +147,99 @@ function AuthTestsPage() {
   });
 
   // User count query
-  const { data: userCount } = useQuery({
+  const { data: userCount } = useQuery<{ count: number }>({
     queryKey: ['/api/auth-test/user-count'],
     queryFn: getQueryFn({ on401: "returnNull" }),
+  });
+
+  // Individual test mutations
+  const validationMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('POST', '/api/auth-test/validate-password', {
+        password: 'TestPassword123!',
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      refetchValidation();
+      toast({
+        title: 'Validation Tests Completed',
+        description: 'Password validation tests run successfully',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Test Error',
+        description: `Failed to run validation tests: ${error.message}`,
+        variant: 'destructive',
+      });
+    }
+  });
+
+  const credentialMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('POST', '/api/auth-test/validate-credentials', {
+        email: 'test@example.com',
+        password: 'TestPassword123!',
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      refetchCredentials();
+      toast({
+        title: 'Credential Tests Completed',
+        description: 'Credential verification tests run successfully',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Test Error',
+        description: `Failed to run credential tests: ${error.message}`,
+        variant: 'destructive',
+      });
+    }
+  });
+
+  const sessionMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('POST', '/api/auth-test/session-persistence');
+      return response.json();
+    },
+    onSuccess: () => {
+      refetchSession();
+      toast({
+        title: 'Session Tests Completed',
+        description: 'Session management tests run successfully',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Test Error',
+        description: `Failed to run session tests: ${error.message}`,
+        variant: 'destructive',
+      });
+    }
+  });
+
+  const systemMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('POST', '/api/auth-test/system-tests');
+      return response.json();
+    },
+    onSuccess: () => {
+      refetchSystem();
+      toast({
+        title: 'System Tests Completed',
+        description: 'System authentication tests run successfully',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Test Error',
+        description: `Failed to run system tests: ${error.message}`,
+        variant: 'destructive',
+      });
+    }
   });
 
   // Test status component
@@ -271,12 +366,12 @@ function AuthTestsPage() {
               </CardContent>
               <CardFooter>
                 <Button 
-                  onClick={() => refetchValidation()} 
-                  disabled={isValidationLoading} 
+                  onClick={() => validationMutation.mutate()} 
+                  disabled={isValidationLoading || validationMutation.isPending} 
                   variant="outline" 
                   className="w-full"
                 >
-                  {isValidationLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {(isValidationLoading || validationMutation.isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Run Tests
                 </Button>
               </CardFooter>
@@ -378,12 +473,12 @@ function AuthTestsPage() {
               </CardContent>
               <CardFooter>
                 <Button 
-                  onClick={() => refetchCredentials()} 
-                  disabled={isCredentialLoading} 
+                  onClick={() => credentialMutation.mutate()} 
+                  disabled={isCredentialLoading || credentialMutation.isPending} 
                   variant="outline" 
                   className="w-full"
                 >
-                  {isCredentialLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {(isCredentialLoading || credentialMutation.isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Run Tests
                 </Button>
               </CardFooter>
@@ -485,12 +580,12 @@ function AuthTestsPage() {
               </CardContent>
               <CardFooter>
                 <Button 
-                  onClick={() => refetchSession()} 
-                  disabled={isSessionLoading} 
+                  onClick={() => sessionMutation.mutate()} 
+                  disabled={isSessionLoading || sessionMutation.isPending} 
                   variant="outline" 
                   className="w-full"
                 >
-                  {isSessionLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {(isSessionLoading || sessionMutation.isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Run Tests
                 </Button>
               </CardFooter>
@@ -592,12 +687,12 @@ function AuthTestsPage() {
               </CardContent>
               <CardFooter>
                 <Button 
-                  onClick={() => refetchSystem()} 
-                  disabled={isSystemLoading} 
+                  onClick={() => systemMutation.mutate()} 
+                  disabled={isSystemLoading || systemMutation.isPending} 
                   variant="outline" 
                   className="w-full"
                 >
-                  {isSystemLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {(isSystemLoading || systemMutation.isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Run Tests
                 </Button>
               </CardFooter>
