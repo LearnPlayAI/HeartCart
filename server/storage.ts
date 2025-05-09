@@ -4728,17 +4728,28 @@ export class DatabaseStorage implements IStorage {
       const count = result[0]?.count;
       logger.info('User count retrieved successfully', { count });
       
-      // Explicitly check if the count is a number to ensure proper type handling
-      if (typeof count !== 'number') {
-        logger.error('User count is not a number', { 
-          count, 
-          type: typeof count, 
-          resultObject: JSON.stringify(result) 
-        });
-        return 0;
+      // Handle both number and string cases
+      if (typeof count === 'number') {
+        return count;
+      } else if (typeof count === 'string') {
+        // Parse string to number
+        const parsedCount = parseInt(count, 10);
+        if (!isNaN(parsedCount)) {
+          logger.info('Successfully parsed string count to number', { 
+            original: count,
+            parsed: parsedCount 
+          });
+          return parsedCount;
+        }
       }
       
-      return count;
+      // Log if we couldn't handle the count properly
+      logger.error('User count could not be parsed to a number', { 
+        count, 
+        type: typeof count, 
+        resultObject: JSON.stringify(result) 
+      });
+      return 0;
     } catch (error) {
       logger.error('Error counting users', { 
         error: error instanceof Error ? error.message : String(error),
