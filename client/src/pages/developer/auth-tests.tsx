@@ -454,25 +454,25 @@ function AuthTestsPage() {
                   <div className="text-red-600 py-2">Error: {(sessionError as Error).message}</div>
                 ) : sessionResults && sessionResults.results ? (
                   <div className="space-y-3">
-                    {sessionResults.results.persistenceTest && (
+                    {sessionResults.results.persistenceTest && sessionResults.results.persistenceTest.status && (
                       <div className="flex justify-between items-center p-2 border-b">
                         <span>Session Persistence</span>
                         <TestStatus status={sessionResults.results.persistenceTest.status} />
                       </div>
                     )}
-                    {sessionResults.results.refreshTest && (
+                    {sessionResults.results.refreshTest && sessionResults.results.refreshTest.status && (
                       <div className="flex justify-between items-center p-2 border-b">
                         <span>Session Refresh</span>
                         <TestStatus status={sessionResults.results.refreshTest.status} />
                       </div>
                     )}
-                    {sessionResults.results.timeoutTest && (
+                    {sessionResults.results.timeoutTest && sessionResults.results.timeoutTest.status && (
                       <div className="flex justify-between items-center p-2 border-b">
                         <span>Session Timeout</span>
                         <TestStatus status={sessionResults.results.timeoutTest.status} />
                       </div>
                     )}
-                    {sessionResults.results.logoutTest && (
+                    {sessionResults.results.logoutTest && sessionResults.results.logoutTest.status && (
                       <div className="flex justify-between items-center p-2">
                         <span>Logout Functionality</span>
                         <TestStatus status={sessionResults.results.logoutTest.status} />
@@ -561,25 +561,25 @@ function AuthTestsPage() {
                   <div className="text-red-600 py-2">Error: {(systemError as Error).message}</div>
                 ) : systemResults && systemResults.results ? (
                   <div className="space-y-3">
-                    {systemResults.results.passwordValidation && (
+                    {systemResults.results.passwordValidation && systemResults.results.passwordValidation.status && (
                       <div className="flex justify-between items-center p-2 border-b">
                         <span>Password Validation</span>
                         <TestStatus status={systemResults.results.passwordValidation.status} />
                       </div>
                     )}
-                    {systemResults.results.passwordHashing && (
+                    {systemResults.results.passwordHashing && systemResults.results.passwordHashing.status && (
                       <div className="flex justify-between items-center p-2 border-b">
                         <span>Password Hashing</span>
                         <TestStatus status={systemResults.results.passwordHashing.status} />
                       </div>
                     )}
-                    {systemResults.results.userRetrieval && (
+                    {systemResults.results.userRetrieval && systemResults.results.userRetrieval.status && (
                       <div className="flex justify-between items-center p-2 border-b">
                         <span>User Retrieval</span>
                         <TestStatus status={systemResults.results.userRetrieval.status} />
                       </div>
                     )}
-                    {systemResults.results.sessionExpiry && (
+                    {systemResults.results.sessionExpiry && systemResults.results.sessionExpiry.status && (
                       <div className="flex justify-between items-center p-2">
                         <span>Session Expiry</span>
                         <TestStatus status={systemResults.results.sessionExpiry.status} />
