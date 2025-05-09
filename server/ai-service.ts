@@ -613,7 +613,7 @@ export async function suggestPrice(
     
     // Get the response
     const response = await result.response;
-    const responseText = response.text();
+    const responseText = await response.text();
     
     // Parse JSON response
     try {
@@ -628,12 +628,25 @@ export async function suggestPrice(
           // If AI suggestion is below cost price and we have a markup, use our markup
           suggestedPrice = costPrice * (1 + markupPercentage / 100);
           useAiSuggestion = false;
-          console.log(`AI suggested price (${jsonResponse.suggestedPrice}) was below cost price. Using ${markupSource} markup: ${suggestedPrice.toFixed(2)}`);
+          logger.info(`AI suggested price was below cost price, using category markup instead`, {
+            aiSuggestedPrice: jsonResponse.suggestedPrice,
+            costPrice,
+            markupSource,
+            calculatedPrice: suggestedPrice.toFixed(2),
+            productName,
+            productId: productId || 'unknown'
+          });
         } else {
           // If no markup is set, just use cost price as minimum
           suggestedPrice = costPrice;
           useAiSuggestion = false;
-          console.log(`AI suggested price (${jsonResponse.suggestedPrice}) was below cost price. No markup set, using cost price: ${suggestedPrice.toFixed(2)}`);
+          logger.info(`AI suggested price was below cost price with no markup set, using cost price`, {
+            aiSuggestedPrice: jsonResponse.suggestedPrice,
+            costPrice,
+            calculatedPrice: suggestedPrice.toFixed(2),
+            productName,
+            productId: productId || 'unknown'
+          });
         }
       }
       
@@ -672,12 +685,25 @@ export async function suggestPrice(
             // If AI suggestion is below cost price and we have a markup, use our markup
             suggestedPrice = costPrice * (1 + markupPercentage / 100);
             useAiSuggestion = false;
-            console.log(`AI suggested price (${priceMatch[0]}) was below cost price. Using ${markupSource} markup: ${suggestedPrice.toFixed(2)}`);
+            logger.info(`AI suggested price from pattern match was below cost price, using category markup`, {
+              aiSuggestedPrice: priceMatch[0],
+              costPrice,
+              markupSource,
+              calculatedPrice: suggestedPrice.toFixed(2),
+              productName,
+              productId: productId || 'unknown'
+            });
           } else {
             // If no markup is set, just use cost price as minimum
             suggestedPrice = costPrice;
             useAiSuggestion = false;
-            console.log(`AI suggested price (${priceMatch[0]}) was below cost price. No markup set, using cost price: ${suggestedPrice.toFixed(2)}`);
+            logger.info(`AI suggested price from pattern match was below cost price with no markup, using cost price`, {
+              aiSuggestedPrice: priceMatch[0],
+              costPrice,
+              calculatedPrice: suggestedPrice.toFixed(2),
+              productName,
+              productId: productId || 'unknown'
+            });
           }
         }
         
@@ -707,7 +733,14 @@ export async function suggestPrice(
         // If no valid price found and we have a markup, use it
         if (markupPercentage !== null) {
           const suggestedPrice = costPrice * (1 + markupPercentage / 100);
-          console.log(`No valid AI price found. Using ${markupSource} markup: ${suggestedPrice.toFixed(2)}`);
+          logger.info(`No valid AI price found in pattern matching, using category markup`, {
+            costPrice,
+            markupSource,
+            markupPercentage,
+            calculatedPrice: suggestedPrice.toFixed(2),
+            productName,
+            productId: productId || 'unknown'
+          });
           
           return { 
             suggestedPrice, 
@@ -865,7 +898,7 @@ export async function analyzeProductImage(imageBase64: string, productName: stri
         ]);
         
         const textResponse = await textResult.response;
-        const responseText = textResponse.text();
+        const responseText = await textResponse.text();
         
         try {
           const jsonResponse = JSON.parse(responseText);
@@ -1001,7 +1034,7 @@ export async function analyzeProductImage(imageBase64: string, productName: stri
         
         try {
           const textResponse = await textResult.response;
-          const responseText = textResponse.text();
+          const responseText = await textResponse.text();
           
           const jsonResponse = JSON.parse(responseText);
           
