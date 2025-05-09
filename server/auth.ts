@@ -270,6 +270,15 @@ export function setupAuth(app: Express): void {
     const { password, ...userData } = req.user as Express.User;
     return userData;
   }));
+  
+  // Session refresh endpoint - lightweight endpoint just to keep session alive
+  app.post("/api/session/refresh", isAuthenticated, withStandardResponse(async (req: Request, res: Response) => {
+    // Simply return success - the session cookie will be updated automatically 
+    // due to the 'rolling: true' option in the session configuration
+    const userId = (req.user as Express.User).id;
+    logger.debug('Session refreshed', { userId, timestamp: new Date().toISOString() });
+    return { message: "Session refreshed successfully" };
+  }));
 
   // Use standardized authentication middleware for protected routes
   // Uses the centralized authentication check utility 

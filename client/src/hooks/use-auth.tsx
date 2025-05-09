@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useContext } from "react";
+import { createContext, ReactNode, useContext, useEffect, useRef, useCallback } from "react";
 import {
   useQuery,
   useMutation,
@@ -27,12 +27,83 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     data: response,
     error,
     isLoading,
+    refetch,
   } = useQuery<StandardApiResponse<User | null>, Error>({
     queryKey: ["/api/user"],
     queryFn: getQueryFn({ on401: "returnNull" }),
   });
   
   const user = response?.success ? response.data : null;
+  
+  // Session refresh implementation
+  const SESSION_REFRESH_INTERVAL = 15 * 60 * 1000; // 15 minutes in milliseconds
+  const sessionRefreshTimerRef = useRef<number | null>(null);
+  
+  // Function to refresh the session wrapped in useCallback to prevent unnecessary re-renders
+  const refreshSession = useCallback(async () => {
+    if (user) {
+      try {
+        // Use dedicated endpoint for session refresh instead of refetching all user data
+        await apiRequest("POST", "/api/session/refresh");
+        
+        // Log only in development
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Session refreshed at', new Date().toISOString());
+        }
+      } catch (err) {
+        // If the refresh fails (e.g., session expired), refetch user data
+        // This will trigger login redirect if needed
+        console.error('Failed to refresh session, refetching user data:', err);
+        await refetch();
+      }
+    }
+  }, [user, refetch]);
+  
+  // Set up session refresh mechanism
+  useEffect(() => {
+    // Only set up refresh for authenticated users
+    if (user) {
+      // Clear any existing timer
+      if (sessionRefreshTimerRef.current) {
+        window.clearInterval(sessionRefreshTimerRef.current);
+      }
+      
+      // Set new timer for periodic session refresh
+      sessionRefreshTimerRef.current = window.setInterval(refreshSession, SESSION_REFRESH_INTERVAL);
+      
+      // Throttle for activity-based refresh (5 minutes between refreshes)
+      const ACTIVITY_THROTTLE = 5 * 60 * 1000; // 5 minutes
+      let lastActivityRefresh = Date.now();
+      
+      // Activity-based refresh (mouse movement, keyboard, touch)
+      const handleUserActivity = () => {
+        const now = Date.now();
+        
+        // Check if enough time has passed since the last activity-based refresh
+        if (now - lastActivityRefresh > ACTIVITY_THROTTLE) {
+          refreshSession();
+          lastActivityRefresh = now;
+        }
+      };
+      
+      // Add activity listeners with throttling
+      window.addEventListener('mousemove', handleUserActivity, { passive: true });
+      window.addEventListener('keydown', handleUserActivity, { passive: true });
+      window.addEventListener('touchstart', handleUserActivity, { passive: true });
+      
+      return () => {
+        // Clean up on unmount or when user changes
+        if (sessionRefreshTimerRef.current) {
+          window.clearInterval(sessionRefreshTimerRef.current);
+        }
+        
+        // Remove activity listeners
+        window.removeEventListener('mousemove', handleUserActivity);
+        window.removeEventListener('keydown', handleUserActivity);
+        window.removeEventListener('touchstart', handleUserActivity);
+      };
+    }
+  }, [user?.id]); // Only re-run when user ID changes (login/logout)
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {

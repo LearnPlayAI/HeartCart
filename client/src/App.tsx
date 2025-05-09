@@ -18,6 +18,7 @@ import Profile from "@/pages/profile-fix";
 import AuthPage from "@/pages/auth-page";
 import NotFound from "@/pages/not-found";
 import CartDrawer from "@/components/cart/cart-drawer";
+import { SessionExpiryWarning } from "@/components/session/session-expiry-warning";
 
 // Admin Pages
 import AdminDashboard from "@/pages/admin/dashboard";
@@ -99,6 +100,7 @@ function App() {
       <CartProvider>
         <TooltipProvider>
           <Toaster />
+          <SessionExpiryWarning />
           <div className="flex flex-col min-h-screen">
             <Switch>
               {/* Admin Routes - No header/footer */}
