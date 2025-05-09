@@ -109,11 +109,6 @@ export const orderItems = pgTable("order_items", {
   productId: integer("product_id").references(() => products.id),
   quantity: integer("quantity").notNull(),
   price: doublePrecision("price").notNull(),
-  combinationHash: text("combination_hash"),
-  // Remove reference to non-existent table
-  combinationId: integer("combination_id"),
-  selectedAttributes: jsonb("selected_attributes").default({}),
-  priceAdjustment: doublePrecision("price_adjustment").default(0),
 });
 
 // Product Images table
