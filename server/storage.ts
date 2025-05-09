@@ -1276,20 +1276,80 @@ export class DatabaseStorage implements IStorage {
 
   async removeFromCart(id: number): Promise<boolean> {
     try {
-      await db.delete(cartItems).where(eq(cartItems.id, id));
-      return true;
+      // First retrieve the cart item for logging purposes
+      try {
+        const [cartItem] = await db
+          .select()
+          .from(cartItems)
+          .where(eq(cartItems.id, id));
+        
+        if (!cartItem) {
+          logger.warn(`Attempted to remove non-existent cart item`, {
+            cartItemId: id
+          });
+          return true; // Return success as idempotent operation (item already gone)
+        }
+        
+        // Proceed with deletion
+        await db.delete(cartItems).where(eq(cartItems.id, id));
+        
+        logger.info(`Removed item from cart`, {
+          cartItemId: id,
+          productId: cartItem.productId,
+          userId: cartItem.userId,
+          quantity: cartItem.quantity
+        });
+        
+        return true;
+      } catch (fetchError) {
+        logger.error(`Error fetching cart item before removal`, {
+          error: fetchError,
+          cartItemId: id
+        });
+        throw fetchError;
+      }
     } catch (error) {
-      console.error(`Error removing item ${id} from cart:`, error);
+      logger.error(`Error removing item from cart`, {
+        error,
+        cartItemId: id
+      });
       throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
   }
 
   async clearCart(userId: number): Promise<boolean> {
     try {
-      await db.delete(cartItems).where(eq(cartItems.userId, userId));
-      return true;
+      // First check if user has any items in cart (for better logging)
+      try {
+        const items = await db
+          .select()
+          .from(cartItems)
+          .where(eq(cartItems.userId, userId));
+        
+        const itemCount = items.length;
+        
+        // Delete all cart items for this user
+        await db.delete(cartItems).where(eq(cartItems.userId, userId));
+        
+        logger.info(`Cleared user's cart`, {
+          userId,
+          itemCount,
+          cartItemIds: items.map(item => item.id)
+        });
+        
+        return true;
+      } catch (deleteError) {
+        logger.error(`Error deleting items during cart clear operation`, {
+          error: deleteError,
+          userId
+        });
+        throw deleteError;
+      }
     } catch (error) {
-      console.error(`Error clearing cart for user ${userId}:`, error);
+      logger.error(`Error clearing cart`, {
+        error,
+        userId
+      });
       throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
   }
@@ -1301,15 +1361,36 @@ export class DatabaseStorage implements IStorage {
       try {
         const [newOrder] = await db.insert(orders).values(order).returning();
         
+        logger.info(`Created new order`, {
+          orderId: newOrder.id,
+          userId: order.userId,
+          status: order.status,
+          itemCount: items.length,
+          totalAmount: order.totalAmount
+        });
+        
         // Add order items with attribute combination data
+        let successfulItemInserts = 0;
+        let failedItemInserts = 0;
+        
         for (const item of items) {
           try {
-            await db.insert(orderItems).values({
+            const [orderItem] = await db.insert(orderItems).values({
               ...item,
               orderId: newOrder.id
+            }).returning();
+            
+            successfulItemInserts++;
+            
+            logger.debug(`Added item to order`, {
+              orderId: newOrder.id,
+              orderItemId: orderItem.id,
+              productId: item.productId,
+              quantity: item.quantity,
+              price: item.price
             });
             
-            // If this item has a combination, update the product's sold count
+            // If this item has a productId, update the product's sold count
             if (item.productId) {
               try {
                 await db
@@ -1318,32 +1399,76 @@ export class DatabaseStorage implements IStorage {
                     soldCount: sql`${products.soldCount} + ${item.quantity}`
                   })
                   .where(eq(products.id, item.productId));
+                  
+                logger.debug(`Updated product sold count`, {
+                  orderId: newOrder.id,
+                  productId: item.productId,
+                  quantitySold: item.quantity
+                });
               } catch (updateError) {
-                console.error(`Error updating sold count for product ${item.productId}:`, updateError);
+                logger.error(`Error updating sold count for product`, {
+                  error: updateError,
+                  orderId: newOrder.id,
+                  productId: item.productId,
+                  quantity: item.quantity
+                });
                 // Continue processing other items instead of halting the entire order process
               }
             }
           } catch (itemError) {
-            console.error(`Error inserting order item for order ${newOrder.id}:`, itemError);
+            failedItemInserts++;
+            logger.error(`Error inserting order item`, {
+              error: itemError,
+              orderId: newOrder.id,
+              productId: item.productId,
+              itemIndex: successfulItemInserts + failedItemInserts - 1
+            });
             // Continue processing other items instead of halting the entire order process
           }
         }
         
+        if (failedItemInserts > 0) {
+          logger.warn(`Some order items failed to insert`, {
+            orderId: newOrder.id,
+            successCount: successfulItemInserts,
+            failCount: failedItemInserts,
+            totalItems: items.length
+          });
+        }
+        
         // Clear the cart
         try {
-          await this.clearCart(order.userId);
+          if (order.userId) {
+            await this.clearCart(order.userId);
+            logger.info(`Cleared cart after order creation`, {
+              orderId: newOrder.id,
+              userId: order.userId
+            });
+          }
         } catch (cartError) {
-          console.error(`Error clearing cart for user ${order.userId} after order creation:`, cartError);
+          logger.error(`Error clearing cart after order creation`, {
+            error: cartError,
+            orderId: newOrder.id,
+            userId: order.userId
+          });
           // Don't throw here as the order is already created
         }
         
         return newOrder;
       } catch (orderInsertError) {
-        console.error('Error creating new order:', orderInsertError);
+        logger.error(`Error creating new order`, {
+          error: orderInsertError,
+          userId: order.userId,
+          totalAmount: order.totalAmount,
+          itemCount: items.length
+        });
         throw orderInsertError; // Rethrow so the route handler can catch it and send a proper error response
       }
     } catch (error) {
-      console.error('Error in createOrder:', error);
+      logger.error(`Error in order creation process`, {
+        error,
+        userId: order.userId
+      });
       throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
   }
@@ -1353,29 +1478,51 @@ export class DatabaseStorage implements IStorage {
       // If userId is null, return all orders (admin function)
       if (userId === null) {
         try {
-          return await db
+          const results = await db
             .select()
             .from(orders)
             .orderBy(desc(orders.createdAt));
+          
+          logger.info(`Retrieved all orders for admin view`, {
+            count: results.length
+          });
+          
+          return results;
         } catch (adminOrdersError) {
-          console.error('Error fetching all orders (admin function):', adminOrdersError);
+          logger.error(`Error fetching all orders (admin function)`, {
+            error: adminOrdersError
+          });
           throw adminOrdersError; // Rethrow so the route handler can catch it and send a proper error response
         }
       }
       
       // Return orders for specific user
       try {
-        return await db
+        const results = await db
           .select()
           .from(orders)
           .where(eq(orders.userId, userId))
           .orderBy(desc(orders.createdAt));
+        
+        logger.info(`Retrieved orders for user`, {
+          userId,
+          count: results.length
+        });
+        
+        return results;
       } catch (userOrdersError) {
-        console.error(`Error fetching orders for user ${userId}:`, userOrdersError);
+        logger.error(`Error fetching orders for user`, {
+          error: userOrdersError,
+          userId
+        });
         throw userOrdersError; // Rethrow so the route handler can catch it and send a proper error response
       }
     } catch (error) {
-      console.error(`Error in getOrdersByUser for ${userId === null ? 'admin' : 'user ' + userId}:`, error);
+      logger.error(`Error in order retrieval process`, {
+        error,
+        userType: userId === null ? 'admin' : 'user',
+        userId
+      });
       throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
   }
@@ -1387,7 +1534,17 @@ export class DatabaseStorage implements IStorage {
         .from(orders)
         .where(eq(orders.id, id));
       
-      if (!order) return undefined;
+      if (!order) {
+        logger.warn(`Order not found`, { orderId: id });
+        return undefined;
+      }
+      
+      logger.debug(`Retrieved order details`, {
+        orderId: id,
+        userId: order.userId,
+        status: order.status,
+        createdAt: order.createdAt
+      });
       
       try {
         const orderItemsList = await db
@@ -1395,7 +1552,14 @@ export class DatabaseStorage implements IStorage {
           .from(orderItems)
           .where(eq(orderItems.orderId, id));
         
+        logger.debug(`Retrieved order items`, {
+          orderId: id,
+          itemCount: orderItemsList.length
+        });
+        
         const items: (OrderItem & { product: Product; attributeDetails?: any })[] = [];
+        let successfulItemLoads = 0;
+        let failedItemLoads = 0;
         
         for (const item of orderItemsList) {
           try {
@@ -1429,9 +1593,27 @@ export class DatabaseStorage implements IStorage {
                         attributes: item.selectedAttributes
                         // categoryAttributes removed as part of attribute system redesign
                       };
+                      
+                      logger.debug(`Retrieved attribute details for order item`, {
+                        orderId: id,
+                        orderItemId: item.id,
+                        productId: item.productId,
+                        combinationId: item.combinationId
+                      });
+                    } else {
+                      logger.warn(`Attribute combination not found for order item`, {
+                        orderId: id,
+                        orderItemId: item.id,
+                        combinationId: item.combinationId
+                      });
                     }
                   } catch (combinationError) {
-                    console.error(`Error fetching attribute combination ${item.combinationId} for order item ${item.id}:`, combinationError);
+                    logger.error(`Error fetching attribute combination for order item`, {
+                      error: combinationError,
+                      orderId: id,
+                      orderItemId: item.id,
+                      combinationId: item.combinationId
+                    });
                     // Continue without attribute details
                   }
                 }
@@ -1441,56 +1623,145 @@ export class DatabaseStorage implements IStorage {
                   product: enrichedProduct,
                   attributeDetails
                 });
+                
+                successfulItemLoads++;
+                
+                logger.debug(`Successfully loaded order item with product details`, {
+                  orderId: id,
+                  orderItemId: item.id,
+                  productId: item.productId,
+                  productName: enrichedProduct.name
+                });
               } catch (enrichError) {
-                console.error(`Error enriching product ${product.id} with images for order item ${item.id}:`, enrichError);
+                logger.error(`Error enriching product with images for order item`, {
+                  error: enrichError,
+                  orderId: id,
+                  orderItemId: item.id,
+                  productId: product.id
+                });
+                
                 // Add the item with the basic product info
                 items.push({
                   ...item,
                   product: product
                 });
+                
+                successfulItemLoads++;
               }
+            } else {
+              failedItemLoads++;
+              logger.warn(`Product not found for order item`, {
+                orderId: id,
+                orderItemId: item.id,
+                productId: item.productId
+              });
             }
           } catch (productError) {
-            console.error(`Error fetching product ${item.productId} for order item ${item.id}:`, productError);
+            failedItemLoads++;
+            logger.error(`Error fetching product for order item`, {
+              error: productError,
+              orderId: id,
+              orderItemId: item.id,
+              productId: item.productId
+            });
             // Continue to next order item
           }
         }
+        
+        if (failedItemLoads > 0) {
+          logger.warn(`Some order items failed to load completely`, {
+            orderId: id,
+            successCount: successfulItemLoads,
+            failCount: failedItemLoads,
+            totalItems: orderItemsList.length
+          });
+        }
+        
+        logger.info(`Completed order details retrieval`, {
+          orderId: id,
+          itemCount: items.length
+        });
         
         return {
           ...order,
           items
         };
       } catch (itemsError) {
-        console.error(`Error fetching order items for order ${id}:`, itemsError);
+        logger.error(`Error fetching order items`, {
+          error: itemsError,
+          orderId: id
+        });
+        
         // Return order without items
+        logger.warn(`Returning order without items due to error`, {
+          orderId: id
+        });
+        
         return {
           ...order,
           items: []
         };
       }
     } catch (error) {
-      console.error(`Error in getOrderById for order ${id}:`, error);
+      logger.error(`Error in order retrieval process`, {
+        error,
+        orderId: id
+      });
       throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
   }
   
   async updateOrderStatus(id: number, status: string): Promise<Order | undefined> {
     try {
-      const now = new Date();
-      
-      // Update the order with the new status and updatedAt timestamp
-      const [updatedOrder] = await db
-        .update(orders)
-        .set({ 
-          status, 
-          updatedAt: now 
-        })
-        .where(eq(orders.id, id))
-        .returning();
-      
-      return updatedOrder;
+      // First check if the order exists
+      try {
+        const [existingOrder] = await db
+          .select()
+          .from(orders)
+          .where(eq(orders.id, id));
+          
+        if (!existingOrder) {
+          logger.warn(`Attempted to update status of non-existent order`, {
+            orderId: id,
+            newStatus: status
+          });
+          return undefined;
+        }
+        
+        const oldStatus = existingOrder.status;
+        const now = new Date();
+        
+        // Update the order with the new status and updatedAt timestamp
+        const [updatedOrder] = await db
+          .update(orders)
+          .set({ 
+            status, 
+            updatedAt: now 
+          })
+          .where(eq(orders.id, id))
+          .returning();
+        
+        logger.info(`Updated order status`, {
+          orderId: id,
+          oldStatus,
+          newStatus: status,
+          userId: updatedOrder.userId
+        });
+        
+        return updatedOrder;
+      } catch (queryError) {
+        logger.error(`Error querying order before status update`, {
+          error: queryError,
+          orderId: id
+        });
+        throw queryError;
+      }
     } catch (error) {
-      console.error(`Error updating status to "${status}" for order ${id}:`, error);
+      logger.error(`Error updating order status`, {
+        error,
+        orderId: id,
+        newStatus: status
+      });
       throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
   }
