@@ -23,6 +23,7 @@ import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, Tabl
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 // Define types for test results
 type TestStatus = 'passed' | 'failed' | 'pending' | 'warning';
@@ -325,6 +326,74 @@ function ApiTestsPage() {
     });
   };
 
+  // Filter states for endpoint availability table
+  const [methodFilter, setMethodFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [statusCodeFilter, setStatusCodeFilter] = useState<string>('all');
+  
+  // Filter states for error handling table
+  const [errorMethodFilter, setErrorMethodFilter] = useState<string>('all');
+  const [errorStatusFilter, setErrorStatusFilter] = useState<string>('all');
+  const [errorStatusCodeFilter, setErrorStatusCodeFilter] = useState<string>('all');
+  
+  // Filtering function for endpoint tests
+  const getFilteredEndpointTests = () => {
+    if (!availabilityResults?.results.endpointTests) return [];
+    
+    return availabilityResults.results.endpointTests.filter(test => {
+      const matchesMethod = methodFilter === 'all' || test.method === methodFilter;
+      const matchesStatus = statusFilter === 'all' || test.status === statusFilter;
+      const matchesStatusCode = statusCodeFilter === 'all' || 
+        (test.statusCode && statusCodeFilter === test.statusCode.toString());
+      
+      return matchesMethod && matchesStatus && matchesStatusCode;
+    });
+  };
+  
+  // Filtering function for error handling tests
+  const getFilteredErrorTests = () => {
+    if (!errorResults?.results.errorTests) return [];
+    
+    return errorResults.results.errorTests.filter(test => {
+      const matchesMethod = errorMethodFilter === 'all' || test.method === errorMethodFilter;
+      const matchesStatus = errorStatusFilter === 'all' || test.status === errorStatusFilter;
+      const matchesStatusCode = errorStatusCodeFilter === 'all' || 
+        (test.actualStatus && errorStatusCodeFilter === test.actualStatus.toString()) ||
+        (test.expectedStatus && errorStatusCodeFilter === test.expectedStatus.toString());
+      
+      return matchesMethod && matchesStatus && matchesStatusCode;
+    });
+  };
+  
+  // Get unique status codes for filter options
+  const getUniqueStatusCodes = () => {
+    if (!availabilityResults?.results.endpointTests) return [];
+    
+    const statusCodes = availabilityResults.results.endpointTests
+      .map(test => test.statusCode?.toString())
+      .filter(Boolean)
+      .filter((value, index, self) => self.indexOf(value) === index)
+      .sort();
+      
+    return statusCodes;
+  };
+  
+  // Get unique status codes for error tests filter
+  const getUniqueErrorStatusCodes = () => {
+    if (!errorResults?.results.errorTests) return [];
+    
+    const statusCodes = errorResults.results.errorTests
+      .flatMap(test => [
+        test.actualStatus?.toString(), 
+        test.expectedStatus?.toString()
+      ])
+      .filter(Boolean)
+      .filter((value, index, self) => self.indexOf(value) === index)
+      .sort();
+      
+    return statusCodes;
+  };
+  
   // Determine if any test is loading
   const isAnyTestLoading = 
     isAvailabilityLoading || 
@@ -491,21 +560,78 @@ function ApiTestsPage() {
                 </div>
               ) : availabilityResults ? (
                 <div>
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="bg-gray-100 p-3 rounded-md">
-                      <div className="text-sm text-gray-500">Total Endpoints</div>
-                      <div className="text-xl font-semibold">{availabilityResults.results.totalEndpoints}</div>
-                    </div>
-                    <div className="bg-gray-100 p-3 rounded-md">
-                      <div className="text-sm text-gray-500">Available</div>
-                      <div className="text-xl font-semibold">{availabilityResults.results.availableEndpoints}</div>
-                    </div>
-                    <div className="bg-gray-100 p-3 rounded-md">
-                      <div className="text-sm text-gray-500">Success Rate</div>
-                      <div className="text-xl font-semibold">
-                        {Math.round((availabilityResults.results.availableEndpoints / availabilityResults.results.totalEndpoints) * 100)}%
+                  <div className="flex flex-wrap justify-between items-center gap-4 mb-4">
+                    <div className="flex items-center gap-4">
+                      <div className="bg-gray-100 p-3 rounded-md">
+                        <div className="text-sm text-gray-500">Total Endpoints</div>
+                        <div className="text-xl font-semibold">{availabilityResults.results.totalEndpoints}</div>
+                      </div>
+                      <div className="bg-gray-100 p-3 rounded-md">
+                        <div className="text-sm text-gray-500">Available</div>
+                        <div className="text-xl font-semibold">{availabilityResults.results.availableEndpoints}</div>
+                      </div>
+                      <div className="bg-gray-100 p-3 rounded-md">
+                        <div className="text-sm text-gray-500">Success Rate</div>
+                        <div className="text-xl font-semibold">
+                          {Math.round((availabilityResults.results.availableEndpoints / availabilityResults.results.totalEndpoints) * 100)}%
+                        </div>
                       </div>
                     </div>
+                    
+                    {/* Filters */}
+                    <div className="flex items-center gap-3">
+                      <div className="flex flex-col">
+                        <label className="text-xs mb-1 text-gray-500">Method</label>
+                        <Select value={methodFilter} onValueChange={setMethodFilter}>
+                          <SelectTrigger className="w-[120px]">
+                            <SelectValue placeholder="Method" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Methods</SelectItem>
+                            <SelectItem value="GET">GET</SelectItem>
+                            <SelectItem value="POST">POST</SelectItem>
+                            <SelectItem value="PUT">PUT</SelectItem>
+                            <SelectItem value="DELETE">DELETE</SelectItem>
+                            <SelectItem value="PATCH">PATCH</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="flex flex-col">
+                        <label className="text-xs mb-1 text-gray-500">Status</label>
+                        <Select value={statusFilter} onValueChange={setStatusFilter}>
+                          <SelectTrigger className="w-[120px]">
+                            <SelectValue placeholder="Status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Status</SelectItem>
+                            <SelectItem value="passed">Passed</SelectItem>
+                            <SelectItem value="failed">Failed</SelectItem>
+                            <SelectItem value="warning">Warning</SelectItem>
+                            <SelectItem value="pending">Pending</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="flex flex-col">
+                        <label className="text-xs mb-1 text-gray-500">Status Code</label>
+                        <Select value={statusCodeFilter} onValueChange={setStatusCodeFilter}>
+                          <SelectTrigger className="w-[120px]">
+                            <SelectValue placeholder="Status Code" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Codes</SelectItem>
+                            {getUniqueStatusCodes().map(code => (
+                              <SelectItem key={code} value={code}>{code}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mb-2 text-sm text-gray-500">
+                    Showing {getFilteredEndpointTests().length} of {availabilityResults.results.endpointTests.length} endpoints
                   </div>
 
                   <Table>
@@ -520,7 +646,7 @@ function ApiTestsPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {availabilityResults.results.endpointTests.map((test, index) => (
+                      {getFilteredEndpointTests().map((test, index) => (
                         <TableRow key={index}>
                           <TableCell className="font-mono text-sm">{test.endpoint}</TableCell>
                           <TableCell>
@@ -766,21 +892,78 @@ function ApiTestsPage() {
                 </div>
               ) : errorResults ? (
                 <div>
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="bg-gray-100 p-3 rounded-md">
-                      <div className="text-sm text-gray-500">Total Tests</div>
-                      <div className="text-xl font-semibold">{errorResults.results.totalTests}</div>
-                    </div>
-                    <div className="bg-gray-100 p-3 rounded-md">
-                      <div className="text-sm text-gray-500">Passed</div>
-                      <div className="text-xl font-semibold">{errorResults.results.passedTests}</div>
-                    </div>
-                    <div className="bg-gray-100 p-3 rounded-md">
-                      <div className="text-sm text-gray-500">Success Rate</div>
-                      <div className="text-xl font-semibold">
-                        {Math.round((errorResults.results.passedTests / errorResults.results.totalTests) * 100)}%
+                  <div className="flex flex-wrap justify-between items-center gap-4 mb-4">
+                    <div className="flex items-center gap-4">
+                      <div className="bg-gray-100 p-3 rounded-md">
+                        <div className="text-sm text-gray-500">Total Tests</div>
+                        <div className="text-xl font-semibold">{errorResults.results.totalTests}</div>
+                      </div>
+                      <div className="bg-gray-100 p-3 rounded-md">
+                        <div className="text-sm text-gray-500">Passed</div>
+                        <div className="text-xl font-semibold">{errorResults.results.passedTests}</div>
+                      </div>
+                      <div className="bg-gray-100 p-3 rounded-md">
+                        <div className="text-sm text-gray-500">Success Rate</div>
+                        <div className="text-xl font-semibold">
+                          {Math.round((errorResults.results.passedTests / errorResults.results.totalTests) * 100)}%
+                        </div>
                       </div>
                     </div>
+                    
+                    {/* Filters */}
+                    <div className="flex items-center gap-3">
+                      <div className="flex flex-col">
+                        <label className="text-xs mb-1 text-gray-500">Method</label>
+                        <Select value={errorMethodFilter} onValueChange={setErrorMethodFilter}>
+                          <SelectTrigger className="w-[120px]">
+                            <SelectValue placeholder="Method" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Methods</SelectItem>
+                            <SelectItem value="GET">GET</SelectItem>
+                            <SelectItem value="POST">POST</SelectItem>
+                            <SelectItem value="PUT">PUT</SelectItem>
+                            <SelectItem value="DELETE">DELETE</SelectItem>
+                            <SelectItem value="PATCH">PATCH</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="flex flex-col">
+                        <label className="text-xs mb-1 text-gray-500">Status</label>
+                        <Select value={errorStatusFilter} onValueChange={setErrorStatusFilter}>
+                          <SelectTrigger className="w-[120px]">
+                            <SelectValue placeholder="Status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Status</SelectItem>
+                            <SelectItem value="passed">Passed</SelectItem>
+                            <SelectItem value="failed">Failed</SelectItem>
+                            <SelectItem value="warning">Warning</SelectItem>
+                            <SelectItem value="pending">Pending</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="flex flex-col">
+                        <label className="text-xs mb-1 text-gray-500">Status Code</label>
+                        <Select value={errorStatusCodeFilter} onValueChange={setErrorStatusCodeFilter}>
+                          <SelectTrigger className="w-[120px]">
+                            <SelectValue placeholder="Status Code" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Codes</SelectItem>
+                            {getUniqueErrorStatusCodes().map(code => (
+                              <SelectItem key={code} value={code}>{code}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="mb-2 text-sm text-gray-500">
+                    Showing {getFilteredErrorTests().length} of {errorResults.results.errorTests.length} error handling tests
                   </div>
 
                   <Table>
@@ -796,7 +979,7 @@ function ApiTestsPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {errorResults.results.errorTests.map((test, index) => (
+                      {getFilteredErrorTests().map((test, index) => (
                         <TableRow key={index}>
                           <TableCell className="font-mono text-sm">{test.endpoint}</TableCell>
                           <TableCell>
