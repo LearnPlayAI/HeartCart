@@ -456,26 +456,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       try {
-        // Check if category exists
+        // Check if category exists first
         const category = await storage.getCategoryById(categoryId);
         if (!category) {
           throw new NotFoundError(`Category with ID ${categoryId} not found`, 'category');
         }
         
+        // Fetch products for this category
         const products = await storage.getProductsByCategory(
           categoryId, 
           Number(limit), 
           Number(offset), 
           options
         );
-        res.json(products);
+        
+        // Return standardized response format
+        res.json({
+          success: true,
+          data: products,
+          meta: {
+            categoryId,
+            categoryName: category.name,
+            totalItems: products.length,
+            limit: Number(limit),
+            offset: Number(offset)
+          }
+        });
       } catch (error) {
+        // If it's already a known error type (like NotFoundError), rethrow
         if (error instanceof NotFoundError) {
           throw error;
         }
-        logger.error('Error fetching products by category', { error, categoryId });
+        
+        // Log detailed error information for debugging
+        logger.error('Error fetching products by category', { 
+          error, 
+          categoryId,
+          limit: Number(limit),
+          offset: Number(offset)
+        });
+        
+        // Throw standardized error
         throw new AppError(
-          "Failed to fetch products for the specified category",
+          "Failed to fetch products for the specified category. Please try again.",
           ErrorCode.INTERNAL_SERVER_ERROR,
           500
         );
@@ -489,7 +512,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get(
     "/api/products/:id", 
     validateRequest({ params: idParamSchema }),
-    withStandardResponse(async (req: Request, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const id = Number(req.params.id);
       
       const user = req.user as any;
@@ -500,13 +523,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         includeCategoryInactive: isAdmin 
       };
       
-      const product = await storage.getProductById(id, options);
-      
-      if (!product) {
-        throw new NotFoundError(`Product with ID ${id} not found`, 'product');
+      try {
+        const product = await storage.getProductById(id, options);
+        
+        if (!product) {
+          throw new NotFoundError(`Product with ID ${id} not found`, 'product');
+        }
+        
+        // Return standardized response format
+        res.json({
+          success: true,
+          data: product
+        });
+      } catch (error) {
+        // If it's already a known error type (like NotFoundError), rethrow
+        if (error instanceof NotFoundError) {
+          throw error;
+        }
+        
+        // Log detailed error information for debugging
+        logger.error('Error fetching product by ID', { 
+          error, 
+          productId: id
+        });
+        
+        // Throw standardized error
+        throw new AppError(
+          "Failed to fetch product details. Please try again.",
+          ErrorCode.INTERNAL_SERVER_ERROR,
+          500
+        );
       }
-      
-      return product;
     })
   );
   
@@ -535,16 +582,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw new NotFoundError(`Product with ID ${productId} not found`, 'product');
       }
       
-      // Remove properties that shouldn't be updated directly
-      const updateData = { ...req.body };
-      delete updateData.id;
-      delete updateData.createdAt;
-      delete updateData.updatedAt;
-      
-      // Update the product
-      const updatedProduct = await storage.updateProduct(productId, updateData);
-      
-      res.json(updatedProduct);
+      try {
+        // Remove properties that shouldn't be updated directly
+        const updateData = { ...req.body };
+        delete updateData.id;
+        delete updateData.createdAt;
+        delete updateData.updatedAt;
+        
+        // Update the product
+        const updatedProduct = await storage.updateProduct(productId, updateData);
+        
+        if (!updatedProduct) {
+          throw new AppError(
+            `Failed to update product "${existingProduct.name}"`,
+            ErrorCode.INTERNAL_SERVER_ERROR,
+            500
+          );
+        }
+        
+        res.json({
+          success: true,
+          data: updatedProduct,
+          message: `Product "${updatedProduct.name}" updated successfully`
+        });
+      } catch (error) {
+        // Log the detailed error
+        logger.error('Error updating product:', { 
+          error, 
+          productId,
+          productName: existingProduct.name
+        });
+        
+        throw new AppError(
+          "An error occurred while updating the product. Please try again.",
+          ErrorCode.INTERNAL_SERVER_ERROR,
+          500
+        );
+      }
     })
   );
   
@@ -600,7 +674,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     validateRequest({
       query: featuredProductsQuerySchema
     }),
-    withStandardResponse(async (req: Request, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const { limit } = req.query;
       
       const user = req.user as any;
@@ -613,11 +687,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       try {
         const products = await storage.getFeaturedProducts(Number(limit), options);
-        return products;
+        
+        // Return standardized response format
+        res.json({
+          success: true,
+          data: products,
+          meta: {
+            total: products.length,
+            limit: Number(limit)
+          }
+        });
       } catch (error) {
-        logger.error('Error fetching featured products', { error });
+        // Log detailed error for debugging
+        logger.error('Error fetching featured products', { 
+          error,
+          limit: Number(limit)
+        });
+        
         throw new AppError(
-          "Failed to fetch featured products",
+          "Failed to fetch featured products. Please try again later.",
           ErrorCode.INTERNAL_SERVER_ERROR,
           500
         );
@@ -635,7 +723,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     validateRequest({
       query: flashDealsQuerySchema
     }),
-    withStandardResponse(async (req: Request, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const { limit } = req.query;
       
       const user = req.user as any;
@@ -648,11 +736,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       try {
         const products = await storage.getFlashDeals(Number(limit), options);
-        return products;
+        
+        // Return standardized response format
+        res.json({
+          success: true,
+          data: products,
+          meta: {
+            total: products.length,
+            limit: Number(limit)
+          }
+        });
       } catch (error) {
-        logger.error('Error fetching flash deals', { error });
+        // Log detailed error for debugging
+        logger.error('Error fetching flash deals', { 
+          error,
+          limit: Number(limit)
+        });
+        
         throw new AppError(
-          "Failed to fetch flash deals",
+          "Failed to fetch flash deals. Please try again later.",
           ErrorCode.INTERNAL_SERVER_ERROR,
           500
         );
@@ -672,7 +774,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     validateRequest({
       query: searchQuerySchema
     }),
-    withStandardResponse(async (req: Request, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const { q: query, limit, offset } = req.query;
       
       const user = req.user as any;
@@ -683,8 +785,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         includeCategoryInactive: isAdmin 
       };
       
-      const products = await storage.searchProducts(query as string, Number(limit), Number(offset), options);
-      return products;
+      try {
+        const products = await storage.searchProducts(query as string, Number(limit), Number(offset), options);
+        
+        res.json({
+          success: true,
+          data: products,
+          meta: {
+            query: query as string,
+            total: products.length,
+            limit: Number(limit),
+            offset: Number(offset)
+          }
+        });
+      } catch (error) {
+        // Log the error with context
+        logger.error('Error searching products:', { 
+          error, 
+          searchQuery: query,
+          limit: Number(limit),
+          offset: Number(offset)
+        });
+        
+        throw new AppError(
+          "An error occurred while searching for products. Please try again.",
+          ErrorCode.INTERNAL_SERVER_ERROR,
+          500
+        );
+      }
     })
   );
   
