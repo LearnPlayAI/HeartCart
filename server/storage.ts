@@ -80,6 +80,7 @@ export interface IStorage {
   createOrder(order: InsertOrder, items: InsertOrderItem[]): Promise<Order>;
   getOrdersByUser(userId: number | null): Promise<Order[]>; // null means get all orders (admin only)
   getOrderById(id: number): Promise<(Order & { items: (OrderItem & { product: Product })[] }) | undefined>;
+  getOrderItems(orderId: number): Promise<(OrderItem & { product: Product })[]>;
   updateOrderStatus(id: number, status: string): Promise<Order | undefined>;
   
   // AI Recommendation operations
@@ -1354,6 +1355,34 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  /**
+   * Get all order items for a specific order with product details
+   * @param orderId The ID of the order to get items for
+   * @returns Array of order items with product details
+   */
+  async getOrderItems(orderId: number): Promise<(OrderItem & { product: Product })[]> {
+    try {
+      // Get order items with product details
+      const items = await db
+        .select({
+          orderItem: orderItems,
+          product: products
+        })
+        .from(orderItems)
+        .innerJoin(products, eq(orderItems.productId, products.id))
+        .where(eq(orderItems.orderId, orderId));
+      
+      // Map the result to get the structure we want
+      return items.map(row => ({
+        ...row.orderItem,
+        product: row.product
+      }));
+    } catch (error) {
+      console.error(`Error fetching order items for order ${orderId}:`, error);
+      throw error; // Rethrow for proper error handling in the route
+    }
+  }
+  
   // Order operations
   async createOrder(order: InsertOrder, items: InsertOrderItem[]): Promise<Order> {
     try {
@@ -1529,6 +1558,7 @@ export class DatabaseStorage implements IStorage {
 
   async getOrderById(id: number): Promise<(Order & { items: (OrderItem & { product: Product; attributeDetails?: any })[] }) | undefined> {
     try {
+      // Get the order
       const [order] = await db
         .select()
         .from(orders)
@@ -1547,124 +1577,79 @@ export class DatabaseStorage implements IStorage {
       });
       
       try {
-        const orderItemsList = await db
-          .select()
-          .from(orderItems)
-          .where(eq(orderItems.orderId, id));
+        // Use the getOrderItems method to fetch items with products
+        const itemsWithProducts = await this.getOrderItems(id);
         
-        logger.debug(`Retrieved order items`, {
+        logger.debug(`Retrieved order items using getOrderItems method`, {
           orderId: id,
-          itemCount: orderItemsList.length
+          itemCount: itemsWithProducts.length
         });
         
         const items: (OrderItem & { product: Product; attributeDetails?: any })[] = [];
         let successfulItemLoads = 0;
         let failedItemLoads = 0;
         
-        for (const item of orderItemsList) {
+        // Process each item to add attribute details if needed
+        for (const item of itemsWithProducts) {
           try {
-            const [product] = await db
-              .select()
-              .from(products)
-              .where(eq(products.id, item.productId));
+            let attributeDetails = undefined;
             
-            if (product) {
+            // If there's a combination, get more details
+            if (item.combinationId) {
               try {
-                // Enrich product with main image URL
-                const enrichedProducts = await this.enrichProductsWithMainImage([product]);
-                const enrichedProduct = enrichedProducts[0];
-                
-                let attributeDetails = undefined;
-                
-                // If there's a combination, get more details
-                if (item.combinationId) {
-                  try {
-                    const [combination] = await db
-                      .select()
-                      .from(productAttributeCombinations)
-                      .where(eq(productAttributeCombinations.id, item.combinationId));
-                      
-                    if (combination) {
-                      // Get category attributes - COMMENTED OUT as part of attribute system redesign
-                      // const categoryAttributes = await this.getCategoryAttributes(enrichedProduct.categoryId);
-                      
-                      attributeDetails = {
-                        combination,
-                        attributes: item.selectedAttributes
-                        // categoryAttributes removed as part of attribute system redesign
-                      };
-                      
-                      logger.debug(`Retrieved attribute details for order item`, {
-                        orderId: id,
-                        orderItemId: item.id,
-                        productId: item.productId,
-                        combinationId: item.combinationId
-                      });
-                    } else {
-                      logger.warn(`Attribute combination not found for order item`, {
-                        orderId: id,
-                        orderItemId: item.id,
-                        combinationId: item.combinationId
-                      });
-                    }
-                  } catch (combinationError) {
-                    logger.error(`Error fetching attribute combination for order item`, {
-                      error: combinationError,
-                      orderId: id,
-                      orderItemId: item.id,
-                      combinationId: item.combinationId
-                    });
-                    // Continue without attribute details
-                  }
+                const [combination] = await db
+                  .select()
+                  .from(productAttributeCombinations)
+                  .where(eq(productAttributeCombinations.id, item.combinationId));
+                  
+                if (combination) {
+                  attributeDetails = {
+                    combination,
+                    attributes: item.selectedAttributes
+                  };
+                  
+                  logger.debug(`Retrieved attribute details for order item`, {
+                    orderId: id,
+                    orderItemId: item.id,
+                    productId: item.productId,
+                    combinationId: item.combinationId
+                  });
+                } else {
+                  logger.warn(`Attribute combination not found for order item`, {
+                    orderId: id,
+                    orderItemId: item.id,
+                    combinationId: item.combinationId
+                  });
                 }
-                
-                items.push({
-                  ...item,
-                  product: enrichedProduct,
-                  attributeDetails
-                });
-                
-                successfulItemLoads++;
-                
-                logger.debug(`Successfully loaded order item with product details`, {
+              } catch (combinationError) {
+                logger.error(`Error fetching attribute combination for order item`, {
+                  error: combinationError,
                   orderId: id,
                   orderItemId: item.id,
-                  productId: item.productId,
-                  productName: enrichedProduct.name
+                  combinationId: item.combinationId
                 });
-              } catch (enrichError) {
-                logger.error(`Error enriching product with images for order item`, {
-                  error: enrichError,
-                  orderId: id,
-                  orderItemId: item.id,
-                  productId: product.id
-                });
-                
-                // Add the item with the basic product info
-                items.push({
-                  ...item,
-                  product: product
-                });
-                
-                successfulItemLoads++;
+                // Continue without attribute details
               }
-            } else {
-              failedItemLoads++;
-              logger.warn(`Product not found for order item`, {
-                orderId: id,
-                orderItemId: item.id,
-                productId: item.productId
-              });
             }
-          } catch (productError) {
-            failedItemLoads++;
-            logger.error(`Error fetching product for order item`, {
-              error: productError,
-              orderId: id,
-              orderItemId: item.id,
-              productId: item.productId
+            
+            // Add the item with attribute details
+            items.push({
+              ...item,
+              attributeDetails
             });
-            // Continue to next order item
+            
+            successfulItemLoads++;
+            
+          } catch (itemError) {
+            failedItemLoads++;
+            logger.error(`Error processing order item details`, {
+              error: itemError,
+              orderId: id,
+              orderItemId: item.id
+            });
+            
+            // Still add the basic item without additional processing
+            items.push(item);
           }
         }
         
@@ -1673,7 +1658,7 @@ export class DatabaseStorage implements IStorage {
             orderId: id,
             successCount: successfulItemLoads,
             failCount: failedItemLoads,
-            totalItems: orderItemsList.length
+            totalItems: itemsWithProducts.length
           });
         }
         
