@@ -331,10 +331,22 @@ function ApiTestsPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [statusCodeFilter, setStatusCodeFilter] = useState<string>('all');
   
+  // Filter states for response validation table
+  const [validationStatusFilter, setValidationStatusFilter] = useState<string>('all');
+  
+  // Filter states for auth & authorization table
+  const [authMethodFilter, setAuthMethodFilter] = useState<string>('all');
+  const [authStatusFilter, setAuthStatusFilter] = useState<string>('all');
+  const [authTypeFilter, setAuthTypeFilter] = useState<string>('all');
+  
   // Filter states for error handling table
   const [errorMethodFilter, setErrorMethodFilter] = useState<string>('all');
   const [errorStatusFilter, setErrorStatusFilter] = useState<string>('all');
   const [errorStatusCodeFilter, setErrorStatusCodeFilter] = useState<string>('all');
+  
+  // Filter states for performance table
+  const [perfMethodFilter, setPerfMethodFilter] = useState<string>('all');
+  const [perfStatusFilter, setPerfStatusFilter] = useState<string>('all');
   
   // Filtering function for endpoint tests
   const getFilteredEndpointTests = () => {
@@ -350,6 +362,30 @@ function ApiTestsPage() {
     });
   };
   
+  // Filtering function for response validation tests
+  const getFilteredValidationTests = () => {
+    if (!validationResults?.results.validationTests) return [];
+    
+    return validationResults.results.validationTests.filter(test => {
+      const matchesStatus = validationStatusFilter === 'all' || test.status === validationStatusFilter;
+      
+      return matchesStatus;
+    });
+  };
+  
+  // Filtering function for auth tests
+  const getFilteredAuthTests = () => {
+    if (!authResults?.results.authTests) return [];
+    
+    return authResults.results.authTests.filter(test => {
+      const matchesMethod = authMethodFilter === 'all' || test.method === authMethodFilter;
+      const matchesStatus = authStatusFilter === 'all' || test.status === authStatusFilter;
+      const matchesType = authTypeFilter === 'all' || test.testType === authTypeFilter;
+      
+      return matchesMethod && matchesStatus && matchesType;
+    });
+  };
+  
   // Filtering function for error handling tests
   const getFilteredErrorTests = () => {
     if (!errorResults?.results.errorTests) return [];
@@ -362,6 +398,18 @@ function ApiTestsPage() {
         (test.expectedStatus && errorStatusCodeFilter === test.expectedStatus.toString());
       
       return matchesMethod && matchesStatus && matchesStatusCode;
+    });
+  };
+  
+  // Filtering function for performance tests
+  const getFilteredPerformanceTests = () => {
+    if (!performanceResults?.results.performanceTests) return [];
+    
+    return performanceResults.results.performanceTests.filter(test => {
+      const matchesMethod = perfMethodFilter === 'all' || test.method === perfMethodFilter;
+      const matchesStatus = perfStatusFilter === 'all' || test.status === perfStatusFilter;
+      
+      return matchesMethod && matchesStatus;
     });
   };
   
@@ -392,6 +440,19 @@ function ApiTestsPage() {
       .sort();
       
     return statusCodes;
+  };
+  
+  // Get unique auth test types for auth test filter
+  const getUniqueAuthTestTypes = () => {
+    if (!authResults?.results.authTests) return [];
+    
+    const testTypes = authResults.results.authTests
+      .map(test => test.testType)
+      .filter(Boolean)
+      .filter((value, index, self) => self.indexOf(value) === index)
+      .sort();
+      
+    return testTypes;
   };
   
   // Determine if any test is loading
@@ -706,19 +767,40 @@ function ApiTestsPage() {
                 </div>
               ) : validationResults ? (
                 <div>
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="bg-gray-100 p-3 rounded-md">
-                      <div className="text-sm text-gray-500">Total Tests</div>
-                      <div className="text-xl font-semibold">{validationResults.results.totalTests}</div>
+                  <div className="flex flex-wrap justify-between items-center gap-4 mb-4">
+                    <div className="flex items-center gap-4">
+                      <div className="bg-gray-100 p-3 rounded-md">
+                        <div className="text-sm text-gray-500">Total Tests</div>
+                        <div className="text-xl font-semibold">{validationResults.results.totalTests}</div>
+                      </div>
+                      <div className="bg-gray-100 p-3 rounded-md">
+                        <div className="text-sm text-gray-500">Passed</div>
+                        <div className="text-xl font-semibold">{validationResults.results.passedTests}</div>
+                      </div>
+                      <div className="bg-gray-100 p-3 rounded-md">
+                        <div className="text-sm text-gray-500">Success Rate</div>
+                        <div className="text-xl font-semibold">
+                          {Math.round((validationResults.results.passedTests / validationResults.results.totalTests) * 100)}%
+                        </div>
+                      </div>
                     </div>
-                    <div className="bg-gray-100 p-3 rounded-md">
-                      <div className="text-sm text-gray-500">Passed</div>
-                      <div className="text-xl font-semibold">{validationResults.results.passedTests}</div>
-                    </div>
-                    <div className="bg-gray-100 p-3 rounded-md">
-                      <div className="text-sm text-gray-500">Success Rate</div>
-                      <div className="text-xl font-semibold">
-                        {Math.round((validationResults.results.passedTests / validationResults.results.totalTests) * 100)}%
+                    
+                    {/* Filters */}
+                    <div className="flex items-center gap-3">
+                      <div className="flex flex-col">
+                        <label className="text-xs mb-1 text-gray-500">Status</label>
+                        <Select value={validationStatusFilter} onValueChange={setValidationStatusFilter}>
+                          <SelectTrigger className="w-[120px]">
+                            <SelectValue placeholder="Status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Status</SelectItem>
+                            <SelectItem value="passed">Passed</SelectItem>
+                            <SelectItem value="failed">Failed</SelectItem>
+                            <SelectItem value="warning">Warning</SelectItem>
+                            <SelectItem value="pending">Pending</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
                   </div>
@@ -786,22 +868,79 @@ function ApiTestsPage() {
                 </div>
               ) : authResults ? (
                 <div>
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="bg-gray-100 p-3 rounded-md">
-                      <div className="text-sm text-gray-500">Total Tests</div>
-                      <div className="text-xl font-semibold">{authResults.results.totalTests}</div>
+                  <div className="flex flex-wrap justify-between items-center gap-4 mb-4">
+                    <div className="flex items-center gap-4">
+                      <div className="bg-gray-100 p-3 rounded-md">
+                        <div className="text-sm text-gray-500">Total Tests</div>
+                        <div className="text-xl font-semibold">{authResults.results.totalTests}</div>
+                      </div>
+                      <div className="bg-gray-100 p-3 rounded-md">
+                        <div className="text-sm text-gray-500">Passed</div>
+                        <div className="text-xl font-semibold">{authResults.results.passedTests}</div>
+                      </div>
+                      <div className="bg-gray-100 p-3 rounded-md">
+                        <div className="text-sm text-gray-500">Warnings</div>
+                        <div className="text-xl font-semibold">{authResults.results.warningTests}</div>
+                      </div>
+                      <div className="bg-gray-100 p-3 rounded-md">
+                        <div className="text-sm text-gray-500">Failed</div>
+                        <div className="text-xl font-semibold">{authResults.results.failedTests}</div>
+                      </div>
                     </div>
-                    <div className="bg-gray-100 p-3 rounded-md">
-                      <div className="text-sm text-gray-500">Passed</div>
-                      <div className="text-xl font-semibold">{authResults.results.passedTests}</div>
-                    </div>
-                    <div className="bg-gray-100 p-3 rounded-md">
-                      <div className="text-sm text-gray-500">Warnings</div>
-                      <div className="text-xl font-semibold">{authResults.results.warningTests}</div>
-                    </div>
-                    <div className="bg-gray-100 p-3 rounded-md">
-                      <div className="text-sm text-gray-500">Failed</div>
-                      <div className="text-xl font-semibold">{authResults.results.failedTests}</div>
+                    
+                    {/* Filters */}
+                    <div className="flex items-center gap-3">
+                      <div className="flex flex-col">
+                        <label className="text-xs mb-1 text-gray-500">Method</label>
+                        <Select value={authMethodFilter} onValueChange={setAuthMethodFilter}>
+                          <SelectTrigger className="w-[120px]">
+                            <SelectValue placeholder="Method" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Methods</SelectItem>
+                            <SelectItem value="GET">GET</SelectItem>
+                            <SelectItem value="POST">POST</SelectItem>
+                            <SelectItem value="PUT">PUT</SelectItem>
+                            <SelectItem value="DELETE">DELETE</SelectItem>
+                            <SelectItem value="PATCH">PATCH</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="flex flex-col">
+                        <label className="text-xs mb-1 text-gray-500">Status</label>
+                        <Select value={authStatusFilter} onValueChange={setAuthStatusFilter}>
+                          <SelectTrigger className="w-[120px]">
+                            <SelectValue placeholder="Status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Status</SelectItem>
+                            <SelectItem value="passed">Passed</SelectItem>
+                            <SelectItem value="failed">Failed</SelectItem>
+                            <SelectItem value="warning">Warning</SelectItem>
+                            <SelectItem value="pending">Pending</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="flex flex-col">
+                        <label className="text-xs mb-1 text-gray-500">Test Type</label>
+                        <Select value={authTypeFilter} onValueChange={setAuthTypeFilter}>
+                          <SelectTrigger className="w-[150px]">
+                            <SelectValue placeholder="Test Type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Types</SelectItem>
+                            {getUniqueAuthTestTypes().map(type => (
+                              <SelectItem key={type} value={type}>
+                                {type === 'public_access' ? 'Public Access' : 
+                                 type === 'authenticated_access' ? 'Authenticated Access' : 
+                                 'Admin Access'}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                   </div>
 
