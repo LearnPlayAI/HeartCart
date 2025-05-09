@@ -41,6 +41,7 @@ import GlobalAttributes from "@/pages/admin/global-attributes";
 import AttributeEditor from "@/pages/admin/attribute-editor";
 import ProductImages from "@/pages/admin/product-images";
 import BatchUpload from "@/pages/admin/batch-upload";
+import AuthTestDashboard from "@/pages/admin/auth-test-dashboard";
 
 // Admin-specific protected route
 import { useAuth } from "@/hooks/use-auth";
@@ -127,6 +128,7 @@ function App() {
               <AdminProtectedRoute path="/admin/orders" component={AdminOrders} />
               <AdminProtectedRoute path="/admin/ai-settings" component={AdminAISettings} />
               <AdminProtectedRoute path="/admin/batch-upload" component={BatchUpload} />
+              <AdminProtectedRoute path="/admin/auth-test" component={AuthTestDashboard} />
               
               {/* Regular Routes - With header/footer */}
               <Route path="*">
