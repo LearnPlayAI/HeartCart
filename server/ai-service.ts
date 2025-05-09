@@ -740,7 +740,7 @@ export async function updateAiModel(modelName: string): Promise<boolean> {
   }
 }
 
-export async function analyzeProductImage(imageBase64: string, productName: string): Promise<{
+export async function analyzeProductImage(imageBase64: string, productName: string, productId?: number): Promise<{
   suggestedName?: string;
   suggestedDescription?: string;
   suggestedCategory?: string;
@@ -753,12 +753,27 @@ export async function analyzeProductImage(imageBase64: string, productName: stri
   try {
     // Validate inputs
     if (!imageBase64) {
+      logger.error('Missing image data for product analysis', {
+        productId,
+        productName
+      });
       throw new Error('Image data is required for product analysis');
     }
     
     if (!productName) {
+      logger.error('Missing product name for product analysis', {
+        productId,
+        hasImage: !!imageBase64
+      });
       throw new Error('Product name is required for analysis');
     }
+    
+    logger.debug('Starting product image analysis', {
+      productId,
+      productName,
+      imageType: imageBase64.startsWith('http') ? 'url' : 'base64',
+      aiModel: await getCurrentAiModel()
+    });
     
     let imageData: string;
     
@@ -767,7 +782,12 @@ export async function analyzeProductImage(imageBase64: string, productName: stri
       try {
         // If it's a URL, we can still process it with the Gemini 1.5 Flash multimodal model
         // by sending the URL directly in the prompt
-        console.log(`Using image URL directly with Gemini 1.5 multimodal capabilities for product "${productName}"`);
+        logger.info(`Using image URL for product analysis`, {
+          productId,
+          productName,
+          aiModel: await getCurrentAiModel(),
+          imageUrlLength: imageBase64.length
+        });
         
         // Create a multimodal request that includes the image URL and product name
         const textResult = await geminiProVision.generateContent([
@@ -798,15 +818,26 @@ export async function analyzeProductImage(imageBase64: string, productName: stri
           
           // Validate response structure with detailed logging
           if (!jsonResponse.description) {
-            console.warn(`Missing description in AI analysis for product "${productName}" with URL image`);
+            logger.warn(`Missing description in AI analysis for product with URL image`, {
+              productId,
+              productName
+            });
           }
           
           if (!jsonResponse.category) {
-            console.warn(`Missing category in AI analysis for product "${productName}" with URL image`);
+            logger.warn(`Missing category in AI analysis for product with URL image`, {
+              productId,
+              productName
+            });
           }
           
           if (!jsonResponse.tags || !Array.isArray(jsonResponse.tags)) {
-            console.warn(`Missing or invalid tags in AI analysis for product "${productName}" with URL image`);
+            logger.warn(`Missing or invalid tags in AI analysis for product with URL image`, {
+              productId,
+              productName,
+              tagsType: typeof jsonResponse.tags,
+              hasTagsArray: Array.isArray(jsonResponse.tags)
+            });
           }
           
           return {
@@ -820,8 +851,15 @@ export async function analyzeProductImage(imageBase64: string, productName: stri
             marketResearch: jsonResponse.marketResearch || ""
           };
         } catch (jsonError) {
-          console.error(`Failed to parse text-only JSON response for product "${productName}":`, jsonError);
-          console.error(`Raw response: ${responseText.substring(0, 200)}...`);
+          logger.error(`Failed to parse URL image JSON response`, {
+            error: jsonError,
+            errorType: jsonError instanceof Error ? jsonError.name : typeof jsonError, 
+            errorMessage: jsonError instanceof Error ? jsonError.message : String(jsonError),
+            productId,
+            productName,
+            responsePreview: responseText.substring(0, 100) + '...'
+          });
+          
           return {
             suggestedName: productName,
             suggestedDescription: "",
@@ -831,14 +869,27 @@ export async function analyzeProductImage(imageBase64: string, productName: stri
           };
         }
       } catch (urlAnalysisError) {
-        console.error(`Error analyzing product "${productName}" with URL image:`, urlAnalysisError);
+        logger.error(`Error analyzing product with URL image`, {
+          error: urlAnalysisError,
+          errorType: urlAnalysisError instanceof Error ? urlAnalysisError.name : typeof urlAnalysisError,
+          errorMessage: urlAnalysisError instanceof Error ? urlAnalysisError.message : String(urlAnalysisError),
+          productId,
+          productName,
+          imageUrlLength: imageBase64.length
+        });
+        
         throw new Error(`Failed to analyze URL image: ${urlAnalysisError instanceof Error ? urlAnalysisError.message : 'Unknown error'}`);
       }
     }
     
     try {
       // Extract content type and convert to buffer
-      console.log(`Processing image data for product "${productName}"`);
+      logger.info(`Processing image data for product analysis`, {
+        productId,
+        productName,
+        imageDataLength: imageBase64.length
+      });
+      
       const imageBuffer = base64ToBuffer(imageBase64);
       
       // Resize image to reduce processing time and convert to PNG format
@@ -849,12 +900,28 @@ export async function analyzeProductImage(imageBase64: string, productName: stri
       
       // Create prompt
       imageData = bufferToBase64(resizedImageBuffer, 'image/png');
-      console.log(`Successfully processed image for product "${productName}" to base64`);
+      
+      logger.info(`Successfully processed image for product analysis`, {
+        productId,
+        productName,
+        originalSize: imageBase64.length,
+        processedSize: imageData.length
+      });
     } catch (imageError) {
-      console.error(`Image processing failed for product "${productName}":`, imageError);
+      logger.error(`Image processing failed for product analysis`, {
+        error: imageError,
+        errorType: imageError instanceof Error ? imageError.name : typeof imageError,
+        errorMessage: imageError instanceof Error ? imageError.message : String(imageError),
+        productId,
+        productName,
+        imageDataLength: imageBase64 ? imageBase64.length : 0
+      });
       
       // If image processing fails, fall back to text-only analysis using the product name
-      console.log(`Falling back to text-only analysis for product "${productName}" due to image processing failure`);
+      logger.info(`Falling back to text-only analysis for product due to image processing failure`, {
+        productId,
+        productName
+      });
       
       try {
         // Create a text-only request using Gemini 1.5 Flash's multimodal capabilities
@@ -886,15 +953,26 @@ export async function analyzeProductImage(imageBase64: string, productName: stri
           
           // Validate response structure with detailed logging
           if (!jsonResponse.description) {
-            console.warn(`Missing description in text-only AI analysis for product "${productName}"`);
+            logger.warn(`Missing description in text-only AI analysis for product`, {
+              productId,
+              productName
+            });
           }
           
           if (!jsonResponse.category) {
-            console.warn(`Missing category in text-only AI analysis for product "${productName}"`);
+            logger.warn(`Missing category in text-only AI analysis for product`, {
+              productId,
+              productName
+            });
           }
           
           if (!jsonResponse.tags || !Array.isArray(jsonResponse.tags)) {
-            console.warn(`Missing or invalid tags in text-only AI analysis for product "${productName}"`);
+            logger.warn(`Missing or invalid tags in text-only AI analysis for product`, {
+              productId,
+              productName,
+              tagsType: typeof jsonResponse.tags,
+              hasTagsArray: Array.isArray(jsonResponse.tags)
+            });
           }
           
           return {
@@ -908,8 +986,15 @@ export async function analyzeProductImage(imageBase64: string, productName: stri
             marketResearch: jsonResponse.marketResearch || ""
           };
         } catch (jsonError) {
-          console.error(`Failed to parse text-only JSON response for product "${productName}":`, jsonError);
-          console.error(`Raw text-only response: ${responseText?.substring(0, 200)}...`);
+          logger.error(`Failed to parse text-only fallback JSON response`, {
+            error: jsonError,
+            errorType: jsonError instanceof Error ? jsonError.name : typeof jsonError,
+            errorMessage: jsonError instanceof Error ? jsonError.message : String(jsonError),
+            productId,
+            productName,
+            responsePreview: responseText?.substring(0, 100) + '...'
+          });
+          
           // If all else fails, return just the product name as a fallback
           return {
             suggestedName: productName,
@@ -920,7 +1005,14 @@ export async function analyzeProductImage(imageBase64: string, productName: stri
           };
         }
       } catch (textAnalysisError) {
-        console.error(`Error in text-only analysis fallback for product "${productName}":`, textAnalysisError);
+        logger.error(`Error in text-only analysis fallback`, {
+          error: textAnalysisError,
+          errorType: textAnalysisError instanceof Error ? textAnalysisError.name : typeof textAnalysisError,
+          errorMessage: textAnalysisError instanceof Error ? textAnalysisError.message : String(textAnalysisError),
+          productId,
+          productName
+        });
+        
         throw new Error(`Failed to analyze product via text-only fallback: ${textAnalysisError instanceof Error ? textAnalysisError.message : 'Unknown model error'}`);
       }
     }
@@ -928,7 +1020,11 @@ export async function analyzeProductImage(imageBase64: string, productName: stri
     try {
       // Create the generation request using multimodal capabilities of Gemini 1.5
       // This will analyze both the image and the text (product name)
-      console.log(`Making multimodal Gemini AI request for product "${productName}" with processed image`);
+      logger.info(`Making multimodal Gemini AI request for product analysis`, {
+        productId,
+        productName,
+        imageDataSize: imageData.length
+      });
       
       const result = await geminiProVision.generateContent([
         {
