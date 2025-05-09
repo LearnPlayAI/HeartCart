@@ -815,7 +815,7 @@ function ApiTestsPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {validationResults.results.validationTests.map((test, index) => (
+                      {getFilteredValidationTests().map((test, index) => (
                         <TableRow key={index}>
                           <TableCell className="font-mono text-sm">{test.endpoint}</TableCell>
                           <TableCell>{test.description}</TableCell>
@@ -956,7 +956,7 @@ function ApiTestsPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {authResults.results.authTests.map((test, index) => (
+                      {getFilteredAuthTests().map((test, index) => (
                         <TableRow key={index}>
                           <TableCell className="font-mono text-sm">{test.endpoint}</TableCell>
                           <TableCell>
@@ -1173,26 +1173,64 @@ function ApiTestsPage() {
                 </div>
               ) : performanceResults ? (
                 <div>
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="bg-gray-100 p-3 rounded-md">
-                      <div className="text-sm text-gray-500">Total Tests</div>
-                      <div className="text-xl font-semibold">{performanceResults.results.totalTests}</div>
+                  <div className="flex flex-wrap justify-between items-center gap-4 mb-4">
+                    <div className="flex items-center gap-4">
+                      <div className="bg-gray-100 p-3 rounded-md">
+                        <div className="text-sm text-gray-500">Total Tests</div>
+                        <div className="text-xl font-semibold">{performanceResults.results.totalTests}</div>
+                      </div>
+                      <div className="bg-gray-100 p-3 rounded-md">
+                        <div className="text-sm text-gray-500">Passed</div>
+                        <div className="text-xl font-semibold">{performanceResults.results.passedTests}</div>
+                      </div>
+                      <div className="bg-gray-100 p-3 rounded-md">
+                        <div className="text-sm text-gray-500">Warnings</div>
+                        <div className="text-xl font-semibold">{performanceResults.results.warningTests}</div>
+                      </div>
+                      <div className="bg-gray-100 p-3 rounded-md">
+                        <div className="text-sm text-gray-500">Failed</div>
+                        <div className="text-xl font-semibold">{performanceResults.results.failedTests}</div>
+                      </div>
+                      <div className="bg-gray-100 p-3 rounded-md">
+                        <div className="text-sm text-gray-500">Avg Response Time</div>
+                        <div className="text-xl font-semibold">{performanceResults.results.averageResponseTime}ms</div>
+                      </div>
                     </div>
-                    <div className="bg-gray-100 p-3 rounded-md">
-                      <div className="text-sm text-gray-500">Passed</div>
-                      <div className="text-xl font-semibold">{performanceResults.results.passedTests}</div>
-                    </div>
-                    <div className="bg-gray-100 p-3 rounded-md">
-                      <div className="text-sm text-gray-500">Warnings</div>
-                      <div className="text-xl font-semibold">{performanceResults.results.warningTests}</div>
-                    </div>
-                    <div className="bg-gray-100 p-3 rounded-md">
-                      <div className="text-sm text-gray-500">Failed</div>
-                      <div className="text-xl font-semibold">{performanceResults.results.failedTests}</div>
-                    </div>
-                    <div className="bg-gray-100 p-3 rounded-md">
-                      <div className="text-sm text-gray-500">Avg Response Time</div>
-                      <div className="text-xl font-semibold">{performanceResults.results.averageResponseTime}ms</div>
+                    
+                    {/* Filters */}
+                    <div className="flex items-center gap-3">
+                      <div className="flex flex-col">
+                        <label className="text-xs mb-1 text-gray-500">Method</label>
+                        <Select value={perfMethodFilter} onValueChange={setPerfMethodFilter}>
+                          <SelectTrigger className="w-[120px]">
+                            <SelectValue placeholder="Method" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Methods</SelectItem>
+                            <SelectItem value="GET">GET</SelectItem>
+                            <SelectItem value="POST">POST</SelectItem>
+                            <SelectItem value="PUT">PUT</SelectItem>
+                            <SelectItem value="DELETE">DELETE</SelectItem>
+                            <SelectItem value="PATCH">PATCH</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="flex flex-col">
+                        <label className="text-xs mb-1 text-gray-500">Status</label>
+                        <Select value={perfStatusFilter} onValueChange={setPerfStatusFilter}>
+                          <SelectTrigger className="w-[120px]">
+                            <SelectValue placeholder="Status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Status</SelectItem>
+                            <SelectItem value="passed">Passed</SelectItem>
+                            <SelectItem value="failed">Failed</SelectItem>
+                            <SelectItem value="warning">Warning</SelectItem>
+                            <SelectItem value="pending">Pending</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                   </div>
 
@@ -1209,7 +1247,7 @@ function ApiTestsPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {performanceResults.results.performanceTests.map((test, index) => (
+                      {getFilteredPerfTests().map((test, index) => (
                         <TableRow key={index}>
                           <TableCell className="font-mono text-sm">{test.endpoint}</TableCell>
                           <TableCell>
