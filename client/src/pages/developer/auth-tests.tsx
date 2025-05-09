@@ -17,10 +17,18 @@ type TestResult = {
 type ValidationTestResults = {
   status: 'passed' | 'failed' | 'pending';
   results: {
-    complexityRules: TestResult;
-    lengthRequirements: TestResult;
-    specialCharacters: TestResult;
-    commonPasswords: TestResult;
+    complexityRules?: TestResult;
+    lengthRequirements?: TestResult;
+    specialCharacters?: TestResult;
+    commonPasswords?: TestResult;
+    digitRequirement?: TestResult;
+    validPassword?: TestResult;
+    // Add new properties from real tests
+    minLength?: TestResult;
+    hasUpperCase?: TestResult;
+    hasLowerCase?: TestResult;
+    hasDigit?: TestResult;
+    hasSpecial?: TestResult;
   };
   failedTests: string[];
 };
@@ -367,6 +375,7 @@ function AuthTestsPage() {
                   <div className="text-red-600 py-2">Error: {(validationError as Error).message}</div>
                 ) : validationResults && validationResults.results ? (
                   <div className="space-y-3">
+                    {/* Check for legacy properties first */}
                     {validationResults.results.complexityRules && (
                       <div className="flex justify-between items-center p-2 border-b">
                         <span>Complexity Rules</span>
@@ -386,9 +395,47 @@ function AuthTestsPage() {
                       </div>
                     )}
                     {validationResults.results.commonPasswords && (
-                      <div className="flex justify-between items-center p-2">
+                      <div className="flex justify-between items-center p-2 border-b">
                         <span>Common Passwords</span>
                         <TestStatus status={validationResults.results.commonPasswords.status} />
+                      </div>
+                    )}
+                    
+                    {/* New properties from real validation tests */}
+                    {validationResults.results.minLength && (
+                      <div className="flex justify-between items-center p-2 border-b">
+                        <span>Minimum Length (8 chars)</span>
+                        <TestStatus status={validationResults.results.minLength.status} />
+                      </div>
+                    )}
+                    {validationResults.results.hasUpperCase && (
+                      <div className="flex justify-between items-center p-2 border-b">
+                        <span>Uppercase Letter</span>
+                        <TestStatus status={validationResults.results.hasUpperCase.status} />
+                      </div>
+                    )}
+                    {validationResults.results.hasLowerCase && (
+                      <div className="flex justify-between items-center p-2 border-b">
+                        <span>Lowercase Letter</span>
+                        <TestStatus status={validationResults.results.hasLowerCase.status} />
+                      </div>
+                    )}
+                    {validationResults.results.hasDigit && (
+                      <div className="flex justify-between items-center p-2 border-b">
+                        <span>Numeric Digit</span>
+                        <TestStatus status={validationResults.results.hasDigit.status} />
+                      </div>
+                    )}
+                    {validationResults.results.hasSpecial && (
+                      <div className="flex justify-between items-center p-2 border-b">
+                        <span>Special Character</span>
+                        <TestStatus status={validationResults.results.hasSpecial.status} />
+                      </div>
+                    )}
+                    {validationResults.results.validPassword && (
+                      <div className="flex justify-between items-center p-2 border-b font-semibold">
+                        <span>Valid Password</span>
+                        <TestStatus status={validationResults.results.validPassword.status} />
                       </div>
                     )}
                   </div>

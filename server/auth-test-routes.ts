@@ -42,7 +42,7 @@ export function registerAuthTestRoutes(app: Express): void {
       }
       
       // Use the actual application password validation logic
-      const { validatePassword } = await import('./utils/auth-validation');
+      const { validatePassword } = await import('../server/utils/auth-validation');
       const valid = validatePassword(password);
       
       // Perform detailed validation using the actual validation rules
