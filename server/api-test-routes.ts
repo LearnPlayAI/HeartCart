@@ -181,6 +181,7 @@ export function registerApiTestRoutes(app: Express): void {
   // Test for API endpoint availability
   app.get("/api/api-test/endpoint-availability", apiTestAdminCheck, async (req: Request, res: Response) => {
     try {
+      console.log('ENDPOINT AVAILABILITY TEST RUNNING');
       logger.info('Running API endpoint availability tests');
       
       // Create a base URL for internal requests
@@ -190,6 +191,7 @@ export function registerApiTestRoutes(app: Express): void {
 
       // Dynamically discover all endpoints in the Express application
       const discoveredEndpoints = discoverEndpoints(app);
+      console.log(`DISCOVERED ENDPOINTS: ${discoveredEndpoints.length}`);
       
       // Filter to only include /api endpoints and exclude test endpoints
       const apiEndpoints = discoveredEndpoints
@@ -199,6 +201,10 @@ export function registerApiTestRoutes(app: Express): void {
           !endpoint.path.includes('/api/auth-test') &&
           !endpoint.path.includes('/api/database-test')
         );
+      
+      console.log(`FILTERED API ENDPOINTS: ${apiEndpoints.length}`);
+      console.log(`SAMPLE ENDPOINTS: ${JSON.stringify(apiEndpoints.slice(0, 3))}`);
+      
       
       // Add dynamic parameter replacement for testing
       const endpointsToTest = apiEndpoints.map(endpoint => {
@@ -304,8 +310,10 @@ export function registerApiTestRoutes(app: Express): void {
         failedTests
       };
       
+      console.log('RESULTS FOR ENDPOINT AVAILABILITY TEST:', JSON.stringify(results));
       return sendSuccess(res, results);
     } catch (error) {
+      console.error('Error testing API endpoints:', error);
       logger.error('Error testing API endpoints', { error });
       return sendError(res, "Error testing API endpoints", 500);
     }
