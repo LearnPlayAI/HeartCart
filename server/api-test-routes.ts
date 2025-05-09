@@ -635,88 +635,266 @@ export function registerApiTestRoutes(app: Express): void {
         headers.Cookie = cookies;
       }
       
-      // Define the validation tests
-      const validationTests = [
-        {
-          endpoint: '/api/products',
-          method: 'GET',
-          validator: (response: any) => {
-            // Check if response follows our standard format
-            if (!response || typeof response !== 'object') return false;
-            if (typeof response.success !== 'boolean') return false;
-            if (!Array.isArray(response.data)) return false;
-            
-            // Check product structure if there's at least one product
-            if (response.data.length > 0) {
-              const product = response.data[0];
-              return (
-                typeof product.id === 'number' &&
-                typeof product.name === 'string' &&
-                (product.price === null || typeof product.price === 'number') &&
-                (product.description === null || typeof product.description === 'string')
-              );
+      // First, discover all available API endpoints using the same logic as the endpoint-availability test
+      const apiEndpoints = discoverEndpoints(app);
+      logger.info(`Discovered ${apiEndpoints.length} API endpoints for validation testing`);
+      
+      // Get all resource mappings for creating test paths
+      // Helper function to get resource mapping for URL parameter substitution
+      async function getResourceMapping(): Promise<Record<string, string | null>> {
+        try {
+          // Define the mapping of parameter types to their corresponding values
+          const resourceMap: Record<string, string | null> = {
+            // Default to null (missing) for all params
+            // These will be filled with actual values if available
+            id: null,
+            userId: null,
+            productId: null,
+            categoryId: null,
+            orderId: null,
+            attributeId: null,
+            supplierID: null,
+            catalogId: null,
+            batchId: null,
+            ruleId: null,
+            optionId: null,
+          };
+          
+          // Try to get various types of resources from the database
+          
+          // Products
+          const products = await storage.getProducts({}, 1, 1);
+          if (products && products.data.length > 0) {
+            resourceMap.productId = String(products.data[0].id);
+          }
+          
+          // Categories
+          const categories = await storage.getCategories({}, 1, 1);
+          if (categories && categories.data.length > 0) {
+            resourceMap.categoryId = String(categories.data[0].id);
+          }
+          
+          // Users (if we have access to them)
+          try {
+            const users = await storage.getUsers({}, 1, 1);
+            if (users && users.data.length > 0) {
+              resourceMap.userId = String(users.data[0].id);
             }
-            return true;
-          },
-          description: 'Products endpoint returns properly structured data'
-        },
-        {
-          endpoint: '/api/categories',
-          method: 'GET',
-          validator: (response: any) => {
-            if (!response || typeof response !== 'object') return false;
-            if (typeof response.success !== 'boolean') return false;
-            if (!Array.isArray(response.data)) return false;
-            
-            if (response.data.length > 0) {
-              const category = response.data[0];
-              return (
-                typeof category.id === 'number' &&
-                typeof category.name === 'string'
-              );
+          } catch (error) {
+            logger.warn('Could not fetch users for resource mapping');
+          }
+          
+          // Orders (if we have access to them)
+          try {
+            const orders = await storage.getOrders({}, 1, 1);
+            if (orders && orders.data.length > 0) {
+              resourceMap.orderId = String(orders.data[0].id);
             }
-            return true;
-          },
-          description: 'Categories endpoint returns properly structured data'
-        },
-        {
-          endpoint: '/api/cart',
-          method: 'GET',
-          validator: (response: any) => {
-            if (!response || typeof response !== 'object') return false;
-            if (typeof response.success !== 'boolean') return false;
+          } catch (error) {
+            logger.warn('Could not fetch orders for resource mapping');
+          }
+          
+          // Attributes
+          try {
+            const attributes = await storage.getAttributes();
+            if (attributes && attributes.length > 0) {
+              resourceMap.attributeId = String(attributes[0].id);
+              
+              // If the attribute has options, get the first option ID
+              if (attributes[0].options && attributes[0].options.length > 0) {
+                resourceMap.optionId = String(attributes[0].options[0].id);
+              }
+            }
+          } catch (error) {
+            logger.warn('Could not fetch attributes for resource mapping');
+          }
+          
+          // Default any resource ID to the first value we found
+          // This is a fallback for generic "id" parameters
+          for (const key in resourceMap) {
+            if (resourceMap[key] !== null && resourceMap.id === null) {
+              resourceMap.id = resourceMap[key];
+              break;
+            }
+          }
+          
+          return resourceMap;
+        } catch (error) {
+          logger.error('Error creating resource mapping', { error });
+          // Return empty mapping if we encounter an error
+          return {};
+        }
+      }
+      
+      const resourceMapping = await getResourceMapping();
+      
+      // Process endpoints to determine which ones we can actually test
+      const endpointsWithParams = apiEndpoints.map(endpoint => {
+        // Analyze path to determine testability
+        // Define the analyzePath function locally since it's used here
+        function analyzePath(path: string): { canTest: boolean; testPath: string; } {
+          // Extract all parameters from the path
+          const paramRegex = /\/:([a-zA-Z0-9_]+)(?=\/|$)/g;
+          let match;
+          let missingResources: string[] = [];
+          let testPath = path;
+          
+          // Reset regex state
+          paramRegex.lastIndex = 0;
+          
+          // Find all required parameters
+          while ((match = paramRegex.exec(path)) !== null) {
+            const paramName = match[1];
+            
+            // Check if we have a resource for this parameter
+            const paramValue = resourceMapping[paramName];
+            if (paramValue === null) {
+              missingResources.push(paramName);
+            } else {
+              // Replace parameter in test path with actual value
+              const paramRegex = new RegExp(`\\/:${paramName}(?=\\/|$)`, 'g');
+              testPath = testPath.replace(paramRegex, `/${paramValue}`);
+            }
+          }
+          
+          return {
+            canTest: missingResources.length === 0,
+            testPath
+          };
+        }
+        
+        const result = analyzePath(endpoint.path);
+        return {
+          ...endpoint,
+          canTest: result.canTest,
+          testPath: result.testPath,
+        };
+      });
+      
+      // Only test GET endpoints that we can actually test (have all needed parameters)
+      // and that are likely to return data (not just trigger actions)
+      const testableEndpoints = endpointsWithParams.filter(e => 
+        e.canTest && 
+        e.method === 'GET' && 
+        !e.path.includes('/delete') &&
+        !e.path.includes('/create') &&
+        !e.path.includes('/update') &&
+        !e.path.includes('/edit') &&
+        !e.path.includes('/batch') &&
+        !e.path.includes('/import') &&
+        !e.path.includes('/export')
+      );
+      
+      logger.info(`Found ${testableEndpoints.length} GET endpoints to validate`);
+      
+      // Create validators for common patterns
+      const createStandardValidator = (expectArray: boolean = true) => {
+        return (response: any) => {
+          // Check basic response structure
+          if (!response || typeof response !== 'object') return false;
+          if (typeof response.success !== 'boolean') return false;
+          
+          // Check data format based on expectation (array or object)
+          if (expectArray) {
             if (!Array.isArray(response.data)) return false;
-            
-            // Meta data should be present
+          } else {
+            // If not expecting an array, we should have either an object or null
+            if (response.data !== null && typeof response.data !== 'object') return false;
+          }
+          
+          return true;
+        };
+      };
+      
+      // Define specific validators for known endpoints
+      const customValidators: Record<string, (response: any) => boolean> = {
+        '/api/products': (response: any) => {
+          if (!createStandardValidator(true)(response)) return false;
+          
+          if (response.data.length > 0) {
+            const product = response.data[0];
             return (
-              response.meta &&
-              typeof response.meta.count === 'number' &&
-              typeof response.meta.total === 'number'
+              typeof product.id === 'number' &&
+              typeof product.name === 'string' &&
+              (product.price === null || typeof product.price === 'number') &&
+              (product.description === null || typeof product.description === 'string')
             );
-          },
-          description: 'Cart endpoint returns properly structured data with meta information'
+          }
+          return true;
         },
-        {
-          endpoint: '/api/user',
-          method: 'GET',
-          validator: (response: any) => {
-            if (!response || typeof response !== 'object') return false;
-            if (typeof response.success !== 'boolean') return false;
-            
-            // User should be either null or have proper structure
-            if (response.data === null) return true;
-            
-            const user = response.data;
+        '/api/categories': (response: any) => {
+          if (!createStandardValidator(true)(response)) return false;
+          
+          if (response.data.length > 0) {
+            const category = response.data[0];
             return (
-              typeof user.id === 'number' &&
-              typeof user.username === 'string' &&
-              typeof user.email === 'string' &&
-              typeof user.role === 'string'
+              typeof category.id === 'number' &&
+              typeof category.name === 'string'
             );
-          },
-          description: 'User endpoint returns properly structured user data'
+          }
+          return true;
         },
-      ];
+        '/api/cart': (response: any) => {
+          if (!createStandardValidator(true)(response)) return false;
+          
+          // Meta data should be present
+          return (
+            response.meta &&
+            typeof response.meta.count === 'number' &&
+            typeof response.meta.total === 'number'
+          );
+        },
+        '/api/user': (response: any) => {
+          if (!createStandardValidator(false)(response)) return false;
+          
+          // User should be either null or have proper structure
+          if (response.data === null) return true;
+          
+          const user = response.data;
+          return (
+            typeof user.id === 'number' &&
+            typeof user.username === 'string' &&
+            typeof user.email === 'string' &&
+            typeof user.role === 'string'
+          );
+        }
+      };
+      
+      // Create validation tests for each endpoint
+      const validationTests = testableEndpoints.map(endpoint => {
+        const normalizedPath = endpoint.path.split('?')[0]; // Remove query parameters if any
+        
+        // Get a custom validator if available, otherwise use the standard one
+        // Determine if endpoint is likely to return an array or single object
+        const expectArray = !normalizedPath.match(/\/[^\/]+\/\d+$/) && 
+                            !normalizedPath.includes('/:') && 
+                            !normalizedPath.includes('/current') &&
+                            !normalizedPath.includes('/me') &&
+                            !normalizedPath.includes('/settings');
+                            
+        const validator = customValidators[normalizedPath] || createStandardValidator(expectArray);
+        
+        return {
+          endpoint: endpoint.testPath,
+          originalPath: endpoint.path,
+          method: endpoint.method,
+          description: getValidationDescription(endpoint.path, endpoint.method),
+          validator: validator
+        };
+      });
+      
+      // Helper function to generate validation description
+      function getValidationDescription(path: string, method: string): string {
+        const pathParts = path.split('/').filter(p => p && !p.startsWith(':'));
+        const resourceName = pathParts[pathParts.length - 1] || pathParts[pathParts.length - 2] || 'resource';
+        
+        const formattedResourceName = resourceName
+          .replace(/-/g, ' ')
+          .replace(/([A-Z])/g, ' $1')
+          .toLowerCase();
+          
+        return `${formattedResourceName.charAt(0).toUpperCase() + formattedResourceName.slice(1)} endpoint returns properly structured data`;
+      }
       
       // Execute the validation tests
       const testResults = await Promise.all(validationTests.map(async (test) => {
