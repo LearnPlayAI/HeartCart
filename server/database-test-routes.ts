@@ -259,7 +259,10 @@ export function registerDatabaseTestRoutes(app: Express): void {
         return table.name; // Get the actual table name from the schema definition
       });
       
-      logger.debug('Expected table names:', { expectedTableNames });
+      // To avoid circular reference errors when logging, extract only the string values
+      logger.debug('Expected table names:', { 
+        expectedTableNames: expectedTableNames.map(name => String(name)) 
+      });
       
       // Compare actual tables with expected tables
       const missingTables = expectedTableNames.filter(table => !tables.includes(table));
@@ -357,20 +360,31 @@ export function registerDatabaseTestRoutes(app: Express): void {
         }
       });
       
+      // Create a safe, serializable result object without circular references
       const results = {
         status,
         results: {
           expectedTables: {
             count: expectedTableNames.length,
-            names: expectedTableNames
+            // Convert complex objects to simple strings to avoid circular references
+            names: expectedTableNames.map(name => String(name))
           },
           actualTables: {
             count: tables.length,
             names: tables
           },
-          missingTables,
+          missingTables: missingTables.map(name => String(name)),
           unexpectedTables,
-          columnTests
+          // Ensure columnTests is serializable
+          columnTests: columnTests.map(test => ({
+            ...test,
+            // Ensure any complex objects are converted to strings
+            tableName: String(test.tableName),
+            missingColumns: Array.isArray(test.missingColumns) ? 
+              test.missingColumns.map(col => String(col)) : [],
+            extraColumns: Array.isArray(test.extraColumns) ? 
+              test.extraColumns : []
+          }))
         },
         failedTests
       };
