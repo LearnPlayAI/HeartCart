@@ -2000,7 +2000,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         productName: z.string().min(1, "Product name is required")
       })
     }),
-    withStandardResponse(async (req: Request, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const user = req.user as any;
       
       if (user.role !== 'admin') {
@@ -2009,8 +2009,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const { imageUrl, productName } = req.body;
       
-      const analysis = await analyzeProductImage(imageUrl, productName);
-      return analysis;
+      try {
+        // Validate image URL format
+        const isValidUrl = await validateImageUrl(imageUrl);
+        if (!isValidUrl) {
+          throw new BadRequestError(
+            "Invalid image URL. Please provide a valid and accessible image URL.", 
+            "imageUrl"
+          );
+        }
+        
+        // Analyze the product image using AI
+        const analysis = await analyzeProductImage(imageUrl, productName);
+        
+        if (!analysis) {
+          throw new AppError(
+            "Failed to analyze product image. AI service returned no results.",
+            ErrorCode.EXTERNAL_SERVICE_ERROR,
+            500
+          );
+        }
+        
+        // Return standardized response format
+        res.json({
+          success: true,
+          message: "Product image analyzed successfully", 
+          data: analysis,
+          meta: {
+            productName,
+            imageUrl: imageUrl.substring(0, 100) + (imageUrl.length > 100 ? '...' : '') // Trim URL for logging
+          }
+        });
+      } catch (error) {
+        // Log the error in detail for debugging
+        logger.error('Error analyzing product image with AI', { 
+          error, 
+          productName, 
+          imageUrlLength: imageUrl.length
+        });
+        
+        // Handle specific error cases
+        if (error instanceof BadRequestError) {
+          throw error;
+        }
+        
+        // Check if it's a Gemini API-specific error and provide better error messages
+        if (error instanceof Error && error.message.includes('GEMINI_API_KEY')) {
+          throw new AppError(
+            "AI service configuration error. Please contact an administrator.",
+            ErrorCode.EXTERNAL_SERVICE_ERROR,
+            500
+          );
+        }
+        
+        // Generic error fallback
+        throw new AppError(
+          "Failed to analyze product image. The AI service is currently unavailable.",
+          ErrorCode.EXTERNAL_SERVICE_ERROR,
+          500,
+          { originalError: error }
+        );
+      }
     })
   );
 
@@ -2026,7 +2085,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         categoryId: z.coerce.number().positive().optional()
       })
     }),
-    withStandardResponse(async (req: Request, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const user = req.user as any;
       
       if (user.role !== 'admin') {
@@ -2035,16 +2094,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const { costPrice, productName, categoryName, categoryId } = req.body;
       
-      // If categoryId is provided, check if it exists
-      if (categoryId) {
-        const category = await storage.getCategoryById(categoryId);
-        if (!category) {
-          throw new NotFoundError("Category not found", "category");
+      try {
+        // If categoryId is provided, check if it exists
+        let categoryData = null;
+        if (categoryId) {
+          categoryData = await storage.getCategoryById(categoryId);
+          if (!categoryData) {
+            throw new NotFoundError("Category not found", "category");
+          }
         }
+        
+        // Get price suggestion from AI service
+        const suggestion = await suggestPrice(costPrice, productName, categoryName, categoryId);
+        
+        if (!suggestion || !suggestion.suggestedPrice) {
+          throw new AppError(
+            "Failed to generate price suggestion. AI service returned invalid data.",
+            ErrorCode.EXTERNAL_SERVICE_ERROR,
+            500
+          );
+        }
+        
+        // Return standardized response format
+        res.json({
+          success: true,
+          message: "Price suggestion generated successfully", 
+          data: suggestion,
+          meta: {
+            productName,
+            costPrice,
+            categoryName: categoryName || (categoryData ? categoryData.name : undefined),
+            margin: suggestion.margin || (((suggestion.suggestedPrice - costPrice) / costPrice) * 100).toFixed(2) + '%'
+          }
+        });
+      } catch (error) {
+        // Log detailed error information for debugging
+        logger.error('Error generating price suggestion with AI', { 
+          error, 
+          productName, 
+          costPrice,
+          categoryId
+        });
+        
+        // Handle known error types explicitly
+        if (error instanceof NotFoundError) {
+          throw error;
+        }
+        
+        // Check if it's a Gemini API-specific error and provide better error messages
+        if (error instanceof Error && error.message.includes('GEMINI_API_KEY')) {
+          throw new AppError(
+            "AI service configuration error. Please contact an administrator.",
+            ErrorCode.EXTERNAL_SERVICE_ERROR,
+            500
+          );
+        }
+        
+        // Generic error fallback
+        throw new AppError(
+          "Failed to generate price suggestion. The AI service is currently unavailable.",
+          ErrorCode.EXTERNAL_SERVICE_ERROR,
+          500,
+          { originalError: error }
+        );
       }
-      
-      const suggestion = await suggestPrice(costPrice, productName, categoryName, categoryId);
-      return suggestion;
     })
   );
   
@@ -2054,7 +2167,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get(
     "/api/admin/ai/models", 
     isAuthenticated, 
-    withStandardResponse(async (req: Request, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const user = req.user as any;
       
       // Check if user is admin
@@ -2062,17 +2175,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw new ForbiddenError("Only administrators can manage AI settings");
       }
       
-      // Get all available models
-      const models = getAvailableAiModels();
-      
-      // Get current model
-      const currentModel = await getCurrentAiModelSetting();
-      
-      return {
-        available: models,
-        current: currentModel.modelName,
-        isDefault: currentModel.isDefault
-      };
+      try {
+        // Get all available models
+        const models = getAvailableAiModels();
+        
+        // Get current model
+        const currentModel = await getCurrentAiModelSetting();
+        
+        // Return standardized response format
+        res.json({
+          success: true,
+          data: {
+            available: models,
+            current: currentModel.modelName,
+            isDefault: currentModel.isDefault
+          }
+        });
+      } catch (error) {
+        // Log detailed error information
+        logger.error('Error retrieving AI model settings', { error });
+        
+        // Return generic error
+        throw new AppError(
+          "Failed to retrieve AI model settings.",
+          ErrorCode.INTERNAL_SERVER_ERROR,
+          500,
+          { originalError: error }
+        );
+      }
     })
   );
   
@@ -2085,7 +2215,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         modelName: z.string().min(1, "Model name is required")
       })
     }),
-    withStandardResponse(async (req: Request, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const user = req.user as any;
       
       // Check if user is admin
@@ -2095,25 +2225,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const { modelName } = req.body;
       
-      // Validate that the model name is in the available models list
-      const availableModels = getAvailableAiModels();
-      if (!availableModels.includes(modelName)) {
-        throw new BadRequestError(`Model '${modelName}' is not available. Available models: ${availableModels.join(', ')}`);
-      }
-      
-      const success = await updateAiModel(modelName);
-      
-      if (success) {
-        return { 
-          message: `Successfully updated AI model to: ${modelName}`
-        };
-      } else {
-        // Still return a 200 but indicate that initialization failed in the response
-        // The standard response wrapper will set success: true, but we include additional info
-        return { 
-          initialized: false,
-          message: `Model ${modelName} was saved but could not be initialized. Will try again on next server restart.`
-        };
+      try {
+        // Validate that the model name is in the available models list
+        const availableModels = getAvailableAiModels();
+        if (!availableModels.includes(modelName)) {
+          throw new BadRequestError(
+            `Model '${modelName}' is not available. Available models: ${availableModels.join(', ')}`,
+            'modelName'
+          );
+        }
+        
+        // Update AI model
+        const success = await updateAiModel(modelName);
+        
+        // Return standardized response format
+        res.json({
+          success: true,
+          message: success 
+            ? `Successfully updated AI model to: ${modelName}` 
+            : `Model ${modelName} was saved but could not be initialized. Will try again on next server restart.`,
+          data: { 
+            modelName,
+            initialized: success
+          }
+        });
+      } catch (error) {
+        // Log detailed error information
+        logger.error('Error updating AI model', { 
+          error, 
+          requestedModel: modelName 
+        });
+        
+        // Handle different error types
+        if (error instanceof BadRequestError) {
+          throw error;
+        }
+        
+        // Check for API key issues
+        if (error instanceof Error && error.message.includes('GEMINI_API_KEY')) {
+          throw new AppError(
+            "AI service configuration error. Missing API key.",
+            ErrorCode.EXTERNAL_SERVICE_ERROR,
+            500
+          );
+        }
+        
+        // Generic error fallback
+        throw new AppError(
+          "Failed to update AI model settings.",
+          ErrorCode.INTERNAL_SERVER_ERROR,
+          500,
+          { originalError: error }
+        );
       }
     })
   );
@@ -2122,7 +2285,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get(
     "/api/admin/ai/settings", 
     isAuthenticated, 
-    withStandardResponse(async (req: Request, res: Response) => {
+    asyncHandler(async (req: Request, res: Response) => {
       const user = req.user as any;
       
       // Check if user is admin
@@ -2130,8 +2293,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw new ForbiddenError("Only administrators can manage AI settings");
       }
       
-      const settings = await storage.getAllAiSettings();
-      return settings;
+      try {
+        // Get all AI settings
+        const settings = await storage.getAllAiSettings();
+        
+        // Return standardized response format
+        res.json({
+          success: true,
+          data: settings,
+          meta: {
+            count: settings.length
+          }
+        });
+      } catch (error) {
+        // Log detailed error information
+        logger.error('Error retrieving AI settings', { error });
+        
+        // Return generic error
+        throw new AppError(
+          "Failed to retrieve AI settings.",
+          ErrorCode.INTERNAL_SERVER_ERROR,
+          500,
+          { originalError: error }
+        );
+      }
     })
   );
 
