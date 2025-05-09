@@ -79,19 +79,27 @@ export function registerDatabaseTestRoutes(app: Express): void {
         client.release();
       }
       
-      // Get expected tables from our Drizzle schema by identifying pgTable exports
-      const expectedTables = Object.keys(schema)
-        .filter(key => {
-          // Check if this is a pgTable definition from schema.ts
-          const item = (schema as any)[key];
-          return item && 
-                 typeof item === 'object' && 
-                 // Tables have the name property matching their table name in the database
-                 item.name && 
-                 typeof item.name === 'string' &&
-                 // Make sure this is actually a table object and not a relation
-                 !key.includes('Relations');
-        });
+      // Get expected tables from our Drizzle schema - inspect pgTable objects
+      const expectedTables: string[] = [];
+      
+      // Iterate through all exports from schema.ts
+      Object.entries(schema).forEach(([key, value]) => {
+        // Check for Drizzle table definitions
+        // Tables are exported as objects with a name property (pgTable)
+        if (
+          value && 
+          typeof value === 'object' && 
+          'name' in value && 
+          typeof value.name === 'string' && 
+          // Filter out relations
+          !key.includes('Relations') &&
+          // These properties are typically on Drizzle table objects
+          '$schema' in value
+        ) {
+          expectedTables.push(key);
+          logger.debug(`Found table: ${key} with DB name: ${value.name}`);
+        }
+      });
       
       // Log the tables we found for debugging
       logger.debug('Expected tables from schema:', { expectedTables });
@@ -847,19 +855,27 @@ export function registerDatabaseTestRoutes(app: Express): void {
               client.release();
             }
             
-            // Get expected tables from our Drizzle schema
-            const expectedTables = Object.keys(schema)
-              .filter(key => {
-                // Check if this is a pgTable definition from schema.ts
-                const item = (schema as any)[key];
-                return item && 
-                      typeof item === 'object' && 
-                      // Tables have the name property matching their table name in the database
-                      item.name && 
-                      typeof item.name === 'string' &&
-                      // Make sure this is actually a table object and not a relation
-                      !key.includes('Relations');
-              });
+            // Get expected tables from our Drizzle schema - inspect pgTable objects
+            const expectedTables: string[] = [];
+            
+            // Iterate through all exports from schema.ts
+            Object.entries(schema).forEach(([key, value]) => {
+              // Check for Drizzle table definitions
+              // Tables are exported as objects with a name property (pgTable)
+              if (
+                value && 
+                typeof value === 'object' && 
+                'name' in value && 
+                typeof value.name === 'string' && 
+                // Filter out relations
+                !key.includes('Relations') &&
+                // These properties are typically on Drizzle table objects
+                '$schema' in value
+              ) {
+                expectedTables.push(key);
+                logger.debug(`Found table: ${key} with DB name: ${value.name}`);
+              }
+            });
             
             logger.debug('Expected tables from schema:', { count: expectedTables.length, tables: expectedTables });
             
