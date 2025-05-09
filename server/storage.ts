@@ -2318,17 +2318,17 @@ export class DatabaseStorage implements IStorage {
         // Continue with deletion
       }
       
-      // Skip product attribute combinations as they might not be needed anymore
-      // Leaving comment for future reference in case this needs to be re-implemented
-      /*try {
-        // Delete product attribute combinations
-        if (typeof productAttributeCombinations !== 'undefined') {
-          await db.delete(productAttributeCombinations).where(eq(productAttributeCombinations.productId, id));
-        }
-      } catch (combosError) {
-        console.error(`Error deleting product attribute combinations for product ${id}:`, combosError);
+      // Delete product attribute values
+      try {
+        await db.delete(productAttributeValues).where(eq(productAttributeValues.productId, id));
+        logger.debug(`Deleted product attribute values`, { productId: id });
+      } catch (valuesError) {
+        logger.error(`Error deleting product attribute values`, {
+          error: valuesError,
+          productId: id
+        });
         // Continue with deletion
-      }*/
+      }
       
       try {
         // Finally delete the product itself
@@ -3292,53 +3292,288 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  // Product Attribute Combination operations
-  async getProductAttributeCombinations(productId: number): Promise<ProductAttributeCombination[]> {
-    return await db
-      .select()
-      .from(productAttributeCombinations)
-      .where(eq(productAttributeCombinations.productId, productId));
+  // Product Attribute Value operations - replacement for the legacy combination system
+  /**
+   * Get all attribute values for a product
+   * @param productId The ID of the product
+   * @returns Array of attribute values
+   */
+  async getProductAttributeValues(productId: number): Promise<ProductAttributeValue[]> {
+    try {
+      const values = await db
+        .select()
+        .from(productAttributeValues)
+        .where(eq(productAttributeValues.productId, productId));
+        
+      logger.debug(`Retrieved product attribute values`, {
+        productId,
+        valueCount: values.length
+      });
+      
+      return values;
+    } catch (error) {
+      logger.error(`Error retrieving product attribute values`, {
+        error,
+        productId
+      });
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
+  }
+  
+  /**
+   * Get attribute values for a specific product and attribute
+   * @param productId The ID of the product
+   * @param attributeId The ID of the attribute
+   * @returns Array of attribute values
+   */
+  async getProductAttributeValuesByAttributeId(productId: number, attributeId: number): Promise<ProductAttributeValue[]> {
+    try {
+      const values = await db
+        .select()
+        .from(productAttributeValues)
+        .where(
+          and(
+            eq(productAttributeValues.productId, productId),
+            eq(productAttributeValues.attributeId, attributeId)
+          )
+        );
+        
+      logger.debug(`Retrieved product attribute values for specific attribute`, {
+        productId,
+        attributeId,
+        valueCount: values.length
+      });
+      
+      return values;
+    } catch (error) {
+      logger.error(`Error retrieving product attribute values for specific attribute`, {
+        error,
+        productId,
+        attributeId
+      });
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
   }
 
-  async getProductAttributeCombinationByHash(productId: number, combinationHash: string): Promise<ProductAttributeCombination | undefined> {
-    const [combination] = await db
-      .select()
-      .from(productAttributeCombinations)
-      .where(
-        and(
-          eq(productAttributeCombinations.productId, productId),
-          eq(productAttributeCombinations.combinationHash, combinationHash)
-        )
-      );
-    return combination;
+  /**
+   * Create a new attribute value for a product
+   * @param value The value data to insert
+   * @returns The created attribute value
+   */
+  async createProductAttributeValue(value: InsertProductAttributeValue): Promise<ProductAttributeValue> {
+    try {
+      const [newValue] = await db
+        .insert(productAttributeValues)
+        .values(value)
+        .returning();
+        
+      logger.info(`Created new product attribute value`, {
+        valueId: newValue.id,
+        productId: newValue.productId,
+        attributeId: newValue.attributeId,
+        optionId: newValue.optionId
+      });
+      
+      return newValue;
+    } catch (error) {
+      logger.error(`Error creating product attribute value`, {
+        error,
+        productId: value.productId,
+        attributeId: value.attributeId
+      });
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
   }
 
-  async createProductAttributeCombination(combination: InsertProductAttributeCombination): Promise<ProductAttributeCombination> {
-    const [newCombination] = await db
-      .insert(productAttributeCombinations)
-      .values(combination)
-      .returning();
-    return newCombination;
+  /**
+   * Update an existing attribute value
+   * @param id The ID of the attribute value to update
+   * @param valueData The new data
+   * @returns The updated attribute value or undefined if not found
+   */
+  async updateProductAttributeValue(id: number, valueData: Partial<InsertProductAttributeValue>): Promise<ProductAttributeValue | undefined> {
+    try {
+      const [updatedValue] = await db
+        .update(productAttributeValues)
+        .set(valueData)
+        .where(eq(productAttributeValues.id, id))
+        .returning();
+        
+      if (!updatedValue) {
+        logger.warn(`Product attribute value not found for update`, { valueId: id });
+        return undefined;
+      }
+      
+      logger.info(`Updated product attribute value`, {
+        valueId: id,
+        productId: updatedValue.productId,
+        attributeId: updatedValue.attributeId
+      });
+      
+      return updatedValue;
+    } catch (error) {
+      logger.error(`Error updating product attribute value`, {
+        error,
+        valueId: id
+      });
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
   }
 
-  async updateProductAttributeCombination(id: number, combinationData: Partial<InsertProductAttributeCombination>): Promise<ProductAttributeCombination | undefined> {
-    const [updatedCombination] = await db
-      .update(productAttributeCombinations)
-      .set(combinationData)
-      .where(eq(productAttributeCombinations.id, id))
-      .returning();
-    return updatedCombination;
-  }
-
-  async deleteProductAttributeCombination(id: number): Promise<boolean> {
+  /**
+   * Delete an attribute value
+   * @param id The ID of the attribute value to delete
+   * @returns True if successful, or throws error
+   */
+  async deleteProductAttributeValue(id: number): Promise<boolean> {
     try {
       await db
-        .delete(productAttributeCombinations)
-        .where(eq(productAttributeCombinations.id, id));
+        .delete(productAttributeValues)
+        .where(eq(productAttributeValues.id, id));
+        
+      logger.info(`Deleted product attribute value`, { valueId: id });
       return true;
     } catch (error) {
-      console.error(`Error deleting product attribute combination ${id}:`, error);
+      logger.error(`Error deleting product attribute value`, {
+        error,
+        valueId: id
+      });
       throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
+  }
+  
+  // These methods are maintained for backward compatibility with existing code
+  // but now use the new attribute value system
+  
+  /**
+   * @deprecated Use getProductAttributeValues instead
+   */
+  async getProductAttributeCombinations(productId: number): Promise<any[]> {
+    try {
+      logger.warn(`Using deprecated method getProductAttributeCombinations`, { productId });
+      const values = await this.getProductAttributeValues(productId);
+      // Convert to the expected format to maintain compatibility
+      return values.map(value => ({
+        id: value.id,
+        productId: value.productId,
+        attributeValues: [value]
+      }));
+    } catch (error) {
+      logger.error(`Error in deprecated getProductAttributeCombinations method`, {
+        error,
+        productId
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * @deprecated Use getProductAttributeValues with filtering instead
+   */
+  async getProductAttributeCombinationByHash(productId: number, combinationHash: string): Promise<any | undefined> {
+    try {
+      logger.warn(`Using deprecated method getProductAttributeCombinationByHash`, { 
+        productId,
+        combinationHash
+      });
+      // Just return the first value as a fallback
+      const values = await this.getProductAttributeValues(productId);
+      if (values.length === 0) return undefined;
+      
+      return {
+        id: values[0].id,
+        productId,
+        attributeValues: values
+      };
+    } catch (error) {
+      logger.error(`Error in deprecated getProductAttributeCombinationByHash method`, {
+        error,
+        productId,
+        combinationHash
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * @deprecated Use createProductAttributeValue instead
+   */
+  async createProductAttributeCombination(combination: any): Promise<any> {
+    try {
+      logger.warn(`Using deprecated method createProductAttributeCombination`, { 
+        productId: combination.productId
+      });
+      
+      if (!combination.attributeValues || combination.attributeValues.length === 0) {
+        logger.error(`Cannot create combination without attribute values`, {
+          productId: combination.productId
+        });
+        throw new Error('Attribute values are required');
+      }
+      
+      // Create the first attribute value and return a compatible object
+      const value = await this.createProductAttributeValue({
+        productId: combination.productId,
+        attributeId: combination.attributeValues[0].attributeId,
+        optionId: combination.attributeValues[0].optionId,
+        textValue: combination.attributeValues[0].textValue
+      });
+      
+      return {
+        id: value.id,
+        productId: value.productId,
+        attributeValues: [value]
+      };
+    } catch (error) {
+      logger.error(`Error in deprecated createProductAttributeCombination method`, {
+        error,
+        productId: combination.productId
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * @deprecated Use updateProductAttributeValue instead
+   */
+  async updateProductAttributeCombination(id: number, combinationData: any): Promise<any | undefined> {
+    try {
+      logger.warn(`Using deprecated method updateProductAttributeCombination`, { id });
+      
+      // We'll just update the value with this ID as a fallback
+      const value = await this.updateProductAttributeValue(id, {
+        productId: combinationData.productId
+      });
+      
+      if (!value) return undefined;
+      
+      return {
+        id: value.id,
+        productId: value.productId,
+        attributeValues: [value]
+      };
+    } catch (error) {
+      logger.error(`Error in deprecated updateProductAttributeCombination method`, {
+        error,
+        id
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * @deprecated Use deleteProductAttributeValue instead
+   */
+  async deleteProductAttributeCombination(id: number): Promise<boolean> {
+    try {
+      logger.warn(`Using deprecated method deleteProductAttributeCombination`, { id });
+      return await this.deleteProductAttributeValue(id);
+    } catch (error) {
+      logger.error(`Error in deprecated deleteProductAttributeCombination method`, {
+        error,
+        id
+      });
+      throw error;
     }
   }
   
@@ -3613,7 +3848,6 @@ export class DatabaseStorage implements IStorage {
       selectedOptions: productAttr.options
     }));
   }
-  */
 
   // ==================================================================================
   // ATTRIBUTE SYSTEM IMPLEMENTATION
