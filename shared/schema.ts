@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, doublePrecision, jsonb, varchar, unique, decimal } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, doublePrecision, jsonb, varchar, unique, decimal, index } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -71,6 +71,10 @@ export const products = pgTable("products", {
   hasBackgroundRemoved: boolean("has_background_removed").default(false),
   originalImageObjectKey: text("original_image_object_key"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => {
+  return {
+    categoryIdIdx: index("products_category_id_idx").on(table.categoryId),
+  };
 });
 
 // Cart items table
@@ -125,6 +129,10 @@ export const productImages = pgTable("product_images", {
   // Note: 'alt' field removed as it doesn't exist in the database
   sortOrder: integer("sort_order").default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => {
+  return {
+    productIdIdx: index("product_images_product_id_idx").on(table.productId),
+  };
 });
 
 // AI Recommendations table
