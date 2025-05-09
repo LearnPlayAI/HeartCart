@@ -990,26 +990,218 @@ export function registerApiTestRoutes(app: Express): void {
       // Create a base URL for internal requests
       const baseURL = `http://localhost:5000`;
       
-      // Define authentication tests
-      const authTests = [
-        {
-          endpoint: '/api/user',
-          method: 'GET',
-          description: 'User endpoint returns authenticated user when logged in',
-          authRequired: true,
-          adminRequired: false,
-          testType: 'authenticated_access'
-        },
-        {
+      // Discover all endpoints in the application
+      const discoveredEndpoints = discoverEndpoints(app);
+      
+      // Filter to only include /api endpoints and exclude test endpoints
+      const apiEndpoints = discoveredEndpoints
+        .filter(endpoint => 
+          endpoint.path.startsWith('/api') && 
+          !endpoint.path.includes('/api/api-test') &&
+          !endpoint.path.includes('/api/auth-test') &&
+          !endpoint.path.includes('/api/database-test')
+        );
+        
+      logger.info(`Discovered ${apiEndpoints.length} endpoints for auth testing`);
+      
+      // Collect available resources for parameterized paths
+      const resourceMapping = await getResourceMapping();
+      
+      // Analyze paths to determine which ones we can actually test
+      const endpointsWithTestPaths = apiEndpoints.map(endpoint => {
+        function analyzePath(path: string): { 
+          canTest: boolean; 
+          testPath: string;
+          missingResources: string[];
+        } {
+          // Extract all parameters from the path
+          const paramRegex = /\/:([a-zA-Z0-9_]+)(?=\/|$)/g;
+          let match;
+          let missingResources: string[] = [];
+          let testPath = path;
+          
+          // Reset regex state
+          paramRegex.lastIndex = 0;
+          
+          // Find all required parameters
+          while ((match = paramRegex.exec(path)) !== null) {
+            const paramName = match[1];
+            
+            // Check if we have a resource for this parameter
+            const paramValue = resourceMapping[paramName];
+            if (paramValue === null) {
+              missingResources.push(paramName);
+            } else {
+              // Replace parameter in test path with actual value
+              const paramRegex = new RegExp(`\\/:${paramName}(?=\\/|$)`, 'g');
+              testPath = testPath.replace(paramRegex, `/${paramValue}`);
+            }
+          }
+          
+          return {
+            canTest: missingResources.length === 0,
+            testPath,
+            missingResources
+          };
+        }
+        
+        const pathAnalysis = analyzePath(endpoint.path);
+        
+        return {
+          ...endpoint,
+          testPath: pathAnalysis.testPath,
+          canTest: pathAnalysis.canTest,
+          missingResources: pathAnalysis.missingResources
+        };
+      });
+      
+      // Categorize endpoints by their likely authentication requirements
+      // We'll use path patterns and HTTP methods to guess requirements
+      
+      // Likely public endpoints (accessible without auth)
+      const publicPatterns = [
+        // GET requests for public data
+        { method: 'GET', pattern: /^\/api\/products\/?$/ },
+        { method: 'GET', pattern: /^\/api\/categories\/?$/ },
+        { method: 'GET', pattern: /^\/api\/featured-products\/?$/ },
+        { method: 'GET', pattern: /^\/api\/flash-deals\/?$/ },
+        { method: 'GET', pattern: /^\/api\/recommendations\/?$/ },
+        { method: 'GET', pattern: /^\/api\/search\/?$/ }
+      ];
+      
+      // Likely auth-required endpoints (require login but not admin)
+      const authRequiredPatterns = [
+        // User profile/data endpoints
+        { method: 'GET', pattern: /^\/api\/user(\/.*)?$/ },
+        { method: 'GET', pattern: /^\/api\/cart\/?$/ },
+        { method: 'GET', pattern: /^\/api\/orders\/?$/ },
+        { method: 'POST', pattern: /^\/api\/cart\/?$/ },
+        { method: 'PUT', pattern: /^\/api\/cart\/?$/ },
+        { method: 'DELETE', pattern: /^\/api\/cart\/?$/ }
+      ];
+      
+      // Likely admin-only endpoints
+      const adminRequiredPatterns = [
+        // Create/update/delete operations
+        { method: 'POST', pattern: /^\/api\/products\/?$/ },
+        { method: 'PUT', pattern: /^\/api\/products\/.*$/ },
+        { method: 'DELETE', pattern: /^\/api\/products\/.*$/ },
+        { method: 'POST', pattern: /^\/api\/categories\/?$/ },
+        { method: 'PUT', pattern: /^\/api\/categories\/.*$/ },
+        { method: 'DELETE', pattern: /^\/api\/categories\/.*$/ },
+        // Admin-specific endpoints
+        { method: 'ANY', pattern: /^\/api\/admin\/.*$/ },
+        { method: 'ANY', pattern: /^\/api\/suppliers\/.*$/ },
+        { method: 'ANY', pattern: /^\/api\/catalogs\/.*$/ },
+        { method: 'ANY', pattern: /^\/api\/batch-upload\/.*$/ }
+      ];
+      
+      // Helper to check if an endpoint matches any of the patterns
+      function matchesAnyPattern(endpoint: any, patterns: Array<{method: string, pattern: RegExp}>): boolean {
+        return patterns.some(p => 
+          (p.method === 'ANY' || p.method === endpoint.method) && 
+          p.pattern.test(endpoint.path)
+        );
+      }
+      
+      // Generate auth tests dynamically
+      const authTests: any[] = [];
+      
+      // Add public access tests
+      endpointsWithTestPaths
+        .filter(e => e.canTest && e.method === 'GET' && matchesAnyPattern(e, publicPatterns))
+        .slice(0, 5) // Limit to 5 tests for performance
+        .forEach(endpoint => {
+          authTests.push({
+            endpoint: endpoint.testPath,
+            originalPath: endpoint.path,
+            method: endpoint.method,
+            description: `${endpoint.description} is accessible without authentication`,
+            authRequired: false,
+            adminRequired: false,
+            testType: 'public_access'
+          });
+        });
+        
+      // Add authenticated user tests  
+      endpointsWithTestPaths
+        .filter(e => e.canTest && matchesAnyPattern(e, authRequiredPatterns))
+        .slice(0, 5) // Limit to 5 tests for performance
+        .forEach(endpoint => {
+          authTests.push({
+            endpoint: endpoint.testPath,
+            originalPath: endpoint.path,
+            method: endpoint.method,
+            description: `${endpoint.description} requires user authentication`,
+            authRequired: true,
+            adminRequired: false,
+            testType: 'authenticated_access'
+          });
+        });
+        
+      // Add admin-only tests
+      endpointsWithTestPaths
+        .filter(e => e.canTest && matchesAnyPattern(e, adminRequiredPatterns))
+        .slice(0, 5) // Limit to 5 tests for performance
+        .forEach(endpoint => {
+          authTests.push({
+            endpoint: endpoint.testPath,
+            originalPath: endpoint.path,
+            method: endpoint.method,
+            description: `${endpoint.description} requires admin privileges`,
+            authRequired: true,
+            adminRequired: true,
+            testType: 'admin_only',
+            // For POST/PUT methods, add a simple placeholder request body
+            ...(endpoint.method === 'POST' || endpoint.method === 'PUT' ? {
+              requestBody: {
+                name: 'API Test Item',
+                description: 'This is a test that should not create anything',
+              }
+            } : {})
+          });
+        });
+        
+      // Add specific auth tests that we know about
+      authTests.push({
+        endpoint: '/api/user',
+        originalPath: '/api/user',
+        method: 'GET',
+        description: 'User endpoint returns authenticated user when logged in',
+        authRequired: true,
+        adminRequired: false,
+        testType: 'authenticated_access'
+      });
+      
+      // Make sure we have at least one test of each type
+      if (!authTests.some(t => t.testType === 'public_access')) {
+        authTests.push({
           endpoint: '/api/products',
+          originalPath: '/api/products',
           method: 'GET',
           description: 'Products endpoint is accessible without authentication',
           authRequired: false,
           adminRequired: false,
           testType: 'public_access'
-        },
-        {
-          endpoint: '/api/products/create',
+        });
+      }
+      
+      if (!authTests.some(t => t.testType === 'authenticated_access')) {
+        authTests.push({
+          endpoint: '/api/user',
+          originalPath: '/api/user',
+          method: 'GET',
+          description: 'User endpoint requires authentication',
+          authRequired: true,
+          adminRequired: false,
+          testType: 'authenticated_access'
+        });
+      }
+      
+      if (!authTests.some(t => t.testType === 'admin_only')) {
+        authTests.push({
+          endpoint: '/api/products',
+          originalPath: '/api/products',
           method: 'POST',
           description: 'Product creation requires admin privileges',
           authRequired: true,
@@ -1020,19 +1212,10 @@ export function registerApiTestRoutes(app: Express): void {
             description: 'This is a test product that should not actually be created',
             price: 99.99
           }
-        },
-        {
-          endpoint: '/api/categories/create',
-          method: 'POST',
-          description: 'Category creation requires admin privileges',
-          authRequired: true,
-          adminRequired: true,
-          testType: 'admin_only',
-          requestBody: {
-            name: 'Test Category'
-          }
-        }
-      ];
+        });
+      }
+      
+      logger.info(`Created ${authTests.length} auth tests based on endpoint discovery`);
       
       // Execute the auth tests - we'll use the cookies from the current request for auth tests
       const cookies = req.headers.cookie;
@@ -1225,16 +1408,109 @@ export function registerApiTestRoutes(app: Express): void {
         logger.error('Failed to get CSRF token for error handling tests', { error });
       }
       
-      // Define error handling tests
-      const errorTests = [
-        {
+      // Discover all API endpoints for error testing
+      const discoveredEndpoints = discoverEndpoints(app);
+      
+      // Filter to only include /api endpoints and exclude test endpoints
+      const apiEndpoints = discoveredEndpoints
+        .filter(endpoint => 
+          endpoint.path.startsWith('/api') && 
+          !endpoint.path.includes('/api/api-test') &&
+          !endpoint.path.includes('/api/auth-test') &&
+          !endpoint.path.includes('/api/database-test')
+        );
+      
+      logger.info(`Discovered ${apiEndpoints.length} endpoints for error handling testing`);
+      
+      // Generate error tests dynamically
+      const errorTests: any[] = [];
+      
+      // 1. Test 404 errors for resource endpoints with IDs
+      // Look for GET endpoints with patterns like /api/resources/:id
+      const resourceEndpoints = apiEndpoints.filter(e => 
+        e.method === 'GET' && 
+        e.path.match(/\/api\/[^\/]+\/:[a-zA-Z0-9_]+$/)
+      );
+      
+      // Create 404 tests for resource endpoints (up to 5)
+      resourceEndpoints.slice(0, 5).forEach(endpoint => {
+        const basePath = endpoint.path.split('/:')[0];
+        errorTests.push({
+          endpoint: `${basePath}/999999`,
+          method: 'GET',
+          description: `Non-existent resource at ${basePath} returns 404`,
+          expectedStatus: 404,
+          expectStandardError: true
+        });
+      });
+      
+      // 2. Test validation errors for POST/PUT endpoints
+      // Look for POST endpoints that likely create resources
+      const createEndpoints = apiEndpoints.filter(e => 
+        e.method === 'POST' && 
+        !e.path.includes('/login') &&
+        !e.path.includes('/logout') &&
+        !e.path.includes('/auth')
+      );
+      
+      // Create validation error tests (up to 5)
+      createEndpoints.slice(0, 5).forEach(endpoint => {
+        let testBody = {};
+        
+        // Generate appropriate test body based on endpoint path
+        if (endpoint.path.includes('/product')) {
+          testBody = { price: "invalid" }; // Invalid price
+        } else if (endpoint.path.includes('/cart')) {
+          testBody = { productId: 999999, quantity: 0 }; // Invalid cart item
+        } else if (endpoint.path.includes('/categor')) {
+          testBody = { name: "" }; // Empty name
+        } else {
+          testBody = {}; // Empty body to trigger validation errors
+        }
+        
+        errorTests.push({
+          endpoint: endpoint.path,
+          method: 'POST',
+          description: `Invalid data for ${endpoint.path} returns validation error`,
+          requestBody: testBody,
+          expectedStatus: 400,
+          expectStandardError: true
+        });
+      });
+      
+      // 3. Test PUT endpoints for non-existent resources
+      const updateEndpoints = apiEndpoints.filter(e => 
+        e.method === 'PUT' && 
+        e.path.match(/\/api\/[^\/]+\/:[a-zA-Z0-9_]+$/)
+      );
+      
+      // Create error tests for update endpoints (up to 3)
+      updateEndpoints.slice(0, 3).forEach(endpoint => {
+        const basePath = endpoint.path.split('/:')[0];
+        errorTests.push({
+          endpoint: `${basePath}/999999`,
+          method: 'PUT',
+          description: `Updating non-existent resource at ${basePath} returns 404`,
+          requestBody: {
+            name: 'Updated Product'
+          },
+          expectedStatus: 404,
+          expectStandardError: true
+        });
+      });
+      
+      // Ensure we have at least some standard error tests
+      if (errorTests.length === 0) {
+        // Add default product error tests
+        errorTests.push({
           endpoint: '/api/products/999999',
           method: 'GET',
           description: 'Non-existent product ID returns 404',
           expectedStatus: 404,
           expectStandardError: true
-        },
-        {
+        });
+        
+        errorTests.push({
           endpoint: '/api/products',
           method: 'POST',
           description: 'Invalid product data returns 400',
@@ -1243,36 +1519,8 @@ export function registerApiTestRoutes(app: Express): void {
           },
           expectedStatus: 400,
           expectStandardError: true
-        },
-        {
-          endpoint: '/api/cart/add',
-          method: 'POST',
-          description: 'Adding invalid product to cart returns proper error',
-          requestBody: {
-            productId: 999999,
-            quantity: 1
-          },
-          expectedStatus: 400,
-          expectStandardError: true
-        },
-        {
-          endpoint: '/api/categories/999999',
-          method: 'GET',
-          description: 'Non-existent category returns 404',
-          expectedStatus: 404,
-          expectStandardError: true
-        },
-        {
-          endpoint: `/api/products/999999`,
-          method: 'PUT',
-          description: 'Updating non-existent product returns 404',
-          requestBody: {
-            name: 'Updated Product'
-          },
-          expectedStatus: 404,
-          expectStandardError: true
-        }
-      ];
+        });
+      }
       
       // Execute the error handling tests
       const testResults = await Promise.all(errorTests.map(async (test) => {
@@ -1393,39 +1641,164 @@ export function registerApiTestRoutes(app: Express): void {
         headers.Cookie = cookies;
       }
       
-      // Define performance tests with threshold expectations
-      const performanceTests = [
-        {
+      // Discover all API endpoints for performance testing
+      const discoveredEndpoints = discoverEndpoints(app);
+      
+      // Filter to only include /api endpoints and exclude test endpoints
+      const apiEndpoints = discoveredEndpoints
+        .filter(endpoint => 
+          endpoint.path.startsWith('/api') && 
+          !endpoint.path.includes('/api/api-test') &&
+          !endpoint.path.includes('/api/auth-test') &&
+          !endpoint.path.includes('/api/database-test') &&
+          endpoint.method === 'GET'  // Only test GET endpoints for performance
+        );
+      
+      logger.info(`Discovered ${apiEndpoints.length} GET endpoints for performance testing`);
+      
+      // Collect available resources for parameterized paths
+      const resourceMapping = await getResourceMapping();
+      
+      // Analyze paths to determine which ones we can actually test
+      const endpointsWithTestPaths = apiEndpoints.map(endpoint => {
+        function analyzePath(path: string): { 
+          canTest: boolean; 
+          testPath: string;
+          missingResources: string[];
+        } {
+          // Extract all parameters from the path
+          const paramRegex = /\/:([a-zA-Z0-9_]+)(?=\/|$)/g;
+          let match;
+          let missingResources: string[] = [];
+          let testPath = path;
+          
+          // Reset regex state
+          paramRegex.lastIndex = 0;
+          
+          // Find all required parameters
+          while ((match = paramRegex.exec(path)) !== null) {
+            const paramName = match[1];
+            
+            // Check if we have a resource for this parameter
+            const paramValue = resourceMapping[paramName];
+            if (paramValue === null) {
+              missingResources.push(paramName);
+            } else {
+              // Replace parameter in test path with actual value
+              const paramRegex = new RegExp(`\\/:${paramName}(?=\\/|$)`, 'g');
+              testPath = testPath.replace(paramRegex, `/${paramValue}`);
+            }
+          }
+          
+          return {
+            canTest: missingResources.length === 0,
+            testPath,
+            missingResources
+          };
+        }
+        
+        const pathAnalysis = analyzePath(endpoint.path);
+        
+        return {
+          ...endpoint,
+          testPath: pathAnalysis.testPath,
+          canTest: pathAnalysis.canTest,
+          missingResources: pathAnalysis.missingResources
+        };
+      });
+      
+      // Filter to endpoints we can actually test (no missing path parameters)
+      const testableEndpoints = endpointsWithTestPaths.filter(e => e.canTest);
+      
+      // Categorize endpoints for performance testing
+      // Primary endpoints (frequently accessed, higher priority)
+      const primaryPatterns = [
+        { pattern: /^\/api\/products\/?$/, name: 'Products list' },
+        { pattern: /^\/api\/categories\/?$/, name: 'Categories list' },
+        { pattern: /^\/api\/featured-products\/?$/, name: 'Featured products' },
+        { pattern: /^\/api\/recommendations\/?$/, name: 'Recommendations' },
+        { pattern: /^\/api\/user\/?$/, name: 'User profile' },
+        { pattern: /^\/api\/cart\/?$/, name: 'Shopping cart' }
+      ];
+      
+      // Secondary endpoints (individual resources, medium priority)
+      const secondaryPatterns = [
+        { pattern: /^\/api\/products\/\d+\/?$/, name: 'Single product' },
+        { pattern: /^\/api\/categories\/\d+\/?$/, name: 'Single category' },
+        { pattern: /^\/api\/orders\/\d+\/?$/, name: 'Order details' }
+      ];
+      
+      // Create performance tests with appropriate thresholds
+      const performanceTests: any[] = [];
+      
+      // Add primary endpoints (expect faster response times)
+      for (const pattern of primaryPatterns) {
+        const matchingEndpoints = testableEndpoints.filter(e => pattern.pattern.test(e.path));
+        if (matchingEndpoints.length > 0) {
+          // Take the first matching endpoint
+          const endpoint = matchingEndpoints[0];
+          performanceTests.push({
+            endpoint: endpoint.testPath,
+            originalPath: endpoint.path,
+            method: 'GET',
+            description: `${pattern.name} loads quickly`,
+            expectedMaxTime: 300 // ms - somewhat strict threshold for important endpoints
+          });
+        }
+      }
+      
+      // Add secondary endpoints (can be slightly slower)
+      for (const pattern of secondaryPatterns) {
+        const matchingEndpoints = testableEndpoints.filter(e => pattern.pattern.test(e.path));
+        if (matchingEndpoints.length > 0) {
+          // Take the first matching endpoint
+          const endpoint = matchingEndpoints[0];
+          performanceTests.push({
+            endpoint: endpoint.testPath,
+            originalPath: endpoint.path,
+            method: 'GET',
+            description: `${pattern.name} loads quickly`,
+            expectedMaxTime: 200 // ms
+          });
+        }
+      }
+      
+      // Add other testable endpoints (with more lenient thresholds)
+      // Limit to 5 additional endpoints to keep the test reasonably short
+      const remainingEndpoints = testableEndpoints.filter(e => 
+        !performanceTests.some(t => t.originalPath === e.path)
+      ).slice(0, 5);
+      
+      remainingEndpoints.forEach(endpoint => {
+        const endpointName = endpoint.path.split('/').filter(Boolean).slice(-1)[0] || 'API endpoint';
+        performanceTests.push({
+          endpoint: endpoint.testPath,
+          originalPath: endpoint.path,
+          method: 'GET',
+          description: `${endpointName} endpoint loads quickly`,
+          expectedMaxTime: 500 // ms - more lenient threshold for other endpoints
+        });
+      });
+      
+      // Make sure we have at least some standard performance tests
+      if (performanceTests.length === 0) {
+        // Add default product performance tests
+        performanceTests.push({
           endpoint: '/api/products',
           method: 'GET',
           description: 'Products list loads quickly',
           expectedMaxTime: 300 // ms
-        },
-        {
+        });
+        
+        performanceTests.push({
           endpoint: '/api/categories',
           method: 'GET',
           description: 'Categories list loads quickly',
           expectedMaxTime: 200 // ms
-        },
-        {
-          endpoint: '/api/products/1',
-          method: 'GET',
-          description: 'Single product details load quickly',
-          expectedMaxTime: 200 // ms
-        },
-        {
-          endpoint: '/api/featured-products',
-          method: 'GET',
-          description: 'Featured products load quickly',
-          expectedMaxTime: 300 // ms
-        },
-        {
-          endpoint: '/api/categories/main/with-children',
-          method: 'GET',
-          description: 'Category hierarchy loads quickly',
-          expectedMaxTime: 300 // ms
-        }
-      ];
+        });
+      }
+      
+      logger.info(`Created ${performanceTests.length} performance tests based on endpoint discovery`);
       
       // Helper function to measure response time
       async function measureResponseTime(endpoint: string, method: string) {
