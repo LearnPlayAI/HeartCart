@@ -65,25 +65,46 @@ const loginLimiter = rateLimit({
 
 // No longer using CSRF protection
 
+/**
+ * Get session secret, ensuring it's available and secure
+ * @returns {string} The session secret to use
+ */
 function getSessionSecret(): string {
-  // In production, this should be an environment variable
-  return process.env.SESSION_SECRET || 'temusa-session-secret-dev-only';
+  const secret = process.env.SESSION_SECRET || 'temusa-session-secret-dev-only';
+  
+  // In production, require a properly set session secret
+  if (process.env.NODE_ENV === 'production' && !process.env.SESSION_SECRET) {
+    logger.error('SESSION_SECRET environment variable not set in production mode');
+    throw new Error('SESSION_SECRET environment variable is required in production');
+  }
+  
+  return secret;
 }
 
+/**
+ * Setup authentication and session management for the Express application
+ * @param {Express} app - The Express application
+ */
 export function setupAuth(app: Express): void {
+  // Configure session settings with improved security
   const sessionSettings: session.SessionOptions = {
     secret: getSessionSecret(),
     resave: false,
     saveUninitialized: false,
+    name: 'tmy_session', // Custom name to avoid using default 'connect.sid'
     cookie: {
-      secure: process.env.NODE_ENV === "production",
-      httpOnly: true,
+      secure: process.env.NODE_ENV === "production", // Require HTTPS in production
+      httpOnly: true, // Prevent client-side JS from accessing the cookie
+      sameSite: 'lax', // Provides some CSRF protection
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      path: '/', // Restrict cookie to root path
     },
     store: new PostgresSessionStore({
       pool,
       tableName: 'session',
-      createTableIfMissing: true
+      createTableIfMissing: true,
+      // Cleanup expired sessions periodically
+      pruneSessionInterval: 60, // Check for expired sessions every minute
     })
   };
 
