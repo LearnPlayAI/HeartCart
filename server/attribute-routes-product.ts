@@ -93,135 +93,652 @@ export default function registerProductAttributeRoutes(app: Express) {
   );
 
   // Category Attribute Routes
-  app.get("/api/categories/:categoryId/attributes", handleErrors(async (req: Request, res: Response) => {
-    const categoryId = parseInt(req.params.categoryId);
-    if (isNaN(categoryId)) {
-      return sendError(res, "Invalid category ID", 400, "INVALID_ID");
-    }
+  app.get("/api/categories/:categoryId/attributes", 
+    validateRequest({
+      params: z.object({
+        categoryId: z.string().refine(val => !isNaN(parseInt(val)), { message: "Category ID must be a number" })
+      })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const categoryId = parseInt(req.params.categoryId);
+        
+        // Verify that the category exists
+        const category = await storage.getCategoryById(categoryId);
+        if (!category) {
+          throw new NotFoundError(`Category with ID ${categoryId} not found`, 'category');
+        }
+        
+        const attributes = await storage.getCategoryAttributes(categoryId);
+        
+        logger.debug(`Retrieved ${attributes.length} attributes for category ID ${categoryId}`);
+        
+        sendSuccess(res, attributes);
+      } catch (error) {
+        logger.error('Error fetching category attributes:', { 
+          error, 
+          categoryId: req.params.categoryId,
+          userId: req.user?.id
+        });
+        throw error;
+      }
+    })
+  );
 
-    const attributes = await storage.getCategoryAttributes(categoryId);
-    sendSuccess(res, attributes);
-  }));
+  app.post("/api/categories/:categoryId/attributes", 
+    isAdmin,
+    validateRequest({
+      params: z.object({
+        categoryId: z.string().refine(val => !isNaN(parseInt(val)), { message: "Category ID must be a number" })
+      }),
+      body: insertCategoryAttributeSchema.omit({ categoryId: true })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const categoryId = parseInt(req.params.categoryId);
+        
+        // Verify that the category exists
+        const category = await storage.getCategoryById(categoryId);
+        if (!category) {
+          throw new NotFoundError(`Category with ID ${categoryId} not found`, 'category');
+        }
+        
+        // Verify that the attribute exists if attributeId is provided
+        if (req.body.attributeId) {
+          const attribute = await storage.getAttributeById(req.body.attributeId);
+          if (!attribute) {
+            throw new NotFoundError(`Attribute with ID ${req.body.attributeId} not found`, 'attribute');
+          }
+        }
+        
+        // Check if this attribute is already associated with the category
+        if (req.body.attributeId) {
+          const existingAttributes = await storage.getCategoryAttributes(categoryId);
+          const alreadyExists = existingAttributes.some(attr => attr.attributeId === req.body.attributeId);
+          
+          if (alreadyExists) {
+            throw new AppError(
+              `Attribute with ID ${req.body.attributeId} is already associated with category ${categoryId}`,
+              ErrorCode.DUPLICATE_ENTITY,
+              409
+            );
+          }
+        }
+        
+        const attributeData = {
+          ...req.body,
+          categoryId
+        };
+        
+        const newAttribute = await storage.createCategoryAttribute(attributeData);
+        
+        logger.info(`Category attribute created`, {
+          categoryId,
+          attributeId: req.body.attributeId,
+          categoryAttributeId: newAttribute.id,
+          userId: req.user?.id
+        });
+        
+        sendSuccess(res, newAttribute, 201);
+      } catch (error) {
+        logger.error('Error creating category attribute:', { 
+          error, 
+          categoryId: req.params.categoryId,
+          attributeData: req.body,
+          userId: req.user?.id 
+        });
+        throw error;
+      }
+    })
+  );
 
-  app.post("/api/categories/:categoryId/attributes", isAdmin, handleErrors(async (req: Request, res: Response) => {
-    const categoryId = parseInt(req.params.categoryId);
-    if (isNaN(categoryId)) {
-      return sendError(res, "Invalid category ID", 400, "INVALID_ID");
-    }
+  app.put("/api/categories/:categoryId/attributes/:id", 
+    isAdmin,
+    validateRequest({
+      params: z.object({
+        categoryId: z.string().refine(val => !isNaN(parseInt(val)), { message: "Category ID must be a number" }),
+        id: z.string().refine(val => !isNaN(parseInt(val)), { message: "Attribute ID must be a number" })
+      }),
+      body: insertCategoryAttributeSchema.partial()
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const id = parseInt(req.params.id);
+        const categoryId = parseInt(req.params.categoryId);
+        
+        // Verify that the category exists
+        const category = await storage.getCategoryById(categoryId);
+        if (!category) {
+          throw new NotFoundError(`Category with ID ${categoryId} not found`, 'category');
+        }
+        
+        // Verify that the category attribute exists
+        const existingAttribute = await storage.getCategoryAttributeById(id);
+        if (!existingAttribute) {
+          throw new NotFoundError(`Category attribute with ID ${id} not found`, 'category_attribute');
+        }
+        
+        // Verify that the attribute belongs to the specified category
+        if (existingAttribute.categoryId !== categoryId) {
+          throw new ForbiddenError(`Category attribute with ID ${id} does not belong to category with ID ${categoryId}`);
+        }
+        
+        // If attributeId is being updated, verify that the new attribute exists
+        if (req.body.attributeId) {
+          const attribute = await storage.getAttributeById(req.body.attributeId);
+          if (!attribute) {
+            throw new NotFoundError(`Attribute with ID ${req.body.attributeId} not found`, 'attribute');
+          }
+          
+          // Check that the new attribute isn't already associated with this category
+          if (req.body.attributeId !== existingAttribute.attributeId) {
+            const existingAttributes = await storage.getCategoryAttributes(categoryId);
+            const alreadyExists = existingAttributes.some(attr => 
+              attr.id !== id && attr.attributeId === req.body.attributeId
+            );
+            
+            if (alreadyExists) {
+              throw new AppError(
+                `Attribute with ID ${req.body.attributeId} is already associated with category ${categoryId}`,
+                ErrorCode.DUPLICATE_ENTITY,
+                409
+              );
+            }
+          }
+        }
+        
+        const attributeData = req.body;
+        const updatedAttribute = await storage.updateCategoryAttribute(id, attributeData);
+        
+        if (!updatedAttribute) {
+          throw new AppError(
+            `Failed to update category attribute with ID ${id}`,
+            ErrorCode.OPERATION_FAILED,
+            500
+          );
+        }
+        
+        logger.info(`Category attribute updated`, {
+          categoryId,
+          categoryAttributeId: id,
+          changes: req.body,
+          userId: req.user?.id
+        });
+        
+        sendSuccess(res, updatedAttribute);
+      } catch (error) {
+        logger.error('Error updating category attribute:', { 
+          error, 
+          categoryId: req.params.categoryId,
+          attributeId: req.params.id,
+          body: req.body,
+          userId: req.user?.id
+        });
+        throw error;
+      }
+    })
+  );
 
-    const attributeData = insertCategoryAttributeSchema.parse({
-      ...req.body,
-      categoryId
-    });
-    
-    const newAttribute = await storage.createCategoryAttribute(attributeData);
-    sendSuccess(res, newAttribute, 201);
-  }));
-
-  app.put("/api/categories/:categoryId/attributes/:id", isAdmin, handleErrors(async (req: Request, res: Response) => {
-    const id = parseInt(req.params.id);
-    if (isNaN(id)) {
-      return sendError(res, "Invalid attribute ID", 400, "INVALID_ID");
-    }
-
-    const attributeData = insertCategoryAttributeSchema.partial().parse(req.body);
-    const updatedAttribute = await storage.updateCategoryAttribute(id, attributeData);
-    
-    if (!updatedAttribute) {
-      return sendError(res, "Category attribute not found", 404, "NOT_FOUND");
-    }
-    
-    sendSuccess(res, updatedAttribute);
-  }));
-
-  app.delete("/api/categories/:categoryId/attributes/:id", isAdmin, handleErrors(async (req: Request, res: Response) => {
-    const id = parseInt(req.params.id);
-    if (isNaN(id)) {
-      return sendError(res, "Invalid attribute ID", 400, "INVALID_ID");
-    }
-
-    const success = await storage.deleteCategoryAttribute(id);
-    if (!success) {
-      return sendError(res, "Category attribute not found or could not be deleted", 404, "NOT_FOUND");
-    }
-    
-    sendSuccess(res, null, 204);
-  }));
+  app.delete("/api/categories/:categoryId/attributes/:id", 
+    isAdmin,
+    validateRequest({
+      params: z.object({
+        categoryId: z.string().refine(val => !isNaN(parseInt(val)), { message: "Category ID must be a number" }),
+        id: z.string().refine(val => !isNaN(parseInt(val)), { message: "Attribute ID must be a number" })
+      })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const id = parseInt(req.params.id);
+        const categoryId = parseInt(req.params.categoryId);
+        
+        // Verify that the category exists
+        const category = await storage.getCategoryById(categoryId);
+        if (!category) {
+          throw new NotFoundError(`Category with ID ${categoryId} not found`, 'category');
+        }
+        
+        // Verify that the category attribute exists
+        const existingAttribute = await storage.getCategoryAttributeById(id);
+        if (!existingAttribute) {
+          throw new NotFoundError(`Category attribute with ID ${id} not found`, 'category_attribute');
+        }
+        
+        // Verify that the attribute belongs to the specified category
+        if (existingAttribute.categoryId !== categoryId) {
+          throw new ForbiddenError(`Category attribute with ID ${id} does not belong to category with ID ${categoryId}`);
+        }
+        
+        // Check for dependent resources (options, values, etc.)
+        const options = await storage.getCategoryAttributeOptions(id);
+        if (options.length > 0) {
+          // We could automatically delete the options, but here we'll require manual deletion first
+          throw new AppError(
+            `Cannot delete category attribute with ID ${id} because it has ${options.length} options. Delete them first.`,
+            ErrorCode.DEPENDENT_RESOURCES_EXIST,
+            409
+          );
+        }
+        
+        const success = await storage.deleteCategoryAttribute(id);
+        if (!success) {
+          throw new AppError(
+            `Failed to delete category attribute with ID ${id}`,
+            ErrorCode.OPERATION_FAILED,
+            500
+          );
+        }
+        
+        logger.info(`Category attribute deleted`, {
+          categoryId,
+          categoryAttributeId: id,
+          userId: req.user?.id
+        });
+        
+        sendSuccess(res, null, 204);
+      } catch (error) {
+        logger.error('Error deleting category attribute:', { 
+          error, 
+          categoryId: req.params.categoryId,
+          attributeId: req.params.id,
+          userId: req.user?.id
+        });
+        throw error;
+      }
+    })
+  );
 
   // Category Attribute Options Routes
-  app.get("/api/categories/:categoryId/attributes/:attributeId/options", handleErrors(async (req: Request, res: Response) => {
-    const attributeId = parseInt(req.params.attributeId);
-    if (isNaN(attributeId)) {
-      return sendError(res, "Invalid attribute ID", 400, "INVALID_ID");
-    }
+  app.get("/api/categories/:categoryId/attributes/:attributeId/options", 
+    validateRequest({
+      params: z.object({
+        categoryId: z.string().refine(val => !isNaN(parseInt(val)), { message: "Category ID must be a number" }),
+        attributeId: z.string().refine(val => !isNaN(parseInt(val)), { message: "Attribute ID must be a number" })
+      })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const attributeId = parseInt(req.params.attributeId);
+        const categoryId = parseInt(req.params.categoryId);
+        
+        // Verify that the category exists
+        const category = await storage.getCategoryById(categoryId);
+        if (!category) {
+          throw new NotFoundError(`Category with ID ${categoryId} not found`, 'category');
+        }
+        
+        // Verify that the category attribute exists
+        const categoryAttribute = await storage.getCategoryAttributeById(attributeId);
+        if (!categoryAttribute) {
+          throw new NotFoundError(`Category attribute with ID ${attributeId} not found`, 'category_attribute');
+        }
+        
+        // Verify that the attribute belongs to the specified category
+        if (categoryAttribute.categoryId !== categoryId) {
+          throw new ForbiddenError(`Category attribute with ID ${attributeId} does not belong to category with ID ${categoryId}`);
+        }
+        
+        const options = await storage.getCategoryAttributeOptions(attributeId);
+        
+        logger.debug(`Retrieved ${options.length} options for category attribute ID ${attributeId}`, {
+          categoryId,
+          attributeId
+        });
+        
+        sendSuccess(res, options);
+      } catch (error) {
+        logger.error('Error fetching category attribute options:', { 
+          error, 
+          categoryId: req.params.categoryId,
+          attributeId: req.params.attributeId,
+          userId: req.user?.id
+        });
+        throw error;
+      }
+    })
+  );
 
-    const options = await storage.getCategoryAttributeOptions(attributeId);
-    sendSuccess(res, options);
-  }));
+  app.post("/api/categories/:categoryId/attributes/:attributeId/options", 
+    isAdmin,
+    validateRequest({
+      params: z.object({
+        categoryId: z.string().refine(val => !isNaN(parseInt(val)), { message: "Category ID must be a number" }),
+        attributeId: z.string().refine(val => !isNaN(parseInt(val)), { message: "Attribute ID must be a number" })
+      }),
+      body: insertCategoryAttributeOptionSchema.omit({ categoryAttributeId: true })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const attributeId = parseInt(req.params.attributeId);
+        const categoryId = parseInt(req.params.categoryId);
+        
+        // Verify that the category exists
+        const category = await storage.getCategoryById(categoryId);
+        if (!category) {
+          throw new NotFoundError(`Category with ID ${categoryId} not found`, 'category');
+        }
+        
+        // Verify that the category attribute exists
+        const categoryAttribute = await storage.getCategoryAttributeById(attributeId);
+        if (!categoryAttribute) {
+          throw new NotFoundError(`Category attribute with ID ${attributeId} not found`, 'category_attribute');
+        }
+        
+        // Verify that the attribute belongs to the specified category
+        if (categoryAttribute.categoryId !== categoryId) {
+          throw new ForbiddenError(`Category attribute with ID ${attributeId} does not belong to category with ID ${categoryId}`);
+        }
+        
+        // Validate option data
+        // Check if an option with the same value already exists
+        if (req.body.value) {
+          const existingOptions = await storage.getCategoryAttributeOptions(attributeId);
+          const duplicateOption = existingOptions.find(option => 
+            option.value.toLowerCase() === req.body.value.toLowerCase()
+          );
+          
+          if (duplicateOption) {
+            throw new AppError(
+              `An option with value "${req.body.value}" already exists for this attribute`,
+              ErrorCode.DUPLICATE_ENTITY,
+              409
+            );
+          }
+        }
+        
+        const optionData = {
+          ...req.body,
+          categoryAttributeId: attributeId
+        };
+        
+        const newOption = await storage.createCategoryAttributeOption(optionData);
+        
+        logger.info(`Category attribute option created`, {
+          categoryId,
+          attributeId,
+          optionId: newOption.id,
+          value: newOption.value,
+          userId: req.user?.id
+        });
+        
+        sendSuccess(res, newOption, 201);
+      } catch (error) {
+        logger.error('Error creating category attribute option:', { 
+          error, 
+          categoryId: req.params.categoryId,
+          attributeId: req.params.attributeId,
+          optionData: req.body,
+          userId: req.user?.id
+        });
+        throw error;
+      }
+    })
+  );
 
-  app.post("/api/categories/:categoryId/attributes/:attributeId/options", isAdmin, handleErrors(async (req: Request, res: Response) => {
-    const attributeId = parseInt(req.params.attributeId);
-    if (isNaN(attributeId)) {
-      return sendError(res, "Invalid attribute ID", 400, "INVALID_ID");
-    }
+  app.put("/api/categories/:categoryId/attributes/:attributeId/options/:id", 
+    isAdmin, 
+    validateRequest({
+      params: z.object({
+        categoryId: z.string().refine(val => !isNaN(parseInt(val)), { message: "Category ID must be a number" }),
+        attributeId: z.string().refine(val => !isNaN(parseInt(val)), { message: "Attribute ID must be a number" }),
+        id: z.string().refine(val => !isNaN(parseInt(val)), { message: "Option ID must be a number" })
+      }),
+      body: insertCategoryAttributeOptionSchema.partial()
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const id = parseInt(req.params.id);
+        const attributeId = parseInt(req.params.attributeId);
+        const categoryId = parseInt(req.params.categoryId);
+        
+        // Verify that the category exists
+        const category = await storage.getCategoryById(categoryId);
+        if (!category) {
+          throw new NotFoundError(`Category with ID ${categoryId} not found`, 'category');
+        }
+        
+        // Verify that the category attribute exists
+        const categoryAttribute = await storage.getCategoryAttributeById(attributeId);
+        if (!categoryAttribute) {
+          throw new NotFoundError(`Category attribute with ID ${attributeId} not found`, 'category_attribute');
+        }
+        
+        // Verify that the attribute belongs to the specified category
+        if (categoryAttribute.categoryId !== categoryId) {
+          throw new ForbiddenError(`Category attribute with ID ${attributeId} does not belong to category with ID ${categoryId}`);
+        }
+        
+        // Verify that the option exists
+        const existingOption = await storage.getCategoryAttributeOptionById(id);
+        if (!existingOption) {
+          throw new NotFoundError(`Option with ID ${id} not found`, 'attribute_option');
+        }
+        
+        // Verify that the option belongs to the specified attribute
+        if (existingOption.categoryAttributeId !== attributeId) {
+          throw new ForbiddenError(`Option with ID ${id} does not belong to attribute with ID ${attributeId}`);
+        }
+        
+        // If updating value, check for duplication
+        if (req.body.value) {
+          const existingOptions = await storage.getCategoryAttributeOptions(attributeId);
+          const duplicateOption = existingOptions.find(option => 
+            option.id !== id && 
+            option.value.toLowerCase() === req.body.value.toLowerCase()
+          );
+          
+          if (duplicateOption) {
+            throw new AppError(
+              `An option with value "${req.body.value}" already exists for this attribute`,
+              ErrorCode.DUPLICATE_ENTITY,
+              409
+            );
+          }
+        }
+        
+        const optionData = req.body;
+        const updatedOption = await storage.updateCategoryAttributeOption(id, optionData);
+        
+        if (!updatedOption) {
+          throw new AppError(
+            `Failed to update option with ID ${id}`,
+            ErrorCode.OPERATION_FAILED,
+            500
+          );
+        }
+        
+        logger.info(`Category attribute option updated`, {
+          categoryId,
+          attributeId,
+          optionId: id,
+          updates: Object.keys(optionData),
+          userId: req.user?.id
+        });
+        
+        sendSuccess(res, updatedOption);
+      } catch (error) {
+        logger.error('Error updating category attribute option:', { 
+          error, 
+          categoryId: req.params.categoryId,
+          attributeId: req.params.attributeId,
+          optionId: req.params.id,
+          optionData: req.body,
+          userId: req.user?.id
+        });
+        throw error;
+      }
+    })
+  );
 
-    const optionData = insertCategoryAttributeOptionSchema.parse({
-      ...req.body,
-      categoryAttributeId: attributeId
-    });
-    
-    const newOption = await storage.createCategoryAttributeOption(optionData);
-    sendSuccess(res, newOption, 201);
-  }));
+  app.delete("/api/categories/:categoryId/attributes/:attributeId/options/:id", 
+    isAdmin,
+    validateRequest({
+      params: z.object({
+        categoryId: z.string().refine(val => !isNaN(parseInt(val)), { message: "Category ID must be a number" }),
+        attributeId: z.string().refine(val => !isNaN(parseInt(val)), { message: "Attribute ID must be a number" }),
+        id: z.string().refine(val => !isNaN(parseInt(val)), { message: "Option ID must be a number" })
+      })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const id = parseInt(req.params.id);
+        const attributeId = parseInt(req.params.attributeId);
+        const categoryId = parseInt(req.params.categoryId);
+        
+        // Verify that the category exists
+        const category = await storage.getCategoryById(categoryId);
+        if (!category) {
+          throw new NotFoundError(`Category with ID ${categoryId} not found`, 'category');
+        }
+        
+        // Verify that the category attribute exists
+        const categoryAttribute = await storage.getCategoryAttributeById(attributeId);
+        if (!categoryAttribute) {
+          throw new NotFoundError(`Category attribute with ID ${attributeId} not found`, 'category_attribute');
+        }
+        
+        // Verify that the attribute belongs to the specified category
+        if (categoryAttribute.categoryId !== categoryId) {
+          throw new ForbiddenError(`Category attribute with ID ${attributeId} does not belong to category with ID ${categoryId}`);
+        }
+        
+        // Verify that the option exists
+        const existingOption = await storage.getCategoryAttributeOptionById(id);
+        if (!existingOption) {
+          throw new NotFoundError(`Option with ID ${id} not found`, 'attribute_option');
+        }
+        
+        // Verify that the option belongs to the specified attribute
+        if (existingOption.categoryAttributeId !== attributeId) {
+          throw new ForbiddenError(`Option with ID ${id} does not belong to attribute with ID ${attributeId}`);
+        }
+        
+        // Check if the option is being used in any products
+        // This would depend on your data model - here we're assuming there might be product attributes
+        // using category attribute options
+        try {
+          const productAttributes = await storage.getProductAttributeValuesByCategoryOptionId(id);
+          if (productAttributes && productAttributes.length > 0) {
+            throw new AppError(
+              `Cannot delete option with ID ${id} because it is used by ${productAttributes.length} products`,
+              ErrorCode.ENTITY_IN_USE,
+              409
+            );
+          }
+        } catch (err) {
+          // If the method doesn't exist, we can ignore this check
+          logger.warn(`Could not check product attribute values for category option ID ${id}`, { error: err });
+        }
+        
+        const success = await storage.deleteCategoryAttributeOption(id);
+        if (!success) {
+          throw new AppError(
+            `Failed to delete option with ID ${id}`,
+            ErrorCode.OPERATION_FAILED,
+            500
+          );
+        }
+        
+        logger.info(`Category attribute option deleted`, {
+          categoryId,
+          attributeId,
+          optionId: id,
+          userId: req.user?.id
+        });
+        
+        sendSuccess(res, null, 204);
+      } catch (error) {
+        logger.error('Error deleting category attribute option:', { 
+          error, 
+          categoryId: req.params.categoryId,
+          attributeId: req.params.attributeId,
+          optionId: req.params.id,
+          userId: req.user?.id
+        });
+        throw error;
+      }
+    })
+  );
 
-  app.put("/api/categories/:categoryId/attributes/:attributeId/options/:id", isAdmin, handleErrors(async (req: Request, res: Response) => {
-    const id = parseInt(req.params.id);
-    if (isNaN(id)) {
-      return sendError(res, "Invalid option ID", 400, "INVALID_ID");
-    }
-
-    const optionData = insertCategoryAttributeOptionSchema.partial().parse(req.body);
-    const updatedOption = await storage.updateCategoryAttributeOption(id, optionData);
-    
-    if (!updatedOption) {
-      return sendError(res, "Option not found", 404, "NOT_FOUND");
-    }
-    
-    sendSuccess(res, updatedOption);
-  }));
-
-  app.delete("/api/categories/:categoryId/attributes/:attributeId/options/:id", isAdmin, handleErrors(async (req: Request, res: Response) => {
-    const id = parseInt(req.params.id);
-    if (isNaN(id)) {
-      return sendError(res, "Invalid option ID", 400, "INVALID_ID");
-    }
-
-    const success = await storage.deleteCategoryAttributeOption(id);
-    if (!success) {
-      return sendError(res, "Option not found or could not be deleted", 404, "NOT_FOUND");
-    }
-    
-    sendSuccess(res, null, 204);
-  }));
-
-  app.post("/api/categories/:categoryId/attributes/:attributeId/options/reorder", isAdmin, handleErrors(async (req: Request, res: Response) => {
-    const attributeId = parseInt(req.params.attributeId);
-    if (isNaN(attributeId)) {
-      return sendError(res, "Invalid attribute ID", 400, "INVALID_ID");
-    }
-
-    const { optionIds } = req.body;
-    if (!Array.isArray(optionIds)) {
-      return sendError(res, "optionIds must be an array of IDs", 400, "INVALID_DATA");
-    }
-
-    const success = await storage.updateCategoryAttributeOptionsOrder(attributeId, optionIds);
-    if (!success) {
-      return sendError(res, "Failed to update options order", 500, "OPERATION_FAILED");
-    }
-    
-    sendSuccess(res, { message: "Options reordered successfully" });
-  }));
+  app.post("/api/categories/:categoryId/attributes/:attributeId/options/reorder", 
+    isAdmin,
+    validateRequest({
+      params: z.object({
+        categoryId: z.string().refine(val => !isNaN(parseInt(val)), { message: "Category ID must be a number" }),
+        attributeId: z.string().refine(val => !isNaN(parseInt(val)), { message: "Attribute ID must be a number" })
+      }),
+      body: z.object({
+        optionIds: z.array(z.number())
+      })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const attributeId = parseInt(req.params.attributeId);
+        const categoryId = parseInt(req.params.categoryId);
+        const { optionIds } = req.body;
+        
+        // Verify that the category exists
+        const category = await storage.getCategoryById(categoryId);
+        if (!category) {
+          throw new NotFoundError(`Category with ID ${categoryId} not found`, 'category');
+        }
+        
+        // Verify that the category attribute exists
+        const categoryAttribute = await storage.getCategoryAttributeById(attributeId);
+        if (!categoryAttribute) {
+          throw new NotFoundError(`Category attribute with ID ${attributeId} not found`, 'category_attribute');
+        }
+        
+        // Verify that the attribute belongs to the specified category
+        if (categoryAttribute.categoryId !== categoryId) {
+          throw new ForbiddenError(`Category attribute with ID ${attributeId} does not belong to category with ID ${categoryId}`);
+        }
+        
+        // Get all options to verify that the provided IDs actually exist
+        const existingOptions = await storage.getCategoryAttributeOptions(attributeId);
+        const existingIds = new Set(existingOptions.map(option => option.id));
+        
+        // Check if all optionIds exist
+        const nonExistentIds = optionIds.filter(id => !existingIds.has(id));
+        if (nonExistentIds.length > 0) {
+          throw new BadRequestError(`The following option IDs do not exist for this attribute: ${nonExistentIds.join(', ')}`);
+        }
+        
+        // Check if all existing options are included in the reordering
+        const missingIds = [...existingIds].filter(id => !optionIds.includes(id));
+        if (missingIds.length > 0) {
+          throw new BadRequestError(`Not all existing options are included in the reorder request. Missing IDs: ${missingIds.join(', ')}`);
+        }
+        
+        const success = await storage.updateCategoryAttributeOptionsOrder(attributeId, optionIds);
+        if (!success) {
+          throw new AppError(
+            `Failed to update options order for attribute ID ${attributeId}`,
+            ErrorCode.OPERATION_FAILED,
+            500
+          );
+        }
+        
+        logger.info(`Category attribute options reordered`, {
+          categoryId,
+          attributeId,
+          optionIds,
+          userId: req.user?.id
+        });
+        
+        sendSuccess(res, { message: "Options reordered successfully" });
+      } catch (error) {
+        logger.error('Error reordering category attribute options:', { 
+          error, 
+          categoryId: req.params.categoryId,
+          attributeId: req.params.attributeId,
+          optionIds: req.body.optionIds,
+          userId: req.user?.id
+        });
+        throw error;
+      }
+    })
+  );
 
   // Product Attribute Routes
   app.get("/api/products/:productId/attributes", 
