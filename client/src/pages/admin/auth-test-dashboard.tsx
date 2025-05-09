@@ -292,7 +292,7 @@ function AuthTestDashboard() {
                       ) : localTestData?.data.details.session.sessionStoreAvailable ? (
                         <Badge variant="default">Connected</Badge>
                       ) : (
-                        <Badge variant="warning">Not Available</Badge>
+                        <Badge variant="outline" className="text-amber-500 border-amber-500">Not Available</Badge>
                       )}
                     </div>
                     
