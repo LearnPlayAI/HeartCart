@@ -113,10 +113,10 @@ function AuthTestsPage() {
   const runAllTestsMutation = useMutation({
     mutationFn: async () => {
       await Promise.all([
-        apiRequest('GET', '/api/auth-test/validate-password'),
-        apiRequest('GET', '/api/auth-test/validate-credentials'),
-        apiRequest('GET', '/api/auth-test/session-persistence'),
-        apiRequest('GET', '/api/auth-test/system-tests'),
+        apiRequest('POST', '/api/auth-test/validate-password'),
+        apiRequest('POST', '/api/auth-test/validate-credentials'),
+        apiRequest('POST', '/api/auth-test/session-persistence'),
+        apiRequest('POST', '/api/auth-test/system-tests'),
       ]);
       return { success: true };
     },
