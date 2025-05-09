@@ -114,12 +114,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   };
 
-  // Authentication middleware (disabled)
-  // This middleware has been disabled to allow open access
-  const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
-    // Always proceed to the next middleware regardless of authentication status
-    next();
-  };
+  // NOTE: Authentication middleware is imported from auth-middleware.ts
+  // The proper isAuthenticated and isAdmin functions should be used throughout the application
+  // DO NOT override these functions locally as it breaks authentication across the system
 
   // CATEGORY ROUTES
   app.get("/api/categories", withStandardResponse(async (req: Request, res: Response) => {

@@ -137,16 +137,31 @@ export function setupAuth(app: Express): void {
       },
       async (email, password, done) => {
         try {
+          // Check for empty credentials first
+          if (!email || !password || email.trim() === '' || password.trim() === '') {
+            logger.warn('Authentication attempt with empty credentials', { 
+              emailEmpty: !email || email.trim() === '',
+              passwordEmpty: !password || password.trim() === ''
+            });
+            return done(null, false, { message: "Email and password are required" });
+          }
+
           const user = await storage.getUserByEmail(email);
           if (!user) {
+            logger.info('Failed login attempt: user not found', { email });
             return done(null, false, { message: "Invalid email or password" });
           }
 
           const isValid = await comparePasswords(password, user.password);
           if (!isValid) {
+            logger.info('Failed login attempt: invalid password', { email });
             return done(null, false, { message: "Invalid email or password" });
           }
 
+          // Update last login time
+          await storage.updateUser(user.id, { lastLogin: new Date() });
+          logger.info('Successful login', { userId: user.id, email });
+          
           return done(null, user as Express.User);
         } catch (error) {
           return done(error);

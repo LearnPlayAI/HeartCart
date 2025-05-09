@@ -87,6 +87,14 @@ export async function validateCredentials(email: string, password: string): Prom
   error?: string;
 }> {
   try {
+    // Check for empty credentials
+    if (!email || !password || email.trim() === '' || password.trim() === '') {
+      return {
+        valid: false,
+        error: "Email and password are required"
+      };
+    }
+    
     // Find user by email
     const user = await storage.getUserByEmail(email);
     
