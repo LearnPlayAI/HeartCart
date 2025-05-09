@@ -16,23 +16,43 @@ import {
   insertProductAttributeOptionSchema,
   insertProductAttributeValueSchema
 } from "@shared/schema";
+import { 
+  AppError, 
+  ErrorCode, 
+  NotFoundError,
+  ValidationError,
+  BadRequestError,
+  DatabaseError,
+  asyncHandler,
+  formatZodError 
+} from "./error-handler";
+import { validateRequest } from "./validation-middleware";
 
 /**
  * Register all attribute-related routes
  */
 export default function registerAttributeRoutes(app: Express) {
-  const handleErrors = (fn: Function) => async (req: Request, res: Response) => {
+  // Use asyncHandler instead of custom handleErrors function
+  const handleErrors = (fn: Function) => asyncHandler(async (req: Request, res: Response) => {
     try {
       await fn(req, res);
     } catch (error) {
       if (error instanceof ZodError) {
-        sendError(res, "Validation error", 400, "VALIDATION_ERROR", error.errors);
-        return;
+        throw new ValidationError("Validation error", formatZodError(error));
       }
-      logger.error("Error in attribute route:", error);
-      sendError(res, "Internal server error", 500, "INTERNAL_ERROR");
+      
+      // Log error with context information
+      logger.error("Error in attribute route:", {
+        error,
+        path: req.path,
+        method: req.method,
+        userId: req.user?.id,
+      });
+      
+      // Rethrow error for the global error handler
+      throw error;
     }
-  };
+  });
 
   // Global Attribute Routes
   app.get("/api/attributes", handleErrors(async (req: Request, res: Response) => {
