@@ -85,6 +85,7 @@ export function SessionExpiryWarning() {
           description: "Your session will expire soon due to inactivity. Click to extend.",
           action: <Button variant="outline" size="sm" onClick={handleRefreshSession}>Extend Session</Button>,
           duration: 0, // Don't auto-dismiss
+          variant: "warning",
         });
       }
     }, 60000); // Check every minute
