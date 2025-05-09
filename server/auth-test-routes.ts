@@ -78,7 +78,7 @@ export function registerAuthTestRoutes(app: Express): void {
   app.get("/api/auth-test/validate-password", isAdmin, async (req: Request, res: Response) => {
     try {
       // Use the actual application password validation logic
-      const { validatePassword } = await import('./utils/auth-validation');
+      const { validatePassword } = await import('../server/utils/auth-validation');
       
       // Test each password requirement using real validation rules
       const minLengthTest = "1234567"; // Should fail min length (if 8+ required)
@@ -425,7 +425,7 @@ export function registerAuthTestRoutes(app: Express): void {
       // Use real application methods to test core components
       // Import actual authentication and validation utilities
       const { hashPassword, comparePasswords } = await import('./auth');
-      const { validatePassword } = await import('./utils/auth-validation');
+      const { validatePassword } = await import('../server/utils/auth-validation');
       
       // Test password hashing and comparison using real functions
       const testPassword = "TestPassword123!";
@@ -522,7 +522,7 @@ export function registerAuthTestRoutes(app: Express): void {
       // Use real application methods to test core components
       // Import actual authentication and validation utilities
       const { hashPassword, comparePasswords } = await import('./auth');
-      const { validatePassword } = await import('./utils/auth-validation');
+      const { validatePassword } = await import('../server/utils/auth-validation');
       
       // Test password hashing and comparison using real functions
       const testPassword = "TestPassword123!";
