@@ -306,7 +306,9 @@ export async function removeImageBackground(imageBase64: string): Promise<string
       error,
       errorType: error instanceof Error ? error.name : typeof error,
       errorMessage: error instanceof Error ? error.message : String(error),
-      responsePreview: responseTextOuter ? responseTextOuter.substring(0, 100) + '...' : 'No response text available'
+      responsePreview: responseTextOuter ? responseTextOuter.substring(0, 100) + '...' : 'No response text available',
+      aiModel: await getCurrentAiModel().catch(() => 'unknown'),
+      dataFormat: imageBase64 ? (imageBase64.startsWith('data:') ? 'data-url' : 'base64-string') : 'empty'
     });
     
     throw new Error('Failed to remove background: ' + (error instanceof Error ? error.message : 'Unknown error'));
@@ -561,7 +563,11 @@ export async function generateProductTags(
       errorMessage: error instanceof Error ? error.message : String(error),
       productId,
       productName,
-      responsePreview: responseTextOuter ? responseTextOuter.substring(0, 100) + '...' : 'No response text available'
+      productDescriptionLength: productDescription?.length || 0,
+      responsePreview: responseTextOuter ? responseTextOuter.substring(0, 100) + '...' : 'No response text available',
+      aiModel: await getCurrentAiModel().catch(() => 'unknown'),
+      hasImage: !!imageBase64,
+      imageType: imageBase64?.startsWith('data:') ? 'data-url' : imageBase64?.startsWith('http') ? 'url' : 'base64-string'
     });
     throw new Error('Failed to generate tags: ' + (error instanceof Error ? error.message : 'Unknown error'));
   }
@@ -819,7 +825,11 @@ export async function suggestPrice(
       costPrice,
       productName,
       productId: productId || 'unknown',
-      responsePreview: responseTextOuter ? responseTextOuter.substring(0, 100) + '...' : 'No response text available'
+      categoryId,
+      categoryName,
+      responsePreview: responseTextOuter ? responseTextOuter.substring(0, 100) + '...' : 'No response text available',
+      aiModel: await getCurrentAiModel().catch(() => 'unknown'),
+      aiModelSettingKey: AI_MODEL_SETTING_KEY
     });
     
     // Even on error, return cost price as minimum
@@ -1366,7 +1376,11 @@ export async function analyzeProductImage(imageBase64: string, productName: stri
         errorMessage: aiRequestError instanceof Error ? aiRequestError.message : String(aiRequestError),
         productId,
         productName,
-        model: await getCurrentAiModel()
+        model: await getCurrentAiModel(),
+        responsePreview: responseTextOuter ? responseTextOuter.substring(0, 100) + '...' : 'No response text available',
+        aiModelSettingKey: AI_MODEL_SETTING_KEY,
+        imageDataLength: imageBase64?.length || 0,
+        geminiApiKeyExists: !!process.env.GEMINI_API_KEY
       });
       
       throw new Error(`AI analysis request failed: ${aiRequestError instanceof Error ? aiRequestError.message : 'Unknown AI processing error'}`);
@@ -1379,7 +1393,12 @@ export async function analyzeProductImage(imageBase64: string, productName: stri
       productId,
       productName,
       model: await getCurrentAiModel().catch(() => 'unknown'),
-      responsePreview: responseTextOuter ? responseTextOuter.substring(0, 100) + '...' : 'No response text available'
+      responsePreview: responseTextOuter ? responseTextOuter.substring(0, 100) + '...' : 'No response text available',
+      aiModelSettingKey: AI_MODEL_SETTING_KEY,
+      hasImage: !!imageBase64,
+      imageType: imageBase64?.startsWith('data:') ? 'data-url' : imageBase64?.startsWith('http') ? 'url' : 'base64-string',
+      imageDataLength: imageBase64?.length || 0,
+      geminiApiKeyExists: !!process.env.GEMINI_API_KEY
     });
     
     throw new Error('Failed to analyze product image: ' + (error instanceof Error ? error.message : 'Unknown error'));
