@@ -46,6 +46,7 @@ import AuthTestDashboard from "@/pages/admin/auth-test-dashboard";
 // Developer Pages
 import DeveloperDashboard from "@/pages/developer";
 import AuthTestsPage from "@/pages/developer/auth-tests";
+import DatabaseTestsPage from "@/pages/developer/database-tests";
 import { DeveloperProtectedRoute } from "@/lib/developer-protected-route";
 
 // Admin-specific protected route
@@ -138,7 +139,7 @@ function App() {
               {/* Developer Routes - No header/footer */}
               <DeveloperProtectedRoute path="/developer" component={DeveloperDashboard} />
               <DeveloperProtectedRoute path="/developer/auth-tests" component={AuthTestsPage} />
-              <DeveloperProtectedRoute path="/developer/database-tests" component={DeveloperDashboard} />
+              <DeveloperProtectedRoute path="/developer/database-tests" component={DatabaseTestsPage} />
               <DeveloperProtectedRoute path="/developer/ai-tests" component={DeveloperDashboard} />
               <DeveloperProtectedRoute path="/developer/storage-tests" component={DeveloperDashboard} />
               <DeveloperProtectedRoute path="/developer/api-tests" component={DeveloperDashboard} />
