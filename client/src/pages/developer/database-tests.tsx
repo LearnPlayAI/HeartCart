@@ -634,7 +634,7 @@ function DatabaseTestsPage() {
                                   {test.extraColumns.map((col, colIdx) => (
                                     <div 
                                       key={colIdx} 
-                                      className="inline-flex items-center border border-gray-200 px-2.5 py-0.5 text-xs font-medium rounded-full bg-gray-100 text-gray-800"
+                                      className="inline-flex items-center border border-amber-300 px-2.5 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-800"
                                     >
                                       {col}
                                     </div>
