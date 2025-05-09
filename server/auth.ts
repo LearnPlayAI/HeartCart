@@ -11,6 +11,9 @@ import connectPg from "connect-pg-simple";
 import { pool } from "./db";
 import { sendSuccess, sendError } from "./api-response";
 import { withStandardResponse } from "./response-wrapper";
+import { logger } from "./logger";
+import { AppError, ErrorCode, ForbiddenError, NotFoundError } from "./error-handler";
+import { isAuthenticated } from "./auth-middleware";
 
 const PostgresSessionStore = connectPg(session);
 
@@ -249,5 +252,75 @@ export function setupAuth(app: Express): void {
   // No longer using CSRF protection
   app.get("/api/csrf-token", withStandardResponse(async (req: Request, res: Response) => {
     return { message: "CSRF protection disabled" };
+  }));
+
+  // User profile update endpoint
+  app.put("/api/users/:id", isAuthenticated, withStandardResponse(async (req: Request, res: Response) => {
+    const userId = parseInt(req.params.id);
+    const currentUser = req.user as Express.User;
+
+    try {
+      // Verify the user can only update their own profile unless they're an admin
+      if (userId !== currentUser.id && currentUser.role !== 'admin') {
+        throw new ForbiddenError("You can only update your own profile");
+      }
+
+      // Check if user exists
+      const existingUser = await storage.getUser(userId);
+      if (!existingUser) {
+        throw new NotFoundError(`User with ID ${userId} not found`, "user");
+      }
+
+      // Create update data - prevent email changes as it's used for login
+      const { email, ...allowedUpdates } = req.body;
+
+      // If they're trying to change email, reject the request
+      if (email && email !== existingUser.email) {
+        throw new AppError(
+          "Email cannot be changed as it is used for login",
+          ErrorCode.INVALID_OPERATION,
+          400
+        );
+      }
+
+      // Update user profile
+      const updatedUser = await storage.updateUser(userId, allowedUpdates);
+      if (!updatedUser) {
+        throw new AppError(
+          "Failed to update user profile",
+          ErrorCode.DATABASE_ERROR,
+          500
+        );
+      }
+
+      // Return updated user data (excluding password)
+      const { password, ...userData } = updatedUser;
+      logger.info('User profile updated', { userId, fields: Object.keys(allowedUpdates) });
+      return userData;
+    } catch (error) {
+      // Log detailed error information with context
+      logger.error('Error updating user profile', { 
+        error,
+        userId,
+        currentUserId: currentUser.id,
+        isAdmin: currentUser.role === 'admin',
+        requestBody: req.body
+      });
+      
+      // Handle specific error types
+      if (error instanceof NotFoundError || 
+          error instanceof ForbiddenError || 
+          error instanceof AppError) {
+        throw error;
+      }
+      
+      // Return generic error for unexpected issues
+      throw new AppError(
+        "Failed to update profile. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
+    }
   }));
 }
