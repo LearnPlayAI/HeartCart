@@ -1187,7 +1187,9 @@ export async function analyzeProductImage(imageBase64: string, productName: stri
           errorType: textAnalysisError instanceof Error ? textAnalysisError.name : typeof textAnalysisError,
           errorMessage: textAnalysisError instanceof Error ? textAnalysisError.message : String(textAnalysisError),
           productId,
-          productName
+          productName,
+          responsePreview: responseTextOuter ? responseTextOuter.substring(0, 100) + '...' : 'No response text available',
+          aiModel: await getCurrentAiModel().catch(() => 'unknown')
         });
         
         throw new Error(`Failed to analyze product via text-only fallback: ${textAnalysisError instanceof Error ? textAnalysisError.message : 'Unknown model error'}`);
