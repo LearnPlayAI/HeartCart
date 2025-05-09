@@ -4150,112 +4150,272 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }));
 
   // Quick edit product endpoint
-  app.patch("/api/products/:id/quick-edit", isAuthenticated, withStandardResponse(async (req: Request, res: Response) => {
+  app.patch("/api/products/:id/quick-edit", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
     const user = req.user as any;
-    
-    if (user.role !== 'admin') {
-      throw new ForbiddenError("Only administrators can update products");
-    }
-    
     const productId = parseInt(req.params.id);
     
-    if (isNaN(productId)) {
-      throw new BadRequestError("Invalid product ID");
+    try {
+      if (user.role !== 'admin') {
+        throw new ForbiddenError("Only administrators can update products");
+      }
+      
+      if (isNaN(productId)) {
+        throw new BadRequestError("Invalid product ID");
+      }
+      
+      const { name, price, listPrice, sku, stockQuantity, isActive } = req.body;
+      
+      // Create validation schema for quick edit
+      const quickEditSchema = z.object({
+        name: z.string().min(3, "Product name must be at least 3 characters"),
+        price: z.number().positive("Price must be a positive number"),
+        listPrice: z.number().nonnegative("List price must be a non-negative number").optional(),
+        sku: z.string().min(1, "SKU is required"),
+        stockQuantity: z.number().int().nonnegative("Stock quantity must be a non-negative integer"),
+        isActive: z.boolean()
+      });
+      
+      // Validate input using zod
+      try {
+        quickEditSchema.parse({
+          name,
+          price,
+          listPrice,
+          sku,
+          stockQuantity,
+          isActive
+        });
+      } catch (validationError) {
+        if (validationError instanceof z.ZodError) {
+          const errorMessages = validationError.errors.map(err => err.message).join(', ');
+          throw new ValidationError(`Validation failed: ${errorMessages}`);
+        }
+        throw validationError;
+      }
+      
+      // Get the existing product to check if it exists
+      const existingProduct = await storage.getProductById(productId);
+      
+      if (!existingProduct) {
+        throw new NotFoundError(`Product with ID ${productId} not found`, "product");
+      }
+      
+      // Check if the SKU is unique (if it's changed)
+      if (sku !== existingProduct.sku) {
+        const existingProductWithSku = await storage.getProductBySku(sku);
+        if (existingProductWithSku && existingProductWithSku.id !== productId) {
+          throw new AppError(
+            `A product with SKU "${sku}" already exists`,
+            ErrorCode.VALIDATION_ERROR,
+            400
+          );
+        }
+      }
+      
+      // Update the product
+      const updateData = {
+        name,
+        price,
+        sku,
+        stockQuantity,
+        isActive
+      };
+      
+      // Only add listPrice if it's provided
+      if (listPrice !== undefined) {
+        // @ts-ignore - We know this is valid from our validation
+        updateData.listPrice = listPrice;
+      }
+      
+      const updatedProduct = await storage.updateProduct(productId, updateData);
+      
+      if (!updatedProduct) {
+        throw new AppError(
+          "Failed to update product due to a database error",
+          ErrorCode.DATABASE_ERROR,
+          500
+        );
+      }
+      
+      return res.json({
+        success: true,
+        data: {
+          message: "Product updated successfully",
+          product: updatedProduct
+        }
+      });
+    } catch (error) {
+      // Log detailed error information with context
+      logger.error('Error updating product', { 
+        error,
+        userId: user.id,
+        productId,
+        requestBody: req.body
+      });
+      
+      // Check for specific error types
+      if (error instanceof NotFoundError || 
+          error instanceof ForbiddenError || 
+          error instanceof ValidationError ||
+          error instanceof BadRequestError ||
+          error instanceof AppError) {
+        throw error;
+      }
+      
+      // Return generic error for unexpected issues
+      throw new AppError(
+        "Failed to update product. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
     }
-    
-    const { name, price, listPrice, sku, stockQuantity, isActive } = req.body;
-    
-    // Validate required fields
-    if (!name || name.trim().length < 3) {
-      throw new ValidationError("Product name must be at least 3 characters");
-    }
-    
-    if (typeof price !== 'number' || price <= 0) {
-      throw new ValidationError("Price must be a positive number");
-    }
-    
-    if (listPrice !== undefined && (typeof listPrice !== 'number' || listPrice < 0)) {
-      throw new ValidationError("List price must be a non-negative number");
-    }
-    
-    if (!sku || sku.trim() === '') {
-      throw new ValidationError("SKU is required");
-    }
-    
-    if (typeof stockQuantity !== 'number' || stockQuantity < 0 || !Number.isInteger(stockQuantity)) {
-      throw new ValidationError("Stock quantity must be a non-negative integer");
-    }
-    
-    if (typeof isActive !== 'boolean') {
-      throw new ValidationError("Active status must be a boolean");
-    }
-    
-    // Get the existing product to check if it exists
-    const existingProduct = await storage.getProductById(productId);
-    
-    if (!existingProduct) {
-      throw new NotFoundError("Product not found");
-    }
-    
-    // Update the product
-    const updatedProduct = await storage.updateProduct(productId, {
-      name,
-      price,
-      listPrice: listPrice === undefined ? undefined : listPrice,
-      sku,
-      stockQuantity,
-      isActive
-    });
-    
-    return { 
-      message: "Product updated successfully",
-      product: updatedProduct
-    };
   }));
 
   // PATCH endpoint to reorder products in a catalog
-  app.patch("/api/catalogs/:id/products/reorder", isAuthenticated, withStandardResponse(async (req: Request, res: Response) => {
+  app.patch("/api/catalogs/:id/products/reorder", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
     const user = req.user as any;
-    
-    if (user.role !== 'admin') {
-      throw new ForbiddenError("Only administrators can reorder catalog products");
-    }
-    
     const catalogId = parseInt(req.params.id);
-    const { productIds } = req.body;
     
-    if (!Array.isArray(productIds)) {
-      throw new ValidationError("productIds must be an array of product IDs");
+    try {
+      if (user.role !== 'admin') {
+        throw new ForbiddenError("Only administrators can reorder catalog products");
+      }
+      
+      if (isNaN(catalogId)) {
+        throw new BadRequestError("Invalid catalog ID");
+      }
+      
+      // Validate productIds is an array of integers
+      const { productIds } = req.body;
+      
+      if (!Array.isArray(productIds)) {
+        throw new ValidationError("productIds must be an array of product IDs");
+      }
+      
+      if (productIds.length === 0) {
+        throw new ValidationError("productIds array cannot be empty");
+      }
+      
+      // Check if all items are valid integers
+      for (const id of productIds) {
+        if (typeof id !== 'number' || !Number.isInteger(id) || id <= 0) {
+          throw new ValidationError(`Invalid product ID: ${id}. All IDs must be positive integers.`);
+        }
+      }
+      
+      // Check for duplicate IDs
+      const uniqueIds = new Set(productIds);
+      if (uniqueIds.size !== productIds.length) {
+        throw new ValidationError("productIds contains duplicate values");
+      }
+      
+      // Check if catalog exists
+      const catalog = await storage.getCatalogById(catalogId);
+      if (!catalog) {
+        throw new NotFoundError(`Catalog with ID ${catalogId} not found`, "catalog");
+      }
+      
+      // Check if all products exist and belong to this catalog
+      const existingProducts = await storage.getProductsByCatalogId(catalogId, { includeInactive: true });
+      const existingProductIds = new Set(existingProducts.map(p => p.id));
+      
+      const invalidIds = productIds.filter(id => !existingProductIds.has(id));
+      if (invalidIds.length > 0) {
+        throw new ValidationError(
+          `The following product IDs do not exist in catalog ${catalogId}: ${invalidIds.join(', ')}`
+        );
+      }
+      
+      // If not all products are included, we should validate that we're not missing any
+      if (productIds.length !== existingProducts.length) {
+        // Get the missing IDs for better error message
+        const missingIds = [...existingProductIds].filter(id => !productIds.includes(id));
+        throw new ValidationError(
+          `Not all products in catalog are included in the reordering. Missing product IDs: ${missingIds.join(', ')}`
+        );
+      }
+      
+      // Update the display order for each product
+      const result = await storage.updateProductDisplayOrder(catalogId, productIds);
+      
+      return res.json({
+        success: true,
+        data: { 
+          message: `Updated display order for ${result.count} products in catalog "${catalog.name}"`,
+          count: result.count,
+          catalog: {
+            id: catalog.id,
+            name: catalog.name
+          }
+        }
+      });
+    } catch (error) {
+      // Log detailed error information with context
+      logger.error('Error reordering catalog products', { 
+        error,
+        userId: user.id,
+        catalogId,
+        productIds: req.body.productIds
+      });
+      
+      // Check for specific error types
+      if (error instanceof NotFoundError || 
+          error instanceof ForbiddenError || 
+          error instanceof ValidationError ||
+          error instanceof BadRequestError ||
+          error instanceof AppError) {
+        throw error;
+      }
+      
+      // Return generic error for unexpected issues
+      throw new AppError(
+        "Failed to reorder catalog products. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
     }
-    
-    // Update the display order for each product
-    const result = await storage.updateProductDisplayOrder(catalogId, productIds);
-    
-    return { 
-      message: `Updated display order for ${result.count} products`,
-      count: result.count
-    };
   }));
   
   // Object storage file access endpoint - using reliable buffer-based approach
-  app.get('/api/files/:path(*)', async (req: Request, res: Response) => {
+  app.get('/api/files/:path(*)', asyncHandler(async (req: Request, res: Response) => {
+    const objectKey = req.params.path;
+    
     try {
-      const objectKey = req.params.path;
-      console.log(`Serving file from object storage: ${objectKey}`);
+      logger.debug(`Serving file from object storage: ${objectKey}`);
+      
+      if (!objectKey || objectKey.trim() === '') {
+        throw new BadRequestError("Invalid file path");
+      }
+      
+      // Validate allowed file paths for security
+      if (objectKey.includes('..') || objectKey.startsWith('/') || objectKey.includes('\\')) {
+        throw new ForbiddenError("Invalid file path pattern");
+      }
+      
+      // Check allowed object directories
+      const allowedPrefixes = ['products/', 'categories/', 'temp/', 'suppliers/', 'catalog/'];
+      const isAllowedPrefix = allowedPrefixes.some(prefix => objectKey.startsWith(prefix));
+      
+      if (!isAllowedPrefix) {
+        logger.warn(`Attempted access to unauthorized path: ${objectKey}`);
+        throw new ForbiddenError("Access to this file path is not allowed");
+      }
+      
+      // First check if the file exists
+      const fileExists = await objectStore.exists(objectKey);
+      if (!fileExists) {
+        throw new NotFoundError(`File not found: ${objectKey}`, "file");
+      }
       
       const MAX_RETRIES = 3;
       let lastError: any = null;
       
       for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
         try {
-          // First check if the file exists
-          if (!(await objectStore.exists(objectKey))) {
-            console.error(`File not found in object storage: ${objectKey}`);
-            return res.status(404).send('File not found');
-          }
-          
-          // Use our new buffer-based method for reliable file handling
-          console.log(`Retrieving file ${objectKey} using buffer-based approach (attempt ${attempt}/${MAX_RETRIES})`);
+          // Use our buffer-based method for reliable file handling
+          logger.debug(`Retrieving file ${objectKey} using buffer-based approach (attempt ${attempt}/${MAX_RETRIES})`);
           
           // Apply a small delay if this is a temp file to prevent race conditions
           if (objectKey.includes('/temp/')) {
@@ -4267,41 +4427,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Validate the buffer has actual content
           if (!data || data.length === 0) {
-            throw new Error(`Retrieved empty buffer for ${objectKey}`);
+            throw new AppError(
+              `Retrieved empty buffer for ${objectKey}`,
+              ErrorCode.STORAGE_ERROR,
+              500
+            );
           }
           
           // Set appropriate headers
-          res.setHeader('Content-Type', contentType);
+          if (contentType) {
+            res.setHeader('Content-Type', contentType);
+          }
           res.setHeader('Content-Length', data.length);
-          res.setHeader('Cache-Control', contentType.startsWith('image/') ? 'public, max-age=86400' : 'no-cache');
+          res.setHeader('Cache-Control', 
+            contentType && contentType.startsWith('image/') 
+              ? 'public, max-age=86400' 
+              : 'no-cache'
+          );
           
-          console.log(`Successfully retrieved file ${objectKey}: ${data.length} bytes, type: ${contentType}`);
+          logger.debug(`Successfully retrieved file ${objectKey}: ${data.length} bytes, type: ${contentType || 'unknown'}`);
           
           // Send the buffer directly (more reliable than streaming)
           return res.end(data);
         } catch (downloadError: any) {
           lastError = downloadError;
-          console.error(`Error retrieving file ${objectKey} (attempt ${attempt}/${MAX_RETRIES}):`, downloadError);
+          logger.error(`Error retrieving file ${objectKey} (attempt ${attempt}/${MAX_RETRIES}):`, { 
+            error: downloadError,
+            attempt,
+            objectKey
+          });
           
           if (attempt < MAX_RETRIES) {
             // Exponential backoff
             const delay = Math.pow(2, attempt) * 200;
-            console.log(`Retrying file retrieval after ${delay}ms...`);
+            logger.debug(`Retrying file retrieval after ${delay}ms...`);
             await new Promise(resolve => setTimeout(resolve, delay));
-          } else {
-            return res.status(500).send(`Error reading file: ${downloadError.message}`);
           }
         }
       }
       
       // If we get here, all retries failed
-      return res.status(500).send(`Failed to retrieve file after ${MAX_RETRIES} attempts: ${lastError?.message || 'Unknown error'}`);
+      throw new AppError(
+        `Failed to retrieve file after ${MAX_RETRIES} attempts`,
+        ErrorCode.STORAGE_ERROR,
+        500,
+        { originalError: lastError, objectKey }
+      );
       
-    } catch (error: any) {
-      console.error('Error serving file:', error);
-      return res.status(500).send(`Error serving file: ${error.message}`);
+    } catch (error) {
+      // Log detailed error information with context
+      logger.error('Error serving file', { 
+        error,
+        objectKey,
+        requestPath: req.path,
+        requestOrigin: req.headers.origin || 'unknown'
+      });
+      
+      // Check for specific error types
+      if (error instanceof NotFoundError || 
+          error instanceof ForbiddenError || 
+          error instanceof BadRequestError ||
+          error instanceof AppError) {
+        throw error;
+      }
+      
+      // Return generic error for unexpected issues
+      throw new AppError(
+        "Failed to retrieve file from storage. Please try again.",
+        ErrorCode.STORAGE_ERROR,
+        500,
+        { originalError: error }
+      );
     }
-  });
+  }));
 
   // Register new attribute system routes
   registerAttributeRoutes(app);
