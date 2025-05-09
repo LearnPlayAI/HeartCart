@@ -33,6 +33,17 @@ type ValidationTestResults = {
   failedTests: string[];
 };
 
+type ValidationSystemTestResults = {
+  status: 'passed' | 'failed' | 'pending';
+  results: {
+    loginValidation: TestResult;
+    registrationValidation: TestResult;
+    passwordStrength: TestResult;
+    emailFormat: TestResult;
+  };
+  failedTests: string[];
+};
+
 type CredentialTestResults = {
   status: 'passed' | 'failed' | 'pending';
   results: {
@@ -129,6 +140,21 @@ function AuthTestsPage() {
   
   // Extract just the system results from the standard response format
   const systemResults = systemResponse?.success ? systemResponse.data : undefined;
+  
+  // Validation system tests (Zod schemas)
+  const {
+    data: validationSystemResponse,
+    isLoading: isValidationSystemLoading,
+    error: validationSystemError,
+    refetch: refetchValidationSystem,
+  } = useQuery<{ success: boolean, data: ValidationSystemTestResults }>({
+    queryKey: ['/api/auth-test/validation-system'],
+    queryFn: getQueryFn({ on401: "returnNull" }),
+    enabled: selectedTest === 'validation-system',
+  });
+  
+  // Extract just the validation system results from the standard response format
+  const validationSystemResults = validationSystemResponse?.success ? validationSystemResponse.data : undefined;
 
   // Run all tests mutation
   const runAllTestsMutation = useMutation({
@@ -330,6 +356,33 @@ function AuthTestsPage() {
       toast({
         title: 'Test Error',
         description: `Failed to run system tests: ${error.message}`,
+        variant: 'destructive',
+      });
+    }
+  });
+  
+  const validationSystemMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('GET', '/api/auth-test/validation-system');
+      const responseJson = await response.json();
+      return responseJson.success && 'data' in responseJson ? responseJson.data : responseJson;
+    },
+    onSuccess: (data) => {
+      // Update the validation system results directly instead of refetching
+      // Wrap the result in the standardized API response format
+      queryClient.setQueryData(['/api/auth-test/validation-system'], {
+        success: true,
+        data: data
+      });
+      toast({
+        title: 'Validation System Tests Completed',
+        description: 'Schema validation tests run successfully',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Test Error',
+        description: `Failed to run validation system tests: ${error.message}`,
         variant: 'destructive',
       });
     }
