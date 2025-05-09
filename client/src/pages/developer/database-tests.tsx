@@ -161,6 +161,17 @@ function DatabaseTestsPage() {
   });
   
   const structureResults = structureResponse?.success ? structureResponse.data : undefined;
+  
+  // Debug log to check what's being returned from the server
+  React.useEffect(() => {
+    if (structureResults) {
+      console.log('Structure Test Results:', {
+        expectedTables: structureResults.results.expectedTables,
+        actualTables: structureResults.results.actualTables,
+        unexpectedTables: structureResults.results.unexpectedTables
+      });
+    }
+  }, [structureResults]);
 
   // Data Integrity Tests
   const {
@@ -499,6 +510,21 @@ function DatabaseTestsPage() {
                         {structureResults.results.actualTables.names.map((table, idx) => {
                           // Check if this table is an unexpected table (exists in DB but not in schema)
                           const isUnexpectedTable = structureResults.results.unexpectedTables.includes(table);
+                          // Debug log to check if condition is working properly
+                          if (isUnexpectedTable) {
+                            console.log("Found unexpected table:", table);
+                          }
+                          // Special handling for session table to force red background
+                          if (table === "session") {
+                            return (
+                              <div 
+                                key={idx}
+                                className="inline-flex items-center border px-2.5 py-0.5 text-xs font-bold rounded-full bg-red-600 text-white"
+                              >
+                                {table}
+                              </div>
+                            );
+                          }
                           return (
                             <Badge 
                               key={idx} 
@@ -532,7 +558,12 @@ function DatabaseTestsPage() {
                       <AlertDescription>
                         <div className="mt-2 flex flex-wrap gap-2">
                           {structureResults.results.unexpectedTables.map((table, idx) => (
-                            <Badge key={idx} variant="destructive">{table}</Badge>
+                            <div 
+                              key={idx} 
+                              className="inline-flex items-center border px-2.5 py-0.5 text-xs font-bold rounded-full bg-red-600 text-white"
+                            >
+                              {table}
+                            </div>
                           ))}
                         </div>
                       </AlertDescription>
@@ -587,7 +618,12 @@ function DatabaseTestsPage() {
                               {test.missingColumns.length > 0 ? (
                                 <div className="flex flex-wrap gap-1">
                                   {test.missingColumns.map((col, colIdx) => (
-                                    <Badge key={colIdx} variant="destructive">{col}</Badge>
+                                    <div 
+                                      key={colIdx} 
+                                      className="inline-flex items-center border px-2.5 py-0.5 text-xs font-bold rounded-full bg-red-600 text-white"
+                                    >
+                                      {col}
+                                    </div>
                                   ))}
                                 </div>
                               ) : 'None'}
@@ -596,7 +632,12 @@ function DatabaseTestsPage() {
                               {test.extraColumns.length > 0 ? (
                                 <div className="flex flex-wrap gap-1">
                                   {test.extraColumns.map((col, colIdx) => (
-                                    <Badge key={colIdx} variant="outline">{col}</Badge>
+                                    <div 
+                                      key={colIdx} 
+                                      className="inline-flex items-center border border-gray-200 px-2.5 py-0.5 text-xs font-medium rounded-full bg-gray-100 text-gray-800"
+                                    >
+                                      {col}
+                                    </div>
                                   ))}
                                 </div>
                               ) : 'None'}
