@@ -749,7 +749,12 @@ export async function suggestPrice(
           };
         } else {
           // If no markup and no AI price, just use cost price
-          console.log(`No valid AI price found and no markup set. Using cost price: ${costPrice.toFixed(2)}`);
+          logger.info(`No valid AI price found in pattern matching and no markup set, using cost price`, {
+            costPrice,
+            calculatedPrice: costPrice.toFixed(2),
+            productName,
+            productId: productId || 'unknown'
+          });
           return {
             suggestedPrice: costPrice,
             markupPercentage: 0,
@@ -759,7 +764,14 @@ export async function suggestPrice(
       }
     }
   } catch (error) {
-    console.error('Price suggestion failed:', error);
+    logger.error('Price suggestion failed', {
+      error,
+      errorType: error instanceof Error ? error.name : typeof error,
+      errorMessage: error instanceof Error ? error.message : String(error),
+      costPrice,
+      productName,
+      productId: productId || 'unknown'
+    });
     
     // Even on error, return cost price as minimum
     return { 
@@ -810,10 +822,19 @@ export async function updateAiModel(modelName: string): Promise<boolean> {
     // Update the current model instance
     try {
       geminiProVision = genAI.getGenerativeModel({ model: modelName });
-      console.log(`Successfully updated AI model to: ${modelName}`);
+      logger.info(`Successfully updated AI model`, {
+        modelName,
+        aiModelSettingKey: AI_MODEL_SETTING_KEY
+      });
       return true;
     } catch (modelError) {
-      console.error(`Error initializing model ${modelName}:`, modelError);
+      logger.error(`Error initializing AI model`, {
+        error: modelError,
+        errorType: modelError instanceof Error ? modelError.name : typeof modelError,
+        errorMessage: modelError instanceof Error ? modelError.message : String(modelError),
+        modelName,
+        fallbackModel: 'gemini-1.5-flash'
+      });
       
       // Fallback to default model if the requested model fails
       geminiProVision = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
@@ -822,7 +843,12 @@ export async function updateAiModel(modelName: string): Promise<boolean> {
       return false;
     }
   } catch (error) {
-    console.error('Failed to update AI model:', error);
+    logger.error('Failed to update AI model', {
+      error,
+      errorType: error instanceof Error ? error.name : typeof error,
+      errorMessage: error instanceof Error ? error.message : String(error),
+      aiModelSettingKey: AI_MODEL_SETTING_KEY
+    });
     throw new Error('Failed to update AI model: ' + (error instanceof Error ? error.message : 'Unknown error'));
   }
 }
@@ -1079,7 +1105,7 @@ export async function analyzeProductImage(imageBase64: string, productName: stri
             errorMessage: jsonError instanceof Error ? jsonError.message : String(jsonError),
             productId,
             productName,
-            responsePreview: responseText?.substring(0, 100) + '...'
+            responsePreview: responseTextOuter ? responseTextOuter.substring(0, 100) + '...' : 'No response text available'
           });
           
           // If all else fails, return just the product name as a fallback
@@ -1144,6 +1170,9 @@ export async function analyzeProductImage(imageBase64: string, productName: stri
       const response = await result.response;
       // Use await when calling response.text() as it returns a Promise
       const responseText = await response.text(); // This contains the text response directly
+      
+      // Store in outer variable for error handling blocks
+      let responseTextOuter = responseText;
       
       // Parse JSON response
       try {
