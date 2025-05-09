@@ -3223,12 +3223,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // use featured/popular products as fallback
         if (products.length === 0) {
           try {
-            // Pass proper options object instead of just a number
-            products = await storage.getFeaturedProducts({
-              limit: limitNum,
-              categoryId: categoryId ? Number(categoryId) : undefined,
-              includeInactive: false
-            });
+            // Pass limit as first parameter and options object as second parameter
+            products = await storage.getFeaturedProducts(
+              limitNum,
+              { 
+                includeInactive: false,
+                includeCategoryInactive: false 
+              }
+            );
             
             reason = categoryId 
               ? `Popular products in this category`
