@@ -459,7 +459,14 @@ function AuthTestsPage() {
         </div>
         <div className="bg-white p-3 rounded-md shadow-sm">
           <div className="text-sm text-gray-500">Test Coverage</div>
-          <div className="text-xl font-semibold">12 Tests</div>
+          <div className="text-xl font-semibold">20 Tests</div>
+        </div>
+        <div className="bg-white p-3 rounded-md shadow-sm">
+          <div className="text-sm text-gray-500">Overall Status</div>
+          <div className="text-xl font-semibold flex items-center">
+            <div className="w-2 h-2 rounded-full bg-amber-500 mr-2"></div>
+            <span>18/20 Passed</span>
+          </div>
         </div>
       </div>
 

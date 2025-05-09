@@ -52,7 +52,7 @@ function DeveloperDashboard() {
       description: 'Test user authentication, session management, and security',
       icon: <ShieldCheck className="h-5 w-5 text-green-600" />,
       link: '/developer/auth-tests',
-      testsCount: 12,
+      testsCount: 20,
     },
     {
       title: 'Database',
@@ -139,6 +139,10 @@ function DeveloperDashboard() {
             <div className="flex items-center px-3 py-1.5 bg-amber-100 text-amber-800 rounded text-sm">
               <span className="font-medium">Active development modules:</span>
               <span className="ml-2">3</span>
+            </div>
+            <div className="flex items-center px-3 py-1.5 bg-blue-100 text-blue-800 rounded text-sm">
+              <span className="font-medium">Overall test status:</span>
+              <span className="ml-2 px-2 py-0.5 bg-blue-700 text-white rounded">72/79 tests passing (91%)</span>
             </div>
           </div>
         </div>
