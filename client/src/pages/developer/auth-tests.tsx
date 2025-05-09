@@ -164,7 +164,8 @@ function AuthTestsPage() {
         validationResponse, 
         credentialResponse, 
         sessionResponse, 
-        systemResponse
+        systemResponse,
+        validationSystemResponse
       ] = await Promise.all([
         apiRequest('POST', '/api/auth-test/validate-password', {
           password: 'TestPassword123!', // Test password with good complexity
@@ -175,6 +176,7 @@ function AuthTestsPage() {
         }),
         apiRequest('POST', '/api/auth-test/session-persistence'),
         apiRequest('POST', '/api/auth-test/system-tests'),
+        apiRequest('GET', '/api/auth-test/validation-system'),
       ]);
       
       // Parse all responses and extract data property if present
@@ -187,12 +189,14 @@ function AuthTestsPage() {
       const credentialData = await processResponse(credentialResponse);
       const sessionData = await processResponse(sessionResponse);
       const systemData = await processResponse(systemResponse);
+      const validationSystemData = await processResponse(validationSystemResponse);
       
       return {
         validationData,
         credentialData,
         sessionData,
-        systemData
+        systemData,
+        validationSystemData
       };
     },
     onSuccess: (data) => {
@@ -213,6 +217,11 @@ function AuthTestsPage() {
       queryClient.setQueryData(['/api/auth-test/system-tests'], {
         success: true,
         data: data.systemData
+      });
+      
+      queryClient.setQueryData(['/api/auth-test/validation-system'], {
+        success: true,
+        data: data.validationSystemData
       });
       
       // Also refresh user count
@@ -460,6 +469,7 @@ function AuthTestsPage() {
           <TabsTrigger value="credentials">Credential Verification</TabsTrigger>
           <TabsTrigger value="session">Session Management</TabsTrigger>
           <TabsTrigger value="system">System Tests</TabsTrigger>
+          <TabsTrigger value="validation-system">Validation System</TabsTrigger>
         </TabsList>
 
         {/* Password Validation Tests */}
@@ -920,6 +930,125 @@ function AuthTestsPage() {
                         </ul>
                       </div>
                     )}
+                  </div>
+                ) : (
+                  <div className="text-gray-500 py-2">No test results available</div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+        
+        {/* Validation System Tests */}
+        <TabsContent value="validation-system">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Validation Schema System</CardTitle>
+                <CardDescription>
+                  Test Zod validation schemas for authentication
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isValidationSystemLoading ? (
+                  <div className="flex justify-center py-4">
+                    <Loader2 className="h-8 w-8 animate-spin text-green-600" />
+                  </div>
+                ) : validationSystemError ? (
+                  <div className="text-red-600 py-2">Error: {(validationSystemError as Error).message}</div>
+                ) : validationSystemResults && validationSystemResults.results ? (
+                  <div className="space-y-3">
+                    {validationSystemResults.results.loginValidation && (
+                      <div className="flex justify-between items-center p-2 border-b">
+                        <span>Login Schema Validation</span>
+                        <TestStatus status={validationSystemResults.results.loginValidation.status} />
+                      </div>
+                    )}
+                    {validationSystemResults.results.registrationValidation && (
+                      <div className="flex justify-between items-center p-2 border-b">
+                        <span>Registration Schema Validation</span>
+                        <TestStatus status={validationSystemResults.results.registrationValidation.status} />
+                      </div>
+                    )}
+                    {validationSystemResults.results.passwordStrength && (
+                      <div className="flex justify-between items-center p-2 border-b">
+                        <span>Password Strength Rules</span>
+                        <TestStatus status={validationSystemResults.results.passwordStrength.status} />
+                      </div>
+                    )}
+                    {validationSystemResults.results.emailFormat && (
+                      <div className="flex justify-between items-center p-2">
+                        <span>Email Format Validation</span>
+                        <TestStatus status={validationSystemResults.results.emailFormat.status} />
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-gray-500 py-2">No test results available</div>
+                )}
+              </CardContent>
+              <CardFooter>
+                <Button 
+                  onClick={() => validationSystemMutation.mutate()} 
+                  disabled={isValidationSystemLoading || validationSystemMutation.isPending} 
+                  variant="outline" 
+                  className="w-full"
+                >
+                  {(isValidationSystemLoading || validationSystemMutation.isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Run Tests
+                </Button>
+              </CardFooter>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Test Results</CardTitle>
+                <CardDescription>
+                  Detailed results of validation system tests
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isValidationSystemLoading ? (
+                  <div className="flex justify-center py-4">
+                    <Loader2 className="h-8 w-8 animate-spin text-green-600" />
+                  </div>
+                ) : validationSystemError ? (
+                  <div className="text-red-600 py-2">Error: {(validationSystemError as Error).message}</div>
+                ) : validationSystemResults ? (
+                  <div>
+                    <div className="mb-4">
+                      <h3 className="text-lg font-medium mb-2 flex items-center">
+                        <TestStatus status={validationSystemResults.status} />
+                        <span className="ml-2">Overall Result</span>
+                      </h3>
+                      <p className="text-sm text-gray-500">
+                        {validationSystemResults.status === 'passed' 
+                          ? 'All validation schema tests passed successfully' 
+                          : validationSystemResults.failedTests && `${validationSystemResults.failedTests.length} validation schema tests failed`}
+                      </p>
+                    </div>
+                    {validationSystemResults.status === 'failed' && validationSystemResults.failedTests && (
+                      <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+                        <h4 className="text-sm font-medium text-red-800 mb-1">Failed Tests:</h4>
+                        <ul className="list-disc list-inside text-sm text-red-700">
+                          {validationSystemResults.failedTests.map((test, i) => (
+                            <li key={i}>{test}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                      <h4 className="text-sm font-medium text-blue-800 mb-1">Schema Information:</h4>
+                      <div className="text-sm text-blue-800">
+                        <p>The validation system uses Zod schemas to validate user inputs for authentication:</p>
+                        <ul className="list-disc list-inside text-sm text-blue-700 mt-2">
+                          <li>Login: Validates email format and password requirements</li>
+                          <li>Registration: Validates all user fields with appropriate rules</li>
+                          <li>Password: Enforces minimum complexity requirements</li>
+                          <li>Email: Ensures valid email format with domain verification</li>
+                        </ul>
+                      </div>
+                    </div>
                   </div>
                 ) : (
                   <div className="text-gray-500 py-2">No test results available</div>
