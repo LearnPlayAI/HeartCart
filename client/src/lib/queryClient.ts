@@ -66,11 +66,9 @@ export const getQueryFn: <T>(options: {
     await throwIfResNotOk(res);
     const responseJson = await res.json();
     
-    // Extract just the data field from our standard API response format
-    if (responseJson && responseJson.success === true && 'data' in responseJson) {
-      return responseJson.data;
-    }
-    
+    // Return the entire responseJson to ensure the client can access both the success flag
+    // and data properties. This makes our API more robust handling both standardized and
+    // non-standardized responses.
     return responseJson;
   };
 
