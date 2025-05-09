@@ -402,7 +402,7 @@ function ApiTestsPage() {
   };
   
   // Filtering function for performance tests
-  const getFilteredPerformanceTests = () => {
+  const getFilteredPerfTests = () => {
     if (!performanceResults?.results.performanceTests) return [];
     
     return performanceResults.results.performanceTests.filter(test => {
