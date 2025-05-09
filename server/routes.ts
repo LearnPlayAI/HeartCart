@@ -3660,128 +3660,493 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }));
 
   // CATALOG ROUTES
-  app.get("/api/catalogs", withStandardResponse(async (req: Request, res: Response) => {
-    // For admin users, show all catalogs regardless of active status
-    // For regular users, only show active catalogs
-    const user = req.user as any;
-    const isAdmin = user && user.role === 'admin';
-    const activeOnly = isAdmin ? false : req.query.activeOnly !== 'false';
-    
-    const catalogs = await storage.getAllCatalogs(activeOnly);
-    return catalogs;
-  }));
-
-  app.get("/api/catalogs/:id", withStandardResponse(async (req: Request, res: Response) => {
-    const id = parseInt(req.params.id);
-    const catalog = await storage.getCatalogById(id);
-    
-    if (!catalog) {
-      throw new NotFoundError("Catalog not found", "catalog");
+  app.get("/api/catalogs", asyncHandler(async (req: Request, res: Response) => {
+    try {
+      // For admin users, show all catalogs regardless of active status
+      // For regular users, only show active catalogs
+      const user = req.user as any;
+      const isAdmin = user && user.role === 'admin';
+      const activeOnly = isAdmin ? false : req.query.activeOnly !== 'false';
+      
+      const catalogs = await storage.getAllCatalogs(activeOnly);
+      
+      return res.json({
+        success: true,
+        data: catalogs,
+        meta: {
+          count: catalogs.length,
+          activeOnly
+        }
+      });
+    } catch (error) {
+      // Log detailed error information
+      logger.error('Error retrieving catalogs', { 
+        error,
+        query: req.query
+      });
+      
+      // Return generic error
+      throw new AppError(
+        "Failed to retrieve catalogs. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
     }
-    
-    return catalog;
   }));
 
-  app.get("/api/suppliers/:supplierId/catalogs", withStandardResponse(async (req: Request, res: Response) => {
+  app.get("/api/catalogs/:id", asyncHandler(async (req: Request, res: Response) => {
+    const id = parseInt(req.params.id);
+    
+    try {
+      const catalog = await storage.getCatalogById(id);
+      
+      if (!catalog) {
+        throw new NotFoundError(`Catalog with ID ${id} not found`, "catalog");
+      }
+      
+      // Get supplier information
+      const supplier = await storage.getSupplierById(catalog.supplierId);
+      
+      return res.json({
+        success: true,
+        data: {
+          ...catalog,
+          supplier: supplier ? {
+            id: supplier.id,
+            name: supplier.name,
+            isActive: supplier.isActive
+          } : null
+        }
+      });
+    } catch (error) {
+      // Log detailed error information with context
+      logger.error('Error retrieving catalog by ID', { 
+        error,
+        catalogId: id
+      });
+      
+      // Check for specific error types
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
+      
+      // Return generic error for unexpected issues
+      throw new AppError(
+        "Failed to retrieve catalog details. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
+    }
+  }));
+
+  app.get("/api/suppliers/:supplierId/catalogs", asyncHandler(async (req: Request, res: Response) => {
     const supplierId = parseInt(req.params.supplierId);
-    // For admin users, show all catalogs regardless of active status
-    // For regular users, only show active catalogs
-    const user = req.user as any;
-    const isAdmin = user && user.role === 'admin';
-    const activeOnly = isAdmin ? false : req.query.activeOnly !== 'false';
     
-    const catalogs = await storage.getCatalogsBySupplierId(supplierId, activeOnly);
-    return catalogs;
+    try {
+      // Verify the supplier exists
+      const supplier = await storage.getSupplierById(supplierId);
+      if (!supplier) {
+        throw new NotFoundError(`Supplier with ID ${supplierId} not found`, "supplier");
+      }
+      
+      // For admin users, show all catalogs regardless of active status
+      // For regular users, only show active catalogs
+      const user = req.user as any;
+      const isAdmin = user && user.role === 'admin';
+      const activeOnly = isAdmin ? false : req.query.activeOnly !== 'false';
+      
+      const catalogs = await storage.getCatalogsBySupplierId(supplierId, activeOnly);
+      
+      return res.json({
+        success: true,
+        data: catalogs,
+        meta: {
+          count: catalogs.length,
+          supplier: {
+            id: supplier.id,
+            name: supplier.name,
+            isActive: supplier.isActive
+          },
+          activeOnly
+        }
+      });
+    } catch (error) {
+      // Log detailed error information with context
+      logger.error('Error retrieving catalogs by supplier ID', { 
+        error,
+        supplierId,
+        query: req.query
+      });
+      
+      // Check for specific error types
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
+      
+      // Return generic error for unexpected issues
+      throw new AppError(
+        "Failed to retrieve supplier catalogs. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
+    }
   }));
 
-  app.post("/api/catalogs", isAuthenticated, withStandardResponse(async (req: Request, res: Response) => {
+  app.post("/api/catalogs", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
     const user = req.user as any;
     
-    if (user.role !== 'admin') {
-      throw new ForbiddenError("Only administrators can manage catalogs");
+    try {
+      if (user.role !== 'admin') {
+        throw new ForbiddenError("Only administrators can manage catalogs");
+      }
+      
+      const catalogData = insertCatalogSchema.parse(req.body);
+      
+      // Verify the supplier exists
+      const supplier = await storage.getSupplierById(catalogData.supplierId);
+      if (!supplier) {
+        throw new NotFoundError(`Supplier with ID ${catalogData.supplierId} not found`, "supplier");
+      }
+      
+      // Check if a catalog with the same name already exists for this supplier
+      const existingCatalog = await storage.getCatalogByNameAndSupplierId(
+        catalogData.name, 
+        catalogData.supplierId
+      );
+      
+      if (existingCatalog) {
+        throw new AppError(
+          `A catalog named "${catalogData.name}" already exists for this supplier`,
+          ErrorCode.DUPLICATE_ENTITY,
+          409
+        );
+      }
+      
+      const catalog = await storage.createCatalog(catalogData);
+      
+      return res.status(201).json({
+        success: true,
+        data: catalog,
+        message: `Catalog "${catalog.name}" created successfully`
+      });
+    } catch (error) {
+      // Log detailed error information with context
+      logger.error('Error creating catalog', { 
+        error,
+        userId: user.id,
+        catalogData: req.body
+      });
+      
+      // Check for specific error types
+      if (error instanceof ForbiddenError || error instanceof NotFoundError || error instanceof AppError || error instanceof z.ZodError) {
+        throw error;
+      }
+      
+      // Return generic error for unexpected issues
+      throw new AppError(
+        "Failed to create catalog. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
     }
-    
-    const catalogData = insertCatalogSchema.parse(req.body);
-    const catalog = await storage.createCatalog(catalogData);
-    
-    return catalog;
-  }, 201));
+  }));
 
-  app.put("/api/catalogs/:id", isAuthenticated, withStandardResponse(async (req: Request, res: Response) => {
+  app.put("/api/catalogs/:id", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
     const user = req.user as any;
-    
-    if (user.role !== 'admin') {
-      throw new ForbiddenError("Only administrators can manage catalogs");
-    }
-    
     const id = parseInt(req.params.id);
-    const catalogData = insertCatalogSchema.partial().parse(req.body);
-    const catalog = await storage.updateCatalog(id, catalogData);
     
-    if (!catalog) {
-      throw new NotFoundError("Catalog not found");
+    try {
+      if (user.role !== 'admin') {
+        throw new ForbiddenError("Only administrators can manage catalogs");
+      }
+      
+      // Validate request body
+      const catalogData = insertCatalogSchema.partial().parse(req.body);
+      
+      // Check if catalog exists
+      const existingCatalog = await storage.getCatalogById(id);
+      if (!existingCatalog) {
+        throw new NotFoundError(`Catalog with ID ${id} not found`, "catalog");
+      }
+      
+      // If changing the supplier, check if it exists
+      if (catalogData.supplierId && catalogData.supplierId !== existingCatalog.supplierId) {
+        const supplier = await storage.getSupplierById(catalogData.supplierId);
+        if (!supplier) {
+          throw new NotFoundError(`Supplier with ID ${catalogData.supplierId} not found`, "supplier");
+        }
+      }
+      
+      // If changing the name, check for duplicates within the same supplier
+      if (catalogData.name && catalogData.name !== existingCatalog.name) {
+        const supplierId = catalogData.supplierId || existingCatalog.supplierId;
+        const duplicateCatalog = await storage.getCatalogByNameAndSupplierId(
+          catalogData.name, 
+          supplierId
+        );
+        
+        if (duplicateCatalog && duplicateCatalog.id !== id) {
+          throw new AppError(
+            `A catalog named "${catalogData.name}" already exists for this supplier`,
+            ErrorCode.DUPLICATE_ENTITY,
+            409
+          );
+        }
+      }
+      
+      // Update the catalog
+      const catalog = await storage.updateCatalog(id, catalogData);
+      
+      // If 'isActive' property was changed, update all products in this catalog
+      if (catalogData.isActive !== undefined) {
+        try {
+          const updateResult = await storage.bulkUpdateCatalogProducts(id, { isActive: catalogData.isActive });
+          logger.info(`Updated isActive status for products in catalog ${id}`, {
+            catalogId: id, 
+            isActive: catalogData.isActive,
+            productsUpdated: updateResult
+          });
+        } catch (cascadeError) {
+          // Log cascade error but don't fail the main operation
+          logger.warn('Error during cascade update of product status', { 
+            error: cascadeError, 
+            catalogId: id,
+            isActive: catalogData.isActive
+          });
+        }
+      }
+      
+      return res.json({
+        success: true,
+        data: catalog,
+        message: `Catalog "${catalog.name}" updated successfully`
+      });
+    } catch (error) {
+      // Log detailed error information with context
+      logger.error('Error updating catalog', { 
+        error,
+        userId: user.id,
+        catalogId: id,
+        catalogData: req.body
+      });
+      
+      // Check for specific error types
+      if (error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof AppError || error instanceof z.ZodError) {
+        throw error;
+      }
+      
+      // Return generic error for unexpected issues
+      throw new AppError(
+        "Failed to update catalog. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
     }
-    
-    // If 'isActive' property was changed, update all products in this catalog
-    if (catalogData.isActive !== undefined) {
-      const updateResult = await storage.bulkUpdateCatalogProducts(id, { isActive: catalogData.isActive });
-      console.log(`Updated isActive status for ${updateResult} products in catalog ${id} to ${catalogData.isActive}`);
-    }
-    
-    return catalog;
   }));
 
-  app.delete("/api/catalogs/:id", isAuthenticated, withStandardResponse(async (req: Request, res: Response) => {
+  app.delete("/api/catalogs/:id", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
     const user = req.user as any;
-    
-    if (user.role !== 'admin') {
-      throw new ForbiddenError("Only administrators can manage catalogs");
-    }
-    
     const id = parseInt(req.params.id);
-    const success = await storage.deleteCatalog(id);
     
-    if (!success) {
-      throw new NotFoundError("Catalog not found");
+    try {
+      if (user.role !== 'admin') {
+        throw new ForbiddenError("Only administrators can manage catalogs");
+      }
+      
+      // Check if catalog exists
+      const catalog = await storage.getCatalogById(id);
+      if (!catalog) {
+        throw new NotFoundError(`Catalog with ID ${id} not found`, "catalog");
+      }
+      
+      // Check if catalog has products
+      const catalogProducts = await storage.getProductsByCatalogId(id, { includeInactive: true });
+      if (catalogProducts.length > 0) {
+        throw new AppError(
+          `Cannot delete catalog "${catalog.name}" because it contains ${catalogProducts.length} products. Deactivate the catalog instead.`,
+          ErrorCode.DEPENDENT_ENTITIES_EXIST,
+          409
+        );
+      }
+      
+      const success = await storage.deleteCatalog(id);
+      
+      if (!success) {
+        throw new AppError(
+          "Failed to delete catalog due to a database error.",
+          ErrorCode.DATABASE_ERROR,
+          500
+        );
+      }
+      
+      return res.json({
+        success: true,
+        message: `Catalog "${catalog.name}" deleted successfully`
+      });
+    } catch (error) {
+      // Log detailed error information with context
+      logger.error('Error deleting catalog', { 
+        error,
+        userId: user.id,
+        catalogId: id
+      });
+      
+      // Check for specific error types
+      if (error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof AppError) {
+        throw error;
+      }
+      
+      // Return generic error for unexpected issues
+      throw new AppError(
+        "Failed to delete catalog. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
     }
-    
-    // When a catalog is deleted (marked inactive), also mark all its products as inactive
-    const productsUpdated = await storage.bulkUpdateCatalogProducts(id, { isActive: false });
-    console.log(`Catalog ${id} deleted: marked ${productsUpdated} products as inactive`);
-    
-    return { success: true, message: "Catalog successfully deleted" };
   }));
 
-  app.get("/api/catalogs/:catalogId/products", withStandardResponse(async (req: Request, res: Response) => {
+  app.get("/api/catalogs/:catalogId/products", asyncHandler(async (req: Request, res: Response) => {
     const catalogId = parseInt(req.params.catalogId);
-    // For admin users, show all products regardless of active status
-    // For regular users, only show active products
-    const user = req.user as any;
-    const isAdmin = user && user.role === 'admin';
-    const activeOnly = isAdmin ? false : req.query.activeOnly !== 'false';
     
-    const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
-    const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
-    
-    const products = await storage.getProductsByCatalogId(catalogId, activeOnly, limit, offset);
-    return products;
+    try {
+      // First check if the catalog exists
+      const catalog = await storage.getCatalogById(catalogId);
+      if (!catalog) {
+        throw new NotFoundError(`Catalog with ID ${catalogId} not found`, "catalog");
+      }
+      
+      // For admin users, show all products regardless of active status
+      // For regular users, only show active products
+      const user = req.user as any;
+      const isAdmin = user && user.role === 'admin';
+      const activeOnly = isAdmin ? false : req.query.activeOnly !== 'false';
+      
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
+      const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
+      
+      if (isNaN(limit) || isNaN(offset) || limit < 0 || offset < 0) {
+        throw new ValidationError("Invalid pagination parameters");
+      }
+      
+      const products = await storage.getProductsByCatalogId(catalogId, { 
+        includeInactive: !activeOnly
+      }, limit, offset);
+      
+      // Get total count for pagination
+      const totalCount = await storage.getProductCountByCatalogId(catalogId, !activeOnly);
+      
+      return res.json({
+        success: true,
+        data: products,
+        meta: {
+          count: products.length,
+          total: totalCount,
+          limit,
+          offset,
+          catalog: {
+            id: catalog.id,
+            name: catalog.name,
+            isActive: catalog.isActive
+          },
+          includeInactive: !activeOnly
+        }
+      });
+    } catch (error) {
+      // Log detailed error information with context
+      logger.error('Error retrieving catalog products', { 
+        error,
+        catalogId,
+        query: req.query
+      });
+      
+      // Check for specific error types
+      if (error instanceof NotFoundError || error instanceof ValidationError) {
+        throw error;
+      }
+      
+      // Return generic error for unexpected issues
+      throw new AppError(
+        "Failed to retrieve catalog products. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
+    }
   }));
 
-  app.put("/api/catalogs/:catalogId/products/bulk", isAuthenticated, withStandardResponse(async (req: Request, res: Response) => {
+  app.put("/api/catalogs/:catalogId/products/bulk", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
     const user = req.user as any;
-    
-    if (user.role !== 'admin') {
-      throw new ForbiddenError("Only administrators can manage catalog products");
-    }
-    
     const catalogId = parseInt(req.params.catalogId);
-    const updateData = insertProductSchema.partial().parse(req.body);
     
-    const count = await storage.bulkUpdateCatalogProducts(catalogId, updateData);
-    return { 
-      message: `Updated ${count} products in catalog`,
-      count 
-    };
+    try {
+      if (user.role !== 'admin') {
+        throw new ForbiddenError("Only administrators can manage catalog products");
+      }
+      
+      // First check if the catalog exists
+      const catalog = await storage.getCatalogById(catalogId);
+      if (!catalog) {
+        throw new NotFoundError(`Catalog with ID ${catalogId} not found`, "catalog");
+      }
+      
+      // Validate update data
+      const updateData = insertProductSchema.partial().parse(req.body);
+      
+      // Check if there are any products in this catalog
+      const productCount = await storage.getProductCountByCatalogId(catalogId, true);
+      if (productCount === 0) {
+        return res.json({
+          success: true,
+          data: {
+            count: 0,
+            message: "No products found in catalog to update"
+          }
+        });
+      }
+      
+      // Perform the bulk update
+      const count = await storage.bulkUpdateCatalogProducts(catalogId, updateData);
+      
+      return res.json({
+        success: true,
+        data: {
+          count,
+          message: `Updated ${count} products in catalog "${catalog.name}"`,
+          catalog: {
+            id: catalog.id,
+            name: catalog.name
+          },
+          updateFields: Object.keys(updateData)
+        }
+      });
+    } catch (error) {
+      // Log detailed error information with context
+      logger.error('Error bulk updating catalog products', { 
+        error,
+        userId: user.id,
+        catalogId,
+        updateData: req.body
+      });
+      
+      // Check for specific error types
+      if (error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof z.ZodError) {
+        throw error;
+      }
+      
+      // Return generic error for unexpected issues
+      throw new AppError(
+        "Failed to bulk update catalog products. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
+    }
   }));
 
   // Quick edit product endpoint
