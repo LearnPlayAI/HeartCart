@@ -30,7 +30,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import DeveloperLayout from '@/components/developer/layout';
+import DeveloperLayout from '@/components/developer/developer-layout';
 import TestResults from '@/components/developer/test-results';
 import PerformanceResultsView from '@/components/developer/performance-results-view';
 import { Badge } from '@/components/ui/badge';
