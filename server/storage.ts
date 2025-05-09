@@ -37,6 +37,11 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, userData: Partial<InsertUser>): Promise<User | undefined>;
   updateUserLastLogin(id: number): Promise<boolean>;
+  getUserCount(): Promise<number>;
+  hashPassword(password: string): Promise<string>;
+  
+  // Session store for authentication testing
+  sessionStore: any;
   
   // Category operations
   getAllCategories(options?: { includeInactive?: boolean, parentId?: number | null, level?: number, orderBy?: 'name' | 'displayOrder' }): Promise<Category[]>;
