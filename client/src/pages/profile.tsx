@@ -592,10 +592,18 @@ const ProfilePage = () => {
                           name="email"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Email</FormLabel>
+                              <FormLabel>Email (cannot be changed)</FormLabel>
                               <FormControl>
-                                <Input placeholder="you@example.com" {...field} />
+                                <Input 
+                                  placeholder="you@example.com" 
+                                  {...field} 
+                                  disabled 
+                                  className="bg-gray-50 cursor-not-allowed"
+                                />
                               </FormControl>
+                              <FormDescription className="text-xs text-gray-500">
+                                Email is used for login and cannot be changed
+                              </FormDescription>
                               <FormMessage />
                             </FormItem>
                           )}
