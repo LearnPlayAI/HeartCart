@@ -53,6 +53,7 @@ export const products = pgTable("products", {
   discount: integer("discount"),
   imageUrl: text("image_url"),
   additionalImages: text("additional_images").array(),
+  stock: integer("stock").notNull(), // Added to match DB structure - used as stockQuantity in UI
   rating: doublePrecision("rating").default(0),
   reviewCount: integer("review_count").default(0),
   isActive: boolean("is_active").default(true).notNull(),
@@ -388,6 +389,7 @@ export const insertProductSchema = createInsertSchema(products).omit({
   createdAt: true,
 }).extend({
   displayOrder: z.number().default(999).optional(),
+  stock: z.number().int().nonnegative().default(0), // Add default value for stock column
 });
 
 export const insertCartItemSchema = createInsertSchema(cartItems).omit({
