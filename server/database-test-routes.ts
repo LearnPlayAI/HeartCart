@@ -258,7 +258,7 @@ export function registerDatabaseTestRoutes(app: Express): void {
                 AND parent.${sql.identifier(fk.foreign_column_name)} IS NULL
             `);
             
-            const orphanedCount = parseInt(testQuery[0].orphaned_count, 10);
+            const orphanedCount = parseInt(testQuery[0]?.orphaned_count?.toString() || '0', 10);
             
             return {
               constraint: fk.constraint_name,
@@ -300,7 +300,7 @@ export function registerDatabaseTestRoutes(app: Express): void {
               HAVING COUNT(*) > 1
             `);
             
-            const duplicateCount = testQuery.length;
+            const duplicateCount = Array.isArray(testQuery) ? testQuery.length : 0;
             
             return {
               constraint: constraint.constraint_name,

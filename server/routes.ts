@@ -31,6 +31,7 @@ import attributeDiscountRoutes from "./attribute-discount-routes";
 import pricingRoutes from "./pricing-routes";
 import batchUploadRoutes from "./batch-upload-routes";
 import { registerAuthTestRoutes } from "./auth-test-routes";
+import { registerDatabaseTestRoutes } from "./database-test-routes";
 import { validateRequest, idSchema } from './validation-middleware';
 import { 
   productsQuerySchema,
@@ -83,6 +84,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register authentication testing routes
   registerAuthTestRoutes(app);
+  
+  // Register database testing routes
+  registerDatabaseTestRoutes(app);
   
   // Apply response wrapper middleware to standardize API responses
   app.use(responseWrapperMiddleware);

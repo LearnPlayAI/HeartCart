@@ -491,7 +491,7 @@ function DatabaseTestsPage() {
                   )}
 
                   {structureResults.results.unexpectedTables.length > 0 && (
-                    <Alert variant="warning">
+                    <Alert className="bg-amber-50 border-amber-200 text-amber-800">
                       <AlertTitle>Unexpected Tables</AlertTitle>
                       <AlertDescription>
                         <div className="mt-2 flex flex-wrap gap-2">
