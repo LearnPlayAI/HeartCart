@@ -94,87 +94,104 @@ export function registerDatabaseTestRoutes(app: Express): void {
       
       const tableDefs: TableDefinition[] = [];
       
-      // Approach 1: First try accessing the schema directly through imports
+      // Deep inspection of the schema object to find all table definitions
       try {
-        logger.debug('Attempting to detect tables through schema imports');
+        logger.debug('Performing deep inspection of schema object to find tables');
         
-        // Get all exported variables from schema
+        // First, get all exported variables from schema
         const schemaExports = Object.keys(schema);
         logger.debug('Schema exports found:', { count: schemaExports.length });
         
+        // Log some sample schema exports to help with debugging
+        const sampleExports = schemaExports.slice(0, 5); // Just log a few for clarity
+        logger.debug('Sample schema exports:', { sampleExports });
+        
+        // Identify pgTable objects by examining properties
         for (const key of schemaExports) {
-          // Skip relations, schemas, types
-          if (key.includes('Relations') || key.includes('Schema') || key.includes('Type')) {
+          const value = (schema as any)[key];
+          
+          // Skip anything that's clearly not a table definition
+          if (!value || typeof value !== 'object') continue;
+          if (key.includes('Relations') || key.includes('Schema') || key.includes('Type')) continue;
+          
+          // Special case: directly examine schema structure
+          if ('name' in value && typeof value.name === 'string') {
+            // Found a table definition through direct property access
+            tableDefs.push({
+              variableName: key,
+              tableName: value.name,
+              value: value
+            });
+            
+            logger.debug(`Found table via direct property: ${key} (DB name: ${value.name})`);
             continue;
           }
           
-          const value = (schema as any)[key];
+          // Alternative approach: check for signature of a pgTable 
+          if (
+            // Look for common table properties
+            ('$schema' in value) ||  
+            // Check if this is a table with columns
+            (value.$columns && typeof value.$columns === 'object') ||
+            // Or check prototype chain for drizzle table
+            (Object.getPrototypeOf(value)?.constructor?.name?.includes('Table'))
+          ) {
+            // This is likely a table definition
+            // Try to derive the table name from various properties
+            const possibleName = value.name || 
+                                 value.$table?.name || 
+                                 value.tableName || 
+                                 key.toLowerCase();
+            
+            tableDefs.push({
+              variableName: key,
+              tableName: typeof possibleName === 'string' ? possibleName : key,
+              value: value
+            });
+            
+            logger.debug(`Found table via structure analysis: ${key}`);
+          }
+        }
+        
+        // Log what we found through direct examination
+        if (tableDefs.length > 0) {
+          logger.debug(`Found ${tableDefs.length} tables through schema inspection`);
+        } else {
+          logger.warn('No tables found through schema inspection - this is unexpected');
           
-          // Basic check if this is a table object
-          if (value && typeof value === 'object') {
-            // Check if it has a name property (typical of pgTable)
-            if ('name' in value && typeof value.name === 'string') {
-              tableDefs.push({
-                variableName: key,
-                tableName: value.name,
-                value: value
-              });
+          // As a last resort, try a simpler approach that just looks for known table names
+          for (const key of schemaExports) {
+            // Skip anything with 'schema' or 'type' in the name
+            if (key.toLowerCase().includes('schema') || 
+                key.toLowerCase().includes('type') || 
+                key.toLowerCase().includes('relation')) {
+              continue;
+            }
+            
+            // If it's a plural noun, it's likely a table
+            // Common table names in the application 
+            if (['users', 'products', 'categories', 'orders', 'suppliers', 
+                 'attributes', 'catalogs', 'pricing'].includes(key.toLowerCase())) {
               
-              logger.debug(`Found table via import: ${key} with DB name: ${value.name}`);
+              const value = (schema as any)[key];
+              if (value && typeof value === 'object') {
+                tableDefs.push({
+                  variableName: key,
+                  tableName: key.toLowerCase(),
+                  value: value
+                });
+                
+                logger.debug(`Found table via name heuristic: ${key}`);
+              }
             }
           }
         }
       } catch (error) {
-        logger.error('Error detecting tables via schema import:', error instanceof Error ? { message: error.message, stack: error.stack } : { error });
-      }
-      
-      // Approach 2: If no tables found yet, try parsing the file directly
-      if (tableDefs.length === 0) {
-        try {
-          const fs = require('fs');
-          const path = require('path');
-          
-          // Read the schema.ts file directly
-          const schemaPath = path.join(process.cwd(), 'shared', 'schema.ts');
-          logger.debug('Reading schema file from:', { path: schemaPath });
-          
-          const schemaContent = fs.readFileSync(schemaPath, 'utf8');
-          
-          // Simple parsing to extract table definitions
-          // This is more reliable than complex regex in this case
-          const lines = schemaContent.split('\n');
-          
-          for (let i = 0; i < lines.length; i++) {
-            const line = lines[i].trim();
-            
-            // Look for export declarations of pgTable
-            if (line.startsWith('export const ') && line.includes('pgTable(')) {
-              // Extract variable name - this is between 'export const ' and ' ='
-              const varMatch = line.match(/export const ([a-zA-Z0-9_]+)\s*=/);
-              
-              if (varMatch && varMatch[1]) {
-                const variableName = varMatch[1];
-                
-                // Extract table name - this is the string between quotes in pgTable()
-                const tableMatch = line.match(/pgTable\s*\(\s*["']([a-zA-Z0-9_]+)["']/);
-                
-                if (tableMatch && tableMatch[1]) {
-                  const tableName = tableMatch[1];
-                  
-                  tableDefs.push({
-                    variableName: variableName,
-                    tableName: tableName,
-                    value: (schema as any)[variableName] || {}
-                  });
-                  
-                  logger.debug(`Found table from file: ${variableName} with DB name: ${tableName}`);
-                }
-              }
-            }
-          }
-        } catch (error) {
-          logger.error('Error parsing schema.ts file directly:', error instanceof Error ? { message: error.message, stack: error.stack } : { error });
-        }
+        // Enhanced error handling with full details
+        logger.error('Error analyzing schema object:', error instanceof Error ? 
+          { message: error.message, stack: error.stack, name: error.name } : 
+          { error }
+        );
       }
       
       // Fallback: Traditional approach if regex didn't find anything
