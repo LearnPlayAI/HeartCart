@@ -2,6 +2,7 @@ import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
 import sharp from 'sharp';
 import { storage } from './storage';
 import { InsertAiSetting } from '@shared/schema';
+import { logger } from './logger';
 
 // Environment variable validation
 if (!process.env.GEMINI_API_KEY) {
@@ -145,42 +146,108 @@ export async function removeImageBackground(imageBase64: string): Promise<string
   try {
     // Check if imageBase64 is valid
     if (!imageBase64 || typeof imageBase64 !== 'string') {
+      logger.error('Invalid image data provided to background removal', {
+        type: typeof imageBase64,
+        isEmpty: !imageBase64,
+        dataLength: imageBase64 ? imageBase64.length : 0
+      });
       throw new Error('Invalid image data provided');
     }
     
-    // Extract content type and convert to buffer
-    const imageBuffer = base64ToBuffer(imageBase64);
+    logger.debug('Starting background removal process', {
+      dataSize: imageBase64.length,
+      isDataUrl: imageBase64.startsWith('data:'),
+      aiModel: await getCurrentAiModel()
+    });
     
-    // Resize image and convert to PNG for consistency
-    const resizedImageBuffer = await sharp(imageBuffer)
-      .resize({ width: 1024, height: 1024, fit: 'inside' })
-      .png() // Convert to PNG format for consistency
-      .toBuffer();
-    
-    // Create prompt with image data
-    const imageData = bufferToBase64(resizedImageBuffer, 'image/png');
-    
-    // Create the generation request
-    const result = await geminiProVision.generateContent([
-      "Please remove the background from this product image, preserving only the product with a transparent background. Return only the processed image without any text.",
-      { inlineData: { data: imageData, mimeType: 'image/png' } }
-    ]);
-    
-    // Get the response
-    const response = await result.response;
-    
-    // Check if we got image parts in the response
-    if (response.candidates && response.candidates[0]?.content?.parts) {
-      for (const part of response.candidates[0].content.parts) {
-        if (part.inlineData?.data) {
-          return part.inlineData.data;
+    try {
+      // Extract content type and convert to buffer
+      const imageBuffer = base64ToBuffer(imageBase64);
+      
+      // Resize image and convert to PNG for consistency
+      try {
+        const resizedImageBuffer = await sharp(imageBuffer)
+          .resize({ width: 1024, height: 1024, fit: 'inside' })
+          .png() // Convert to PNG format for consistency
+          .toBuffer();
+        
+        // Create prompt with image data
+        const imageData = bufferToBase64(resizedImageBuffer, 'image/png');
+        
+        logger.debug('Successfully processed image before background removal', {
+          originalSize: imageBuffer.length,
+          processedSize: resizedImageBuffer.length,
+          resizedDimensions: '1024x1024',
+          format: 'png'
+        });
+        
+        try {
+          // Create the generation request
+          const result = await geminiProVision.generateContent([
+            "Please remove the background from this product image, preserving only the product with a transparent background. Return only the processed image without any text.",
+            { inlineData: { data: imageData, mimeType: 'image/png' } }
+          ]);
+          
+          // Get the response
+          const response = await result.response;
+          
+          // Check if we got image parts in the response
+          if (response.candidates && response.candidates[0]?.content?.parts) {
+            for (const part of response.candidates[0].content.parts) {
+              if (part.inlineData?.data) {
+                logger.info('Successfully removed background from image', {
+                  hasResponseData: true,
+                  responseSize: part.inlineData.data.length,
+                  mimeType: part.inlineData.mimeType
+                });
+                return part.inlineData.data;
+              }
+            }
+          }
+          
+          logger.error('No image data in Gemini response', {
+            hasResponse: !!response,
+            hasCandidates: !!response?.candidates,
+            candidateCount: response?.candidates?.length,
+            firstCandidateHasParts: !!response?.candidates?.[0]?.content?.parts,
+            partsCount: response?.candidates?.[0]?.content?.parts?.length
+          });
+          
+          throw new Error('No processed image was returned from Gemini AI');
+        } catch (aiError) {
+          logger.error('Error during Gemini AI background removal request', {
+            error: aiError,
+            errorType: aiError instanceof Error ? aiError.name : typeof aiError,
+            errorMessage: aiError instanceof Error ? aiError.message : String(aiError)
+          });
+          throw aiError; // Re-throw for outer catch
         }
+      } catch (imageProcessingError) {
+        logger.error('Error processing image for background removal', {
+          error: imageProcessingError,
+          errorType: imageProcessingError instanceof Error ? imageProcessingError.name : typeof imageProcessingError,
+          errorMessage: imageProcessingError instanceof Error ? imageProcessingError.message : String(imageProcessingError),
+          bufferSize: imageBuffer ? imageBuffer.length : 0
+        });
+        throw imageProcessingError; // Re-throw for outer catch
       }
+    } catch (bufferError) {
+      logger.error('Error converting image data to buffer', {
+        error: bufferError,
+        errorType: bufferError instanceof Error ? bufferError.name : typeof bufferError,
+        errorMessage: bufferError instanceof Error ? bufferError.message : String(bufferError),
+        dataLength: imageBase64.length,
+        dataFormat: imageBase64.substring(0, 30) + '...'
+      });
+      throw bufferError; // Re-throw for outer catch
     }
-    
-    throw new Error('No processed image was returned from Gemini AI');
   } catch (error) {
-    console.error('Background removal failed:', error);
+    logger.error('Background removal operation failed', {
+      error,
+      errorType: error instanceof Error ? error.name : typeof error,
+      errorMessage: error instanceof Error ? error.message : String(error)
+    });
+    
     throw new Error('Failed to remove background: ' + (error instanceof Error ? error.message : 'Unknown error'));
   }
 }
@@ -191,41 +258,86 @@ export async function removeImageBackground(imageBase64: string): Promise<string
 export async function generateProductTags(
   imageBase64: string, 
   productName: string, 
-  productDescription: string
+  productDescription: string,
+  productId?: number
 ): Promise<string[]> {
   try {
+    // Input validation
+    if (!productName) {
+      logger.error('Missing product name for tag generation', {
+        hasProductName: !!productName,
+        productId,
+        descriptionLength: productDescription?.length
+      });
+      throw new Error('Product name is required for tag generation');
+    }
+
+    logger.debug('Starting product tag generation', {
+      productId,
+      hasImage: !!imageBase64,
+      imageType: imageBase64?.startsWith('http') ? 'url' : 'base64',
+      productNameLength: productName.length,
+      descriptionLength: productDescription?.length,
+      aiModel: await getCurrentAiModel()
+    });
+    
     let imageData: string;
     
     // Check if imageBase64 is a URL or a base64 string
-    if (imageBase64.startsWith('http')) {
-      // If it's a URL, we'll skip image processing and use text-only prompt
-      console.log("Image URL provided instead of base64, using text-only prompt");
+    if (!imageBase64 || imageBase64.startsWith('http')) {
+      // If it's a URL or empty, we'll skip image processing and use text-only prompt
+      logger.info("Using text-only prompt for tag generation", {
+        reason: !imageBase64 ? 'No image provided' : 'URL provided instead of base64',
+        productId
+      });
       
-      // Generate tags based only on text
-      const textOnlyResult = await genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
-        .generateContent([
-          `Generate 5-7 relevant product tags for an e-commerce website based on this product information. 
-          Focus on features, use cases, materials, style, benefits, and relevant categories.
-          Return only the tags in a comma-separated list format, with each tag being 1-3 words maximum.
-          
-          Product Name: ${productName}
-          Product Description: ${productDescription}`
-        ]);
-      
-      const textResponse = await textOnlyResult.response;
-      const responseText = textResponse.text();
-      
-      // Parse comma-separated tags
-      const tags = responseText
-        .split(',')
-        .map(tag => tag.trim())
-        .filter(tag => tag && tag.length > 0);
-      
-      return tags;
+      try {
+        // Generate tags based only on text
+        const textOnlyResult = await genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+          .generateContent([
+            `Generate 5-7 relevant product tags for an e-commerce website based on this product information. 
+            Focus on features, use cases, materials, style, benefits, and relevant categories.
+            Return only the tags in a comma-separated list format, with each tag being 1-3 words maximum.
+            
+            Product Name: ${productName}
+            Product Description: ${productDescription || 'Not provided'}`
+          ]);
+        
+        const textResponse = await textOnlyResult.response;
+        const responseText = textResponse.text();
+        
+        // Parse comma-separated tags
+        const tags = responseText
+          .split(',')
+          .map(tag => tag.trim())
+          .filter(tag => tag && tag.length > 0);
+        
+        logger.info('Successfully generated tags using text-only prompt', {
+          productId,
+          tagCount: tags.length,
+          tags: tags.join(', ')
+        });
+        
+        return tags;
+      } catch (textPromptError) {
+        logger.error('Failed to generate tags with text-only prompt', {
+          error: textPromptError,
+          errorType: textPromptError instanceof Error ? textPromptError.name : typeof textPromptError,
+          errorMessage: textPromptError instanceof Error ? textPromptError.message : String(textPromptError),
+          productId
+        });
+        throw new Error('Failed to generate tags with text prompt: ' + 
+          (textPromptError instanceof Error ? textPromptError.message : 'AI service error'));
+      }
     }
     
     // Process image if we have a base64 string
     try {
+      logger.debug('Processing image for tag generation', {
+        productId,
+        imageDataSize: imageBase64.length
+      });
+      
       // Extract content type and convert to buffer
       const imageBuffer = base64ToBuffer(imageBase64);
       
@@ -237,22 +349,75 @@ export async function generateProductTags(
       
       // Create prompt with image
       imageData = bufferToBase64(resizedImageBuffer, 'image/png');
+      
+      logger.debug('Successfully processed image for tag generation', {
+        productId,
+        originalSize: imageBuffer.length,
+        processedSize: resizedImageBuffer.length
+      });
     } catch (imageError) {
-      console.warn('Image processing failed, falling back to text-only:', imageError);
+      logger.warn('Image processing failed for tag generation, falling back to text-only', {
+        error: imageError,
+        errorType: imageError instanceof Error ? imageError.name : typeof imageError,
+        errorMessage: imageError instanceof Error ? imageError.message : String(imageError),
+        productId,
+        imageDataLength: imageBase64?.length
+      });
       
       // Generate tags based only on text as fallback
-      const textOnlyResult = await genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
-        .generateContent([
-          `Generate 5-7 relevant product tags for an e-commerce website based on this product information. 
-          Focus on features, use cases, materials, style, benefits, and relevant categories.
-          Return only the tags in a comma-separated list format, with each tag being 1-3 words maximum.
-          
-          Product Name: ${productName}
-          Product Description: ${productDescription}`
-        ]);
+      try {
+        const textOnlyResult = await genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+          .generateContent([
+            `Generate 5-7 relevant product tags for an e-commerce website based on this product information. 
+            Focus on features, use cases, materials, style, benefits, and relevant categories.
+            Return only the tags in a comma-separated list format, with each tag being 1-3 words maximum.
+            
+            Product Name: ${productName}
+            Product Description: ${productDescription || 'Not provided'}`
+          ]);
+        
+        const textResponse = await textOnlyResult.response;
+        const responseText = textResponse.text();
+        
+        // Parse comma-separated tags
+        const tags = responseText
+          .split(',')
+          .map(tag => tag.trim())
+          .filter(tag => tag && tag.length > 0);
+        
+        logger.info('Successfully generated tags using text-only fallback', {
+          productId,
+          tagCount: tags.length,
+          tags: tags.join(', '),
+          reason: 'Image processing failed'
+        });
+        
+        return tags;
+      } catch (fallbackError) {
+        logger.error('Both image processing and text fallback failed for tag generation', {
+          originalError: imageError,
+          fallbackError,
+          productId
+        });
+        throw new Error('Failed to generate tags: Image processing failed and text fallback also failed');
+      }
+    }
+    
+    try {
+      // Create the generation request with image
+      const result = await geminiProVision.generateContent([
+        `Generate 5-7 relevant product tags for an e-commerce website based on this product image, name, and description. 
+        Focus on features, use cases, materials, style, benefits, and relevant categories.
+        Return only the tags in a comma-separated list format, with each tag being 1-3 words maximum.
+        
+        Product Name: ${productName}
+        Product Description: ${productDescription || 'Not provided'}`,
+        { inlineData: { data: imageData, mimeType: 'image/png' } }
+      ]);
       
-      const textResponse = await textOnlyResult.response;
-      const responseText = textResponse.text();
+      // Get the response
+      const response = await result.response;
+      const responseText = response.text();
       
       // Parse comma-separated tags
       const tags = responseText
@@ -260,33 +425,70 @@ export async function generateProductTags(
         .map(tag => tag.trim())
         .filter(tag => tag && tag.length > 0);
       
-      return tags;
-    }
-    
-    // Create the generation request with image
-    const result = await geminiProVision.generateContent([
-      `Generate 5-7 relevant product tags for an e-commerce website based on this product image, name, and description. 
-      Focus on features, use cases, materials, style, benefits, and relevant categories.
-      Return only the tags in a comma-separated list format, with each tag being 1-3 words maximum.
+      logger.info('Successfully generated tags with image analysis', {
+        productId,
+        tagCount: tags.length,
+        tags: tags.join(', ')
+      });
       
-      Product Name: ${productName}
-      Product Description: ${productDescription}`,
-      { inlineData: { data: imageData, mimeType: 'image/png' } }
-    ]);
-    
-    // Get the response
-    const response = await result.response;
-    const responseText = response.text();
-    
-    // Parse comma-separated tags
-    const tags = responseText
-      .split(',')
-      .map(tag => tag.trim())
-      .filter(tag => tag && tag.length > 0);
-    
-    return tags;
+      return tags;
+    } catch (aiError) {
+      logger.error('AI service failed during image-based tag generation', {
+        error: aiError,
+        errorType: aiError instanceof Error ? aiError.name : typeof aiError,
+        errorMessage: aiError instanceof Error ? aiError.message : String(aiError),
+        productId
+      });
+      
+      // Try one more time with text-only as final fallback
+      try {
+        logger.info('Attempting final text-only fallback for tag generation', { productId });
+        
+        const textOnlyResult = await genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+          .generateContent([
+            `Generate 5-7 relevant product tags for an e-commerce website based on this product information. 
+            Focus on features, use cases, materials, style, benefits, and relevant categories.
+            Return only the tags in a comma-separated list format, with each tag being 1-3 words maximum.
+            
+            Product Name: ${productName}
+            Product Description: ${productDescription || 'Not provided'}`
+          ]);
+        
+        const textResponse = await textOnlyResult.response;
+        const responseText = textResponse.text();
+        
+        // Parse comma-separated tags
+        const tags = responseText
+          .split(',')
+          .map(tag => tag.trim())
+          .filter(tag => tag && tag.length > 0);
+        
+        logger.info('Successfully generated tags using final text-only fallback', {
+          productId,
+          tagCount: tags.length,
+          tags: tags.join(', '),
+          reason: 'Image-based generation failed'
+        });
+        
+        return tags;
+      } catch (finalFallbackError) {
+        logger.error('All tag generation attempts failed', {
+          productId,
+          imageError: aiError,
+          textFallbackError: finalFallbackError
+        });
+        throw new Error('Failed to generate tags after multiple attempts: ' + 
+          (aiError instanceof Error ? aiError.message : 'AI service error'));
+      }
+    }
   } catch (error) {
-    console.error('Tag generation failed:', error);
+    logger.error('Tag generation operation failed', {
+      error,
+      errorType: error instanceof Error ? error.name : typeof error,
+      errorMessage: error instanceof Error ? error.message : String(error),
+      productId,
+      productName
+    });
     throw new Error('Failed to generate tags: ' + (error instanceof Error ? error.message : 'Unknown error'));
   }
 }
