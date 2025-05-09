@@ -302,3 +302,43 @@ export async function runAuthSystemTests(): Promise<{
     failedTests
   };
 }
+
+/**
+ * Local Testing Client - This is used only for local testing of the authentication system
+ * Can be exposed via a route that's only available in development mode for admin testing
+ */
+export async function executeLocalTest(): Promise<{
+  testName: string,
+  result: boolean,
+  details: any
+}> {
+  // Test the password validation functionality
+  const testPassword = "TestPass123";
+  const weakPassword = "password";
+  
+  const passwordValidationResult = validatePasswordFormat(testPassword);
+  const weakPasswordValidationResult = validatePasswordFormat(weakPassword);
+  
+  // Test session functionality available in this environment
+  let sessionTestResult = {};
+  try {
+    // Get the number of users from storage
+    const userCount = await storage.getUserCount();
+    sessionTestResult = {
+      userCount,
+      sessionStoreAvailable: !!storage.sessionStore
+    };
+  } catch (error) {
+    sessionTestResult = { error: 'Could not test session storage' };
+  }
+  
+  return {
+    testName: 'Local Authentication System Test',
+    result: passwordValidationResult.valid && !weakPasswordValidationResult.valid,
+    details: {
+      strongPassword: passwordValidationResult,
+      weakPassword: weakPasswordValidationResult,
+      session: sessionTestResult
+    }
+  };
+}

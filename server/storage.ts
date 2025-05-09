@@ -4715,6 +4715,76 @@ export class DatabaseStorage implements IStorage {
       totalAdjustment
     };
   }
+  // Authentication testing utilities
+  
+  /**
+   * Count the total number of users in the system
+   * @returns The count of users
+   */
+  async getUserCount(): Promise<number> {
+    try {
+      const result = await db.select({ count: sql<number>`count(*)` }).from(users);
+      return result[0]?.count || 0;
+    } catch (error) {
+      logger.error('Error counting users', { error });
+      return 0;
+    }
+  }
+  
+  /**
+   * Hash a password using the app's standard algorithm
+   * This delegates to the auth module's hashPassword function
+   * @param password - The password to hash
+   * @returns The hashed password
+   */
+  async hashPassword(password: string): Promise<string> {
+    // Import here to avoid circular dependency
+    const { hashPassword } = await import('./auth');
+    return hashPassword(password);
+  }
+  
+  /**
+   * Session store for authentication - this is initialized in the constructor
+   */
+  readonly sessionStore: any;
+  
+  constructor() {
+    // Initialize session store using dynamic imports to avoid ESM compatibility issues
+    this.initSessionStore();
+  }
+  
+  /**
+   * Initialize the session store asynchronously
+   * This approach avoids ESM/CommonJS compatibility issues
+   */
+  private async initSessionStore(): Promise<void> {
+    try {
+      // Dynamically import the required modules
+      const { default: session } = await import('express-session');
+      const { default: pgSimple } = await import('connect-pg-simple');
+      
+      const PostgresSessionStore = pgSimple(session);
+      
+      this.sessionStore = new PostgresSessionStore({
+        pool,
+        tableName: 'session',
+        createTableIfMissing: true,
+        pruneSessionInterval: 60 // Check for expired sessions every minute
+      });
+      
+      logger.info('PostgreSQL session store initialized successfully');
+    } catch (error) {
+      // Fallback to memory store if PostgreSQL session store fails
+      logger.error('Failed to initialize PostgreSQL session store, using memory store instead', { error });
+      const { default: memorystore } = await import('memorystore');
+      const { default: session } = await import('express-session');
+      
+      const MemoryStore = memorystore(session);
+      this.sessionStore = new MemoryStore({
+        checkPeriod: 86400000 // Prune expired entries every 24h
+      });
+    }
+  }
 }
 
 export const storage = new DatabaseStorage();
