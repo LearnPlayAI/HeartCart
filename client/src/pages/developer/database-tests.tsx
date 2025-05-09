@@ -486,24 +486,18 @@ function DatabaseTestsPage() {
                       <h3 className="text-sm font-medium mb-2">Expected Tables</h3>
                       <div className="text-2xl font-bold">{structureResults.results.expectedTables.count}</div>
                       <div className="mt-4 flex flex-wrap gap-2">
-                        {structureResults.results.expectedTables.names.slice(0, 6).map((table, idx) => (
+                        {structureResults.results.expectedTables.names.map((table, idx) => (
                           <Badge key={idx} variant="outline">{table}</Badge>
                         ))}
-                        {structureResults.results.expectedTables.names.length > 6 && (
-                          <Badge variant="outline">+{structureResults.results.expectedTables.names.length - 6} more</Badge>
-                        )}
                       </div>
                     </Card>
                     <Card className="p-4 border border-gray-200">
                       <h3 className="text-sm font-medium mb-2">Actual Tables</h3>
                       <div className="text-2xl font-bold">{structureResults.results.actualTables.count}</div>
                       <div className="mt-4 flex flex-wrap gap-2">
-                        {structureResults.results.actualTables.names.slice(0, 6).map((table, idx) => (
+                        {structureResults.results.actualTables.names.map((table, idx) => (
                           <Badge key={idx} variant="outline">{table}</Badge>
                         ))}
-                        {structureResults.results.actualTables.names.length > 6 && (
-                          <Badge variant="outline">+{structureResults.results.actualTables.names.length - 6} more</Badge>
-                        )}
                       </div>
                     </Card>
                   </div>
