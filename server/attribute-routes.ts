@@ -518,86 +518,382 @@ export default function registerAttributeRoutes(app: Express) {
   );
 
   // Catalog Attribute Routes
-  app.get("/api/catalogs/:catalogId/attributes", handleErrors(async (req: Request, res: Response) => {
-    const catalogId = parseInt(req.params.catalogId);
-    if (isNaN(catalogId)) {
-      return sendError(res, "Invalid catalog ID", 400, "INVALID_ID");
-    }
+  app.get("/api/catalogs/:catalogId/attributes", 
+    validateRequest({ 
+      params: z.object({ 
+        catalogId: z.string().refine(val => !isNaN(parseInt(val)), { message: "Catalog ID must be a number" }) 
+      })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const catalogId = parseInt(req.params.catalogId);
+        
+        // Verify that the catalog exists
+        const catalog = await storage.getCatalogById(catalogId);
+        if (!catalog) {
+          throw new NotFoundError(`Catalog with ID ${catalogId} not found`, 'catalog');
+        }
+        
+        const attributes = await storage.getCatalogAttributes(catalogId);
+        
+        logger.debug(`Retrieved ${attributes.length} catalog attributes`, { 
+          catalogId,
+          attributeCount: attributes.length,
+          catalogName: catalog.name
+        });
+        
+        sendSuccess(res, attributes);
+      } catch (error) {
+        logger.error('Error fetching catalog attributes:', { 
+          error, 
+          catalogId: req.params.catalogId 
+        });
+        throw error;
+      }
+    })
+  );
 
-    const attributes = await storage.getCatalogAttributes(catalogId);
-    sendSuccess(res, attributes);
-  }));
+  app.post("/api/catalogs/:catalogId/attributes", 
+    isAdmin, 
+    validateRequest({ 
+      params: z.object({ 
+        catalogId: z.string().refine(val => !isNaN(parseInt(val)), { message: "Catalog ID must be a number" }) 
+      }),
+      body: insertCatalogAttributeSchema.omit({ catalogId: true })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const catalogId = parseInt(req.params.catalogId);
+        
+        // Verify that the catalog exists
+        const catalog = await storage.getCatalogById(catalogId);
+        if (!catalog) {
+          throw new NotFoundError(`Catalog with ID ${catalogId} not found`, 'catalog');
+        }
+        
+        // Check for duplicate attribute name in this catalog
+        const existingAttributes = await storage.getCatalogAttributes(catalogId);
+        const nameExists = existingAttributes.some(attr => 
+          attr.name.toLowerCase() === req.body.name.toLowerCase());
+          
+        if (nameExists) {
+          throw new AppError(
+            `Attribute with name '${req.body.name}' already exists for this catalog`,
+            ErrorCode.DUPLICATE_ENTITY,
+            409
+          );
+        }
+        
+        const attributeData = {
+          ...req.body,
+          catalogId
+        };
+        
+        const newAttribute = await storage.createCatalogAttribute(attributeData);
+        
+        // Log the creation for audit purposes
+        logger.info(`Catalog attribute created`, { 
+          catalogId,
+          attributeId: newAttribute.id,
+          attributeName: newAttribute.name,
+          userId: req.user?.id,
+          catalogName: catalog.name
+        });
+        
+        sendSuccess(res, newAttribute, 201);
+      } catch (error) {
+        logger.error('Error creating catalog attribute:', { 
+          error, 
+          catalogId: req.params.catalogId,
+          attributeData: req.body,
+          userId: req.user?.id 
+        });
+        throw error;
+      }
+    })
+  );
 
-  app.post("/api/catalogs/:catalogId/attributes", isAdmin, handleErrors(async (req: Request, res: Response) => {
-    const catalogId = parseInt(req.params.catalogId);
-    if (isNaN(catalogId)) {
-      return sendError(res, "Invalid catalog ID", 400, "INVALID_ID");
-    }
+  app.put("/api/catalogs/:catalogId/attributes/:id", 
+    isAdmin, 
+    validateRequest({ 
+      params: z.object({ 
+        catalogId: z.string().refine(val => !isNaN(parseInt(val)), { message: "Catalog ID must be a number" }),
+        id: z.string().refine(val => !isNaN(parseInt(val)), { message: "Attribute ID must be a number" })
+      }),
+      body: insertCatalogAttributeSchema.partial().omit({ catalogId: true })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const catalogId = parseInt(req.params.catalogId);
+        const attributeId = parseInt(req.params.id);
+        
+        // Verify that the catalog exists
+        const catalog = await storage.getCatalogById(catalogId);
+        if (!catalog) {
+          throw new NotFoundError(`Catalog with ID ${catalogId} not found`, 'catalog');
+        }
+        
+        // Verify that the attribute exists and belongs to this catalog
+        const existingAttribute = await storage.getCatalogAttributeById(attributeId);
+        if (!existingAttribute) {
+          throw new NotFoundError(`Attribute with ID ${attributeId} not found`, 'attribute');
+        }
+        
+        if (existingAttribute.catalogId !== catalogId) {
+          throw new AppError(
+            `Attribute with ID ${attributeId} does not belong to catalog ${catalogId}`,
+            ErrorCode.INVALID_RELATIONSHIP,
+            400
+          );
+        }
+        
+        // Check for duplicate name if name is being updated
+        if (req.body.name && req.body.name !== existingAttribute.name) {
+          const existingAttributes = await storage.getCatalogAttributes(catalogId);
+          const nameExists = existingAttributes.some(attr => 
+            attr.id !== attributeId && 
+            attr.name.toLowerCase() === req.body.name.toLowerCase());
+            
+          if (nameExists) {
+            throw new AppError(
+              `Attribute with name '${req.body.name}' already exists for this catalog`,
+              ErrorCode.DUPLICATE_ENTITY,
+              409
+            );
+          }
+        }
+        
+        const attributeData = req.body;
+        const updatedAttribute = await storage.updateCatalogAttribute(attributeId, attributeData);
+        
+        // Log the update for audit purposes
+        logger.info(`Catalog attribute updated`, { 
+          catalogId,
+          attributeId,
+          attributeName: updatedAttribute.name,
+          userId: req.user?.id,
+          changes: Object.keys(req.body).join(', ')
+        });
+        
+        sendSuccess(res, updatedAttribute);
+      } catch (error) {
+        logger.error('Error updating catalog attribute:', { 
+          error, 
+          catalogId: req.params.catalogId,
+          attributeId: req.params.id,
+          attributeData: req.body,
+          userId: req.user?.id 
+        });
+        throw error;
+      }
+    })
+  );
 
-    const attributeData = insertCatalogAttributeSchema.parse({
-      ...req.body,
-      catalogId
-    });
-    
-    const newAttribute = await storage.createCatalogAttribute(attributeData);
-    sendSuccess(res, newAttribute, 201);
-  }));
-
-  app.put("/api/catalogs/:catalogId/attributes/:id", isAdmin, handleErrors(async (req: Request, res: Response) => {
-    const id = parseInt(req.params.id);
-    if (isNaN(id)) {
-      return sendError(res, "Invalid attribute ID", 400, "INVALID_ID");
-    }
-
-    const attributeData = insertCatalogAttributeSchema.partial().parse(req.body);
-    const updatedAttribute = await storage.updateCatalogAttribute(id, attributeData);
-    
-    if (!updatedAttribute) {
-      return sendError(res, "Catalog attribute not found", 404, "NOT_FOUND");
-    }
-    
-    sendSuccess(res, updatedAttribute);
-  }));
-
-  app.delete("/api/catalogs/:catalogId/attributes/:id", isAdmin, handleErrors(async (req: Request, res: Response) => {
-    const id = parseInt(req.params.id);
-    if (isNaN(id)) {
-      return sendError(res, "Invalid attribute ID", 400, "INVALID_ID");
-    }
-
-    const success = await storage.deleteCatalogAttribute(id);
-    if (!success) {
-      return sendError(res, "Catalog attribute not found or could not be deleted", 404, "NOT_FOUND");
-    }
-    
-    sendSuccess(res, null, 204);
-  }));
+  app.delete("/api/catalogs/:catalogId/attributes/:id", 
+    isAdmin, 
+    validateRequest({ 
+      params: z.object({ 
+        catalogId: z.string().refine(val => !isNaN(parseInt(val)), { message: "Catalog ID must be a number" }),
+        id: z.string().refine(val => !isNaN(parseInt(val)), { message: "Attribute ID must be a number" })
+      })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const catalogId = parseInt(req.params.catalogId);
+        const attributeId = parseInt(req.params.id);
+        
+        // Verify that the catalog exists
+        const catalog = await storage.getCatalogById(catalogId);
+        if (!catalog) {
+          throw new NotFoundError(`Catalog with ID ${catalogId} not found`, 'catalog');
+        }
+        
+        // Verify that the attribute exists and belongs to this catalog
+        const existingAttribute = await storage.getCatalogAttributeById(attributeId);
+        if (!existingAttribute) {
+          throw new NotFoundError(`Attribute with ID ${attributeId} not found`, 'attribute');
+        }
+        
+        if (existingAttribute.catalogId !== catalogId) {
+          throw new AppError(
+            `Attribute with ID ${attributeId} does not belong to catalog ${catalogId}`,
+            ErrorCode.INVALID_RELATIONSHIP,
+            400
+          );
+        }
+        
+        // Check if attribute is being used in products
+        const attributeOptions = await storage.getCatalogAttributeOptions(attributeId);
+        
+        // Check for product attribute values using this attribute's options
+        if (attributeOptions.length > 0) {
+          const optionIds = attributeOptions.map(option => option.id);
+          const productValues = await storage.getProductAttributeValuesByOptions(optionIds);
+          
+          if (productValues.length > 0) {
+            const productCount = new Set(productValues.map(val => val.productId)).size;
+            throw new AppError(
+              `Cannot delete attribute: it is used by ${productCount} products. Remove attribute values from products first.`,
+              ErrorCode.ENTITY_IN_USE,
+              409
+            );
+          }
+        }
+        
+        // Perform the deletion with cascading to options
+        const success = await storage.deleteCatalogAttribute(attributeId);
+        
+        // Log the deletion for audit purposes
+        logger.info(`Catalog attribute deleted`, { 
+          catalogId,
+          attributeId,
+          attributeName: existingAttribute.name || `ID: ${attributeId}`,
+          optionsCount: attributeOptions.length,
+          userId: req.user?.id
+        });
+        
+        sendSuccess(res, { success }, 200);
+      } catch (error) {
+        logger.error('Error deleting catalog attribute:', { 
+          error, 
+          catalogId: req.params.catalogId,
+          attributeId: req.params.id,
+          userId: req.user?.id 
+        });
+        throw error;
+      }
+    })
+  );
 
   // Catalog Attribute Options Routes
-  app.get("/api/catalogs/:catalogId/attributes/:attributeId/options", handleErrors(async (req: Request, res: Response) => {
-    const attributeId = parseInt(req.params.attributeId);
-    if (isNaN(attributeId)) {
-      return sendError(res, "Invalid attribute ID", 400, "INVALID_ID");
-    }
+  app.get("/api/catalogs/:catalogId/attributes/:attributeId/options", 
+    validateRequest({ 
+      params: z.object({ 
+        catalogId: z.string().refine(val => !isNaN(parseInt(val)), { message: "Catalog ID must be a number" }),
+        attributeId: z.string().refine(val => !isNaN(parseInt(val)), { message: "Attribute ID must be a number" })
+      })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const catalogId = parseInt(req.params.catalogId);
+        const attributeId = parseInt(req.params.attributeId);
+        
+        // Verify that the catalog exists
+        const catalog = await storage.getCatalogById(catalogId);
+        if (!catalog) {
+          throw new NotFoundError(`Catalog with ID ${catalogId} not found`, 'catalog');
+        }
+        
+        // Verify that the attribute exists and belongs to this catalog
+        const existingAttribute = await storage.getCatalogAttributeById(attributeId);
+        if (!existingAttribute) {
+          throw new NotFoundError(`Attribute with ID ${attributeId} not found`, 'attribute');
+        }
+        
+        if (existingAttribute.catalogId !== catalogId) {
+          throw new AppError(
+            `Attribute with ID ${attributeId} does not belong to catalog ${catalogId}`,
+            ErrorCode.INVALID_RELATIONSHIP,
+            400
+          );
+        }
+        
+        const options = await storage.getCatalogAttributeOptions(attributeId);
+        
+        logger.debug(`Retrieved ${options.length} attribute options`, { 
+          catalogId,
+          attributeId,
+          optionsCount: options.length
+        });
+        
+        sendSuccess(res, options);
+      } catch (error) {
+        logger.error('Error fetching attribute options:', { 
+          error, 
+          catalogId: req.params.catalogId,
+          attributeId: req.params.attributeId
+        });
+        throw error;
+      }
+    })
+  );
 
-    const options = await storage.getCatalogAttributeOptions(attributeId);
-    sendSuccess(res, options);
-  }));
-
-  app.post("/api/catalogs/:catalogId/attributes/:attributeId/options", isAdmin, handleErrors(async (req: Request, res: Response) => {
-    const attributeId = parseInt(req.params.attributeId);
-    if (isNaN(attributeId)) {
-      return sendError(res, "Invalid attribute ID", 400, "INVALID_ID");
-    }
-
-    const optionData = insertCatalogAttributeOptionSchema.parse({
-      ...req.body,
-      catalogAttributeId: attributeId
-    });
-    
-    const newOption = await storage.createCatalogAttributeOption(optionData);
-    sendSuccess(res, newOption, 201);
-  }));
+  app.post("/api/catalogs/:catalogId/attributes/:attributeId/options", 
+    isAdmin, 
+    validateRequest({ 
+      params: z.object({ 
+        catalogId: z.string().refine(val => !isNaN(parseInt(val)), { message: "Catalog ID must be a number" }),
+        attributeId: z.string().refine(val => !isNaN(parseInt(val)), { message: "Attribute ID must be a number" })
+      }),
+      body: insertCatalogAttributeOptionSchema.omit({ catalogAttributeId: true })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const catalogId = parseInt(req.params.catalogId);
+        const attributeId = parseInt(req.params.attributeId);
+        
+        // Verify that the catalog exists
+        const catalog = await storage.getCatalogById(catalogId);
+        if (!catalog) {
+          throw new NotFoundError(`Catalog with ID ${catalogId} not found`, 'catalog');
+        }
+        
+        // Verify that the attribute exists and belongs to this catalog
+        const existingAttribute = await storage.getCatalogAttributeById(attributeId);
+        if (!existingAttribute) {
+          throw new NotFoundError(`Attribute with ID ${attributeId} not found`, 'attribute');
+        }
+        
+        if (existingAttribute.catalogId !== catalogId) {
+          throw new AppError(
+            `Attribute with ID ${attributeId} does not belong to catalog ${catalogId}`,
+            ErrorCode.RESOURCE_CONFLICT,
+            400
+          );
+        }
+        
+        // Check for duplicate value in existing options
+        const existingOptions = await storage.getCatalogAttributeOptions(attributeId);
+        const valueExists = existingOptions.some(opt => 
+          opt.value.toLowerCase() === req.body.value.toLowerCase());
+          
+        if (valueExists) {
+          throw new AppError(
+            `Option with value '${req.body.value}' already exists for this attribute`,
+            ErrorCode.DUPLICATE_ENTITY,
+            409
+          );
+        }
+        
+        const optionData = {
+          ...req.body,
+          catalogAttributeId: attributeId
+        };
+        
+        const newOption = await storage.createCatalogAttributeOption(optionData);
+        
+        // Log the creation for audit purposes
+        logger.info(`Attribute option created`, { 
+          catalogId,
+          attributeId,
+          optionId: newOption.id,
+          optionValue: newOption.value,
+          userId: req.user?.id
+        });
+        
+        sendSuccess(res, newOption, 201);
+      } catch (error) {
+        logger.error('Error creating attribute option:', { 
+          error, 
+          catalogId: req.params.catalogId,
+          attributeId: req.params.attributeId,
+          optionData: req.body,
+          userId: req.user?.id 
+        });
+        throw error;
+      }
+    })
+  );
 
   app.put("/api/catalogs/:catalogId/attributes/:attributeId/options/:id", isAdmin, handleErrors(async (req: Request, res: Response) => {
     const id = parseInt(req.params.id);
