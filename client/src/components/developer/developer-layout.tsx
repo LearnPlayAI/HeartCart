@@ -1,20 +1,27 @@
 import { ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
-import { useAuth } from '@/hooks/use-auth';
 import { 
-  ChevronRight, 
-  Home, 
-  Lock, 
+  AlertCircle, 
   Database, 
-  Brain, 
-  HardDrive, 
-  Globe, 
-  ShoppingCart, 
-  Tags, 
-  Layout, 
-  Gauge,
-  Code
+  Code, 
+  FileCode, 
+  LayoutDashboard, 
+  LogOut, 
+  Settings, 
+  ShieldCheck, 
+  Terminal,
+  BookOpen,
+  Zap,
+  Cpu,
+  Activity,
+  Puzzle,
+  Palette,
+  ArrowLeft,
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
+import { useAuth } from '@/hooks/use-auth';
 
 interface DeveloperLayoutProps {
   children: ReactNode;
@@ -22,116 +29,183 @@ interface DeveloperLayoutProps {
   subtitle?: string;
 }
 
-interface NavItem {
-  name: string;
-  href: string;
-  icon: JSX.Element;
-  current?: boolean;
-}
+const DeveloperNavItems = [
+  {
+    title: 'Dashboard',
+    icon: <LayoutDashboard className="w-5 h-5 mr-2" />,
+    href: '/developer',
+  },
+  {
+    title: 'Auth Tests',
+    icon: <ShieldCheck className="w-5 h-5 mr-2" />,
+    href: '/developer/auth-tests',
+  },
+  {
+    title: 'Database Tests',
+    icon: <Database className="w-5 h-5 mr-2" />,
+    href: '/developer/database-tests',
+  },
+  {
+    title: 'AI Tests',
+    icon: <Cpu className="w-5 h-5 mr-2" />,
+    href: '/developer/ai-tests',
+  },
+  {
+    title: 'Storage Tests',
+    icon: <FileCode className="w-5 h-5 mr-2" />,
+    href: '/developer/storage-tests',
+  },
+  {
+    title: 'API Tests',
+    icon: <Code className="w-5 h-5 mr-2" />,
+    href: '/developer/api-tests',
+  },
+  {
+    title: 'E-commerce Tests',
+    icon: <BookOpen className="w-5 h-5 mr-2" />,
+    href: '/developer/ecommerce-tests',
+  },
+  {
+    title: 'Attribute Tests',
+    icon: <Puzzle className="w-5 h-5 mr-2" />,
+    href: '/developer/attribute-tests',
+  },
+  {
+    title: 'UI Tests',
+    icon: <Palette className="w-5 h-5 mr-2" />,
+    href: '/developer/ui-tests',
+  },
+  {
+    title: 'Performance Tests',
+    icon: <Activity className="w-5 h-5 mr-2" />,
+    href: '/developer/performance-tests',
+  },
+  {
+    title: 'Debug Console',
+    icon: <Terminal className="w-5 h-5 mr-2" />,
+    href: '/developer/debug-console',
+  },
+];
 
-function DeveloperLayout({ children, title, subtitle }: DeveloperLayoutProps) {
-  const { user } = useAuth();
+export default function DeveloperLayout({ children, title, subtitle }: DeveloperLayoutProps) {
   const [location] = useLocation();
-  
-  const navigation: NavItem[] = [
-    { name: 'Dashboard', href: '/developer', icon: <Home className="h-5 w-5" /> },
-    { name: 'Auth Tests', href: '/developer/auth-tests', icon: <Lock className="h-5 w-5" /> },
-    { name: 'Database Tests', href: '/developer/database-tests', icon: <Database className="h-5 w-5" /> },
-    { name: 'AI Tests', href: '/developer/ai-tests', icon: <Brain className="h-5 w-5" /> },
-    { name: 'Storage Tests', href: '/developer/storage-tests', icon: <HardDrive className="h-5 w-5" /> },
-    { name: 'API Tests', href: '/developer/api-tests', icon: <Globe className="h-5 w-5" /> },
-    { name: 'E-commerce Tests', href: '/developer/ecommerce-tests', icon: <ShoppingCart className="h-5 w-5" /> },
-    { name: 'Attribute Tests', href: '/developer/attribute-tests', icon: <Tags className="h-5 w-5" /> },
-    { name: 'UI Tests', href: '/developer/ui-tests', icon: <Layout className="h-5 w-5" /> },
-    { name: 'Performance Tests', href: '/developer/performance-tests', icon: <Gauge className="h-5 w-5" /> },
-    { name: 'Debug Console', href: '/developer/debug-console', icon: <Code className="h-5 w-5" /> },
-  ];
-  
+  const { logoutMutation } = useAuth();
+
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="flex h-screen overflow-hidden">
-        {/* Sidebar */}
-        <div className="hidden md:flex md:flex-shrink-0">
-          <div className="flex flex-col w-64">
-            <div className="flex flex-col flex-grow bg-white pt-5 pb-4 overflow-y-auto">
-              <div className="flex items-center flex-shrink-0 px-4">
-                <h1 className="font-bold text-xl text-pink-600">TeeMeYou Developer</h1>
-              </div>
-              <div className="mt-5 flex-1 flex flex-col">
-                <nav className="flex-1 px-2 space-y-1">
-                  {navigation.map((item) => (
-                    <Link 
-                      key={item.name}
-                      href={item.href}
-                      className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
-                        location === item.href
-                          ? 'bg-pink-100 text-pink-600'
-                          : 'text-gray-600 hover:bg-pink-50 hover:text-pink-600'
-                      }`}
-                    >
-                      {item.icon}
-                      <span className="ml-3">{item.name}</span>
-                    </Link>
-                  ))}
-                </nav>
-              </div>
-              <div className="flex-shrink-0 flex border-t border-gray-200 p-4">
-                <div className="flex-shrink-0 w-full group block">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-700">{user?.username || 'Admin User'}</p>
-                      <div className="flex space-x-2">
-                        <Link href="/" className="text-xs font-medium text-gray-500 hover:text-gray-700">
-                          View Store
-                        </Link>
-                        <span className="text-xs text-gray-500">|</span>
-                        <Link href="/admin" className="text-xs font-medium text-gray-500 hover:text-gray-700">
-                          Admin
-                        </Link>
-                      </div>
-                    </div>
-                    
-                    <div className="px-2 py-1 rounded bg-green-100 text-green-800 text-xs font-medium">
-                      Dev Mode
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+    <div className="min-h-screen flex flex-col">
+      {/* Top Navigation Bar */}
+      <header className="bg-green-700 text-white py-3 px-4 shadow-md">
+        <div className="container mx-auto flex justify-between items-center">
+          <div className="flex items-center">
+            <Terminal className="h-6 w-6 mr-2" />
+            <h1 className="text-xl font-bold">Developer Dashboard</h1>
+          </div>
+          <div className="flex items-center space-x-4">
+            <Button variant="ghost" size="sm" asChild>
+              <Link href="/" className="text-white hover:text-green-200">
+                <ArrowLeft className="h-4 w-4 mr-1" />
+                Back to Site
+              </Link>
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="text-white border-white hover:bg-green-800"
+              onClick={() => logoutMutation.mutate()}
+            >
+              <LogOut className="h-4 w-4 mr-1" />
+              Logout
+            </Button>
           </div>
         </div>
-        
-        {/* Main content */}
-        <div className="flex flex-col w-0 flex-1 overflow-hidden">
-          <div className="relative z-10 flex-shrink-0 flex h-16 bg-white border-b border-gray-200">
-            <div className="flex-1 px-4 flex justify-between">
-              <div className="flex-1 flex items-center">
-                <div className="hidden md:block">
-                  <div className="flex items-baseline space-x-4">
-                    <h1 className="text-2xl font-semibold text-gray-900">{title}</h1>
-                    {subtitle && (
-                      <div className="flex items-center text-sm text-gray-500">
-                        <ChevronRight className="h-4 w-4 mx-1" />
-                        <span>{subtitle}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
+      </header>
+
+      <div className="flex-1 flex">
+        {/* Sidebar */}
+        <div className="w-64 bg-gray-50 border-r border-gray-200 hidden md:block">
+          <ScrollArea className="h-[calc(100vh-4rem)]">
+            <div className="py-6 px-4">
+              <p className="text-sm font-medium text-gray-500 mb-4">DEVELOP & TEST</p>
+              <nav className="space-y-1">
+                {DeveloperNavItems.map((item) => (
+                  <Button
+                    key={item.href}
+                    variant="ghost"
+                    size="sm"
+                    className={`w-full justify-start ${
+                      location === item.href
+                        ? 'bg-green-100 text-green-700'
+                        : 'text-gray-600 hover:text-green-700 hover:bg-green-50'
+                    }`}
+                    asChild
+                  >
+                    <Link href={item.href}>
+                      {item.icon}
+                      {item.title}
+                    </Link>
+                  </Button>
+                ))}
+              </nav>
+              
+              <Separator className="my-6" />
+              
+              <p className="text-sm font-medium text-gray-500 mb-4">OTHER</p>
+              <nav className="space-y-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start text-gray-600 hover:text-green-700 hover:bg-green-50"
+                  asChild
+                >
+                  <Link href="/admin">
+                    <Settings className="w-5 h-5 mr-2" />
+                    Admin Dashboard
+                  </Link>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start text-gray-600 hover:text-green-700 hover:bg-green-50"
+                  asChild
+                >
+                  <Link href="/admin/auth-test">
+                    <AlertCircle className="w-5 h-5 mr-2" />
+                    Legacy Auth Tests
+                  </Link>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start text-gray-600 hover:text-pink-600 hover:bg-pink-50"
+                  asChild
+                >
+                  <Link href="/">
+                    <Zap className="w-5 h-5 mr-2" />
+                    Go to Store
+                  </Link>
+                </Button>
+              </nav>
             </div>
-          </div>
-          
-          <main className="flex-1 relative overflow-y-auto focus:outline-none bg-gray-100">
-            <div className="py-6">
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+          </ScrollArea>
+        </div>
+
+        {/* Main Content */}
+        <div className="flex-1 overflow-auto">
+          <div className="container mx-auto p-6">
+            <div className="mb-6">
+              <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
+              {subtitle && (
+                <p className="text-gray-500 mt-1">{subtitle}</p>
+              )}
+            </div>
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+              <div className="p-6">
                 {children}
               </div>
             </div>
-          </main>
+          </div>
         </div>
       </div>
     </div>
   );
 }
-
-export default DeveloperLayout;

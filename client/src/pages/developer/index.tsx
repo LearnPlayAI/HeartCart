@@ -1,19 +1,19 @@
-import DeveloperLayout from '@/components/developer/developer-layout';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Link } from 'wouter';
+import DeveloperLayout from '@/components/developer/developer-layout';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
-  Lock, 
+  ShieldCheck, 
   Database, 
-  Brain, 
-  HardDrive, 
-  Globe, 
-  ShoppingCart, 
-  Tags, 
-  Layout, 
-  Gauge,
-  Code
+  Cpu, 
+  FileCode, 
+  Code, 
+  BookOpen, 
+  Puzzle, 
+  Palette, 
+  Activity, 
+  Terminal 
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface TestModuleCardProps {
   title: string;
@@ -25,127 +25,136 @@ interface TestModuleCardProps {
 
 function TestModuleCard({ title, description, icon, link, testsCount }: TestModuleCardProps) {
   return (
-    <Card className="h-full transition-all duration-200 hover:shadow-md">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-lg font-medium">{title}</CardTitle>
-        <div className="h-9 w-9 rounded-lg bg-pink-100 p-2 text-pink-600">
+    <Card className="overflow-hidden">
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-xl">
           {icon}
-        </div>
+          {title}
+        </CardTitle>
+        <CardDescription>{description}</CardDescription>
       </CardHeader>
-      <CardContent>
-        <CardDescription className="min-h-[60px]">{description}</CardDescription>
-        <div className="mt-4 flex items-center justify-between">
-          <div className="text-sm text-muted-foreground">
-            {testsCount} test{testsCount !== 1 ? 's' : ''}
-          </div>
-          <Link href={link}>
-            <Button size="sm" variant="outline">
-              Run Tests
-            </Button>
-          </Link>
-        </div>
+      <CardContent className="text-sm text-gray-500">
+        <p>{testsCount} tests available</p>
       </CardContent>
+      <CardFooter className="pt-2 pb-4">
+        <Button variant="outline" className="w-full" asChild>
+          <Link href={link}>View Tests</Link>
+        </Button>
+      </CardFooter>
     </Card>
   );
 }
 
 function DeveloperDashboard() {
-  const modules = [
+  const testModules = [
     {
       title: 'Authentication',
-      description: 'Test user authentication, sessions, permissions, and password security',
-      icon: <Lock className="h-5 w-5" />,
+      description: 'Test user authentication, session management, and security',
+      icon: <ShieldCheck className="h-5 w-5 text-green-600" />,
       link: '/developer/auth-tests',
-      testsCount: 12
+      testsCount: 12,
     },
     {
       title: 'Database',
-      description: 'Verify database connections, queries, data integrity, and transactions',
-      icon: <Database className="h-5 w-5" />,
+      description: 'Verify database connections, queries, and performance',
+      icon: <Database className="h-5 w-5 text-blue-600" />,
       link: '/developer/database-tests',
-      testsCount: 8
+      testsCount: 8,
     },
     {
-      title: 'AI System',
-      description: 'Test Gemini integration, image processing, and AI recommendations',
-      icon: <Brain className="h-5 w-5" />,
+      title: 'AI Integration',
+      description: 'Test Gemini AI features and content generation',
+      icon: <Cpu className="h-5 w-5 text-purple-600" />,
       link: '/developer/ai-tests',
-      testsCount: 6
+      testsCount: 6,
     },
     {
       title: 'Storage',
-      description: 'Validate object storage, file uploads, and image optimization',
-      icon: <HardDrive className="h-5 w-5" />,
+      description: 'Verify object storage and file management',
+      icon: <FileCode className="h-5 w-5 text-orange-600" />,
       link: '/developer/storage-tests',
-      testsCount: 5
+      testsCount: 5,
     },
     {
       title: 'API',
-      description: 'Check endpoint responses, rate limiting, and error handling',
-      icon: <Globe className="h-5 w-5" />,
+      description: 'Test API endpoints, validation, and error handling',
+      icon: <Code className="h-5 w-5 text-gray-600" />,
       link: '/developer/api-tests',
-      testsCount: 10
+      testsCount: 10,
     },
     {
       title: 'E-commerce',
-      description: 'Test product CRUD, cart functionality, and order processing',
-      icon: <ShoppingCart className="h-5 w-5" />,
+      description: 'Verify product, cart, and order functionality',
+      icon: <BookOpen className="h-5 w-5 text-pink-600" />,
       link: '/developer/ecommerce-tests',
-      testsCount: 9
+      testsCount: 15,
     },
     {
       title: 'Attributes',
-      description: 'Verify attribute management, product attributes, and multi-value support',
-      icon: <Tags className="h-5 w-5" />,
+      description: 'Test dynamic attribute system and pricing',
+      icon: <Puzzle className="h-5 w-5 text-amber-600" />,
       link: '/developer/attribute-tests',
-      testsCount: 7
+      testsCount: 7,
     },
     {
       title: 'UI Components',
-      description: 'Test form validation, component rendering, and accessibility',
-      icon: <Layout className="h-5 w-5" />,
+      description: 'Verify UI components and responsive design',
+      icon: <Palette className="h-5 w-5 text-indigo-600" />,
       link: '/developer/ui-tests',
-      testsCount: 11
+      testsCount: 9,
     },
     {
       title: 'Performance',
-      description: 'Analyze load times, response times, and resource optimization',
-      icon: <Gauge className="h-5 w-5" />,
+      description: 'Run performance tests and analyze metrics',
+      icon: <Activity className="h-5 w-5 text-red-600" />,
       link: '/developer/performance-tests',
-      testsCount: 6
+      testsCount: 4,
     },
     {
       title: 'Debug Console',
-      description: 'Interactive console for debugging and running custom test commands',
-      icon: <Code className="h-5 w-5" />,
+      description: 'Interactive debugging and logging tools',
+      icon: <Terminal className="h-5 w-5 text-slate-600" />,
       link: '/developer/debug-console',
-      testsCount: 3
-    }
+      testsCount: 3,
+    },
   ];
 
   return (
-    <DeveloperLayout title="Developer Dashboard">
-      <div className="space-y-6">
-        <div className="bg-white p-6 rounded-lg shadow-sm">
-          <h2 className="text-xl font-semibold mb-2">System Testing Dashboard</h2>
-          <p className="text-gray-500">
-            Welcome to the TeeMeYou Developer Dashboard. This tool provides comprehensive testing 
-            capabilities for all core system components. Select a module below to run specific tests.
+    <DeveloperLayout 
+      title="Developer Dashboard" 
+      subtitle="Comprehensive testing and diagnostic tools for the TeeMeYou platform"
+    >
+      <div className="mb-8">
+        <div className="p-6 bg-gradient-to-r from-green-50 to-green-100 border border-green-200 rounded-md">
+          <h2 className="text-xl font-semibold mb-2 text-green-800">Welcome to the Developer Dashboard</h2>
+          <p className="text-green-700 mb-4">
+            This dashboard provides tools for testing, debugging, and validating all aspects of the TeeMeYou e-commerce platform. 
+            Select a testing module below to get started.
           </p>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center px-3 py-1.5 bg-green-700 text-white rounded text-sm">
+              <span className="font-medium">Authentication system:</span>
+              <span className="ml-2 px-2 py-0.5 bg-green-100 text-green-800 rounded">Ready for testing</span>
+            </div>
+            <div className="flex items-center px-3 py-1.5 bg-amber-100 text-amber-800 rounded text-sm">
+              <span className="font-medium">Active development modules:</span>
+              <span className="ml-2">3</span>
+            </div>
+          </div>
         </div>
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {modules.map((module) => (
-            <TestModuleCard
-              key={module.title}
-              title={module.title}
-              description={module.description}
-              icon={module.icon}
-              link={module.link}
-              testsCount={module.testsCount}
-            />
-          ))}
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {testModules.map((module) => (
+          <TestModuleCard
+            key={module.link}
+            title={module.title}
+            description={module.description}
+            icon={module.icon}
+            link={module.link}
+            testsCount={module.testsCount}
+          />
+        ))}
       </div>
     </DeveloperLayout>
   );

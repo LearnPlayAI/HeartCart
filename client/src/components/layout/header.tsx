@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
-import { User, ShoppingCart, LogIn, UserPlus, LogOut, ChevronDown, LayoutDashboard } from 'lucide-react';
+import { User, ShoppingCart, LogIn, UserPlus, LogOut, ChevronDown, LayoutDashboard, Terminal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { 
   DropdownMenu, 
@@ -108,6 +108,12 @@ const Header = () => {
                             Admin Dashboard
                           </Link>
                         </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link href="/developer" className="cursor-pointer text-green-700 font-medium flex items-center">
+                            <Terminal className="h-4 w-4 mr-2" />
+                            Developer Dashboard
+                          </Link>
+                        </DropdownMenuItem>
                       </>
                     )}
                     
@@ -184,13 +190,22 @@ const Header = () => {
             
             {/* Admin Dashboard direct link in main navigation */}
             {user?.role === 'admin' && (
-              <Link 
-                href="/admin" 
-                className="px-4 py-1 font-medium text-sm bg-white text-[#FF69B4] rounded-full mx-1 transition-colors duration-200 flex items-center"
-              >
-                <LayoutDashboard className="h-3 w-3 mr-1" />
-                Admin
-              </Link>
+              <>
+                <Link 
+                  href="/admin" 
+                  className="px-4 py-1 font-medium text-sm bg-white text-[#FF69B4] rounded-full mx-1 transition-colors duration-200 flex items-center"
+                >
+                  <LayoutDashboard className="h-3 w-3 mr-1" />
+                  Admin
+                </Link>
+                <Link 
+                  href="/developer" 
+                  className="px-4 py-1 font-medium text-sm bg-green-100 text-green-700 rounded-full mx-1 transition-colors duration-200 flex items-center"
+                >
+                  <Terminal className="h-3 w-3 mr-1" />
+                  Developer
+                </Link>
+              </>
             )}
           </div>
         </div>

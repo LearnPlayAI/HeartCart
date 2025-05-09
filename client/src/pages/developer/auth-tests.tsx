@@ -1,0 +1,624 @@
+import { useState, useEffect } from 'react';
+import DeveloperLayout from '@/components/developer/developer-layout';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ShieldCheck, Check, X, AlertTriangle, Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { getQueryFn, apiRequest, queryClient } from "@/lib/queryClient";
+
+type TestResult = {
+  status: 'passed' | 'failed' | 'pending';
+  message: string;
+};
+
+type ValidationTestResults = {
+  status: 'passed' | 'failed' | 'pending';
+  results: {
+    complexityRules: TestResult;
+    lengthRequirements: TestResult;
+    specialCharacters: TestResult;
+    commonPasswords: TestResult;
+  };
+  failedTests: string[];
+};
+
+type CredentialTestResults = {
+  status: 'passed' | 'failed' | 'pending';
+  results: {
+    validLogin: TestResult;
+    invalidUsername: TestResult;
+    invalidPassword: TestResult;
+    emptyCredentials: TestResult;
+  };
+  failedTests: string[];
+};
+
+type SessionTestResults = {
+  status: 'passed' | 'failed' | 'pending';
+  results: {
+    persistenceTest: TestResult;
+    refreshTest: TestResult;
+    timeoutTest: TestResult;
+    logoutTest: TestResult;
+  };
+  failedTests: string[];
+};
+
+type SystemTestResults = {
+  status: 'passed' | 'failed' | 'pending';
+  results: {
+    passwordValidation: TestResult;
+    passwordHashing: TestResult;
+    userRetrieval: TestResult;
+    sessionExpiry: TestResult;
+  };
+  failedTests: string[];
+};
+
+function AuthTestsPage() {
+  const { toast } = useToast();
+  const [selectedTest, setSelectedTest] = useState<string>('validation');
+
+  // Password validation test
+  const {
+    data: validationResults,
+    isLoading: isValidationLoading,
+    error: validationError,
+    refetch: refetchValidation,
+  } = useQuery<ValidationTestResults>({
+    queryKey: ['/api/auth-test/validate-password'],
+    queryFn: getQueryFn(),
+    enabled: selectedTest === 'validation',
+  });
+
+  // Credential verification test
+  const {
+    data: credentialResults,
+    isLoading: isCredentialLoading,
+    error: credentialError,
+    refetch: refetchCredentials,
+  } = useQuery<CredentialTestResults>({
+    queryKey: ['/api/auth-test/validate-credentials'],
+    queryFn: getQueryFn(),
+    enabled: selectedTest === 'credentials',
+  });
+
+  // Session management test
+  const {
+    data: sessionResults,
+    isLoading: isSessionLoading,
+    error: sessionError,
+    refetch: refetchSession,
+  } = useQuery<SessionTestResults>({
+    queryKey: ['/api/auth-test/session-persistence'],
+    queryFn: getQueryFn(),
+    enabled: selectedTest === 'session',
+  });
+
+  // System tests
+  const {
+    data: systemResults,
+    isLoading: isSystemLoading,
+    error: systemError,
+    refetch: refetchSystem,
+  } = useQuery<SystemTestResults>({
+    queryKey: ['/api/auth-test/system-tests'],
+    queryFn: getQueryFn(),
+    enabled: selectedTest === 'system',
+  });
+
+  // Run all tests mutation
+  const runAllTestsMutation = useMutation({
+    mutationFn: async () => {
+      await Promise.all([
+        apiRequest('GET', '/api/auth-test/validate-password'),
+        apiRequest('GET', '/api/auth-test/validate-credentials'),
+        apiRequest('GET', '/api/auth-test/session-persistence'),
+        apiRequest('GET', '/api/auth-test/system-tests'),
+      ]);
+      return { success: true };
+    },
+    onSuccess: () => {
+      toast({
+        title: 'All tests completed',
+        description: 'Authentication tests have been run successfully',
+      });
+      
+      // Refetch all tests
+      refetchValidation();
+      refetchCredentials();
+      refetchSession();
+      refetchSystem();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Test Error',
+        description: `Failed to run tests: ${error.message}`,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // User count query
+  const { data: userCount } = useQuery({
+    queryKey: ['/api/auth-test/user-count'],
+    queryFn: getQueryFn(),
+  });
+
+  // Test status component
+  const TestStatus = ({ status }: { status: 'passed' | 'failed' | 'pending' }) => {
+    if (status === 'passed') {
+      return <div className="flex items-center text-green-600"><Check className="w-5 h-5 mr-1" /> Passed</div>;
+    } else if (status === 'failed') {
+      return <div className="flex items-center text-red-600"><X className="w-5 h-5 mr-1" /> Failed</div>;
+    } else {
+      return <div className="flex items-center text-amber-600"><AlertTriangle className="w-5 h-5 mr-1" /> Pending</div>;
+    }
+  };
+
+  // Handle tab change
+  const handleTabChange = (value: string) => {
+    setSelectedTest(value);
+  };
+
+  // Run all tests
+  const runAllTests = () => {
+    runAllTestsMutation.mutate();
+  };
+
+  return (
+    <DeveloperLayout 
+      title="Authentication Tests" 
+      subtitle="Comprehensive tests for authentication, session management, and security"
+    >
+      <div className="mb-6 flex justify-between items-center">
+        <div>
+          <div className="flex items-center">
+            <ShieldCheck className="w-6 h-6 text-green-600 mr-2" />
+            <h2 className="text-xl font-semibold">Authentication System Tests</h2>
+          </div>
+          <p className="text-gray-500 mt-1">
+            Verify user authentication, session management, and security measures
+          </p>
+        </div>
+        <div className="flex space-x-3">
+          <Button 
+            variant="outline" 
+            disabled={runAllTestsMutation.isPending} 
+            onClick={runAllTests}
+          >
+            {runAllTestsMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Run All Tests
+          </Button>
+        </div>
+      </div>
+
+      <div className="bg-gray-50 p-4 rounded-md mb-6 flex flex-wrap gap-4">
+        <div className="bg-white p-3 rounded-md shadow-sm">
+          <div className="text-sm text-gray-500">Registered Users</div>
+          <div className="text-2xl font-semibold">{userCount?.count || 0}</div>
+        </div>
+        <div className="bg-white p-3 rounded-md shadow-sm">
+          <div className="text-sm text-gray-500">System Status</div>
+          <div className="text-lg font-medium text-green-600 flex items-center">
+            <div className="w-2 h-2 rounded-full bg-green-500 mr-2"></div>
+            Operational
+          </div>
+        </div>
+        <div className="bg-white p-3 rounded-md shadow-sm">
+          <div className="text-sm text-gray-500">Test Coverage</div>
+          <div className="text-xl font-semibold">12 Tests</div>
+        </div>
+      </div>
+
+      <Tabs defaultValue="validation" onValueChange={handleTabChange}>
+        <TabsList className="mb-6">
+          <TabsTrigger value="validation">Password Validation</TabsTrigger>
+          <TabsTrigger value="credentials">Credential Verification</TabsTrigger>
+          <TabsTrigger value="session">Session Management</TabsTrigger>
+          <TabsTrigger value="system">System Tests</TabsTrigger>
+        </TabsList>
+
+        {/* Password Validation Tests */}
+        <TabsContent value="validation">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Complexity Rules</CardTitle>
+                <CardDescription>
+                  Test password complexity requirement enforcement
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isValidationLoading ? (
+                  <div className="flex justify-center py-4">
+                    <Loader2 className="h-8 w-8 animate-spin text-green-600" />
+                  </div>
+                ) : validationError ? (
+                  <div className="text-red-600 py-2">Error: {(validationError as Error).message}</div>
+                ) : validationResults ? (
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center p-2 border-b">
+                      <span>Complexity Rules</span>
+                      <TestStatus status={validationResults.results.complexityRules.status} />
+                    </div>
+                    <div className="flex justify-between items-center p-2 border-b">
+                      <span>Length Requirements</span>
+                      <TestStatus status={validationResults.results.lengthRequirements.status} />
+                    </div>
+                    <div className="flex justify-between items-center p-2 border-b">
+                      <span>Special Characters</span>
+                      <TestStatus status={validationResults.results.specialCharacters.status} />
+                    </div>
+                    <div className="flex justify-between items-center p-2">
+                      <span>Common Passwords</span>
+                      <TestStatus status={validationResults.results.commonPasswords.status} />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-gray-500 py-2">No test results available</div>
+                )}
+              </CardContent>
+              <CardFooter>
+                <Button 
+                  onClick={() => refetchValidation()} 
+                  disabled={isValidationLoading} 
+                  variant="outline" 
+                  className="w-full"
+                >
+                  {isValidationLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Run Tests
+                </Button>
+              </CardFooter>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Test Results</CardTitle>
+                <CardDescription>
+                  Detailed results of password validation tests
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isValidationLoading ? (
+                  <div className="flex justify-center py-4">
+                    <Loader2 className="h-8 w-8 animate-spin text-green-600" />
+                  </div>
+                ) : validationError ? (
+                  <div className="text-red-600 py-2">Error: {(validationError as Error).message}</div>
+                ) : validationResults ? (
+                  <div>
+                    <div className="mb-4">
+                      <h3 className="text-lg font-medium mb-2 flex items-center">
+                        <TestStatus status={validationResults.status} />
+                        <span className="ml-2">Overall Result</span>
+                      </h3>
+                      <p className="text-sm text-gray-500">
+                        {validationResults.status === 'passed' 
+                          ? 'All password validation tests passed successfully' 
+                          : `${validationResults.failedTests.length} validation tests failed`}
+                      </p>
+                    </div>
+                    {validationResults.status === 'failed' && (
+                      <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+                        <h4 className="text-sm font-medium text-red-800 mb-1">Failed Tests:</h4>
+                        <ul className="list-disc list-inside text-sm text-red-700">
+                          {validationResults.failedTests.map((test, i) => (
+                            <li key={i}>{test}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-gray-500 py-2">No test results available</div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* Credential Verification Tests */}
+        <TabsContent value="credentials">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Credential Verification</CardTitle>
+                <CardDescription>
+                  Test login credential validation and security
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isCredentialLoading ? (
+                  <div className="flex justify-center py-4">
+                    <Loader2 className="h-8 w-8 animate-spin text-green-600" />
+                  </div>
+                ) : credentialError ? (
+                  <div className="text-red-600 py-2">Error: {(credentialError as Error).message}</div>
+                ) : credentialResults ? (
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center p-2 border-b">
+                      <span>Valid Login</span>
+                      <TestStatus status={credentialResults.results.validLogin.status} />
+                    </div>
+                    <div className="flex justify-between items-center p-2 border-b">
+                      <span>Invalid Username</span>
+                      <TestStatus status={credentialResults.results.invalidUsername.status} />
+                    </div>
+                    <div className="flex justify-between items-center p-2 border-b">
+                      <span>Invalid Password</span>
+                      <TestStatus status={credentialResults.results.invalidPassword.status} />
+                    </div>
+                    <div className="flex justify-between items-center p-2">
+                      <span>Empty Credentials</span>
+                      <TestStatus status={credentialResults.results.emptyCredentials.status} />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-gray-500 py-2">No test results available</div>
+                )}
+              </CardContent>
+              <CardFooter>
+                <Button 
+                  onClick={() => refetchCredentials()} 
+                  disabled={isCredentialLoading} 
+                  variant="outline" 
+                  className="w-full"
+                >
+                  {isCredentialLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Run Tests
+                </Button>
+              </CardFooter>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Test Results</CardTitle>
+                <CardDescription>
+                  Detailed results of credential verification tests
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isCredentialLoading ? (
+                  <div className="flex justify-center py-4">
+                    <Loader2 className="h-8 w-8 animate-spin text-green-600" />
+                  </div>
+                ) : credentialError ? (
+                  <div className="text-red-600 py-2">Error: {(credentialError as Error).message}</div>
+                ) : credentialResults ? (
+                  <div>
+                    <div className="mb-4">
+                      <h3 className="text-lg font-medium mb-2 flex items-center">
+                        <TestStatus status={credentialResults.status} />
+                        <span className="ml-2">Overall Result</span>
+                      </h3>
+                      <p className="text-sm text-gray-500">
+                        {credentialResults.status === 'passed' 
+                          ? 'All credential verification tests passed successfully' 
+                          : `${credentialResults.failedTests.length} verification tests failed`}
+                      </p>
+                    </div>
+                    {credentialResults.status === 'failed' && (
+                      <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+                        <h4 className="text-sm font-medium text-red-800 mb-1">Failed Tests:</h4>
+                        <ul className="list-disc list-inside text-sm text-red-700">
+                          {credentialResults.failedTests.map((test, i) => (
+                            <li key={i}>{test}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-gray-500 py-2">No test results available</div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* Session Management Tests */}
+        <TabsContent value="session">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Session Management</CardTitle>
+                <CardDescription>
+                  Test session persistence, timeout, and security
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isSessionLoading ? (
+                  <div className="flex justify-center py-4">
+                    <Loader2 className="h-8 w-8 animate-spin text-green-600" />
+                  </div>
+                ) : sessionError ? (
+                  <div className="text-red-600 py-2">Error: {(sessionError as Error).message}</div>
+                ) : sessionResults ? (
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center p-2 border-b">
+                      <span>Session Persistence</span>
+                      <TestStatus status={sessionResults.results.persistenceTest.status} />
+                    </div>
+                    <div className="flex justify-between items-center p-2 border-b">
+                      <span>Session Refresh</span>
+                      <TestStatus status={sessionResults.results.refreshTest.status} />
+                    </div>
+                    <div className="flex justify-between items-center p-2 border-b">
+                      <span>Session Timeout</span>
+                      <TestStatus status={sessionResults.results.timeoutTest.status} />
+                    </div>
+                    <div className="flex justify-between items-center p-2">
+                      <span>Logout Functionality</span>
+                      <TestStatus status={sessionResults.results.logoutTest.status} />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-gray-500 py-2">No test results available</div>
+                )}
+              </CardContent>
+              <CardFooter>
+                <Button 
+                  onClick={() => refetchSession()} 
+                  disabled={isSessionLoading} 
+                  variant="outline" 
+                  className="w-full"
+                >
+                  {isSessionLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Run Tests
+                </Button>
+              </CardFooter>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Test Results</CardTitle>
+                <CardDescription>
+                  Detailed results of session management tests
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isSessionLoading ? (
+                  <div className="flex justify-center py-4">
+                    <Loader2 className="h-8 w-8 animate-spin text-green-600" />
+                  </div>
+                ) : sessionError ? (
+                  <div className="text-red-600 py-2">Error: {(sessionError as Error).message}</div>
+                ) : sessionResults ? (
+                  <div>
+                    <div className="mb-4">
+                      <h3 className="text-lg font-medium mb-2 flex items-center">
+                        <TestStatus status={sessionResults.status} />
+                        <span className="ml-2">Overall Result</span>
+                      </h3>
+                      <p className="text-sm text-gray-500">
+                        {sessionResults.status === 'passed' 
+                          ? 'All session management tests passed successfully' 
+                          : `${sessionResults.failedTests.length} session tests failed`}
+                      </p>
+                    </div>
+                    {sessionResults.status === 'failed' && (
+                      <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+                        <h4 className="text-sm font-medium text-red-800 mb-1">Failed Tests:</h4>
+                        <ul className="list-disc list-inside text-sm text-red-700">
+                          {sessionResults.failedTests.map((test, i) => (
+                            <li key={i}>{test}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-gray-500 py-2">No test results available</div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* System Tests */}
+        <TabsContent value="system">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>System Tests</CardTitle>
+                <CardDescription>
+                  Test overall authentication system functionality
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isSystemLoading ? (
+                  <div className="flex justify-center py-4">
+                    <Loader2 className="h-8 w-8 animate-spin text-green-600" />
+                  </div>
+                ) : systemError ? (
+                  <div className="text-red-600 py-2">Error: {(systemError as Error).message}</div>
+                ) : systemResults ? (
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center p-2 border-b">
+                      <span>Password Validation</span>
+                      <TestStatus status={systemResults.results.passwordValidation.status} />
+                    </div>
+                    <div className="flex justify-between items-center p-2 border-b">
+                      <span>Password Hashing</span>
+                      <TestStatus status={systemResults.results.passwordHashing.status} />
+                    </div>
+                    <div className="flex justify-between items-center p-2 border-b">
+                      <span>User Retrieval</span>
+                      <TestStatus status={systemResults.results.userRetrieval.status} />
+                    </div>
+                    <div className="flex justify-between items-center p-2">
+                      <span>Session Expiry</span>
+                      <TestStatus status={systemResults.results.sessionExpiry.status} />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-gray-500 py-2">No test results available</div>
+                )}
+              </CardContent>
+              <CardFooter>
+                <Button 
+                  onClick={() => refetchSystem()} 
+                  disabled={isSystemLoading} 
+                  variant="outline" 
+                  className="w-full"
+                >
+                  {isSystemLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Run Tests
+                </Button>
+              </CardFooter>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Test Results</CardTitle>
+                <CardDescription>
+                  Detailed results of system-wide authentication tests
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isSystemLoading ? (
+                  <div className="flex justify-center py-4">
+                    <Loader2 className="h-8 w-8 animate-spin text-green-600" />
+                  </div>
+                ) : systemError ? (
+                  <div className="text-red-600 py-2">Error: {(systemError as Error).message}</div>
+                ) : systemResults ? (
+                  <div>
+                    <div className="mb-4">
+                      <h3 className="text-lg font-medium mb-2 flex items-center">
+                        <TestStatus status={systemResults.status} />
+                        <span className="ml-2">Overall Result</span>
+                      </h3>
+                      <p className="text-sm text-gray-500">
+                        {systemResults.status === 'passed' 
+                          ? 'All system authentication tests passed successfully' 
+                          : `${systemResults.failedTests.length} system tests failed`}
+                      </p>
+                    </div>
+                    {systemResults.status === 'failed' && (
+                      <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+                        <h4 className="text-sm font-medium text-red-800 mb-1">Failed Tests:</h4>
+                        <ul className="list-disc list-inside text-sm text-red-700">
+                          {systemResults.failedTests.map((test, i) => (
+                            <li key={i}>{test}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-gray-500 py-2">No test results available</div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
+    </DeveloperLayout>
+  );
+}
+
+export default AuthTestsPage;
