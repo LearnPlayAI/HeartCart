@@ -82,23 +82,44 @@ export function registerDatabaseTestRoutes(app: Express): void {
       // Get expected tables from our Drizzle schema - inspect pgTable objects
       const expectedTables: string[] = [];
       
-      // Iterate through all exports from schema.ts
+      // Find all table definitions in schema.ts by looking for variable declarations with pgTable
+      // Example: export const users = pgTable("users", {
+      const tableDefs = [];
+      
+      // Get all entries exported from schema
       Object.entries(schema).forEach(([key, value]) => {
-        // Check for Drizzle table definitions
-        // Tables are exported as objects with a name property (pgTable)
+        // Skip any entries with "Relations" in the name (these are relationship definitions)
+        if (key.includes('Relations') || key.includes('Schema')) {
+          return;
+        }
+        
+        // Check if this is a table definition
+        // Drizzle Tables are objects with special prototype methods and properties
         if (
           value && 
           typeof value === 'object' && 
+          // Must have a name property with string value (table name)
           'name' in value && 
-          typeof value.name === 'string' && 
-          // Filter out relations
-          !key.includes('Relations') &&
-          // These properties are typically on Drizzle table objects
-          '$schema' in value
+          typeof value.name === 'string' &&
+          // The schema should also have an $inferSelect method
+          '$inferSelect' in value
         ) {
-          expectedTables.push(key);
+          tableDefs.push({
+            variableName: key, 
+            tableName: value.name,
+            value: value
+          });
           logger.debug(`Found table: ${key} with DB name: ${value.name}`);
         }
+      });
+      
+      // Extract the expected table names from the table definitions
+      expectedTables = tableDefs.map(t => t.variableName);
+      
+      // Additional debugging info about the found tables
+      logger.debug('Found table definitions:', { 
+        tableCount: tableDefs.length,
+        tablesFound: tableDefs.map(t => `${t.variableName} (${t.tableName})`)
       });
       
       // Log the tables we found for debugging

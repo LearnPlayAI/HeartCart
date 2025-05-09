@@ -155,7 +155,8 @@ function DatabaseTestsPage() {
   } = useQuery<{ success: boolean, data: TableStructureResults }>({
     queryKey: ['/api/db-test/table-structure'],
     queryFn: getQueryFn({ on401: "returnNull" }),
-    enabled: selectedTest === 'structure',
+    staleTime: 0, // Don't cache results
+    refetchOnWindowFocus: false, // Don't refetch automatically
   });
   
   const structureResults = structureResponse?.success ? structureResponse.data : undefined;
@@ -169,7 +170,8 @@ function DatabaseTestsPage() {
   } = useQuery<{ success: boolean, data: DataIntegrityResults }>({
     queryKey: ['/api/db-test/data-integrity'],
     queryFn: getQueryFn({ on401: "returnNull" }),
-    enabled: selectedTest === 'integrity',
+    staleTime: 0, // Don't cache results
+    refetchOnWindowFocus: false, // Don't refetch automatically
   });
   
   const integrityResults = integrityResponse?.success ? integrityResponse.data : undefined;
@@ -183,7 +185,8 @@ function DatabaseTestsPage() {
   } = useQuery<{ success: boolean, data: QueryPerformanceResults }>({
     queryKey: ['/api/db-test/query-performance'],
     queryFn: getQueryFn({ on401: "returnNull" }),
-    enabled: selectedTest === 'performance',
+    staleTime: 0, // Don't cache results
+    refetchOnWindowFocus: false, // Don't refetch automatically
   });
   
   const performanceResults = performanceResponse?.success ? performanceResponse.data : undefined;
@@ -197,7 +200,8 @@ function DatabaseTestsPage() {
   } = useQuery<{ success: boolean, data: IndexEffectivenessResults }>({
     queryKey: ['/api/db-test/index-effectiveness'],
     queryFn: getQueryFn({ on401: "returnNull" }),
-    enabled: selectedTest === 'index',
+    staleTime: 0, // Don't cache results
+    refetchOnWindowFocus: false, // Don't refetch automatically
   });
   
   const indexResults = indexResponse?.success ? indexResponse.data : undefined;
@@ -211,7 +215,8 @@ function DatabaseTestsPage() {
   } = useQuery<{ success: boolean, data: TransactionResults }>({
     queryKey: ['/api/db-test/transactions'],
     queryFn: getQueryFn({ on401: "returnNull" }),
-    enabled: selectedTest === 'transaction',
+    staleTime: 0, // Don't cache results
+    refetchOnWindowFocus: false, // Don't refetch automatically
   });
   
   const transactionResults = transactionResponse?.success ? transactionResponse.data : undefined;
@@ -281,23 +286,35 @@ function DatabaseTestsPage() {
 
   // Run individual test
   const runIndividualTest = () => {
+    let testName = '';
+    
     switch (selectedTest) {
       case 'structure':
         refetchStructure();
+        testName = 'Table Structure';
         break;
       case 'integrity':
         refetchIntegrity();
+        testName = 'Data Integrity';
         break;
       case 'performance':
         refetchPerformance();
+        testName = 'Query Performance';
         break;
       case 'index':
         refetchIndex();
+        testName = 'Index Effectiveness';
         break;
       case 'transaction':
         refetchTransaction();
+        testName = 'Transaction';
         break;
     }
+    
+    toast({
+      title: `Running ${testName} Test`,
+      description: 'The test is being executed, please wait for results to appear.',
+    });
   };
 
   return (
