@@ -181,8 +181,14 @@ export function setupAuth(app: Express): void {
   // Registration endpoint with enhanced validation and error handling
   app.post("/api/register", withStandardResponse(async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // Validate required fields
-      const { username, email, password, fullName } = req.body;
+      // Extract and sanitize required fields
+      let { username, email, password, fullName } = req.body;
+      
+      // Basic sanitization - trim whitespace from all inputs
+      username = username?.trim();
+      email = email?.trim();
+      password = password?.toString(); // Keep password as is, but ensure it's a string
+      fullName = fullName?.trim();
       
       if (!username || !email || !password) {
         throw new AppError(
@@ -219,6 +225,18 @@ export function setupAuth(app: Express): void {
       if (password.length < 6) {
         throw new AppError(
           "Password must be at least 6 characters",
+          ErrorCode.VALIDATION_ERROR,
+          400,
+          { field: 'password' }
+        );
+      }
+      
+      // Check for at least one letter and one number
+      const hasLetter = /[a-zA-Z]/.test(password);
+      const hasNumber = /[0-9]/.test(password);
+      if (!hasLetter || !hasNumber) {
+        throw new AppError(
+          "Password must contain at least one letter and one number",
           ErrorCode.VALIDATION_ERROR,
           400,
           { field: 'password' }
@@ -283,6 +301,14 @@ export function setupAuth(app: Express): void {
             reject(err);
             return;
           }
+          // Update last login timestamp on registration
+          storage.updateUserLastLogin(user.id).catch(err => {
+            logger.error('Failed to update last login timestamp on registration', {
+              error: err,
+              userId: user.id
+            });
+          });
+          
           // Return user data (excluding password)
           const { password, ...userData } = user;
           res.status(201); // Set status code for created
