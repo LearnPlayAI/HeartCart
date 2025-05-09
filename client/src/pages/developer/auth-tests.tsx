@@ -72,51 +72,63 @@ function AuthTestsPage() {
 
   // Password validation test
   const {
-    data: validationResults,
+    data: validationResponse,
     isLoading: isValidationLoading,
     error: validationError,
     refetch: refetchValidation,
-  } = useQuery<ValidationTestResults>({
+  } = useQuery<{ success: boolean, data: ValidationTestResults }>({
     queryKey: ['/api/auth-test/validate-password'],
     queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: selectedTest === 'validation',
   });
+  
+  // Extract just the validation results from the standard response format
+  const validationResults = validationResponse?.success ? validationResponse.data : undefined;
 
   // Credential verification test
   const {
-    data: credentialResults,
+    data: credentialResponse,
     isLoading: isCredentialLoading,
     error: credentialError,
     refetch: refetchCredentials,
-  } = useQuery<CredentialTestResults>({
+  } = useQuery<{ success: boolean, data: CredentialTestResults }>({
     queryKey: ['/api/auth-test/validate-credentials'],
     queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: selectedTest === 'credentials',
   });
+  
+  // Extract just the credential results from the standard response format
+  const credentialResults = credentialResponse?.success ? credentialResponse.data : undefined;
 
   // Session management test
   const {
-    data: sessionResults,
+    data: sessionResponse,
     isLoading: isSessionLoading,
     error: sessionError,
     refetch: refetchSession,
-  } = useQuery<SessionTestResults>({
+  } = useQuery<{ success: boolean, data: SessionTestResults }>({
     queryKey: ['/api/auth-test/session-persistence'],
     queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: selectedTest === 'session',
   });
+  
+  // Extract just the session results from the standard response format
+  const sessionResults = sessionResponse?.success ? sessionResponse.data : undefined;
 
   // System tests
   const {
-    data: systemResults,
+    data: systemResponse,
     isLoading: isSystemLoading,
     error: systemError,
     refetch: refetchSystem,
-  } = useQuery<SystemTestResults>({
+  } = useQuery<{ success: boolean, data: SystemTestResults }>({
     queryKey: ['/api/auth-test/system-tests'],
     queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: selectedTest === 'system',
   });
+  
+  // Extract just the system results from the standard response format
+  const systemResults = systemResponse?.success ? systemResponse.data : undefined;
 
   // Run all tests mutation
   const runAllTestsMutation = useMutation({
@@ -159,10 +171,23 @@ function AuthTestsPage() {
     },
     onSuccess: (data) => {
       // Update query cache directly instead of refetching
-      queryClient.setQueryData(['/api/auth-test/validate-password'], data.validationData);
-      queryClient.setQueryData(['/api/auth-test/validate-credentials'], data.credentialData);
-      queryClient.setQueryData(['/api/auth-test/session-persistence'], data.sessionData);
-      queryClient.setQueryData(['/api/auth-test/system-tests'], data.systemData);
+      // Wrap each result in the standardized API response format
+      queryClient.setQueryData(['/api/auth-test/validate-password'], {
+        success: true,
+        data: data.validationData
+      });
+      queryClient.setQueryData(['/api/auth-test/validate-credentials'], {
+        success: true,
+        data: data.credentialData
+      });
+      queryClient.setQueryData(['/api/auth-test/session-persistence'], {
+        success: true,
+        data: data.sessionData
+      });
+      queryClient.setQueryData(['/api/auth-test/system-tests'], {
+        success: true,
+        data: data.systemData
+      });
       
       // Also refresh user count
       refetchUserCount();
@@ -207,7 +232,11 @@ function AuthTestsPage() {
     },
     onSuccess: (data) => {
       // Update the validation results directly instead of refetching
-      queryClient.setQueryData(['/api/auth-test/validate-password'], data);
+      // Wrap the result in the standardized API response format
+      queryClient.setQueryData(['/api/auth-test/validate-password'], {
+        success: true,
+        data: data
+      });
       toast({
         title: 'Validation Tests Completed',
         description: 'Password validation tests run successfully',
@@ -233,7 +262,11 @@ function AuthTestsPage() {
     },
     onSuccess: (data) => {
       // Update the credential results directly instead of refetching
-      queryClient.setQueryData(['/api/auth-test/validate-credentials'], data);
+      // Wrap the result in the standardized API response format
+      queryClient.setQueryData(['/api/auth-test/validate-credentials'], {
+        success: true,
+        data: data
+      });
       toast({
         title: 'Credential Tests Completed',
         description: 'Credential verification tests run successfully',
@@ -256,7 +289,11 @@ function AuthTestsPage() {
     },
     onSuccess: (data) => {
       // Update the session results directly instead of refetching
-      queryClient.setQueryData(['/api/auth-test/session-persistence'], data);
+      // Wrap the result in the standardized API response format
+      queryClient.setQueryData(['/api/auth-test/session-persistence'], {
+        success: true,
+        data: data
+      });
       toast({
         title: 'Session Tests Completed',
         description: 'Session management tests run successfully',
@@ -279,7 +316,11 @@ function AuthTestsPage() {
     },
     onSuccess: (data) => {
       // Update the system results directly instead of refetching
-      queryClient.setQueryData(['/api/auth-test/system-tests'], data);
+      // Wrap the result in the standardized API response format
+      queryClient.setQueryData(['/api/auth-test/system-tests'], {
+        success: true,
+        data: data
+      });
       toast({
         title: 'System Tests Completed',
         description: 'System authentication tests run successfully',
