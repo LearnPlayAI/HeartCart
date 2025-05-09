@@ -1063,6 +1063,9 @@ export async function analyzeProductImage(imageBase64: string, productName: stri
           const textResponse = await textResult.response;
           const responseText = await textResponse.text();
           
+          // Store in outer variable for error handling blocks
+          responseTextOuter = responseText;
+          
           const jsonResponse = JSON.parse(responseText);
           
           // Validate response structure with detailed logging
@@ -1181,7 +1184,7 @@ export async function analyzeProductImage(imageBase64: string, productName: stri
         logger.info(`Received AI response for product analysis, attempting to parse JSON`, {
           productId, 
           productName,
-          responseLength: responseText.length
+          responseLength: responseTextOuter.length
         });
         
         const jsonResponse = JSON.parse(responseText);
