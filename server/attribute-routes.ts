@@ -895,52 +895,287 @@ export default function registerAttributeRoutes(app: Express) {
     })
   );
 
-  app.put("/api/catalogs/:catalogId/attributes/:attributeId/options/:id", isAdmin, handleErrors(async (req: Request, res: Response) => {
-    const id = parseInt(req.params.id);
-    if (isNaN(id)) {
-      return sendError(res, "Invalid option ID", 400, "INVALID_ID");
-    }
+  app.put("/api/catalogs/:catalogId/attributes/:attributeId/options/:id", 
+    isAdmin, 
+    validateRequest({ 
+      params: z.object({ 
+        catalogId: z.string().refine(val => !isNaN(parseInt(val)), { message: "Catalog ID must be a number" }),
+        attributeId: z.string().refine(val => !isNaN(parseInt(val)), { message: "Attribute ID must be a number" }),
+        id: z.string().refine(val => !isNaN(parseInt(val)), { message: "Option ID must be a number" })
+      }),
+      body: insertCatalogAttributeOptionSchema.partial().omit({ catalogAttributeId: true })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const catalogId = parseInt(req.params.catalogId);
+        const attributeId = parseInt(req.params.attributeId);
+        const optionId = parseInt(req.params.id);
+        
+        // Verify that the catalog exists
+        const catalog = await storage.getCatalogById(catalogId);
+        if (!catalog) {
+          throw new NotFoundError(`Catalog with ID ${catalogId} not found`, 'catalog');
+        }
+        
+        // Verify that the attribute exists and belongs to this catalog
+        const existingAttribute = await storage.getCatalogAttributeById(attributeId);
+        if (!existingAttribute) {
+          throw new NotFoundError(`Attribute with ID ${attributeId} not found`, 'attribute');
+        }
+        
+        if (existingAttribute.catalogId !== catalogId) {
+          throw new AppError(
+            `Attribute with ID ${attributeId} does not belong to catalog ${catalogId}`,
+            ErrorCode.RESOURCE_CONFLICT,
+            400
+          );
+        }
+        
+        // Verify the option exists and belongs to this attribute
+        const existingOption = await storage.getCatalogAttributeOptionById(optionId);
+        if (!existingOption) {
+          throw new NotFoundError(`Option with ID ${optionId} not found`, 'attribute_option');
+        }
+        
+        if (existingOption.catalogAttributeId !== attributeId) {
+          throw new AppError(
+            `Option with ID ${optionId} does not belong to attribute ${attributeId}`,
+            ErrorCode.RESOURCE_CONFLICT,
+            400
+          );
+        }
+        
+        // Check for duplicate value if value is being updated
+        if (req.body.value && req.body.value !== existingOption.value) {
+          const existingOptions = await storage.getCatalogAttributeOptions(attributeId);
+          const valueExists = existingOptions.some(opt => 
+            opt.id !== optionId && 
+            opt.value.toLowerCase() === req.body.value.toLowerCase());
+            
+          if (valueExists) {
+            throw new AppError(
+              `Option with value '${req.body.value}' already exists for this attribute`,
+              ErrorCode.DUPLICATE_ENTITY,
+              409
+            );
+          }
+        }
+        
+        const optionData = req.body;
+        const updatedOption = await storage.updateCatalogAttributeOption(optionId, optionData);
+        
+        // Log the update for audit purposes
+        logger.info(`Attribute option updated`, { 
+          catalogId,
+          attributeId,
+          optionId,
+          optionValue: updatedOption.value,
+          userId: req.user?.id,
+          changes: Object.keys(req.body).join(', ')
+        });
+        
+        sendSuccess(res, updatedOption);
+      } catch (error) {
+        logger.error('Error updating attribute option:', { 
+          error, 
+          catalogId: req.params.catalogId,
+          attributeId: req.params.attributeId,
+          optionId: req.params.id,
+          optionData: req.body,
+          userId: req.user?.id 
+        });
+        throw error;
+      }
+    })
+  );
 
-    const optionData = insertCatalogAttributeOptionSchema.partial().parse(req.body);
-    const updatedOption = await storage.updateCatalogAttributeOption(id, optionData);
-    
-    if (!updatedOption) {
-      return sendError(res, "Option not found", 404, "NOT_FOUND");
-    }
-    
-    sendSuccess(res, updatedOption);
-  }));
+  app.delete("/api/catalogs/:catalogId/attributes/:attributeId/options/:id", 
+    isAdmin, 
+    validateRequest({ 
+      params: z.object({ 
+        catalogId: z.string().refine(val => !isNaN(parseInt(val)), { message: "Catalog ID must be a number" }),
+        attributeId: z.string().refine(val => !isNaN(parseInt(val)), { message: "Attribute ID must be a number" }),
+        id: z.string().refine(val => !isNaN(parseInt(val)), { message: "Option ID must be a number" })
+      })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const catalogId = parseInt(req.params.catalogId);
+        const attributeId = parseInt(req.params.attributeId);
+        const optionId = parseInt(req.params.id);
+        
+        // Verify that the catalog exists
+        const catalog = await storage.getCatalogById(catalogId);
+        if (!catalog) {
+          throw new NotFoundError(`Catalog with ID ${catalogId} not found`, 'catalog');
+        }
+        
+        // Verify that the attribute exists and belongs to this catalog
+        const existingAttribute = await storage.getCatalogAttributeById(attributeId);
+        if (!existingAttribute) {
+          throw new NotFoundError(`Attribute with ID ${attributeId} not found`, 'attribute');
+        }
+        
+        if (existingAttribute.catalogId !== catalogId) {
+          throw new AppError(
+            `Attribute with ID ${attributeId} does not belong to catalog ${catalogId}`,
+            ErrorCode.RESOURCE_CONFLICT,
+            400
+          );
+        }
+        
+        // Verify the option exists and belongs to this attribute
+        const existingOption = await storage.getCatalogAttributeOptionById(optionId);
+        if (!existingOption) {
+          throw new NotFoundError(`Option with ID ${optionId} not found`, 'attribute_option');
+        }
+        
+        if (existingOption.catalogAttributeId !== attributeId) {
+          throw new AppError(
+            `Option with ID ${optionId} does not belong to attribute ${attributeId}`,
+            ErrorCode.RESOURCE_CONFLICT,
+            400
+          );
+        }
+        
+        // Check if the option is used in any products
+        const productValues = await storage.getProductAttributeValuesByOptionId(optionId);
+        if (productValues && productValues.length > 0) {
+          const productCount = new Set(productValues.map(val => val.productId)).size;
+          throw new AppError(
+            `Cannot delete option: it is used by ${productCount} products. Remove attribute values from products first.`,
+            ErrorCode.ENTITY_IN_USE,
+            409
+          );
+        }
+        
+        // Perform the deletion
+        const success = await storage.deleteCatalogAttributeOption(optionId);
+        if (!success) {
+          throw new AppError(
+            `Failed to delete attribute option with ID ${optionId}`,
+            ErrorCode.INTERNAL_SERVER_ERROR,
+            500
+          );
+        }
+        
+        // Log the deletion for audit purposes
+        logger.info(`Attribute option deleted`, { 
+          catalogId,
+          attributeId,
+          optionId,
+          optionValue: existingOption.value,
+          userId: req.user?.id
+        });
+        
+        sendSuccess(res, { success }, 200);
+      } catch (error) {
+        logger.error('Error deleting attribute option:', { 
+          error, 
+          catalogId: req.params.catalogId,
+          attributeId: req.params.attributeId,
+          optionId: req.params.id,
+          userId: req.user?.id 
+        });
+        throw error;
+      }
+    })
+  );
 
-  app.delete("/api/catalogs/:catalogId/attributes/:attributeId/options/:id", isAdmin, handleErrors(async (req: Request, res: Response) => {
-    const id = parseInt(req.params.id);
-    if (isNaN(id)) {
-      return sendError(res, "Invalid option ID", 400, "INVALID_ID");
-    }
-
-    const success = await storage.deleteCatalogAttributeOption(id);
-    if (!success) {
-      return sendError(res, "Option not found or could not be deleted", 404, "NOT_FOUND");
-    }
-    
-    sendSuccess(res, null, 204);
-  }));
-
-  app.post("/api/catalogs/:catalogId/attributes/:attributeId/options/reorder", isAdmin, handleErrors(async (req: Request, res: Response) => {
-    const attributeId = parseInt(req.params.attributeId);
-    if (isNaN(attributeId)) {
-      return sendError(res, "Invalid attribute ID", 400, "INVALID_ID");
-    }
-
-    const { optionIds } = req.body;
-    if (!Array.isArray(optionIds)) {
-      return sendError(res, "optionIds must be an array of IDs", 400, "INVALID_FORMAT");
-    }
-
-    const success = await storage.updateCatalogAttributeOptionsOrder(attributeId, optionIds);
-    if (!success) {
-      return sendError(res, "Failed to update options order", 500, "SERVER_ERROR");
-    }
-    
-    sendSuccess(res, { message: "Options reordered successfully" });
-  }));
+  app.post("/api/catalogs/:catalogId/attributes/:attributeId/options/reorder", 
+    isAdmin, 
+    validateRequest({ 
+      params: z.object({ 
+        catalogId: z.string().refine(val => !isNaN(parseInt(val)), { message: "Catalog ID must be a number" }),
+        attributeId: z.string().refine(val => !isNaN(parseInt(val)), { message: "Attribute ID must be a number" })
+      }),
+      body: z.object({
+        optionIds: z.array(z.number())
+      })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const catalogId = parseInt(req.params.catalogId);
+        const attributeId = parseInt(req.params.attributeId);
+        const { optionIds } = req.body;
+        
+        // Verify that the catalog exists
+        const catalog = await storage.getCatalogById(catalogId);
+        if (!catalog) {
+          throw new NotFoundError(`Catalog with ID ${catalogId} not found`, 'catalog');
+        }
+        
+        // Verify that the attribute exists and belongs to this catalog
+        const existingAttribute = await storage.getCatalogAttributeById(attributeId);
+        if (!existingAttribute) {
+          throw new NotFoundError(`Attribute with ID ${attributeId} not found`, 'attribute');
+        }
+        
+        if (existingAttribute.catalogId !== catalogId) {
+          throw new AppError(
+            `Attribute with ID ${attributeId} does not belong to catalog ${catalogId}`,
+            ErrorCode.RESOURCE_CONFLICT,
+            400
+          );
+        }
+        
+        // Get current options to make sure all the IDs in optionIds actually belong to this attribute
+        const currentOptions = await storage.getCatalogAttributeOptions(attributeId);
+        const currentOptionIds = new Set(currentOptions.map(option => option.id));
+        
+        // Check that all provided option IDs belong to this attribute
+        const invalidOptionIds = optionIds.filter(id => !currentOptionIds.has(id));
+        if (invalidOptionIds.length > 0) {
+          throw new AppError(
+            `The following option IDs do not belong to attribute ${attributeId}: ${invalidOptionIds.join(', ')}`,
+            ErrorCode.RESOURCE_CONFLICT,
+            400
+          );
+        }
+        
+        // Check that all current options are included in the reordering
+        if (currentOptions.length !== optionIds.length) {
+          throw new AppError(
+            `Reordering must include all ${currentOptions.length} options, but received ${optionIds.length} IDs`,
+            ErrorCode.VALIDATION_ERROR,
+            400
+          );
+        }
+        
+        // Perform the reordering
+        const success = await storage.updateCatalogAttributeOptionsOrder(attributeId, optionIds);
+        if (!success) {
+          throw new AppError(
+            `Failed to update options order for attribute ${attributeId}`,
+            ErrorCode.INTERNAL_SERVER_ERROR,
+            500
+          );
+        }
+        
+        // Log the operation for audit purposes
+        logger.info(`Attribute options reordered`, { 
+          catalogId,
+          attributeId,
+          optionCount: optionIds.length,
+          userId: req.user?.id,
+          newOrder: optionIds
+        });
+        
+        sendSuccess(res, { 
+          success, 
+          message: "Options reordered successfully", 
+          optionIds 
+        });
+      } catch (error) {
+        logger.error('Error reordering attribute options:', { 
+          error, 
+          catalogId: req.params.catalogId,
+          attributeId: req.params.attributeId,
+          optionIds: req.body.optionIds,
+          userId: req.user?.id 
+        });
+        throw error;
+      }
+    })
+  );
 }
