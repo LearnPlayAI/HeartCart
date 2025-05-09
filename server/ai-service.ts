@@ -6,7 +6,7 @@ import { logger } from './logger';
 
 // Environment variable validation
 if (!process.env.GEMINI_API_KEY) {
-  console.error('GEMINI_API_KEY environment variable is required');
+  logger.error('GEMINI_API_KEY environment variable is required');
   process.exit(1);
 }
 
@@ -1055,30 +1055,53 @@ export async function analyzeProductImage(imageBase64: string, productName: stri
       
       // Get the response
       const response = await result.response;
-      const responseText = response.text();
+      // Use await when calling response.text() as it returns a Promise
+      const responseText = await response.text(); // This contains the text response directly
       
       // Parse JSON response
       try {
         // First, try to parse the response as-is
-        console.log(`Received AI response for product "${productName}", attempting to parse JSON`);
+        logger.info(`Received AI response for product analysis, attempting to parse JSON`, {
+          productId, 
+          productName,
+          responseLength: responseText.length
+        });
         
         const jsonResponse = JSON.parse(responseText);
         
         // Validate response structure with detailed logging
         if (!jsonResponse.name) {
-          console.warn(`Missing name in AI analysis result for product "${productName}"`);
+          logger.warn(`Missing name in AI analysis result`, {
+            productId,
+            productName,
+            responseKeys: Object.keys(jsonResponse)
+          });
         }
         
         if (!jsonResponse.description) {
-          console.warn(`Missing description in AI analysis result for product "${productName}"`);
+          logger.warn(`Missing description in AI analysis result`, {
+            productId,
+            productName,
+            responseKeys: Object.keys(jsonResponse)
+          });
         }
         
         if (!jsonResponse.category) {
-          console.warn(`Missing category in AI analysis result for product "${productName}"`);
+          logger.warn(`Missing category in AI analysis result`, {
+            productId,
+            productName,
+            responseKeys: Object.keys(jsonResponse)
+          });
         }
         
         if (!jsonResponse.tags || !Array.isArray(jsonResponse.tags)) {
-          console.warn(`Missing or invalid tags in AI analysis result for product "${productName}"`);
+          logger.warn(`Missing or invalid tags in AI analysis result`, {
+            productId,
+            productName,
+            tagsType: typeof jsonResponse.tags,
+            hasTagsArray: Array.isArray(jsonResponse.tags),
+            responseKeys: Object.keys(jsonResponse)
+          });
         }
         
         return {
@@ -1093,8 +1116,19 @@ export async function analyzeProductImage(imageBase64: string, productName: stri
         };
       } catch (jsonError) {
         // If direct parsing fails, try to extract JSON from the text
-        console.error(`Failed to parse JSON response for product "${productName}":`, jsonError);
-        console.log(`Attempting to extract JSON from raw text response for product "${productName}"`);
+        logger.error(`Failed to parse JSON response`, {
+          error: jsonError,
+          errorType: jsonError instanceof Error ? jsonError.name : typeof jsonError,
+          errorMessage: jsonError instanceof Error ? jsonError.message : String(jsonError),
+          productId,
+          productName,
+          responseLength: responseText.length
+        });
+        
+        logger.info(`Attempting to extract JSON from raw text response`, {
+          productId,
+          productName
+        });
         
         const jsonMatch = responseText.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
@@ -1102,7 +1136,12 @@ export async function analyzeProductImage(imageBase64: string, productName: stri
           try {
             const extractedJson = JSON.parse(jsonStr);
             
-            console.log(`Successfully extracted and parsed JSON from text for product "${productName}"`);
+            logger.info(`Successfully extracted and parsed JSON from text response`, {
+              productId,
+              productName,
+              extractedJsonLength: jsonStr.length,
+              extractedKeys: Object.keys(extractedJson)
+            });
             
             return {
               suggestedName: extractedJson.name || productName,
@@ -1115,22 +1154,51 @@ export async function analyzeProductImage(imageBase64: string, productName: stri
               marketResearch: extractedJson.marketResearch || ""
             };
           } catch (extractError) {
-            console.error(`Failed to parse extracted JSON for product "${productName}":`, extractError);
-            console.error(`Raw extracted text: ${jsonStr.substring(0, 200)}...`);
+            logger.error(`Failed to parse extracted JSON pattern`, {
+              error: extractError,
+              errorType: extractError instanceof Error ? extractError.name : typeof extractError,
+              errorMessage: extractError instanceof Error ? extractError.message : String(extractError),
+              productId,
+              productName,
+              extractedJsonLength: jsonStr.length,
+              extractedSample: jsonStr.substring(0, 100) + '...'
+            });
+            
             throw new Error(`Failed to parse extracted JSON: ${extractError instanceof Error ? extractError.message : 'Unknown parsing error'}`);
           }
         } else {
-          console.error(`No valid JSON pattern found in response for product "${productName}"`);
-          console.error(`Raw response first 200 chars: ${responseText.substring(0, 200)}...`);
+          logger.error(`No valid JSON pattern found in AI response`, {
+            productId,
+            productName,
+            responseLength: responseText.length,
+            responseSample: responseText.substring(0, 100) + '...'
+          });
+          
           throw new Error(`No valid JSON found in AI response for product "${productName}"`);
         }
       }
     } catch (aiRequestError) {
-      console.error(`AI request failed for product "${productName}":`, aiRequestError);
+      logger.error(`AI request failed`, {
+        error: aiRequestError,
+        errorType: aiRequestError instanceof Error ? aiRequestError.name : typeof aiRequestError,
+        errorMessage: aiRequestError instanceof Error ? aiRequestError.message : String(aiRequestError),
+        productId,
+        productName,
+        model: await getCurrentAiModel()
+      });
+      
       throw new Error(`AI analysis request failed: ${aiRequestError instanceof Error ? aiRequestError.message : 'Unknown AI processing error'}`);
     }
   } catch (error) {
-    console.error('Product analysis failed:', error);
+    logger.error(`Product analysis failed`, {
+      error,
+      errorType: error instanceof Error ? error.name : typeof error,
+      errorMessage: error instanceof Error ? error.message : String(error),
+      productId,
+      productName,
+      model: await getCurrentAiModel().catch(() => 'unknown')
+    });
+    
     throw new Error('Failed to analyze product image: ' + (error instanceof Error ? error.message : 'Unknown error'));
   }
 }
