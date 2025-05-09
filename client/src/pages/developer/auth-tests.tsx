@@ -1,3 +1,4 @@
+import * as React from 'react';
 import { useState, useEffect } from 'react';
 import DeveloperLayout from '@/components/developer/developer-layout';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -112,7 +113,13 @@ function AuthTestsPage() {
   // Run all tests mutation
   const runAllTestsMutation = useMutation({
     mutationFn: async () => {
-      await Promise.all([
+      // Run all tests in parallel and get responses
+      const [
+        validationResponse, 
+        credentialResponse, 
+        sessionResponse, 
+        systemResponse
+      ] = await Promise.all([
         apiRequest('POST', '/api/auth-test/validate-password', {
           password: 'TestPassword123!', // Test password with good complexity
         }),
@@ -123,19 +130,34 @@ function AuthTestsPage() {
         apiRequest('POST', '/api/auth-test/session-persistence'),
         apiRequest('POST', '/api/auth-test/system-tests'),
       ]);
-      return { success: true };
+      
+      // Parse all responses
+      const validationData = await validationResponse.json();
+      const credentialData = await credentialResponse.json();
+      const sessionData = await sessionResponse.json();
+      const systemData = await systemResponse.json();
+      
+      return {
+        validationData,
+        credentialData,
+        sessionData,
+        systemData
+      };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // Update query cache directly instead of refetching
+      queryClient.setQueryData(['/api/auth-test/validate-password'], data.validationData);
+      queryClient.setQueryData(['/api/auth-test/validate-credentials'], data.credentialData);
+      queryClient.setQueryData(['/api/auth-test/session-persistence'], data.sessionData);
+      queryClient.setQueryData(['/api/auth-test/system-tests'], data.systemData);
+      
+      // Also refresh user count
+      refetchUserCount();
+      
       toast({
         title: 'All tests completed',
         description: 'Authentication tests have been run successfully',
       });
-      
-      // Refetch all tests
-      refetchValidation();
-      refetchCredentials();
-      refetchSession();
-      refetchSystem();
     },
     onError: (error: Error) => {
       toast({
@@ -146,11 +168,17 @@ function AuthTestsPage() {
     },
   });
 
-  // User count query
-  const { data: userCount } = useQuery<{ count: number }>({
+  // User count query with auto-refresh
+  const { data: userCount, refetch: refetchUserCount } = useQuery<{ count: number }>({
     queryKey: ['/api/auth-test/user-count'],
     queryFn: getQueryFn({ on401: "returnNull" }),
+    staleTime: 0, // Always refetch the latest count
   });
+  
+  // Refresh user count when page loads
+  React.useEffect(() => {
+    refetchUserCount();
+  }, [refetchUserCount]);
 
   // Individual test mutations
   const validationMutation = useMutation({
@@ -160,8 +188,9 @@ function AuthTestsPage() {
       });
       return response.json();
     },
-    onSuccess: () => {
-      refetchValidation();
+    onSuccess: (data) => {
+      // Update the validation results directly instead of refetching
+      queryClient.setQueryData(['/api/auth-test/validate-password'], data);
       toast({
         title: 'Validation Tests Completed',
         description: 'Password validation tests run successfully',
@@ -184,8 +213,9 @@ function AuthTestsPage() {
       });
       return response.json();
     },
-    onSuccess: () => {
-      refetchCredentials();
+    onSuccess: (data) => {
+      // Update the credential results directly instead of refetching
+      queryClient.setQueryData(['/api/auth-test/validate-credentials'], data);
       toast({
         title: 'Credential Tests Completed',
         description: 'Credential verification tests run successfully',
@@ -205,8 +235,9 @@ function AuthTestsPage() {
       const response = await apiRequest('POST', '/api/auth-test/session-persistence');
       return response.json();
     },
-    onSuccess: () => {
-      refetchSession();
+    onSuccess: (data) => {
+      // Update the session results directly instead of refetching
+      queryClient.setQueryData(['/api/auth-test/session-persistence'], data);
       toast({
         title: 'Session Tests Completed',
         description: 'Session management tests run successfully',
@@ -226,8 +257,9 @@ function AuthTestsPage() {
       const response = await apiRequest('POST', '/api/auth-test/system-tests');
       return response.json();
     },
-    onSuccess: () => {
-      refetchSystem();
+    onSuccess: (data) => {
+      // Update the system results directly instead of refetching
+      queryClient.setQueryData(['/api/auth-test/system-tests'], data);
       toast({
         title: 'System Tests Completed',
         description: 'System authentication tests run successfully',
