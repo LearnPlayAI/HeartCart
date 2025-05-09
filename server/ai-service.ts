@@ -570,19 +570,42 @@ export async function suggestPrice(
         if (categorySetting) {
           markupPercentage = categorySetting.markupPercentage;
           markupSource = `category_${categoryId}`;
-          console.log(`Using category-specific markup of ${markupPercentage}% for category #${categoryId}`);
+          logger.info(`Using category-specific markup for price calculation`, {
+            markupPercentage,
+            categoryId,
+            productId: productId || 'unknown',
+            productName,
+            source: 'category_specific'
+          });
         } else {
           // No category-specific setting, try global default
           markupPercentage = await storage.getDefaultMarkupPercentage();
           if (markupPercentage !== null) {
             markupSource = 'global_default';
-            console.log(`Using global default markup of ${markupPercentage}%`);
+            logger.info(`Using global default markup for price calculation`, {
+              markupPercentage,
+              productId: productId || 'unknown',
+              productName,
+              source: 'global_default'
+            });
           } else {
-            console.log('No markup percentage defined. Will rely solely on AI suggestion.');
+            logger.info('No markup percentage defined, will rely on AI suggestion', {
+              productId: productId || 'unknown',
+              productName,
+              source: 'ai_only'
+            });
           }
         }
       } catch (dbError) {
-        console.error('Error fetching markup settings:', dbError);
+        logger.error('Error fetching markup settings', {
+          error: dbError,
+          errorType: dbError instanceof Error ? dbError.name : typeof dbError,
+          errorMessage: dbError instanceof Error ? dbError.message : String(dbError),
+          productId: productId || 'unknown',
+          productName,
+          categoryId,
+          categoryName
+        });
         // Continue with no markup if DB access fails
       }
     }
