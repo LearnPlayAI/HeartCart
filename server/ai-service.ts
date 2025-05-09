@@ -562,6 +562,9 @@ export async function suggestPrice(
   categoryId?: number,
   productId?: number
 ): Promise<{ suggestedPrice: number; markupPercentage: number; markupSource: string }> {
+  // Define responseTextOuter at the function scope level so it's accessible in all catch blocks
+  let responseTextOuter = "";
+  
   try {
     // First, try to get category-specific markup if we have a categoryId
     let markupPercentage: number | null = null; // No default markup
@@ -643,6 +646,7 @@ export async function suggestPrice(
     // Get the response
     const response = await result.response;
     const responseText = await response.text();
+    responseTextOuter = responseText;
     
     // Parse JSON response
     try {
@@ -799,7 +803,8 @@ export async function suggestPrice(
       errorMessage: error instanceof Error ? error.message : String(error),
       costPrice,
       productName,
-      productId: productId || 'unknown'
+      productId: productId || 'unknown',
+      responsePreview: responseTextOuter ? responseTextOuter.substring(0, 100) + '...' : 'No response text available'
     });
     
     // Even on error, return cost price as minimum
@@ -835,6 +840,9 @@ export async function getCurrentAiModelSetting(): Promise<{ modelName: string, i
  * Update the current AI model and reinitialize services
  */
 export async function updateAiModel(modelName: string): Promise<boolean> {
+  // Define responseTextOuter at the function scope level for error handling
+  let responseTextOuter = "";
+  
   try {
     // Verify the model is valid
     if (!AVAILABLE_GEMINI_MODELS.includes(modelName)) {
@@ -876,7 +884,8 @@ export async function updateAiModel(modelName: string): Promise<boolean> {
       error,
       errorType: error instanceof Error ? error.name : typeof error,
       errorMessage: error instanceof Error ? error.message : String(error),
-      aiModelSettingKey: AI_MODEL_SETTING_KEY
+      aiModelSettingKey: AI_MODEL_SETTING_KEY,
+      responsePreview: responseTextOuter ? responseTextOuter.substring(0, 100) + '...' : 'No response text available'
     });
     throw new Error('Failed to update AI model: ' + (error instanceof Error ? error.message : 'Unknown error'));
   }
@@ -959,6 +968,7 @@ export async function analyzeProductImage(imageBase64: string, productName: stri
         const responseText = await textResponse.text();
         
         try {
+          responseTextOuter = responseText; // Store for error handling
           const jsonResponse = JSON.parse(responseText);
           
           // Validate response structure with detailed logging
@@ -1207,7 +1217,7 @@ export async function analyzeProductImage(imageBase64: string, productName: stri
       const responseText = await response.text(); // This contains the text response directly
       
       // Store in outer variable for error handling blocks
-      let responseTextOuter = responseText;
+      responseTextOuter = responseText;
       
       // Parse JSON response
       try {
@@ -1347,7 +1357,8 @@ export async function analyzeProductImage(imageBase64: string, productName: stri
       errorMessage: error instanceof Error ? error.message : String(error),
       productId,
       productName,
-      model: await getCurrentAiModel().catch(() => 'unknown')
+      model: await getCurrentAiModel().catch(() => 'unknown'),
+      responsePreview: responseTextOuter ? responseTextOuter.substring(0, 100) + '...' : 'No response text available'
     });
     
     throw new Error('Failed to analyze product image: ' + (error instanceof Error ? error.message : 'Unknown error'));
