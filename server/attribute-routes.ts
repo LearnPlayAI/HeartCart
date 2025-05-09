@@ -232,81 +232,290 @@ export default function registerAttributeRoutes(app: Express) {
   );
 
   // Attribute Options Routes
-  app.get("/api/attributes/:attributeId/options", handleErrors(async (req: Request, res: Response) => {
-    const attributeId = parseInt(req.params.attributeId);
-    if (isNaN(attributeId)) {
-      return sendError(res, "Invalid attribute ID", 400, "INVALID_ID");
-    }
+  app.get("/api/attributes/:attributeId/options", 
+    validateRequest({ 
+      params: z.object({ 
+        attributeId: z.string().refine(val => !isNaN(parseInt(val)), { message: "Attribute ID must be a number" }) 
+      })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const attributeId = parseInt(req.params.attributeId);
+        
+        // Verify that the attribute exists
+        const attribute = await storage.getAttributeById(attributeId);
+        if (!attribute) {
+          throw new NotFoundError(`Attribute with ID ${attributeId} not found`, 'attribute');
+        }
+        
+        const options = await storage.getAttributeOptions(attributeId);
+        sendSuccess(res, options);
+      } catch (error) {
+        logger.error('Error fetching attribute options:', { 
+          error, 
+          attributeId: req.params.attributeId
+        });
+        throw error;
+      }
+    })
+  );
 
-    const options = await storage.getAttributeOptions(attributeId);
-    sendSuccess(res, options);
-  }));
+  app.post("/api/attributes/:attributeId/options", 
+    isAdmin, 
+    validateRequest({ 
+      params: z.object({ 
+        attributeId: z.string().refine(val => !isNaN(parseInt(val)), { message: "Attribute ID must be a number" }) 
+      }),
+      body: insertAttributeOptionSchema.omit({ attributeId: true })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const attributeId = parseInt(req.params.attributeId);
+        
+        // Verify that the attribute exists
+        const attribute = await storage.getAttributeById(attributeId);
+        if (!attribute) {
+          throw new NotFoundError(`Attribute with ID ${attributeId} not found`, 'attribute');
+        }
+        
+        // Check for duplicate option name
+        const existingOptions = await storage.getAttributeOptions(attributeId);
+        const nameExists = existingOptions.some(option => 
+          option.value.toLowerCase() === req.body.value.toLowerCase());
+          
+        if (nameExists) {
+          throw new AppError(
+            `Option with value '${req.body.value}' already exists for this attribute`,
+            ErrorCode.DUPLICATE_ENTITY,
+            409
+          );
+        }
+        
+        const optionData = {
+          ...req.body,
+          attributeId
+        };
+        
+        const newOption = await storage.createAttributeOption(optionData);
+        
+        // Log the creation for audit purposes
+        logger.info(`Attribute option created`, { 
+          attributeId,
+          optionId: newOption.id,
+          optionValue: newOption.value,
+          userId: req.user?.id 
+        });
+        
+        sendSuccess(res, newOption, 201);
+      } catch (error) {
+        logger.error('Error creating attribute option:', { 
+          error, 
+          attributeId: req.params.attributeId,
+          optionData: req.body,
+          userId: req.user?.id 
+        });
+        throw error;
+      }
+    })
+  );
 
-  app.post("/api/attributes/:attributeId/options", isAdmin, handleErrors(async (req: Request, res: Response) => {
-    const attributeId = parseInt(req.params.attributeId);
-    if (isNaN(attributeId)) {
-      return sendError(res, "Invalid attribute ID", 400, "INVALID_ID");
-    }
+  app.put("/api/attributes/:attributeId/options/:id", 
+    isAdmin, 
+    validateRequest({ 
+      params: z.object({ 
+        attributeId: z.string().refine(val => !isNaN(parseInt(val)), { message: "Attribute ID must be a number" }),
+        id: z.string().refine(val => !isNaN(parseInt(val)), { message: "Option ID must be a number" })
+      }),
+      body: insertAttributeOptionSchema.partial().omit({ attributeId: true })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const attributeId = parseInt(req.params.attributeId);
+        const id = parseInt(req.params.id);
+        
+        // Verify that the attribute exists
+        const attribute = await storage.getAttributeById(attributeId);
+        if (!attribute) {
+          throw new NotFoundError(`Attribute with ID ${attributeId} not found`, 'attribute');
+        }
+        
+        // Verify that the option exists and belongs to this attribute
+        const options = await storage.getAttributeOptions(attributeId);
+        const existingOption = options.find(option => option.id === id);
+        
+        if (!existingOption) {
+          throw new NotFoundError(`Option with ID ${id} not found for attribute ${attributeId}`, 'attributeOption');
+        }
+        
+        // Check for duplicate name if name is being updated
+        if (req.body.value && req.body.value !== existingOption.value) {
+          const nameExists = options.some(option => 
+            option.id !== id && option.value.toLowerCase() === req.body.value.toLowerCase());
+            
+          if (nameExists) {
+            throw new AppError(
+              `Option with value '${req.body.value}' already exists for this attribute`,
+              ErrorCode.DUPLICATE_ENTITY,
+              409
+            );
+          }
+        }
+        
+        const updatedOption = await storage.updateAttributeOption(id, req.body);
+        
+        if (!updatedOption) {
+          throw new NotFoundError(`Failed to update option with ID ${id}`, 'attributeOption');
+        }
+        
+        // Log the update for audit purposes
+        logger.info(`Attribute option updated`, { 
+          attributeId,
+          optionId: id,
+          changes: req.body,
+          userId: req.user?.id 
+        });
+        
+        sendSuccess(res, updatedOption);
+      } catch (error) {
+        logger.error('Error updating attribute option:', { 
+          error, 
+          attributeId: req.params.attributeId,
+          optionId: req.params.id,
+          updateData: req.body,
+          userId: req.user?.id 
+        });
+        throw error;
+      }
+    })
+  );
 
-    const optionData = insertAttributeOptionSchema.parse({
-      ...req.body,
-      attributeId
-    });
-    
-    const newOption = await storage.createAttributeOption(optionData);
-    sendSuccess(res, newOption, 201);
-  }));
+  app.delete("/api/attributes/:attributeId/options/:id", 
+    isAdmin, 
+    validateRequest({ 
+      params: z.object({ 
+        attributeId: z.string().refine(val => !isNaN(parseInt(val)), { message: "Attribute ID must be a number" }),
+        id: z.string().refine(val => !isNaN(parseInt(val)), { message: "Option ID must be a number" })
+      })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const attributeId = parseInt(req.params.attributeId);
+        const id = parseInt(req.params.id);
+        
+        // Verify that the attribute exists
+        const attribute = await storage.getAttributeById(attributeId);
+        if (!attribute) {
+          throw new NotFoundError(`Attribute with ID ${attributeId} not found`, 'attribute');
+        }
+        
+        // Verify that the option exists and belongs to this attribute
+        const options = await storage.getAttributeOptions(attributeId);
+        const existingOption = options.find(option => option.id === id);
+        
+        if (!existingOption) {
+          throw new NotFoundError(`Option with ID ${id} not found for attribute ${attributeId}`, 'attributeOption');
+        }
+        
+        // Check if this option is in use by any products
+        // This would be implemented in a real system to prevent orphaned references
+        // For now, we'll just make a placeholder for the logic
+        
+        // Now safely delete the option
+        const success = await storage.deleteAttributeOption(id);
+        if (!success) {
+          throw new AppError(
+            `Failed to delete option with ID ${id}`, 
+            ErrorCode.INTERNAL_SERVER_ERROR, 
+            500
+          );
+        }
+        
+        // Log the deletion for audit purposes
+        logger.info(`Attribute option deleted`, { 
+          attributeId,
+          optionId: id,
+          optionValue: existingOption.value,
+          userId: req.user?.id 
+        });
+        
+        sendSuccess(res, null, 204);
+      } catch (error) {
+        logger.error('Error deleting attribute option:', { 
+          error, 
+          attributeId: req.params.attributeId,
+          optionId: req.params.id,
+          userId: req.user?.id 
+        });
+        throw error;
+      }
+    })
+  );
 
-  app.put("/api/attributes/:attributeId/options/:id", isAdmin, handleErrors(async (req: Request, res: Response) => {
-    const attributeId = parseInt(req.params.attributeId);
-    const id = parseInt(req.params.id);
-    
-    if (isNaN(attributeId) || isNaN(id)) {
-      return sendError(res, "Invalid ID", 400, "INVALID_ID");
-    }
-
-    const optionData = insertAttributeOptionSchema.partial().parse(req.body);
-    const updatedOption = await storage.updateAttributeOption(id, optionData);
-    
-    if (!updatedOption) {
-      return sendError(res, "Option not found", 404, "NOT_FOUND");
-    }
-    
-    sendSuccess(res, updatedOption);
-  }));
-
-  app.delete("/api/attributes/:attributeId/options/:id", isAdmin, handleErrors(async (req: Request, res: Response) => {
-    const id = parseInt(req.params.id);
-    if (isNaN(id)) {
-      return sendError(res, "Invalid option ID", 400, "INVALID_ID");
-    }
-
-    const success = await storage.deleteAttributeOption(id);
-    if (!success) {
-      return sendError(res, "Option not found or could not be deleted", 404, "NOT_FOUND");
-    }
-    
-    sendSuccess(res, null, 204);
-  }));
-
-  app.post("/api/attributes/:attributeId/options/reorder", isAdmin, handleErrors(async (req: Request, res: Response) => {
-    const attributeId = parseInt(req.params.attributeId);
-    if (isNaN(attributeId)) {
-      return sendError(res, "Invalid attribute ID", 400, "INVALID_ID");
-    }
-
-    const { optionIds } = req.body;
-    if (!Array.isArray(optionIds)) {
-      return sendError(res, "optionIds must be an array of IDs", 400, "INVALID_FORMAT");
-    }
-
-    const success = await storage.updateAttributeOptionsOrder(attributeId, optionIds);
-    if (!success) {
-      return sendError(res, "Failed to update options order", 500, "SERVER_ERROR");
-    }
-    
-    sendSuccess(res, { message: "Options reordered successfully" });
-  }));
+  app.post("/api/attributes/:attributeId/options/reorder", 
+    isAdmin, 
+    validateRequest({ 
+      params: z.object({ 
+        attributeId: z.string().refine(val => !isNaN(parseInt(val)), { message: "Attribute ID must be a number" })
+      }),
+      body: z.object({
+        optionIds: z.array(z.number()).min(1, "At least one option ID must be provided")
+      })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const attributeId = parseInt(req.params.attributeId);
+        const { optionIds } = req.body;
+        
+        // Verify that the attribute exists
+        const attribute = await storage.getAttributeById(attributeId);
+        if (!attribute) {
+          throw new NotFoundError(`Attribute with ID ${attributeId} not found`, 'attribute');
+        }
+        
+        // Verify that all option IDs belong to this attribute
+        const options = await storage.getAttributeOptions(attributeId);
+        const existingOptionIds = new Set(options.map(opt => opt.id));
+        
+        // Check if all provided IDs exist for this attribute
+        const nonExistingIds = optionIds.filter(id => !existingOptionIds.has(id));
+        if (nonExistingIds.length > 0) {
+          throw new BadRequestError(`The following option IDs do not exist for this attribute: ${nonExistingIds.join(', ')}`);
+        }
+        
+        // Check if all options for this attribute are included in the request
+        if (optionIds.length !== options.length) {
+          throw new BadRequestError('All options must be included when reordering. Some options are missing.');
+        }
+        
+        // Now reorder the options
+        const success = await storage.updateAttributeOptionsOrder(attributeId, optionIds);
+        if (!success) {
+          throw new AppError(
+            `Failed to update options order for attribute ${attributeId}`, 
+            ErrorCode.INTERNAL_SERVER_ERROR, 
+            500
+          );
+        }
+        
+        // Log the reordering for audit purposes
+        logger.info(`Attribute options reordered`, { 
+          attributeId,
+          newOrder: optionIds,
+          userId: req.user?.id 
+        });
+        
+        sendSuccess(res, { message: "Options reordered successfully" });
+      } catch (error) {
+        logger.error('Error reordering attribute options:', { 
+          error, 
+          attributeId: req.params.attributeId,
+          optionIds: req.body.optionIds,
+          userId: req.user?.id 
+        });
+        throw error;
+      }
+    })
+  );
 
   // Catalog Attribute Routes
   app.get("/api/catalogs/:catalogId/attributes", handleErrors(async (req: Request, res: Response) => {
