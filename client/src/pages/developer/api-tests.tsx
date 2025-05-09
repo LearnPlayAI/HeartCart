@@ -159,6 +159,12 @@ function ApiTestsPage() {
     queryFn: getQueryFn({ on401: "returnNull" }),
     staleTime: 0, // Don't cache results
     refetchOnWindowFocus: false, // Don't refetch automatically
+    onSuccess: (data) => {
+      console.log('Endpoint availability test results:', data);
+    },
+    onError: (error) => {
+      console.error('Endpoint availability test error:', error);
+    }
   });
   
   const availabilityResults = availabilityResponse?.success ? availabilityResponse.data : undefined;
