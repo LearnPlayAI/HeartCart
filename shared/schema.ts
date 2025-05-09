@@ -835,14 +835,13 @@ export const batchUploads = pgTable("batch_uploads", {
 // Batch upload error logs for detailed error tracking
 export const batchUploadErrors = pgTable("batch_upload_errors", {
   id: serial("id").primaryKey(),
-  batchId: integer("batch_id").references(() => batchUploads.id, { onDelete: "cascade" }).notNull(),
-  rowNumber: integer("row_number"),
-  errorType: text("error_type").notNull(), // validation, processing, db, etc.
-  errorMessage: text("error_message").notNull(),
+  batchId: integer("batch_upload_id").references(() => batchUploads.id, { onDelete: "cascade" }).notNull(),
+  rowNumber: integer("row"),
+  errorType: text("type").notNull(), // validation, processing, db, etc.
+  errorMessage: text("message").notNull(),
   severity: text("severity").default("error"), // error, warning
-  rawData: jsonb("raw_data"), // The raw CSV row data
   field: text("field"), // The specific field that caused the error
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }),
 });
 
 // Attribute-based discount rules
