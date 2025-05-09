@@ -78,26 +78,42 @@ export function registerDatabaseTestRoutes(app: Express): void {
         client.release();
       }
       
-      // Get expected tables from our Drizzle schema
+      // Get expected tables from our Drizzle schema by identifying pgTable exports
       const expectedTables = Object.keys(schema)
         .filter(key => {
-          // Only include table definitions (which have $type with '$inferSelect')
+          // Check if this is a pgTable definition from schema.ts
           const item = (schema as any)[key];
-          return item && typeof item === 'object' && item.$type && 
-                 item.$type.includes('Table') && !key.includes('Relations');
+          return item && 
+                 typeof item === 'object' && 
+                 // Tables have the name property matching their table name in the database
+                 item.name && 
+                 typeof item.name === 'string' &&
+                 // Make sure this is actually a table object and not a relation
+                 !key.includes('Relations');
         });
       
+      // Log the tables we found for debugging
+      logger.debug('Expected tables from schema:', { expectedTables });
+      
+      // Extract actual table names from the pgTable definitions
+      const expectedTableNames = expectedTables.map(tableKey => {
+        const table = (schema as any)[tableKey];
+        return table.name; // Get the actual table name from the schema definition
+      });
+      
+      logger.debug('Expected table names:', { expectedTableNames });
+      
       // Compare actual tables with expected tables
-      const missingTables = expectedTables.filter(table => !tables.includes(table));
+      const missingTables = expectedTableNames.filter(table => !tables.includes(table));
       const unexpectedTables = tables.filter(table => 
-        !expectedTables.includes(table) && 
+        !expectedTableNames.includes(table) && 
         table !== 'session' && 
         !table.includes('drizzle')
       );
       
       // Test column definitions for each table
       const columnTests = await Promise.all(
-        expectedTables.filter(table => tables.includes(table)).map(async (tableName) => {
+        expectedTableNames.filter(tableName => tables.includes(tableName)).map(async (tableName) => {
           // Get actual columns from PostgreSQL
           const client = await pool.connect();
           let actualColumns: { column_name: string, data_type: string }[] = [];
@@ -116,8 +132,14 @@ export function registerDatabaseTestRoutes(app: Express): void {
             client.release();
           }
           
+          // Find the schema key for this table
+          const schemaKey = expectedTables.find(key => {
+            const table = (schema as any)[key];
+            return table && table.name === tableName;
+          });
+          
           // Get expected columns from our Drizzle schema
-          const tableSchema = (schema as any)[tableName];
+          const tableSchema = schemaKey ? (schema as any)[schemaKey] : null;
           if (!tableSchema) {
             return {
               tableName,
@@ -181,8 +203,8 @@ export function registerDatabaseTestRoutes(app: Express): void {
         status,
         results: {
           expectedTables: {
-            count: expectedTables.length,
-            names: expectedTables
+            count: expectedTableNames.length,
+            names: expectedTableNames
           },
           actualTables: {
             count: tables.length,
