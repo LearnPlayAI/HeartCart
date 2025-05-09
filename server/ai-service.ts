@@ -315,6 +315,9 @@ export async function generateProductTags(
   productDescription: string,
   productId?: number
 ): Promise<string[]> {
+  // Define responseTextOuter at the function scope level so it's accessible in all catch blocks
+  let responseTextOuter = "";
+  
   try {
     // Input validation
     if (!productName) {
@@ -359,6 +362,7 @@ export async function generateProductTags(
         
         const textResponse = await textOnlyResult.response;
         const responseText = await textResponse.text();
+        responseTextOuter = responseText;
         
         // Parse comma-separated tags
         const tags = responseText
@@ -472,6 +476,7 @@ export async function generateProductTags(
       // Get the response
       const response = await result.response;
       const responseText = await response.text();
+      responseTextOuter = responseText;
       
       // Parse comma-separated tags
       const tags = responseText
