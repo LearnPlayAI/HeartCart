@@ -17,7 +17,8 @@ import { WizardStep, ProductWizardData } from './types';
 import WizardContainer from './WizardContainer';
 import BasicInfoStep from './steps/BasicInfoStep';
 import ProductImagesStep from './steps/ProductImagesStep';
-// Additional steps will be imported as they are implemented
+import AdditionalInfoStep from './steps/AdditionalInfoStep';
+import ReviewSaveStep from './steps/ReviewSaveStep';
 
 interface ProductWizardProps {
   catalogId?: number;
@@ -111,12 +112,10 @@ const ProductWizardContent: React.FC = () => {
         return <ProductImagesStep />;
         
       case WizardStep.ADDITIONAL_INFO:
-        // This will be implemented later
-        return <div>Additional Info Step (Coming Soon)</div>;
+        return <AdditionalInfoStep />;
         
       case WizardStep.REVIEW_SAVE:
-        // This will be implemented later
-        return <div>Review & Save Step (Coming Soon)</div>;
+        return <ReviewSaveStep />;
         
       default:
         return <div>Unknown step</div>;
