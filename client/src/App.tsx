@@ -148,6 +148,7 @@ function App() {
               <DeveloperProtectedRoute path="/developer" component={DeveloperDashboard} />
               <DeveloperProtectedRoute path="/developer/auth-tests" component={AuthTestsPage} />
               <DeveloperProtectedRoute path="/developer/database-tests" component={DatabaseTestsPage} />
+              <DeveloperProtectedRoute path="/developer/url-handling-test" component={URLHandlingTestPage} />
               <DeveloperProtectedRoute path="/developer/ai-tests" component={DeveloperDashboard} />
               <DeveloperProtectedRoute path="/developer/storage-tests" component={StorageTestsPage} />
               <DeveloperProtectedRoute path="/developer/api-tests" component={ApiTestsPage} />

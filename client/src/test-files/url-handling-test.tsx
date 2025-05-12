@@ -34,15 +34,21 @@ const TEST_CASES = [
   // Test objects (product images)
   {
     url: '/api/files/temp/pending/test image.jpg',
-    objectKey: 'temp/pending/test image.jpg'
+    objectKey: 'temp/pending/test image.jpg',
+    isMain: false,
+    order: 0
   },
   {
     url: '/api/files/products/456/product image with spaces.jpg',
-    objectKey: 'products/456/product image with spaces.jpg'
+    objectKey: 'products/456/product image with spaces.jpg',
+    isMain: true,
+    order: 1
   },
   {
     url: '/api/files/temp/pending/1747061479501_tr0tab70soa_HEART-FLEECE-COMFORTER-SET3.jpg',
-    objectKey: 'temp/pending/1747061479501_tr0tab70soa_HEART-FLEECE-COMFORTER-SET3.jpg'
+    objectKey: 'temp/pending/1747061479501_tr0tab70soa_HEART-FLEECE-COMFORTER-SET3.jpg',
+    isMain: false,
+    order: 2
   }
 ];
 
@@ -90,7 +96,11 @@ export default function URLHandlingTest() {
       
       const testResults = TEST_CASES.map((testCase) => {
         const input = typeof testCase === 'string' ? testCase : JSON.stringify(testCase);
-        const formattedUrl = ensureValidImageUrl(testCase);
+        
+        // Ensure testCase is either a string or properly implements UploadedImage
+        const formattedUrl = typeof testCase === 'string' 
+          ? ensureValidImageUrl(testCase)
+          : ensureValidImageUrl(testCase as UploadedImage);
         
         return {
           input,

@@ -48,6 +48,13 @@ function TestModuleCard({ title, description, icon, link, testsCount }: TestModu
 function DeveloperDashboard() {
   const testModules = [
     {
+      title: 'URL Handling',
+      description: 'Test file URL encoding and path formatting functionality',
+      icon: <FileCode className="h-5 w-5 text-green-600" />,
+      link: '/developer/url-handling-test',
+      testsCount: 6,
+    },
+    {
       title: 'Authentication',
       description: 'Test user authentication, session management, and security',
       icon: <ShieldCheck className="h-5 w-5 text-green-600" />,
