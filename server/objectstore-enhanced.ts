@@ -42,13 +42,58 @@ export interface FileMetadata {
  * providing both the original functionality and enhanced file browsing capabilities.
  */
 export class EnhancedObjectStorageService {
-  private client: Client;
+  private clients: Record<string, Client> = {};
+  private currentBucket: string = '';
   private initialized = false;
   private initPromise: Promise<void> | null = null;
   private localFallbackEnabled = false;
   
-  constructor() {
-    this.client = new Client(); // Use Replit environment variables for authentication
+  // Define available buckets
+  private availableBuckets = ['TeeMeYouStorage', 'TeeMeYouDev'];
+  
+  constructor(initialBucket: string = 'TeeMeYouStorage') {
+    this.setBucket(initialBucket);
+  }
+  
+  /**
+   * Get available buckets
+   */
+  getAvailableBuckets(): string[] {
+    return [...this.availableBuckets];
+  }
+  
+  /**
+   * Set the current bucket
+   */
+  setBucket(bucketId: string): void {
+    if (!this.availableBuckets.includes(bucketId)) {
+      console.warn(`Bucket ${bucketId} is not in the list of available buckets, but will try to use it anyway`);
+    }
+    
+    this.currentBucket = bucketId;
+    
+    // Create client if it doesn't exist
+    if (!this.clients[bucketId]) {
+      this.clients[bucketId] = new Client({ bucketId });
+    }
+    
+    // Reset initialization state for the new bucket
+    this.initialized = false;
+    this.initPromise = null;
+  }
+  
+  /**
+   * Get the current bucket
+   */
+  getCurrentBucket(): string {
+    return this.currentBucket;
+  }
+  
+  /**
+   * Get the active client for the current bucket
+   */
+  private get client(): Client {
+    return this.clients[this.currentBucket];
   }
   
   /**

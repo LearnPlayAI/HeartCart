@@ -35,17 +35,74 @@ const upload = multer({
 });
 
 /**
+ * Get available buckets
+ */
+router.get('/buckets', isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const buckets = enhancedObjectStorage.getAvailableBuckets();
+    const currentBucket = enhancedObjectStorage.getCurrentBucket();
+    
+    res.json({
+      success: true,
+      data: {
+        buckets,
+        currentBucket
+      }
+    });
+  } catch (error: any) {
+    console.error('Error listing buckets:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to list buckets'
+    });
+  }
+});
+
+/**
+ * Set current bucket
+ */
+router.post('/buckets/set', isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const { bucketId } = req.body;
+    
+    if (!bucketId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Bucket ID is required'
+      });
+    }
+    
+    enhancedObjectStorage.setBucket(bucketId);
+    
+    res.json({
+      success: true,
+      data: {
+        currentBucket: bucketId
+      }
+    });
+  } catch (error: any) {
+    console.error('Error setting bucket:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to set bucket'
+    });
+  }
+});
+
+/**
  * Get list of root folders
  */
 router.get('/folders', isAuthenticated, async (req: Request, res: Response) => {
   try {
     await enhancedObjectStorage.initialize();
     const folders = await enhancedObjectStorage.listRootFolders();
+    const currentBucket = enhancedObjectStorage.getCurrentBucket();
     
     res.json({
       success: true,
       data: {
-        folders
+        folders,
+        currentBucket
       }
     });
   } catch (error: any) {
