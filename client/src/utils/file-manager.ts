@@ -247,6 +247,20 @@ export function formatObjectKeyPath(objectKey: string): string {
   // Handle temp folder paths
   if (objectKey.includes(`${STORAGE_FOLDERS.TEMP}/`)) {
     const parts = objectKey.split('/');
+    
+    // Special handling for temp/pending folder (used for batch uploads)
+    if (parts.length >= 3 && parts[1] === 'pending') {
+      // This is a special case for the 'pending' folder before products are created
+      const filename = parts[2]; // Just get the filename
+      
+      // Ensure we're not double-encoding paths with already encoded components
+      const safeFilename = filename.includes('%') ? filename : encodeURIComponent(filename);
+      const formattedUrl = `${API_FILES_BASE}/${STORAGE_FOLDERS.TEMP}/pending/${safeFilename}`;
+      
+      console.log("Formatted temp/pending URL:", formattedUrl);
+      return formattedUrl;
+    }
+    
     if (parts.length >= 3) {
       // Get all parts after 'temp/{id}/'
       const productId = parts[1];
@@ -322,8 +336,22 @@ export function formatUrlPath(url: string): string {
       
       // Special handling for temp folder with file upload paths
       if (url.includes('/temp/pending/')) {
-        // This pattern matches our timestamp_randomstring_filename format
-        // Split the URL to isolate the filename part
+        // Special case for pending uploads (before product ID exists)
+        const pendingPathRegex = /^\/api\/files\/temp\/pending\/(.*)/;
+        const pendingMatch = url.match(pendingPathRegex);
+        
+        if (pendingMatch && pendingMatch[1]) {
+          const filename = pendingMatch[1];
+          // Only encode if not already encoded
+          const encodedFilename = filename.includes('%') ? filename : encodeURIComponent(filename);
+          const encodedUrl = `/api/files/temp/pending/${encodedFilename}`;
+          
+          // Log retry attempts with properly encoded URL
+          console.log("Retrying with properly encoded temp URL format:", encodedUrl);
+          return encodedUrl;
+        }
+        
+        // Fallback for other formats - handle timestamp_randomstring_filename pattern
         const parts = url.split('/');
         const lastPart = parts[parts.length - 1];
         

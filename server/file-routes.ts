@@ -130,6 +130,56 @@ router.get('/temp/:productId/:filename', async (req: Request, res: Response) => 
 });
 
 /**
+ * Access files from the temp/pending folder (for batch uploads)
+ * This is a dedicated handler for the specific 'pending' folder which is used
+ * before products are created in the database
+ */
+router.get('/temp/pending/:filename', async (req: Request, res: Response) => {
+  try {
+    // Decode the path parameters to handle URL-encoded characters
+    const filename = decodeURIComponent(req.params.filename);
+    const filePath = `${STORAGE_FOLDERS.TEMP}/pending/${filename}`;
+    
+    console.log(`Serving pending file: ${filePath}`);
+
+    // If filename contains spaces, create a properly encoded URL and redirect
+    if (filename.includes(' ')) {
+      console.log('Pending file name contains spaces, redirecting to properly encoded URL');
+      const encodedFilename = encodeURIComponent(filename);
+      return res.redirect(`/api/files/temp/pending/${encodedFilename}`);
+    }
+    
+    // Check if file exists
+    const exists = await objectStore.exists(filePath);
+    if (!exists) {
+      console.error(`Pending file not found: ${filePath}`);
+      return sendError(res, 'File not found', 404);
+    }
+    
+    // Get file data
+    const { data: fileData, contentType } = await objectStore.getFileAsBuffer(filePath);
+    
+    // Set appropriate content type
+    const detectedContentType = contentType || determineContentType(filename);
+    res.setHeader('Content-Type', detectedContentType);
+    
+    // Set caching headers
+    res.setHeader('Cache-Control', 'public, max-age=31536000'); // 1 year
+    
+    // Add CORS headers for image requests
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET');
+    res.setHeader('Vary', 'Origin');
+    
+    // Send file
+    res.send(fileData);
+  } catch (error) {
+    console.error('Error serving pending file:', error);
+    sendError(res, 'Error serving file', 500);
+  }
+});
+
+/**
  * Determine content type based on file extension
  */
 function determineContentType(filename: string): string {
