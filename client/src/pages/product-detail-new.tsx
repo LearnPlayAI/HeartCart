@@ -345,7 +345,7 @@ const ProductDetailView = ({
   
   // Handle thumbnail click to change main image (memoized to prevent re-renders)
   const handleThumbnailClick = useCallback((image: string) => {
-    setCurrentImage(image);
+    setCurrentImage(ensureValidImageUrl(image));
   }, []);
   
   // Open image carousel modal
@@ -570,7 +570,7 @@ const ProductDetailView = ({
                   {product.additionalImages && (
                     <div className="relative w-full h-full flex items-center justify-center">
                       <img 
-                        src={product.additionalImages[carouselIndex]} 
+                        src={ensureValidImageUrl(product.additionalImages[carouselIndex])} 
                         alt={`${product.name} - large view`} 
                         className="max-h-full max-w-full object-contain"
                       />
