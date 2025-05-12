@@ -5,7 +5,7 @@
  * with navigation and action buttons.
  */
 
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Save } from 'lucide-react';
 import { useProductWizard, getStepConfig, canNavigateToStep, isStepValid } from './context';
 import { WizardStep, WizardActionType } from './types';
@@ -13,6 +13,7 @@ import WizardNavigation from './WizardNavigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface WizardContainerProps {
   children: ReactNode;
@@ -27,11 +28,15 @@ const WizardContainer: React.FC<WizardContainerProps> = ({
 }) => {
   const { state, dispatch } = useProductWizard();
   const { currentStep, productData, isFormDirty, isLoading } = state;
+  const [direction, setDirection] = useState<'forward' | 'backward'>('forward');
+  const [animationKey, setAnimationKey] = useState<number>(0);
   
   // Handle moving to the next step
   const handleNext = () => {
     const nextStep = currentStep + 1;
     if (nextStep <= WizardStep.REVIEW_SAVE && isStepValid(currentStep, productData)) {
+      setDirection('forward');
+      setAnimationKey(prevKey => prevKey + 1);
       dispatch({
         type: WizardActionType.SET_STEP,
         payload: nextStep
@@ -43,6 +48,8 @@ const WizardContainer: React.FC<WizardContainerProps> = ({
   const handlePrevious = () => {
     const prevStep = currentStep - 1;
     if (prevStep >= WizardStep.BASIC_INFO) {
+      setDirection('backward');
+      setAnimationKey(prevKey => prevKey + 1);
       dispatch({
         type: WizardActionType.SET_STEP,
         payload: prevStep
@@ -102,8 +109,31 @@ const WizardContainer: React.FC<WizardContainerProps> = ({
       
       {/* Main content area */}
       <Card>
-        <CardContent className="pt-6">
-          {children}
+        <CardContent className="pt-6 overflow-hidden">
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={`step-${currentStep}-${animationKey}`}
+              initial={{ 
+                x: direction === 'forward' ? 300 : -300,
+                opacity: 0 
+              }}
+              animate={{ 
+                x: 0, 
+                opacity: 1 
+              }}
+              exit={{ 
+                x: direction === 'forward' ? -300 : 300,
+                opacity: 0 
+              }}
+              transition={{ 
+                type: "spring", 
+                stiffness: 300, 
+                damping: 30 
+              }}
+            >
+              {children}
+            </motion.div>
+          </AnimatePresence>
         </CardContent>
       </Card>
       
