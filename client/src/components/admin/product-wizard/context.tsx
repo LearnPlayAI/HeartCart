@@ -249,14 +249,31 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
   }
 }
 
-// Provider component
+/**
+ * Props interface for the ProductWizardProvider component
+ * @interface ProductWizardProviderProps
+ */
 interface ProductWizardProviderProps {
+  /** React child components */
   children: ReactNode;
+  /** Optional initial data to pre-populate the wizard */
   initialData?: Partial<ProductWizardData>;
+  /** Optional catalog ID if creating a product for a specific catalog */
   catalogId?: number;
+  /** Optional supplier ID if creating a product for a specific supplier */
   supplierId?: number;
 }
 
+/**
+ * Provider component that wraps the application with the ProductWizard context
+ * Initializes the state with defaults and any provided initial data
+ * 
+ * @param {ReactNode} children - Child components that will have access to the context
+ * @param {Partial<ProductWizardData>} initialData - Optional initial data for the product
+ * @param {number} catalogId - Optional catalog ID for the product
+ * @param {number} supplierId - Optional supplier ID for the product
+ * @returns {JSX.Element} Provider component with context
+ */
 export const ProductWizardProvider: React.FC<ProductWizardProviderProps> = ({ 
   children, 
   initialData, 
@@ -283,7 +300,13 @@ export const ProductWizardProvider: React.FC<ProductWizardProviderProps> = ({
   );
 };
 
-// Custom hook for accessing the context
+/**
+ * Custom hook for accessing the ProductWizard context
+ * Provides a convenient way to access the wizard state and dispatch functions
+ * 
+ * @returns {Object} The context object containing state and dispatch function
+ * @throws {Error} If used outside of a ProductWizardProvider component
+ */
 export const useProductWizard = () => {
   const context = useContext(ProductWizardContext);
   
