@@ -29,7 +29,7 @@ import {
 
 // Import the new file handling utilities
 import { useFileUpload } from '@/hooks/use-file-upload';
-import { UPLOAD_ENDPOINTS } from '@/utils/file-manager';
+import { UPLOAD_ENDPOINTS, ensureValidImageUrl } from '@/utils/file-manager';
 
 interface ProductImagesStepProps {
   className?: string;
@@ -245,7 +245,7 @@ export const ProductImagesStepRefactored: React.FC<ProductImagesStepProps> = ({ 
                               
                               {/* Image preview */}
                               <img
-                                src={previewUrl}
+                                src={ensureValidImageUrl(previewUrl)}
                                 alt={`Product image ${index + 1}`}
                                 className="w-full h-full object-cover"
                               />
