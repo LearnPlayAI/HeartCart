@@ -14,7 +14,8 @@ import {
   ChevronLeft,
   ArrowUp,
   Info,
-  X
+  X,
+  Database
 } from 'lucide-react';
 import { 
   Card, 
@@ -49,6 +50,15 @@ import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from '@/components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type FileItem = {
   name: string;
@@ -156,13 +166,49 @@ const FileBrowser: React.FC = () => {
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [isUploading, setIsUploading] = useState<boolean>(false);
   
-  // Queries
+  // Bucket queries
+  const {
+    data: bucketsData,
+    isLoading: isBucketsLoading,
+    error: bucketsError,
+    refetch: refetchBuckets
+  } = useQuery<{ success: boolean; data: { buckets: string[], currentBucket: string } }>({
+    queryKey: ['/api/file-browser/buckets'],
+    queryFn: getQueryFn({ on401: "returnNull" }),
+    refetchOnWindowFocus: false
+  });
+  
+  // Set bucket mutation
+  const setBucketMutation = useMutation({
+    mutationFn: async (bucketId: string) => {
+      return await apiRequest('/api/file-browser/buckets/set', 'POST', { bucketId });
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Storage Bucket Changed',
+        description: 'Storage bucket has been switched successfully.',
+        variant: 'default'
+      });
+      // Refetch folders and reset path
+      setCurrentPath('');
+      refetchFolders();
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error Changing Bucket',
+        description: error.message || 'Failed to change storage bucket. Please try again.',
+        variant: 'destructive'
+      });
+    }
+  });
+  
+  // Folders
   const {
     data: foldersData,
     isLoading: isFoldersLoading,
     error: foldersError,
     refetch: refetchFolders
-  } = useQuery<{ success: boolean; data: { folders: string[] } }>({
+  } = useQuery<{ success: boolean; data: { folders: string[], currentBucket: string } }>({
     queryKey: ['/api/file-browser/folders'],
     queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: currentPath === '',
@@ -191,6 +237,10 @@ const FileBrowser: React.FC = () => {
     queryFn: getQueryFn({ on401: "returnNull" }),
     refetchOnWindowFocus: false
   });
+  
+  // Extract data
+  const buckets = bucketsData?.success ? bucketsData.data.buckets : [];
+  const currentBucket = bucketsData?.success ? bucketsData.data.currentBucket : '';
   
   // Root folders
   const rootFolders = foldersData?.success ? foldersData.data.folders : [];
@@ -487,6 +537,30 @@ const FileBrowser: React.FC = () => {
             </CardDescription>
           </div>
           <div className="flex space-x-2">
+            <div className="flex items-center mr-4">
+              <div className="flex items-center space-x-2">
+                <Database className="h-4 w-4 text-gray-500" />
+                <Select
+                  value={currentBucket}
+                  onValueChange={(value) => setBucketMutation.mutate(value)}
+                  disabled={isBucketsLoading || setBucketMutation.isPending}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Select bucket" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectLabel>Storage Buckets</SelectLabel>
+                      {buckets.map((bucket) => (
+                        <SelectItem key={bucket} value={bucket}>
+                          {bucket}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
             <Button
               variant="outline"
               size="sm"
@@ -563,6 +637,16 @@ const FileBrowser: React.FC = () => {
               })}
             </>
           )}
+        </div>
+        
+        {/* Current bucket indicator */}
+        <div className="mb-4">
+          <div className="flex items-center">
+            <Database className="h-3 w-3 text-gray-500 mr-1" />
+            <span className="text-xs text-gray-500">
+              Currently using storage bucket: <span className="font-medium">{currentBucket || 'Loading...'}</span>
+            </span>
+          </div>
         </div>
         
         {renderEmptyState() || (
