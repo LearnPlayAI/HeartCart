@@ -40,12 +40,26 @@ const ProductWizardContent: React.FC = () => {
       
       console.log('Making request to:', url, 'with method:', method);
       
+      // Process date fields correctly for server validation
+      const processedData = {
+        ...data,
+        // Process date objects
+        specialSaleStart: data.specialSaleStart instanceof Date ? 
+          data.specialSaleStart.toISOString() : null,
+        specialSaleEnd: data.specialSaleEnd instanceof Date ? 
+          data.specialSaleEnd.toISOString() : null,
+        flashDealStart: data.flashDealStart instanceof Date ? 
+          data.flashDealStart.toISOString() : null,
+        flashDealEnd: data.flashDealEnd instanceof Date ? 
+          data.flashDealEnd.toISOString() : null
+      };
+      
       const response = await fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(data)
+        body: JSON.stringify(processedData)
       });
       
       if (!response.ok) {
@@ -122,11 +136,23 @@ const ProductWizardContent: React.FC = () => {
   // Handle form submission
   const handleSave = async () => {
     try {
-      // Create a properly formatted slug if not present
-      const slug = state.productData.slug || 
-        (state.productData.name ? 
+      // Create a properly formatted slug if not present or too short
+      let slug = state.productData.slug || '';
+      if (!slug || slug.length < 3) {
+        slug = state.productData.name ? 
           state.productData.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') : 
-          `product-${Date.now()}`);
+          `product-${Date.now()}`;
+        
+        // Ensure minimum length of 3 characters for the slug
+        if (slug.length < 3) {
+          slug = `${slug}-${Date.now()}`.substring(0, 50);
+        }
+      }
+      
+      // Ensure catalogId is present and valid
+      if (!state.catalogId) {
+        throw new Error("Catalog ID is required. Please select a catalog.");
+      }
       
       // Extract and format the data from the wizard state
       const productData = {
@@ -135,15 +161,12 @@ const ProductWizardContent: React.FC = () => {
         stock: state.productData.stock || 0, // Default stock value to fix validation
         catalogId: state.catalogId,
         supplierId: state.supplierId,
-        // Convert Date objects to ISO strings for server validation
-        specialSaleStart: state.productData.specialSaleStart ? 
-          state.productData.specialSaleStart.toISOString() : null,
-        specialSaleEnd: state.productData.specialSaleEnd ? 
-          state.productData.specialSaleEnd.toISOString() : null,
-        flashDealStart: state.productData.flashDealStart ? 
-          state.productData.flashDealStart.toISOString() : null,
-        flashDealEnd: state.productData.flashDealEnd ? 
-          state.productData.flashDealEnd.toISOString() : null
+        
+        // Use the actual Date objects in the state (we'll process them to ISO strings later)
+        specialSaleStart: state.productData.specialSaleStart,
+        specialSaleEnd: state.productData.specialSaleEnd,
+        flashDealStart: state.productData.flashDealStart,
+        flashDealEnd: state.productData.flashDealEnd
       };
       
       // Debug the submission data to verify all required fields are present
