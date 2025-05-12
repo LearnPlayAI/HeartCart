@@ -42,17 +42,29 @@ const ProductWizardContent: React.FC = () => {
         console.log('Making request to:', url, 'with method:', method);
         
         // Process date fields correctly for server validation
+        // The API expects actual Date objects - any string dates must be converted to Date objects
         const processedData = {
           ...data,
-          // Process date objects
+          // Process dates with robust handling - ensure we have proper Date objects
           specialSaleStart: data.specialSaleStart instanceof Date ? 
-            data.specialSaleStart.toISOString() : null,
+            data.specialSaleStart : 
+            (typeof data.specialSaleStart === 'string' && data.specialSaleStart ? 
+              new Date(data.specialSaleStart) : null),
+            
           specialSaleEnd: data.specialSaleEnd instanceof Date ? 
-            data.specialSaleEnd.toISOString() : null,
+            data.specialSaleEnd : 
+            (typeof data.specialSaleEnd === 'string' && data.specialSaleEnd ? 
+              new Date(data.specialSaleEnd) : null),
+              
           flashDealStart: data.flashDealStart instanceof Date ? 
-            data.flashDealStart.toISOString() : null,
+            data.flashDealStart : 
+            (typeof data.flashDealStart === 'string' && data.flashDealStart ? 
+              new Date(data.flashDealStart) : null),
+              
           flashDealEnd: data.flashDealEnd instanceof Date ? 
-            data.flashDealEnd.toISOString() : null
+            data.flashDealEnd : 
+            (typeof data.flashDealEnd === 'string' && data.flashDealEnd ? 
+              new Date(data.flashDealEnd) : null)
         };
         
         // Debug: Log the exact payload being sent

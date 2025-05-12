@@ -181,10 +181,67 @@ const ReviewSaveStep: React.FC<ReviewSaveStepProps> = ({ className }) => {
           <Tabs defaultValue="overview" className="w-full">
             <TabsList className="mb-4">
               <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="images">Images</TabsTrigger>
               <TabsTrigger value="details">Details</TabsTrigger>
               <TabsTrigger value="sales">Sales Info</TabsTrigger>
             </TabsList>
             
+            <TabsContent value="images" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Product Images</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {productData.uploadedImages && productData.uploadedImages.length > 0 ? (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {productData.uploadedImages.map((image, index) => (
+                        <div 
+                          key={index} 
+                          className={`relative border rounded-md overflow-hidden aspect-[4/3] ${image.isMain ? 'ring-2 ring-primary' : ''}`}
+                        >
+                          <img 
+                            src={image.url} 
+                            alt={`Product image ${index + 1}`} 
+                            className="object-cover w-full h-full"
+                            onError={(e) => {
+                              console.error('Image failed to load', e);
+                              e.currentTarget.src = ''; // Clear src on error
+                              e.currentTarget.classList.add('hidden');
+                              e.currentTarget.parentElement?.querySelector('.fallback-icon')?.classList.remove('hidden');
+                            }}
+                          />
+                          <div className="absolute inset-0 flex items-center justify-center hidden fallback-icon">
+                            <ImageIcon className="h-12 w-12 text-muted-foreground" />
+                          </div>
+                          {image.isMain && (
+                            <Badge className="absolute top-2 left-2 bg-primary">Main</Badge>
+                          )}
+                          <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white px-2 py-1 text-xs truncate">
+                            {image.file?.relativePath || 'Uploaded image'}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center p-4">
+                      <ImageIcon className="h-12 w-12 text-muted-foreground mb-2" />
+                      <p className="text-muted-foreground">No images uploaded yet</p>
+                    </div>
+                  )}
+                </CardContent>
+                <CardFooter>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => navigateToStep(WizardStep.PRODUCT_IMAGES)}
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit Images
+                  </Button>
+                </CardFooter>
+              </Card>
+            </TabsContent>
+
             <TabsContent value="overview" className="space-y-4">
               <Card>
                 <CardHeader>
@@ -472,17 +529,29 @@ const ReviewSaveStep: React.FC<ReviewSaveStepProps> = ({ className }) => {
             <CardContent>
               <div className="border rounded-md overflow-hidden shadow-sm">
                 <div className="aspect-[4/3] relative bg-gray-100 dark:bg-gray-800">
-                  {(productData.uploadedImages?.find(img => img.isMain)?.url || productData.imageUrl) ? (
+                  {productData.uploadedImages && productData.uploadedImages.length > 0 ? (
+                    // Use URL.createObjectURL for blob URLs or direct URL for server images
                     <img 
-                      src={productData.uploadedImages?.find(img => img.isMain)?.url || productData.imageUrl || ''} 
+                      src={productData.uploadedImages.find(img => img.isMain)?.url || productData.uploadedImages[0]?.url || productData.imageUrl || ''} 
                       alt={productData.name} 
                       className="object-cover w-full h-full"
+                      onError={(e) => {
+                        console.error('Image failed to load', e);
+                        e.currentTarget.src = ''; // Clear src on error
+                        e.currentTarget.classList.add('hidden');
+                        e.currentTarget.parentElement?.querySelector('.fallback-icon')?.classList.remove('hidden');
+                      }}
                     />
                   ) : (
-                    <div className="flex items-center justify-center h-full">
+                    <div className="flex items-center justify-center h-full fallback-icon">
                       <ImageIcon className="h-12 w-12 text-muted-foreground" />
                     </div>
                   )}
+                  
+                  {/* Hidden fallback icon that shows if image fails to load */}
+                  <div className="flex items-center justify-center h-full fallback-icon hidden">
+                    <ImageIcon className="h-12 w-12 text-muted-foreground" />
+                  </div>
                   
                   {/* Discount badge */}
                   {hasDiscount && (
