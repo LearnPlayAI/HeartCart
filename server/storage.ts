@@ -996,6 +996,57 @@ export class DatabaseStorage implements IStorage {
       throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
   }
+  
+  /**
+   * Creates a product using the enhanced wizard fields and functionality
+   * This method handles all the additional fields introduced in the new product wizard
+   */
+  async createProductWithWizard(product: InsertProduct): Promise<Product> {
+    try {
+      // Use a transaction to ensure all operations succeed or fail together
+      return await db.transaction(async (tx) => {
+        // Insert the product with all wizard fields
+        const [createdProduct] = await tx.insert(products).values(product).returning();
+        
+        if (!createdProduct) {
+          throw new Error('Failed to create product');
+        }
+        
+        // Handle required attributes if specified
+        if (product.requiredAttributeIds && product.requiredAttributeIds.length > 0) {
+          console.log(`Setting required attributes for product ${createdProduct.id}:`, product.requiredAttributeIds);
+          
+          // Update product attributes to mark them as required
+          for (const attributeId of product.requiredAttributeIds) {
+            const existingAttr = await tx.query.productAttributes.findFirst({
+              where: eq(productAttributes.productId, createdProduct.id) && eq(productAttributes.attributeId, attributeId)
+            });
+            
+            if (existingAttr) {
+              // Update existing attribute to be required
+              await tx.update(productAttributes)
+                .set({ isRequired: true })
+                .where(eq(productAttributes.id, existingAttr.id));
+            }
+          }
+        }
+        
+        // Handle special sale configuration if specified
+        if (product.specialSaleText && (product.specialSaleStart || product.specialSaleEnd)) {
+          console.log(`Setting special sale for product ${createdProduct.id}:`, {
+            text: product.specialSaleText,
+            start: product.specialSaleStart,
+            end: product.specialSaleEnd
+          });
+        }
+        
+        return createdProduct;
+      });
+    } catch (error) {
+      console.error(`Error creating product with wizard "${product.name}":`, error);
+      throw error;
+    }
+  }
 
   async updateProduct(id: number, productData: Partial<InsertProduct>): Promise<Product | undefined> {
     try {
