@@ -298,82 +298,72 @@ const AdditionalInfoStep: React.FC<AdditionalInfoStepProps> = ({ className }) =>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* SKU */}
-              <FormItem>
-                <FormLabel>SKU (Stock Keeping Unit)</FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder="Enter product SKU"
-                    value={productData.sku || ''}
-                    onChange={(e) => handleFieldChange('sku', e.target.value)}
-                  />
-                </FormControl>
-                <FormDescription>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">SKU (Stock Keeping Unit)</label>
+                <Input
+                  placeholder="Enter product SKU"
+                  value={productData.sku || ''}
+                  onChange={(e) => handleFieldChange('sku', e.target.value)}
+                />
+                <p className="text-sm text-muted-foreground">
                   A unique identifier for your product
-                </FormDescription>
-              </FormItem>
+                </p>
+              </div>
               
               {/* Brand */}
-              <FormItem>
-                <FormLabel>Brand</FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder="Enter product brand"
-                    value={productData.brand || ''}
-                    onChange={(e) => handleFieldChange('brand', e.target.value)}
-                  />
-                </FormControl>
-                <FormDescription>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Brand</label>
+                <Input
+                  placeholder="Enter product brand"
+                  value={productData.brand || ''}
+                  onChange={(e) => handleFieldChange('brand', e.target.value)}
+                />
+                <p className="text-sm text-muted-foreground">
                   The manufacturer or brand name
-                </FormDescription>
-              </FormItem>
+                </p>
+              </div>
               
               {/* Minimum Order */}
-              <FormItem>
-                <FormLabel>Minimum Order Quantity</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    min="1"
-                    step="1"
-                    placeholder="1"
-                    value={productData.minimumOrder || ''}
-                    onChange={(e) => handleFieldChange('minimumOrder', e.target.value)}
-                  />
-                </FormControl>
-                <FormDescription>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Minimum Order Quantity</label>
+                <Input
+                  type="number"
+                  min="1"
+                  step="1"
+                  placeholder="1"
+                  value={productData.minimumOrder || ''}
+                  onChange={(e) => handleFieldChange('minimumOrder', e.target.value)}
+                />
+                <p className="text-sm text-muted-foreground">
                   Minimum quantity customers must order
-                </FormDescription>
-              </FormItem>
+                </p>
+              </div>
             </div>
             
             {/* Short Description */}
-            <FormItem>
-              <FormLabel>Short Description</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder="Brief summary of the product..."
-                  rows={2}
-                  value={productData.shortDescription || ''}
-                  onChange={(e) => handleFieldChange('shortDescription', e.target.value)}
-                />
-              </FormControl>
-              <FormDescription>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Short Description</label>
+              <Textarea
+                placeholder="Brief summary of the product..."
+                rows={2}
+                value={productData.shortDescription || ''}
+                onChange={(e) => handleFieldChange('shortDescription', e.target.value)}
+              />
+              <p className="text-sm text-muted-foreground">
                 A concise summary shown in product listings (max 200 characters)
-              </FormDescription>
-            </FormItem>
+              </p>
+            </div>
             
             {/* Tags */}
-            <FormItem>
-              <FormLabel>Product Tags</FormLabel>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Product Tags</label>
               <div className="flex gap-2">
-                <FormControl>
-                  <Input
-                    placeholder="Add a tag (press Enter)"
-                    value={tagInput}
-                    onChange={(e) => setTagInput(e.target.value)}
-                    onKeyPress={handleTagKeyPress}
-                  />
-                </FormControl>
+                <Input
+                  placeholder="Add a tag (press Enter)"
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyPress={handleTagKeyPress}
+                />
                 <Button type="button" onClick={handleAddTag} size="sm">
                   <Tag className="h-4 w-4 mr-2" />
                   Add
@@ -414,10 +404,10 @@ const AdditionalInfoStep: React.FC<AdditionalInfoStepProps> = ({ className }) =>
                   <p className="text-sm text-muted-foreground italic">No tags added yet</p>
                 )}
               </div>
-              <FormDescription>
+              <p className="text-sm text-muted-foreground">
                 Tags help customers find your product
-              </FormDescription>
-            </FormItem>
+              </p>
+            </div>
           </CardContent>
         </Card>
         
@@ -571,23 +561,21 @@ const AdditionalInfoStep: React.FC<AdditionalInfoStepProps> = ({ className }) =>
                 {productData.isFlashDeal && (
                   <div className="space-y-4 pt-2">
                     {/* Flash Deal Start */}
-                    <FormItem>
-                      <FormLabel>Flash Deal Start</FormLabel>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Flash Deal Start</label>
                       <Popover>
                         <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              className="w-full justify-start text-left font-normal"
-                            >
-                              <Calendar className="mr-2 h-4 w-4" />
-                              {productData.flashDealStart ? (
-                                new Date(productData.flashDealStart).toLocaleDateString()
-                              ) : (
-                                <span>Pick a start date</span>
-                              )}
-                            </Button>
-                          </FormControl>
+                          <Button
+                            variant="outline"
+                            className="w-full justify-start text-left font-normal"
+                          >
+                            <Calendar className="mr-2 h-4 w-4" />
+                            {productData.flashDealStart ? (
+                              new Date(productData.flashDealStart).toLocaleDateString()
+                            ) : (
+                              <span>Pick a start date</span>
+                            )}
+                          </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0">
                           <CalendarComponent
@@ -598,26 +586,24 @@ const AdditionalInfoStep: React.FC<AdditionalInfoStepProps> = ({ className }) =>
                           />
                         </PopoverContent>
                       </Popover>
-                    </FormItem>
+                    </div>
                     
                     {/* Flash Deal End */}
-                    <FormItem>
-                      <FormLabel>Flash Deal End</FormLabel>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Flash Deal End</label>
                       <Popover>
                         <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              className="w-full justify-start text-left font-normal"
-                            >
-                              <Calendar className="mr-2 h-4 w-4" />
-                              {productData.flashDealEnd ? (
-                                new Date(productData.flashDealEnd).toLocaleDateString()
-                              ) : (
-                                <span>Pick an end date</span>
-                              )}
-                            </Button>
-                          </FormControl>
+                          <Button
+                            variant="outline"
+                            className="w-full justify-start text-left font-normal"
+                          >
+                            <Calendar className="mr-2 h-4 w-4" />
+                            {productData.flashDealEnd ? (
+                              new Date(productData.flashDealEnd).toLocaleDateString()
+                            ) : (
+                              <span>Pick an end date</span>
+                            )}
+                          </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0">
                           <CalendarComponent
@@ -628,7 +614,7 @@ const AdditionalInfoStep: React.FC<AdditionalInfoStepProps> = ({ className }) =>
                           />
                         </PopoverContent>
                       </Popover>
-                    </FormItem>
+                    </div>
                   </div>
                 )}
               </div>
@@ -657,35 +643,31 @@ const AdditionalInfoStep: React.FC<AdditionalInfoStepProps> = ({ className }) =>
                 {productData.specialSaleText && (
                   <div className="space-y-4 pt-2">
                     {/* Special Sale Text */}
-                    <FormItem>
-                      <FormLabel>Special Sale Text</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Special Offer!"
-                          value={productData.specialSaleText}
-                          onChange={(e) => handleFieldChange('specialSaleText', e.target.value)}
-                        />
-                      </FormControl>
-                    </FormItem>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Special Sale Text</label>
+                      <Input
+                        placeholder="Special Offer!"
+                        value={productData.specialSaleText}
+                        onChange={(e) => handleFieldChange('specialSaleText', e.target.value)}
+                      />
+                    </div>
                     
                     {/* Special Sale Start */}
-                    <FormItem>
-                      <FormLabel>Special Sale Start</FormLabel>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Special Sale Start</label>
                       <Popover>
                         <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              className="w-full justify-start text-left font-normal"
-                            >
-                              <Calendar className="mr-2 h-4 w-4" />
-                              {productData.specialSaleStart ? (
-                                new Date(productData.specialSaleStart).toLocaleDateString()
-                              ) : (
-                                <span>Pick a start date</span>
-                              )}
-                            </Button>
-                          </FormControl>
+                          <Button
+                            variant="outline"
+                            className="w-full justify-start text-left font-normal"
+                          >
+                            <Calendar className="mr-2 h-4 w-4" />
+                            {productData.specialSaleStart ? (
+                              new Date(productData.specialSaleStart).toLocaleDateString()
+                            ) : (
+                              <span>Pick a start date</span>
+                            )}
+                          </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0">
                           <CalendarComponent
@@ -696,26 +678,24 @@ const AdditionalInfoStep: React.FC<AdditionalInfoStepProps> = ({ className }) =>
                           />
                         </PopoverContent>
                       </Popover>
-                    </FormItem>
+                    </div>
                     
                     {/* Special Sale End */}
-                    <FormItem>
-                      <FormLabel>Special Sale End</FormLabel>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Special Sale End</label>
                       <Popover>
                         <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              className="w-full justify-start text-left font-normal"
-                            >
-                              <Calendar className="mr-2 h-4 w-4" />
-                              {productData.specialSaleEnd ? (
-                                new Date(productData.specialSaleEnd).toLocaleDateString()
-                              ) : (
-                                <span>Pick an end date</span>
-                              )}
-                            </Button>
-                          </FormControl>
+                          <Button
+                            variant="outline"
+                            className="w-full justify-start text-left font-normal"
+                          >
+                            <Calendar className="mr-2 h-4 w-4" />
+                            {productData.specialSaleEnd ? (
+                              new Date(productData.specialSaleEnd).toLocaleDateString()
+                            ) : (
+                              <span>Pick an end date</span>
+                            )}
+                          </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0">
                           <CalendarComponent
@@ -726,7 +706,7 @@ const AdditionalInfoStep: React.FC<AdditionalInfoStepProps> = ({ className }) =>
                           />
                         </PopoverContent>
                       </Popover>
-                    </FormItem>
+                    </div>
                   </div>
                 )}
               </div>
