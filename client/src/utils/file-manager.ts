@@ -205,16 +205,42 @@ export function formatUrlPath(url: string): string {
   if (url.startsWith('http') || url.startsWith('blob:')) {
     return url;
   }
+
+  // Log image details to help with debugging
+  if (typeof url === 'object') {
+    console.log("Image details:", url);
+  }
   
   // Handle API files URLs
   if (url.startsWith('/api/files/')) {
     try {
-      const urlParts = url.split('/').filter(part => part.length > 0);
+      const urlParts = url.split('/');
       
+      // Special handling for temp folder with file upload paths
+      if (url.includes('/temp/pending/')) {
+        // This pattern matches our timestamp_randomstring_filename format
+        // Split the URL to isolate the filename part
+        const parts = url.split('/');
+        const lastPart = parts[parts.length - 1];
+        
+        // Check if this is the filename part (should contain timestamp prefix)
+        if (lastPart && lastPart.includes('_')) {
+          // We need to encode just the filename portion
+          const prefix = parts.slice(0, parts.length - 1).join('/');
+          const encodedLastPart = encodeURIComponent(lastPart);
+          const encodedUrl = `${prefix}/${encodedLastPart}`;
+          
+          // Log retry attempts with properly encoded URL
+          console.log("Retrying with properly encoded temp URL format:", encodedUrl);
+          return encodedUrl;
+        }
+      }
+      
+      // Standard API files URL handling
       // Reconstruct with proper encoding for segments after /api/files/
-      if (urlParts.length >= 2 && urlParts[0] === 'api' && urlParts[1] === 'files') {
-        const apiBase = `/${urlParts[0]}/${urlParts[1]}`;
-        const remainingParts = urlParts.slice(2);
+      if (urlParts.length >= 3 && urlParts[1] === 'api' && urlParts[2] === 'files') {
+        const apiBase = `/${urlParts[1]}/${urlParts[2]}`;
+        const remainingParts = urlParts.slice(3);
         const encodedParts = remainingParts.map(part => encodeURIComponent(part));
         return `${apiBase}/${encodedParts.join('/')}`;
       }

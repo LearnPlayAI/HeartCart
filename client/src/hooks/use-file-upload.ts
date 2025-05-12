@@ -55,7 +55,17 @@ export function useFileUpload(options?: FileUploadOptions) {
 
   const [state, setState] = useState<FileUploadState>({
     images: initialImages,
-    previews: initialImages.map(img => ensureValidImageUrl(img)),
+    // Ensure all URLs are properly encoded
+    previews: initialImages.map(img => {
+      // Check if we have an image object or string
+      const url = typeof img === 'string' ? img : (img.url || '');
+      if (url) {
+        console.log("Processing image URL:", url);
+        // Keep track of URLs for debugging
+        return ensureValidImageUrl(img);
+      }
+      return '';
+    }),
     isUploading: false,
     uploadProgress: {},
     errors: {},
