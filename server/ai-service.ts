@@ -918,6 +918,154 @@ export async function updateAiModel(modelName: string): Promise<boolean> {
   }
 }
 
+/**
+ * Suggest appropriate attributes for a product based on its category, name, and description
+ * This helps merchants create complete product information with recommended attribute values
+ * 
+ * @param categoryId The ID of the product category
+ * @param productName The name of the product
+ * @param productDescription The description of the product (optional)
+ * @param existingAttributes Existing attribute values to consider (optional)
+ * @returns Suggested attribute values with their IDs
+ */
+export async function suggestProductAttributes(
+  categoryId: number,
+  productName: string,
+  productDescription?: string,
+  existingAttributes?: Array<{ id: number; name: string; value: string }>
+): Promise<Array<{ attributeId: number; attributeName: string; suggestedValue: string }>> {
+  try {
+    logger.debug('Starting attribute suggestion process', {
+      categoryId,
+      productName,
+      hasDescription: !!productDescription,
+      existingAttributesCount: existingAttributes?.length || 0
+    });
+    
+    // Fetch category attributes from database
+    const categoryAttributes = await storage.getCategoryAttributes(categoryId);
+    
+    if (!categoryAttributes || categoryAttributes.length === 0) {
+      logger.info('No attributes found for category', { categoryId });
+      return [];
+    }
+    
+    // Get category information for context
+    const category = await storage.getCategoryById(categoryId);
+    
+    if (!category) {
+      logger.warn('Category not found for attribute suggestion', { categoryId });
+      return [];
+    }
+    
+    // Format existing attributes for the prompt
+    const existingAttributesText = existingAttributes && existingAttributes.length > 0
+      ? existingAttributes.map(attr => `${attr.name}: ${attr.value}`).join('\n')
+      : 'None';
+    
+    // Create a prompt for the AI to suggest attribute values
+    const promptText = `
+    As a product data specialist, suggest appropriate values for the following attributes
+    based on the product information provided. The product belongs to the "${category.name}" category.
+    
+    Product Name: ${productName}
+    ${productDescription ? `Product Description: ${productDescription}` : ''}
+    
+    Category: ${category.name}
+    
+    Attributes that need values:
+    ${categoryAttributes.map(attr => 
+      `- ${attr.name}${attr.description ? ` (${attr.description})` : ''}`
+    ).join('\n')}
+    
+    Existing attribute values to consider:
+    ${existingAttributesText}
+    
+    For each attribute, provide a sensible, realistic value appropriate for this product.
+    Return your response as a JSON array with objects containing "attributeId", "attributeName", and "suggestedValue" keys.
+    `;
+    
+    // Get the current AI model
+    const currentModel = await getCurrentAiModel();
+    
+    // Use the text-only model for attribute suggestions
+    const generationResult = await genAI.getGenerativeModel({ model: currentModel })
+      .generateContent(promptText);
+    
+    const response = await generationResult.response;
+    const responseText = await response.text();
+    
+    // Try to extract JSON from the response
+    try {
+      let jsonResponse: Array<{ attributeId: number; attributeName: string; suggestedValue: string }> = [];
+      
+      // First attempt: Parse the entire response as JSON
+      try {
+        jsonResponse = JSON.parse(responseText);
+      } catch (parseError) {
+        logger.debug('Failed to parse entire response as JSON, trying to extract JSON', {
+          responsePreview: responseText.substring(0, 100)
+        });
+        
+        // Second attempt: Try to extract JSON with regex
+        const jsonMatch = responseText.match(/\[.*\]/s);
+        if (jsonMatch) {
+          jsonResponse = JSON.parse(jsonMatch[0]);
+        } else {
+          throw new Error('Could not extract valid JSON from AI response');
+        }
+      }
+      
+      // Validate and match with actual category attributes
+      const validSuggestions = jsonResponse.filter(suggestion => {
+        const matchingAttribute = categoryAttributes.find(attr => 
+          attr.id === suggestion.attributeId || attr.name === suggestion.attributeName
+        );
+        return matchingAttribute && suggestion.suggestedValue;
+      }).map(suggestion => {
+        // If attributeId is not provided or incorrect, look up by name
+        if (!suggestion.attributeId || !categoryAttributes.some(attr => attr.id === suggestion.attributeId)) {
+          const matchingAttribute = categoryAttributes.find(attr => 
+            attr.name.toLowerCase() === suggestion.attributeName.toLowerCase()
+          );
+          if (matchingAttribute) {
+            suggestion.attributeId = matchingAttribute.id;
+            suggestion.attributeName = matchingAttribute.name; // Use exact name from DB
+          }
+        }
+        return suggestion;
+      });
+      
+      logger.info('Successfully generated attribute suggestions', {
+        categoryId,
+        productName,
+        suggestionsCount: validSuggestions.length,
+        attributesCount: categoryAttributes.length
+      });
+      
+      return validSuggestions;
+    } catch (jsonError) {
+      logger.error('Failed to parse AI response for attribute suggestions', {
+        error: jsonError,
+        responsePreview: responseText.substring(0, 200),
+        categoryId
+      });
+      
+      // Fallback: Return empty suggestions
+      return [];
+    }
+  } catch (error) {
+    logger.error('Error generating attribute suggestions', {
+      error,
+      categoryId,
+      productName
+    });
+    
+    // Return empty array on error
+    return [];
+  }
+}
+
 export async function analyzeProductImage(imageBase64: string, productName: string, productId?: number): Promise<{
   suggestedName?: string;
   suggestedDescription?: string;

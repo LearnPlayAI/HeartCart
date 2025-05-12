@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { ZodError } from "zod";
 import { logger } from "./logger";
 import crypto from "crypto";
-import { removeImageBackground, generateProductTags, analyzeProductImage, suggestPrice, getAvailableAiModels, getCurrentAiModelSetting, updateAiModel } from "./ai-service";
+import { removeImageBackground, generateProductTags, analyzeProductImage, suggestPrice, getAvailableAiModels, getCurrentAiModelSetting, updateAiModel, suggestProductAttributes } from "./ai-service";
 import { imageService, THUMBNAIL_SIZES } from "./image-service";
 import { 
   insertCartItemSchema, 
@@ -4422,6 +4422,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }));
   
+  // AI-assisted attribute suggestion for the product wizard
+  app.post(
+    "/api/products/wizard/suggest-attributes",
+    isAuthenticated,
+    asyncHandler(async (req: Request, res: Response) => {
+      const user = req.user as any;
+      
+      // Check if user is admin
+      if (user.role !== 'admin') {
+        throw new ForbiddenError("Only administrators can use AI attribute suggestions");
+      }
+      
+      const { categoryId, productName, productDescription, existingAttributes } = req.body;
+      
+      if (!categoryId || !productName) {
+        throw new BadRequestError("Category ID and product name are required");
+      }
+      
+      try {
+        const suggestions = await suggestProductAttributes(
+          categoryId,
+          productName,
+          productDescription,
+          existingAttributes
+        );
+        
+        res.json({
+          success: true,
+          data: suggestions
+        });
+      } catch (error) {
+        logger.error('Error generating attribute suggestions:', { 
+          error, 
+          userId: user.id, 
+          categoryId, 
+          productName 
+        });
+        
+        throw new AppError(
+          "Failed to generate attribute suggestions. Please try again or fill in attributes manually.",
+          ErrorCode.AI_SERVICE_ERROR,
+          500
+        );
+      }
+    })
+  );
+
   // Get catalog context data for product wizard
   app.get("/api/catalogs/:catalogId/context", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
     const user = req.user as any;
