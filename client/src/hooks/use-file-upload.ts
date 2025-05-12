@@ -75,14 +75,14 @@ export function useFileUpload(options?: FileUploadOptions) {
   const addFiles = useCallback((newFiles: File[]) => {
     setState(prev => {
       // Check how many more files we can add
-      const availableSlots = maxFiles - prev.images.length;
+      const availableSlots = (maxFiles || 5) - prev.images.length;
       
       if (availableSlots <= 0) {
         return {
           ...prev,
           errors: {
             ...prev.errors,
-            limit: `Maximum of ${maxFiles} files allowed`
+            limit: `Maximum of ${maxFiles || 5} files allowed`
           }
         };
       }

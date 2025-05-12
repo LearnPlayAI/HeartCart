@@ -32,6 +32,14 @@ export const STORAGE_FOLDERS = {
   OPTIMIZED: 'optimized'
 };
 
+// Define the interface for the replit ObjectStore upload options
+interface UploadOptions {
+  metadata?: Record<string, string>;
+  cacheControl?: string;
+  contentDisposition?: string;
+  contentType?: string;
+}
+
 // File operation options
 interface FileOperationOptions {
   contentType?: string;
@@ -144,11 +152,17 @@ class ObjectStoreService {
       
       if (!markerExists) {
         // Create an empty file as a directory marker
-        await this.objectStore.uploadFromBytes(`${normalized}.dir`, Buffer.from(''));
+        await this.objectStore.uploadFromBytes(`${normalized}.dir`, Buffer.from(''), {
+          contentType: 'application/octet-stream'
+        });
       }
     } catch (error) {
       console.error(`Error ensuring directory exists: ${dirPath}`, error);
-      throw error;
+      if (error instanceof Error) {
+        throw error;
+      } else {
+        throw new Error(`Unknown error ensuring directory exists: ${dirPath}`);
+      }
     }
   }
   
@@ -354,13 +368,13 @@ class ObjectStoreService {
       if (options.format === 'jpeg') {
         return await sharpInstance.jpeg({ quality: options.quality || 85 }).toBuffer();
       } else if (options.format === 'png') {
-        return await sharpInstance.png({ quality: options.quality || 90 }).toBuffer();
+        return await sharpInstance.png().toBuffer();
       } else if (options.format === 'webp') {
         return await sharpInstance.webp({ quality: options.quality || 85 }).toBuffer();
       }
       
-      // If no format specified, use input format with quality optimization
-      return await sharpInstance.toBuffer({ quality: options.quality || 85 });
+      // If no format specified, use input format
+      return await sharpInstance.toBuffer();
     } catch (error) {
       console.error('Error processing image:', error);
       throw new Error(`Image processing failed: ${error instanceof Error ? error.message : String(error)}`);
@@ -605,6 +619,10 @@ class ObjectStoreService {
     await this.initialize();
     
     try {
+      // Create options for Replit ObjectStore list method
+      const options = {};
+      
+      // Call the list method with the given prefix
       const result = await this.objectStore.list(prefix);
       
       if ('err' in result && result.err) {
@@ -619,11 +637,12 @@ class ObjectStoreService {
       if (result.value && Array.isArray(result.value)) {
         for (const obj of result.value) {
           if (obj && typeof obj === 'object' && 'key' in obj) {
+            const key = String(obj.key);
             // Skip directory marker files
-            if (obj.key.toString().endsWith('.dir')) {
+            if (key.endsWith('.dir')) {
               continue;
             }
-            keys.push(obj.key.toString());
+            keys.push(key);
           }
         }
       }

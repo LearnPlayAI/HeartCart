@@ -11,7 +11,11 @@ import multer from 'multer';
 import { isAuthenticated, isAdmin } from './auth-middleware';
 import { objectStore, ROOT_DIRS, STORAGE_FOLDERS } from './object-store-updated';
 import { sendSuccess, sendError } from './api-response';
-import { catchErrors } from './error-handler';
+
+// Helper function for error handling in async routes
+const catchErrors = (fn: Function) => 
+  (req: Request, res: Response, next: NextFunction) => 
+    Promise.resolve(fn(req, res, next)).catch(next);
 
 // Configure multer for memory storage
 const upload = multer({
