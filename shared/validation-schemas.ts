@@ -173,3 +173,70 @@ export const paginationSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20)
 });
+
+/**
+ * Product Wizard Validation Schemas
+ */
+
+// Step 1: Basic Info validation
+export const productWizardBasicInfoSchema = z.object({
+  name: z.string().min(3, { message: "Product name is required (min 3 characters)" }).max(200),
+  slug: z.string().min(3, { message: "Product slug is required" }).max(200),
+  description: z.string().optional(),
+  categoryId: z.number().int().positive({ message: "Category is required" }),
+  catalogId: z.number().int().positive({ message: "Catalog is required" }),
+  price: z.number().min(0.01, { message: "Price must be greater than 0" }),
+  minimumPrice: z.number().min(0).optional(),
+  costPrice: z.number().min(0, { message: "Cost price is required" }),
+  salePrice: z.number().min(0).optional(),
+  discount: z.number().int().min(0).max(100).optional(),
+  discountLabel: z.string().max(50).optional(),
+});
+
+// Step 2: Product Images validation
+export const productWizardImagesSchema = z.object({
+  imageUrl: z.string().url().optional(),
+  additionalImages: z.array(z.string().url()).optional(),
+  hasBackgroundRemoved: z.boolean().default(false),
+  originalImageObjectKey: z.string().optional(),
+});
+
+// Step 3: Additional Info validation
+export const productWizardAdditionalInfoSchema = z.object({
+  stock: z.number().int().min(0, { message: "Stock quantity is required" }),
+  minimumOrder: z.number().int().min(1).default(1),
+  supplier: z.string().optional(),
+  brand: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+  weight: z.number().min(0).optional(),
+  dimensions: z.string().optional(),
+  requiredAttributeIds: z.array(z.number().int().positive()).optional(),
+  isActive: z.boolean().default(true),
+  isFeatured: z.boolean().default(false),
+  isFlashDeal: z.boolean().default(false),
+  flashDealEnd: z.date().optional(),
+  specialSaleText: z.string().max(100).optional(),
+  specialSaleStart: z.date().optional(),
+  specialSaleEnd: z.date().optional(),
+  freeShipping: z.boolean().default(false),
+});
+
+// Combined complete product wizard validation schema
+export const productWizardCompleteSchema = productWizardBasicInfoSchema
+  .merge(productWizardImagesSchema)
+  .merge(productWizardAdditionalInfoSchema);
+
+// Required attributes validation schema
+export const requiredAttributesSchema = z.array(
+  z.object({
+    attributeId: z.number().int().positive(),
+    value: z.union([
+      z.string(),
+      z.number(),
+      z.boolean(),
+      z.array(z.string()),
+      z.array(z.number())
+    ]),
+    isRequired: z.boolean().default(false)
+  })
+);

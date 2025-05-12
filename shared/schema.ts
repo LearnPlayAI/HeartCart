@@ -48,18 +48,24 @@ export const products = pgTable("products", {
   categoryId: integer("category_id").references(() => categories.id),
   catalogId: integer("catalog_id").references(() => catalogs.id),
   price: doublePrecision("price").notNull(),
+  minimumPrice: doublePrecision("minimum_price"), // New field for setting price floors
   costPrice: doublePrecision("cost_price").notNull(),
   salePrice: doublePrecision("sale_price"),
   discount: integer("discount"),
+  discountLabel: text("discount_label"), // New field for displaying discount type/occasion
   imageUrl: text("image_url"),
   additionalImages: text("additional_images").array(),
   stock: integer("stock").notNull(), // Added to match DB structure - used as stockQuantity in UI
+  minimumOrder: integer("minimum_order").default(1), // New field for supplier requirements
   rating: doublePrecision("rating").default(0),
   reviewCount: integer("review_count").default(0),
   isActive: boolean("is_active").default(true).notNull(),
   isFeatured: boolean("is_featured").default(false).notNull(),
   isFlashDeal: boolean("is_flash_deal").default(false).notNull(),
   flashDealEnd: timestamp("flash_deal_end", { withTimezone: true }),
+  specialSaleText: text("special_sale_text"), // New field for custom sale messaging
+  specialSaleStart: timestamp("special_sale_start", { withTimezone: true }), // New field for special sale start date
+  specialSaleEnd: timestamp("special_sale_end", { withTimezone: true }), // New field for special sale end date
   soldCount: integer("sold_count").default(0),
   supplier: text("supplier"),
   freeShipping: boolean("free_shipping").default(false),
@@ -67,6 +73,7 @@ export const products = pgTable("products", {
   dimensions: text("dimensions"), // format: "LxWxH" in cm
   brand: text("brand"),
   tags: text("tags").array(),
+  requiredAttributeIds: integer("required_attribute_ids").array(), // New field to track mandatory attributes
   displayOrder: integer("display_order").default(999), // Default high number to place new products at the end
   hasBackgroundRemoved: boolean("has_background_removed").default(false),
   originalImageObjectKey: text("original_image_object_key"),
