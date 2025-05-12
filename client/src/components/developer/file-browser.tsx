@@ -204,10 +204,7 @@ const FileBrowser: React.FC = () => {
   // Mutations
   const createFolderMutation = useMutation({
     mutationFn: async (folderPath: string) => {
-      return await apiRequest(`/api/file-browser/folders`, {
-        method: 'POST',
-        data: { path: folderPath }
-      });
+      return await apiRequest('/api/file-browser/folders', 'POST', { path: folderPath });
     },
     onSuccess: () => {
       toast({
@@ -296,9 +293,7 @@ const FileBrowser: React.FC = () => {
   
   const deleteFileMutation = useMutation({
     mutationFn: async (filePath: string) => {
-      return await apiRequest(`/api/file-browser/files/${filePath}`, {
-        method: 'DELETE'
-      });
+      return await apiRequest(`/api/file-browser/files/${filePath}`, 'DELETE');
     },
     onSuccess: () => {
       toast({
