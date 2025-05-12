@@ -52,6 +52,7 @@ export interface ProductWizardData {
   sku?: string;
   price: number;
   costPrice: number;
+  markupPercentage?: string; // Added markup percentage for price calculation
   salePrice?: number | null;
   minimumPrice?: number;
   discount?: number;

@@ -91,17 +91,12 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ className }) => {
     if (field === 'price') {
       // If regular price changes:
       
-      // 1. If cost price is not set, suggest cost price at 70% of regular price
-      if (!productData.costPrice) {
-        payload.costPrice = Math.round((value * 0.7) * 100) / 100; // 70% of price, rounded to 2 decimals
-      }
-      
-      // 2. If minimum price is not set, suggest minimum price at 90% of regular price
+      // 1. If minimum price is not set, suggest minimum price at 90% of regular price
       if (!productData.minimumPrice) {
         payload.minimumPrice = Math.round((value * 0.9) * 100) / 100; // 90% of price
       }
       
-      // 3. Update discount percentage if sale price exists
+      // 2. Update discount percentage if sale price exists
       if (productData.salePrice && productData.salePrice > 0 && value > 0) {
         const discountPercent = Math.round(((value - productData.salePrice) / value) * 100);
         if (discountPercent > 0) {
@@ -251,13 +246,98 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ className }) => {
                 step="0.01"
                 placeholder="0.00"
                 value={productData.costPrice || ''}
-                onChange={(e) => handleFieldChange('costPrice', e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  handleFieldChange('costPrice', value);
+                  
+                  // If markup percentage exists, recalculate prices
+                  if (productData.markupPercentage && value) {
+                    const costPrice = parseFloat(value);
+                    const markup = parseFloat(productData.markupPercentage);
+                    const calculatedPrice = Math.round((costPrice * (1 + markup / 100)) * 100) / 100;
+                    handleFieldChange('price', calculatedPrice);
+                    
+                    // Also update sale price if discount exists
+                    if (productData.discount) {
+                      const discount = parseFloat(productData.discount);
+                      const calculatedSalePrice = Math.round((calculatedPrice * (100 - discount) / 100) * 100) / 100;
+                      handleFieldChange('salePrice', calculatedSalePrice);
+                    }
+                  }
+                }}
               />
               <p className="text-sm text-muted-foreground">
-                Your cost to acquire this product
-                {productData.price && productData.costPrice === Math.round((productData.price * 0.7) * 100) / 100 && 
-                  <span className="ml-1 text-blue-600">(Auto-suggested based on price)</span>
-                }
+                Your cost to acquire this product (required)
+              </p>
+            </div>
+            
+            {/* Markup Percentage */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Markup Percentage (%)</label>
+              <div className="flex gap-2">
+                <Select
+                  value={productData.markupPercentage || ''}
+                  onValueChange={(value) => {
+                    handleFieldChange('markupPercentage', value);
+                    
+                    // If cost price exists, recalculate prices
+                    if (productData.costPrice && value) {
+                      const costPrice = parseFloat(productData.costPrice);
+                      const markup = parseFloat(value);
+                      const calculatedPrice = Math.round((costPrice * (1 + markup / 100)) * 100) / 100;
+                      handleFieldChange('price', calculatedPrice);
+                      
+                      // Also update sale price if discount exists
+                      if (productData.discount) {
+                        const discount = parseFloat(productData.discount);
+                        const calculatedSalePrice = Math.round((calculatedPrice * (100 - discount) / 100) * 100) / 100;
+                        handleFieldChange('salePrice', calculatedSalePrice);
+                      }
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select markup" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="15">15%</SelectItem>
+                    <SelectItem value="20">20%</SelectItem>
+                    <SelectItem value="25">25%</SelectItem>
+                    <SelectItem value="30">30%</SelectItem>
+                    <SelectItem value="35">35%</SelectItem>
+                    <SelectItem value="40">40%</SelectItem>
+                    <SelectItem value="45">45%</SelectItem>
+                    <SelectItem value="50">50%</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Input
+                  type="number"
+                  min="0"
+                  placeholder="Custom %"
+                  value={productData.markupPercentage || ''}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    handleFieldChange('markupPercentage', value);
+                    
+                    // If cost price exists, recalculate prices
+                    if (productData.costPrice && value) {
+                      const costPrice = parseFloat(productData.costPrice);
+                      const markup = parseFloat(value);
+                      const calculatedPrice = Math.round((costPrice * (1 + markup / 100)) * 100) / 100;
+                      handleFieldChange('price', calculatedPrice);
+                      
+                      // Also update sale price if discount exists
+                      if (productData.discount) {
+                        const discount = parseFloat(productData.discount);
+                        const calculatedSalePrice = Math.round((calculatedPrice * (100 - discount) / 100) * 100) / 100;
+                        handleFieldChange('salePrice', calculatedSalePrice);
+                      }
+                    }
+                  }}
+                />
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Choose or enter a markup percentage to calculate selling price
               </p>
             </div>
             
@@ -274,6 +354,10 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ className }) => {
               />
               <p className="text-sm text-muted-foreground">
                 Regular selling price
+                {productData.costPrice && productData.markupPercentage && 
+                  productData.price === Math.round((parseFloat(productData.costPrice) * (1 + parseFloat(productData.markupPercentage) / 100)) * 100) / 100 && 
+                  <span className="ml-1 text-blue-600">(Auto-calculated from cost and markup)</span>
+                }
               </p>
             </div>
             
