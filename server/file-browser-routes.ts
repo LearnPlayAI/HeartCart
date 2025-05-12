@@ -1,7 +1,7 @@
 import { Request, Response, Router } from 'express';
 import multer from 'multer';
 import path from 'path';
-import { enhancedObjectStorage, STORAGE_FOLDERS } from './objectstore-enhanced';
+import { enhancedObjectStorage, STORAGE_FOLDERS, logClientAPIMethods } from './objectstore-enhanced';
 import { isAuthenticated } from './middleware';
 
 const router = Router();

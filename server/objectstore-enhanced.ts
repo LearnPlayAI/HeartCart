@@ -512,8 +512,20 @@ export class EnhancedObjectStorageService {
         fs.unlinkSync(localPath);
         return true;
       } else {
-        const result = await this.client.delete(filePath);
-        return result.ok !== undefined;
+        try {
+          // First check if file exists
+          if (!(await this.fileExists(filePath))) {
+            console.log(`File ${filePath} does not exist, skipping delete`);
+            return true; // Consider it a success if file doesn't exist
+          }
+          
+          // Use the remove method from Replit Client API
+          const result = await this.client.remove(filePath);
+          return result && result.ok !== undefined;
+        } catch (deleteError) {
+          console.error(`Error deleting file ${filePath}:`, deleteError);
+          return false;
+        }
       }
     } catch (error) {
       console.error(`Error deleting file ${filePath}:`, error);
@@ -531,3 +543,15 @@ export class EnhancedObjectStorageService {
 
 // Export a singleton instance
 export const enhancedObjectStorage = new EnhancedObjectStorageService();
+
+// Helper function to log available methods on Client API (for debugging)
+export async function logClientAPIMethods(): Promise<void> {
+  try {
+    await enhancedObjectStorage.initialize();
+    const client = (enhancedObjectStorage as any).client;
+    console.log('Available Client API methods:', Object.getOwnPropertyNames(client));
+    console.log('Available Client API prototype methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(client)));
+  } catch (error) {
+    console.error('Error checking Client API methods:', error);
+  }
+}
