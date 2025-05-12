@@ -56,6 +56,11 @@ const ensureValidImageUrl = (image: UploadedImage): string => {
     return image.url;
   }
   
+  // Special case handling for temp/pending files from the upload process
+  if (image.objectKey && image.objectKey.includes('temp/pending/')) {
+    return `${getApiBaseUrl()}/api/files/${image.objectKey}`;
+  }
+  
   // If URL starts with /, it's a relative path that needs base URL
   if (image.url.startsWith('/')) {
     return `${getApiBaseUrl()}${image.url}`;
