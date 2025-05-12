@@ -4308,14 +4308,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check if catalog has products
       const catalogProducts = await storage.getProductsByCatalogId(id, { includeInactive: true });
+      
+      // Delete all products in the catalog if there are any
       if (catalogProducts.length > 0) {
-        throw new AppError(
-          `Cannot delete catalog "${catalog.name}" because it contains ${catalogProducts.length} products. Deactivate the catalog instead.`,
-          ErrorCode.DEPENDENT_ENTITIES_EXIST,
-          409
-        );
+        logger.info(`Deleting ${catalogProducts.length} products from catalog "${catalog.name}" (ID: ${id})`);
+        
+        // Delete all product images from object storage first
+        for (const product of catalogProducts) {
+          try {
+            // Get all images for this product
+            const productImages = await storage.getProductImages(product.id);
+            
+            // Delete each image from object storage
+            for (const image of productImages) {
+              try {
+                if (image.objectKey) {
+                  await objectStore.deleteObject(image.objectKey);
+                  logger.debug(`Deleted product image from object storage: ${image.objectKey}`);
+                }
+                
+                // Also delete background-removed image if it exists
+                if (image.hasBgRemoved && image.bgRemovedObjectKey) {
+                  await objectStore.deleteObject(image.bgRemovedObjectKey);
+                  logger.debug(`Deleted background-removed image from object storage: ${image.bgRemovedObjectKey}`);
+                }
+              } catch (imageDeleteError) {
+                logger.error(`Error deleting product image from object storage`, {
+                  error: imageDeleteError,
+                  productId: product.id,
+                  imageId: image.id,
+                  objectKey: image.objectKey
+                });
+                // Continue with other images even if one fails
+              }
+            }
+            
+            // Now delete the product itself
+            await storage.deleteProduct(product.id);
+            logger.debug(`Deleted product ID ${product.id} from catalog ${id}`);
+          } catch (productDeleteError) {
+            logger.error(`Error deleting product ${product.id} from catalog ${id}`, {
+              error: productDeleteError
+            });
+            // Continue with other products even if one fails
+          }
+        }
       }
       
+      // Finally delete the catalog
       const success = await storage.deleteCatalog(id);
       
       if (!success) {
@@ -4328,7 +4368,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       return res.json({
         success: true,
-        message: `Catalog "${catalog.name}" deleted successfully`
+        message: `Catalog "${catalog.name}" and all its products deleted successfully`
       });
     } catch (error) {
       // Log detailed error information with context
