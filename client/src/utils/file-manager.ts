@@ -328,7 +328,6 @@ export function formatUrlPath(url: string): string {
     try {
       // Don't re-encode URLs that already contain encoded components (%)
       if (url.includes('%')) {
-        console.log("Already encoded URL, returning as is:", url);
         return url;
       }
       
@@ -344,11 +343,7 @@ export function formatUrlPath(url: string): string {
           const filename = pendingMatch[1];
           // Only encode if not already encoded
           const encodedFilename = filename.includes('%') ? filename : encodeURIComponent(filename);
-          const encodedUrl = `/api/files/temp/pending/${encodedFilename}`;
-          
-          // Log retry attempts with properly encoded URL
-          console.log("Retrying with properly encoded temp URL format:", encodedUrl);
-          return encodedUrl;
+          return `/api/files/temp/pending/${encodedFilename}`;
         }
         
         // Fallback for other formats - handle timestamp_randomstring_filename pattern
@@ -360,11 +355,7 @@ export function formatUrlPath(url: string): string {
           // We need to encode just the filename portion
           const prefix = parts.slice(0, parts.length - 1).join('/');
           const encodedLastPart = encodeURIComponent(lastPart);
-          const encodedUrl = `${prefix}/${encodedLastPart}`;
-          
-          // Log retry attempts with properly encoded URL
-          console.log("Retrying with properly encoded temp URL format:", encodedUrl);
-          return encodedUrl;
+          return `${prefix}/${encodedLastPart}`;
         }
       }
       
