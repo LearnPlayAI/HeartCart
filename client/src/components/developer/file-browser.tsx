@@ -253,7 +253,7 @@ const FileBrowser: React.FC = () => {
       
       // Return a Promise that resolves when upload is complete
       return new Promise((resolve, reject) => {
-        xhr.open('POST', `/api/file-browser/files${folderPath ? `/${encodeURIComponent(folderPath)}` : ''}`);
+        xhr.open('POST', `/api/file-browser/upload${folderPath ? `/${encodeURIComponent(folderPath)}` : ''}`);
         xhr.onload = () => {
           if (xhr.status >= 200 && xhr.status < 300) {
             resolve(JSON.parse(xhr.responseText));
