@@ -14,15 +14,7 @@ import { Loader2 } from 'lucide-react';
 import slugify from 'slugify';
 import { ContextualHelp, ExtendedHelpCard } from '../contextual-help';
 
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
+// Form components no longer needed since we're using basic HTML
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -102,39 +94,35 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ className }) => {
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Product Name */}
-            <FormItem>
+            <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <FormLabel>Product Name</FormLabel>
+                <label className="text-sm font-medium">Product Name</label>
                 <ContextualHelp fieldId="product-name" />
               </div>
-              <FormControl>
-                <Input
-                  placeholder="Enter product name"
-                  value={productData.name}
-                  onChange={(e) => handleFieldChange('name', e.target.value)}
-                />
-              </FormControl>
-              <FormDescription>
+              <Input
+                placeholder="Enter product name"
+                value={productData.name}
+                onChange={(e) => handleFieldChange('name', e.target.value)}
+              />
+              <p className="text-sm text-muted-foreground">
                 A clear, descriptive name for your product
-              </FormDescription>
-            </FormItem>
+              </p>
+            </div>
             
             {/* Product Slug */}
-            <FormItem>
+            <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <FormLabel>Product Slug</FormLabel>
+                <label className="text-sm font-medium">Product Slug</label>
                 <ContextualHelp fieldId="product-slug" />
               </div>
-              <FormControl>
-                <Input
-                  placeholder="product-url-slug"
-                  value={productData.slug}
-                  onChange={(e) => handleFieldChange('slug', e.target.value)}
-                />
-              </FormControl>
-              <FormDescription>
+              <Input
+                placeholder="product-url-slug"
+                value={productData.slug}
+                onChange={(e) => handleFieldChange('slug', e.target.value)}
+              />
+              <p className="text-sm text-muted-foreground">
                 Used for the product URL (auto-generated from name)
-              </FormDescription>
+              </p>
               <ExtendedHelpCard title="URL Slug Tips" className="mt-2">
                 <p className="mb-2">A good slug improves SEO and creates clean URLs.</p>
                 <ul className="list-disc pl-4 space-y-1">
@@ -143,11 +131,11 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ className }) => {
                   <li>Keep it short but descriptive</li>
                 </ul>
               </ExtendedHelpCard>
-            </FormItem>
+            </div>
             
             {/* Category Selection */}
-            <FormItem>
-              <FormLabel>Category</FormLabel>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Category</label>
               <Select
                 value={productData.categoryId?.toString() || ''}
                 onValueChange={(value) => handleFieldChange('categoryId', parseInt(value))}
@@ -163,26 +151,24 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ className }) => {
                   ))}
                 </SelectContent>
               </Select>
-              <FormDescription>
+              <p className="text-sm text-muted-foreground">
                 Choose the most relevant category for your product
-              </FormDescription>
-            </FormItem>
+              </p>
+            </div>
             
             {/* Product Description */}
-            <FormItem>
-              <FormLabel>Description</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder="Describe your product in detail..."
-                  rows={6}
-                  value={productData.description}
-                  onChange={(e) => handleFieldChange('description', e.target.value)}
-                />
-              </FormControl>
-              <FormDescription>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Description</label>
+              <Textarea
+                placeholder="Describe your product in detail..."
+                rows={6}
+                value={productData.description}
+                onChange={(e) => handleFieldChange('description', e.target.value)}
+              />
+              <p className="text-sm text-muted-foreground">
                 A complete description of the product, features, and benefits
-              </FormDescription>
-            </FormItem>
+              </p>
+            </div>
           </CardContent>
         </Card>
         
@@ -192,109 +178,97 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ className }) => {
           </CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Cost Price */}
-            <FormItem>
-              <FormLabel>Cost Price (R)</FormLabel>
-              <FormControl>
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={productData.costPrice || ''}
-                  onChange={(e) => handleFieldChange('costPrice', e.target.value)}
-                />
-              </FormControl>
-              <FormDescription>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Cost Price (R)</label>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+                value={productData.costPrice || ''}
+                onChange={(e) => handleFieldChange('costPrice', e.target.value)}
+              />
+              <p className="text-sm text-muted-foreground">
                 Your cost to acquire this product
-              </FormDescription>
-            </FormItem>
+              </p>
+            </div>
             
             {/* Regular Price */}
-            <FormItem>
-              <FormLabel>Regular Price (R)</FormLabel>
-              <FormControl>
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={productData.price || ''}
-                  onChange={(e) => handleFieldChange('price', e.target.value)}
-                />
-              </FormControl>
-              <FormDescription>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Regular Price (R)</label>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+                value={productData.price || ''}
+                onChange={(e) => handleFieldChange('price', e.target.value)}
+              />
+              <p className="text-sm text-muted-foreground">
                 Regular selling price
-              </FormDescription>
-            </FormItem>
+              </p>
+            </div>
             
             {/* Sale Price */}
-            <FormItem>
-              <FormLabel>Sale Price (R)</FormLabel>
-              <FormControl>
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={productData.salePrice || ''}
-                  onChange={(e) => handleFieldChange('salePrice', e.target.value)}
-                />
-              </FormControl>
-              <FormDescription>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Sale Price (R)</label>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+                value={productData.salePrice || ''}
+                onChange={(e) => handleFieldChange('salePrice', e.target.value)}
+              />
+              <p className="text-sm text-muted-foreground">
                 Optional discounted price (leave empty if not on sale)
-              </FormDescription>
-            </FormItem>
+              </p>
+            </div>
             
             {/* Minimum Price */}
-            <FormItem>
-              <FormLabel>Minimum Price (R)</FormLabel>
-              <FormControl>
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={productData.minimumPrice || ''}
-                  onChange={(e) => handleFieldChange('minimumPrice', e.target.value)}
-                />
-              </FormControl>
-              <FormDescription>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Minimum Price (R)</label>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+                value={productData.minimumPrice || ''}
+                onChange={(e) => handleFieldChange('minimumPrice', e.target.value)}
+              />
+              <p className="text-sm text-muted-foreground">
                 Minimum allowed selling price
-              </FormDescription>
-            </FormItem>
+              </p>
+            </div>
             
             {/* Discount Percentage */}
-            <FormItem>
-              <FormLabel>Discount Percentage (%)</FormLabel>
-              <FormControl>
-                <Input
-                  type="number"
-                  min="0"
-                  max="100"
-                  placeholder="0"
-                  value={productData.discount || ''}
-                  onChange={(e) => handleFieldChange('discount', e.target.value)}
-                />
-              </FormControl>
-              <FormDescription>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Discount Percentage (%)</label>
+              <Input
+                type="number"
+                min="0"
+                max="100"
+                placeholder="0"
+                value={productData.discount || ''}
+                onChange={(e) => handleFieldChange('discount', e.target.value)}
+              />
+              <p className="text-sm text-muted-foreground">
                 Percentage discount to display (0-100)
-              </FormDescription>
-            </FormItem>
+              </p>
+            </div>
             
             {/* Discount Label */}
-            <FormItem>
-              <FormLabel>Discount Label</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder="e.g., Summer Sale, Black Friday"
-                  value={productData.discountLabel || ''}
-                  onChange={(e) => handleFieldChange('discountLabel', e.target.value)}
-                />
-              </FormControl>
-              <FormDescription>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Discount Label</label>
+              <Input
+                placeholder="e.g., Summer Sale, Black Friday"
+                value={productData.discountLabel || ''}
+                onChange={(e) => handleFieldChange('discountLabel', e.target.value)}
+              />
+              <p className="text-sm text-muted-foreground">
                 Label to show for this discount (e.g. "Black Friday Deal")
-              </FormDescription>
-            </FormItem>
+              </p>
+            </div>
           </CardContent>
         </Card>
       </div>
