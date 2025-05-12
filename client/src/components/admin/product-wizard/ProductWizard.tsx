@@ -351,16 +351,29 @@ const ProductWizard: React.FC<ProductWizardProps> = ({ catalogId, productId }) =
     enabled: !!productId
   });
   
-  // Process catalog data when available
+  // Process catalog data when available from API response or direct prop
   useEffect(() => {
+    // If we have a direct catalogId prop, use it immediately
+    if (catalogId && !catalogData) {
+      // Direct usage of catalogId from props for immediate initialization
+      console.log('Using direct catalogId from props:', catalogId);
+      setCatalogData({
+        id: catalogId,
+        name: 'Loading catalog...',  // Will be updated when response comes back
+        supplierId: 0  // Will be updated when response comes back
+      });
+    }
+    
+    // Then update with full details when API response is available
     if (catalogResponse?.data) {
+      console.log('Received catalog data from API:', catalogResponse.data);
       setCatalogData({
         id: catalogResponse.data.id,
         name: catalogResponse.data.name,
         supplierId: catalogResponse.data.supplierId
       });
     }
-  }, [catalogResponse]);
+  }, [catalogResponse, catalogId, catalogData]);
   
   // Process product data when available
   useEffect(() => {
