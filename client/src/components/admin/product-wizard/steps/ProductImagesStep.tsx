@@ -12,7 +12,6 @@ import { useDropzone } from 'react-dropzone';
 import { Loader2, Plus, XCircle, StarIcon, Upload, ImageIcon, Trash2 } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
-import { getApiBaseUrl } from '@/lib/api';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 
 import { Button } from '@/components/ui/button';
@@ -55,10 +54,6 @@ const ensureValidImageUrl = (image: UploadedImage): string => {
   if (image.url.startsWith('http')) {
     return image.url;
   }
-  
-  // We'll get the API base URL from the dynamic configuration
-  // This ensures we don't hardcode environment-specific URLs
-  const baseUrl = '';
   
   // Handle relative API URLs (/api/files/...)
   if (image.url && image.url.startsWith('/api/files/')) {
@@ -123,21 +118,19 @@ const ensureValidImageUrl = (image: UploadedImage): string => {
     return `/api/files/${encodedKey}`;
   }
   
-  // If URL starts with /, it's a relative path that needs base URL
+  // If URL starts with /, it's a relative path
   if (image.url.startsWith('/')) {
-    const baseUrl = getApiBaseUrl();
-    
     // Handle direct API paths
     if (image.url.startsWith('/api/files/')) {
       // Split the URL into parts and properly encode the filename
       const urlParts = image.url.split('/');
       const filename = urlParts.pop() || '';
       const path = urlParts.join('/');
-      return `${baseUrl}${path}/${encodeURIComponent(filename)}`;
+      return `${path}/${encodeURIComponent(filename)}`;
     }
     
-    // For other relative paths
-    return `${baseUrl}${image.url}`;
+    // For other relative paths, use as is
+    return image.url;
   }
   
   // Return whatever URL we have as a fallback

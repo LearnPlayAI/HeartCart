@@ -276,12 +276,11 @@ const ReviewSaveStep: React.FC<ReviewSaveStepProps> = ({ className }) => {
                               if (image.objectKey) {
                                 const parts = image.objectKey.split('/');
                                 const filename = parts.pop() || '';
-                                const baseUrl = getApiBaseUrl();
                                 
                                 // First try the server upload endpoint pattern
                                 if (parts.length >= 2 && parts[0] === 'products') {
                                   const tempProductId = parts[1];
-                                  const directUrl = `${baseUrl}/api/files/products/${encodeURIComponent(tempProductId)}/${encodeURIComponent(filename)}`;
+                                  const directUrl = `/api/files/products/${encodeURIComponent(tempProductId)}/${encodeURIComponent(filename)}`;
                                   console.log('Review Step: Retrying with product URL format:', directUrl);
                                   e.currentTarget.src = directUrl;
                                   return;
@@ -289,14 +288,14 @@ const ReviewSaveStep: React.FC<ReviewSaveStepProps> = ({ className }) => {
                                 
                                 // Then try temp/pending pattern
                                 if (image.objectKey.includes('temp/pending')) {
-                                  const directUrl = `${baseUrl}/api/files/temp/pending/${encodeURIComponent(filename)}`;
+                                  const directUrl = `/api/files/temp/pending/${encodeURIComponent(filename)}`;
                                   console.log('Review Step: Retrying with temp URL format:', directUrl);
                                   e.currentTarget.src = directUrl;
                                   return;
                                 }
                                 
                                 // Try with raw objectKey as last resort
-                                const directUrl = `${baseUrl}/api/files/${encodeURIComponent(image.objectKey)}`;
+                                const directUrl = `/api/files/${encodeURIComponent(image.objectKey)}`;
                                 console.log('Review Step: Retrying with direct objectKey URL:', directUrl);
                                 e.currentTarget.src = directUrl;
                                 
