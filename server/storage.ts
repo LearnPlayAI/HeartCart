@@ -41,6 +41,12 @@ export interface IStorage {
   hashPassword(password: string): Promise<string>;
   getAllUsers(): Promise<User[]>;
   
+  // Product Wizard Draft operations
+  saveProductDraft(userId: number, draftData: any, step: number, draftId?: string, catalogId?: number): Promise<any>;
+  getProductDraft(userId: number, draftId: string): Promise<any | undefined>;
+  getUserProductDrafts(userId: number, catalogId?: number): Promise<any[]>;
+  deleteProductDraft(userId: number, draftId: string): Promise<boolean>;
+  
   // API Testing support methods
   getProductWithSlug(): Promise<Product | undefined>;
   getAllOrders(): Promise<Order[]>;
