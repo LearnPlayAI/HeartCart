@@ -58,17 +58,36 @@ const ensureValidImageUrl = (image: UploadedImage): string => {
   
   // Special case handling for temp/pending files from the upload process
   if (image.objectKey && image.objectKey.includes('temp/pending/')) {
-    return `${getApiBaseUrl()}/api/files/${image.objectKey}`;
+    // We need to properly encode the URL components
+    const baseUrl = getApiBaseUrl();
+    const objectKeyParts = image.objectKey.split('/');
+    const filename = objectKeyParts.pop() || '';
+    const path = objectKeyParts.join('/');
+    
+    // Construct and encode the URL properly
+    return `${baseUrl}/api/files/${path}/${encodeURIComponent(filename)}`;
   }
   
   // If URL starts with /, it's a relative path that needs base URL
   if (image.url.startsWith('/')) {
-    return `${getApiBaseUrl()}${image.url}`;
+    const baseUrl = getApiBaseUrl();
+    const urlPath = image.url.replace(/^\/api\/files\//, '');
+    
+    // Properly encode URL path components
+    const urlParts = urlPath.split('/');
+    const filename = urlParts.pop() || '';
+    const path = urlParts.join('/');
+    
+    if (urlPath.startsWith('temp/pending/')) {
+      return `${baseUrl}/api/files/${path}/${encodeURIComponent(filename)}`;
+    }
+    
+    return `${baseUrl}${image.url}`;
   }
   
   // If we have an objectKey but no valid URL, construct one
   if (image.objectKey && !image.url.includes('/api/')) {
-    return `${getApiBaseUrl()}/api/files/products/${image.objectKey}`;
+    return `${getApiBaseUrl()}/api/files/products/${encodeURIComponent(image.objectKey)}`;
   }
   
   // Return whatever URL we have
@@ -417,10 +436,23 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className 
                                   src={ensureValidImageUrl(image)}
                                   alt={image.metadata?.alt || "Product"} 
                                   className="w-full h-40 object-cover"
+                                  onLoad={() => console.log(`Image loaded successfully: ${image.metadata?.originalname || 'Unknown image'}`)}
                                   onError={(e) => {
                                     console.error('Failed to load image:', image.url);
                                     console.log('Image details:', image);
-                                    // Add fallback display
+                                    
+                                    // Try one more time with a direct URL construction for temp files
+                                    if (image.objectKey && image.objectKey.includes('temp/pending/')) {
+                                      const filename = image.objectKey.split('/').pop() || '';
+                                      const encodedFilename = encodeURIComponent(filename);
+                                      const baseUrl = getApiBaseUrl();
+                                      const directUrl = `${baseUrl}/api/files/temp/pending/${encodedFilename}`;
+                                      console.log('Retrying with direct URL:', directUrl);
+                                      e.currentTarget.src = directUrl;
+                                      return;
+                                    }
+                                    
+                                    // Add fallback display if retry fails
                                     e.currentTarget.classList.add('hidden');
                                     const fallbackElement = e.currentTarget.parentElement?.querySelector('.fallback-display');
                                     if (fallbackElement) {
