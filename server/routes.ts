@@ -46,7 +46,8 @@ import {
   createProductSchema,
   updateProductSchema,
   createProductImageSchema,
-  updateProductImageSchema
+  updateProductImageSchema,
+  productWizardCompleteSchema
 } from '@shared/validation-schemas';
 import { 
   asyncHandler, 
@@ -878,6 +879,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (error) {
         // Log the detailed error
         logger.error('Error creating product:', { error, productData: req.body });
+      }
+    })
+  );
+  
+  // New route for creating products with the enhanced wizard
+  app.post(
+    "/api/products/wizard", 
+    isAuthenticated, 
+    validateRequest({ body: productWizardCompleteSchema }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const user = req.user as any;
+      
+      // Check if user is admin
+      if (user.role !== 'admin') {
+        throw new ForbiddenError("Only administrators can create products");
+      }
+      
+      try {
+        // Create the product with the enhanced wizard functionality
+        const product = await storage.createProductWithWizard(req.body);
+        
+        res.status(201).json({
+          success: true,
+          data: product,
+          message: `Product "${product.name}" created successfully with wizard`
+        });
+      } catch (error) {
+        // Log the detailed error
+        logger.error('Error creating product with wizard:', { error, productData: req.body });
         
         throw new AppError(
           "An error occurred while creating the product. Please try again.",

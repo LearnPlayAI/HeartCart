@@ -36,7 +36,7 @@ const ProductWizardContent: React.FC = () => {
     mutationFn: async (data: ProductWizardData) => {
       const isUpdate = !!data.id;
       const method = isUpdate ? 'PUT' : 'POST';
-      const url = isUpdate ? `/api/wizard/products/${data.id}` : '/api/wizard/products';
+      const url = isUpdate ? `/api/products/${data.id}` : '/api/products/wizard';
       
       const response = await fetch(url, {
         method,
@@ -122,8 +122,22 @@ const ProductWizardContent: React.FC = () => {
     }
   };
   
+  // Get catalog name if available
+  const { data: catalogNameData } = useQuery({
+    queryKey: ['/api/catalogs', state.catalogId],
+    queryFn: async () => {
+      if (!state.catalogId) return null;
+      const res = await fetch(`/api/catalogs/${state.catalogId}`);
+      if (!res.ok) throw new Error('Failed to fetch catalog');
+      return res.json();
+    },
+    enabled: !!state.catalogId
+  });
+  
+  const catalogName = catalogNameData?.data?.name;
+  
   return (
-    <WizardContainer onSave={handleSave} catalogName={state.catalogId ? 'Sample Catalog' : undefined}>
+    <WizardContainer onSave={handleSave} catalogName={catalogName}>
       {renderStepContent()}
     </WizardContainer>
   );
