@@ -46,26 +46,89 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ className }) => {
   
   const categories = categoriesResponse?.data || [];
   
-  // Auto-generate slug when name changes
+  // Always auto-generate slug when name changes
   useEffect(() => {
-    if (productData.name && !productData.slug) {
-      const generatedSlug = slugify(productData.name, {
+    if (productData.name) {
+      // Generate a base slug from the product name
+      let generatedSlug = slugify(productData.name, {
         lower: true,
         strict: true
       });
+      
+      // Ensure minimum length and add timestamp for uniqueness if needed
+      if (generatedSlug.length < 3) {
+        generatedSlug = `product-${Date.now()}`;
+      } else {
+        // Add random suffix for uniqueness
+        const timestamp = Date.now().toString(36).slice(-4);
+        generatedSlug = `${generatedSlug}-${timestamp}`;
+      }
+      
+      // Limit length to avoid excessively long slugs
+      if (generatedSlug.length > 50) {
+        generatedSlug = generatedSlug.substring(0, 50);
+      }
+      
       handleFieldChange('slug', generatedSlug);
+    } else {
+      // If no name, generate a random slug
+      const timestamp = Date.now();
+      handleFieldChange('slug', `product-${timestamp}`);
     }
   }, [productData.name]);
 
+  // Enhanced field change handler with auto-calculation and data filling
   const handleFieldChange = (field: string, value: any) => {
     // For numeric fields, convert the value
     if (['price', 'costPrice', 'salePrice', 'discount', 'minimumPrice'].includes(field)) {
       value = value === '' ? 0 : Number(value);
     }
     
+    // Create payload with the changed field
+    const payload: Record<string, any> = { [field]: value };
+    
+    // Auto-calculate related fields
+    if (field === 'price') {
+      // If regular price changes:
+      
+      // 1. If cost price is not set, suggest cost price at 70% of regular price
+      if (!productData.costPrice) {
+        payload.costPrice = Math.round((value * 0.7) * 100) / 100; // 70% of price, rounded to 2 decimals
+      }
+      
+      // 2. If minimum price is not set, suggest minimum price at 90% of regular price
+      if (!productData.minimumPrice) {
+        payload.minimumPrice = Math.round((value * 0.9) * 100) / 100; // 90% of price
+      }
+      
+      // 3. Update discount percentage if sale price exists
+      if (productData.salePrice && productData.salePrice > 0 && value > 0) {
+        const discountPercent = Math.round(((value - productData.salePrice) / value) * 100);
+        if (discountPercent > 0) {
+          payload.discount = discountPercent;
+        }
+      }
+    } 
+    else if (field === 'salePrice') {
+      // If sale price changes and regular price exists, calculate discount
+      if (productData.price && productData.price > 0 && value > 0) {
+        const discountPercent = Math.round(((productData.price - value) / productData.price) * 100);
+        if (discountPercent > 0) {
+          payload.discount = discountPercent;
+        }
+      }
+    }
+    else if (field === 'discount') {
+      // If discount changes and regular price exists, calculate sale price
+      if (productData.price && productData.price > 0 && value > 0) {
+        const calculatedSalePrice = Math.round((productData.price * (100 - value) / 100) * 100) / 100;
+        payload.salePrice = calculatedSalePrice;
+      }
+    }
+    
     dispatch({
       type: WizardActionType.UPDATE_PRODUCT_DATA,
-      payload: { [field]: value }
+      payload: payload
     });
   };
   
@@ -109,7 +172,7 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ className }) => {
               </p>
             </div>
             
-            {/* Product Slug */}
+            {/* Product Slug - Read-only field */}
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <label className="text-sm font-medium">Product Slug</label>
@@ -118,17 +181,19 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ className }) => {
               <Input
                 placeholder="product-url-slug"
                 value={productData.slug}
-                onChange={(e) => handleFieldChange('slug', e.target.value)}
+                readOnly
+                disabled
+                className="bg-gray-50 text-gray-500 cursor-not-allowed"
               />
               <p className="text-sm text-muted-foreground">
-                Used for the product URL (auto-generated from name)
+                Used for the product URL (automatically generated from name for uniqueness)
               </p>
-              <ExtendedHelpCard title="URL Slug Tips" className="mt-2">
-                <p className="mb-2">A good slug improves SEO and creates clean URLs.</p>
+              <ExtendedHelpCard title="About Product Slugs" className="mt-2">
+                <p className="mb-2">Product slugs are automatically generated from the product name for uniqueness and SEO best practices.</p>
                 <ul className="list-disc pl-4 space-y-1">
-                  <li>Use hyphens instead of spaces</li>
-                  <li>Avoid special characters</li>
-                  <li>Keep it short but descriptive</li>
+                  <li>Includes a unique identifier to prevent conflicts</li>
+                  <li>Special characters are automatically removed</li>
+                  <li>No manual editing needed - changes when product name changes</li>
                 </ul>
               </ExtendedHelpCard>
             </div>
@@ -190,6 +255,9 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ className }) => {
               />
               <p className="text-sm text-muted-foreground">
                 Your cost to acquire this product
+                {productData.price && productData.costPrice === Math.round((productData.price * 0.7) * 100) / 100 && 
+                  <span className="ml-1 text-blue-600">(Auto-suggested based on price)</span>
+                }
               </p>
             </div>
             
@@ -222,6 +290,9 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ className }) => {
               />
               <p className="text-sm text-muted-foreground">
                 Optional discounted price (leave empty if not on sale)
+                {productData.price && productData.discount && productData.salePrice === Math.round((productData.price * (100 - productData.discount) / 100) * 100) / 100 && 
+                  <span className="ml-1 text-blue-600">(Auto-calculated from discount)</span>
+                }
               </p>
             </div>
             
@@ -238,6 +309,9 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ className }) => {
               />
               <p className="text-sm text-muted-foreground">
                 Minimum allowed selling price
+                {productData.price && productData.minimumPrice === Math.round((productData.price * 0.9) * 100) / 100 && 
+                  <span className="ml-1 text-blue-600">(Auto-suggested based on price)</span>
+                }
               </p>
             </div>
             
