@@ -3,6 +3,7 @@
  * 
  * This component implements Step 1 of the product wizard,
  * collecting basic information like title, description, category, and pricing.
+ * Includes contextual help tooltips for user guidance.
  */
 
 import React, { useEffect } from 'react';
@@ -11,6 +12,7 @@ import { WizardActionType } from '../types';
 import { useQuery } from '@tanstack/react-query';
 import { Loader2 } from 'lucide-react';
 import slugify from 'slugify';
+import { ContextualHelp, ExtendedHelpCard } from '../contextual-help';
 
 import {
   Form,
@@ -101,7 +103,10 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ className }) => {
           <CardContent className="space-y-4">
             {/* Product Name */}
             <FormItem>
-              <FormLabel>Product Name</FormLabel>
+              <div className="flex items-center gap-2">
+                <FormLabel>Product Name</FormLabel>
+                <ContextualHelp fieldId="product-name" />
+              </div>
               <FormControl>
                 <Input
                   placeholder="Enter product name"
@@ -116,7 +121,10 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ className }) => {
             
             {/* Product Slug */}
             <FormItem>
-              <FormLabel>Product Slug</FormLabel>
+              <div className="flex items-center gap-2">
+                <FormLabel>Product Slug</FormLabel>
+                <ContextualHelp fieldId="product-slug" />
+              </div>
               <FormControl>
                 <Input
                   placeholder="product-url-slug"
@@ -127,6 +135,14 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ className }) => {
               <FormDescription>
                 Used for the product URL (auto-generated from name)
               </FormDescription>
+              <ExtendedHelpCard title="URL Slug Tips" className="mt-2">
+                <p className="mb-2">A good slug improves SEO and creates clean URLs.</p>
+                <ul className="list-disc pl-4 space-y-1">
+                  <li>Use hyphens instead of spaces</li>
+                  <li>Avoid special characters</li>
+                  <li>Keep it short but descriptive</li>
+                </ul>
+              </ExtendedHelpCard>
             </FormItem>
             
             {/* Category Selection */}
