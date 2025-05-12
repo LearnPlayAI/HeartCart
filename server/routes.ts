@@ -4843,6 +4843,117 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }));
 
+  // ------------------------------------------------
+  // Product Drafts API Routes
+  // ------------------------------------------------
+  
+  // Get all product drafts for the current user
+  app.get("/api/product-drafts", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    const catalogId = req.query.catalogId ? parseInt(req.query.catalogId as string) : undefined;
+    
+    try {
+      const drafts = await storage.getUserProductDrafts(user.id, catalogId);
+      
+      res.json({
+        success: true,
+        data: drafts,
+        meta: {
+          count: drafts.length
+        }
+      });
+    } catch (error) {
+      handleApiError(error, res);
+    }
+  }));
+  
+  // Get a specific product draft by ID
+  app.get("/api/product-drafts/:draftId", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    const draftId = req.params.draftId;
+    
+    try {
+      const draft = await storage.getProductDraft(user.id, draftId);
+      
+      if (!draft) {
+        throw new NotFoundError("Product draft not found", "draft");
+      }
+      
+      res.json({
+        success: true,
+        data: draft
+      });
+    } catch (error) {
+      handleApiError(error, res);
+    }
+  }));
+  
+  // Save a product draft (create or update)
+  app.post("/api/product-drafts", isAuthenticated, 
+    validateRequest({
+      body: z.object({
+        draftData: z.any().refine(val => typeof val === 'object', {
+          message: "Draft data must be an object"
+        }),
+        step: z.number().int().min(0).max(3),
+        draftId: z.string().optional(),
+        catalogId: z.number().int().positive().optional()
+      })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const user = req.user as any;
+      const { draftData, step, draftId, catalogId } = req.body;
+      
+      try {
+        // Ensure user has permission to create drafts for specified catalog
+        if (catalogId) {
+          const catalog = await storage.getCatalogById(catalogId);
+          if (!catalog) {
+            throw new NotFoundError("Catalog not found", "catalog");
+          }
+          
+          // If not admin, check if user has specific permission for this catalog
+          if (user.role !== 'admin') {
+            throw new ForbiddenError("You don't have permission to create product drafts for this catalog");
+          }
+        }
+        
+        const draft = await storage.saveProductDraft(user.id, draftData, step, draftId, catalogId);
+        
+        res.json({
+          success: true,
+          data: draft
+        });
+      } catch (error) {
+        handleApiError(error, res);
+      }
+    })
+  );
+  
+  // Delete a product draft
+  app.delete("/api/product-drafts/:draftId", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    const draftId = req.params.draftId;
+    
+    try {
+      // Ensure draft exists and belongs to user
+      const draft = await storage.getProductDraft(user.id, draftId);
+      
+      if (!draft) {
+        throw new NotFoundError("Product draft not found", "draft");
+      }
+      
+      const success = await storage.deleteProductDraft(user.id, draftId);
+      
+      res.json({
+        success: true,
+        data: { deleted: success }
+      });
+    } catch (error) {
+      handleApiError(error, res);
+    }
+  }));
+
   // Register new attribute system routes
   registerAttributeRoutes(app);
   registerProductAttributeRoutes(app);
