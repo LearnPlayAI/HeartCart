@@ -40,8 +40,8 @@ interface ReviewSaveStepProps {
  * Handles both object store URLs and API-returned URLs
  */
 const ensureValidImageUrl = (image: UploadedImage): string => {
-  if (!image.url) {
-    console.warn('Image missing URL:', image);
+  if (!image.url && !image.objectKey) {
+    console.warn('Image missing URL and objectKey:', image);
     return '';
   }
   
@@ -55,7 +55,7 @@ const ensureValidImageUrl = (image: UploadedImage): string => {
   }
   
   // If URL is already absolute (starts with http), return as is
-  if (image.url.startsWith('http')) {
+  if (image.url && image.url.startsWith('http')) {
     return image.url;
   }
   
