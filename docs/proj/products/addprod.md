@@ -153,7 +153,7 @@ The current product creation process needs to be completely rebuilt to:
 
 #### 6.2 Catalog Integration Points
 - [x] Update the "Add Product" button in catalog products list
-- [ ] Remove old component references
+- [x] Remove old component references
 - [x] Implement navigation with proper context passing
 - [x] Add success redirect handling
 
