@@ -23,7 +23,7 @@ import {
   AlertTriangle,
   Save
 } from 'lucide-react';
-import { getApiBaseUrl } from '@/lib/api';
+
 
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -61,37 +61,50 @@ const ensureValidImageUrl = (image: UploadedImage): string => {
   
   // Direct access to Object Store URLs (this follows the server upload endpoint pattern)
   if (image.objectKey) {
-    const baseUrl = getApiBaseUrl();
-    
     // Force objectKey to be encoded properly, even if nested
     const encodedKey = image.objectKey
       .split('/')
       .map(part => encodeURIComponent(part))
       .join('/');
     
+    // For temp/pending uploads
     if (image.objectKey.includes('temp/pending/')) {
-      return `${baseUrl}/api/files/${encodedKey}`;
-    } else {
-      // This handles products/${tempProductId}/${filename} pattern from the server
-      return `${baseUrl}/api/files/${encodedKey}`;
+      // Extract the filename with timestamp prefix
+      const parts = image.objectKey.split('/');
+      if (parts.length >= 3) {
+        const filenameWithTimestamp = parts.slice(2).join('/');
+        return `/api/files/temp/pending/${encodeURIComponent(filenameWithTimestamp)}`;
+      }
+      return `/api/files/${encodedKey}`;
+    } 
+    
+    // For product-specific images
+    if (image.objectKey.startsWith('products/')) {
+      const parts = image.objectKey.split('/');
+      if (parts.length >= 3) {
+        const productId = parts[1];
+        const filename = parts.slice(2).join('/');
+        return `/api/files/products/${encodeURIComponent(productId)}/${encodeURIComponent(filename)}`;
+      }
     }
+    
+    // Fallback to direct objectKey access
+    return `/api/files/${encodedKey}`;
   }
   
-  // If URL starts with /, it's a relative path that needs base URL
+  // If URL starts with /, it's a relative path
   if (image.url.startsWith('/')) {
-    const baseUrl = getApiBaseUrl();
-    
     // Handle direct API paths
     if (image.url.startsWith('/api/files/')) {
       // Split the URL into parts and properly encode the filename
       const urlParts = image.url.split('/');
       const filename = urlParts.pop() || '';
       const path = urlParts.join('/');
-      return `${baseUrl}${path}/${encodeURIComponent(filename)}`;
+      return `${path}/${encodeURIComponent(filename)}`;
     }
     
-    // For other relative paths
-    return `${baseUrl}${image.url}`;
+    // For other relative paths, use as is
+    return image.url;
   }
   
   // Return whatever URL we have as a fallback
