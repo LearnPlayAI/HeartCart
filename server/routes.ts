@@ -917,6 +917,155 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     })
   );
+  
+  // PRODUCT WIZARD DRAFT ROUTES
+  
+  // Save a product draft (creates or updates)
+  app.post(
+    "/api/products/wizard/drafts",
+    isAuthenticated,
+    asyncHandler(async (req: Request, res: Response) => {
+      const user = req.user as any;
+      
+      // Check if user is admin
+      if (user.role !== 'admin') {
+        throw new ForbiddenError("Only administrators can save product drafts");
+      }
+      
+      const { draftId, data, step, catalogId } = req.body;
+      
+      try {
+        const draft = await storage.saveProductDraft(
+          user.id,
+          data,
+          step,
+          draftId,
+          catalogId
+        );
+        
+        res.status(201).json({
+          success: true,
+          data: draft,
+          message: "Draft saved successfully"
+        });
+      } catch (error) {
+        logger.error('Error saving product draft:', { error, userId: user.id, draftId });
+        
+        throw new AppError(
+          "An error occurred while saving the draft. Please try again.",
+          ErrorCode.INTERNAL_SERVER_ERROR,
+          500
+        );
+      }
+    })
+  );
+  
+  // Get a specific product draft
+  app.get(
+    "/api/products/wizard/drafts/:draftId",
+    isAuthenticated,
+    asyncHandler(async (req: Request, res: Response) => {
+      const user = req.user as any;
+      const { draftId } = req.params;
+      
+      // Check if user is admin
+      if (user.role !== 'admin') {
+        throw new ForbiddenError("Only administrators can retrieve product drafts");
+      }
+      
+      try {
+        const draft = await storage.getProductDraft(user.id, draftId);
+        
+        if (!draft) {
+          throw new NotFoundError(`Draft with ID ${draftId} not found`, 'draft');
+        }
+        
+        res.json({
+          success: true,
+          data: draft
+        });
+      } catch (error) {
+        if (error instanceof NotFoundError) {
+          throw error;
+        }
+        
+        logger.error('Error retrieving product draft:', { error, userId: user.id, draftId });
+        
+        throw new AppError(
+          "An error occurred while retrieving the draft. Please try again.",
+          ErrorCode.INTERNAL_SERVER_ERROR,
+          500
+        );
+      }
+    })
+  );
+  
+  // Get all drafts for the current user
+  app.get(
+    "/api/products/wizard/drafts",
+    isAuthenticated,
+    asyncHandler(async (req: Request, res: Response) => {
+      const user = req.user as any;
+      const catalogId = req.query.catalogId ? Number(req.query.catalogId) : undefined;
+      
+      // Check if user is admin
+      if (user.role !== 'admin') {
+        throw new ForbiddenError("Only administrators can list product drafts");
+      }
+      
+      try {
+        const drafts = await storage.getUserProductDrafts(user.id, catalogId);
+        
+        res.json({
+          success: true,
+          data: drafts,
+          meta: {
+            count: drafts.length
+          }
+        });
+      } catch (error) {
+        logger.error('Error listing product drafts:', { error, userId: user.id, catalogId });
+        
+        throw new AppError(
+          "An error occurred while listing drafts. Please try again.",
+          ErrorCode.INTERNAL_SERVER_ERROR,
+          500
+        );
+      }
+    })
+  );
+  
+  // Delete a draft
+  app.delete(
+    "/api/products/wizard/drafts/:draftId",
+    isAuthenticated,
+    asyncHandler(async (req: Request, res: Response) => {
+      const user = req.user as any;
+      const { draftId } = req.params;
+      
+      // Check if user is admin
+      if (user.role !== 'admin') {
+        throw new ForbiddenError("Only administrators can delete product drafts");
+      }
+      
+      try {
+        await storage.deleteProductDraft(user.id, draftId);
+        
+        res.json({
+          success: true,
+          message: "Draft deleted successfully"
+        });
+      } catch (error) {
+        logger.error('Error deleting product draft:', { error, userId: user.id, draftId });
+        
+        throw new AppError(
+          "An error occurred while deleting the draft. Please try again.",
+          ErrorCode.INTERNAL_SERVER_ERROR,
+          500
+        );
+      }
+    })
+  );
 
   // PRODUCT ATTRIBUTE ROUTES - Removed as part of attribute system redesign
 

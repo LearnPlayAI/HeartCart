@@ -11,6 +11,7 @@ import {
   aiSettings, type AiSetting, type InsertAiSetting,
   suppliers, type Supplier, type InsertSupplier,
   catalogs, type Catalog, type InsertCatalog,
+  productDrafts, type InsertProductDraft,
   // New attribute system imports
   attributes, type Attribute, type InsertAttribute,
   attributeOptions, type AttributeOption, type InsertAttributeOption,
@@ -1051,6 +1052,124 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error(`Error creating product with wizard "${product.name}":`, error);
       throw error;
+    }
+  }
+  
+  /**
+   * Saves a product draft for the wizard auto-save functionality
+   * Creates a new draft if draftId is not provided, otherwise updates the existing draft
+   */
+  async saveProductDraft(userId: number, draftData: any, step: number, draftId?: string, catalogId?: number): Promise<any> {
+    try {
+      const randomDraftId = draftId || `draft_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+      
+      // Check if draft already exists
+      const existingDraft = draftId 
+        ? await db.query.productDrafts.findFirst({
+            where: and(
+              eq(productDrafts.userId, userId),
+              eq(productDrafts.draftId, draftId)
+            )
+          })
+        : null;
+        
+      if (existingDraft) {
+        // Update existing draft
+        const [updatedDraft] = await db
+          .update(productDrafts)
+          .set({
+            data: draftData,
+            step: step,
+            catalogId: catalogId || existingDraft.catalogId,
+            updatedAt: new Date()
+          })
+          .where(eq(productDrafts.id, existingDraft.id))
+          .returning();
+        
+        return updatedDraft;
+      } else {
+        // Create new draft
+        const [newDraft] = await db
+          .insert(productDrafts)
+          .values({
+            userId: userId,
+            draftId: randomDraftId,
+            catalogId: catalogId,
+            step: step,
+            data: draftData
+          })
+          .returning();
+        
+        return newDraft;
+      }
+    } catch (error) {
+      logger.error('Error saving product draft', { userId, draftId, error });
+      throw new Error(`Failed to save product draft: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  /**
+   * Gets a specific product draft by its draft ID
+   */
+  async getProductDraft(userId: number, draftId: string): Promise<any | undefined> {
+    try {
+      const draft = await db.query.productDrafts.findFirst({
+        where: and(
+          eq(productDrafts.userId, userId),
+          eq(productDrafts.draftId, draftId)
+        )
+      });
+      
+      return draft;
+    } catch (error) {
+      logger.error('Error retrieving product draft', { userId, draftId, error });
+      throw new Error(`Failed to retrieve product draft: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  /**
+   * Gets all product drafts for a specific user, optionally filtered by catalog
+   */
+  async getUserProductDrafts(userId: number, catalogId?: number): Promise<any[]> {
+    try {
+      if (catalogId) {
+        return await db.query.productDrafts.findMany({
+          where: and(
+            eq(productDrafts.userId, userId),
+            eq(productDrafts.catalogId, catalogId)
+          ),
+          orderBy: [desc(productDrafts.updatedAt)]
+        });
+      } else {
+        return await db.query.productDrafts.findMany({
+          where: eq(productDrafts.userId, userId),
+          orderBy: [desc(productDrafts.updatedAt)]
+        });
+      }
+    } catch (error) {
+      logger.error('Error retrieving user product drafts', { userId, catalogId, error });
+      throw new Error(`Failed to retrieve user product drafts: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  /**
+   * Deletes a product draft
+   */
+  async deleteProductDraft(userId: number, draftId: string): Promise<boolean> {
+    try {
+      await db
+        .delete(productDrafts)
+        .where(
+          and(
+            eq(productDrafts.userId, userId),
+            eq(productDrafts.draftId, draftId)
+          )
+        );
+      
+      return true;
+    } catch (error) {
+      logger.error('Error deleting product draft', { userId, draftId, error });
+      throw new Error(`Failed to delete product draft: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
