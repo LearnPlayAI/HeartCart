@@ -42,6 +42,15 @@ const ensureValidImageUrl = (image: UploadedImage): string => {
     return '';
   }
   
+  // When we have a file object (client-side), create an object URL
+  if (image.file) {
+    // Return existing URL if already created
+    if (image.url && image.url.startsWith('blob:')) {
+      return image.url;
+    }
+    return URL.createObjectURL(image.file);
+  }
+  
   // If URL is already absolute (starts with http), return as is
   if (image.url.startsWith('http')) {
     return image.url;
