@@ -1,7 +1,18 @@
 /**
  * Product Wizard Context
  * 
- * This file provides context and state management for the product wizard.
+ * This module provides comprehensive context and state management for the product wizard.
+ * It implements a React Context + useReducer pattern for maintaining wizard state across
+ * multiple steps, handling validation, and managing the overall wizard flow.
+ * 
+ * The context provides:
+ * - State management through a reducer pattern
+ * - Step-based validation rules
+ * - Navigation guards between steps
+ * - Form state persistence
+ * - Draft saving and loading capabilities
+ * 
+ * @module ProductWizardContext
  */
 
 import React, { createContext, useContext, useReducer, ReactNode } from 'react';
@@ -14,14 +25,24 @@ import {
   UploadedImage
 } from './types';
 
-// Step configuration with labels and validation rules
+/**
+ * Step configuration interface defining the metadata and validation for each wizard step
+ * @interface StepConfig
+ */
 interface StepConfig {
+  /** Display label for the step */
   label: string;
+  /** Description text explaining the step's purpose */
   description: string;
+  /** Validation function that checks if the step data is complete and valid */
   validation: (data: ProductWizardData) => boolean;
 }
 
-// Configuration for each wizard step
+/**
+ * Returns the configuration for a specific wizard step
+ * @param {WizardStep} step - The wizard step to get configuration for
+ * @returns {StepConfig} Configuration object for the requested step
+ */
 export const getStepConfig = (step: WizardStep): StepConfig => {
   const stepConfigs: Record<WizardStep, StepConfig> = {
     [WizardStep.BASIC_INFO]: {
@@ -49,12 +70,29 @@ export const getStepConfig = (step: WizardStep): StepConfig => {
   return stepConfigs[step];
 };
 
-// Check if the current step's data is valid
+/**
+ * Validates if a step's data meets all requirements
+ * 
+ * @param {WizardStep} step - The step to validate
+ * @param {ProductWizardData} data - The current product data
+ * @returns {boolean} True if the step data is valid, false otherwise
+ */
 export const isStepValid = (step: WizardStep, data: ProductWizardData): boolean => {
   return getStepConfig(step).validation(data);
 };
 
-// Check if navigation to a step is allowed
+/**
+ * Determines if navigation to a target step is allowed based on the current state
+ * Navigation is only allowed if:
+ * 1. Going backward (to a previous step)
+ * 2. Going forward one step and the current step is valid
+ * 3. Going to any step if all required steps up to that point are valid
+ * 
+ * @param {WizardStep} currentStep - The current active step
+ * @param {WizardStep} targetStep - The step to navigate to
+ * @param {ProductWizardData} data - The current product data
+ * @returns {boolean} True if navigation is allowed, false otherwise
+ */
 export const canNavigateToStep = (
   currentStep: WizardStep,
   targetStep: WizardStep,
@@ -90,13 +128,23 @@ const initialState: WizardState = {
   isLoading: false
 };
 
-// Context creation
+/**
+ * React Context for the Product Wizard
+ * Provides state and dispatch function to all child components
+ */
 const ProductWizardContext = createContext<{
   state: WizardState;
   dispatch: React.Dispatch<WizardAction>;
 } | undefined>(undefined);
 
-// Reducer for state management
+/**
+ * Reducer function that handles all state transitions in the wizard
+ * Follows standard Redux-style reducer pattern with actions and immutable updates
+ * 
+ * @param {WizardState} state - Current wizard state
+ * @param {WizardAction} action - Action to be performed
+ * @returns {WizardState} New state after applying the action
+ */
 function wizardReducer(state: WizardState, action: WizardAction): WizardState {
   switch (action.type) {
     case WizardActionType.SET_STEP:
