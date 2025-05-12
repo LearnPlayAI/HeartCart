@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { ProductImage } from '@shared/schema';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { ensureValidImageUrl } from '@/utils/file-manager';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -187,7 +188,9 @@ const ProductImageManager = ({ productId, onBackgroundRemoved }: ProductImageMan
             onClick={() => setSelectedImage(image)}
           >
             <img
-              src={image.hasBgRemoved && image.bgRemovedUrl ? image.bgRemovedUrl : image.url}
+              src={image.hasBgRemoved && image.bgRemovedUrl 
+                ? ensureValidImageUrl(image.bgRemovedUrl) 
+                : ensureValidImageUrl(image.url)}
               alt="Product"
               className="w-full h-full object-cover"
             />
@@ -216,7 +219,9 @@ const ProductImageManager = ({ productId, onBackgroundRemoved }: ProductImageMan
           
           <div className="aspect-video bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
             <img
-              src={selectedImage.hasBgRemoved && selectedImage.bgRemovedUrl ? selectedImage.bgRemovedUrl : selectedImage.url}
+              src={selectedImage.hasBgRemoved && selectedImage.bgRemovedUrl 
+                ? ensureValidImageUrl(selectedImage.bgRemovedUrl) 
+                : ensureValidImageUrl(selectedImage.url)}
               alt="Selected product"
               className="w-full h-full object-contain"
             />

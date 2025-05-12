@@ -242,11 +242,9 @@ const ProductDetailView = ({
   // Effect to set initial image on component mount or when product changes
   useEffect(() => {
     if (product) {
-      // Try to use image object first, then fall back to imageUrl
-      if (product.image) {
-        setCurrentImage(ensureValidImageUrl(product.image));
-      } else if (product.imageUrl && !currentImage) {
-        setCurrentImage(product.imageUrl);
+      // First check for imageUrl, then fall back to objectKey
+      if (product.imageUrl && !currentImage) {
+        setCurrentImage(ensureValidImageUrl(product.imageUrl));
       } else if (product.originalImageObjectKey && !currentImage) {
         // If we have an object key, use it
         setCurrentImage(ensureValidImageUrl(product.originalImageObjectKey));

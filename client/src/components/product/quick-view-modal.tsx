@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StandardApiResponse } from '@/types/api';
 import { Product } from '@shared/schema';
+import { ensureValidImageUrl } from '@/utils/file-manager';
 
 interface ProductAttribute {
   id: number;
@@ -275,7 +276,8 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
           {/* Product Image */}
           <div>
             <img 
-              src={product.imageUrl || ''} 
+              src={product.imageUrl ? ensureValidImageUrl(product.imageUrl) : 
+                  (product.originalImageObjectKey ? ensureValidImageUrl(product.originalImageObjectKey) : '')} 
               alt={product.name} 
               className="w-full h-auto object-cover rounded-md"
             />

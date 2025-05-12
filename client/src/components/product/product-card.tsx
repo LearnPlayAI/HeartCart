@@ -167,7 +167,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
           </div>
         ) : (
           <img 
-            src={product.image ? ensureValidImageUrl(product.image) : (product.imageUrl || '')} 
+            src={product.imageUrl ? ensureValidImageUrl(product.imageUrl) : (product.originalImageObjectKey ? ensureValidImageUrl(product.originalImageObjectKey) : '')} 
             alt={product.name || 'Product image'} 
             className="w-full h-48 object-cover"
             onError={() => setImageError(true)}
