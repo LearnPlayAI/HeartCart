@@ -486,8 +486,6 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className 
                                     
                                     // Try with direct API access as second attempt
                                     if (image.objectKey) {
-                                      const baseUrl = getApiBaseUrl();
-                                      
                                       // For temp/pending uploads with timestamp and random prefix
                                       if (image.objectKey.includes('temp/pending/')) {
                                         // Extract the full filename with timestamp and random prefix
@@ -523,7 +521,7 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className 
                                         .map(part => encodeURIComponent(part))
                                         .join('/');
                                       
-                                      const directUrl = `${baseUrl}/api/files/${encodedKey}`;
+                                      const directUrl = `/api/files/${encodedKey}`;
                                       console.log('Retrying with fully encoded URL:', directUrl);
                                       e.currentTarget.src = directUrl;
                                       
