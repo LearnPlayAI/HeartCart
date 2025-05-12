@@ -56,22 +56,70 @@ const ensureValidImageUrl = (image: UploadedImage): string => {
     return image.url;
   }
   
-  // Direct access to Object Store URLs (this follows the server upload endpoint pattern)
-  if (image.objectKey) {
-    const baseUrl = getApiBaseUrl();
+  // We'll get the API base URL from the dynamic configuration
+  // This ensures we don't hardcode environment-specific URLs
+  const baseUrl = '';
+  
+  // Handle relative API URLs (/api/files/...)
+  if (image.url && image.url.startsWith('/api/files/')) {
+    // Special case for temp storage paths
+    if (image.url.includes('/temp/pending/')) {
+      // Extract the filename with timestamp prefix from the URL
+      const matches = image.url.match(/\/temp\/pending\/([^\/]+)$/);
+      if (matches && matches.length === 2) {
+        const filenameWithPrefix = matches[1];
+        return `/api/files/temp/pending/${encodeURIComponent(filenameWithPrefix)}`;
+      }
+    }
     
-    // Force objectKey to be encoded properly, even if nested
+    // Special case for product image paths
+    if (image.url.includes('/products/')) {
+      const matches = image.url.match(/\/products\/([^\/]+)\/([^\/]+)$/);
+      if (matches && matches.length === 3) {
+        const productId = matches[1];
+        const filename = matches[2];
+        return `/api/files/products/${encodeURIComponent(productId)}/${encodeURIComponent(filename)}`;
+      }
+    }
+    
+    // General case: encode each path component
+    const urlParts = image.url.split('/').filter(Boolean);
+    const apiPrefix = urlParts.slice(0, 2).join('/'); // Extract /api/files
+    const remainingPath = urlParts.slice(2).map(part => encodeURIComponent(part)).join('/');
+    return `/${apiPrefix}/${remainingPath}`;
+  }
+  
+  // Direct access to Object Store URLs using objectKey
+  if (image.objectKey) {
+    // For temp/pending uploads, construct URL with proper encoding
+    if (image.objectKey.includes('temp/pending/')) {
+      // Extract timestamp, random prefix and filename from objectKey
+      const pathParts = image.objectKey.split('/');
+      if (pathParts.length >= 3) {
+        const tempDir = pathParts.slice(0, 2).join('/'); // 'temp/pending'
+        const filenamePart = pathParts.slice(2).join('/'); // The full filename with timestamp
+        
+        return `${baseUrl}/api/files/${tempDir}/${encodeURIComponent(filenamePart)}`;
+      }
+    }
+    
+    // For product-specific images (products/${productId}/${filename})
+    if (image.objectKey.startsWith('products/')) {
+      const parts = image.objectKey.split('/');
+      if (parts.length >= 3) {
+        const productId = parts[1];
+        const filename = parts.slice(2).join('/'); // Handle cases where filename might contain slashes
+        return `${baseUrl}/api/files/products/${encodeURIComponent(productId)}/${encodeURIComponent(filename)}`;
+      }
+    }
+    
+    // Fallback: encode the entire object key properly
     const encodedKey = image.objectKey
       .split('/')
       .map(part => encodeURIComponent(part))
       .join('/');
     
-    if (image.objectKey.includes('temp/pending/')) {
-      return `${baseUrl}/api/files/${encodedKey}`;
-    } else {
-      // This handles products/${tempProductId}/${filename} pattern from the server
-      return `${baseUrl}/api/files/${encodedKey}`;
-    }
+    return `${baseUrl}/api/files/${encodedKey}`;
   }
   
   // If URL starts with /, it's a relative path that needs base URL
@@ -444,35 +492,51 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className 
                                     
                                     // Try with direct API access as second attempt
                                     if (image.objectKey) {
-                                      const parts = image.objectKey.split('/');
-                                      const filename = parts.pop() || '';
                                       const baseUrl = getApiBaseUrl();
                                       
-                                      // First try the server upload endpoint pattern
-                                      if (parts.length >= 2 && parts[0] === 'products') {
-                                        const tempProductId = parts[1];
-                                        const directUrl = `${baseUrl}/api/files/products/${encodeURIComponent(tempProductId)}/${encodeURIComponent(filename)}`;
-                                        console.log('Retrying with product URL format:', directUrl);
-                                        e.currentTarget.src = directUrl;
-                                        return;
+                                      // For temp/pending uploads with timestamp and random prefix
+                                      if (image.objectKey.includes('temp/pending/')) {
+                                        // Extract timestamp, random prefix, and filename parts
+                                        const matches = image.objectKey.match(/^temp\/pending\/([^_]+)_([^_]+)_(.+)$/);
+                                        if (matches && matches.length === 4) {
+                                          const timestamp = matches[1];
+                                          const randomPrefix = matches[2];
+                                          const filename = matches[3];
+                                          
+                                          // Construct the full properly encoded URL
+                                          const directUrl = `${baseUrl}/api/files/temp/pending/${timestamp}_${randomPrefix}_${encodeURIComponent(filename)}`;
+                                          console.log('Retrying with properly encoded temp URL format:', directUrl);
+                                          e.currentTarget.src = directUrl;
+                                          return;
+                                        }
                                       }
                                       
-                                      // Then try temp/pending pattern
-                                      if (image.objectKey.includes('temp/pending')) {
-                                        const directUrl = `${baseUrl}/api/files/temp/pending/${encodeURIComponent(filename)}`;
-                                        console.log('Retrying with temp URL format:', directUrl);
-                                        e.currentTarget.src = directUrl;
-                                        return;
+                                      // For product-specific images
+                                      if (image.objectKey.startsWith('products/')) {
+                                        const parts = image.objectKey.split('/');
+                                        if (parts.length >= 3) {
+                                          const productId = parts[1];
+                                          const filename = parts.slice(2).join('/'); // Handle cases where filename might contain slashes
+                                          const directUrl = `${baseUrl}/api/files/products/${encodeURIComponent(productId)}/${encodeURIComponent(filename)}`;
+                                          console.log('Retrying with properly encoded product URL format:', directUrl);
+                                          e.currentTarget.src = directUrl;
+                                          return;
+                                        }
                                       }
                                       
-                                      // Try with raw objectKey as last resort
-                                      const directUrl = `${baseUrl}/api/files/${encodeURIComponent(image.objectKey)}`;
-                                      console.log('Retrying with direct objectKey URL:', directUrl);
+                                      // Fallback: try with fully encoded path
+                                      const encodedKey = image.objectKey
+                                        .split('/')
+                                        .map(part => encodeURIComponent(part))
+                                        .join('/');
+                                      
+                                      const directUrl = `${baseUrl}/api/files/${encodedKey}`;
+                                      console.log('Retrying with fully encoded URL:', directUrl);
                                       e.currentTarget.src = directUrl;
                                       
-                                      // We'll add the error handler on this second attempt
+                                      // Add error handler for this second attempt
                                       e.currentTarget.onerror = (secondErr) => {
-                                        console.error('All URL formats failed for image');
+                                        console.error('All URL formats failed for image:', image.objectKey);
                                         const img = secondErr.currentTarget as HTMLImageElement;
                                         img.classList.add('hidden');
                                         const fallbackElement = img.parentElement?.querySelector('.fallback-display');
