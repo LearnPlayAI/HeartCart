@@ -50,6 +50,7 @@ import AuthTestsPage from "@/pages/developer/auth-tests";
 import DatabaseTestsPage from "@/pages/developer/database-tests";
 import ApiTestsPage from "@/pages/developer/api-tests";
 import StorageTestsPage from "@/pages/developer/storage-tests";
+import URLHandlingTestPage from "@/pages/developer/url-handling-test-page";
 import { DeveloperProtectedRoute } from "@/lib/developer-protected-route";
 
 // Admin-specific protected route
