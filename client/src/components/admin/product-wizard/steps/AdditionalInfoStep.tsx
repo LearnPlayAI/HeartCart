@@ -16,15 +16,7 @@ import {
 import { useProductWizard } from '../context';
 import { WizardActionType } from '../types';
 
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
+// Form components have been replaced with standard HTML elements
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -718,41 +710,37 @@ const AdditionalInfoStep: React.FC<AdditionalInfoStepProps> = ({ className }) =>
               {/* Feature Toggles */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Free Shipping */}
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                <div className="flex flex-row items-center justify-between rounded-lg border p-4">
                   <div className="space-y-0.5">
-                    <FormLabel className="text-base">Free Shipping</FormLabel>
-                    <FormDescription>
+                    <label className="text-base font-medium">Free Shipping</label>
+                    <p className="text-sm text-muted-foreground">
                       Offer free shipping for this product
-                    </FormDescription>
+                    </p>
                   </div>
-                  <FormControl>
-                    <Switch
-                      checked={productData.freeShipping || false}
-                      onCheckedChange={(checked) => handleFieldChange('freeShipping', checked)}
-                    />
-                  </FormControl>
-                </FormItem>
+                  <Switch
+                    checked={productData.freeShipping || false}
+                    onCheckedChange={(checked) => handleFieldChange('freeShipping', checked)}
+                  />
+                </div>
                 
                 {/* Featured Product */}
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                <div className="flex flex-row items-center justify-between rounded-lg border p-4">
                   <div className="space-y-0.5">
-                    <FormLabel className="text-base">Featured Product</FormLabel>
-                    <FormDescription>
+                    <label className="text-base font-medium">Featured Product</label>
+                    <p className="text-sm text-muted-foreground">
                       Show in featured products section
-                    </FormDescription>
+                    </p>
                   </div>
-                  <FormControl>
-                    <Switch
-                      checked={productData.isFeatured || false}
-                      onCheckedChange={(checked) => handleFieldChange('isFeatured', checked)}
-                    />
-                  </FormControl>
-                </FormItem>
+                  <Switch
+                    checked={productData.isFeatured || false}
+                    onCheckedChange={(checked) => handleFieldChange('isFeatured', checked)}
+                  />
+                </div>
               </div>
               
               {/* Product Status */}
-              <FormItem className="pt-4">
-                <FormLabel>Product Status</FormLabel>
+              <div className="pt-4 space-y-2">
+                <label className="text-sm font-medium">Product Status</label>
                 <Select
                   value={productData.status || 'draft'}
                   onValueChange={(value) => handleFieldChange('status', value)}
@@ -766,10 +754,10 @@ const AdditionalInfoStep: React.FC<AdditionalInfoStepProps> = ({ className }) =>
                     <SelectItem value="active">Active (Visible)</SelectItem>
                   </SelectContent>
                 </Select>
-                <FormDescription>
+                <p className="text-sm text-muted-foreground">
                   Control the visibility of this product
-                </FormDescription>
-              </FormItem>
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
