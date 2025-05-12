@@ -205,9 +205,23 @@ const ProductWizardContent: React.FC = () => {
         }
       }
       
+      // Validate required fields before submission
+      if (!state.productData.name || state.productData.name.trim() === '') {
+        throw new Error("Product name is required.");
+      }
+      
       // Ensure catalogId is present and valid
       if (!state.catalogId) {
         throw new Error("Catalog ID is required. Please select a catalog.");
+      }
+      
+      // Validate price-related fields
+      if (isNaN(Number(state.productData.price)) || Number(state.productData.price) <= 0) {
+        throw new Error("Regular price must be a positive number.");
+      }
+      
+      if (isNaN(Number(state.productData.costPrice)) || Number(state.productData.costPrice) <= 0) {
+        throw new Error("Cost price must be a positive number.");
       }
       
       // Extract and format the data from the wizard state
@@ -217,6 +231,12 @@ const ProductWizardContent: React.FC = () => {
         stock: state.productData.stock || 0, // Default stock value to fix validation
         catalogId: state.catalogId,
         supplierId: state.supplierId,
+        
+        // Ensure prices are numbers
+        price: Number(state.productData.price),
+        salePrice: Number(state.productData.salePrice) || null,
+        costPrice: Number(state.productData.costPrice),
+        minimumPrice: Number(state.productData.minimumPrice) || null,
         
         // Use the actual Date objects in the state (we'll process them to ISO strings later)
         specialSaleStart: state.productData.specialSaleStart,
@@ -231,16 +251,31 @@ const ProductWizardContent: React.FC = () => {
         slug: productData.slug,
         catalogId: productData.catalogId,
         stock: productData.stock,
+        price: productData.price,
+        salePrice: productData.salePrice,
+        costPrice: productData.costPrice,
         specialSaleStart: productData.specialSaleStart,
         specialSaleEnd: productData.specialSaleEnd
       });
       
-      // Call the mutation
-      await saveProduct.mutateAsync(productData);
-      
-      return true;
-    } catch (error) {
-      console.error('Error saving product:', error);
+      // Call the mutation with error handling
+      try {
+        await saveProduct.mutateAsync(productData);
+        return true;
+      } catch (mutationError) {
+        // Let the mutation's onError handler deal with this
+        // But preserve the error for debugging
+        console.log('Mutation error:', mutationError);
+        return false;
+      }
+    } catch (validationError) {
+      // Handle local validation errors
+      console.error('Validation error before save:', validationError);
+      toast({
+        title: "Validation Error",
+        description: validationError.message || "Please check all required fields before saving.",
+        variant: "destructive",
+      });
       return false;
     }
   };
