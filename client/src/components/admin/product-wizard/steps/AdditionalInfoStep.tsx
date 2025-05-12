@@ -69,6 +69,12 @@ const AdditionalInfoStep: React.FC<AdditionalInfoStepProps> = ({ className }) =>
   // State for tag input
   const [tagInput, setTagInput] = useState('');
   
+  // State for attribute values
+  const [attributeValues, setAttributeValues] = useState<Record<number, any>>({});
+  
+  // State for attribute generation
+  const [isGeneratingAttributes, setIsGeneratingAttributes] = useState(false);
+  
   // Fetch attributes
   const { data: attributesResponse, isLoading: isAttributesLoading } = useQuery({
     queryKey: ['/api/attributes'],
@@ -278,6 +284,132 @@ const AdditionalInfoStep: React.FC<AdditionalInfoStepProps> = ({ className }) =>
                 Tags help customers find your product
               </FormDescription>
             </FormItem>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle>Product Attributes</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <h4 className="font-medium">Product Attributes</h4>
+                <p className="text-sm text-muted-foreground">
+                  Add specific details about your product
+                </p>
+              </div>
+              {productData.categoryId && (
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleGenerateAttributeSuggestions}
+                  disabled={isGeneratingAttributes}
+                >
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  {isGeneratingAttributes ? 'Generating...' : 'Suggest Attributes'}
+                </Button>
+              )}
+            </div>
+            
+            {productData.categoryId ? (
+              <>
+                {attributes.length > 0 ? (
+                  <Accordion type="multiple" className="w-full">
+                    {attributes.map((attribute, index) => (
+                      <AccordionItem key={attribute.id} value={`attribute-${attribute.id}`}>
+                        <AccordionTrigger className="hover:no-underline">
+                          <div className="flex items-center justify-between w-full pr-4">
+                            <span>{attribute.name}</span>
+                            {attributeValues[attribute.id] && (
+                              <Badge className="ml-2 text-xs" variant="outline">
+                                {getAttributeValuePreview(attributeValues[attribute.id])}
+                              </Badge>
+                            )}
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <div className="py-2">
+                            {attribute.description && (
+                              <p className="text-sm text-muted-foreground mb-3">{attribute.description}</p>
+                            )}
+                            
+                            {attribute.type === 'text' && (
+                              <Input
+                                placeholder={`Enter ${attribute.name.toLowerCase()}`}
+                                value={attributeValues[attribute.id]?.textValue || ''}
+                                onChange={(e) => handleAttributeChange(attribute.id, 'textValue', e.target.value)}
+                              />
+                            )}
+                            
+                            {attribute.type === 'number' && (
+                              <Input
+                                type="number"
+                                placeholder={`Enter ${attribute.name.toLowerCase()}`}
+                                value={attributeValues[attribute.id]?.numericValue || ''}
+                                onChange={(e) => handleAttributeChange(attribute.id, 'numericValue', e.target.value)}
+                              />
+                            )}
+                            
+                            {attribute.type === 'boolean' && (
+                              <div className="flex items-center space-x-2">
+                                <Switch
+                                  checked={attributeValues[attribute.id]?.booleanValue || false}
+                                  onCheckedChange={(checked) => 
+                                    handleAttributeChange(attribute.id, 'booleanValue', checked)
+                                  }
+                                />
+                                <span className="text-sm">
+                                  {attributeValues[attribute.id]?.booleanValue ? 'Yes' : 'No'}
+                                </span>
+                              </div>
+                            )}
+                            
+                            {attribute.type === 'date' && (
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    className="w-full justify-start text-left font-normal"
+                                  >
+                                    <Calendar className="mr-2 h-4 w-4" />
+                                    {attributeValues[attribute.id]?.dateValue ? (
+                                      new Date(attributeValues[attribute.id].dateValue).toLocaleDateString()
+                                    ) : (
+                                      <span>Pick a date</span>
+                                    )}
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0">
+                                  <CalendarComponent
+                                    mode="single"
+                                    selected={attributeValues[attribute.id]?.dateValue ? 
+                                      new Date(attributeValues[attribute.id].dateValue) : undefined}
+                                    onSelect={(date) => 
+                                      handleAttributeChange(attribute.id, 'dateValue', date)
+                                    }
+                                    initialFocus
+                                  />
+                                </PopoverContent>
+                              </Popover>
+                            )}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    ))}
+                  </Accordion>
+                ) : (
+                  <div className="text-center p-6 border border-dashed rounded-md">
+                    <p className="text-muted-foreground">No attributes defined for this category</p>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="text-center p-6 border border-dashed rounded-md">
+                <p className="text-muted-foreground">Select a category to view available attributes</p>
+              </div>
+            )}
           </CardContent>
         </Card>
         
