@@ -38,6 +38,8 @@ const ProductWizardContent: React.FC = () => {
       const method = isUpdate ? 'PUT' : 'POST';
       const url = isUpdate ? `/api/products/${data.id}` : '/api/products/wizard';
       
+      console.log('Making request to:', url, 'with method:', method);
+      
       const response = await fetch(url, {
         method,
         headers: {
@@ -48,6 +50,16 @@ const ProductWizardContent: React.FC = () => {
       
       if (!response.ok) {
         const error = await response.json();
+        console.error('Server response error:', error);
+        
+        if (error.details?.body) {
+          // Extract validation errors from the response
+          const validationErrors = Object.entries(error.details.body)
+            .map(([field, message]) => `${field}: ${message}`)
+            .join(', ');
+          throw new Error(`Validation error: ${validationErrors}`);
+        }
+        
         throw new Error(error.message || 'Failed to save product');
       }
       
@@ -76,21 +88,32 @@ const ProductWizardContent: React.FC = () => {
     onError: (error: Error) => {
       console.error('Error saving product:', error);
       
-      // Check if it's a response with validation details
+      // Check if it's a validation error with detailed information
       let errorMessage = error.message || "There was a problem saving the product";
+      let errorDetails = "";
       
-      // Show the validation errors in a more user-friendly format
-      if (errorMessage.includes('validation')) {
-        errorMessage = "Please fix the following validation errors:\n" +
-          "- Make sure product has a name and valid slug\n" +
-          "- Ensure catalog is selected\n" +
-          "- Check that stock value is set\n" +
-          "- Verify that sale dates are in correct format";
+      if (errorMessage.includes('Validation error:')) {
+        // Parse validation error details from the message
+        const validationPart = errorMessage.split('Validation error:')[1].trim();
+        
+        // Format in a readable way for the toast notification
+        errorMessage = "Please fix the following fields:";
+        errorDetails = validationPart
+          .split(', ')
+          .map(item => `• ${item.split(':')[0]}: ${item.split(':')[1]}`)
+          .join('\n');
+      } else if (errorMessage.includes('validation')) {
+        // Fallback for general validation messages
+        errorMessage = "Please fix the following validation errors:";
+        errorDetails = "• Make sure product has a name and valid slug\n" +
+          "• Ensure catalog is selected\n" +
+          "• Check that stock value is set\n" +
+          "• Verify that sale dates are in correct format";
       }
       
       toast({
         title: "Error saving product",
-        description: errorMessage,
+        description: errorMessage + (errorDetails ? "\n\n" + errorDetails : ""),
         variant: "destructive",
       });
     }
@@ -122,6 +145,16 @@ const ProductWizardContent: React.FC = () => {
         flashDealEnd: state.productData.flashDealEnd ? 
           state.productData.flashDealEnd.toISOString() : null
       };
+      
+      // Debug the submission data to verify all required fields are present
+      console.log('Submitting product data:', {
+        name: productData.name,
+        slug: productData.slug,
+        catalogId: productData.catalogId,
+        stock: productData.stock,
+        specialSaleStart: productData.specialSaleStart,
+        specialSaleEnd: productData.specialSaleEnd
+      });
       
       // Call the mutation
       await saveProduct.mutateAsync(productData);
