@@ -54,10 +54,8 @@ export function sanitizeFilename(filename: string): string {
   // Combine sanitized base name with original extension
   const sanitized = sanitizedBase + extension;
   
-  // Log sanitization results for debugging
-  if (sanitized !== filename) {
-    console.log(`Sanitized filename: "${filename}" → "${sanitized}"`);
-  }
+  // Silently sanitize the filename without logging
+  // Sanitization creates consistent filenames without spaces or special characters
   
   return sanitized;
 }
@@ -177,22 +175,16 @@ export function revokeLocalImageUrl(url: string): void {
 
 /**
  * Ensures a valid image URL for display
- * This is a centralized version of the function used across components
+ * This is a centralized function used across components to consistently handle image URLs
  */
 export function ensureValidImageUrl(image: UploadedImage | string): string {
-  // For debugging
-  console.log("ensureValidImageUrl input:", image);
-  
   // Handle string URLs directly (simplified use case)
   if (typeof image === 'string') {
-    const formattedPath = formatUrlPath(image);
-    console.log("String URL formatted to:", formattedPath);
-    return formattedPath;
+    return formatUrlPath(image);
   }
   
   // Handle UploadedImage objects (full featured case)
   if (!image.url && !image.objectKey) {
-    console.warn('Image missing URL and objectKey:', image);
     return '';
   }
   
@@ -200,36 +192,26 @@ export function ensureValidImageUrl(image: UploadedImage | string): string {
   if (image.file) {
     // Return existing URL if already created
     if (image.url && image.url.startsWith('blob:')) {
-      console.log("Using existing blob URL:", image.url);
       return image.url;
     }
-    const blobUrl = URL.createObjectURL(image.file);
-    console.log("Created new blob URL:", blobUrl);
-    return blobUrl;
+    return URL.createObjectURL(image.file);
   }
   
   // If URL is already absolute (starts with http), return as is
   if (image.url && image.url.startsWith('http')) {
-    console.log("Using absolute URL:", image.url);
     return image.url;
   }
   
   // Direct access to Object Store URLs using objectKey (preferred method)
   if (image.objectKey) {
-    const formattedPath = formatObjectKeyPath(image.objectKey);
-    console.log("objectKey formatted to:", formattedPath);
-    return formattedPath;
+    return formatObjectKeyPath(image.objectKey);
   }
   
   // Use image URL as fallback with proper encoding
   if (image.url) {
-    const formattedPath = formatUrlPath(image.url);
-    console.log("URL formatted to:", formattedPath);
-    return formattedPath;
+    return formatUrlPath(image.url);
   }
   
-  // Last resort fallback
-  console.error("Failed to generate valid image URL:", image);
   return '';
 }
 
@@ -238,11 +220,8 @@ export function ensureValidImageUrl(image: UploadedImage | string): string {
  */
 export function formatObjectKeyPath(objectKey: string): string {
   if (!objectKey) {
-    console.error("Empty object key provided to formatObjectKeyPath");
     return '';
   }
-  
-  console.log("Formatting object key path:", objectKey);
   
   // Handle temp folder paths
   if (objectKey.includes(`${STORAGE_FOLDERS.TEMP}/`)) {
@@ -255,10 +234,7 @@ export function formatObjectKeyPath(objectKey: string): string {
       
       // Ensure we're not double-encoding paths with already encoded components
       const safeFilename = filename.includes('%') ? filename : encodeURIComponent(filename);
-      const formattedUrl = `${API_FILES_BASE}/${STORAGE_FOLDERS.TEMP}/pending/${safeFilename}`;
-      
-      console.log("Formatted temp/pending URL:", formattedUrl);
-      return formattedUrl;
+      return `${API_FILES_BASE}/${STORAGE_FOLDERS.TEMP}/pending/${safeFilename}`;
     }
     
     if (parts.length >= 3) {
@@ -268,10 +244,7 @@ export function formatObjectKeyPath(objectKey: string): string {
       
       // Ensure we're not double-encoding paths with already encoded components
       const safeFilename = filename.includes('%') ? filename : encodeURIComponent(filename);
-      const formattedUrl = `${API_FILES_BASE}/${STORAGE_FOLDERS.TEMP}/${productId}/${safeFilename}`;
-      
-      console.log("Formatted temp URL:", formattedUrl);
-      return formattedUrl;
+      return `${API_FILES_BASE}/${STORAGE_FOLDERS.TEMP}/${productId}/${safeFilename}`;
     }
   }
   
@@ -285,10 +258,7 @@ export function formatObjectKeyPath(objectKey: string): string {
       
       // Ensure we're not double-encoding paths with already encoded components
       const safeFilename = filename.includes('%') ? filename : encodeURIComponent(filename);
-      const formattedUrl = `${API_FILES_BASE}/${STORAGE_FOLDERS.PRODUCTS}/${productId}/${safeFilename}`;
-      
-      console.log("Formatted product URL:", formattedUrl);
-      return formattedUrl;
+      return `${API_FILES_BASE}/${STORAGE_FOLDERS.PRODUCTS}/${productId}/${safeFilename}`;
     }
   }
   
@@ -299,9 +269,7 @@ export function formatObjectKeyPath(objectKey: string): string {
     return segment.includes('%') ? segment : encodeURIComponent(segment);
   }).join('/');
   
-  const formattedUrl = `${API_FILES_BASE}/${encodedPath}`;
-  console.log("Formatted generic URL:", formattedUrl);
-  return formattedUrl;
+  return `${API_FILES_BASE}/${encodedPath}`;
 }
 
 /**
@@ -310,17 +278,9 @@ export function formatObjectKeyPath(objectKey: string): string {
 export function formatUrlPath(url: string): string {
   if (!url) return '';
   
-  // Debugging
-  console.log("formatUrlPath input:", url);
-  
   // Handle already absolute URLs
   if (url.startsWith('http') || url.startsWith('blob:')) {
     return url;
-  }
-
-  // Log image details to help with debugging
-  if (typeof url === 'object') {
-    console.log("Image details:", url);
   }
   
   // Handle API files URLs
@@ -365,12 +325,11 @@ export function formatUrlPath(url: string): string {
         const apiBase = `/${urlParts[1]}/${urlParts[2]}`;
         const remainingParts = urlParts.slice(3);
         const encodedParts = remainingParts.map(part => encodeURIComponent(part));
-        const formattedUrl = `${apiBase}/${encodedParts.join('/')}`;
-        console.log("Formatted API URL:", formattedUrl);
-        return formattedUrl;
+        return `${apiBase}/${encodedParts.join('/')}`;
       }
     } catch (error) {
-      console.error("Error encoding URL parts:", error);
+      // Silent error, return the original URL in case of any issues
+      return url;
     }
   }
   
@@ -381,11 +340,8 @@ export function formatUrlPath(url: string): string {
       // Don't re-encode segments that already have encoded characters
       return segment.includes('%') ? segment : encodeURIComponent(segment);
     });
-    const formattedUrl = `/${encodedSegments.join('/')}`;
-    console.log("Formatted relative URL:", formattedUrl);
-    return formattedUrl;
+    return `/${encodedSegments.join('/')}`;
   } catch (error) {
-    console.error("Error encoding relative URL:", error);
     return url;
   }
 }
