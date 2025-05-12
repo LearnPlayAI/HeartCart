@@ -17,6 +17,7 @@ import {
   Puzzle,
   Palette,
   ArrowLeft,
+  FileImage,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -34,6 +35,11 @@ const DeveloperNavItems = [
     title: 'Dashboard',
     icon: <LayoutDashboard className="w-5 h-5 mr-2" />,
     href: '/developer',
+  },
+  {
+    title: 'URL Handling Test',
+    icon: <FileImage className="w-5 h-5 mr-2 text-green-600" />,
+    href: '/developer/url-handling-test',
   },
   {
     title: 'Auth Tests',
