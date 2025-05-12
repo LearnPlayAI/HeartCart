@@ -14,6 +14,7 @@ import {
   sanitizeFilename,
   STORAGE_FOLDERS
 } from '../utils/file-manager';
+import { UploadedImage } from '../components/admin/product-wizard/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
   Table, 
