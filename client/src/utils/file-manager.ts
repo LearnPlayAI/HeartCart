@@ -91,10 +91,7 @@ export function prepareFilesFormData(
     // Create a new file with sanitized name
     const sanitizedFile = createFileWithSanitizedName(file);
     
-    // Log the transformation for debugging
-    if (sanitizedFile.name !== file.name) {
-      console.log(`Sanitized filename: "${file.name}" → "${sanitizedFile.name}"`);
-    }
+    // Silently sanitize filenames without logging
     
     formData.append('images', sanitizedFile);
   });

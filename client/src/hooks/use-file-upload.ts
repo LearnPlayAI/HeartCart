@@ -60,8 +60,6 @@ export function useFileUpload(options?: FileUploadOptions) {
       // Check if we have an image object or string
       const url = typeof img === 'string' ? img : (img.url || '');
       if (url) {
-        console.log("Processing image URL:", url);
-        // Keep track of URLs for debugging
         return ensureValidImageUrl(img);
       }
       return '';
@@ -146,7 +144,6 @@ export function useFileUpload(options?: FileUploadOptions) {
       const newPreviews = newImages.map(img => {
         // Use ensureValidImageUrl to get properly encoded URLs
         if (img.url) {
-          console.log("Processing new image:", img.url);
           return ensureValidImageUrl(img);
         }
         return '';
