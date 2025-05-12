@@ -366,47 +366,7 @@ const ReviewSaveStep: React.FC<ReviewSaveStepProps> = ({ className }) => {
                 </CardFooter>
               </Card>
               
-              <Card>
-                <CardHeader>
-                  <CardTitle>Images</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {(productData.uploadedImages?.length || 0) > 0 ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                      {productData.uploadedImages?.map((image, index) => (
-                        <div 
-                          key={index} 
-                          className={`relative rounded-md overflow-hidden aspect-square border ${image.isMain ? 'ring-2 ring-primary' : ''}`}
-                        >
-                          <img 
-                            src={image.url} 
-                            alt={`Product image ${index + 1}`} 
-                            className="object-cover w-full h-full"
-                          />
-                          {image.isMain && (
-                            <Badge className="absolute top-2 left-2">Main</Badge>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center h-40 bg-muted rounded-md">
-                      <ImageIcon className="h-10 w-10 text-muted-foreground mb-2" />
-                      <p className="text-muted-foreground">No images added</p>
-                    </div>
-                  )}
-                </CardContent>
-                <CardFooter>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => navigateToStep(WizardStep.PRODUCT_IMAGES)}
-                  >
-                    <Edit className="h-4 w-4 mr-2" />
-                    Edit Images
-                  </Button>
-                </CardFooter>
-              </Card>
+
             </TabsContent>
             
             <TabsContent value="sales" className="space-y-4">
@@ -533,17 +493,18 @@ const ReviewSaveStep: React.FC<ReviewSaveStepProps> = ({ className }) => {
                     // Use URL.createObjectURL for blob URLs or direct URL for server images
                     <img 
                       src={productData.uploadedImages.find(img => img.isMain)?.url || productData.uploadedImages[0]?.url || productData.imageUrl || ''} 
-                      alt={productData.name} 
+                      alt={productData.name || 'Product image'} 
                       className="object-cover w-full h-full"
                       onError={(e) => {
-                        console.error('Image failed to load', e);
-                        e.currentTarget.src = ''; // Clear src on error
+                        console.error('Image failed to load:', e);
+                        // Hide the failed image
                         e.currentTarget.classList.add('hidden');
+                        // Show the fallback icon
                         e.currentTarget.parentElement?.querySelector('.fallback-icon')?.classList.remove('hidden');
                       }}
                     />
                   ) : (
-                    <div className="flex items-center justify-center h-full fallback-icon">
+                    <div className="flex items-center justify-center h-full">
                       <ImageIcon className="h-12 w-12 text-muted-foreground" />
                     </div>
                   )}
