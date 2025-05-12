@@ -4393,6 +4393,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }));
 
+  // Endpoint to toggle catalog active status and update all its products
+  app.patch("/api/catalogs/:id/toggle-status", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    const id = parseInt(req.params.id);
+    
+    try {
+      // Check admin permissions
+      if (user.role !== 'admin') {
+        throw new ForbiddenError("Only administrators can manage catalogs");
+      }
+      
+      // Validate request body
+      const { isActive } = req.body;
+      
+      if (typeof isActive !== 'boolean') {
+        throw new ValidationError("isActive must be a boolean value");
+      }
+      
+      // Verify the catalog exists
+      const catalog = await storage.getCatalogById(id);
+      if (!catalog) {
+        throw new NotFoundError(`Catalog with ID ${id} not found`, "catalog");
+      }
+      
+      // If the status is already what was requested, no need to change
+      if (catalog.isActive === isActive) {
+        return res.json({
+          success: true,
+          data: {
+            catalog,
+            productsUpdated: 0
+          },
+          message: `Catalog "${catalog.name}" is already ${isActive ? 'active' : 'inactive'}`
+        });
+      }
+      
+      // Update catalog status
+      const updatedCatalog = await storage.updateCatalog(id, { isActive });
+      
+      if (!updatedCatalog) {
+        throw new AppError(
+          "Failed to update catalog status.",
+          ErrorCode.DATABASE_ERROR,
+          500
+        );
+      }
+      
+      // Get all products in this catalog
+      const products = await storage.getProductsByCatalogId(id, { includeInactive: true });
+      let updatedCount = 0;
+      
+      // Update status of all products
+      if (products.length > 0) {
+        const productIds = products.map(product => product.id);
+        updatedCount = await storage.bulkUpdateProductStatus(productIds, isActive);
+        
+        logger.info(`Updated ${updatedCount} products in catalog ${id} to ${isActive ? 'active' : 'inactive'} status`);
+      }
+      
+      return res.json({
+        success: true,
+        data: {
+          catalog: updatedCatalog,
+          productsUpdated: updatedCount
+        },
+        message: `Catalog "${catalog.name}" ${isActive ? 'activated' : 'deactivated'} successfully with ${updatedCount} products updated`
+      });
+    } catch (error) {
+      // Log detailed error information with context
+      logger.error('Error toggling catalog status', { 
+        error,
+        userId: user?.id,
+        catalogId: id
+      });
+      
+      // Check for specific error types
+      if (error instanceof NotFoundError || 
+          error instanceof ForbiddenError || 
+          error instanceof ValidationError ||
+          error instanceof AppError) {
+        throw error;
+      }
+      
+      // Return generic error for unexpected issues
+      throw new AppError(
+        "Failed to update catalog status. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
+    }
+  }));
+
   app.get("/api/catalogs/:catalogId/products", asyncHandler(async (req: Request, res: Response) => {
     const catalogId = parseInt(req.params.catalogId);
     

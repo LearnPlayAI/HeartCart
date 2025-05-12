@@ -32,6 +32,8 @@ import {
   RefreshCw,
   Clock,
   Eye,
+  ToggleLeft,
+  ToggleRight,
 } from "lucide-react";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
@@ -115,6 +117,48 @@ export default function AdminCatalogs() {
     setSelectedCatalog(catalog);
     setShowDeleteDialog(true);
   };
+  
+  // Toggle catalog status handler
+  const handleToggleStatus = (catalog: Catalog) => {
+    toggleCatalogStatus(catalog);
+  };
+
+  // Toggle catalog status mutation
+  const { mutate: toggleCatalogStatus, isPending: isTogglingStatus } = useMutation({
+    mutationFn: async (catalog: Catalog) => {
+      const response = await apiRequest(
+        "PATCH", 
+        `/api/catalogs/${catalog.id}/toggle-status`, 
+        { isActive: !catalog.isActive }
+      );
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to update catalog status");
+      }
+      
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error?.message || "Failed to update catalog status");
+      }
+      
+      return result;
+    },
+    onSuccess: (result, catalog) => {
+      toast({
+        title: catalog.isActive ? "Catalog deactivated" : "Catalog activated",
+        description: result.message || `${catalog.name} has been ${catalog.isActive ? 'deactivated' : 'activated'} with ${result.data?.productsUpdated || 0} products updated.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/catalogs"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update catalog status",
+        variant: "destructive",
+      });
+    },
+  });
 
   const { mutate: deleteCatalog, isPending: isDeleting } = useMutation({
     mutationFn: async (id: number) => {
@@ -319,6 +363,25 @@ export default function AdminCatalogs() {
                             <div onClick={() => handleEditCatalog(catalog)} className="flex items-center cursor-pointer">
                               <Edit className="mr-2 h-4 w-4" />
                               Edit
+                            </div>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <div 
+                              onClick={() => handleToggleStatus(catalog)} 
+                              className="flex items-center cursor-pointer"
+                              disabled={isTogglingStatus}
+                            >
+                              {catalog.isActive ? (
+                                <>
+                                  <ToggleLeft className="mr-2 h-4 w-4 text-amber-500" />
+                                  Deactivate
+                                </>
+                              ) : (
+                                <>
+                                  <ToggleRight className="mr-2 h-4 w-4 text-green-500" />
+                                  Activate
+                                </>
+                              )}
                             </div>
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
