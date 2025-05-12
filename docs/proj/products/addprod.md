@@ -29,23 +29,23 @@ The current product creation process needs to be completely rebuilt to:
 ### 2. Data Model & Schema Updates
 
 #### 2.1 Database Schema Expansion
-- [ ] Add new fields to product schema in `shared/schema.ts`:
-  - [ ] minimumPrice field (for setting price floors)
-  - [ ] minimumOrder field (for supplier requirements)
-  - [ ] discountLabel field (for displaying discount type/occasion)
-  - [ ] specialSaleText field (for custom sale messaging)
-  - [ ] specialSaleStart and specialSaleEnd fields (separate from flash sale dates)
-  - [ ] requiredAttributeIds array field (to track mandatory attributes)
+- [x] Add new fields to product schema in `shared/schema.ts`:
+  - [x] minimumPrice field (for setting price floors)
+  - [x] minimumOrder field (for supplier requirements)
+  - [x] discountLabel field (for displaying discount type/occasion)
+  - [x] specialSaleText field (for custom sale messaging)
+  - [x] specialSaleStart and specialSaleEnd fields (separate from flash sale dates)
+  - [x] requiredAttributeIds array field (to track mandatory attributes)
 
 #### 2.2 New Validation Schema Creation
-- [ ] Create new product wizard validation schemas in `shared/validation-schemas.ts`
-- [ ] Create step-specific validation schemas for each wizard step
-- [ ] Create attribute requirement validation schema
+- [x] Create new product wizard validation schemas in `shared/validation-schemas.ts`
+- [x] Create step-specific validation schemas for each wizard step
+- [x] Create attribute requirement validation schema
 
 #### 2.3 Database Migration Implementation
-- [ ] Create database migration script for the new fields
-- [ ] Implement safe conversion of existing product data
-- [ ] Add indexes for new searchable fields
+- [x] Create database migration script for the new fields
+- [x] Implement safe conversion of existing product data
+- [x] Add indexes for new searchable fields
 
 ### 3. Backend API Development
 
