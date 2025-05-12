@@ -23,6 +23,19 @@ const upload = multer({
 });
 
 /**
+ * Sanitize a filename by replacing spaces with hyphens and removing special characters
+ */
+function sanitizeFilename(filename: string): string {
+  // Replace spaces with hyphens
+  let sanitized = filename.replace(/\s+/g, '-');
+  
+  // Remove other problematic characters
+  sanitized = sanitized.replace(/[^a-zA-Z0-9-_.]/g, '');
+  
+  return sanitized;
+}
+
+/**
  * Upload temporary product images
  * This handles images during product creation before a product ID exists
  */
@@ -36,9 +49,18 @@ router.post('/products/images/temp', upload.array('images', 10), async (req: Req
     
     const results = await Promise.all(files.map(async (file) => {
       const { originalname, buffer, mimetype } = file;
+      
+      // Sanitize the filename - replace spaces with hyphens
+      const sanitizedName = sanitizeFilename(originalname);
+      
+      // Log the transformation for debugging
+      if (sanitizedName !== originalname) {
+        console.log(`Sanitized filename: "${originalname}" → "${sanitizedName}"`);
+      }
+      
       const timestamp = Date.now();
       const randomString = Math.random().toString(36).substring(2, 15);
-      const filename = `${timestamp}_${randomString}_${originalname}`;
+      const filename = `${timestamp}_${randomString}_${sanitizedName}`;
       const productId = req.body.productId || 'pending';
       
       // Upload to temp folder first
@@ -52,7 +74,7 @@ router.post('/products/images/temp', upload.array('images', 10), async (req: Req
       return {
         url,
         objectKey,
-        originalname,
+        originalname, // Keep original name for reference
         filename
       };
     }));
@@ -93,9 +115,18 @@ router.post('/products/:productId/images', upload.array('images', 10), async (re
     
     const results = await Promise.all(files.map(async (file, index) => {
       const { originalname, buffer, mimetype } = file;
+      
+      // Sanitize the filename - replace spaces with hyphens
+      const sanitizedName = sanitizeFilename(originalname);
+      
+      // Log the transformation for debugging
+      if (sanitizedName !== originalname) {
+        console.log(`Sanitized filename: "${originalname}" → "${sanitizedName}"`);
+      }
+      
       const timestamp = Date.now();
       const randomString = Math.random().toString(36).substring(2, 15);
-      const filename = `${timestamp}_${randomString}_${originalname}`;
+      const filename = `${timestamp}_${randomString}_${sanitizedName}`;
       
       // Upload directly to product folder
       const { url, objectKey } = await objectStore.uploadProductFile(
@@ -128,7 +159,7 @@ router.post('/products/:productId/images', upload.array('images', 10), async (re
       return {
         url,
         objectKey,
-        originalname,
+        originalname, // Keep original name for reference
         filename,
         isMain
       };
@@ -147,6 +178,8 @@ router.post('/products/:productId/images', upload.array('images', 10), async (re
 
 /**
  * Move a temporary file to a permanent location
+ * Note: When working with existing file paths in Object Storage, we don't need to
+ * re-sanitize the filenames since they would have been sanitized during the initial upload.
  */
 router.post('/products/images/move', async (req: Request, res: Response) => {
   try {
