@@ -1,0 +1,51 @@
+**Add Product from the /admin/catalogs page requirement**
+I need us to clean-break redesign the way the admin users adds a new product with no fall backs or workarounds.
+I want the process to be as follows:
+1. User goes to the /admin/catalogs page
+2. User clicks on the button called "Manage" (for the desired catalog to manage products there)
+3. User then clicks on the "Add Product" button.
+4. The product is then created in the context of the catalog and supplier it belongs to.
+Then a guided procedure wizard page is opened.
+Requirements:
+- The wizard must Guide the user through the steps needed.
+1. Step 1 : Basic Product Info: to enter the product basic info like:
+1.1. Title
+1.2. Description, 
+1.3. Category, 
+1.4. Pricing info (Cost Price, Regular Price, Sale Price, Discount percentage, Discount Lable, Minimum Price).
+2. Step 2 : upload the images
+2.1. for the product (one or more), and the first image is set to be the main image by default. 
+2.2. User can change the main image if needed. 
+2.3. Delete uploaded images ect.
+3. Step 3 : Maintain all additional info like: 
+3.1. SKU, Brand, and Minimum Order (some suppliers of ours will only take minimum number of items for an order).
+3.2. tags, (can be AI generated or manually entered, then the user can select which tags to use and save). 
+3.3. short description, 
+3.4. Product Attributes like:
+3.4.1. Select one or more Custom Global Product Attribute types (as defined in the Global Attributes admin page).
+3.4.2. Add one or multiple values(options) for each selected global attribute type to the product.
+3.4.3. Set what attribute types are mandatory for the buyer to select before before it can be added to the basket.
+3.5. Set Sales Information for:
+3.5.1. Flash sale (this must have a from and to date selection, with a from and to time).
+3.5.2. Free Delivery (only for products over R1000)
+3.5.4. Featured Product
+3.5.5. Special Sale (select Date and start time and end time) this will be for things like a mothers day sale, or special holidays sales like black friday (the Lable for this special Sale was already filled in step 1.4 called Discount Lable). The Admin must be able to input custom Text for the Special sale, and specify the date and time range that this special sale will be active for.
+3.6. Set Product status: 
+3.6.1. draft/inactive/active (when the product is saved, the selected product status bust be set)
+4. Step 4 : Review and save.
+4.1. Show the user what the product card and product detail page will look like on the same page.
+4.2. Allow the user to either save the product or cancel, or go back to a previous step.
+
+Notes on The Requirement: 
+- the system must autofill any fields for which it already has the context info (like Supplier, Catelog, ect..). 
+- Not all products require attributes.
+- Not all assigned Product attributes could be mandatory, but some might (depending on the way the product was created) for the user to select before it can be added to the cart.
+- be sure to implement using our Standarized API system and Error handeling and other standarizations we have implemented thus far.
+
+Your Tasks:
+- Create a complete implementation roadmap document called docs/proj/products/addprod.md with all the required implementation tasks in logical order of implementation.
+- Each task MUST have a task completion status box like [ ] and [x]. [ ] is not complete, [x] is task completed.
+- identify any missing fields needed in the product creation steps.
+- identify any changes required to satisfy our implementation goals.
+- then add your recommendations to the roadmap document called docs/proj/products/addprod.md.
+- DO NOT make any code changes without my explicit permission.
