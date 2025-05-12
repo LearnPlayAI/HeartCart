@@ -611,14 +611,6 @@ const ReviewSaveStep: React.FC<ReviewSaveStepProps> = ({ className }) => {
                   <p className="text-sm text-muted-foreground">
                     All required information has been provided. You can now save your product.
                   </p>
-                  <Button
-                    onClick={() => window.dispatchEvent(new CustomEvent('product-wizard-save'))}
-                    className="mt-4 bg-green-600 hover:bg-green-700 text-white"
-                    size="lg"
-                  >
-                    <Save className="mr-2 h-5 w-5" />
-                    Save Product
-                  </Button>
                 </div>
               ) : (
                 <div className="text-center space-y-2">

@@ -31,20 +31,8 @@ const WizardContainer: React.FC<WizardContainerProps> = ({
   const [direction, setDirection] = useState<'forward' | 'backward'>('forward');
   const [animationKey, setAnimationKey] = useState<number>(0);
   
-  // Listen for save event from the ReviewSaveStep component
-  useEffect(() => {
-    const handleSaveEvent = () => {
-      // Call handleSave directly
-      handleSave();
-    };
-    
-    window.addEventListener('product-wizard-save', handleSaveEvent);
-    
-    return () => {
-      window.removeEventListener('product-wizard-save', handleSaveEvent);
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // We're now using the built-in Save button in the bottom navigation
+  // No need for custom event handling
   
   // Handle moving to the next step
   const handleNext = () => {
