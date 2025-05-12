@@ -204,9 +204,10 @@ const ReviewSaveStep: React.FC<ReviewSaveStepProps> = ({ className }) => {
                             alt={`Product image ${index + 1}`} 
                             className="object-cover w-full h-full"
                             onError={(e) => {
-                              console.error('Image failed to load', e);
-                              e.currentTarget.src = ''; // Clear src on error
+                              console.error('Image failed to load:', e);
+                              // Hide the failed image
                               e.currentTarget.classList.add('hidden');
+                              // Show the fallback icon
                               e.currentTarget.parentElement?.querySelector('.fallback-icon')?.classList.remove('hidden');
                             }}
                           />
@@ -216,8 +217,11 @@ const ReviewSaveStep: React.FC<ReviewSaveStepProps> = ({ className }) => {
                           {image.isMain && (
                             <Badge className="absolute top-2 left-2 bg-primary">Main</Badge>
                           )}
+                          {image.metadata?.backgroundRemoved && (
+                            <Badge className="absolute top-2 right-2 bg-blue-500">Enhanced</Badge>
+                          )}
                           <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white px-2 py-1 text-xs truncate">
-                            {image.file?.relativePath || 'Uploaded image'}
+                            {image.objectKey ? image.objectKey.split('/').pop() : 'Uploaded image'}
                           </div>
                         </div>
                       ))}
