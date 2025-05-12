@@ -34,50 +34,78 @@ const ProductWizardContent: React.FC = () => {
   // Save product mutation
   const saveProduct = useMutation({
     mutationFn: async (data: ProductWizardData) => {
-      const isUpdate = !!data.id;
-      const method = isUpdate ? 'PUT' : 'POST';
-      const url = isUpdate ? `/api/products/${data.id}` : '/api/products/wizard';
-      
-      console.log('Making request to:', url, 'with method:', method);
-      
-      // Process date fields correctly for server validation
-      const processedData = {
-        ...data,
-        // Process date objects
-        specialSaleStart: data.specialSaleStart instanceof Date ? 
-          data.specialSaleStart.toISOString() : null,
-        specialSaleEnd: data.specialSaleEnd instanceof Date ? 
-          data.specialSaleEnd.toISOString() : null,
-        flashDealStart: data.flashDealStart instanceof Date ? 
-          data.flashDealStart.toISOString() : null,
-        flashDealEnd: data.flashDealEnd instanceof Date ? 
-          data.flashDealEnd.toISOString() : null
-      };
-      
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(processedData)
-      });
-      
-      if (!response.ok) {
-        const error = await response.json();
-        console.error('Server response error:', error);
+      try {
+        const isUpdate = !!data.id;
+        const method = isUpdate ? 'PUT' : 'POST';
+        const url = isUpdate ? `/api/products/${data.id}` : '/api/products/wizard';
         
-        if (error.details?.body) {
-          // Extract validation errors from the response
-          const validationErrors = Object.entries(error.details.body)
-            .map(([field, message]) => `${field}: ${message}`)
-            .join(', ');
-          throw new Error(`Validation error: ${validationErrors}`);
+        console.log('Making request to:', url, 'with method:', method);
+        
+        // Process date fields correctly for server validation
+        const processedData = {
+          ...data,
+          // Process date objects
+          specialSaleStart: data.specialSaleStart instanceof Date ? 
+            data.specialSaleStart.toISOString() : null,
+          specialSaleEnd: data.specialSaleEnd instanceof Date ? 
+            data.specialSaleEnd.toISOString() : null,
+          flashDealStart: data.flashDealStart instanceof Date ? 
+            data.flashDealStart.toISOString() : null,
+          flashDealEnd: data.flashDealEnd instanceof Date ? 
+            data.flashDealEnd.toISOString() : null
+        };
+        
+        // Debug: Log the exact payload being sent
+        console.log('Product save payload:', JSON.stringify(processedData, null, 2));
+        
+        const response = await fetch(url, {
+          method,
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(processedData),
+          credentials: 'same-origin' // Ensure cookies are sent with the request
+        });
+        
+        // Log the raw response for debugging
+        console.log('Server response status:', response.status);
+        console.log('Server response headers:', Object.fromEntries([...response.headers.entries()]));
+        
+        // Try to parse the response as JSON, with fallback for non-JSON responses
+        let responseData;
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          responseData = await response.json();
+        } else {
+          responseData = { text: await response.text() };
         }
         
-        throw new Error(error.message || 'Failed to save product');
+        // Debug: Log the response data
+        console.log('Server response data:', responseData);
+        
+        if (!response.ok) {
+          // Enhanced error handling
+          if (responseData.error && responseData.error.details?.body) {
+            // Extract validation errors from the response
+            const validationErrors = Object.entries(responseData.error.details.body)
+              .map(([field, message]) => `${field}: ${message}`)
+              .join(', ');
+            throw new Error(`Validation error: ${validationErrors}`);
+          } else if (responseData.error && responseData.error.message) {
+            throw new Error(responseData.error.message);
+          } else if (responseData.message) {
+            throw new Error(responseData.message);
+          } else {
+            throw new Error(`Server error: ${response.status} ${response.statusText}`);
+          }
+        }
+        
+        return responseData;
+      } catch (err) {
+        // Catch and re-throw with more context
+        console.error('Error in product save operation:', err);
+        throw err;
       }
-      
-      return response.json();
     },
     onSuccess: (data) => {
       // Show success message
@@ -114,8 +142,19 @@ const ProductWizardContent: React.FC = () => {
         errorMessage = "Please fix the following fields:";
         errorDetails = validationPart
           .split(', ')
-          .map(item => `• ${item.split(':')[0]}: ${item.split(':')[1]}`)
+          .map(item => {
+            const parts = item.split(':');
+            if (parts.length >= 2) {
+              return `• ${parts[0]}: ${parts.slice(1).join(':')}`;
+            }
+            return `• ${item}`;
+          })
           .join('\n');
+      } else if (errorMessage.includes('Server error:')) {
+        // Handle server errors
+        errorMessage = "Server error occurred";
+        errorDetails = `• ${errorMessage.split('Server error:')[1].trim()}\n` +
+                       "• Please try again or contact support if the issue persists";
       } else if (errorMessage.includes('validation')) {
         // Fallback for general validation messages
         errorMessage = "Please fix the following validation errors:";
@@ -123,12 +162,29 @@ const ProductWizardContent: React.FC = () => {
           "• Ensure catalog is selected\n" +
           "• Check that stock value is set\n" +
           "• Verify that sale dates are in correct format";
+      } else if (errorMessage.includes('network') || errorMessage.includes('Failed to fetch') || errorMessage.includes('failed to fetch')) {
+        // Network errors
+        errorMessage = "Network error occurred";
+        errorDetails = "• Could not connect to the server\n" +
+                      "• Please check your internet connection and try again";
+      } else {
+        // Generic error with the original message
+        errorDetails = `• ${errorMessage}`;
+        errorMessage = "Error occurred while saving the product";
       }
+      
+      // Log additional details for debugging
+      console.log('Error details for product save:', {
+        errorMessage,
+        errorDetails,
+        originalError: error
+      });
       
       toast({
         title: "Error saving product",
         description: errorMessage + (errorDetails ? "\n\n" + errorDetails : ""),
         variant: "destructive",
+        duration: 10000, // Show for longer to give time to read error
       });
     }
   });
