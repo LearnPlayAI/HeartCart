@@ -8,7 +8,7 @@
 
 import React from 'react';
 import { useProductWizard } from '../context';
-import { WizardStep, WizardActionType } from '../types';
+import { WizardStep, WizardActionType, UploadedImage } from '../types';
 import { 
   CheckCircle, 
   XCircle, 
@@ -23,6 +23,7 @@ import {
   AlertTriangle,
   Save
 } from 'lucide-react';
+import { getApiBaseUrl } from '@/lib/api';
 
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,6 +33,35 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface ReviewSaveStepProps {
   className?: string;
+}
+
+/**
+ * Helper function to ensure image URLs are correctly formatted
+ * Handles both object store URLs and API-returned URLs
+ */
+const ensureValidImageUrl = (image: UploadedImage): string => {
+  if (!image.url) {
+    console.warn('Image missing URL:', image);
+    return '';
+  }
+  
+  // If URL is already absolute (starts with http), return as is
+  if (image.url.startsWith('http')) {
+    return image.url;
+  }
+  
+  // If URL starts with /, it's a relative path that needs base URL
+  if (image.url.startsWith('/')) {
+    return `${getApiBaseUrl()}${image.url}`;
+  }
+  
+  // If we have an objectKey but no valid URL, construct one
+  if (image.objectKey && !image.url.includes('/api/')) {
+    return `${getApiBaseUrl()}/api/files/products/${image.objectKey}`;
+  }
+  
+  // Return whatever URL we have
+  return image.url;
 }
 
 const ReviewSaveStep: React.FC<ReviewSaveStepProps> = ({ className }) => {
@@ -200,11 +230,12 @@ const ReviewSaveStep: React.FC<ReviewSaveStepProps> = ({ className }) => {
                           className={`relative border rounded-md overflow-hidden aspect-[4/3] ${image.isMain ? 'ring-2 ring-primary' : ''}`}
                         >
                           <img 
-                            src={image.url} 
-                            alt={`Product image ${index + 1}`} 
+                            src={ensureValidImageUrl(image)} 
+                            alt={image.metadata?.alt || `Product image ${index + 1}`}
                             className="object-cover w-full h-full"
                             onError={(e) => {
-                              console.error('Image failed to load:', e);
+                              console.error('Image failed to load:', image.url);
+                              console.log('Image details:', image);
                               // Hide the failed image
                               e.currentTarget.classList.add('hidden');
                               // Show the fallback icon
@@ -496,7 +527,13 @@ const ReviewSaveStep: React.FC<ReviewSaveStepProps> = ({ className }) => {
                   {productData.uploadedImages && productData.uploadedImages.length > 0 ? (
                     // Use URL.createObjectURL for blob URLs or direct URL for server images
                     <img 
-                      src={productData.uploadedImages.find(img => img.isMain)?.url || productData.uploadedImages[0]?.url || productData.imageUrl || ''} 
+                      src={
+                        productData.uploadedImages.find(img => img.isMain) 
+                          ? ensureValidImageUrl(productData.uploadedImages.find(img => img.isMain)!) 
+                          : productData.uploadedImages[0] 
+                            ? ensureValidImageUrl(productData.uploadedImages[0]) 
+                            : productData.imageUrl || ''
+                      } 
                       alt={productData.name || 'Product image'} 
                       className="object-cover w-full h-full"
                       onError={(e) => {
