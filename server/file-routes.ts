@@ -13,7 +13,10 @@ const router = express.Router();
  */
 router.get('/:path(*)', async (req: Request, res: Response) => {
   try {
-    const filePath = req.params.path;
+    // Decode the path parameter to handle URL-encoded characters
+    const filePath = decodeURIComponent(req.params.path);
+    
+    console.log(`Serving file: ${filePath}`);
     
     // Check if file exists
     const exists = await objectStore.exists(filePath);
@@ -32,6 +35,10 @@ router.get('/:path(*)', async (req: Request, res: Response) => {
     // Set caching headers
     res.setHeader('Cache-Control', 'public, max-age=31536000'); // 1 year
     
+    // Add CORS headers for image requests
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET');
+    
     // Send file
     res.send(fileData);
   } catch (error) {
@@ -45,11 +52,17 @@ router.get('/:path(*)', async (req: Request, res: Response) => {
  */
 router.get('/object-storage/:folder/:subfolder/:filename', async (req: Request, res: Response) => {
   try {
-    const { folder, subfolder, filename } = req.params;
+    // Decode the path parameters to handle URL-encoded characters
+    const folder = decodeURIComponent(req.params.folder);
+    const subfolder = decodeURIComponent(req.params.subfolder);
+    const filename = decodeURIComponent(req.params.filename);
     const filePath = `${folder}/${subfolder}/${filename}`;
     
-    // Redirect to the new file path format
-    res.redirect(`/api/files/${filePath}`);
+    console.log(`Redirecting legacy file path: ${filePath}`);
+    
+    // Redirect to the new file path format with proper encoding
+    const encodedPath = `${encodeURIComponent(folder)}/${encodeURIComponent(subfolder)}/${encodeURIComponent(filename)}`;
+    res.redirect(`/api/files/${encodedPath}`);
   } catch (error) {
     console.error('Error in legacy file redirect:', error);
     sendError(res, 'Error serving file', 500);
@@ -61,8 +74,12 @@ router.get('/object-storage/:folder/:subfolder/:filename', async (req: Request, 
  */
 router.get('/temp/:productId/:filename', async (req: Request, res: Response) => {
   try {
-    const { productId, filename } = req.params;
+    // Decode the path parameters to handle URL-encoded characters
+    const productId = decodeURIComponent(req.params.productId);
+    const filename = decodeURIComponent(req.params.filename);
     const filePath = `${STORAGE_FOLDERS.TEMP}/${productId}/${filename}`;
+    
+    console.log(`Serving temp file: ${filePath}`);
     
     // Check if file exists
     const exists = await objectStore.exists(filePath);
@@ -77,6 +94,10 @@ router.get('/temp/:productId/:filename', async (req: Request, res: Response) => 
     // Set appropriate content type
     const detectedContentType = contentType || determineContentType(filename);
     res.setHeader('Content-Type', detectedContentType);
+    
+    // Add CORS headers for image requests
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET');
     
     // Send file
     res.send(fileData);
