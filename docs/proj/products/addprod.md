@@ -159,7 +159,7 @@ The current product creation process needs to be completely rebuilt to:
 
 #### 6.3 Admin Navigation Updates
 - [x] Update admin navigation to include new wizard
-- [ ] Add breadcrumb support for wizard routes
+- [x] Add breadcrumb support for wizard routes
 - [x] Implement proper return navigation after completion
 - [x] Add wizard entry points from multiple locations
 
