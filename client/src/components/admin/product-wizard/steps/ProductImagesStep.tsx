@@ -93,13 +93,14 @@ const ensureValidImageUrl = (image: UploadedImage): string => {
   if (image.objectKey) {
     // For temp/pending uploads, construct URL with proper encoding
     if (image.objectKey.includes('temp/pending/')) {
-      // Extract timestamp, random prefix and filename from objectKey
-      const pathParts = image.objectKey.split('/');
-      if (pathParts.length >= 3) {
-        const tempDir = pathParts.slice(0, 2).join('/'); // 'temp/pending'
-        const filenamePart = pathParts.slice(2).join('/'); // The full filename with timestamp
+      // The objectKey should follow the pattern: temp/pending/timestamp_randomprefix_filename.jpg
+      const parts = image.objectKey.split('/');
+      if (parts.length >= 3) {
+        // Extract the full filename component which includes timestamp and random prefix
+        const filenameWithTimestamp = parts.slice(2).join('/');
         
-        return `${baseUrl}/api/files/${tempDir}/${encodeURIComponent(filenamePart)}`;
+        // Construct proper URL for API access with proper encoding
+        return `/api/files/temp/pending/${encodeURIComponent(filenameWithTimestamp)}`;
       }
     }
     
@@ -109,7 +110,7 @@ const ensureValidImageUrl = (image: UploadedImage): string => {
       if (parts.length >= 3) {
         const productId = parts[1];
         const filename = parts.slice(2).join('/'); // Handle cases where filename might contain slashes
-        return `${baseUrl}/api/files/products/${encodeURIComponent(productId)}/${encodeURIComponent(filename)}`;
+        return `/api/files/products/${encodeURIComponent(productId)}/${encodeURIComponent(filename)}`;
       }
     }
     
@@ -119,7 +120,7 @@ const ensureValidImageUrl = (image: UploadedImage): string => {
       .map(part => encodeURIComponent(part))
       .join('/');
     
-    return `${baseUrl}/api/files/${encodedKey}`;
+    return `/api/files/${encodedKey}`;
   }
   
   // If URL starts with /, it's a relative path that needs base URL
@@ -496,15 +497,14 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className 
                                       
                                       // For temp/pending uploads with timestamp and random prefix
                                       if (image.objectKey.includes('temp/pending/')) {
-                                        // Extract timestamp, random prefix, and filename parts
-                                        const matches = image.objectKey.match(/^temp\/pending\/([^_]+)_([^_]+)_(.+)$/);
-                                        if (matches && matches.length === 4) {
-                                          const timestamp = matches[1];
-                                          const randomPrefix = matches[2];
-                                          const filename = matches[3];
+                                        // Extract the full filename with timestamp and random prefix
+                                        const parts = image.objectKey.split('/');
+                                        if (parts.length >= 3) {
+                                          // Get the filename portion (includes timestamp_randomprefix_actualfilename)
+                                          const filenameWithPrefix = parts.slice(2).join('/');
                                           
-                                          // Construct the full properly encoded URL
-                                          const directUrl = `${baseUrl}/api/files/temp/pending/${timestamp}_${randomPrefix}_${encodeURIComponent(filename)}`;
+                                          // Construct the fully encoded URL for API access
+                                          const directUrl = `/api/files/temp/pending/${encodeURIComponent(filenameWithPrefix)}`;
                                           console.log('Retrying with properly encoded temp URL format:', directUrl);
                                           e.currentTarget.src = directUrl;
                                           return;
@@ -517,7 +517,7 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className 
                                         if (parts.length >= 3) {
                                           const productId = parts[1];
                                           const filename = parts.slice(2).join('/'); // Handle cases where filename might contain slashes
-                                          const directUrl = `${baseUrl}/api/files/products/${encodeURIComponent(productId)}/${encodeURIComponent(filename)}`;
+                                          const directUrl = `/api/files/products/${encodeURIComponent(productId)}/${encodeURIComponent(filename)}`;
                                           console.log('Retrying with properly encoded product URL format:', directUrl);
                                           e.currentTarget.src = directUrl;
                                           return;
