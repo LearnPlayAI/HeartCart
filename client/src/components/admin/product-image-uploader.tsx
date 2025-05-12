@@ -133,6 +133,8 @@ const ProductImageUploader = ({ productId, onUploadComplete }: ProductImageUploa
       )
     );
     
+    let successCount = 0; // Initialize outside the try/catch blocks
+    
     try {
       // Create a FormData object
       const formData = new FormData();
@@ -193,7 +195,7 @@ const ProductImageUploader = ({ productId, onUploadComplete }: ProductImageUploa
         })
       );
       
-      const successCount = filesToUpload.length;
+      successCount = filesToUpload.length;
     } catch (error) {
       // Update all uploading files to error status
       setFiles(prev => 
@@ -216,7 +218,7 @@ const ProductImageUploader = ({ productId, onUploadComplete }: ProductImageUploa
         variant: 'destructive',
       });
       
-      const successCount = 0;
+      successCount = 0;
     }
     
     // Display toast with upload results
@@ -262,7 +264,7 @@ const ProductImageUploader = ({ productId, onUploadComplete }: ProductImageUploa
         <ImageCropModal
           open={cropModalOpen}
           onOpenChange={setCropModalOpen}
-          imageUrl={files[selectedFileIndex].preview}
+          imageUrl={ensureValidImageUrl(files[selectedFileIndex].preview)}
           onCropComplete={handleCropComplete}
           aspectRatio={1}
         />

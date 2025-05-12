@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Loader2 } from 'lucide-react';
+import { ensureValidImageUrl } from '@/utils/file-manager';
 
 interface ImageCropModalProps {
   open: boolean;
@@ -89,7 +90,7 @@ export function ImageCropModal({
           >
             <img
               ref={imgRef}
-              src={imageUrl}
+              src={ensureValidImageUrl(imageUrl)}
               alt="Crop preview"
               onLoad={onImageLoad}
               className="max-w-full max-h-[60vh] object-contain"
