@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'wouter';
 import { Star, StarHalf, Eye, ShoppingCart, ImageOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import QuickViewModal from './quick-view-modal';
 import { Badge } from '@/components/ui/badge';
 import type { Product } from '@shared/schema';
+import { ensureValidImageUrl } from '@/utils/file-manager';
 
 type ProductCardProps = {
   product: Product;
@@ -38,7 +39,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
     try {
       addItem({
         productId: product.id,
-        product,
         quantity: 1
       });
       
@@ -91,7 +91,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
             </div>
           ) : (
             <img 
-              src={product.imageUrl || ''} 
+              src={product.image ? ensureValidImageUrl(product.image) : (product.imageUrl || '')} 
               alt={product.name || 'Product image'} 
               className="w-full h-36 object-cover"
               onError={() => setImageError(true)}
@@ -167,7 +167,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
           </div>
         ) : (
           <img 
-            src={product.imageUrl || ''} 
+            src={product.image ? ensureValidImageUrl(product.image) : (product.imageUrl || '')} 
             alt={product.name || 'Product image'} 
             className="w-full h-48 object-cover"
             onError={() => setImageError(true)}
