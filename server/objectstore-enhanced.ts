@@ -111,16 +111,17 @@ export class EnhancedObjectStorageService {
     this.initPromise = (async () => {
       try {
         // Verify access by trying a test operation
-        const testResult = await this.client.head('test-access');
-        console.log('Object Store access verified successfully');
+        // Use list operation instead of head since head might not be available
+        const testResult = await this.client.list({ maxResults: 1 });
+        console.log(`Object Store access verified successfully for bucket '${this.currentBucket}'`);
         
         // Create base folders if they don't exist
         await this.ensureBaseDirectoriesExist();
         
         this.initialized = true;
-        console.log('Object Store successfully initialized');
+        console.log(`Object Store successfully initialized for bucket '${this.currentBucket}'`);
       } catch (error) {
-        console.error('Failed to initialize object storage:', error);
+        console.error(`Failed to initialize object storage for bucket '${this.currentBucket}':`, error);
         console.warn('Enabling local file fallback for development');
         this.localFallbackEnabled = true;
         
@@ -333,8 +334,18 @@ export class EnhancedObjectStorageService {
         const localPath = path.join('./local-storage', filePath);
         return fs.existsSync(localPath);
       } else {
-        const result = await this.client.head(filePath);
-        return result.ok !== undefined;
+        // Use list with prefix instead of head
+        const result = await this.client.list({
+          prefix: filePath,
+          maxResults: 1
+        });
+        
+        if (!result.ok || !Array.isArray(result.ok)) {
+          return false;
+        }
+        
+        // Check if the exact file exists
+        return result.ok.some(item => item.name === filePath);
       }
     } catch (error) {
       // File doesn't exist or error occurred
@@ -366,40 +377,27 @@ export class EnhancedObjectStorageService {
           lastModified: stats.mtime
         };
       } else {
-        const result = await this.client.head(filePath);
+        // Use list with prefix instead of head
+        const result = await this.client.list({
+          prefix: filePath,
+          maxResults: 1
+        });
         
-        if (!result.ok) {
+        if (!result.ok || !Array.isArray(result.ok)) {
           return null;
         }
         
-        // Parse metadata from headers
-        const metadata: FileMetadata = {};
-        
-        if (result.ok.contentType) {
-          metadata.contentType = result.ok.contentType;
+        // Find exact file
+        const file = result.ok.find(item => item.name === filePath);
+        if (!file) {
+          return null;
         }
         
-        if (result.ok.contentDisposition) {
-          metadata.contentDisposition = result.ok.contentDisposition;
-        }
-        
-        if (result.ok.cacheControl) {
-          metadata.cacheControl = result.ok.cacheControl;
-        }
-        
-        if (result.ok.contentLength) {
-          metadata.size = parseInt(result.ok.contentLength, 10);
-        }
-        
-        if (result.ok.lastModified) {
-          metadata.lastModified = new Date(result.ok.lastModified);
-        }
-        
-        if (result.ok.etag) {
-          metadata.etag = result.ok.etag;
-        }
-        
-        metadata.filename = path.basename(filePath);
+        // Create basic metadata from available information
+        const metadata: FileMetadata = {
+          filename: path.basename(filePath),
+          contentType: mime.lookup(filePath) || 'application/octet-stream'
+        };
         
         return metadata;
       }
@@ -439,30 +437,21 @@ export class EnhancedObjectStorageService {
         
         return true;
       } else {
-        const putOptions: any = {};
+        // Create upload options
+        const uploadOptions = {};
         
-        if (metadata) {
-          if (metadata.contentType) {
-            putOptions.contentType = metadata.contentType;
-          }
-          
-          if (metadata.contentDisposition) {
-            putOptions.contentDisposition = metadata.contentDisposition;
-          }
-          
-          if (metadata.cacheControl) {
-            putOptions.cacheControl = metadata.cacheControl;
-          }
+        // Convert Buffer to Uint8Array for compatibility
+        const fileData = Buffer.isBuffer(data) 
+          ? new Uint8Array(data) 
+          : data;
+        
+        try {
+          const result = await this.client.upload(filePath, fileData);
+          return result && result.ok !== undefined;
+        } catch (uploadError) {
+          console.error(`Error uploading file ${filePath}:`, uploadError);
+          return false;
         }
-        
-        let result;
-        if (Buffer.isBuffer(data)) {
-          result = await this.client.put(filePath, data, putOptions);
-        } else {
-          result = await this.client.putStream(filePath, data, putOptions);
-        }
-        
-        return result.ok !== undefined;
       }
     } catch (error) {
       console.error(`Error putting file ${filePath}:`, error);
@@ -486,13 +475,19 @@ export class EnhancedObjectStorageService {
         
         return await readFile(localPath);
       } else {
-        const result = await this.client.get(filePath);
-        
-        if (!result.ok) {
+        try {
+          const result = await this.client.download(filePath);
+          
+          if (!result.ok) {
+            return null;
+          }
+          
+          // Convert the ArrayBuffer to Buffer
+          return Buffer.from(result.ok);
+        } catch (downloadError) {
+          console.error(`Error downloading file ${filePath}:`, downloadError);
           return null;
         }
-        
-        return result.ok;
       }
     } catch (error) {
       console.error(`Error getting file ${filePath}:`, error);
