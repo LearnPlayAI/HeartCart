@@ -548,7 +548,8 @@ class ObjectStoreService {
         return false;
       }
       
-      return result.value;
+      // Handle undefined case explicitly
+      return result.value === true;
     } catch (error) {
       console.error(`Error checking if ${objectKey} exists:`, error);
       return false;
@@ -615,13 +616,10 @@ class ObjectStoreService {
   /**
    * List files in a directory
    */
-  async listFiles(prefix: string = '', recursive: boolean = false): Promise<string[]> {
+  async listFiles(prefix: string = ''): Promise<string[]> {
     await this.initialize();
     
     try {
-      // Create options for Replit ObjectStore list method
-      const options = {};
-      
       // Call the list method with the given prefix
       const result = await this.objectStore.list(prefix);
       
