@@ -9,7 +9,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { 
-  Calendar, Clock, Loader2, Tag, 
+  Calendar, Clock, Loader2, Tag, X,
   Tags, Star, TruckIcon, Sparkles, BellDot 
 } from 'lucide-react';
 
@@ -75,6 +75,20 @@ const AdditionalInfoStep: React.FC<AdditionalInfoStepProps> = ({ className }) =>
   // State for attribute generation
   const [isGeneratingAttributes, setIsGeneratingAttributes] = useState(false);
   
+  // Initialize attribute values from product data
+  useEffect(() => {
+    if (productData?.attributes?.length) {
+      const initialValues: Record<number, any> = {};
+      
+      productData.attributes.forEach((attr: any) => {
+        const { attributeId, ...values } = attr;
+        initialValues[attributeId] = values;
+      });
+      
+      setAttributeValues(initialValues);
+    }
+  }, [productData.attributes]);
+  
   // Fetch attributes
   const { data: attributesResponse, isLoading: isAttributesLoading } = useQuery({
     queryKey: ['/api/attributes'],
@@ -136,6 +150,126 @@ const AdditionalInfoStep: React.FC<AdditionalInfoStepProps> = ({ className }) =>
     // This would be implemented with the AI service
     // For now, we'll just show a placeholder implementation
     alert('AI Tag Suggestion feature will be implemented soon!');
+  };
+  
+  // Handle attribute changes
+  const handleAttributeChange = (attributeId: number, valueField: string, value: any) => {
+    setAttributeValues(prev => {
+      const updatedValues = {
+        ...prev,
+        [attributeId]: {
+          ...prev[attributeId],
+          [valueField]: value
+        }
+      };
+      
+      // Update product attributes in wizard state
+      dispatch({
+        type: WizardActionType.UPDATE_PRODUCT_DATA,
+        payload: { attributes: formatAttributesForSave(updatedValues) }
+      });
+      
+      return updatedValues;
+    });
+  };
+  
+  // Format attributes for saving to API
+  const formatAttributesForSave = (attributeValues: Record<number, any>) => {
+    return Object.entries(attributeValues).map(([attributeId, values]) => ({
+      attributeId: Number(attributeId),
+      ...values
+    }));
+  };
+  
+  // Get a preview of attribute value for display in accordion header
+  const getAttributeValuePreview = (attributeValue: any) => {
+    if (attributeValue.textValue) return attributeValue.textValue;
+    if (attributeValue.numericValue) return attributeValue.numericValue;
+    if (attributeValue.booleanValue !== undefined) return attributeValue.booleanValue ? 'Yes' : 'No';
+    if (attributeValue.dateValue) return new Date(attributeValue.dateValue).toLocaleDateString();
+    return 'Set';
+  };
+  
+  // Generate attribute suggestions using AI
+  const handleGenerateAttributeSuggestions = async () => {
+    if (!productData.categoryId || !productData.name) return;
+    
+    setIsGeneratingAttributes(true);
+    
+    try {
+      const response = await fetch('/api/products/wizard/suggest-attributes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          categoryId: productData.categoryId,
+          productName: productData.name,
+          productDescription: productData.description,
+          existingAttributes: Object.entries(attributeValues).map(([id, value]) => ({
+            id: Number(id),
+            name: attributes.find(attr => attr.id === Number(id))?.name || '',
+            value: getAttributeValuePreview(value)
+          }))
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to generate attribute suggestions');
+      }
+      
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        // Apply the suggestions to the current attributes
+        const newAttributeValues = { ...attributeValues };
+        
+        result.data.forEach((suggestion: any) => {
+          const { attributeId, suggestedValue } = suggestion;
+          const attribute = attributes.find(attr => attr.id === attributeId);
+          
+          if (attribute) {
+            if (attribute.type === 'text') {
+              newAttributeValues[attributeId] = {
+                ...newAttributeValues[attributeId],
+                textValue: suggestedValue
+              };
+            } else if (attribute.type === 'number') {
+              const numValue = parseFloat(suggestedValue);
+              if (!isNaN(numValue)) {
+                newAttributeValues[attributeId] = {
+                  ...newAttributeValues[attributeId],
+                  numericValue: numValue.toString()
+                };
+              }
+            } else if (attribute.type === 'boolean') {
+              const boolValue = 
+                suggestedValue.toLowerCase() === 'yes' || 
+                suggestedValue.toLowerCase() === 'true' || 
+                suggestedValue === '1';
+              
+              newAttributeValues[attributeId] = {
+                ...newAttributeValues[attributeId],
+                booleanValue: boolValue
+              };
+            }
+            // Date values usually need manual input
+          }
+        });
+        
+        setAttributeValues(newAttributeValues);
+        
+        // Update product attributes in wizard state
+        dispatch({
+          type: WizardActionType.UPDATE_PRODUCT_DATA,
+          payload: { attributes: formatAttributesForSave(newAttributeValues) }
+        });
+      }
+    } catch (error) {
+      console.error('Error generating attribute suggestions:', error);
+    } finally {
+      setIsGeneratingAttributes(false);
+    }
   };
   
   if (isAttributesLoading) {
