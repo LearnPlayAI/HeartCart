@@ -47,8 +47,13 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className 
     setIsUploading(true);
     
     try {
+      // Check if this is the first upload (no existing images)
+      const isFirstUpload = productData.uploadedImages.length === 0;
+      let startingOrder = productData.uploadedImages.length;
+      
       // Process each file (can be made into a batch operation)
-      for (const file of acceptedFiles) {
+      for (let i = 0; i < acceptedFiles.length; i++) {
+        const file = acceptedFiles[i];
         // Create object URL for preview
         const previewUrl = URL.createObjectURL(file);
         
@@ -58,9 +63,10 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className 
         // Create a placeholder image object
         const newImage: UploadedImage = {
           url: previewUrl,
-          isMain: productData.uploadedImages.length === 0, // First image is main by default
+          // Only set as main if this is the first image of the first upload batch
+          isMain: isFirstUpload && i === 0,
           file,
-          order: productData.uploadedImages.length
+          order: startingOrder + i
         };
         
         // Add to state
@@ -365,7 +371,8 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className 
             
             <div className="mt-4 text-sm text-gray-500">
               <p>Drag and drop images to reorder them.</p>
-              <p>The image with the star icon is the main product image that will be displayed in product listings.</p>
+              <p>Click the <StarIcon className="h-3 w-3 inline" /> button on any image to set it as the main product image.</p>
+              <p>The first image uploaded is automatically set as the main image if no main image exists.</p>
             </div>
           </CardContent>
         </Card>
