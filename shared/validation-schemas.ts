@@ -226,6 +226,17 @@ export const productWizardCompleteSchema = productWizardBasicInfoSchema
   .merge(productWizardImagesSchema)
   .merge(productWizardAdditionalInfoSchema);
 
+// Schema for product draft saving and retrieval
+export const productWizardDraftSchema = z.object({
+  userId: z.number().int().positive(),
+  draftId: z.string().optional(),
+  catalogId: z.number().int().positive().optional(),
+  step: z.number().int().min(0).max(3).default(0),
+  data: z.any(), // This will store partial product data at any step
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional()
+});
+
 // Required attributes validation schema
 export const requiredAttributesSchema = z.array(
   z.object({
