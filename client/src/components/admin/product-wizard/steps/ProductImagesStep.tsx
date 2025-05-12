@@ -55,36 +55,7 @@ const ensureValidImageUrl = (image: UploadedImage): string => {
     return image.url;
   }
   
-  // Handle relative API URLs (/api/files/...)
-  if (image.url && image.url.startsWith('/api/files/')) {
-    // Special case for temp storage paths
-    if (image.url.includes('/temp/pending/')) {
-      // Extract the filename with timestamp prefix from the URL
-      const matches = image.url.match(/\/temp\/pending\/([^\/]+)$/);
-      if (matches && matches.length === 2) {
-        const filenameWithPrefix = matches[1];
-        return `/api/files/temp/pending/${encodeURIComponent(filenameWithPrefix)}`;
-      }
-    }
-    
-    // Special case for product image paths
-    if (image.url.includes('/products/')) {
-      const matches = image.url.match(/\/products\/([^\/]+)\/([^\/]+)$/);
-      if (matches && matches.length === 3) {
-        const productId = matches[1];
-        const filename = matches[2];
-        return `/api/files/products/${encodeURIComponent(productId)}/${encodeURIComponent(filename)}`;
-      }
-    }
-    
-    // General case: encode each path component
-    const urlParts = image.url.split('/').filter(Boolean);
-    const apiPrefix = urlParts.slice(0, 2).join('/'); // Extract /api/files
-    const remainingPath = urlParts.slice(2).map(part => encodeURIComponent(part)).join('/');
-    return `/${apiPrefix}/${remainingPath}`;
-  }
-  
-  // Direct access to Object Store URLs using objectKey
+  // Direct access to Object Store URLs using objectKey (preferred method)
   if (image.objectKey) {
     // For temp/pending uploads, construct URL with proper encoding
     if (image.objectKey.includes('temp/pending/')) {
@@ -92,7 +63,7 @@ const ensureValidImageUrl = (image: UploadedImage): string => {
       const parts = image.objectKey.split('/');
       if (parts.length >= 3) {
         // Extract the full filename component which includes timestamp and random prefix
-        const filenameWithTimestamp = parts.slice(2).join('/');
+        const filenameWithTimestamp = parts[2];
         
         // Construct proper URL for API access with proper encoding
         return `/api/files/temp/pending/${encodeURIComponent(filenameWithTimestamp)}`;
@@ -104,31 +75,51 @@ const ensureValidImageUrl = (image: UploadedImage): string => {
       const parts = image.objectKey.split('/');
       if (parts.length >= 3) {
         const productId = parts[1];
-        const filename = parts.slice(2).join('/'); // Handle cases where filename might contain slashes
+        const filename = parts[2]; // Take just the filename portion
         return `/api/files/products/${encodeURIComponent(productId)}/${encodeURIComponent(filename)}`;
       }
     }
     
-    // Fallback: encode the entire object key properly
-    const encodedKey = image.objectKey
-      .split('/')
-      .map(part => encodeURIComponent(part))
-      .join('/');
+    // Fallback: encode each path segment separately
+    const pathSegments = image.objectKey.split('/');
+    const encodedPath = pathSegments.map(segment => encodeURIComponent(segment)).join('/');
+    return `/api/files/${encodedPath}`;
+  }
+  
+  // Handle relative API URLs (/api/files/...)
+  if (image.url && image.url.startsWith('/api/files/')) {
+    // Special case for temp storage paths
+    if (image.url.includes('/temp/pending/')) {
+      // Extract the filename with timestamp prefix from the URL
+      const parts = image.url.split('/');
+      if (parts.length >= 5) { // [empty, api, files, temp, pending, filename]
+        const filenameWithPrefix = parts[5];
+        return `/api/files/temp/pending/${encodeURIComponent(filenameWithPrefix)}`;
+      }
+    }
     
-    return `/api/files/${encodedKey}`;
+    // Special case for product image paths
+    if (image.url.includes('/products/')) {
+      const parts = image.url.split('/');
+      if (parts.length >= 6) { // [empty, api, files, products, productId, filename]
+        const productId = parts[4];
+        const filename = parts[5];
+        return `/api/files/products/${encodeURIComponent(productId)}/${encodeURIComponent(filename)}`;
+      }
+    }
+    
+    // General case: encode each path component after /api/files/
+    const urlParts = image.url.split('/');
+    if (urlParts.length >= 4) {
+      const apiBase = urlParts.slice(0, 4).join('/'); // /api/files/[folder]
+      const remainingParts = urlParts.slice(4);
+      const encodedParts = remainingParts.map(part => encodeURIComponent(part));
+      return `${apiBase}/${encodedParts.join('/')}`;
+    }
   }
   
   // If URL starts with /, it's a relative path
   if (image.url.startsWith('/')) {
-    // Handle direct API paths
-    if (image.url.startsWith('/api/files/')) {
-      // Split the URL into parts and properly encode the filename
-      const urlParts = image.url.split('/');
-      const filename = urlParts.pop() || '';
-      const path = urlParts.join('/');
-      return `${path}/${encodeURIComponent(filename)}`;
-    }
-    
     // For other relative paths, use as is
     return image.url;
   }
@@ -491,8 +482,8 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className 
                                         // Extract the full filename with timestamp and random prefix
                                         const parts = image.objectKey.split('/');
                                         if (parts.length >= 3) {
-                                          // Get the filename portion (includes timestamp_randomprefix_actualfilename)
-                                          const filenameWithPrefix = parts.slice(2).join('/');
+                                          // Get only the third part - the filename portion
+                                          const filenameWithPrefix = parts[2];
                                           
                                           // Construct the fully encoded URL for API access
                                           const directUrl = `/api/files/temp/pending/${encodeURIComponent(filenameWithPrefix)}`;
@@ -507,7 +498,7 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className 
                                         const parts = image.objectKey.split('/');
                                         if (parts.length >= 3) {
                                           const productId = parts[1];
-                                          const filename = parts.slice(2).join('/'); // Handle cases where filename might contain slashes
+                                          const filename = parts[2]; // Take just the filename portion
                                           const directUrl = `/api/files/products/${encodeURIComponent(productId)}/${encodeURIComponent(filename)}`;
                                           console.log('Retrying with properly encoded product URL format:', directUrl);
                                           e.currentTarget.src = directUrl;
