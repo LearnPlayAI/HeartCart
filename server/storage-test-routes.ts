@@ -263,10 +263,17 @@ export function registerStorageTestRoutes(app: Express): void {
           
           // Test listing objects
           try {
-            const listResult = await objectStorageService.listFiles();
+            // List files using an empty prefix to get all objects at the root level
+            const listResult = await objectStorageService.listFiles('');
+            
+            // Check the objects and prefixes properties (not length directly)
             results.listOperation = createTestResult('passed', 
               'Object storage list operation works correctly', 
-              { count: listResult.length });
+              { 
+                objectCount: listResult.objects.length,
+                prefixCount: listResult.prefixes.length,
+                totalCount: listResult.objects.length + listResult.prefixes.length
+              });
           } catch (error) {
             results.listOperation = createTestResult('failed', 
               `Object storage list operation failed: ${error instanceof Error ? error.message : String(error)}`);
