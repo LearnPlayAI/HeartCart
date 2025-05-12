@@ -31,7 +31,37 @@ export const UPLOAD_ENDPOINTS = {
 export const API_FILES_BASE = '/api/files';
 
 /**
+ * Sanitize a filename by replacing spaces with hyphens and removing special characters
+ */
+export function sanitizeFilename(filename: string): string {
+  // Replace spaces with hyphens
+  let sanitized = filename.replace(/\s+/g, '-');
+  
+  // Remove other problematic characters
+  sanitized = sanitized.replace(/[^a-zA-Z0-9-_.]/g, '');
+  
+  return sanitized;
+}
+
+/**
+ * Create a File object with a sanitized filename
+ */
+export function createFileWithSanitizedName(file: File): File {
+  const sanitizedName = sanitizeFilename(file.name);
+  
+  // If the name is already sanitized, return the original
+  if (sanitizedName === file.name) {
+    return file;
+  }
+  
+  // Create a new File object with the sanitized name
+  // We need to use the File constructor to change the filename
+  return new File([file], sanitizedName, { type: file.type });
+}
+
+/**
  * Process an array of File objects into FormData for upload
+ * Sanitizes filenames before upload by replacing spaces with hyphens
  */
 export function prepareFilesFormData(
   files: File[], 
@@ -39,9 +69,17 @@ export function prepareFilesFormData(
 ): FormData {
   const formData = new FormData();
   
-  // Append each file to the form data with the standard 'images' field name
+  // Sanitize filenames and append to form data
   files.forEach(file => {
-    formData.append('images', file);
+    // Create a new file with sanitized name
+    const sanitizedFile = createFileWithSanitizedName(file);
+    
+    // Log the transformation for debugging
+    if (sanitizedFile.name !== file.name) {
+      console.log(`Sanitized filename: "${file.name}" → "${sanitizedFile.name}"`);
+    }
+    
+    formData.append('images', sanitizedFile);
   });
   
   // Add any additional data

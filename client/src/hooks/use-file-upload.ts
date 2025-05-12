@@ -142,8 +142,15 @@ export function useFileUpload(options?: FileUploadOptions) {
         };
       });
       
-      // Create previews for the new images
-      const newPreviews = newImages.map(img => img.url);
+      // Create properly encoded previews for the new images
+      const newPreviews = newImages.map(img => {
+        // Use ensureValidImageUrl to get properly encoded URLs
+        if (img.url) {
+          console.log("Processing new image:", img.url);
+          return ensureValidImageUrl(img);
+        }
+        return '';
+      });
       
       return {
         ...prev,
