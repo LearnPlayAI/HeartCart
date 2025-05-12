@@ -961,3 +961,34 @@ export const batchUploadErrorsRelations = relations(batchUploadErrors, ({ one })
     references: [batchUploads.id]
   })
 }));
+
+// Product Drafts table for wizard auto-save functionality
+export const productDrafts = pgTable("product_drafts", {
+  id: serial("id").primaryKey(),
+  draftId: text("draft_id").notNull().unique(), // Unique identifier for the draft
+  userId: integer("user_id").references(() => users.id).notNull(),
+  catalogId: integer("catalog_id").references(() => catalogs.id),
+  step: integer("step").default(0).notNull(), // Current step in the wizard (0-3)
+  data: jsonb("data").notNull(), // JSON data for the draft at any step
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Product Drafts relations
+export const productDraftsRelations = relations(productDrafts, ({ one }) => ({
+  user: one(users, {
+    fields: [productDrafts.userId],
+    references: [users.id]
+  }),
+  catalog: one(catalogs, {
+    fields: [productDrafts.catalogId],
+    references: [catalogs.id]
+  })
+}));
+
+// Create insert schema for product drafts
+export const insertProductDraftSchema = createInsertSchema(productDrafts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
