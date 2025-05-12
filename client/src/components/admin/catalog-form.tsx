@@ -79,10 +79,13 @@ export function CatalogForm({
   });
 
   // Fetch suppliers for the dropdown
-  const { data: suppliers = [], isLoading: isSuppliersLoading } = useQuery<Supplier[]>({
+  const { data: suppliersResponse, isLoading: isSuppliersLoading } = useQuery<{data: Supplier[], success: boolean}>({
     queryKey: ["/api/suppliers"],
     // No need to define a custom queryFn as the default fetcher is already set up in queryClient
   });
+  
+  // Extract suppliers from the API response format
+  const suppliers = Array.isArray(suppliersResponse?.data) ? suppliersResponse.data : [];
 
   useEffect(() => {
     if (initialData) {
