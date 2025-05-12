@@ -215,6 +215,9 @@ const ProductWizardContent: React.FC = () => {
         throw new Error("Catalog ID is required. Please select a catalog.");
       }
       
+      // Log catalog ID to confirm it's correctly set
+      console.log('Using catalogId for product submission:', state.catalogId);
+      
       // Validate price-related fields
       if (isNaN(Number(state.productData.price)) || Number(state.productData.price) <= 0) {
         throw new Error("Regular price must be a positive number.");
@@ -224,12 +227,17 @@ const ProductWizardContent: React.FC = () => {
         throw new Error("Cost price must be a positive number.");
       }
       
+      // Validate category ID is present
+      if (!state.productData.categoryId) {
+        throw new Error("Category is required. Please select a category.");
+      }
+      
       // Extract and format the data from the wizard state
       const productData = {
         ...state.productData,
         slug,
         stock: state.productData.stock || 0, // Default stock value to fix validation
-        catalogId: state.catalogId,
+        catalogId: state.catalogId, // Ensure catalogId is included from state
         supplierId: state.supplierId,
         
         // Ensure prices are numbers
@@ -351,20 +359,20 @@ const ProductWizard: React.FC<ProductWizardProps> = ({ catalogId, productId }) =
     enabled: !!productId
   });
   
-  // Process catalog data when available from API response or direct prop
+  // Initialize catalog data from props (only run once)
   useEffect(() => {
-    // If we have a direct catalogId prop, use it immediately
     if (catalogId && !catalogData) {
-      // Direct usage of catalogId from props for immediate initialization
-      console.log('Using direct catalogId from props:', catalogId);
+      console.log('Initializing with catalogId from props:', catalogId);
       setCatalogData({
         id: catalogId,
-        name: 'Loading catalog...',  // Will be updated when response comes back
-        supplierId: 0  // Will be updated when response comes back
+        name: 'Loading catalog...',
+        supplierId: 0
       });
     }
-    
-    // Then update with full details when API response is available
+  }, [catalogId]); // Only depends on catalogId prop, not catalogData state
+  
+  // Update with full catalog details when API response is available (separate effect)
+  useEffect(() => {
     if (catalogResponse?.data) {
       console.log('Received catalog data from API:', catalogResponse.data);
       setCatalogData({
@@ -373,7 +381,7 @@ const ProductWizard: React.FC<ProductWizardProps> = ({ catalogId, productId }) =
         supplierId: catalogResponse.data.supplierId
       });
     }
-  }, [catalogResponse, catalogId, catalogData]);
+  }, [catalogResponse]);
   
   // Process product data when available
   useEffect(() => {
@@ -434,11 +442,17 @@ const ProductWizard: React.FC<ProductWizardProps> = ({ catalogId, productId }) =
     );
   }
   
+  // Ensure we always have a catalogId for the provider (from props or API)
+  const providerCatalogId = catalogData?.id || catalogId;
+  
+  // Log the catalog ID being used to render the provider
+  console.log('Rendering ProductWizardProvider with catalogId:', providerCatalogId);
+  
   return (
     <ProductWizardProvider 
       initialData={initialProductData || undefined} 
-      catalogId={catalogData?.id} 
-      supplierId={catalogData?.supplierId}
+      catalogId={providerCatalogId} 
+      supplierId={catalogData?.supplierId || 0}
     >
       <ProductWizardContent />
     </ProductWizardProvider>
