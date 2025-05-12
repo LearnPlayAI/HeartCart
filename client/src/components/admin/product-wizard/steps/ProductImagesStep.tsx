@@ -12,6 +12,7 @@ import { useDropzone } from 'react-dropzone';
 import { Loader2, Plus, XCircle, StarIcon, Upload, ImageIcon, Trash2 } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
+import { getApiBaseUrl } from '@/lib/api';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 
 import { Button } from '@/components/ui/button';
@@ -29,6 +30,35 @@ import {
 
 interface ProductImagesStepProps {
   className?: string;
+}
+
+/**
+ * Helper function to ensure image URLs are correctly formatted
+ * Handles both object store URLs and API-returned URLs
+ */
+const ensureValidImageUrl = (image: UploadedImage): string => {
+  if (!image.url) {
+    console.warn('Image missing URL:', image);
+    return '';
+  }
+  
+  // If URL is already absolute (starts with http), return as is
+  if (image.url.startsWith('http')) {
+    return image.url;
+  }
+  
+  // If URL starts with /, it's a relative path that needs base URL
+  if (image.url.startsWith('/')) {
+    return `${getApiBaseUrl()}${image.url}`;
+  }
+  
+  // If we have an objectKey but no valid URL, construct one
+  if (image.objectKey && !image.url.includes('/api/')) {
+    return `${getApiBaseUrl()}/api/files/products/${image.objectKey}`;
+  }
+  
+  // Return whatever URL we have
+  return image.url;
 }
 
 export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className }) => {
@@ -370,11 +400,12 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className 
                                 }`}
                               >
                                 <img 
-                                  src={image.url} 
-                                  alt="Product" 
+                                  src={ensureValidImageUrl(image)}
+                                  alt={image.metadata?.alt || "Product"} 
                                   className="w-full h-40 object-cover"
                                   onError={(e) => {
                                     console.error('Failed to load image:', image.url);
+                                    console.log('Image details:', image);
                                     // Add fallback display
                                     e.currentTarget.classList.add('hidden');
                                     const fallbackElement = e.currentTarget.parentElement?.querySelector('.fallback-display');
