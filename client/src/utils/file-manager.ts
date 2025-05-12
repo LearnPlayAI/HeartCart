@@ -32,13 +32,32 @@ export const API_FILES_BASE = '/api/files';
 
 /**
  * Sanitize a filename by replacing spaces with hyphens and removing special characters
+ * 
+ * This is the central sanitization function used across the application.
+ * IMPORTANT: This function should remain synchronized with the server-side version
+ * in upload-handlers.ts to ensure consistent behavior.
  */
 export function sanitizeFilename(filename: string): string {
-  // Replace spaces with hyphens
-  let sanitized = filename.replace(/\s+/g, '-');
+  if (!filename) return '';
   
-  // Remove other problematic characters
-  sanitized = sanitized.replace(/[^a-zA-Z0-9-_.]/g, '');
+  // Extract file extension to preserve it
+  const lastDotIndex = filename.lastIndexOf('.');
+  const extension = lastDotIndex !== -1 ? filename.slice(lastDotIndex) : '';
+  const baseName = lastDotIndex !== -1 ? filename.slice(0, lastDotIndex) : filename;
+  
+  // Replace spaces with hyphens
+  let sanitizedBase = baseName.replace(/\s+/g, '-');
+  
+  // Remove other problematic characters, but preserve hyphens, underscores, periods
+  sanitizedBase = sanitizedBase.replace(/[^a-zA-Z0-9-_.]/g, '');
+  
+  // Combine sanitized base name with original extension
+  const sanitized = sanitizedBase + extension;
+  
+  // Log sanitization results for debugging
+  if (sanitized !== filename) {
+    console.log(`Sanitized filename: "${filename}" → "${sanitized}"`);
+  }
   
   return sanitized;
 }
