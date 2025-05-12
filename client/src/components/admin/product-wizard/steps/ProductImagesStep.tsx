@@ -51,36 +51,64 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className 
       const isFirstUpload = productData.uploadedImages.length === 0;
       let startingOrder = productData.uploadedImages.length;
       
-      // Process each file (can be made into a batch operation)
-      for (let i = 0; i < acceptedFiles.length; i++) {
-        const file = acceptedFiles[i];
-        // Create object URL for preview
-        const previewUrl = URL.createObjectURL(file);
-        
-        // In a real implementation, you'd upload to server here
-        // For now, we'll just simulate that by adding to state
-        
-        // Create a placeholder image object
-        const newImage: UploadedImage = {
-          url: previewUrl,
-          // Only set as main if this is the first image of the first upload batch
-          isMain: isFirstUpload && i === 0,
-          file,
-          order: startingOrder + i
-        };
-        
-        // Add to state
-        dispatch({
-          type: WizardActionType.ADD_UPLOADED_IMAGE,
-          payload: newImage
+      // Create form data for batch upload
+      const formData = new FormData();
+      
+      // Append productId if we already have one (editing mode)
+      if (productData.id) {
+        formData.append('productId', productData.id.toString());
+      }
+      
+      // Append each file to the form data
+      acceptedFiles.forEach(file => {
+        formData.append('images', file);
+      });
+      
+      // Determine the correct endpoint
+      // For new products, use the temp upload endpoint
+      // For existing products, use the product-specific endpoint
+      const endpoint = productData.id 
+        ? `/api/upload/products/${productData.id}/images` 
+        : '/api/upload/products/images/temp';
+      
+      console.log('Uploading images to endpoint:', endpoint);
+      
+      // Upload the files
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Upload failed with status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      
+      if (result.success && result.files && Array.isArray(result.files)) {
+        // Map the API response to our UploadedImage format
+        const uploadedImages = result.files.map((file, index) => {
+          const newImage: UploadedImage = {
+            id: file.id, // Use ID from server if available
+            url: file.url, // Use the URL from the server
+            objectKey: file.objectKey,
+            isMain: isFirstUpload && index === 0, // First image is main if no existing main image
+            order: startingOrder + index
+          };
+          return newImage;
         });
         
-        // In a real implementation, you would have API call like:
-        // const formData = new FormData();
-        // formData.append('image', file);
-        // const response = await fetch('/api/product-images/upload', { method: 'POST', body: formData });
-        // const { id, url } = await response.json();
-        // Then update state with real server data
+        // Add each uploaded image to state
+        uploadedImages.forEach(image => {
+          dispatch({
+            type: WizardActionType.ADD_UPLOADED_IMAGE,
+            payload: image
+          });
+        });
+        
+        console.log('Successfully uploaded images:', uploadedImages);
+      } else {
+        throw new Error('Invalid server response format');
       }
       
       toast({
@@ -91,13 +119,13 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className 
       console.error('Error uploading images:', error);
       toast({
         title: "Upload failed",
-        description: "There was a problem uploading your images",
+        description: error instanceof Error ? error.message : "There was a problem uploading your images",
         variant: "destructive"
       });
     } finally {
       setIsUploading(false);
     }
-  }, [dispatch, productData.uploadedImages, toast]);
+  }, [dispatch, productData.uploadedImages, productData.id, toast]);
   
   // Set up dropzone
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -173,39 +201,72 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className 
     setIsRemovingBackground(true);
     
     try {
-      // In a real implementation, you would call an API to remove the background
-      // For now, we'll just simulate the process with a delay
+      // Extract image URL from the image object
+      const imageUrl = image.url;
       
-      // Simulating API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Only proceed if we have a valid image URL
+      if (!imageUrl) {
+        throw new Error('Image URL is missing');
+      }
       
-      toast({
-        title: "Background removed",
-        description: "AI has processed the image and removed the background"
+      console.log('Processing background removal for image:', imageUrl);
+      
+      // Call the background removal API
+      const response = await fetch('/api/ai/remove-background', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          imageUrl: imageUrl,
+          imageId: image.id,
+          objectKey: image.objectKey
+        }),
       });
       
-      // In reality, you would update the image with the new processed version
-      // For now, we'll just mark it as processed
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status} ${response.statusText}`);
+      }
+      
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.message || 'Background removal failed');
+      }
+      
+      // Update the image in the state with the new processed image URL
       const updatedImages = productData.uploadedImages.map(img => {
         if ((typeof imageIdOrUrl === 'number' && img.id === imageIdOrUrl) || 
             (typeof imageIdOrUrl === 'string' && img.url === imageIdOrUrl)) {
           return {
             ...img,
-            metadata: { ...img.metadata, backgroundRemoved: true }
+            url: result.processedImageUrl || img.url, // Use new URL if available
+            objectKey: result.processedObjectKey || img.objectKey, // Use new object key if available
+            metadata: { 
+              ...img.metadata, 
+              backgroundRemoved: true,
+              processedAt: new Date().toISOString()
+            }
           };
         }
         return img;
       });
       
+      // Update the state with the processed image
       dispatch({
         type: WizardActionType.REORDER_IMAGES,
         payload: updatedImages
+      });
+      
+      toast({
+        title: "Background removed",
+        description: "AI has processed the image and removed the background"
       });
     } catch (error) {
       console.error('Error removing background:', error);
       toast({
         title: "Process failed",
-        description: "There was a problem removing the background",
+        description: error instanceof Error ? error.message : "There was a problem removing the background",
         variant: "destructive"
       });
     } finally {
