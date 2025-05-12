@@ -56,41 +56,42 @@ const ensureValidImageUrl = (image: UploadedImage): string => {
     return image.url;
   }
   
-  // Special case handling for temp/pending files from the upload process
-  if (image.objectKey && image.objectKey.includes('temp/pending/')) {
-    // We need to properly encode the URL components
+  // Direct access to Object Store URLs (this follows the server upload endpoint pattern)
+  if (image.objectKey) {
     const baseUrl = getApiBaseUrl();
-    const objectKeyParts = image.objectKey.split('/');
-    const filename = objectKeyParts.pop() || '';
-    const path = objectKeyParts.join('/');
     
-    // Construct and encode the URL properly
-    return `${baseUrl}/api/files/${path}/${encodeURIComponent(filename)}`;
+    // Force objectKey to be encoded properly, even if nested
+    const encodedKey = image.objectKey
+      .split('/')
+      .map(part => encodeURIComponent(part))
+      .join('/');
+    
+    if (image.objectKey.includes('temp/pending/')) {
+      return `${baseUrl}/api/files/${encodedKey}`;
+    } else {
+      // This handles products/${tempProductId}/${filename} pattern from the server
+      return `${baseUrl}/api/files/${encodedKey}`;
+    }
   }
   
   // If URL starts with /, it's a relative path that needs base URL
   if (image.url.startsWith('/')) {
     const baseUrl = getApiBaseUrl();
-    const urlPath = image.url.replace(/^\/api\/files\//, '');
     
-    // Properly encode URL path components
-    const urlParts = urlPath.split('/');
-    const filename = urlParts.pop() || '';
-    const path = urlParts.join('/');
-    
-    if (urlPath.startsWith('temp/pending/')) {
-      return `${baseUrl}/api/files/${path}/${encodeURIComponent(filename)}`;
+    // Handle direct API paths
+    if (image.url.startsWith('/api/files/')) {
+      // Split the URL into parts and properly encode the filename
+      const urlParts = image.url.split('/');
+      const filename = urlParts.pop() || '';
+      const path = urlParts.join('/');
+      return `${baseUrl}${path}/${encodeURIComponent(filename)}`;
     }
     
+    // For other relative paths
     return `${baseUrl}${image.url}`;
   }
   
-  // If we have an objectKey but no valid URL, construct one
-  if (image.objectKey && !image.url.includes('/api/')) {
-    return `${getApiBaseUrl()}/api/files/products/${encodeURIComponent(image.objectKey)}`;
-  }
-  
-  // Return whatever URL we have
+  // Return whatever URL we have as a fallback
   return image.url;
 }
 
@@ -441,18 +442,49 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className 
                                     console.error('Failed to load image:', image.url);
                                     console.log('Image details:', image);
                                     
-                                    // Try one more time with a direct URL construction for temp files
-                                    if (image.objectKey && image.objectKey.includes('temp/pending/')) {
-                                      const filename = image.objectKey.split('/').pop() || '';
-                                      const encodedFilename = encodeURIComponent(filename);
+                                    // Try with direct API access as second attempt
+                                    if (image.objectKey) {
+                                      const parts = image.objectKey.split('/');
+                                      const filename = parts.pop() || '';
                                       const baseUrl = getApiBaseUrl();
-                                      const directUrl = `${baseUrl}/api/files/temp/pending/${encodedFilename}`;
-                                      console.log('Retrying with direct URL:', directUrl);
+                                      
+                                      // First try the server upload endpoint pattern
+                                      if (parts.length >= 2 && parts[0] === 'products') {
+                                        const tempProductId = parts[1];
+                                        const directUrl = `${baseUrl}/api/files/products/${encodeURIComponent(tempProductId)}/${encodeURIComponent(filename)}`;
+                                        console.log('Retrying with product URL format:', directUrl);
+                                        e.currentTarget.src = directUrl;
+                                        return;
+                                      }
+                                      
+                                      // Then try temp/pending pattern
+                                      if (image.objectKey.includes('temp/pending')) {
+                                        const directUrl = `${baseUrl}/api/files/temp/pending/${encodeURIComponent(filename)}`;
+                                        console.log('Retrying with temp URL format:', directUrl);
+                                        e.currentTarget.src = directUrl;
+                                        return;
+                                      }
+                                      
+                                      // Try with raw objectKey as last resort
+                                      const directUrl = `${baseUrl}/api/files/${encodeURIComponent(image.objectKey)}`;
+                                      console.log('Retrying with direct objectKey URL:', directUrl);
                                       e.currentTarget.src = directUrl;
+                                      
+                                      // We'll add the error handler on this second attempt
+                                      e.currentTarget.onerror = (secondErr) => {
+                                        console.error('All URL formats failed for image');
+                                        const img = secondErr.currentTarget as HTMLImageElement;
+                                        img.classList.add('hidden');
+                                        const fallbackElement = img.parentElement?.querySelector('.fallback-display');
+                                        if (fallbackElement) {
+                                          fallbackElement.classList.remove('hidden');
+                                        }
+                                      };
+                                      
                                       return;
                                     }
                                     
-                                    // Add fallback display if retry fails
+                                    // Add fallback display if all retries fail or no objectKey
                                     e.currentTarget.classList.add('hidden');
                                     const fallbackElement = e.currentTarget.parentElement?.querySelector('.fallback-display');
                                     if (fallbackElement) {
