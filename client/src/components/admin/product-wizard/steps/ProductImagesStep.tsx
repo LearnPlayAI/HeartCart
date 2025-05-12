@@ -506,15 +506,29 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className 
                                         }
                                       }
                                       
-                                      // Fallback: try with fully encoded path
-                                      const encodedKey = image.objectKey
-                                        .split('/')
-                                        .map(part => encodeURIComponent(part))
-                                        .join('/');
+                                      // Fallback: try with a simpler path structure
+                                      // Just take the first path component and the last component (filename)
+                                      const parts = image.objectKey.split('/');
                                       
-                                      const directUrl = `/api/files/${encodedKey}`;
-                                      console.log('Retrying with fully encoded URL:', directUrl);
-                                      e.currentTarget.src = directUrl;
+                                      // If we have at least a folder and a filename
+                                      if (parts.length >= 2) {
+                                        const folder = parts[0]; // First segment (folder)
+                                        const filename = parts[parts.length - 1]; // Last segment (filename)
+                                        
+                                        const directUrl = `/api/files/${encodeURIComponent(folder)}/${encodeURIComponent(filename)}`;
+                                        console.log('Retrying with simple folder/filename URL format:', directUrl);
+                                        e.currentTarget.src = directUrl;
+                                      } else {
+                                        // Fallback to fully encoded path if the structure is unexpected
+                                        const encodedKey = image.objectKey
+                                          .split('/')
+                                          .map(part => encodeURIComponent(part))
+                                          .join('/');
+                                          
+                                        const directUrl = `/api/files/${encodedKey}`;
+                                        console.log('Retrying with fully encoded URL:', directUrl);
+                                        e.currentTarget.src = directUrl;
+                                      }
                                       
                                       // Add error handler for this second attempt
                                       e.currentTarget.onerror = (secondErr) => {
