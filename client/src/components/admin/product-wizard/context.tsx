@@ -122,6 +122,7 @@ const initialState: WizardState = {
     description: '',
     price: 0,
     costPrice: 0,
+    stock: 0, // Add default stock value
     uploadedImages: []
   },
   isFormDirty: false,

@@ -74,9 +74,23 @@ const ProductWizardContent: React.FC = () => {
       }
     },
     onError: (error: Error) => {
+      console.error('Error saving product:', error);
+      
+      // Check if it's a response with validation details
+      let errorMessage = error.message || "There was a problem saving the product";
+      
+      // Show the validation errors in a more user-friendly format
+      if (errorMessage.includes('validation')) {
+        errorMessage = "Please fix the following validation errors:\n" +
+          "- Make sure product has a name and valid slug\n" +
+          "- Ensure catalog is selected\n" +
+          "- Check that stock value is set\n" +
+          "- Verify that sale dates are in correct format";
+      }
+      
       toast({
         title: "Error saving product",
-        description: error.message || "There was a problem saving the product",
+        description: errorMessage,
         variant: "destructive",
       });
     }
@@ -85,11 +99,28 @@ const ProductWizardContent: React.FC = () => {
   // Handle form submission
   const handleSave = async () => {
     try {
-      // Extract the relevant data from the wizard state
+      // Create a properly formatted slug if not present
+      const slug = state.productData.slug || 
+        (state.productData.name ? 
+          state.productData.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') : 
+          `product-${Date.now()}`);
+      
+      // Extract and format the data from the wizard state
       const productData = {
         ...state.productData,
+        slug,
+        stock: state.productData.stock || 0, // Default stock value to fix validation
         catalogId: state.catalogId,
         supplierId: state.supplierId,
+        // Convert Date objects to ISO strings for server validation
+        specialSaleStart: state.productData.specialSaleStart ? 
+          state.productData.specialSaleStart.toISOString() : null,
+        specialSaleEnd: state.productData.specialSaleEnd ? 
+          state.productData.specialSaleEnd.toISOString() : null,
+        flashDealStart: state.productData.flashDealStart ? 
+          state.productData.flashDealStart.toISOString() : null,
+        flashDealEnd: state.productData.flashDealEnd ? 
+          state.productData.flashDealEnd.toISOString() : null
       };
       
       // Call the mutation

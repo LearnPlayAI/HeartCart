@@ -57,6 +57,7 @@ export interface ProductWizardData {
   discount?: number;
   discountLabel?: string;
   minimumOrder?: number;
+  stock?: number; // Added stock field which is required by the API
   imageUrl?: string;
   categoryId?: number;
   brand?: string;
