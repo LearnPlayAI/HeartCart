@@ -175,7 +175,7 @@ const FileBrowser: React.FC = () => {
     error: subFoldersError,
     refetch: refetchSubFolders
   } = useQuery<{ success: boolean; data: { subfolders: string[] } }>({
-    queryKey: ['/api/file-browser/folders', currentPath, 'subfolders'],
+    queryKey: [`/api/file-browser/folders/${encodeURIComponent(currentPath)}/subfolders`],
     queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: currentPath !== '',
     refetchOnWindowFocus: false
@@ -187,7 +187,7 @@ const FileBrowser: React.FC = () => {
     error: filesError,
     refetch: refetchFiles
   } = useQuery<{ success: boolean; data: { files: FileItem[] } }>({
-    queryKey: ['/api/file-browser/folders', currentPath, 'files'],
+    queryKey: [`/api/file-browser/folders/${encodeURIComponent(currentPath)}/files`],
     queryFn: getQueryFn({ on401: "returnNull" }),
     refetchOnWindowFocus: false
   });
@@ -204,7 +204,7 @@ const FileBrowser: React.FC = () => {
   // Mutations
   const createFolderMutation = useMutation({
     mutationFn: async (folderPath: string) => {
-      return await apiRequest('/api/file-browser/folders', 'POST', { path: folderPath });
+      return await apiRequest('/api/file-browser/folders', 'POST', { folderPath });
     },
     onSuccess: () => {
       toast({
@@ -253,7 +253,7 @@ const FileBrowser: React.FC = () => {
       
       // Return a Promise that resolves when upload is complete
       return new Promise((resolve, reject) => {
-        xhr.open('POST', `/api/file-browser/upload/${folderPath}`);
+        xhr.open('POST', `/api/file-browser/files${folderPath ? `/${encodeURIComponent(folderPath)}` : ''}`);
         xhr.onload = () => {
           if (xhr.status >= 200 && xhr.status < 300) {
             resolve(JSON.parse(xhr.responseText));
@@ -293,7 +293,7 @@ const FileBrowser: React.FC = () => {
   
   const deleteFileMutation = useMutation({
     mutationFn: async (filePath: string) => {
-      return await apiRequest(`/api/file-browser/files/${filePath}`, 'DELETE');
+      return await apiRequest(`/api/file-browser/files/${encodeURIComponent(filePath)}`, 'DELETE');
     },
     onSuccess: () => {
       toast({
