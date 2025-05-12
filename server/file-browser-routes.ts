@@ -3,6 +3,7 @@ import multer from 'multer';
 import path from 'path';
 import { enhancedObjectStorage, STORAGE_FOLDERS, logClientAPIMethods } from './objectstore-enhanced';
 import { isAuthenticated } from './auth-middleware';
+import { sanitizeFilename, getContentTypeFromFilename, generateUniqueFilename } from '../shared/utils/file-utils';
 
 const router = Router();
 
@@ -363,27 +364,34 @@ router.post('/upload/:path(*)', isAuthenticated, upload.single('file'), async (r
     const folderPath = sanitizePath(req.params.path);
     const originalFilename = req.file.originalname;
     
-    // Sanitize filename
-    const sanitizedFilename = originalFilename.replace(/\s+/g, '-');
+    // Sanitize filename using utility function
+    const sanitizedFilename = sanitizeFilename(originalFilename);
+    
+    // Generate unique filename to prevent overwrites
+    const uniqueFilename = generateUniqueFilename(originalFilename);
     
     // Create full path
-    const filePath = folderPath ? `${folderPath}/${sanitizedFilename}` : sanitizedFilename;
+    const filePath = folderPath ? `${folderPath}/${uniqueFilename}` : uniqueFilename;
     
     await enhancedObjectStorage.initialize();
     
-    // Upload file
+    // Get auto-detected content type if not provided by multer
+    const contentType = req.file.mimetype || getContentTypeFromFilename(uniqueFilename) || 'application/octet-stream';
+    
+    // Upload file with proper content type
     await enhancedObjectStorage.putFile(filePath, req.file.buffer, {
-      contentType: req.file.mimetype
+      contentType
     });
     
     res.json({
       success: true,
       data: {
         originalName: originalFilename,
-        fileName: sanitizedFilename,
+        fileName: uniqueFilename,
+        sanitizedName: sanitizedFilename,
         path: filePath,
         size: req.file.size,
-        mimetype: req.file.mimetype,
+        mimetype: contentType,
         url: `/api/file-browser/files/${filePath}`
       }
     });
