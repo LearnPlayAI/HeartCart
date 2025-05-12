@@ -161,9 +161,14 @@ export function revokeLocalImageUrl(url: string): void {
  * This is a centralized version of the function used across components
  */
 export function ensureValidImageUrl(image: UploadedImage | string): string {
+  // For debugging
+  console.log("ensureValidImageUrl input:", image);
+  
   // Handle string URLs directly (simplified use case)
   if (typeof image === 'string') {
-    return formatUrlPath(image);
+    const formattedPath = formatUrlPath(image);
+    console.log("String URL formatted to:", formattedPath);
+    return formattedPath;
   }
   
   // Handle UploadedImage objects (full featured case)
@@ -176,24 +181,32 @@ export function ensureValidImageUrl(image: UploadedImage | string): string {
   if (image.file) {
     // Return existing URL if already created
     if (image.url && image.url.startsWith('blob:')) {
+      console.log("Using existing blob URL:", image.url);
       return image.url;
     }
-    return URL.createObjectURL(image.file);
+    const blobUrl = URL.createObjectURL(image.file);
+    console.log("Created new blob URL:", blobUrl);
+    return blobUrl;
   }
   
   // If URL is already absolute (starts with http), return as is
   if (image.url && image.url.startsWith('http')) {
+    console.log("Using absolute URL:", image.url);
     return image.url;
   }
   
   // Direct access to Object Store URLs using objectKey (preferred method)
   if (image.objectKey) {
-    return formatObjectKeyPath(image.objectKey);
+    const formattedPath = formatObjectKeyPath(image.objectKey);
+    console.log("objectKey formatted to:", formattedPath);
+    return formattedPath;
   }
   
   // Use image URL as fallback with proper encoding
   if (image.url) {
-    return formatUrlPath(image.url);
+    const formattedPath = formatUrlPath(image.url);
+    console.log("URL formatted to:", formattedPath);
+    return formattedPath;
   }
   
   // Last resort fallback
@@ -205,6 +218,13 @@ export function ensureValidImageUrl(image: UploadedImage | string): string {
  * Format an object key path into a proper API URL with encoding
  */
 export function formatObjectKeyPath(objectKey: string): string {
+  if (!objectKey) {
+    console.error("Empty object key provided to formatObjectKeyPath");
+    return '';
+  }
+  
+  console.log("Formatting object key path:", objectKey);
+  
   // Handle temp folder paths
   if (objectKey.includes(`${STORAGE_FOLDERS.TEMP}/`)) {
     const parts = objectKey.split('/');
@@ -212,7 +232,13 @@ export function formatObjectKeyPath(objectKey: string): string {
       // Get all parts after 'temp/{id}/'
       const productId = parts[1];
       const filename = parts.slice(2).join('/');
-      return `${API_FILES_BASE}/${STORAGE_FOLDERS.TEMP}/${productId}/${encodeURIComponent(filename)}`;
+      
+      // Ensure we're not double-encoding paths with already encoded components
+      const safeFilename = filename.includes('%') ? filename : encodeURIComponent(filename);
+      const formattedUrl = `${API_FILES_BASE}/${STORAGE_FOLDERS.TEMP}/${productId}/${safeFilename}`;
+      
+      console.log("Formatted temp URL:", formattedUrl);
+      return formattedUrl;
     }
   }
   
@@ -223,14 +249,26 @@ export function formatObjectKeyPath(objectKey: string): string {
       const productId = parts[1];
       // Join all remaining parts to handle filenames with folders
       const filename = parts.slice(2).join('/');
-      return `${API_FILES_BASE}/${STORAGE_FOLDERS.PRODUCTS}/${productId}/${encodeURIComponent(filename)}`;
+      
+      // Ensure we're not double-encoding paths with already encoded components
+      const safeFilename = filename.includes('%') ? filename : encodeURIComponent(filename);
+      const formattedUrl = `${API_FILES_BASE}/${STORAGE_FOLDERS.PRODUCTS}/${productId}/${safeFilename}`;
+      
+      console.log("Formatted product URL:", formattedUrl);
+      return formattedUrl;
     }
   }
   
   // Generic object key handling
   const pathSegments = objectKey.split('/');
-  const encodedPath = pathSegments.map(segment => encodeURIComponent(segment)).join('/');
-  return `${API_FILES_BASE}/${encodedPath}`;
+  const encodedPath = pathSegments.map(segment => {
+    // Ensure we're not double-encoding paths with already encoded components
+    return segment.includes('%') ? segment : encodeURIComponent(segment);
+  }).join('/');
+  
+  const formattedUrl = `${API_FILES_BASE}/${encodedPath}`;
+  console.log("Formatted generic URL:", formattedUrl);
+  return formattedUrl;
 }
 
 /**
@@ -238,6 +276,9 @@ export function formatObjectKeyPath(objectKey: string): string {
  */
 export function formatUrlPath(url: string): string {
   if (!url) return '';
+  
+  // Debugging
+  console.log("formatUrlPath input:", url);
   
   // Handle already absolute URLs
   if (url.startsWith('http') || url.startsWith('blob:')) {
@@ -252,6 +293,12 @@ export function formatUrlPath(url: string): string {
   // Handle API files URLs
   if (url.startsWith('/api/files/')) {
     try {
+      // Don't re-encode URLs that already contain encoded components (%)
+      if (url.includes('%')) {
+        console.log("Already encoded URL, returning as is:", url);
+        return url;
+      }
+      
       const urlParts = url.split('/');
       
       // Special handling for temp folder with file upload paths
@@ -280,7 +327,9 @@ export function formatUrlPath(url: string): string {
         const apiBase = `/${urlParts[1]}/${urlParts[2]}`;
         const remainingParts = urlParts.slice(3);
         const encodedParts = remainingParts.map(part => encodeURIComponent(part));
-        return `${apiBase}/${encodedParts.join('/')}`;
+        const formattedUrl = `${apiBase}/${encodedParts.join('/')}`;
+        console.log("Formatted API URL:", formattedUrl);
+        return formattedUrl;
       }
     } catch (error) {
       console.error("Error encoding URL parts:", error);
@@ -290,8 +339,13 @@ export function formatUrlPath(url: string): string {
   // For other relative paths, encode all segments
   try {
     const segments = url.split('/').filter(s => s.length > 0);
-    const encodedSegments = segments.map(segment => encodeURIComponent(segment));
-    return `/${encodedSegments.join('/')}`;
+    const encodedSegments = segments.map(segment => {
+      // Don't re-encode segments that already have encoded characters
+      return segment.includes('%') ? segment : encodeURIComponent(segment);
+    });
+    const formattedUrl = `/${encodedSegments.join('/')}`;
+    console.log("Formatted relative URL:", formattedUrl);
+    return formattedUrl;
   } catch (error) {
     console.error("Error encoding relative URL:", error);
     return url;

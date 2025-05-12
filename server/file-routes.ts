@@ -18,6 +18,19 @@ router.get('/:path(*)', async (req: Request, res: Response) => {
     
     console.log(`Serving file: ${filePath}`);
     
+    // If path includes spaces, create a properly encoded URL and redirect
+    if (filePath.includes(' ')) {
+      console.log('File path contains spaces, redirecting to properly encoded URL');
+      // Split path into segments and properly encode each segment
+      const segments = filePath.split('/');
+      const encodedSegments = segments.map(segment => {
+        // Only encode if not already encoded
+        return segment.includes('%') ? segment : encodeURIComponent(segment);
+      });
+      const encodedPath = encodedSegments.join('/');
+      return res.redirect(`/api/files/${encodedPath}`);
+    }
+    
     // Check if file exists
     const exists = await objectStore.exists(filePath);
     if (!exists) {
@@ -38,6 +51,7 @@ router.get('/:path(*)', async (req: Request, res: Response) => {
     // Add CORS headers for image requests
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET');
+    res.setHeader('Vary', 'Origin');
     
     // Send file
     res.send(fileData);
@@ -80,6 +94,13 @@ router.get('/temp/:productId/:filename', async (req: Request, res: Response) => 
     const filePath = `${STORAGE_FOLDERS.TEMP}/${productId}/${filename}`;
     
     console.log(`Serving temp file: ${filePath}`);
+
+    // If filename contains spaces, create a properly encoded URL and redirect
+    if (filename.includes(' ')) {
+      console.log('Temp file name contains spaces, redirecting to properly encoded URL');
+      const encodedFilename = encodeURIComponent(filename);
+      return res.redirect(`/api/files/temp/${productId}/${encodedFilename}`);
+    }
     
     // Check if file exists
     const exists = await objectStore.exists(filePath);
@@ -98,6 +119,7 @@ router.get('/temp/:productId/:filename', async (req: Request, res: Response) => 
     // Add CORS headers for image requests
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET');
+    res.setHeader('Vary', 'Origin');
     
     // Send file
     res.send(fileData);
