@@ -17,12 +17,39 @@
 export function sanitizeFilename(filename: string): string {
   if (!filename) return '';
   
-  // Replace spaces with hyphens
-  let sanitized = filename.replace(/\s+/g, '-');
+  // Extract just the filename, ignoring any path components
+  // This is a better approach for path traversal prevention
+  const pathComponents = filename.split(/[\/\\]/);
+  let filenameOnly = pathComponents.pop() || '';
   
-  // Remove any characters that aren't alphanumeric, hyphens, underscores, or periods
-  // This keeps the extension intact while removing problematic characters
-  sanitized = sanitized.replace(/[^a-zA-Z0-9\-_\.]/g, '');
+  // If we're dealing with a path traversal attempt, use the last meaningful component
+  // For patterns like "../../dangerous/path.jpg", we want "dangerous/path.jpg"
+  if (pathComponents.length > 0 && pathComponents.some(p => p !== '.' && p !== '..')) {
+    // Find the last meaningful directory name (not . or ..)
+    for (let i = pathComponents.length - 1; i >= 0; i--) {
+      if (pathComponents[i] !== '.' && pathComponents[i] !== '..') {
+        filenameOnly = `${pathComponents[i]}-${filenameOnly}`;
+        break;
+      }
+    }
+  }
+  
+  // Normalize accented characters before further processing
+  // This converts characters like "é" to "e", "ü" to "u", etc.
+  try {
+    filenameOnly = filenameOnly.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  } catch (e) {
+    // Ignore normalization errors, continue with the original string
+  }
+  
+  // Convert to lowercase for consistency
+  filenameOnly = filenameOnly.toLowerCase();
+  
+  // Replace spaces with hyphens
+  let sanitized = filenameOnly.replace(/\s+/g, '-');
+  
+  // Replace special characters with hyphens (not just remove them)
+  sanitized = sanitized.replace(/[^a-z0-9\-_\.]/g, '-');
   
   // Ensure we don't have consecutive hyphens or underscores
   sanitized = sanitized.replace(/[-_]{2,}/g, '-');
@@ -149,6 +176,12 @@ export function ensureValidImageUrl(url: string): string {
     if (url.startsWith('http://') || url.startsWith('https://')) {
       const parsedUrl = new URL(url);
       return parsedUrl.toString();
+    }
+    
+    // Check if URL is already encoded (contains % followed by two hex digits)
+    if (/%[0-9A-F]{2}/i.test(url)) {
+      // Already encoded URL, return as is
+      return url;
     }
     
     // If it's a relative URL, encode the path components but preserve slashes
