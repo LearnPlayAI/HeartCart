@@ -25,6 +25,7 @@ import path from "path";
 import fs from "fs";
 import fileRoutes from "./file-routes";
 import uploadHandlers from "./upload-handlers";
+import fileBrowserRoutes from "./file-browsing-routes";
 import registerAttributeRoutes from "./attribute-routes";
 import registerProductAttributeRoutes from "./attribute-routes-product";
 import attributeDiscountRoutes from "./attribute-discount-routes";
@@ -5230,6 +5231,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register batch upload routes for mass product upload
   app.use('/api/batch-upload', batchUploadRoutes);
+  
+  // Register file browser routes for object storage management
+  app.use('/api/file-browser', fileBrowserRoutes);
 
   const httpServer = createServer(app);
   return httpServer;

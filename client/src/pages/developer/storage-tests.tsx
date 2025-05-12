@@ -33,6 +33,7 @@ import { useToast } from '@/hooks/use-toast';
 import DeveloperLayout from '@/components/developer/developer-layout';
 import TestResults from '@/components/developer/test-results';
 import PerformanceResultsView from '@/components/developer/performance-results-view';
+import FileManagement from '@/components/developer/file-management';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 
@@ -652,6 +653,9 @@ function StorageTestsPage() {
           </Card>
         </TabsContent>
       </Tabs>
+      
+      {/* File Management Section */}
+      <FileManagement />
     </DeveloperLayout>
   );
 }
