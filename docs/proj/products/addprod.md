@@ -1,170 +1,239 @@
 # Add Product Implementation Roadmap
 
-This document outlines the complete implementation plan for redesigning the product addition process from the `/admin/catalogs` page. The goal is to create a clean, intuitive wizard interface for adding products in the context of a specific catalog.
+This document outlines the complete implementation plan for a clean-break redesign of the product addition process from the `/admin/catalogs` page. The goal is to create a brand new wizard interface for adding products in the context of a specific catalog, with no reliance on existing product form components.
 
 ## Overview
 
-The current product creation process needs to be redesigned to:
-1. Allow users to add a product directly from a catalog context
+The current product creation process needs to be completely rebuilt to:
+1. Allow users to add products directly from a catalog context
 2. Guide users through a 4-step wizard for adding all required product information
 3. Simplify the product creation process with context-aware defaults
-4. Support attribute management and AI-powered features
+4. Support advanced attribute management and AI-powered features
 
 ## Implementation Tasks
 
-### 1. Data Model & Schema Updates
+### 1. Project Setup & Planning
 
-#### 1.1 Database Schema Enhancements
-- [ ] Update the product schema in `shared/schema.ts` with new required fields:
+#### 1.1 Component Architecture Planning
+- [ ] Define new component structure and naming conventions
+- [ ] Create component directory structure for the new wizard
+- [ ] Define interfaces and types for the new wizard components
+- [ ] Document architecture decisions and component relationships
+
+#### 1.2 New Code Structure Setup
+- [ ] Create a new directory structure for the wizard (`client/src/components/admin/product-wizard/`)
+- [ ] Set up shared types and interfaces (`client/src/components/admin/product-wizard/types.ts`)
+- [ ] Create a state management structure (`client/src/components/admin/product-wizard/context.tsx`)
+- [ ] Define component boundaries with clear responsibilities
+
+### 2. Data Model & Schema Updates
+
+#### 2.1 Database Schema Expansion
+- [ ] Add new fields to product schema in `shared/schema.ts`:
   - [ ] minimumPrice field (for setting price floors)
   - [ ] minimumOrder field (for supplier requirements)
   - [ ] discountLabel field (for displaying discount type/occasion)
   - [ ] specialSaleText field (for custom sale messaging)
   - [ ] specialSaleStart and specialSaleEnd fields (separate from flash sale dates)
-  - [ ] Add any additional field constraints (e.g., validation rules)
+  - [ ] requiredAttributeIds array field (to track mandatory attributes)
 
-#### 1.2 Update Validation Schemas
-- [ ] Update the product validation schemas in `shared/validation-schemas.ts`
-- [ ] Create/update Zod schemas for the new form wizard steps
-- [ ] Add validation for required attributes selection
+#### 2.2 New Validation Schema Creation
+- [ ] Create new product wizard validation schemas in `shared/validation-schemas.ts`
+- [ ] Create step-specific validation schemas for each wizard step
+- [ ] Create attribute requirement validation schema
 
-#### 1.3 Update Database Migration Files
-- [ ] Create a database migration script for the new fields
-- [ ] Ensure safe migration path for existing products
+#### 2.3 Database Migration Implementation
+- [ ] Create database migration script for the new fields
+- [ ] Implement safe conversion of existing product data
+- [ ] Add indexes for new searchable fields
 
-### 2. Backend API Enhancements
+### 3. Backend API Development
 
-#### 2.1 Storage Service Layer Updates
-- [ ] Update `server/storage.ts` with methods for the new fields
-- [ ] Add methods for setting attribute requirements
-- [ ] Implement special sale configuration storage
-- [ ] Add methods to retrieve products in the context of catalogs with additional fields
+#### 3.1 New Storage Service Methods
+- [ ] Create new methods in `server/storage.ts` with clear suffixes (e.g., `createProductWithWizard`)
+- [ ] Implement methods for handling product attributes as required/optional
+- [ ] Create special sale configuration storage methods
+- [ ] Implement catalog-context product retrieval methods
 
-#### 2.2 API Route Updates
-- [ ] Update product creation endpoint to support context-based creation
-- [ ] Add endpoint for retrieving catalog's default values
-- [ ] Add wizard state persistence endpoints (save draft/progress)
-- [ ] Add endpoints for managing required product attributes
-- [ ] Create API for special sale configuration
+#### 3.2 New API Routes Creation
+- [ ] Create new product wizard API routes (with `/wizard` URL segment)
+- [ ] Implement catalog context retrieval endpoints
+- [ ] Create wizard draft saving and retrieval endpoints
+- [ ] Implement attribute requirement management endpoints
+- [ ] Add special sale configuration endpoints
 
-#### 2.3 Backend Middleware & Validation
-- [ ] Implement middleware for catalog-context product operations
-- [ ] Add validation for the new product fields
+#### 3.3 API Security & Validation
+- [ ] Implement middleware for wizard-specific operations
+- [ ] Create validators for all new API endpoints
 - [ ] Ensure proper error handling for the wizard process
+- [ ] Add permission checks for catalog-based operations
 
-### 3. Frontend Components Structure
+### 4. New Wizard Context & Navigation Framework
 
-#### 3.1 Wizard Framework 
-- [ ] Create a new `ProductWizardProvider` context component for state management
-- [ ] Implement wizard navigation logic and progression management
-- [ ] Add draft saving functionality
-- [ ] Create progress indicators and navigation UI
+#### 4.1 Wizard State Management
+- [ ] Create `ProductWizardProvider` context component
+- [ ] Implement wizard state reducer
+- [ ] Add persistence layer for wizard drafts
+- [ ] Create navigation guards for validation
 
-#### 3.2 Update Routes & Navigation
-- [ ] Update the "Add Product" button flow in `/admin/catalogs/[id]/products`
-- [ ] Implement proper navigation with context passing
-- [ ] Create route handlers for the wizard with catalog context
+#### 4.2 Wizard Navigation Component
+- [ ] Create `WizardNavigation` component
+- [ ] Implement step progress visualization
+- [ ] Add step validation indicators
+- [ ] Create wizard header with contextual information
 
-### 4. Wizard Step Components
+#### 4.3 Wizard Container & Layout
+- [ ] Create `WizardContainer` component with consistent layout
+- [ ] Implement responsive design for all viewports
+- [ ] Add transition animations between steps
+- [ ] Create consistent action button patterns
 
-#### 4.1 Step 1: Basic Product Info
-- [ ] Create/update component for basic product information:
-  - [ ] Title field
-  - [ ] Description field
-  - [ ] Category selector with context awareness
-  - [ ] Pricing information (Cost Price, Regular Price, Sale Price)
+### 5. New Step Components Implementation
+
+#### 5.1 Step 1: Basic Product Info Component
+- [ ] Create `BasicInfoStep.tsx` component
+- [ ] Implement the following fields:
+  - [ ] Title field with validation
+  - [ ] Description field with rich text editor
+  - [ ] Category selector with catalog context
+  - [ ] Pricing fields (Cost Price, Regular Price, Sale Price)
   - [ ] Discount percentage and Discount Label fields
-  - [ ] Minimum Price field
-- [ ] Implement validation for basic information step
-- [ ] Add auto-saving for partially completed step
+  - [ ] Minimum Price field with validation
+- [ ] Add step-specific validation logic
+- [ ] Implement auto-save functionality
 
-#### 4.2 Step 2: Product Images
-- [ ] Create/update component for product images:
-  - [ ] Image upload component with drag-and-drop support
-  - [ ] Main image selection functionality
-  - [ ] Image reordering capability
+#### 5.2 Step 2: Product Images Component
+- [ ] Create `ProductImagesStep.tsx` component
+- [ ] Implement the following features:
+  - [ ] Image upload with drag-and-drop support
+  - [ ] Main image selection controls
+  - [ ] Image reordering with drag-and-drop
   - [ ] Image deletion functionality
-- [ ] Implement image processing and optimization
-- [ ] Add background removal option using AI
+  - [ ] Image metadata editing
+- [ ] Add image processing features
+- [ ] Implement AI background removal integration
 - [ ] Create image preview functionality
 
-#### 4.3 Step 3: Additional Product Information
-- [ ] Create/update component for additional information:
-  - [ ] SKU, Brand, Minimum Order fields
-  - [ ] Tags management with AI suggestion option
+#### 5.3 Step 3: Additional Product Info Component
+- [ ] Create `AdditionalInfoStep.tsx` component
+- [ ] Implement the following sections:
+  - [ ] Product details section (SKU, Brand, Minimum Order)
+  - [ ] Tags management with AI suggestions
   - [ ] Short description field
-  - [ ] Product Attributes management section:
-    - [ ] Global attribute selection
+  - [ ] Product attributes management:
+    - [ ] Global attribute selector component
     - [ ] Attribute values/options assignment
-    - [ ] Required attribute flagging
-  - [ ] Sales Information section:
-    - [ ] Flash sale date/time range picker
-    - [ ] Free Delivery toggle (for products over R1000)
+    - [ ] Required attribute flagging interface
+  - [ ] Sales information section:
+    - [ ] Flash sale date/time picker
+    - [ ] Free Delivery toggle (conditional on price)
     - [ ] Featured Product toggle
-    - [ ] Special Sale configuration (label, date range, custom text)
+    - [ ] Special Sale configuration panel
   - [ ] Product status selector (draft/inactive/active)
-- [ ] Implement validation for additional information step
+- [ ] Implement complex validation logic
 - [ ] Create AI integration for tag suggestions
 
-#### 4.4 Step 4: Review & Save
-- [ ] Create component for review and saving:
-  - [ ] Product card preview component
-  - [ ] Product detail preview component
-  - [ ] Validation summary for all steps
-  - [ ] Action buttons (Save, Cancel, Go Back)
-- [ ] Implement final validation before submission
-- [ ] Create success/error handling for final save
+#### 5.4 Step 4: Review & Save Component
+- [ ] Create `ReviewSaveStep.tsx` component
+- [ ] Implement the following features:
+  - [ ] Product card preview (exactly as it will appear)
+  - [ ] Product detail preview (tabs, sections, etc.)
+  - [ ] Complete validation summary
+  - [ ] Action buttons (Save, Back, Cancel)
+- [ ] Add final validation checks
+- [ ] Implement submission handling with loading states
 
-### 5. Contextual Features & Functionality
+### 6. Route & Navigation Integration
 
-#### 5.1 Catalog Context Integration
-- [ ] Auto-fill supplier information from catalog
-- [ ] Set default values based on catalog settings
-- [ ] Implement catalog-specific validation rules
+#### 6.1 New Route Creation
+- [ ] Create a new product wizard route in `client/src/App.tsx`
+- [ ] Implement route parameters for catalog context
+- [ ] Add navigation interceptors for unsaved changes
+- [ ] Create route-based wizard state initialization
 
-#### 5.2 AI Integration Features
-- [ ] Enhance image analysis capabilities for product suggestions
-- [ ] Implement pricing suggestions based on catalog context
-- [ ] Add tag generation from product images and description
+#### 6.2 Catalog Integration Points
+- [ ] Update the "Add Product" button in catalog products list
+- [ ] Remove old component references
+- [ ] Implement navigation with proper context passing
+- [ ] Add success redirect handling
 
-#### 5.3 Attribute Management Enhancements
-- [ ] Implement UI for marking attributes as required for cart addition
-- [ ] Create attribute preview in product card/detail views
-- [ ] Add attribute filtering in product lists
+#### 6.3 Admin Navigation Updates
+- [ ] Update admin navigation to include new wizard
+- [ ] Add breadcrumb support for wizard routes
+- [ ] Implement proper return navigation after completion
+- [ ] Add wizard entry points from multiple locations
 
-### 6. Testing & Quality Assurance
+### 7. Context-Aware Features Implementation
 
-#### 6.1 Unit & Integration Testing
-- [ ] Create unit tests for new components and functions
-- [ ] Implement integration tests for the wizard flow
-- [ ] Test database migrations and schema updates
+#### 7.1 Catalog Context Features
+- [ ] Implement auto-filling from catalog data
+- [ ] Create default value provider based on catalog settings
+- [ ] Add catalog-specific validation rules
+- [ ] Implement supplier information integration
 
-#### 6.2 User Acceptance Testing
-- [ ] Create test cases for the product addition flow
-- [ ] Validate the wizard with different product types
-- [ ] Test edge cases for attribute management
-- [ ] Verify proper error handling throughout the wizard
+#### 7.2 AI Feature Integration
+- [ ] Create AI image analysis integration
+- [ ] Implement AI-powered pricing suggestions
+- [ ] Add tag generation from product information
+- [ ] Create attribute suggestion features
 
-#### 6.3 Performance & Accessibility Testing
-- [ ] Test wizard performance with large catalogs
-- [ ] Ensure mobile responsiveness of all wizard steps
-- [ ] Verify accessibility compliance
+#### 7.3 Attribute Management Features
+- [ ] Create required attribute selection interface
+- [ ] Implement attribute preview components
+- [ ] Add attribute filtering mechanisms
+- [ ] Create attribute-specific validation
 
-### 7. Documentation & Deployment
+### 8. Testing & Quality Assurance
 
-#### 7.1 Admin Documentation
-- [ ] Create user documentation for the new wizard
-- [ ] Add help text and tooltips within the interface
-- [ ] Document attribute management process
+#### 8.1 Component Testing
+- [ ] Create test suite for wizard components
+- [ ] Implement unit tests for state management
+- [ ] Add integration tests for step transitions
+- [ ] Test form validation thoroughly
 
-#### 7.2 Deployment Strategy
-- [ ] Plan phased rollout of the new feature
-- [ ] Create migration path for existing products
-- [ ] Prepare rollback procedures if needed
+#### 8.2 End-to-End Testing
+- [ ] Create E2E tests for the complete wizard flow
+- [ ] Test with various product types and configurations
+- [ ] Validate attribute management edge cases
+- [ ] Verify proper error handling in all scenarios
+
+#### 8.3 Performance & Accessibility Verification
+- [ ] Test with large datasets
+- [ ] Measure and optimize component render performance
+- [ ] Conduct accessibility audit
+- [ ] Test keyboard navigation and screen reader compatibility
+
+### 9. Documentation & Training
+
+#### 9.1 User Documentation
+- [ ] Create step-by-step guide for the new wizard
+- [ ] Add tooltips and contextual help throughout interface
+- [ ] Document all new fields and features
+- [ ] Create video demonstration of the complete flow
+
+#### 9.2 Code Documentation
+- [ ] Add comprehensive JSDoc comments to all components
+- [ ] Create architecture diagram for the wizard
+- [ ] Document state management patterns
+- [ ] Add README file for the wizard component structure
+
+### 10. Clean-Up & Deployment Planning
+
+#### 10.1 Legacy Code Handling
+- [ ] Mark old components as deprecated
+- [ ] Add redirects from old routes to new wizard
+- [ ] Create plan for eventual removal of old components
+- [ ] Document transition plan for existing users
+
+#### 10.2 Deployment Strategy
+- [ ] Create a phased deployment plan
+- [ ] Implement feature flags for gradual rollout
+- [ ] Prepare database migration scripts
+- [ ] Create rollback procedures
 
 ## Missing Fields Identification
 
-Based on the requirements and current implementation, the following fields appear to be missing:
+Based on the requirements and current implementation, the following fields must be added to the product schema:
 
 1. **Minimum Price** - Required for setting price floors on products
 2. **Discount Label** - For displaying discount type/occasion
@@ -175,65 +244,81 @@ Based on the requirements and current implementation, the following fields appea
 
 ## Implementation Recommendations
 
-### Architecture Recommendations
-1. **State Management & Data Flow**:
-   - Use React context for wizard state instead of passing props down the component tree
-   - Implement auto-save functionality using local storage or server-side drafts
-   - Use a reducer pattern for complex state transitions between steps
+### Clean-Break Architecture Approach
+1. **Complete Separation from Legacy Code**:
+   - Create entirely new component hierarchy with no dependencies on existing components
+   - Use new file naming conventions to clearly distinguish wizard components
+   - Create separate context provider to avoid state pollution
+   - Implement dedicated API endpoints for the wizard flow
 
-2. **Progressive Enhancement**:
-   - Build the wizard to work without JavaScript as a fallback
-   - Implement form validation both client and server-side
-   - Create a simplified single-page fallback for older browsers
+2. **State Management Approach**:
+   - Use React Context API with useReducer for complex state
+   - Create a persistence layer that saves draft state to server
+   - Implement clear action creators for state modifications
+   - Add robust error handling at each state transition
 
-3. **Error Handling & Recovery**:
-   - Implement robust error boundary components
-   - Create persistent draft saving to prevent data loss
-   - Add step-specific error handling and validation
+3. **Component Isolation Strategy**:
+   - Each step should be a standalone component with minimal dependencies
+   - Create shared UI components specific to the wizard
+   - Use composition over inheritance for component reuse
+   - Implement clear boundaries between presentation and logic
 
-4. **Performance Optimization**:
-   - Lazy load wizard steps to improve initial load time
-   - Optimize image uploads with client-side compression
-   - Use debouncing for auto-save functionality
+4. **Parallel Implementation Strategy**:
+   - Build new system alongside existing one
+   - Add feature flags to control visibility
+   - Once new system is complete, redirect from old routes
+   - Eventually remove old components after transition period
 
-### UI/UX Recommendations
-1. **Contextual Guidance**:
-   - Add inline help text that explains each field's purpose
-   - Provide example values for complex fields
-   - Show validation in real-time with clear error messages
+### UI/UX Design Principles
+1. **Guided Experience Design**:
+   - Create clear step indicators showing progress
+   - Add contextual help that explains process at each step
+   - Implement "smart defaults" based on catalog context
+   - Provide clear error recovery paths
 
-2. **Responsive Design Considerations**:
-   - Create mobile-specific layouts for each wizard step
-   - Simplify the UI on smaller screens without losing functionality
-   - Ensure touch-friendly interactive elements
+2. **Mobile-First Approach**:
+   - Design for mobile screens first, then enhance for larger displays
+   - Use responsive layouts that adapt to screen size
+   - Create touch-friendly interaction patterns
+   - Test thoroughly on multiple device sizes
 
-3. **Accessibility Enhancements**:
-   - Add screen reader announcements for step transitions
-   - Ensure keyboard navigation throughout the wizard
-   - Maintain proper heading hierarchy and ARIA landmarks
+3. **Visual Feedback System**:
+   - Show real-time validation feedback
+   - Provide clear success/error states
+   - Implement thoughtful loading indicators
+   - Add micro-interactions for important actions
 
-4. **Visual Feedback**:
-   - Show clear progress indicators between steps
-   - Provide visual confirmation when steps are completed
-   - Use animation sparingly to guide attention
+4. **Accessibility as Core Requirement**:
+   - Ensure screen reader compatibility throughout
+   - Implement proper focus management between steps
+   - Use appropriate ARIA attributes for complex components
+   - Maintain sufficient color contrast
 
-### Technical Implementation Strategy
-1. **Phased Development Approach**:
-   - First implement the data model and API changes
-   - Then build the wizard framework and navigation
-   - Develop each step component independently
-   - Finally integrate all components with state management
+### Technical Implementation Guidelines
+1. **Database Considerations**:
+   - Add new fields with NULL defaults for backward compatibility
+   - Create migration scripts that preserve existing data
+   - Add appropriate indexes for performance
+   - Document schema changes thoroughly
 
-2. **Testing Strategy**:
-   - Create test fixtures for different product types
-   - Test wizard state transitions extensively
-   - Verify data consistency across all steps
+2. **API Design Principles**:
+   - Create RESTful endpoints for each wizard operation
+   - Implement consistent error response format
+   - Add comprehensive validation for all inputs
+   - Document API with examples for each endpoint
 
-3. **Integration Points**:
-   - Ensure seamless integration with existing catalog management
-   - Verify compatibility with current product listing pages
-   - Test integration with search and filtering components
+3. **Testing Strategy**:
+   - Write tests for each component in isolation
+   - Create integration tests for wizard as a whole
+   - Test edge cases thoroughly (large catalogs, many attributes)
+   - Implement E2E tests for critical flows
+
+4. **Code Quality Standards**:
+   - Follow consistent naming conventions
+   - Add comprehensive comments and documentation
+   - Implement strict TypeScript type checking
+   - Use linting and code formatting consistently
 
 ## Conclusion
 
-This implementation roadmap provides a comprehensive plan to redesign the product addition process with a focus on usability, efficiency, and contextual awareness. By following a logical implementation order starting with data models, then backend services, frontend framework, and finally individual components, we ensure a solid foundation for this feature. The changes will significantly improve the admin user experience while maintaining compatibility with the existing system.
+This implementation roadmap provides a comprehensive plan for creating a brand new product addition wizard with no dependencies on existing components. By taking this clean-break approach, we can implement all requirements without being constrained by the current implementation. This will result in a more maintainable, feature-rich, and user-friendly product creation experience that fully satisfies the business requirements while providing a solid foundation for future enhancements.
