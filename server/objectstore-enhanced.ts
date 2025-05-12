@@ -446,8 +446,21 @@ export class EnhancedObjectStorageService {
           : data;
         
         try {
-          const result = await this.client.upload(filePath, fileData);
-          return result && result.ok !== undefined;
+          // Use the appropriate API based on what's available
+          // At runtime, we'll know what method is available
+          if ('upload' in this.client) {
+            const result = await (this.client as any).upload(filePath, fileData);
+            return result && result.ok !== undefined;
+          } else if ('put' in this.client) {
+            const result = await (this.client as any).put(filePath, data);
+            return result && result.ok !== undefined;
+          } else if ('putStream' in this.client) {
+            const result = await (this.client as any).putStream(filePath, data);
+            return result && result.ok !== undefined;
+          } else {
+            console.error('No compatible upload method found on Client API');
+            return false;
+          }
         } catch (uploadError) {
           console.error(`Error uploading file ${filePath}:`, uploadError);
           return false;
@@ -476,14 +489,23 @@ export class EnhancedObjectStorageService {
         return await readFile(localPath);
       } else {
         try {
-          const result = await this.client.download(filePath);
-          
-          if (!result.ok) {
+          // Use the appropriate API based on what's available
+          if ('download' in this.client) {
+            const result = await (this.client as any).download(filePath);
+            if (!result.ok) {
+              return null;
+            }
+            return Buffer.from(result.ok);
+          } else if ('get' in this.client) {
+            const result = await (this.client as any).get(filePath);
+            if (!result.ok) {
+              return null;
+            }
+            return result.ok;
+          } else {
+            console.error('No compatible download method found on Client API');
             return null;
           }
-          
-          // Convert the ArrayBuffer to Buffer
-          return Buffer.from(result.ok);
         } catch (downloadError) {
           console.error(`Error downloading file ${filePath}:`, downloadError);
           return null;
@@ -519,9 +541,17 @@ export class EnhancedObjectStorageService {
             return true; // Consider it a success if file doesn't exist
           }
           
-          // Use the remove method from Replit Client API
-          const result = await this.client.remove(filePath);
-          return result && result.ok !== undefined;
+          // Use the appropriate API based on what's available
+          if ('remove' in this.client) {
+            const result = await (this.client as any).remove(filePath);
+            return result && result.ok !== undefined;
+          } else if ('delete' in this.client) {
+            const result = await (this.client as any).delete(filePath);
+            return result && result.ok !== undefined;
+          } else {
+            console.error('No compatible delete method found on Client API');
+            return false;
+          }
         } catch (deleteError) {
           console.error(`Error deleting file ${filePath}:`, deleteError);
           return false;
@@ -546,12 +576,61 @@ export const enhancedObjectStorage = new EnhancedObjectStorageService();
 
 // Helper function to log available methods on Client API (for debugging)
 export async function logClientAPIMethods(): Promise<void> {
+  console.log("==== REPLIT OBJECT STORAGE CLIENT API INSPECTION ====");
+  
   try {
     await enhancedObjectStorage.initialize();
     const client = (enhancedObjectStorage as any).client;
-    console.log('Available Client API methods:', Object.getOwnPropertyNames(client));
-    console.log('Available Client API prototype methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(client)));
+    
+    if (!client) {
+      console.log("No client instance available");
+      return;
+    }
+    
+    // Log all methods and properties on the client object
+    console.log("\nClient Object Properties and Methods:");
+    const clientProps = Object.getOwnPropertyNames(client);
+    const clientMethods = clientProps.filter(prop => typeof client[prop] === 'function');
+    const clientProperties = clientProps.filter(prop => typeof client[prop] !== 'function');
+    
+    console.log("\nMethods:");
+    clientMethods.forEach(method => {
+      try {
+        const funcStr = client[method].toString().split('\n')[0];
+        console.log(`- ${method}: ${funcStr}`);
+      } catch (err) {
+        console.log(`- ${method}: [Error getting function signature]`);
+      }
+    });
+    
+    console.log("\nProperties:");
+    clientProperties.forEach(prop => {
+      try {
+        console.log(`- ${prop}: ${typeof client[prop]}`);
+      } catch (err) {
+        console.log(`- ${prop}: [Error getting property type]`);
+      }
+    });
+    
+    // Log prototype methods if available
+    const proto = Object.getPrototypeOf(client);
+    if (proto) {
+      console.log("\nPrototype Methods:");
+      const protoMethods = Object.getOwnPropertyNames(proto)
+        .filter(name => name !== 'constructor' && typeof proto[name] === 'function');
+      
+      protoMethods.forEach(method => {
+        try {
+          const funcStr = proto[method].toString().split('\n')[0];
+          console.log(`- ${method}: ${funcStr}`);
+        } catch (err) {
+          console.log(`- ${method}: [Error getting function signature]`);
+        }
+      });
+    }
+    
+    console.log("\n==== END OF API INSPECTION ====");
   } catch (error) {
-    console.error('Error checking Client API methods:', error);
+    console.error("Error during API inspection:", error);
   }
 }

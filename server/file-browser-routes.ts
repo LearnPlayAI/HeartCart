@@ -2,9 +2,25 @@ import { Request, Response, Router } from 'express';
 import multer from 'multer';
 import path from 'path';
 import { enhancedObjectStorage, STORAGE_FOLDERS, logClientAPIMethods } from './objectstore-enhanced';
-import { isAuthenticated } from './middleware';
+import { isAuthenticated } from './auth-middleware';
 
 const router = Router();
+
+/**
+ * Get Client API Methods (diagnostic route)
+ */
+router.get('/api-methods', isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    await logClientAPIMethods();
+    return res.json({
+      success: true,
+      message: 'Client API methods logged to console. Check server logs.'
+    });
+  } catch (error) {
+    console.error('Error checking API methods:', error);
+    return res.status(500).json({ success: false, error: 'Failed to check API methods' });
+  }
+});
 
 /**
  * Helper function to ensure valid path
