@@ -90,11 +90,16 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className 
         const uploadedImages = result.files.map((file, index) => {
           const newImage: UploadedImage = {
             id: file.id, // Use ID from server if available
-            url: file.url, // Use the URL from the server
-            objectKey: file.objectKey,
+            url: file.url, // URL for accessing the file via API
+            objectKey: file.objectKey, // Storage path to the file
             isMain: isFirstUpload && index === 0, // First image is main if no existing main image
-            order: startingOrder + index
+            order: startingOrder + index,
+            metadata: {
+              size: file.size,
+              originalname: file.originalname || file.filename,
+            }
           };
+          console.log('Processing image from API:', file, 'into:', newImage);
           return newImage;
         });
         
@@ -368,7 +373,21 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className 
                                   src={image.url} 
                                   alt="Product" 
                                   className="w-full h-40 object-cover"
+                                  onError={(e) => {
+                                    console.error('Failed to load image:', image.url);
+                                    // Add fallback display
+                                    e.currentTarget.classList.add('hidden');
+                                    const fallbackElement = e.currentTarget.parentElement?.querySelector('.fallback-display');
+                                    if (fallbackElement) {
+                                      fallbackElement.classList.remove('hidden');
+                                    }
+                                  }}
                                 />
+                                
+                                {/* Fallback icon when image fails to load */}
+                                <div className="absolute inset-0 flex items-center justify-center bg-gray-100 hidden fallback-display">
+                                  <ImageIcon className="h-12 w-12 text-gray-400" />
+                                </div>
                                 
                                 <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-opacity flex items-center justify-center opacity-0 group-hover:opacity-100">
                                   <div className="flex space-x-2">

@@ -30,7 +30,8 @@ export enum WizardActionType {
 export interface UploadedImage {
   id?: number;
   url: string;
-  file?: File;
+  objectKey?: string;   // Object key in storage
+  file?: File;          // Used only for client-side temp file references
   isMain: boolean;
   order: number;
   metadata?: {
@@ -39,6 +40,7 @@ export interface UploadedImage {
     height?: number;
     backgroundRemoved?: boolean;
     alt?: string;
+    processedAt?: string;
   };
 }
 
