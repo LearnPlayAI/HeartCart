@@ -30,6 +30,7 @@ import AdminAISettings from "@/pages/admin/ai-settings";
 import AdminSuppliers from "@/pages/admin/suppliers";
 import AdminCatalogs from "@/pages/admin/catalogs";
 import ProductEditPage from "@/pages/admin/product-edit";
+import ProductWizardPage from "@/pages/admin/product-wizard-new";
 import AddSupplier from "@/pages/admin/add-supplier";
 import EditSupplier from "@/pages/admin/edit-supplier";
 import AddCatalog from "@/pages/admin/add-catalog";
@@ -126,6 +127,10 @@ function App() {
               <AdminProtectedRoute path="/admin/products/:id/edit" component={ProductEditPage} />
               <AdminProtectedRoute path="/admin/products/:id/images" component={ProductImages} />
               <AdminProtectedRoute path="/admin/products/:productId/attributes" component={ProductAttributes} />
+              
+              {/* New Product Wizard Routes */}
+              <AdminProtectedRoute path="/admin/products/wizard/:id?" component={ProductWizardPage} />
+              <AdminProtectedRoute path="/admin/catalogs/:catalogId/products/wizard" component={ProductWizardPage} />
               <AdminProtectedRoute path="/admin/categories" component={AdminCategories} />
               <AdminProtectedRoute path="/admin/categories/:categoryId/attributes" component={CategoryAttributes} />
               <AdminProtectedRoute path="/admin/category-attributes/:categoryId" component={CategoryAttributes} />

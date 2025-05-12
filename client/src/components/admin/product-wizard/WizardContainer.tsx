@@ -1,242 +1,145 @@
 /**
- * Product Wizard Container Component
+ * Wizard Container Component
  * 
- * This component provides the layout container for the product wizard,
- * handling the display of navigation, step content, and action buttons.
+ * This component provides the container for the product wizard steps
+ * with navigation and action buttons.
  */
 
 import React, { ReactNode } from 'react';
+import { ChevronLeft, ChevronRight, Save } from 'lucide-react';
 import { useProductWizard, getStepConfig, canNavigateToStep, isStepValid } from './context';
 import { WizardStep, WizardActionType } from './types';
 import WizardNavigation from './WizardNavigation';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Save, Loader2 } from 'lucide-react';
-import { useLocation } from 'wouter';
-import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
+import { Card, CardContent } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 
 interface WizardContainerProps {
   children: ReactNode;
   onSave: () => Promise<boolean>;
   catalogName?: string;
-  className?: string;
 }
 
-export const WizardContainer: React.FC<WizardContainerProps> = ({
-  children,
+const WizardContainer: React.FC<WizardContainerProps> = ({ 
+  children, 
   onSave,
-  catalogName,
-  className
+  catalogName
 }) => {
   const { state, dispatch } = useProductWizard();
-  const steps = getStepConfig();
-  const [, navigate] = useLocation();
-  const { toast } = useToast();
+  const { currentStep, productData, isFormDirty, isLoading } = state;
   
-  // Get current step index
-  const currentStepIndex = steps.findIndex(step => step.id === state.currentStep);
-  const currentStep = steps[currentStepIndex];
-  const isFirstStep = currentStepIndex === 0;
-  const isLastStep = currentStepIndex === steps.length - 1;
+  // Handle moving to the next step
+  const handleNext = () => {
+    const nextStep = currentStep + 1;
+    if (nextStep <= WizardStep.REVIEW_SAVE && isStepValid(currentStep, productData)) {
+      dispatch({
+        type: WizardActionType.SET_STEP,
+        payload: nextStep
+      });
+    }
+  };
   
-  // Navigation handlers
+  // Handle moving to the previous step
   const handlePrevious = () => {
-    if (!isFirstStep) {
+    const prevStep = currentStep - 1;
+    if (prevStep >= WizardStep.BASIC_INFO) {
       dispatch({
         type: WizardActionType.SET_STEP,
-        payload: steps[currentStepIndex - 1].id
+        payload: prevStep
       });
     }
   };
   
-  const handleNext = async () => {
-    if (isLastStep) {
-      return;
-    }
-    
-    // Validate current step before proceeding
-    if (isStepValid(state, state.currentStep)) {
-      dispatch({
-        type: WizardActionType.SET_STEP,
-        payload: steps[currentStepIndex + 1].id
-      });
-    } else {
-      toast({
-        title: "Validation Error",
-        description: `Please complete all required fields in the ${currentStep.label} step`,
-        variant: "destructive"
-      });
-    }
-  };
-  
+  // Handle saving the product
   const handleSave = async () => {
-    try {
-      dispatch({ type: WizardActionType.SET_SUBMITTING, payload: true });
-      
-      // Validate all steps
-      const allStepsValid = steps.every(step => isStepValid(state, step.id));
-      
-      if (!allStepsValid) {
-        toast({
-          title: "Validation Error",
-          description: "Please complete all required fields in all steps before saving",
-          variant: "destructive"
+    // Validate all steps before saving
+    for (let step = WizardStep.BASIC_INFO; step <= WizardStep.ADDITIONAL_INFO; step++) {
+      if (!isStepValid(step, productData)) {
+        dispatch({
+          type: WizardActionType.SET_STEP,
+          payload: step
         });
         return;
       }
-      
-      // Call the provided save handler
-      const success = await onSave();
-      
-      if (success) {
-        toast({
-          title: "Success!",
-          description: "Product saved successfully",
-        });
-        
-        // Reset the form
-        dispatch({ type: WizardActionType.RESET_WIZARD });
-        
-        // Navigate back to products list or catalog
-        if (state.catalogId) {
-          navigate(`/admin/catalogs/${state.catalogId}/products`);
-        } else {
-          navigate('/admin/products');
-        }
-      }
-    } catch (error) {
-      console.error('Error saving product:', error);
-      toast({
-        title: "Error",
-        description: "Failed to save product. Please try again.",
-        variant: "destructive"
+    }
+    
+    const success = await onSave();
+    
+    if (success) {
+      // Reset wizard state on successful save
+      dispatch({
+        type: WizardActionType.RESET_WIZARD
       });
-    } finally {
-      dispatch({ type: WizardActionType.SET_SUBMITTING, payload: false });
     }
   };
   
-  const handleCancel = () => {
-    // Navigate back to products list or catalog
-    if (state.catalogId) {
-      navigate(`/admin/catalogs/${state.catalogId}/products`);
-    } else {
-      navigate('/admin/products');
-    }
-  };
+  // Check if we can navigate to the next step
+  const canGoNext = currentStep < WizardStep.REVIEW_SAVE && 
+                    isStepValid(currentStep, productData);
+  
+  // Check if we can navigate to the previous step
+  const canGoPrevious = currentStep > WizardStep.BASIC_INFO;
+  
+  // Check if we can save (last step or at any step with all required data)
+  const canSave = (currentStep === WizardStep.REVIEW_SAVE) || 
+                  (isFormDirty && Array.from(
+                    { length: WizardStep.ADDITIONAL_INFO + 1 }, 
+                    (_, i) => isStepValid(i, productData)
+                  ).every(Boolean));
   
   return (
-    <Card className={cn("w-full", className)}>
-      <CardHeader>
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <CardTitle>Add New Product</CardTitle>
-            {catalogName && (
-              <CardDescription>
-                Adding product to <span className="font-medium">{catalogName}</span> catalog
-              </CardDescription>
-            )}
-          </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleCancel}
-              disabled={state.isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="default"
-              size="sm"
-              onClick={handleSave}
-              disabled={state.isSubmitting}
-              className="bg-pink-600 hover:bg-pink-700"
-            >
-              {state.isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="mr-2 h-4 w-4" />
-                  Save Product
-                </>
-              )}
-            </Button>
-          </div>
+    <div className="space-y-6">
+      {/* Header info */}
+      {catalogName && (
+        <div className="text-sm text-muted-foreground">
+          <span>Adding product to catalog: </span>
+          <span className="font-medium">{catalogName}</span>
         </div>
-      </CardHeader>
+      )}
       
-      <CardContent>
-        {/* Step navigation */}
-        <WizardNavigation />
-        
-        {/* Step content */}
-        <div className="min-h-[400px] bg-white dark:bg-gray-950 rounded-md p-4">
+      {/* Step navigation */}
+      <WizardNavigation />
+      
+      {/* Main content area */}
+      <Card>
+        <CardContent className="pt-6">
           {children}
-        </div>
-      </CardContent>
+        </CardContent>
+      </Card>
       
-      <CardFooter className="flex justify-between border-t p-4 bg-slate-50 dark:bg-slate-900">
-        {!isFirstStep && (
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={handlePrevious}
-            disabled={state.isSubmitting}
-          >
-            <ChevronLeft className="mr-2 h-4 w-4" />
-            Previous
-          </Button>
-        )}
+      {/* Actions */}
+      <div className="flex justify-between pt-4">
+        <Button
+          variant="outline"
+          onClick={handlePrevious}
+          disabled={!canGoPrevious || isLoading}
+        >
+          <ChevronLeft className="mr-2 h-4 w-4" />
+          Previous
+        </Button>
         
-        {isFirstStep && (
-          <Button
-            variant="outline"
-            onClick={handleCancel}
-            disabled={state.isSubmitting}
-          >
-            Cancel
-          </Button>
-        )}
-        
-        <div className="flex-1" />
-        
-        {!isLastStep ? (
-          <Button 
-            type="button" 
-            onClick={handleNext}
-            disabled={state.isSubmitting || !isStepValid(state, state.currentStep)}
-            className="bg-pink-600 hover:bg-pink-700"
-          >
-            Continue
-            <ChevronRight className="ml-2 h-4 w-4" />
-          </Button>
-        ) : (
-          <Button
-            type="button"
-            onClick={handleSave}
-            disabled={state.isSubmitting}
-            className="bg-pink-600 hover:bg-pink-700"
-          >
-            {state.isSubmitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save className="mr-2 h-4 w-4" />
-                Save Product
-              </>
-            )}
-          </Button>
-        )}
-      </CardFooter>
-    </Card>
+        <div className="space-x-2">
+          {currentStep < WizardStep.REVIEW_SAVE ? (
+            <Button
+              onClick={handleNext}
+              disabled={!canGoNext || isLoading}
+            >
+              Next
+              <ChevronRight className="ml-2 h-4 w-4" />
+            </Button>
+          ) : (
+            <Button
+              onClick={handleSave}
+              disabled={!canSave || isLoading}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              <Save className="mr-2 h-4 w-4" />
+              Save Product
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
   );
 };
 
