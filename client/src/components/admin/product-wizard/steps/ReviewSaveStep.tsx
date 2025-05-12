@@ -59,56 +59,109 @@ const ensureValidImageUrl = (image: UploadedImage): string => {
     return image.url;
   }
   
-  // Direct access to Object Store URLs (this follows the server upload endpoint pattern)
+  // Direct access to Object Store URLs using objectKey (preferred method)
   if (image.objectKey) {
-    // Force objectKey to be encoded properly, even if nested
-    const encodedKey = image.objectKey
-      .split('/')
-      .map(part => encodeURIComponent(part))
-      .join('/');
-    
-    // For temp/pending uploads
+    // For temp/pending uploads, construct URL with proper encoding
     if (image.objectKey.includes('temp/pending/')) {
-      // Extract the filename with timestamp prefix
+      // The objectKey should follow the pattern: temp/pending/timestamp_randomprefix_filename.jpg
       const parts = image.objectKey.split('/');
       if (parts.length >= 3) {
+        // Get all parts after 'temp/pending/'
         const filenameWithTimestamp = parts.slice(2).join('/');
+        
+        // Log the attempt for debugging
+        console.log("Image details:", image);
+        console.log("Retrying with properly encoded temp URL format:", `/api/files/temp/pending/${encodeURIComponent(filenameWithTimestamp)}`);
+        
+        // Construct proper URL for API access with proper encoding
         return `/api/files/temp/pending/${encodeURIComponent(filenameWithTimestamp)}`;
       }
-      return `/api/files/${encodedKey}`;
-    } 
+    }
     
-    // For product-specific images
+    // For product-specific images (products/${productId}/${filename})
     if (image.objectKey.startsWith('products/')) {
       const parts = image.objectKey.split('/');
       if (parts.length >= 3) {
         const productId = parts[1];
+        // Join all remaining parts to handle filenames with spaces
         const filename = parts.slice(2).join('/');
-        return `/api/files/products/${encodeURIComponent(productId)}/${encodeURIComponent(filename)}`;
+        
+        console.log("Using product URL format:", `/api/files/products/${productId}/${encodeURIComponent(filename)}`);
+        
+        return `/api/files/products/${productId}/${encodeURIComponent(filename)}`;
       }
     }
     
-    // Fallback to direct objectKey access
-    return `/api/files/${encodedKey}`;
+    // Fallback: encode each path segment separately
+    const pathSegments = image.objectKey.split('/');
+    const encodedPath = pathSegments.map(segment => encodeURIComponent(segment)).join('/');
+    
+    console.log("Using fallback encoded path:", `/api/files/${encodedPath}`);
+    
+    return `/api/files/${encodedPath}`;
+  }
+  
+  // Handle relative API URLs (/api/files/...)
+  if (image.url && image.url.startsWith('/api/files/')) {
+    try {
+      // Parse the URL and encode each path segment
+      const urlParts = image.url.split('/').filter(part => part.length > 0);
+      
+      // Reconstruct with proper encoding for segments after /api/files/
+      if (urlParts.length >= 2 && urlParts[0] === 'api' && urlParts[1] === 'files') {
+        const apiBase = `/${urlParts[0]}/${urlParts[1]}`;
+        const remainingParts = urlParts.slice(2);
+        const encodedParts = remainingParts.map(part => encodeURIComponent(part));
+        
+        const encodedUrl = `${apiBase}/${encodedParts.join('/')}`;
+        console.log("Encoded API URL:", encodedUrl);
+        
+        return encodedUrl;
+      }
+    } catch (error) {
+      console.error("Error encoding URL parts:", error);
+    }
+  }
+  
+  // Special case for temp images
+  if (image.url && image.url.includes('/temp/pending/')) {
+    try {
+      const urlObj = new URL(image.url, window.location.origin);
+      const pathParts = urlObj.pathname.split('/');
+      
+      // Extract the filename with timestamp prefix (last part)
+      if (pathParts.length > 0) {
+        const filename = pathParts[pathParts.length - 1];
+        console.log("Extracted filename from URL:", filename);
+        return `/api/files/temp/pending/${encodeURIComponent(filename)}`;
+      }
+    } catch (error) {
+      console.error("Error handling temp URL:", error);
+    }
   }
   
   // If URL starts with /, it's a relative path
-  if (image.url.startsWith('/')) {
-    // Handle direct API paths
-    if (image.url.startsWith('/api/files/')) {
-      // Split the URL into parts and properly encode the filename
-      const urlParts = image.url.split('/');
-      const filename = urlParts.pop() || '';
-      const path = urlParts.join('/');
-      return `${path}/${encodeURIComponent(filename)}`;
+  if (image.url && image.url.startsWith('/')) {
+    // For other relative paths, encode the segments
+    try {
+      const segments = image.url.split('/').filter(s => s.length > 0);
+      const encodedSegments = segments.map(segment => encodeURIComponent(segment));
+      return `/${encodedSegments.join('/')}`;
+    } catch (error) {
+      console.error("Error encoding relative URL:", error);
+      return image.url;
     }
-    
-    // For other relative paths, use as is
+  }
+  
+  // If we get here and image has a URL, try to load it
+  if (image.url) {
+    console.log("Using original URL as fallback:", image.url);
     return image.url;
   }
   
-  // Return whatever URL we have as a fallback
-  return image.url;
+  // Last resort fallback
+  console.error("Failed to generate valid image URL:", image);
+  return '';
 }
 
 const ReviewSaveStep: React.FC<ReviewSaveStepProps> = ({ className }) => {
