@@ -42,6 +42,7 @@ import { useCart } from '@/hooks/use-cart';
 import { useToast } from '@/hooks/use-toast';
 import { useAttributeDiscounts } from '@/hooks/use-attribute-discounts';
 import { formatCurrency, calculateDiscount } from '@/lib/utils';
+import { ensureValidImageUrl } from '@/utils/file-manager';
 import ProductCard from '@/components/product/product-card';
 import { Product } from '@shared/schema';
 import { 
@@ -240,8 +241,16 @@ const ProductDetailView = ({
   
   // Effect to set initial image on component mount or when product changes
   useEffect(() => {
-    if (product?.imageUrl && !currentImage) {
-      setCurrentImage(product.imageUrl);
+    if (product) {
+      // Try to use image object first, then fall back to imageUrl
+      if (product.image) {
+        setCurrentImage(ensureValidImageUrl(product.image));
+      } else if (product.imageUrl && !currentImage) {
+        setCurrentImage(product.imageUrl);
+      } else if (product.originalImageObjectKey && !currentImage) {
+        // If we have an object key, use it
+        setCurrentImage(ensureValidImageUrl(product.originalImageObjectKey));
+      }
     }
   }, [product, currentImage]);
 
@@ -517,7 +526,7 @@ const ProductDetailView = ({
               onClick={() => openImageModal(product.additionalImages?.findIndex(img => img === currentImage) || 0)}
             >
               <img 
-                src={currentImage || product.imageUrl || ''} 
+                src={currentImage || (product.imageUrl ? ensureValidImageUrl(product.imageUrl) : '')} 
                 alt={product.name || 'Product image'} 
                 className="w-full h-auto object-contain aspect-square"
               />
@@ -536,7 +545,7 @@ const ProductDetailView = ({
                     onClick={() => handleThumbnailClick(image)}
                   >
                     <img 
-                      src={image} 
+                      src={ensureValidImageUrl(image)} 
                       alt={`${product.name} - image ${index + 1}`} 
                       className="w-full h-auto object-cover aspect-square"
                     />
