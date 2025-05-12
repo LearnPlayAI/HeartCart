@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { ImageCropModal } from './image-crop-modal';
 import { useProductAnalysis } from '@/hooks/use-ai';
+import { ensureValidImageUrl } from '@/utils/file-manager';
 
 type ProductImageUploaderProps = {
   productId: number;
@@ -216,6 +217,7 @@ const ProductImageUploader = ({ productId, onUploadComplete }: ProductImageUploa
       });
       
       const successCount = 0;
+    }
     
     // Display toast with upload results
     if (successCount > 0) {
@@ -297,7 +299,7 @@ const ProductImageUploader = ({ productId, onUploadComplete }: ProductImageUploa
                 className="relative group rounded-lg border overflow-hidden aspect-square"
               >
                 <img
-                  src={file.preview}
+                  src={ensureValidImageUrl(file.preview)}
                   alt={`Product preview ${index}`}
                   className={cn(
                     "w-full h-full object-cover transition-opacity",
