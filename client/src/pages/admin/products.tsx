@@ -129,7 +129,7 @@ export default function AdminProducts() {
           </div>
           <Button 
             className="space-x-2" 
-            onClick={() => navigate('/admin/products/new')}
+            onClick={() => navigate('/admin/products/wizard')}
           >
             <Plus className="h-4 w-4" />
             <span>Add Product</span>

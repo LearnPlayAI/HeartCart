@@ -633,7 +633,8 @@ export default function CatalogProducts() {
 
   // Handlers
   const handleAddProduct = () => {
-    navigate(`/admin/products/new?catalogId=${catalogId}`);
+    // Use the new product wizard instead of the old product edit page
+    navigate(`/admin/catalogs/${catalogId}/products/wizard`);
   };
 
   const handleEditProduct = (product: Product) => {

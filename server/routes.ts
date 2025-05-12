@@ -4421,6 +4421,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
     }
   }));
+  
+  // Get catalog context data for product wizard
+  app.get("/api/catalogs/:catalogId/context", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    const catalogId = parseInt(req.params.catalogId);
+    
+    try {
+      // Ensure user has permission to access this catalog
+      if (user.role !== 'admin') {
+        throw new ForbiddenError("Only administrators can access catalog context data");
+      }
+      
+      // First check if the catalog exists
+      const catalog = await storage.getCatalogById(catalogId);
+      
+      if (!catalog) {
+        throw new NotFoundError(`Catalog with ID ${catalogId} not found`, "catalog");
+      }
+      
+      // Get categories for this catalog's context
+      const categories = await storage.getCategories();
+      
+      // Get the default attribute requirements for new products
+      let requiredAttributes = [];
+      try {
+        // Only fetch if we have the getRequiredAttributes method
+        if (typeof storage.getRequiredAttributes === 'function') {
+          requiredAttributes = await storage.getRequiredAttributes();
+        }
+      } catch (attrError) {
+        console.error("Error fetching required attributes:", attrError);
+      }
+      
+      // For the catalog's custom fields and defaults
+      const supplierName = catalog.supplierName || null;
+      const defaultMarkupPercentage = catalog.defaultMarkupPercentage || 0;
+      
+      return res.json({
+        success: true,
+        data: {
+          catalog: {
+            id: catalog.id,
+            name: catalog.name,
+            supplierName,
+            defaultMarkupPercentage,
+            isActive: catalog.isActive
+          },
+          categories: categories.map(cat => ({
+            id: cat.id,
+            name: cat.name,
+            parentId: cat.parentId || null,
+            isActive: cat.isActive
+          })),
+          requiredAttributes,
+          defaults: {
+            // Default values for new products in this catalog
+            minimumOrder: 1,
+            freeShipping: false
+          }
+        }
+      });
+    } catch (error) {
+      // Log detailed error information with context
+      logger.error('Error retrieving catalog context', { 
+        error,
+        catalogId
+      });
+      
+      // Check for specific error types
+      if (error instanceof NotFoundError || 
+          error instanceof ValidationError || 
+          error instanceof ForbiddenError) {
+        throw error;
+      }
+      
+      // Return generic error for unexpected issues
+      throw new AppError(
+        "Failed to retrieve catalog context data. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
+    }
+  }));
 
   app.put("/api/catalogs/:catalogId/products/bulk", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
     const user = req.user as any;
