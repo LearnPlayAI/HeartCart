@@ -1,10 +1,22 @@
+/**
+ * @deprecated This component is deprecated and will be removed in future versions.
+ * Please use the new ProductWizard component from '@/components/admin/product-wizard/ProductWizard'
+ * 
+ * The new wizard offers more features:
+ * - Improved user experience with better step visualization
+ * - Support for draft saving and resuming
+ * - Enhanced image handling capabilities
+ * - Better AI feature integration
+ * - Context-aware validation and recommendations
+ */
+
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
-import { Loader2, ChevronLeft, ChevronRight, Save, Check } from 'lucide-react';
+import { Loader2, ChevronLeft, ChevronRight, Save, Check, AlertTriangle } from 'lucide-react';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { useProductAnalysis } from '@/hooks/use-ai';
@@ -18,6 +30,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 import { Product, Category, insertProductSchema } from '@shared/schema';
 

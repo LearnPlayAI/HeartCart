@@ -1,126 +1,64 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useRoute, useLocation } from 'wouter';
-import { useQuery } from '@tanstack/react-query';
-import { Loader2, TagsIcon, ArrowLeft } from 'lucide-react';
+import { Loader2, InfoIcon } from 'lucide-react';
 import { AdminLayout } from '@/components/admin/layout';
-import ProductFormWizard from '@/components/admin/product-form-wizard';
-import { Product, Catalog } from '@shared/schema';
-import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
+/**
+ * Redirector to New Product Wizard
+ * 
+ * This page automatically redirects to the new product wizard interface.
+ * The old product edit page has been deprecated in favor of the new wizard.
+ */
 export default function ProductEditPage() {
   const [match, params] = useRoute('/admin/products/:id/edit');
   const [, navigate] = useLocation();
-  const [isNewProduct, setIsNewProduct] = useState(false);
   
   // Get query parameters
   const searchParams = new URLSearchParams(window.location.search);
   const catalogIdParam = searchParams.get('catalogId');
   const catalogId = catalogIdParam ? parseInt(catalogIdParam, 10) : undefined;
   
-  // Check if we're in create mode
+  // Get the product ID if we're in edit mode
+  const productId = params?.id ? parseInt(params.id, 10) : undefined;
+  const isNewProduct = window.location.pathname === '/admin/products/new';
+  
+  // Redirect to the new wizard page with appropriate parameters
   useEffect(() => {
-    if (window.location.pathname === '/admin/products/new') {
-      setIsNewProduct(true);
-    }
-  }, []);
-  
-  // Fetch product data if editing
-  const productId = params?.id && !isNewProduct ? parseInt(params.id, 10) : undefined;
-  
-  const { data: productResponse, isLoading: productLoading } = useQuery<{ success: boolean, data: Product }>({
-    queryKey: ['/api/products', productId],
-    queryFn: async () => {
-      if (!productId) return { success: true, data: null };
-      const res = await fetch(`/api/products/${productId}`);
-      if (!res.ok) throw new Error('Failed to fetch product');
-      return res.json();
-    },
-    enabled: !!productId,
-  });
-  
-  const product = productResponse?.data;
-  
-  // Fetch catalog data if creating from catalog context
-  const { data: catalogResponse, isLoading: catalogLoading } = useQuery<{ success: boolean, data: Catalog }>({
-    queryKey: ['/api/catalogs', catalogId],
-    queryFn: async () => {
-      if (!catalogId) return { success: true, data: null };
-      const res = await fetch(`/api/catalogs/${catalogId}`);
-      if (!res.ok) throw new Error('Failed to fetch catalog');
-      return res.json();
-    },
-    enabled: !!catalogId && isNewProduct,
-  });
-  
-  const catalog = catalogResponse?.data;
-  
-  const isLoading = productLoading || (catalogLoading && !!catalogId);
-  
-  if (isLoading) {
-    return (
-      <AdminLayout>
-        <div className="flex items-center justify-center h-full py-32">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      </AdminLayout>
-    );
-  }
-  
-  const handleSuccessfulSave = () => {
-    // If product was created from catalog context, return to catalog products page
-    if (catalogId && isNewProduct) {
-      navigate(`/admin/catalogs/${catalogId}/products`);
+    let redirectTimer: NodeJS.Timeout;
+    
+    if (isNewProduct) {
+      // Creating a new product
+      const redirectUrl = catalogId 
+        ? `/admin/catalogs/${catalogId}/products/wizard` 
+        : '/admin/products/wizard';
+      
+      redirectTimer = setTimeout(() => navigate(redirectUrl), 2000);
+    } else if (productId) {
+      // Editing an existing product
+      const redirectUrl = `/admin/products/wizard/${productId}${catalogId ? `?catalogId=${catalogId}` : ''}`;
+      redirectTimer = setTimeout(() => navigate(redirectUrl), 2000);
     } else {
-      navigate('/admin/products');
+      // Fallback to products page if no parameters
+      redirectTimer = setTimeout(() => navigate('/admin/products'), 2000);
     }
-  };
+    
+    return () => clearTimeout(redirectTimer);
+  }, [isNewProduct, productId, catalogId, navigate]);
   
   return (
     <AdminLayout>
-      <div className="flex flex-col space-y-6">
-        <div className="flex justify-between items-center">
-          <div>
-            {/* Show catalog context if applicable */}
-            {catalog && isNewProduct && (
-              <div className="flex flex-col">
-                <div className="flex items-center mb-2">
-                  <Button 
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 p-0 mr-2" 
-                    onClick={() => navigate(`/admin/catalogs/${catalogId}/products`)}
-                  >
-                    <ArrowLeft className="h-4 w-4 mr-1" />
-                    Back to Catalog
-                  </Button>
-                </div>
-                <p className="text-muted-foreground mb-2">
-                  Creating new product in <span className="font-medium">{catalog.name}</span> catalog
-                </p>
-              </div>
-            )}
-            <h2 className="text-2xl font-bold tracking-tight">
-              {isNewProduct ? 'Create New Product' : `Edit Product: ${product?.name}`}
-            </h2>
-          </div>
-          
-          {!isNewProduct && productId && (
-            <Button 
-              variant="outline"
-              onClick={() => navigate(`/admin/products/${productId}/attributes`)}
-              disabled={!productId}
-            >
-              <TagsIcon className="mr-2 h-4 w-4" />
-              Manage Attributes
-            </Button>
-          )}
-        </div>
+      <div className="flex flex-col space-y-6 items-center justify-center h-full py-32">
+        <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
         
-        <ProductFormWizard 
-          productId={productId}
-          catalogId={catalogId} 
-          onSuccess={handleSuccessfulSave}
-        />
+        <Alert className="max-w-xl">
+          <InfoIcon className="h-4 w-4" />
+          <AlertTitle>Redirecting to new Product Wizard</AlertTitle>
+          <AlertDescription>
+            The product editing page has been upgraded to a new wizard interface.
+            You'll be redirected automatically in a moment...
+          </AlertDescription>
+        </Alert>
       </div>
     </AdminLayout>
   );
