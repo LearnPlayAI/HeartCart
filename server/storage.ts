@@ -11,7 +11,7 @@ import {
   aiSettings, type AiSetting, type InsertAiSetting,
   suppliers, type Supplier, type InsertSupplier,
   catalogs, type Catalog, type InsertCatalog,
-  productDrafts, type InsertProductDraft,
+  productDrafts,
   // New attribute system imports
   attributes, type Attribute, type InsertAttribute,
   attributeOptions, type AttributeOption, type InsertAttributeOption,
@@ -231,6 +231,12 @@ export interface IStorage {
     }>,
     totalAdjustment: number
   }>;
+  
+  // Product draft operations for wizard auto-save functionality
+  saveProductDraft(userId: number, draftData: any, step: number, draftId?: string, catalogId?: number): Promise<any>;
+  getProductDraft(userId: number, draftId: string): Promise<any | undefined>;
+  getUserProductDrafts(userId: number, catalogId?: number): Promise<any[]>;
+  deleteProductDraft(userId: number, draftId: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
