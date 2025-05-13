@@ -2,7 +2,7 @@
  * AdditionalInfoStep Component
  * 
  * This component handles the third step of the product creation wizard,
- * collecting additional product information like inventory, attributes, shipping, etc.
+ * collecting additional product information like inventory, attributes, SEO, etc.
  */
 
 import React, { useState, useEffect } from 'react';
@@ -402,7 +402,7 @@ export function AdditionalInfoStep() {
                 <TagIcon className="h-4 w-4" />
                 <span>Attributes</span>
               </TabsTrigger>
-              <TabsTrigger value="shipping" className="flex items-center gap-1">
+              <TabsTrigger value="seo" className="flex items-center gap-1">
                 <InfoIcon className="h-4 w-4" />
                 <span>SEO</span>
               </TabsTrigger>
@@ -847,7 +847,7 @@ export function AdditionalInfoStep() {
                 </TabsContent>
                 
                 {/* SEO Tab */}
-                <TabsContent value="shipping" className="space-y-6">
+                <TabsContent value="seo" className="space-y-6">
                   
                   {/* Product Details Section */}
                   <Collapsible
