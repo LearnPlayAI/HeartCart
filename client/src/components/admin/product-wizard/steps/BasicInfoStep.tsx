@@ -291,8 +291,12 @@ export function BasicInfoStep() {
                         <FormItem>
                           <FormLabel>Category</FormLabel>
                           <Select
-                            value={field.value}
-                            onValueChange={field.onChange}
+                            value={field.value?.toString() || "none"}
+                            onValueChange={(value) => {
+                              // Convert "none" to null, otherwise convert string ID to number
+                              const categoryId = value === "none" ? null : parseInt(value, 10);
+                              field.onChange(categoryId);
+                            }}
                           >
                             <FormControl>
                               <SelectTrigger>
@@ -301,14 +305,17 @@ export function BasicInfoStep() {
                             </FormControl>
                             <SelectContent>
                               <SelectItem value="none">None</SelectItem>
-                              {categoriesList.map((category: any) => (
-                                <SelectItem
-                                  key={category.id}
-                                  value={category.id.toString()}
-                                >
-                                  {category.name}
-                                </SelectItem>
-                              ))}
+                              {categoriesList && categoriesList.length > 0 
+                                ? categoriesList.map((category: any) => (
+                                    <SelectItem
+                                      key={category.id}
+                                      value={category.id.toString()}
+                                    >
+                                      {category.name}
+                                    </SelectItem>
+                                  ))
+                                : <SelectItem value="no-categories">No categories available</SelectItem>
+                              }
                             </SelectContent>
                           </Select>
                           <FormMessage />
