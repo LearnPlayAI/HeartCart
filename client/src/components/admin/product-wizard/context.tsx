@@ -8,6 +8,13 @@
 import React, { createContext, useContext, useReducer, useCallback, ReactNode } from 'react';
 import { generateSlug, generateSku } from '@/utils/string-utils';
 
+// Calculate markup percentage based on cost and selling price
+function calculateMarkupPercentage(costPrice: number, sellingPrice: number): number {
+  if (!costPrice || costPrice <= 0 || !sellingPrice) return 40; // Default markup
+  const markup = ((sellingPrice - costPrice) / costPrice) * 100;
+  return Math.round(markup);
+}
+
 // Define the steps in the wizard
 export type WizardStep = 'basic-info' | 'images' | 'additional-info' | 'review';
 
@@ -431,21 +438,23 @@ export const ProductWizardProvider: React.FC<ProductWizardProviderProps> = ({
               const product = data.data;
               
               // Update all fields with product data
+              console.log('Loaded product data for editing:', product);
+              
               dispatch({ type: 'SET_FIELD', field: 'name', value: product.name || '' });
               dispatch({ type: 'SET_FIELD', field: 'slug', value: product.slug || '' });
-              dispatch({ type: 'SET_FIELD', field: 'sku', value: product.sku || '' });
+              dispatch({ type: 'SET_FIELD', field: 'sku', value: product.sku || generateSku(product.name) });
               dispatch({ type: 'SET_FIELD', field: 'description', value: product.description || '' });
               dispatch({ type: 'SET_FIELD', field: 'brand', value: product.brand || '' });
               dispatch({ type: 'SET_FIELD', field: 'categoryId', value: product.categoryId });
               dispatch({ type: 'SET_FIELD', field: 'isActive', value: product.isActive ?? true });
               dispatch({ type: 'SET_FIELD', field: 'isFeatured', value: product.isFeatured ?? false });
               
-              // Pricing
+              // Pricing - API returns price instead of regularPrice
               dispatch({ type: 'SET_FIELD', field: 'costPrice', value: product.costPrice || 0 });
-              dispatch({ type: 'SET_FIELD', field: 'regularPrice', value: product.regularPrice || 0 });
+              dispatch({ type: 'SET_FIELD', field: 'regularPrice', value: product.price || 0 });
               dispatch({ type: 'SET_FIELD', field: 'salePrice', value: product.salePrice || null });
-              dispatch({ type: 'SET_FIELD', field: 'onSale', value: product.onSale ?? false });
-              dispatch({ type: 'SET_FIELD', field: 'markupPercentage', value: product.markupPercentage || 40 });
+              dispatch({ type: 'SET_FIELD', field: 'onSale', value: product.salePrice ? true : false });
+              dispatch({ type: 'SET_FIELD', field: 'markupPercentage', value: calculateMarkupPercentage(product.costPrice, product.price) });
               
               // Load images if available
               if (product.images && product.images.length > 0) {
@@ -461,8 +470,8 @@ export const ProductWizardProvider: React.FC<ProductWizardProviderProps> = ({
                 dispatch({ type: 'SET_FIELD', field: 'mainImageIndex', value: mainImageIndex >= 0 ? mainImageIndex : 0 });
               }
               
-              // Inventory
-              dispatch({ type: 'SET_FIELD', field: 'stockLevel', value: product.stockLevel || 0 });
+              // Inventory - API returns stock instead of stockLevel
+              dispatch({ type: 'SET_FIELD', field: 'stockLevel', value: product.stock || 0 });
               dispatch({ type: 'SET_FIELD', field: 'lowStockThreshold', value: product.lowStockThreshold || 5 });
               dispatch({ type: 'SET_FIELD', field: 'backorderEnabled', value: product.backorderEnabled ?? false });
               
