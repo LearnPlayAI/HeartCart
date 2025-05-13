@@ -396,13 +396,29 @@ export const ProductWizardProvider: React.FC<ProductWizardProviderProps> = ({
   const validateCurrentStep = useCallback((): boolean => {
     const stepValidators: Record<WizardStep, () => boolean> = {
       'basic-info': () => {
+        // Convert string values to numbers properly to fix validation with numeric fields
+        const costPrice = typeof state.costPrice === 'string' ? parseFloat(state.costPrice) : state.costPrice;
+        const regularPrice = typeof state.regularPrice === 'string' ? parseFloat(state.regularPrice) : state.regularPrice;
+        const salePrice = typeof state.salePrice === 'string' ? parseFloat(state.salePrice) : state.salePrice;
+        
+        // Check required fields with proper number handling
         const isValid = Boolean(
           state.name &&
           state.slug &&
-          state.costPrice > 0 &&
-          state.regularPrice > 0 &&
-          (!state.onSale || (state.onSale && state.salePrice !== null && state.salePrice > 0))
+          costPrice > 0 &&
+          regularPrice > 0 &&
+          (!state.onSale || (state.onSale && salePrice && salePrice > 0))
         );
+        
+        console.log('Basic Info validation:', { 
+          isValid, 
+          name: state.name, 
+          slug: state.slug, 
+          costPrice, 
+          regularPrice, 
+          onSale: state.onSale, 
+          salePrice 
+        });
         
         dispatch({ type: 'MARK_STEP_VALID', step: 'basic-info', isValid });
         dispatch({ type: 'MARK_STEP_COMPLETE', step: 'basic-info' });
@@ -422,16 +438,31 @@ export const ProductWizardProvider: React.FC<ProductWizardProviderProps> = ({
         return isValid;
       },
       'review': () => {
+        // Convert string values to numbers properly to fix validation with numeric fields
+        const costPrice = typeof state.costPrice === 'string' ? parseFloat(state.costPrice) : state.costPrice;
+        const regularPrice = typeof state.regularPrice === 'string' ? parseFloat(state.regularPrice) : state.regularPrice;
+        const salePrice = typeof state.salePrice === 'string' ? parseFloat(state.salePrice) : state.salePrice;
+        
         // Final validation before submission
         const isBasicInfoValid = Boolean(
           state.name &&
           state.slug &&
-          state.costPrice > 0 &&
-          state.regularPrice > 0 &&
-          (!state.onSale || (state.onSale && state.salePrice !== null && state.salePrice > 0))
+          costPrice > 0 &&
+          regularPrice > 0 &&
+          (!state.onSale || (state.onSale && salePrice && salePrice > 0))
         );
         
         const isValid = isBasicInfoValid;
+        
+        console.log('Review validation:', { 
+          isValid, 
+          name: state.name, 
+          slug: state.slug, 
+          costPrice, 
+          regularPrice, 
+          onSale: state.onSale, 
+          salePrice 
+        });
         
         dispatch({ type: 'MARK_STEP_VALID', step: 'review', isValid });
         dispatch({ type: 'MARK_STEP_COMPLETE', step: 'review' });
