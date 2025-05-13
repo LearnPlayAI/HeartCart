@@ -42,6 +42,7 @@ interface ProductWizardState {
   
   // Attributes
   attributes: any[];
+  attributeValues: any[]; // For attribute-based pricing, weight, dimensions
   
   // Product details
   supplier: string | null;

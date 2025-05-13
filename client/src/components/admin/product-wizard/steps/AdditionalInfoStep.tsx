@@ -121,9 +121,18 @@ export function AdditionalInfoStep() {
     }
   }, [catalogData, state.catalogId, setField]);
   
+  // Initialize attribute values from the state
+  useEffect(() => {
+    // If we have attribute values in the state, use those
+    if (state.attributeValues && state.attributeValues.length > 0) {
+      setAttributeValues(state.attributeValues);
+    }
+  }, [state.attributeValues]);
+
   // Format available product attributes for our pricing component
   useEffect(() => {
     if (productAttributes && productAttributes.length > 0) {
+      // Convert API attributes to the format expected by AttributePricingConfig
       const formatted = productAttributes.map(attr => ({
         id: attr.id,
         name: attr.name,
@@ -167,9 +176,28 @@ export function AdditionalInfoStep() {
   // Handle attribute values changes from pricing component
   const handleAttributeValuesChange = (newValues: AttributeValue[]) => {
     setAttributeValues(newValues);
-    // Store these values in context or form state as needed
-    // For simplicity, we'll store them in a special field in the form
+    
+    // Store these values in the form and context
     form.setValue('attributeValues', newValues);
+    setField('attributeValues', newValues);
+    
+    // Extract size-based metadata like weight and dimensions
+    const sizeAttribute = newValues.find(attr => 
+      attr.attributeName.toLowerCase().includes('size'));
+    
+    if (sizeAttribute?.metadata) {
+      // Update weight if provided in the metadata
+      if (sizeAttribute.metadata.weight !== undefined) {
+        form.setValue('weight', sizeAttribute.metadata.weight);
+        setField('weight', sizeAttribute.metadata.weight);
+      }
+      
+      // Update dimensions if provided in the metadata
+      if (sizeAttribute.metadata.dimensions) {
+        form.setValue('dimensions', sizeAttribute.metadata.dimensions);
+        setField('dimensions', sizeAttribute.metadata.dimensions);
+      }
+    }
   };
   
   // Initialize form with values from context
@@ -192,6 +220,7 @@ export function AdditionalInfoStep() {
       
       // Product details
       supplier: state.supplier || '',
+      attributeValues: state.attributeValues || [],
       weight: state.weight || null,
       dimensions: state.dimensions || '',
       
