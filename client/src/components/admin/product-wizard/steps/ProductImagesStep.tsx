@@ -162,12 +162,44 @@ const ensureValidImageUrl = (image: UploadedImage): string => {
 
 export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className }) => {
   const { state, dispatch } = useProductWizard();
-  const { productData } = state;
   const { toast } = useToast();
   
+  // Create a local state for the uploaded images
+  const [uploadedImages, setUploadedImages] = useState<any[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [deleteImageId, setDeleteImageId] = useState<string | number | null>(null);
   const [isRemovingBackground, setIsRemovingBackground] = useState(false);
+  
+  // Initialize the uploadedImages from the imageUrls in the state
+  useEffect(() => {
+    const imageUrls = state.imageUrls || [];
+    const imageObjectKeys = state.imageObjectKeys || [];
+    const mainImageIndex = state.mainImageIndex || 0;
+    
+    console.log('Initializing uploaded images from state:', {
+      imageUrls,
+      imageObjectKeys,
+      mainImageIndex
+    });
+    
+    if (imageUrls.length > 0) {
+      // Convert the imageUrls and imageObjectKeys to uploadedImages format
+      const newUploadedImages = imageUrls.map((url, index) => ({
+        id: `existing-${index}`,
+        url: url,
+        objectKey: imageObjectKeys[index] || '',
+        isMain: index === mainImageIndex,
+        order: index,
+        metadata: {
+          size: 0,
+          originalname: url.split('/').pop() || 'image'
+        }
+      }));
+      
+      setUploadedImages(newUploadedImages);
+      console.log('Set uploaded images to:', newUploadedImages);
+    }
+  }, [state.imageUrls, state.imageObjectKeys, state.mainImageIndex]);
   
   // Image upload handler
   const handleImageUpload = useCallback(async (acceptedFiles: File[]) => {
