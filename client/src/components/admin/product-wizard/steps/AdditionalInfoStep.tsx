@@ -1078,7 +1078,7 @@ export function AdditionalInfoStep() {
                       <ChevronDownIcon className="h-4 w-4" />
                     </CollapsibleTrigger>
                     <CollapsibleContent className="px-4 py-3 space-y-4">
-                      {/* Supplier */}
+                      {/* Supplier - Dynamically populated based on catalog */}
                       <FormField
                         control={form.control}
                         name="supplier"
@@ -1090,66 +1090,19 @@ export function AdditionalInfoStep() {
                                 placeholder="Supplier name"
                                 {...field}
                                 value={field.value || ''}
+                                readOnly
+                                className="bg-muted/50"
                               />
                             </FormControl>
                             <FormDescription>
-                              Name of the product supplier
+                              Name of the product supplier (automatically populated from the associated catalog)
                             </FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
                       
-                      {/* Weight */}
-                      <FormField
-                        control={form.control}
-                        name="weight"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Product Weight (kg)</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                placeholder="0.00"
-                                {...field}
-                                value={field.value === null ? '' : field.value}
-                                onChange={(e) => {
-                                  const val = e.target.value === '' ? null : parseFloat(e.target.value);
-                                  field.onChange(val);
-                                }}
-                              />
-                            </FormControl>
-                            <FormDescription>
-                              Weight of the product (excluding packaging)
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      {/* Dimensions */}
-                      <FormField
-                        control={form.control}
-                        name="dimensions"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Dimensions</FormLabel>
-                            <FormControl>
-                              <Input
-                                placeholder="e.g. 10 x 5 x 3 cm"
-                                {...field}
-                                value={field.value || ''}
-                              />
-                            </FormControl>
-                            <FormDescription>
-                              Physical dimensions of the product
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                      {/* Weight and dimensions have been removed as per requirements */}
                     </CollapsibleContent>
                   </Collapsible>
                   
