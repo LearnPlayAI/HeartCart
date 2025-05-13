@@ -102,13 +102,23 @@ export function useAttributeDiscounts() {
   // Calculate price adjustments - memoized to prevent re-creation on each render
   const calculatePriceAdjustments = useCallback(async (
     productId: number,
-    selectedAttributes: Record<string, any>,
+    selectedAttributes: Record<string, number[]>,
     quantity: number = 1
   ): Promise<PriceAdjustmentResult> => {
     try {
+      // Ensure all selectedAttributes are properly formatted as arrays of numbers
+      const formattedAttributes = Object.entries(selectedAttributes).reduce((acc, [key, value]) => {
+        // Ensure value is always an array of numbers
+        const valueArray = Array.isArray(value) ? value : [value];
+        acc[key] = valueArray.map(val => typeof val === 'number' ? val : parseInt(String(val)));
+        return acc;
+      }, {} as Record<string, number[]>);
+      
+      console.log('Sending attributes to API:', formattedAttributes);
+      
       const response = await apiRequest('POST', '/api/attribute-discount-rules/calculate', {
         productId,
-        selectedAttributes,
+        selectedAttributes: formattedAttributes,
         quantity,
       });
 
