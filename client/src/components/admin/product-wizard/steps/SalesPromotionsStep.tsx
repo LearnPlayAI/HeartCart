@@ -29,6 +29,19 @@ export function SalesPromotionsStep() {
       setField(field, null);
     }
   };
+  
+  // Ensure default values to prevent null errors
+  const {
+    regularPrice = 0,
+    onSale = false,
+    salePrice = null,
+    discountLabel = '',
+    specialSaleText = '',
+    specialSaleStart = null,
+    specialSaleEnd = null,
+    isFlashDeal = false,
+    flashDealEnd = null,
+  } = state || {};
 
   return (
     <div className="space-y-6">
@@ -53,7 +66,7 @@ export function SalesPromotionsStep() {
                     <Input
                       type="number"
                       placeholder="0.00"
-                      value={state.regularPrice}
+                      value={regularPrice}
                       onChange={(e) => setField('regularPrice', parseFloat(e.target.value))}
                       min={0}
                       step={0.01}
@@ -71,7 +84,7 @@ export function SalesPromotionsStep() {
                 <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
                   <FormControl>
                     <Checkbox
-                      checked={state.onSale}
+                      checked={onSale}
                       onCheckedChange={(checked) => setField('onSale', checked)}
                     />
                   </FormControl>
@@ -86,7 +99,7 @@ export function SalesPromotionsStep() {
             />
           </div>
 
-          {state.onSale && (
+          {onSale && (
             <FormField
               name="salePrice"
               render={() => (
