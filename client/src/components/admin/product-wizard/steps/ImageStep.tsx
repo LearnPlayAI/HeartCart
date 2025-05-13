@@ -219,15 +219,13 @@ export function ImageStep() {
   };
   
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Product Images</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
+    <div className="wizard-step">
+      <h3 className="wizard-step-header">Product Images</h3>
+      <Card className="bg-white border-gray-200">
+        <CardContent className="pt-6 space-y-4">
           {/* Drag and drop area */}
           <div
-            className="border-2 border-dashed rounded-md p-8 text-center cursor-pointer hover:bg-muted/50 transition-colors"
+            className="image-dropzone border-2 border-dashed border-gray-200 rounded-md p-8 text-center cursor-pointer hover:bg-gray-50 transition-colors"
             onDragEnter={handleDragEnter}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
@@ -235,12 +233,12 @@ export function ImageStep() {
             onClick={handleSelectFiles}
           >
             <div className="flex flex-col items-center justify-center gap-2">
-              <UploadIcon className="h-10 w-10 text-muted-foreground" />
-              <h3 className="font-medium">Drag and drop images here</h3>
-              <p className="text-sm text-muted-foreground">
+              <UploadIcon className="h-10 w-10 text-primary/70" />
+              <h3 className="font-medium text-gray-700">Drag and drop images here</h3>
+              <p className="text-sm text-gray-500">
                 Or click to browse your files
               </p>
-              <p className="text-xs text-muted-foreground mt-2">
+              <p className="text-xs text-gray-400 mt-2">
                 Supported formats: JPEG, PNG, WebP, GIF. Max size: {formatFileSize(MAX_FILE_SIZE)}
               </p>
             </div>
@@ -257,11 +255,11 @@ export function ImageStep() {
           {/* Upload progress */}
           {isUploading && (
             <div className="space-y-2">
-              <div className="flex items-center">
+              <div className="flex items-center text-secondary">
                 <Loader2Icon className="h-4 w-4 mr-2 animate-spin" />
                 <span>Uploading...</span>
               </div>
-              <div className="bg-muted h-2 rounded-full overflow-hidden">
+              <div className="bg-background h-2 rounded-full overflow-hidden">
                 <div
                   className="bg-primary h-full transition-all duration-300"
                   style={{ width: `${uploadProgress}%` }}
@@ -273,7 +271,7 @@ export function ImageStep() {
           {/* Uploaded images */}
           {state.imageUrls.length > 0 ? (
             <div className="space-y-4">
-              <h3 className="font-medium">Uploaded Images ({state.imageUrls.length})</h3>
+              <h3 className="font-medium text-secondary">Uploaded Images ({state.imageUrls.length})</h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                 {state.imageUrls.map((url, index) => (
                   <div
@@ -285,11 +283,11 @@ export function ImageStep() {
                     className={`
                       relative rounded-md overflow-hidden border shadow-sm group
                       ${index === draggingIndex ? 'opacity-50' : ''}
-                      ${index === dragOverIndex ? 'border-primary' : ''}
+                      ${index === dragOverIndex ? 'border-secondary border-2' : ''}
                       ${index === state.mainImageIndex ? 'ring-2 ring-primary' : ''}
                     `}
                   >
-                    <div className="aspect-square bg-muted/20">
+                    <div className="aspect-square bg-gray-50">
                       <img 
                         src={url} 
                         alt={`Product image ${index + 1}`}
@@ -298,12 +296,12 @@ export function ImageStep() {
                     </div>
                     
                     {/* Image overlay with actions */}
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity duration-200">
+                    <div className="absolute inset-0 bg-primary/80 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity duration-200">
                       <div className="flex gap-2 mb-2">
                         <Button
                           variant="secondary"
                           size="icon"
-                          className="w-8 h-8 rounded-full"
+                          className="w-8 h-8 rounded-full bg-white hover:bg-secondary hover:text-white"
                           onClick={() => handleSetMainImage(index)}
                           disabled={index === state.mainImageIndex}
                         >
@@ -318,7 +316,7 @@ export function ImageStep() {
                           <Trash2Icon className="h-3.5 w-3.5" />
                         </Button>
                       </div>
-                      <div className="opacity-70 text-white text-xs flex items-center">
+                      <div className="opacity-90 text-white text-xs flex items-center">
                         <MoveVerticalIcon className="h-3 w-3 mr-1" />
                         <span>Drag to reorder</span>
                       </div>
@@ -327,7 +325,7 @@ export function ImageStep() {
                     {/* Main image indicator */}
                     {index === state.mainImageIndex && (
                       <div className="absolute top-1 left-1">
-                        <Badge variant="secondary" className="bg-primary text-primary-foreground text-xs">
+                        <Badge className="bg-primary text-white text-xs">
                           Main
                         </Badge>
                       </div>
@@ -336,8 +334,8 @@ export function ImageStep() {
                 ))}
               </div>
               
-              <Alert variant="default" className="bg-muted/40">
-                <AlertTriangleIcon className="h-4 w-4" />
+              <Alert variant="default" className="bg-gray-50 border border-gray-200">
+                <AlertTriangleIcon className="h-4 w-4 text-secondary" />
                 <AlertDescription>
                   The image marked as "Main" will be used as the primary product image in listings, 
                   search results, and the product details page.
@@ -346,13 +344,13 @@ export function ImageStep() {
             </div>
           ) : (
             <div className="text-center py-8">
-              <ImageIcon className="h-12 w-12 mx-auto text-muted-foreground" />
-              <p className="mt-2 text-muted-foreground">No images uploaded yet</p>
+              <ImageIcon className="h-12 w-12 mx-auto text-gray-300" />
+              <p className="mt-2 text-gray-500">No images uploaded yet</p>
             </div>
           )}
         </CardContent>
-        <CardFooter className="flex justify-between flex-wrap">
-          <p className="text-sm text-muted-foreground">
+        <CardFooter className="flex justify-between flex-wrap border-t border-gray-100 bg-gray-50">
+          <p className="text-sm text-gray-500">
             {state.imageUrls.length === 0 ? (
               'Images are optional but recommended for better product presentation.'
             ) : (
@@ -363,7 +361,7 @@ export function ImageStep() {
             variant="outline"
             onClick={handleSelectFiles}
             disabled={isUploading}
-            className="gap-1"
+            className="gap-1 bg-white hover:bg-primary hover:text-white"
           >
             <UploadIcon className="h-4 w-4" />
             <span>Upload More</span>

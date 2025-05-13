@@ -556,8 +556,8 @@ export function BasicInfoStep() {
                   
                   {/* Price Summary */}
                   {watchCostPrice > 0 && (
-                    <div className="mt-4 p-4 border rounded-md bg-muted/30">
-                      <h4 className="font-medium mb-2">Pricing Summary</h4>
+                    <div className="mt-4 p-4 border rounded-md bg-background shadow-sm">
+                      <h4 className="font-medium mb-2 text-primary">Pricing Summary</h4>
                       <div className="space-y-1 text-sm">
                         <div className="flex justify-between">
                           <span>Cost Price:</span>
@@ -567,19 +567,19 @@ export function BasicInfoStep() {
                           <span>Markup ({watchMarkupPercentage || 0}%):</span>
                           <span>R{((parseFloat(watchCostPrice) || 0) * ((parseFloat(watchMarkupPercentage) || 0) / 100)).toFixed(2)}</span>
                         </div>
-                        <div className="flex justify-between font-medium">
+                        <div className="flex justify-between font-medium text-accent">
                           <span>Regular Price:</span>
                           <span>R{parseFloat(form.getValues('regularPrice') || 0).toFixed(2)}</span>
                         </div>
                         {watchOnSale && (
                           <>
-                            <div className="flex justify-between text-destructive">
+                            <div className="flex justify-between text-secondary">
                               <span>Discount:</span>
                               <span>-{Math.round((1 - (parseFloat(form.getValues('salePrice') || 0) / parseFloat(form.getValues('regularPrice') || 1))) * 100)}%</span>
                             </div>
                             <div className="flex justify-between font-medium">
                               <span>Sale Price:</span>
-                              <span>R{parseFloat(form.getValues('salePrice') || 0).toFixed(2)}</span>
+                              <span className="text-primary">R{parseFloat(form.getValues('salePrice') || 0).toFixed(2)}</span>
                             </div>
                           </>
                         )}
