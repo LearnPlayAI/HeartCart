@@ -348,8 +348,18 @@ export async function moveFile(
  * Ensure an image URL is valid and accessible
  */
 export function ensureValidImageUrl(url: string): string {
+  // If URL is empty or undefined, return empty string
+  if (!url) {
+    return '';
+  }
+  
   // Check if URL is already absolute
   if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  
+  // Check if it's already a proper API URL
+  if (url.startsWith('/api/files/')) {
     return url;
   }
   
