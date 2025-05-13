@@ -18,9 +18,9 @@ export const users = pgTable("users", {
   country: text("country").default("South Africa"),
   isActive: boolean("is_active").default(true).notNull(),
   role: text("role").default("user").notNull(), // 'user', 'admin', etc.
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-  lastLogin: timestamp("last_login", { withTimezone: true }),
+  createdAt: text("created_at").default(() => new Date().toISOString()).notNull(),
+  updatedAt: text("updated_at").default(() => new Date().toISOString()).notNull(),
+  lastLogin: text("last_login"),
 });
 
 // Categories table
