@@ -650,8 +650,11 @@ export function AdditionalInfoStep() {
                                             handleAttributeValueChange(existingAttrIndex, e.target.value);
                                           }
                                         }}
-                                        placeholder={`Enter ${attr.name.toLowerCase()} value (e.g. ${attr.options[0]?.displayValue || 'Custom'})`}
+                                        placeholder={`Enter ${attr.name.toLowerCase()} values (comma separated)`}
                                       />
+                                      <p className="text-xs text-muted-foreground mt-1">
+                                        For multiple values, separate with commas (e.g. Red, Blue, Green)
+                                      </p>
                                     </div>
                                   </div>
                                 </div>

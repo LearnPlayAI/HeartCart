@@ -180,7 +180,7 @@ export function AttributeConfig({
                         </Label>
                         <Switch 
                           id={`required-${attribute.id}`}
-                          checked={attribute.isRequired}
+                          checked={values.find(v => v.attributeId === attribute.id)?.isRequired || false}
                           onCheckedChange={(checked) => handleRequiredChange(attribute.id, checked)}
                         />
                       </div>
