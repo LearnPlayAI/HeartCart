@@ -6,7 +6,7 @@
  */
 
 import { db } from "../server/db";
-import { products, catalogs, suppliers } from "../shared/schema";
+import { products, catalogs, suppliers, categories } from "../shared/schema";
 import { eq } from "drizzle-orm";
 import { objectStoreAdapter } from "../server/object-store-adapter";
 
@@ -46,22 +46,28 @@ async function updateProductCatalog(productId: number, catalogId: number, fixIma
   await db.update(products)
     .set({ 
       catalogId: catalogId,
-      supplierId: supplier?.id || null
+      // Use supplier instead of supplierId to match schema
+      supplier: supplier?.name || null
     })
     .where(eq(products.id, productId));
   
-  console.log(`Updated product ${product.name} with catalogId=${catalogId} and supplierId=${supplier?.id || 'null'}`);
+  console.log(`Updated product ${product.name} with catalogId=${catalogId} and supplier=${supplier?.name || 'null'}`);
   
   // Step 5: Fix images if requested
-  if (fixImages && product.imageUrl) {
-    console.log(`Fixing images for product ${product.name}...`);
-    await fixProductImages(
-      productId, 
-      product.name, 
-      product.categoryId, 
-      catalog.name, 
-      supplier?.name || 'default-supplier'
-    );
+  if (fixImages) {
+    // Check if the product has images
+    if (product.imageUrl) {
+      console.log(`Fixing images for product ${product.name}...`);
+      await fixProductImages(
+        productId, 
+        product.name, 
+        product.categoryId, 
+        catalog.name, 
+        supplier?.name || 'default-supplier'
+      );
+    } else {
+      console.log(`Product ${product.name} has no imageUrl, skipping image fix.`);
+    }
   }
 }
 
@@ -77,10 +83,12 @@ async function fixProductImages(
   supplierName: string
 ) {
   try {
-    // Get category info
-    const [category] = categoryId 
-      ? await db.select().from({ c: catalogs }).where(eq(c => c.id, categoryId || 0))
-      : [];
+    // Get category info from database - using correct table reference
+    const category = categoryId 
+      ? await db.query.categories.findFirst({
+          where: eq(categories.id, categoryId)
+        })
+      : null;
     
     const categoryName = category?.name || 'uncategorized';
     const sanitizedProductName = productName.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
@@ -105,8 +113,31 @@ async function fixProductImages(
   }
 }
 
-// Usage example (uncomment to use)
-// Call this function with the product ID and catalog ID you want to associate
-// updateProductCatalog(34, 1, true);  // Specify product 34, catalog 1, and fix images
+// Direct script execution function
+async function main() {
+  const productId = process.argv[2] ? parseInt(process.argv[2]) : null;
+  const catalogId = process.argv[3] ? parseInt(process.argv[3]) : null;
+  const fixImages = process.argv[4] === 'true';
+  
+  if (!productId || !catalogId) {
+    console.error('Usage: tsx scripts/update-product-catalog.ts <productId> <catalogId> [fixImages]');
+    console.error('Example: tsx scripts/update-product-catalog.ts 34 1 true');
+    process.exit(1);
+  }
+  
+  try {
+    await updateProductCatalog(productId, catalogId, fixImages);
+    console.log('Product catalog association updated successfully.');
+    process.exit(0);
+  } catch (error) {
+    console.error('Error updating product catalog association:', error);
+    process.exit(1);
+  }
+}
+
+// Run if this is being executed directly
+if (process.argv[1].includes('update-product-catalog')) {
+  main();
+}
 
 export default updateProductCatalog;
