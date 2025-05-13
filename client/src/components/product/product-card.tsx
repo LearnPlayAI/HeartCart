@@ -81,85 +81,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
     return stars;
   };
   
-  if (isFlashDeal) {
-    return (
-      <div className="product-card bg-white rounded-lg border border-gray-200 overflow-hidden min-w-[180px]">
-        <Link href={`/product/id/${product.id}`} className="block">
-          {imageError ? (
-            <div className="w-full h-36 bg-gray-100 flex items-center justify-center">
-              <ImageOff className="w-8 h-8 text-gray-400" />
-            </div>
-          ) : (
-            <img 
-              src={product.imageUrl ? ensureValidImageUrl(product.imageUrl) : (product.originalImageObjectKey ? ensureValidImageUrl(product.originalImageObjectKey) : '')} 
-              alt={product.name || 'Product image'} 
-              className="w-full h-36 object-cover"
-              onError={() => setImageError(true)}
-            />
-          )}
-          <div className="p-2">
-            <div className="flex items-center mb-1">
-              <span className="bg-[#FF69B4] text-white text-xs font-bold px-2 py-0.5 rounded">
-                -{discount}%
-              </span>
-            </div>
-            <h3 className="text-sm font-medium text-gray-800 line-clamp-2 h-10">
-              {product.name}
-            </h3>
-            <div className="flex items-baseline mt-1">
-              <span className="text-[#FF69B4] font-bold">
-                {formatCurrency(product.salePrice || product.price)}
-              </span>
-              {product.salePrice && (
-                <span className="text-gray-500 text-xs ml-1 line-through">
-                  {formatCurrency(product.price)}
-                </span>
-              )}
-            </div>
-            {typeof soldPercentage === 'number' && (
-              <>
-                <div className="mt-1 h-2 bg-gray-200 rounded-full overflow-hidden">
-                  <div 
-                    className="bg-[#FF69B4] h-full rounded-full pulse-animation"
-                    style={{ width: `${soldPercentage}%` }}
-                  ></div>
-                </div>
-                <div className="text-xs text-gray-500 mt-1">
-                  {soldPercentage}% sold
-                </div>
-              </>
-            )}
-          </div>
-        </Link>
-        
-        <div className="px-2 pb-2">
-          <Button
-            variant="outline"
-            size="sm" 
-            className="w-full rounded-full text-xs py-1"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setQuickViewOpen(true);
-            }}
-          >
-            <Eye className="h-3 w-3 mr-1" />
-            Quick View
-          </Button>
-        </div>
-        
-        {/* Quick View Modal */}
-        <QuickViewModal
-          open={quickViewOpen}
-          onOpenChange={setQuickViewOpen}
-          productId={product.id}
-        />
-      </div>
-    );
-  }
-  
+  // All product cards will use a consistent design based on the Featured Products style
   return (
-    <div className="product-card bg-white rounded-lg shadow-md overflow-hidden min-w-[200px]">
+    <div className="product-card bg-white rounded-lg shadow-sm overflow-hidden min-w-[200px]">
       <Link href={`/product/id/${product.id}`} className="block">
         {imageError ? (
           <div className="w-full h-48 bg-gray-100 flex items-center justify-center">
@@ -173,39 +97,59 @@ const ProductCard: React.FC<ProductCardProps> = ({
             onError={() => setImageError(true)}
           />
         )}
+        
         <div className="p-3">
-          <h3 className="text-sm font-medium text-gray-800 mb-1 line-clamp-2 h-10">
+          <h3 className="text-sm font-medium text-gray-800 line-clamp-2 h-10">
             {product.name}
           </h3>
-          <div className="flex items-center mb-1">
-            <div className="flex text-yellow-400 text-xs mr-1">
-              {renderStars(product.rating)}
-            </div>
-            <span className="text-xs text-gray-500">
-              {product.rating?.toFixed(1)} ({product.reviewCount})
-            </span>
-          </div>
-          <div className="flex items-baseline">
-            <span className="text-[#FF69B4] font-bold">
+          
+          <div className="flex items-baseline mt-1">
+            <span className="text-[#FF69B4] font-bold text-lg">
               {formatCurrency(product.salePrice || product.price)}
             </span>
             {product.salePrice && (
-              <>
-                <span className="text-gray-500 text-xs ml-1 line-through">
-                  {formatCurrency(product.price)}
-                </span>
-                <span className="ml-1 text-xs bg-[#FF69B4]/10 text-[#FF69B4] px-1 rounded">
-                  -{discount}%
-                </span>
-              </>
+              <span className="text-gray-500 text-xs ml-1 line-through">
+                {formatCurrency(product.price)}
+              </span>
+            )}
+            {discount > 0 && (
+              <span className="ml-2 text-xs bg-[#FF69B4]/10 text-[#FF69B4] px-1 rounded">
+                -{discount}%
+              </span>
             )}
           </div>
+          
+          {isFlashDeal && typeof soldPercentage === 'number' && (
+            <>
+              <div className="mt-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div 
+                  className="bg-[#FF69B4] h-full rounded-full pulse-animation"
+                  style={{ width: `${soldPercentage}%` }}
+                ></div>
+              </div>
+              <div className="text-xs text-gray-500 mt-1">
+                {soldPercentage}% sold
+              </div>
+            </>
+          )}
+          
+          {!isFlashDeal && (
+            <div className="flex items-center mt-1 mb-1">
+              <div className="flex text-yellow-400 text-xs">
+                {renderStars(product.rating)}
+              </div>
+              <span className="text-xs text-gray-500 ml-1">
+                {product.rating ? product.rating.toFixed(1) : "0.0"} ({product.reviewCount || 0})
+              </span>
+            </div>
+          )}
         </div>
       </Link>
-      <div className="px-3 pb-3 mt-2 flex gap-2">
+      
+      <div className="px-3 pb-3 flex flex-col gap-2">
         {showAddToCart && (
           <Button 
-            className="flex-1 bg-[#FF69B4] hover:bg-[#FF1493] text-white py-1.5 rounded-full text-sm font-medium transition-colors duration-200"
+            className="w-full bg-[#FF69B4] hover:bg-[#FF1493] text-white py-1.5 rounded-full text-sm font-medium transition-colors duration-200"
             onClick={handleAddToCart}
           >
             <ShoppingCart className="h-4 w-4 mr-1" />
@@ -215,7 +159,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
         
         <Button
           variant="outline"
-          className="rounded-full flex-1"
+          className="w-full rounded-full text-sm"
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
