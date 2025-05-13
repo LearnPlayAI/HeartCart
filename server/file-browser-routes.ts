@@ -28,7 +28,7 @@ const fileBrowserAdminCheck = (req: Request, res: Response, next: NextFunction) 
       method: req.method,
       userId: user?.id || 'unauthenticated'
     });
-    return sendError(res, 'Unauthorized access', 'UNAUTHORIZED', 403);
+    return sendError(res, 'Unauthorized access', 403, 'UNAUTHORIZED');
   }
 };
 
@@ -47,8 +47,8 @@ router.get('/api-methods', fileBrowserAdminCheck, async (req: Request, res: Resp
     logger.error('Error checking API methods', { error });
     return sendError(res, 
       'Failed to check API methods', 
-      'API_METHOD_ERROR', 
       500, 
+      'API_METHOD_ERROR', 
       { message: error.message }
     );
   }
@@ -100,8 +100,8 @@ router.get('/buckets', isAuthenticated, async (req: Request, res: Response) => {
     logger.error('Error listing storage buckets', { error });
     return sendError(res, 
       'Failed to list storage buckets', 
+      500,
       'BUCKET_LIST_ERROR', 
-      500, 
       { message: error.message }
     );
   }
@@ -112,29 +112,26 @@ router.get('/buckets', isAuthenticated, async (req: Request, res: Response) => {
  */
 router.post('/buckets/set', isAuthenticated, async (req: Request, res: Response) => {
   try {
+    logger.debug('Setting current storage bucket');
     const { bucketId } = req.body;
     
     if (!bucketId) {
-      return res.status(400).json({
-        success: false,
-        error: 'Bucket ID is required'
-      });
+      return sendError(res, 'Bucket ID is required', 400, 'MISSING_BUCKET_ID');
     }
     
     enhancedObjectStorage.setBucket(bucketId);
     
-    res.json({
-      success: true,
-      data: {
-        currentBucket: bucketId
-      }
+    return sendSuccess(res, {
+      currentBucket: bucketId
     });
   } catch (error: any) {
-    console.error('Error setting bucket:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message || 'Failed to set bucket'
-    });
+    logger.error('Error setting storage bucket', { error, bucketId: req.body?.bucketId });
+    return sendError(res, 
+      'Failed to set storage bucket', 
+      500, 
+      'BUCKET_SET_ERROR', 
+      { message: error.message }
+    );
   }
 });
 
@@ -143,23 +140,24 @@ router.post('/buckets/set', isAuthenticated, async (req: Request, res: Response)
  */
 router.get('/folders', isAuthenticated, async (req: Request, res: Response) => {
   try {
+    logger.debug('Listing root folders');
+    
     await enhancedObjectStorage.initialize();
     const folders = await enhancedObjectStorage.listRootFolders();
     const currentBucket = enhancedObjectStorage.getCurrentBucket();
     
-    res.json({
-      success: true,
-      data: {
-        folders,
-        currentBucket
-      }
+    return sendSuccess(res, {
+      folders,
+      currentBucket
     });
   } catch (error: any) {
-    console.error('Error listing root folders:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message || 'Failed to list root folders'
-    });
+    logger.error('Error listing root folders', { error });
+    return sendError(res, 
+      'Failed to list root folders', 
+      500, 
+      'FOLDER_LIST_ERROR', 
+      { message: error.message }
+    );
   }
 });
 
@@ -169,22 +167,29 @@ router.get('/folders', isAuthenticated, async (req: Request, res: Response) => {
 router.get('/folders/:path/subfolders', isAuthenticated, async (req: Request, res: Response) => {
   try {
     const folderPath = sanitizePath(req.params.path);
+    logger.debug('Listing subfolders', { folderPath });
     
     await enhancedObjectStorage.initialize();
     const subfolders = await enhancedObjectStorage.listSubfolders(folderPath);
     
-    res.json({
-      success: true,
-      data: {
-        subfolders
-      }
+    return sendSuccess(res, {
+      subfolders,
+      parentPath: folderPath
     });
   } catch (error: any) {
-    console.error(`Error listing subfolders in '${req.params.path}':`, error);
-    res.status(500).json({
-      success: false,
-      error: error.message || 'Failed to list subfolders'
+    logger.error(`Error listing subfolders`, { 
+      folderPath: req.params.path,
+      error
     });
+    return sendError(res, 
+      'Failed to list subfolders', 
+      500, 
+      'SUBFOLDER_LIST_ERROR', 
+      { 
+        path: req.params.path,
+        message: error.message 
+      }
+    );
   }
 });
 
@@ -193,7 +198,8 @@ router.get('/folders/:path/subfolders', isAuthenticated, async (req: Request, re
  */
 router.get('/folders/:path/files', isAuthenticated, async (req: Request, res: Response) => {
   try {
-    const folderPath = sanitizePath(req.params.path);
+    const folderPath = sanitizePath(req.params.path || '');
+    logger.debug('Listing files in folder', { folderPath });
     
     await enhancedObjectStorage.initialize();
     const filesList = await enhancedObjectStorage.listFiles(folderPath);
@@ -215,18 +221,25 @@ router.get('/folders/:path/files', isAuthenticated, async (req: Request, res: Re
       })
     );
     
-    res.json({
-      success: true,
-      data: {
-        files
-      }
+    return sendSuccess(res, {
+      files,
+      parentPath: folderPath,
+      totalCount: files.length
     });
   } catch (error: any) {
-    console.error(`Error listing files in '${req.params.path}':`, error);
-    res.status(500).json({
-      success: false,
-      error: error.message || 'Failed to list files'
+    logger.error(`Error listing files`, { 
+      folderPath: req.params.path,
+      error
     });
+    return sendError(res, 
+      'Failed to list files', 
+      500, 
+      'FILE_LIST_ERROR', 
+      { 
+        path: req.params.path,
+        message: error.message 
+      }
+    );
   }
 });
 
@@ -238,13 +251,11 @@ router.post('/folders', isAuthenticated, async (req: Request, res: Response) => 
     const { path: folderPath } = req.body;
     
     if (!folderPath) {
-      return res.status(400).json({
-        success: false,
-        error: 'Folder path is required'
-      });
+      return sendError(res, 'Folder path is required', 400, 'MISSING_FOLDER_PATH');
     }
     
     const sanitizedPath = sanitizePath(folderPath);
+    logger.debug('Creating new folder', { folderPath, sanitizedPath });
     
     await enhancedObjectStorage.initialize();
     
@@ -256,18 +267,25 @@ router.post('/folders', isAuthenticated, async (req: Request, res: Response) => 
       contentType: 'text/plain'
     });
     
-    res.json({
-      success: true,
-      data: {
-        path: sanitizedPath
-      }
+    return sendSuccess(res, {
+      path: sanitizedPath,
+      created: true,
+      timestamp: new Date().toISOString()
     });
   } catch (error: any) {
-    console.error('Error creating folder:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message || 'Failed to create folder'
+    logger.error('Error creating folder', { 
+      folderPath: req.body.path,
+      error
     });
+    return sendError(res, 
+      'Failed to create folder', 
+      500, 
+      'FOLDER_CREATE_ERROR', 
+      { 
+        path: req.body.path,
+        message: error.message 
+      }
+    );
   }
 });
 
@@ -277,16 +295,15 @@ router.post('/folders', isAuthenticated, async (req: Request, res: Response) => 
 router.get('/files/:path(*)', async (req: Request, res: Response) => {
   try {
     const filePath = sanitizePath(req.params.path);
+    logger.debug('Retrieving file', { filePath });
     
     await enhancedObjectStorage.initialize();
     
     // Check if file exists
     const exists = await enhancedObjectStorage.fileExists(filePath);
     if (!exists) {
-      return res.status(404).json({
-        success: false,
-        error: 'File not found'
-      });
+      logger.warn('File not found', { filePath });
+      return sendError(res, 'File not found', 404, 'FILE_NOT_FOUND');
     }
     
     // Get file metadata
@@ -295,10 +312,8 @@ router.get('/files/:path(*)', async (req: Request, res: Response) => {
     // Get file content
     const fileContent = await enhancedObjectStorage.getFile(filePath);
     if (!fileContent) {
-      return res.status(404).json({
-        success: false,
-        error: 'File content not found'
-      });
+      logger.warn('File content not found', { filePath });
+      return sendError(res, 'File content not found', 404, 'FILE_CONTENT_NOT_FOUND');
     }
     
     // Set headers
@@ -310,6 +325,9 @@ router.get('/files/:path(*)', async (req: Request, res: Response) => {
       res.set('Content-Length', metadata.size.toString());
     }
     
+    // Set cache control for improved performance
+    res.set('Cache-Control', 'public, max-age=3600'); // 1 hour cache
+    
     // For download
     if (req.query.download === 'true') {
       const filename = path.basename(filePath);
@@ -319,11 +337,16 @@ router.get('/files/:path(*)', async (req: Request, res: Response) => {
     // Send file
     res.send(fileContent);
   } catch (error: any) {
-    console.error(`Error retrieving file '${req.params.path}':`, error);
-    res.status(500).json({
-      success: false,
-      error: error.message || 'Failed to retrieve file'
+    logger.error(`Error retrieving file`, { 
+      filePath: req.params.path,
+      error
     });
+    return sendError(res, 
+      'Failed to retrieve file', 
+      500, 
+      'FILE_RETRIEVAL_ERROR', 
+      { message: error.message }
+    );
   }
 });
 
