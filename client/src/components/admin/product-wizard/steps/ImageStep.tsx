@@ -271,7 +271,10 @@ export function ImageStep() {
           {/* Uploaded images */}
           {state.imageUrls.length > 0 ? (
             <div className="space-y-4">
-              <h3 className="font-medium text-secondary">Uploaded Images ({state.imageUrls.length})</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="font-medium text-secondary text-lg">Uploaded Images <span className="text-primary font-bold">({state.imageUrls.length})</span></h3>
+                <p className="text-xs text-gray-500">Drag images to reorder • Click star icon to set as main image</p>
+              </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                 {state.imageUrls.map((url, index) => (
                   <div
@@ -317,17 +320,26 @@ export function ImageStep() {
                           <Trash2Icon className="h-3.5 w-3.5" />
                         </Button>
                       </div>
-                      <div className="opacity-90 text-white text-xs flex items-center">
-                        <MoveVerticalIcon className="h-3 w-3 mr-1" />
-                        <span>Drag to reorder</span>
+                      <div className="opacity-90 text-white text-xs flex items-center mt-1">
+                        {index === state.mainImageIndex ? (
+                          <>
+                            <StarIcon className="h-3 w-3 mr-1" />
+                            <span>Main image</span>
+                          </>
+                        ) : (
+                          <>
+                            <MoveVerticalIcon className="h-3 w-3 mr-1" />
+                            <span>Click star to set as main</span>
+                          </>
+                        )}
                       </div>
                     </div>
                     
                     {/* Main image indicator */}
                     {index === state.mainImageIndex && (
-                      <div className="absolute top-1 left-1">
-                        <Badge className="bg-primary text-white text-xs">
-                          Main
+                      <div className="absolute top-2 left-2">
+                        <Badge className="bg-secondary text-white text-xs shadow-sm flex items-center gap-1">
+                          <StarIcon className="h-3 w-3" /> Main
                         </Badge>
                       </div>
                     )}

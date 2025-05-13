@@ -3,63 +3,70 @@
 @tailwind utilities;
 
 :root {
-  --background: 0 0% 88%; /* Soft Gray #E0E0E0 */
-  --foreground: 20 14.3% 4.1%;
-  --muted: 0 0% 88%; /* Soft Gray background */
-  --muted-foreground: 25 5.3% 44.7%;
+  /* New color palette for TeeMeYou */
+  --background: 210 33% 98%; /* Neutral #F8F9FA */
+  --foreground: 0 0% 20%; /* Neutral-dark #333333 */
+  --muted: 210 33% 98%; /* Neutral background */
+  --muted-foreground: 0 0% 40%;
   --popover: 0 0% 100%;
-  --popover-foreground: 20 14.3% 4.1%;
+  --popover-foreground: 0 0% 20%;
   --card: 0 0% 100%;
-  --card-foreground: 20 14.3% 4.1%;
-  --border: 20 5.9% 90%;
-  --input: 20 5.9% 90%;
-  --primary: 330 100% 71%; /* Hot Pink #FF1493 */
-  --primary-foreground: 211 100% 99%;
-  --secondary: 181 100% 41%; /* Teal #00CED1 */
-  --secondary-foreground: 0 0% 100%;
-  --accent: 180 100% 25%; /* Darker Teal #008080 */
-  --accent-foreground: 0 0% 100%;
-  --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 60 9.1% 97.8%;
-  --ring: 20 14.3% 4.1%;
+  --card-foreground: 0 0% 20%;
+  --border: 0 0% 90%;
+  --input: 0 0% 90%;
+  --primary: 330 100% 71%; /* Hot Pink #FF69B4 */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 153 50% 47%; /* Soft Mint #A8E6CF */
+  --secondary-foreground: 0 0% 20%;
+  --accent: 330 100% 92%; /* Primary Light #FFE6F0 */
+  --accent-foreground: 330 100% 40%;
+  --destructive: 0 83% 70%; /* Error #FF6B6B */
+  --destructive-foreground: 0 0% 100%;
+  --success: 122 39% 49%; /* Success #4CAF50 */
+  --success-foreground: 0 0% 100%;
+  --ring: 330 100% 71%;
   --radius: 0.5rem;
   
-  /* Custom colors for TEE ME YOU */
-  --hotpink: 330, 100%, 71%; /* Hot Pink #FF1493 */
-  --lightpink: 330, 100%, 81%; /* Lighter Hot Pink */
-  --darkpink: 330, 100%, 61%; /* Darker Hot Pink */
-  --teal: 180, 100%, 25%; /* Teal #008080 */
-  --aqua: 181, 100%, 41%; /* Aqua #00CED1 */
-  --softgray: 0, 0%, 88%; /* Soft Gray #E0E0E0 */
+  /* Direct color variables */
+  --primary-color: #FF69B4; /* Hot Pink (Base) */
+  --primary-light: #FFE6F0; /* Light shade for form backgrounds */
+  --primary-dark: #D94C97; /* Darker for hover/active states */
+  --neutral: #F8F9FA; /* Background/base color */
+  --neutral-dark: #333333; /* Border/text color */
+  --accent-color: #A8E6CF; /* Soft Mint for contrast */
+  --error: #FF6B6B; /* Form validation error */
+  --success-color: #4CAF50; /* Success messages */
   
   /* Chart colors */
-  --chart-1: var(--hotpink);
-  --chart-2: var(--teal);
-  --chart-3: 199, 89%, 54%;
-  --chart-4: 41, 100%, 59%;
-  --chart-5: 120, 100%, 33%;
+  --chart-1: 330, 100%, 71%; /* Hot Pink */
+  --chart-2: 153, 50%, 47%; /* Soft Mint */
+  --chart-3: 199, 89%, 54%; /* Blue */
+  --chart-4: 41, 100%, 59%; /* Yellow */
+  --chart-5: 120, 100%, 33%; /* Green */
 }
 
 .dark {
-  --background: 240 10% 3.9%;
-  --foreground: 0 0% 98%;
-  --muted: 240 3.7% 15.9%;
-  --muted-foreground: 240 5% 64.9%;
-  --popover: 240 10% 3.9%;
+  --background: 0 0% 10%; /* Dark background */
+  --foreground: 0 0% 98%; /* Light text */
+  --muted: 0 0% 15%;
+  --muted-foreground: 0 0% 80%;
+  --popover: 0 0% 12%;
   --popover-foreground: 0 0% 98%;
-  --card: 240 10% 3.9%;
+  --card: 0 0% 12%;
   --card-foreground: 0 0% 98%;
-  --border: 240 3.7% 15.9%;
-  --input: 240 3.7% 15.9%;
-  --primary: 330 100% 71%; /* Hot Pink #FF1493 */
-  --primary-foreground: 211 100% 99%;
-  --secondary: 181 100% 41%; /* Teal #00CED1 */
-  --secondary-foreground: 0 0% 98%;
-  --accent: 180 100% 25%; /* Darker Teal #008080 */
-  --accent-foreground: 0 0% 98%;
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 0 0% 98%;
-  --ring: 240 4.9% 83.9%;
+  --border: 0 0% 20%;
+  --input: 0 0% 20%;
+  --primary: 330 100% 71%; /* Hot Pink #FF69B4 */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 153 50% 47%; /* Soft Mint #A8E6CF */
+  --secondary-foreground: 0 0% 20%;
+  --accent: 330 100% 92%; /* Primary Light #FFE6F0 */
+  --accent-foreground: 330 100% 40%;
+  --destructive: 0 83% 70%; /* Error #FF6B6B */
+  --destructive-foreground: 0 0% 100%;
+  --success: 122 39% 49%; /* Success #4CAF50 */
+  --success-foreground: 0 0% 100%;
+  --ring: 330 100% 71%;
   --radius: 0.5rem;
 }
 
