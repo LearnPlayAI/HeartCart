@@ -83,6 +83,10 @@ export function AdditionalInfoStep() {
   const [activeTab, setActiveTab] = useState('inventory');
   const [attributeNameInput, setAttributeNameInput] = useState('');
   const [attributeValueInput, setAttributeValueInput] = useState('');
+  const [attributesUsed, setAttributesUsed] = useState<number[]>([]);
+  const [newCustomAttrName, setNewCustomAttrName] = useState('');
+  const [newCustomAttrValue, setNewCustomAttrValue] = useState('');
+  const [customAttributes, setCustomAttributes] = useState<{name: string, value: string}[]>([]);
   const [, navigate] = useLocation();
   
   // Fetch global attributes (always refetch to ensure we have latest data)
@@ -151,6 +155,30 @@ export function AdditionalInfoStep() {
       setAttributeValues(state.attributeValues);
     }
   }, [state.attributeValues]);
+  
+  // Initialize attributesUsed from existing product data when editing
+  useEffect(() => {
+    if (state.attributes && state.attributes.length > 0) {
+      // Get the attribute IDs that aren't custom attributes
+      const usedAttributeIds = state.attributes
+        .filter(attr => !attr.isCustom)
+        .map(attr => attr.id);
+      
+      setAttributesUsed(usedAttributeIds);
+      
+      // Also initialize custom attributes if any
+      const customAttrs = state.attributes
+        .filter(attr => attr.isCustom)
+        .map(attr => ({
+          name: attr.name,
+          value: attr.value || ''
+        }));
+      
+      if (customAttrs.length > 0) {
+        setCustomAttributes(customAttrs);
+      }
+    }
+  }, [state.attributes]);
 
   // Format available product attributes for our pricing component
   useEffect(() => {
@@ -519,18 +547,21 @@ export function AdditionalInfoStep() {
                         <p className="text-sm font-medium">
                           Selected attributes determine what options customers need to select when purchasing this product.
                         </p>
+                        
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {formattedAttributes.map((attr) => (
                             <div 
                               key={attr.id} 
-                              className="border rounded-md p-4 shadow-sm"
+                              className={`border rounded-md p-4 shadow-sm ${attributesUsed.includes(attr.id) ? 'border-primary/30 bg-primary/5' : ''}`}
                             >
                               <div className="flex justify-between items-center mb-2">
                                 <span className="font-medium">{attr.name}</span>
                                 <Switch 
-                                  checked={state.attributes.some(a => a.id === attr.id)}
+                                  checked={attributesUsed.includes(attr.id)}
                                   onCheckedChange={(checked) => {
                                     if (checked) {
+                                      setAttributesUsed([...attributesUsed, attr.id]);
+                                      // Also add to product's attributes in state
                                       addAttribute({
                                         id: attr.id,
                                         name: attr.name,
@@ -538,6 +569,8 @@ export function AdditionalInfoStep() {
                                         isCustom: false,
                                       });
                                     } else {
+                                      setAttributesUsed(attributesUsed.filter(id => id !== attr.id));
+                                      // Also remove from product's attributes in state
                                       const index = state.attributes.findIndex(a => a.id === attr.id);
                                       if (index !== -1) {
                                         handleRemoveAttribute(index);
@@ -549,16 +582,25 @@ export function AdditionalInfoStep() {
                               <p className="text-sm text-muted-foreground mb-2">
                                 {attr.options.length} options available
                               </p>
-                              <div className="flex flex-wrap gap-1">
-                                {attr.options.slice(0, 4).map(option => (
-                                  <Badge key={option.id} variant="outline">
-                                    {option.displayValue}
-                                  </Badge>
-                                ))}
-                                {attr.options.length > 4 && (
-                                  <Badge variant="outline">+{attr.options.length - 4} more</Badge>
-                                )}
-                              </div>
+                              
+                              {attributesUsed.includes(attr.id) && (
+                                <div className="mt-3 border-t pt-3">
+                                  <div className="mb-2">
+                                    <span className="text-sm font-medium mb-1 block">Options for {attr.name}</span>
+                                    <div className="flex flex-wrap gap-2 mt-2">
+                                      {attr.options.map(option => (
+                                        <Badge 
+                                          key={option.id} 
+                                          variant="outline"
+                                          className="px-3 py-1 text-xs"
+                                        >
+                                          {option.displayValue}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           ))}
                         </div>
@@ -572,6 +614,54 @@ export function AdditionalInfoStep() {
                       </div>
                     )}
                     
+                    {/* Custom Attributes for Selected Attributes */}
+                    {attributesUsed.length > 0 && (
+                      <div className="mt-6 pt-6 border-t">
+                        <h4 className="font-medium">Custom Attribute Values</h4>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Add custom values for the selected attributes
+                        </p>
+                        
+                        <div className="space-y-4">
+                          {attributesUsed.map(attrId => {
+                            const attr = formattedAttributes.find(a => a.id === attrId);
+                            if (!attr) return null;
+                            
+                            // Find existing attribute instances in the state
+                            const existingAttrIndex = state.attributes.findIndex(a => a.id === attr.id);
+                            
+                            return (
+                              <div key={attr.id} className="border rounded-md p-4">
+                                <div className="flex justify-between items-center mb-3">
+                                  <h5 className="font-medium">{attr.name}</h5>
+                                </div>
+                                
+                                <div className="space-y-3">
+                                  <div className="grid grid-cols-1 gap-3">
+                                    <label className="text-sm font-medium">
+                                      Custom Value for {attr.name}
+                                    </label>
+                                    <div className="flex items-center gap-2">
+                                      <Input
+                                        type="text"
+                                        value={existingAttrIndex !== -1 ? state.attributes[existingAttrIndex].value || '' : ''}
+                                        onChange={(e) => {
+                                          if (existingAttrIndex !== -1) {
+                                            handleAttributeValueChange(existingAttrIndex, e.target.value);
+                                          }
+                                        }}
+                                        placeholder={`Enter ${attr.name.toLowerCase()} value (e.g. ${attr.options[0]?.displayValue || 'Custom'})`}
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                    
                     {/* Custom Attributes Section */}
                     <div className="mt-6 pt-6 border-t">
                       <h4 className="font-medium">Custom Attributes</h4>
@@ -579,45 +669,47 @@ export function AdditionalInfoStep() {
                         Add one-time custom attributes for this product only
                       </p>
                       
-                      {/* Current Custom Attributes */}
-                      {state.attributes.filter(attr => attr.isCustom).length > 0 ? (
+                      {customAttributes.length === 0 ? (
+                        <p className="text-sm text-muted-foreground italic mb-4">No custom attributes added yet</p>
+                      ) : (
                         <div className="space-y-3 mb-4">
-                          {state.attributes.filter(attr => attr.isCustom).map((attr) => {
-                            const index = state.attributes.findIndex(a => a.id === attr.id);
-                            return (
-                              <div 
-                                key={attr.id || index} 
-                                className="flex items-center gap-2 border rounded-md p-3"
-                              >
-                                <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                  <div>
-                                    <span className="text-sm font-semibold">{attr.name}</span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <input
-                                      type="text"
-                                      value={attr.value || ''}
-                                      onChange={(e) => handleAttributeValueChange(index, e.target.value)}
-                                      placeholder="Enter value"
-                                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                                    />
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8 text-muted-foreground"
-                                      onClick={() => handleRemoveAttribute(index)}
-                                    >
-                                      <XIcon className="h-4 w-4" />
-                                    </Button>
-                                  </div>
+                          {customAttributes.map((attr, index) => (
+                            <div 
+                              key={index} 
+                              className="flex items-center gap-2 border rounded-md p-3"
+                            >
+                              <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <div>
+                                  <span className="text-sm font-semibold">{attr.name}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="text"
+                                    value={attr.value}
+                                    onChange={(e) => {
+                                      const updatedAttrs = [...customAttributes];
+                                      updatedAttrs[index] = { ...attr, value: e.target.value };
+                                      setCustomAttributes(updatedAttrs);
+                                    }}
+                                    placeholder="Enter value"
+                                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                  />
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-muted-foreground"
+                                    onClick={() => {
+                                      setCustomAttributes(customAttributes.filter((_, i) => i !== index));
+                                    }}
+                                  >
+                                    <XIcon className="h-4 w-4" />
+                                  </Button>
                                 </div>
                               </div>
-                            );
-                          })}
+                            </div>
+                          ))}
                         </div>
-                      ) : (
-                        <p className="text-sm text-muted-foreground italic">No custom attributes added yet</p>
                       )}
                       
                       {/* Add Custom Attribute Form */}
@@ -631,8 +723,8 @@ export function AdditionalInfoStep() {
                             <input
                               id="attrName"
                               type="text"
-                              value={attributeNameInput}
-                              onChange={(e) => setAttributeNameInput(e.target.value)}
+                              value={newCustomAttrName}
+                              onChange={(e) => setNewCustomAttrName(e.target.value)}
                               placeholder="e.g. Material, Color, Style"
                               className="mt-1 flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                             />
@@ -644,8 +736,8 @@ export function AdditionalInfoStep() {
                             <input
                               id="attrValue"
                               type="text"
-                              value={attributeValueInput}
-                              onChange={(e) => setAttributeValueInput(e.target.value)}
+                              value={newCustomAttrValue}
+                              onChange={(e) => setNewCustomAttrValue(e.target.value)}
                               placeholder="e.g. Cotton, Red, XL"
                               className="mt-1 flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                             />
@@ -653,8 +745,28 @@ export function AdditionalInfoStep() {
                         </div>
                         <Button
                           type="button"
-                          onClick={handleAddAttribute}
-                          disabled={!attributeNameInput.trim()}
+                          onClick={() => {
+                            if (newCustomAttrName.trim() && newCustomAttrValue.trim()) {
+                              // Add to custom attributes
+                              setCustomAttributes([
+                                ...customAttributes,
+                                { name: newCustomAttrName, value: newCustomAttrValue }
+                              ]);
+                              
+                              // Also add to product attributes through context
+                              addAttribute({
+                                id: Date.now(), // Temporary ID for UI purposes
+                                name: newCustomAttrName.trim(),
+                                value: newCustomAttrValue.trim(),
+                                isCustom: true,
+                              });
+                              
+                              // Clear inputs
+                              setNewCustomAttrName('');
+                              setNewCustomAttrValue('');
+                            }
+                          }}
+                          disabled={!newCustomAttrName.trim() || !newCustomAttrValue.trim()}
                           size="sm"
                           className="mt-2"
                         >
