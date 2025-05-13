@@ -344,7 +344,8 @@ router.post('/', upload.single('file'), async (req: Request, res: Response) => {
       );
     } else {
       // Use general upload for other bucket types
-      result = await objectStore.uploadFile(
+      // For v1 compatibility, we'll stick to uploadTempFile for now
+      result = await objectStore.uploadTempFile(
         buffer,
         filename,
         bucket,
@@ -354,8 +355,13 @@ router.post('/', upload.single('file'), async (req: Request, res: Response) => {
     
     res.json({ 
       success: true, 
+      // Include both formats for backwards compatibility
       url: result.url, 
-      objectKey: result.objectKey 
+      objectKey: result.objectKey,
+      data: {
+        url: result.url,
+        objectKey: result.objectKey
+      }
     });
   } catch (error) {
     console.error('Error uploading file:', error);

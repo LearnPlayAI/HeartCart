@@ -52,10 +52,22 @@ export function useFileUpload() {
         throw new Error(data.message || 'Upload failed');
       }
       
-      return {
-        url: data.data.url,
-        objectKey: data.data.objectKey
-      };
+      // Handle both response formats (with data field or direct properties)
+      if (data.data && data.data.url) {
+        // New standardized format
+        return {
+          url: data.data.url,
+          objectKey: data.data.objectKey
+        };
+      } else if (data.url) {
+        // Legacy direct format
+        return {
+          url: data.url,
+          objectKey: data.objectKey
+        };
+      } else {
+        throw new Error('Invalid response format from server');
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed');
       throw err;

@@ -150,8 +150,14 @@ export function ImageStep() {
         throw new Error('Invalid response format from server');
       }
       
-      // Add image to state
-      addImage(result.url, result.objectKey);
+      // Add image to state - handle both response formats for backwards compatibility
+      if (result.data && result.data.url) {
+        // New standardized format
+        addImage(result.data.url, result.data.objectKey);
+      } else {
+        // Legacy format
+        addImage(result.url, result.objectKey);
+      }
       
       // Mark step as complete
       markStepComplete('images');
