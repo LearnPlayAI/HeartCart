@@ -18,8 +18,8 @@ export const users = pgTable("users", {
   country: text("country").default("South Africa"),
   isActive: boolean("is_active").default(true).notNull(),
   role: text("role").default("user").notNull(), // 'user', 'admin', etc.
-  createdAt: text("created_at").default(() => new Date().toISOString()).notNull(),
-  updatedAt: text("updated_at").default(() => new Date().toISOString()).notNull(),
+  createdAt: text("created_at").default(String(new Date().toISOString())).notNull(),
+  updatedAt: text("updated_at").default(String(new Date().toISOString())).notNull(),
   lastLogin: text("last_login"),
 });
 
@@ -77,7 +77,7 @@ export const products = pgTable("products", {
   displayOrder: integer("display_order").default(999), // Default high number to place new products at the end
   hasBackgroundRemoved: boolean("has_background_removed").default(false),
   originalImageObjectKey: text("original_image_object_key"),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  createdAt: text("created_at").default(String(new Date().toISOString())).notNull(),
 }, (table) => {
   return {
     categoryIdIdx: index("products_category_id_idx").on(table.categoryId),
