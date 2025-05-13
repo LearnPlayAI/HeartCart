@@ -128,6 +128,74 @@ class ObjectStoreAdapter {
   detectContentType(filename: string): string {
     return primaryObjectStore.detectContentType(filename);
   }
+
+  /**
+   * Validate image before upload
+   */
+  async validateImage(buffer: Buffer, filename: string): Promise<{
+    valid: boolean;
+    message?: string;
+    details?: {
+      format?: string;
+      width?: number;
+      height?: number;
+      size?: number;
+    }
+  }> {
+    try {
+      // If the primary object store has a validateImage method, use it
+      if (typeof primaryObjectStore.validateImage === 'function') {
+        return primaryObjectStore.validateImage(buffer, filename);
+      }
+      
+      // Otherwise implement basic validation
+      // This is a fallback implementation
+      const Sharp = require('sharp');
+      const image = Sharp(buffer);
+      const metadata = await image.metadata();
+      
+      // Define validation criteria
+      const minWidth = 200;
+      const minHeight = 200;
+      const maxSizeMB = 5;
+      const allowedFormats = ['jpeg', 'jpg', 'png', 'webp'];
+      
+      // Check format
+      const isValidFormat = allowedFormats.includes(metadata.format);
+      
+      // Check dimensions
+      const hasValidDimensions = 
+        (metadata.width && metadata.width >= minWidth) && 
+        (metadata.height && metadata.height >= minHeight);
+      
+      // Check file size
+      const sizeInMB = buffer.length / (1024 * 1024);
+      const hasValidSize = sizeInMB <= maxSizeMB;
+      
+      // Overall validation
+      const valid = isValidFormat && hasValidDimensions && hasValidSize;
+      
+      // Construct validation result
+      return {
+        valid,
+        message: valid 
+          ? 'Image is valid' 
+          : 'Image validation failed. Check the detailed requirements.',
+        details: {
+          format: metadata.format,
+          width: metadata.width,
+          height: metadata.height,
+          size: sizeInMB
+        }
+      };
+    } catch (error) {
+      console.error('Error validating image:', error);
+      return {
+        valid: false,
+        message: 'Failed to validate image due to processing error',
+      };
+    }
+  }
 }
 
 // Export a singleton instance

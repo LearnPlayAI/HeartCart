@@ -256,13 +256,13 @@ router.post(
     const moveResults = await Promise.all(sourceKeys.map(async (sourceKey: string, index: number) => {
       try {
         // Move file to final location
-        const result = await objectStore.moveToFinalLocation(
+        const result = await objectStoreAdapter.moveToFinalLocation(
           sourceKey,
           supplierName,
           catalogName,
           categoryName,
           sanitizedProductName,
-          productId.toString()
+          productId
         );
         
         // Create product image record
@@ -333,7 +333,7 @@ router.post(
     }
     
     // Validate the image
-    const validationResult = await objectStore.validateImage(
+    const validationResult = await objectStoreAdapter.validateImage(
       req.file.buffer,
       req.file.originalname
     );
