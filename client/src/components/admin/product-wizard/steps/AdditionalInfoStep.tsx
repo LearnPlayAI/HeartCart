@@ -85,9 +85,11 @@ export function AdditionalInfoStep() {
   const [attributeValueInput, setAttributeValueInput] = useState('');
   const [, navigate] = useLocation();
   
-  // Fetch global attributes
-  const { data: globalAttributesData } = useQuery({
+  // Fetch global attributes (always refetch to ensure we have latest data)
+  const { data: globalAttributesData, refetch: refetchAttributes } = useQuery({
     queryKey: ['/api/attributes'],
+    refetchOnMount: true,
+    staleTime: 0 // Consider data stale immediately
   });
   
   // Format global attributes for our component
