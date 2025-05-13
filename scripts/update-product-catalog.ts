@@ -95,59 +95,142 @@ async function fixProductImages(
     const categoryName = category?.name || 'uncategorized';
     const sanitizedProductName = productName.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
     
-    // Get the product to check its current image URLs
-    const [product] = await db.select().from(products).where(eq(products.id, productId));
+    // Step 1: First check if there are product images in the product_images table
+    const productImageRecords = await db.select().from(productImages).where(eq(productImages.productId, productId));
     
-    if (!product) {
-      console.error(`Product with ID ${productId} not found`);
-      return;
+    if (productImageRecords && productImageRecords.length > 0) {
+      console.log(`Found ${productImageRecords.length} images for product ${productId}`);
+      
+      // Create the new path with correct supplier and catalog
+      const sanitizedSupplier = supplierName.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
+      const sanitizedCatalog = catalogName.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
+      
+      for (const image of productImageRecords) {
+        let needsUpdate = false;
+        let newUrl = image.url;
+        let newObjectKey = image.objectKey;
+        
+        // Fix any URLs that have /api/files/ prefix (they shouldn't)
+        if (image.url && image.url.startsWith('/api/files/')) {
+          newUrl = image.url.replace('/api/files/', '');
+          needsUpdate = true;
+        }
+        
+        // Fix unknown supplier/catalog in URLs
+        if (image.url && image.url.includes('unknown-supplier/unknown-catalog')) {
+          newUrl = image.url.replace(
+            'unknown-supplier/unknown-catalog', 
+            `${sanitizedSupplier}/${sanitizedCatalog}`
+          );
+          needsUpdate = true;
+        }
+        
+        // Fix unknown supplier/catalog in object keys
+        if (image.objectKey && image.objectKey.includes('unknown-supplier/unknown-catalog')) {
+          newObjectKey = image.objectKey.replace(
+            'unknown-supplier/unknown-catalog', 
+            `${sanitizedSupplier}/${sanitizedCatalog}`
+          );
+          needsUpdate = true;
+        }
+        
+        if (needsUpdate) {
+          // Update the image record
+          await db.update(productImages)
+            .set({ 
+              url: newUrl,
+              objectKey: newObjectKey 
+            })
+            .where(eq(productImages.id, image.id));
+          
+          console.log(`Updated image ${image.id}: ${newUrl}`);
+        }
+      }
+    } else {
+      console.log(`No product_images found for product ${productId}`);
+      
+      // Get the product to check main image URL field
+      const [product] = await db.select().from(products).where(eq(products.id, productId));
+      
+      if (!product) {
+        console.error(`Product with ID ${productId} not found`);
+        return;
+      }
+      
+      // Check if the product has an image URL with "unknown-supplier/unknown-catalog"
+      if (!product.imageUrl) {
+        console.log('Product has no imageUrl, skipping image fix.');
+        return;
+      }
+      
+      let needsUpdate = false;
+      let newImageUrl = product.imageUrl;
+      
+      if (product.imageUrl.includes('unknown-supplier/unknown-catalog')) {
+        // Create the new path with correct supplier and catalog
+        const sanitizedSupplier = supplierName.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
+        const sanitizedCatalog = catalogName.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
+        
+        // Replace in main image URL
+        newImageUrl = product.imageUrl.replace(
+          'unknown-supplier/unknown-catalog', 
+          `${sanitizedSupplier}/${sanitizedCatalog}`
+        );
+        
+        needsUpdate = true;
+      }
+      
+      // Fix any URLs that have /api/files/ prefix (they shouldn't)
+      if (newImageUrl.startsWith('/api/files/')) {
+        newImageUrl = newImageUrl.replace('/api/files/', '');
+        needsUpdate = true;
+      }
+      
+      // Update additional images if they exist
+      let newAdditionalImages = product.additionalImages || [];
+      if (Array.isArray(product.additionalImages) && product.additionalImages.length > 0) {
+        let additionalImagesUpdated = false;
+        
+        newAdditionalImages = product.additionalImages.map(url => {
+          let newUrl = url;
+          
+          // Fix unknown supplier/catalog
+          if (url.includes('unknown-supplier/unknown-catalog')) {
+            newUrl = url.replace(
+              'unknown-supplier/unknown-catalog', 
+              `${sanitizedSupplier}/${sanitizedCatalog}`
+            );
+            additionalImagesUpdated = true;
+          }
+          
+          // Fix /api/files/ prefix
+          if (newUrl.startsWith('/api/files/')) {
+            newUrl = newUrl.replace('/api/files/', '');
+            additionalImagesUpdated = true;
+          }
+          
+          return newUrl;
+        });
+        
+        if (additionalImagesUpdated) {
+          needsUpdate = true;
+        }
+      }
+      
+      if (needsUpdate) {
+        // Update the product's image URLs in the database
+        await db.update(products)
+          .set({ 
+            imageUrl: newImageUrl,
+            additionalImages: newAdditionalImages
+          })
+          .where(eq(products.id, productId));
+        
+        console.log(`Updated product image URLs. New main image: ${newImageUrl}`);
+      } else {
+        console.log('No image URL updates needed for this product');
+      }
     }
-    
-    // Check if the product has an image URL with "unknown-supplier/unknown-catalog"
-    if (!product.imageUrl || !product.imageUrl.includes('unknown-supplier/unknown-catalog')) {
-      console.log('Product images are not using unknown paths, no update needed');
-      return;
-    }
-    
-    console.log('Current image URL:', product.imageUrl);
-    
-    // Create the new path with correct supplier and catalog
-    const sanitizedSupplier = supplierName.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
-    const sanitizedCatalog = catalogName.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
-    
-    // Use a regex to replace the path prefix in all URLs
-    const oldPathPrefix = '/api/files/unknown-supplier/unknown-catalog/';
-    const newPathPrefix = `/api/files/${sanitizedSupplier}/${sanitizedCatalog}/`;
-    
-    console.log(`Replacing path prefix from "${oldPathPrefix}" to "${newPathPrefix}"`);
-    
-    // Update the main image URL
-    const newImageUrl = product.imageUrl.replace(oldPathPrefix, newPathPrefix);
-    
-    // Update additional images if they exist
-    let newAdditionalImages = product.additionalImages || [];
-    if (Array.isArray(product.additionalImages) && product.additionalImages.length > 0) {
-      newAdditionalImages = product.additionalImages.map(url => 
-        url.replace(oldPathPrefix, newPathPrefix)
-      );
-    }
-    
-    // Update the product's image URLs in the database
-    await db.update(products)
-      .set({ 
-        imageUrl: newImageUrl,
-        additionalImages: newAdditionalImages
-      })
-      .where(eq(products.id, productId));
-    
-    console.log(`Updated product image URLs. New main image: ${newImageUrl}`);
-    
-    // Note: This approach only updates the database references to the images
-    // The actual files in the object store will remain in their current location
-    // If you need to physically move the files, you would need to:
-    // 1. Get the original files from the object store
-    // 2. Upload them to the new paths
-    // 3. Delete the old files (optional)
   } catch (error) {
     console.error(`Error fixing images for product ${productId}:`, error);
   }
