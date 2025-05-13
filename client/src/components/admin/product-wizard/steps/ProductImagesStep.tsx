@@ -180,18 +180,25 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className 
   
   // Function to fetch images for an existing product
   const fetchExistingProductImages = useCallback(async (productId: number) => {
-    if (!productId) return;
+    if (!productId) {
+      console.log('Cannot fetch images - no product ID provided');
+      return;
+    }
     
+    console.log(`Fetching existing images for product ID: ${productId}`);
     setIsLoadingExistingImages(true);
     
     try {
-      const response = await fetch(`/api/products/${productId}/images`);
+      const endpoint = `/api/products/${productId}/images`;
+      console.log(`Calling API endpoint: ${endpoint}`);
+      const response = await fetch(endpoint);
       
       if (!response.ok) {
         throw new Error(`Failed to fetch product images: ${response.status}`);
       }
       
       const result = await response.json();
+      console.log('API response for product images:', result);
       
       if (result.success && Array.isArray(result.data)) {
         console.log('Successfully fetched existing product images:', result.data);
