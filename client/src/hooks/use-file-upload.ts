@@ -1,378 +1,300 @@
 /**
- * useFileUpload Hook
+ * File Upload Hook
  * 
- * Custom hook for handling file uploads, providing a consistent interface
- * across the application for uploading and managing files.
+ * Custom React hook for handling file uploads, providing a consistent
+ * interface for file validation, upload, and progress tracking.
+ * Uses the enhanced file utility functions for validation and sanitization.
  */
 
-import { useState, useEffect, useCallback } from 'react';
-import { UploadedImage } from '../components/admin/product-wizard/types';
+import { useState, useCallback } from 'react';
+import { useToast } from '@/hooks/use-toast';
 import {
-  uploadFiles,
-  ensureValidImageUrl,
-  validateFileSize,
-  cleanupLocalImageUrls,
-  createLocalImageUrl,
-  UPLOAD_ENDPOINTS
-} from '../utils/file-manager';
-
-interface FileUploadState {
-  images: UploadedImage[];
-  previews: string[];
-  isUploading: boolean;
-  uploadProgress: Record<string, number>;
-  errors: Record<string, string>;
-  mainImageIndex: number;
-}
-
-type UploadStatus = 'idle' | 'uploading' | 'success' | 'error';
+  sanitizeFilename,
+  hasAllowedExtension,
+  formatFileSize,
+  generateUniqueFilename
+} from '@/utils/file-utils';
 
 interface FileUploadOptions {
-  maxFiles?: number;
-  maxSizeMB?: number;
-  allowedTypes?: string[];
-  endpoint?: string;
-  additionalData?: Record<string, string | number | boolean>;
-  initialImages?: UploadedImage[];
+  endpoint: string;
+  maxFileSize?: number; // in MB
+  allowedExtensions?: string[];
+  additionalData?: Record<string, string>;
+  autoUpload?: boolean;
+  multiple?: boolean;
+  onSuccess?: (response: any) => void;
+  onError?: (error: Error) => void;
 }
 
-const defaultOptions: FileUploadOptions = {
-  maxFiles: 5,
-  maxSizeMB: 5,
-  allowedTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
-  endpoint: UPLOAD_ENDPOINTS.PRODUCT_TEMP
-};
+interface FileUploadResult {
+  isUploading: boolean;
+  progress: number;
+  error: string | null;
+  selectedFiles: File[];
+  results: any[];
+  selectFiles: (files: FileList | null) => void;
+  uploadFiles: () => Promise<void>;
+  clearFiles: () => void;
+  validateFiles: (files: FileList) => {
+    validFiles: File[];
+    invalidFiles: { file: File; reason: string }[];
+  };
+}
 
-export function useFileUpload(options?: FileUploadOptions) {
+/**
+ * Custom hook for handling file uploads with validation and progress tracking
+ */
+export function useFileUpload(options: FileUploadOptions): FileUploadResult {
+  const [isUploading, setIsUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [results, setResults] = useState<any[]>([]);
+  const { toast } = useToast();
+
   const {
-    maxFiles = defaultOptions.maxFiles,
-    maxSizeMB = defaultOptions.maxSizeMB,
-    allowedTypes = defaultOptions.allowedTypes,
-    endpoint = defaultOptions.endpoint,
-    additionalData,
-    initialImages = []
-  } = options || {};
+    endpoint,
+    maxFileSize = 5, // Default 5MB
+    allowedExtensions = [],
+    additionalData = {},
+    autoUpload = false,
+    multiple = false,
+    onSuccess,
+    onError
+  } = options;
 
-  const [state, setState] = useState<FileUploadState>({
-    images: initialImages,
-    // Ensure all URLs are properly encoded
-    previews: initialImages.map(img => {
-      // Check if we have an image object or string
-      const url = typeof img === 'string' ? img : (img.url || '');
-      if (url) {
-        return ensureValidImageUrl(img);
-      }
-      return '';
-    }),
-    isUploading: false,
-    uploadProgress: {},
-    errors: {},
-    mainImageIndex: initialImages.findIndex(img => img.isMain) || 0
-  });
-
-  const [uploadStatus, setUploadStatus] = useState<UploadStatus>('idle');
-  
-  // Clean up local image URLs when component unmounts
-  useEffect(() => {
-    return () => {
-      cleanupLocalImageUrls(state.images);
-    };
-  }, []);
-  
-  // Add new images (client-side only, doesn't upload yet)
-  const addFiles = useCallback((newFiles: File[]) => {
-    setState(prev => {
-      // Check how many more files we can add
-      const availableSlots = (maxFiles || 5) - prev.images.length;
-      
-      if (availableSlots <= 0) {
-        return {
-          ...prev,
-          errors: {
-            ...prev.errors,
-            limit: `Maximum of ${maxFiles || 5} files allowed`
-          }
-        };
-      }
-      
-      // Limit to available slots and validate each file
+  /**
+   * Validates files against size and extension constraints
+   */
+  const validateFiles = useCallback(
+    (files: FileList) => {
       const validFiles: File[] = [];
-      const newErrors: Record<string, string> = {};
-      
-      newFiles.slice(0, availableSlots).forEach(file => {
-        // Validate file type
-        if (allowedTypes && !allowedTypes.includes(file.type)) {
-          newErrors[file.name] = `Invalid file type: ${file.type}`;
+      const invalidFiles: { file: File; reason: string }[] = [];
+
+      Array.from(files).forEach((file) => {
+        // Check file size
+        if (file.size > maxFileSize * 1024 * 1024) {
+          invalidFiles.push({
+            file,
+            reason: `File exceeds maximum size (${formatFileSize(file.size)} > ${maxFileSize}MB)`
+          });
           return;
         }
-        
-        // Validate file size
-        if (!validateFileSize(file, maxSizeMB)) {
-          newErrors[file.name] = `File exceeds maximum size of ${maxSizeMB}MB`;
-          return;
+
+        // Check file extension if restrictions are provided
+        if (allowedExtensions.length > 0) {
+          const sanitizedName = sanitizeFilename(file.name);
+          if (!hasAllowedExtension(sanitizedName, allowedExtensions)) {
+            invalidFiles.push({
+              file,
+              reason: `File type not allowed (must be one of: ${allowedExtensions.join(', ')})`
+            });
+            return;
+          }
         }
-        
+
         validFiles.push(file);
       });
-      
-      if (validFiles.length === 0) {
-        return {
-          ...prev,
-          errors: {
-            ...prev.errors,
-            ...newErrors
-          }
-        };
+
+      return { validFiles, invalidFiles };
+    },
+    [allowedExtensions, maxFileSize]
+  );
+
+  /**
+   * Handles file selection and optionally triggers upload
+   */
+  const selectFiles = useCallback(
+    (files: FileList | null) => {
+      setError(null);
+
+      if (!files || files.length === 0) {
+        return;
       }
-      
-      // Create temporary uploadedImage objects with local URLs for preview
-      const newImages: UploadedImage[] = validFiles.map((file, index) => {
-        const localUrl = createLocalImageUrl(file);
-        return {
-          url: localUrl,
-          file, // Store the file object for later upload
-          isMain: prev.images.length === 0 && index === 0, // First image is main by default if no images exist
-          order: prev.images.length + index,
-          metadata: {
-            size: file.size,
-            originalname: file.name
-          }
-        };
-      });
-      
-      // Create properly encoded previews for the new images
-      const newPreviews = newImages.map(img => {
-        // Use ensureValidImageUrl to get properly encoded URLs
-        if (img.url) {
-          return ensureValidImageUrl(img);
-        }
-        return '';
-      });
-      
-      return {
-        ...prev,
-        images: [...prev.images, ...newImages],
-        previews: [...prev.previews, ...newPreviews],
-        errors: {
-          ...prev.errors,
-          ...newErrors
-        }
-      };
-    });
-  }, [maxFiles, maxSizeMB, allowedTypes]);
-  
-  // Remove an image by index
-  const removeFile = useCallback((index: number) => {
-    setState(prev => {
-      // Cannot remove during upload
-      if (prev.isUploading) {
-        return prev;
-      }
-      
-      const newImages = [...prev.images];
-      const newPreviews = [...prev.previews];
-      
-      // Get the image being removed
-      const removedImage = newImages[index];
-      
-      // Revoke object URL if it's a local preview
-      if (removedImage && removedImage.url && removedImage.url.startsWith('blob:')) {
-        URL.revokeObjectURL(removedImage.url);
-      }
-      
-      // Remove the image and preview
-      newImages.splice(index, 1);
-      newPreviews.splice(index, 1);
-      
-      // Update main image index if needed
-      let newMainIndex = prev.mainImageIndex;
-      if (index === prev.mainImageIndex) {
-        // If the main image was removed, set first image as main
-        newMainIndex = newImages.length > 0 ? 0 : -1;
-      } else if (index < prev.mainImageIndex) {
-        // If an image before the main image was removed, adjust index
-        newMainIndex--;
-      }
-      
-      // Update isMain flag on images if main index changed
-      if (newMainIndex !== prev.mainImageIndex) {
-        newImages.forEach((img, i) => {
-          img.isMain = i === newMainIndex;
+
+      const { validFiles, invalidFiles } = validateFiles(files);
+
+      // Handle invalid files by showing an error message
+      if (invalidFiles.length > 0) {
+        const errorMessages = invalidFiles.map(
+          ({ file, reason }) => `${file.name}: ${reason}`
+        );
+
+        toast({
+          title: 'Some files could not be uploaded',
+          description: (
+            <div className="mt-2">
+              <p>The following files couldn't be uploaded:</p>
+              <ul className="list-disc pl-4 mt-1">
+                {errorMessages.map((msg, i) => (
+                  <li key={i} className="text-sm">{msg}</li>
+                ))}
+              </ul>
+            </div>
+          ),
+          variant: 'destructive',
         });
       }
-      
-      return {
-        ...prev,
-        images: newImages,
-        previews: newPreviews,
-        mainImageIndex: newMainIndex
-      };
-    });
-  }, []);
-  
-  // Set an image as the main image
-  const setMainImage = useCallback((index: number) => {
-    setState(prev => {
-      if (index < 0 || index >= prev.images.length || index === prev.mainImageIndex) {
-        return prev;
-      }
-      
-      // Update main image flag on all images
-      const newImages = prev.images.map((img, i) => ({
-        ...img,
-        isMain: i === index
-      }));
-      
-      return {
-        ...prev,
-        images: newImages,
-        mainImageIndex: index
-      };
-    });
-  }, []);
-  
-  // Reorder images via drag and drop
-  const reorderImages = useCallback((fromIndex: number, toIndex: number) => {
-    setState(prev => {
-      // Cannot reorder during upload
-      if (prev.isUploading) {
-        return prev;
-      }
-      
-      const newImages = [...prev.images];
-      const newPreviews = [...prev.previews];
-      
-      // Move the image from fromIndex to toIndex
-      const [movedImage] = newImages.splice(fromIndex, 1);
-      newImages.splice(toIndex, 0, movedImage);
-      
-      // Move the preview as well
-      const [movedPreview] = newPreviews.splice(fromIndex, 1);
-      newPreviews.splice(toIndex, 0, movedPreview);
-      
-      // Update order property on all images
-      const reorderedImages = newImages.map((img, i) => ({
-        ...img,
-        order: i
-      }));
-      
-      // Update main image index if needed
-      let newMainIndex = prev.mainImageIndex;
-      if (fromIndex === prev.mainImageIndex) {
-        // Main image was moved
-        newMainIndex = toIndex;
-      } else if (
-        (fromIndex < prev.mainImageIndex && toIndex >= prev.mainImageIndex) ||
-        (fromIndex > prev.mainImageIndex && toIndex <= prev.mainImageIndex)
-      ) {
-        // An image was moved across the main image
-        if (fromIndex < prev.mainImageIndex) {
-          newMainIndex--;
-        } else {
-          newMainIndex++;
-        }
-      }
-      
-      return {
-        ...prev,
-        images: reorderedImages,
-        previews: newPreviews,
-        mainImageIndex: newMainIndex
-      };
-    });
-  }, []);
-  
-  // Upload all local files to the server
-  const uploadAllFiles = useCallback(async (): Promise<UploadedImage[]> => {
-    // Find which images need to be uploaded (those with file objects)
-    const toUpload = state.images.filter(img => img.file);
-    
-    if (toUpload.length === 0) {
-      // Return existing server-side images
-      return state.images.filter(img => !img.file);
-    }
-    
-    setUploadStatus('uploading');
-    setState(prev => ({ ...prev, isUploading: true }));
-    
-    try {
-      // Extract the File objects
-      const files = toUpload.map(img => img.file!);
-      
-      // Upload the files and get server-returned metadata
-      const uploadedImages = await uploadFiles(files, endpoint!, additionalData);
-      
-      // Replace local images with server-returned ones, preserving main image flag and order
-      const newImages = [...state.images];
-      
-      // Replace each local image with the corresponding uploaded one
-      toUpload.forEach((localImage, index) => {
-        const imgIndex = newImages.findIndex(img => img === localImage);
-        if (imgIndex >= 0 && index < uploadedImages.length) {
-          const serverImage = uploadedImages[index];
+
+      // Update selected files state
+      setSelectedFiles((prev) =>
+        multiple ? [...prev, ...validFiles] : validFiles.slice(0, 1)
+      );
+
+      // Auto-upload if enabled
+      if (autoUpload && validFiles.length > 0) {
+        const filesToUpload = multiple 
+          ? [...selectedFiles, ...validFiles] 
+          : validFiles.slice(0, 1);
           
-          // Preserve local metadata
-          newImages[imgIndex] = {
-            ...serverImage,
-            isMain: localImage.isMain,
-            order: localImage.order
-          };
+        uploadFilesToServer(filesToUpload);
+      }
+    },
+    [
+      multiple,
+      autoUpload,
+      validateFiles,
+      selectedFiles,
+      toast
+    ]
+  );
+
+  /**
+   * Core upload function that sends files to the server
+   */
+  const uploadFilesToServer = useCallback(
+    async (filesToUpload: File[]) => {
+      if (filesToUpload.length === 0) {
+        setError('No files selected for upload');
+        return;
+      }
+
+      setIsUploading(true);
+      setProgress(0);
+      setError(null);
+
+      try {
+        const formData = new FormData();
+
+        // Append files to form data
+        filesToUpload.forEach((file) => {
+          // Generate a unique filename to prevent collisions
+          const uniqueFilename = generateUniqueFilename(file.name);
           
-          // Revoke the object URL to prevent memory leaks
-          if (localImage.url && localImage.url.startsWith('blob:')) {
-            URL.revokeObjectURL(localImage.url);
+          // Create a new File object with the unique name
+          const renamedFile = new File([file], uniqueFilename, { type: file.type });
+          
+          formData.append('files', renamedFile);
+        });
+
+        // Append any additional data
+        Object.entries(additionalData).forEach(([key, value]) => {
+          formData.append(key, value);
+        });
+
+        // Track upload progress if supported
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', endpoint);
+
+        xhr.upload.addEventListener('progress', (event) => {
+          if (event.lengthComputable) {
+            const percentComplete = Math.round((event.loaded / event.total) * 100);
+            setProgress(percentComplete);
           }
+        });
+
+        // Promise wrapper for the XHR request
+        const uploadPromise = new Promise<any>((resolve, reject) => {
+          xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              try {
+                const response = JSON.parse(xhr.responseText);
+                resolve(response);
+              } catch (e) {
+                reject(new Error('Invalid response format'));
+              }
+            } else {
+              let errorMessage = `Upload failed with status ${xhr.status}`;
+              try {
+                const errorResponse = JSON.parse(xhr.responseText);
+                errorMessage = errorResponse.error?.message || errorMessage;
+              } catch (e) {
+                // Parsing error, use default message
+              }
+              reject(new Error(errorMessage));
+            }
+          };
+
+          xhr.onerror = () => {
+            reject(new Error('Network error during upload'));
+          };
+
+          xhr.onabort = () => {
+            reject(new Error('Upload aborted'));
+          };
+        });
+
+        // Send the request
+        xhr.send(formData);
+
+        // Wait for completion
+        const response = await uploadPromise;
+
+        // Set results and call success callback
+        setResults((prev) => [...prev, ...response.data]);
+        if (onSuccess) {
+          onSuccess(response);
         }
-      });
-      
-      // Update state with the new images and generate new previews
-      setState(prev => ({
-        ...prev,
-        images: newImages,
-        previews: newImages.map(img => ensureValidImageUrl(img)),
-        isUploading: false,
-        errors: {}
-      }));
-      
-      setUploadStatus('success');
-      return newImages;
-    } catch (error) {
-      setState(prev => ({
-        ...prev,
-        isUploading: false,
-        errors: {
-          upload: error instanceof Error ? error.message : 'Upload failed'
+
+        return response;
+      } catch (error: any) {
+        const errorMessage = error?.message || 'Unknown upload error';
+        setError(errorMessage);
+        
+        if (onError) {
+          onError(error instanceof Error ? error : new Error(errorMessage));
         }
-      }));
-      
-      setUploadStatus('error');
-      throw error;
-    }
-  }, [state.images, endpoint, additionalData]);
-  
-  // Clear all errors
-  const clearErrors = useCallback(() => {
-    setState(prev => ({
-      ...prev,
-      errors: {}
-    }));
+        
+        toast({
+          title: 'Upload Failed',
+          description: errorMessage,
+          variant: 'destructive',
+        });
+        
+        console.error('File upload error:', error);
+      } finally {
+        setIsUploading(false);
+      }
+    },
+    [endpoint, additionalData, onSuccess, onError, toast]
+  );
+
+  /**
+   * Public method to trigger file upload
+   */
+  const uploadFiles = useCallback(async () => {
+    await uploadFilesToServer(selectedFiles);
+  }, [selectedFiles, uploadFilesToServer]);
+
+  /**
+   * Clears all selected files
+   */
+  const clearFiles = useCallback(() => {
+    setSelectedFiles([]);
+    setResults([]);
+    setError(null);
+    setProgress(0);
   }, []);
-  
+
   return {
-    images: state.images,
-    previews: state.previews,
-    isUploading: state.isUploading,
-    uploadStatus,
-    uploadProgress: state.uploadProgress,
-    errors: state.errors,
-    mainImageIndex: state.mainImageIndex,
-    
-    // Actions
-    addFiles,
-    removeFile,
-    setMainImage,
-    reorderImages,
-    uploadAllFiles,
-    clearErrors
+    isUploading,
+    progress,
+    error,
+    selectedFiles,
+    results,
+    selectFiles,
+    uploadFiles,
+    clearFiles,
+    validateFiles
   };
 }
