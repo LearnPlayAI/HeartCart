@@ -457,6 +457,39 @@ export const ProductWizardProvider: React.FC<ProductWizardProviderProps> = ({
               dispatch({ type: 'SET_FIELD', field: 'isActive', value: product.isActive ?? true });
               dispatch({ type: 'SET_FIELD', field: 'isFeatured', value: product.isFeatured ?? false });
               
+              // Make sure catalog and supplier info is loaded
+              dispatch({ type: 'SET_FIELD', field: 'catalogId', value: product.catalogId || null });
+              dispatch({ type: 'SET_FIELD', field: 'supplierId', value: product.supplierId || null });
+              
+              // If we have catalog ID but no catalog data, load it
+              if (product.catalogId) {
+                try {
+                  const catalogResponse = await fetch(`/api/catalogs/${product.catalogId}`);
+                  if (catalogResponse.ok) {
+                    const catalogData = await catalogResponse.json();
+                    if (catalogData.success && catalogData.data) {
+                      const catalog = catalogData.data;
+                      dispatch({ type: 'SET_FIELD', field: 'catalogName', value: catalog.name || null });
+                      
+                      // If the catalog has supplier info, load that too
+                      if (catalog.supplierId) {
+                        dispatch({ type: 'SET_FIELD', field: 'supplierId', value: catalog.supplierId });
+                        
+                        const supplierResponse = await fetch(`/api/suppliers/${catalog.supplierId}`);
+                        if (supplierResponse.ok) {
+                          const supplierData = await supplierResponse.json();
+                          if (supplierData.success && supplierData.data) {
+                            dispatch({ type: 'SET_FIELD', field: 'supplierName', value: supplierData.data.name || null });
+                          }
+                        }
+                      }
+                    }
+                  }
+                } catch (error) {
+                  console.error('Error loading catalog data:', error);
+                }
+              }
+              
               // Pricing - API returns price instead of regularPrice
               dispatch({ type: 'SET_FIELD', field: 'costPrice', value: product.costPrice || 0 });
               dispatch({ type: 'SET_FIELD', field: 'regularPrice', value: product.price || 0 });

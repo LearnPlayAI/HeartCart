@@ -84,14 +84,50 @@ class ObjectStoreAdapter {
     productName: string,
     productId: number
   ): Promise<{ url: string, objectKey: string }> {
-    return primaryObjectStore.moveToFinalLocation(
+    console.log('ObjectStoreAdapter.moveToFinalLocation called with:', {
       sourceKey,
       supplierName,
       catalogName,
       categoryName,
       productName,
       productId
-    );
+    });
+    
+    try {
+      // Verify that supplier and catalog exist and aren't blank
+      if (!supplierName || supplierName === 'unknown-supplier') {
+        console.warn('Using default supplier name because supplier was unknown');
+        supplierName = 'default-supplier';
+      }
+      
+      if (!catalogName || catalogName === 'unknown-catalog') {
+        console.warn('Using default catalog name because catalog was unknown');
+        catalogName = 'default-catalog';
+      }
+      
+      // Check if the source file exists
+      const sourceExists = await primaryObjectStore.exists(sourceKey);
+      if (!sourceExists) {
+        console.error(`Source file does not exist: ${sourceKey}`);
+        throw new Error(`Source file not found: ${sourceKey}`);
+      }
+      
+      // Proceed with moving the file
+      const result = await primaryObjectStore.moveToFinalLocation(
+        sourceKey,
+        supplierName,
+        catalogName,
+        categoryName,
+        productName,
+        productId
+      );
+      
+      console.log('File successfully moved to final location:', result);
+      return result;
+    } catch (error) {
+      console.error('Error moving file to final location:', error);
+      throw error;
+    }
   }
 
   /**
