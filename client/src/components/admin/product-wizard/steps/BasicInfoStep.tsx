@@ -520,7 +520,7 @@ export function BasicInfoStep() {
                       name="salePrice"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel required>Sale Price</FormLabel>
+                          <FormLabel className="flex">Sale Price <span className="text-red-500 ml-1">*</span></FormLabel>
                           <FormControl>
                             <div className="relative">
                               <span className="absolute left-3 top-2.5">R</span>

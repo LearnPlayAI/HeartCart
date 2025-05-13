@@ -1,80 +1,79 @@
 /**
- * Format Utilities Module
+ * Formatting Utility Functions for TeeMeYou
  * 
- * This module provides utility functions for formatting values
- * such as currency, dates, file sizes, etc.
+ * This module provides utility functions for formatting values like prices,
+ * dates, and other display-oriented text transformations.
  */
 
 /**
- * Format a number as currency with the specified currency symbol
- * 
+ * Format a number as currency (ZAR)
  * @param amount The amount to format
- * @param currencySymbol The currency symbol to use (default: R)
- * @param locale The locale to use for formatting (default: en-ZA)
- * @returns A formatted currency string
+ * @param includeCurrency Whether to include the R symbol
+ * @returns Formatted currency string
  */
-export function formatCurrency(
-  amount: number | string | null | undefined,
-  currencySymbol: string = 'R',
-  locale: string = 'en-ZA'
-): string {
-  if (amount === null || amount === undefined) return `${currencySymbol}0.00`;
+export function formatCurrency(amount: number | null | undefined, includeCurrency: boolean = true): string {
+  if (amount === null || amount === undefined) return '-';
   
-  const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
-  
-  if (isNaN(numAmount)) return `${currencySymbol}0.00`;
-  
-  return `${currencySymbol}${numAmount.toLocaleString(locale, {
+  const formatter = new Intl.NumberFormat('en-ZA', {
+    style: includeCurrency ? 'currency' : 'decimal',
+    currency: 'ZAR',
     minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  })}`;
+    maximumFractionDigits: 2,
+  });
+  
+  return formatter.format(amount);
 }
 
 /**
- * Format a date with the specified format
- * 
- * @param date The date to format
- * @param format The format to use (default: dd/MM/yyyy)
- * @returns A formatted date string
+ * Format a number as a percentage
+ * @param value The value to format as percentage
+ * @param decimals Number of decimal places to show
+ * @returns Formatted percentage string
+ */
+export function formatPercentage(value: number | null | undefined, decimals: number = 0): string {
+  if (value === null || value === undefined) return '-';
+  
+  const formatter = new Intl.NumberFormat('en-ZA', {
+    style: 'percent',
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  });
+  
+  return formatter.format(value / 100);
+}
+
+/**
+ * Format a date in localized format
+ * @param date The date to format (string, Date object, or timestamp)
+ * @param includeTime Whether to include the time in the formatted string
+ * @returns Formatted date string
  */
 export function formatDate(
   date: Date | string | number | null | undefined,
-  format: string = 'dd/MM/yyyy'
+  includeTime: boolean = false
 ): string {
-  if (!date) return '';
+  if (!date) return '-';
   
   const dateObj = typeof date === 'object' ? date : new Date(date);
   
-  if (isNaN(dateObj.getTime())) return '';
+  const options: Intl.DateTimeFormatOptions = {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    ...(includeTime ? { hour: '2-digit', minute: '2-digit' } : {}),
+  };
   
-  // Simple format implementation
-  const day = dateObj.getDate().toString().padStart(2, '0');
-  const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
-  const year = dateObj.getFullYear();
-  const hours = dateObj.getHours().toString().padStart(2, '0');
-  const minutes = dateObj.getMinutes().toString().padStart(2, '0');
-  const seconds = dateObj.getSeconds().toString().padStart(2, '0');
-  
-  return format
-    .replace('dd', day)
-    .replace('MM', month)
-    .replace('yyyy', year.toString())
-    .replace('HH', hours)
-    .replace('mm', minutes)
-    .replace('ss', seconds);
+  return new Intl.DateTimeFormat('en-ZA', options).format(dateObj);
 }
 
 /**
- * Format a file size in bytes to a human-readable string
- * 
+ * Format a file size in human-readable format
  * @param bytes The file size in bytes
- * @param decimals The number of decimal places to show (default: 2)
- * @returns A formatted file size string
+ * @param decimals Number of decimal places to show
+ * @returns Formatted file size string
  */
-export function formatFileSize(
-  bytes: number,
-  decimals: number = 2
-): string {
+export function formatFileSize(bytes: number | null | undefined, decimals: number = 2): string {
+  if (bytes === null || bytes === undefined) return '-';
   if (bytes === 0) return '0 Bytes';
   
   const k = 1024;
@@ -87,100 +86,45 @@ export function formatFileSize(
 }
 
 /**
- * Format a number with commas as thousands separators
- * 
+ * Format a phone number in South African format
+ * @param phone The phone number to format
+ * @returns Formatted phone number string
+ */
+export function formatPhoneNumber(phone: string | null | undefined): string {
+  if (!phone) return '-';
+  
+  // Remove all non-digit characters
+  const digitsOnly = phone.replace(/\D/g, '');
+  
+  // Check if it's a South African number
+  if (digitsOnly.length === 10 && (digitsOnly.startsWith('0'))) {
+    // Format as: 073 123 4567
+    return digitsOnly.replace(/(\d{3})(\d{3})(\d{4})/, '$1 $2 $3');
+  }
+  
+  // International format
+  if (digitsOnly.length > 10) {
+    // Try to format international numbers
+    const countryCode = digitsOnly.slice(0, digitsOnly.length - 9);
+    const restOfNumber = digitsOnly.slice(-9);
+    return `+${countryCode} ${restOfNumber.slice(0, 3)} ${restOfNumber.slice(3, 6)} ${restOfNumber.slice(6)}`;
+  }
+  
+  // Return as is if we can't format it
+  return phone;
+}
+
+/**
+ * Format a number with thousand separators
  * @param number The number to format
- * @param decimals The number of decimal places to show (default: 0)
- * @returns A formatted number string
+ * @param decimals Number of decimal places
+ * @returns Formatted number string
  */
-export function formatNumber(
-  number: number | string | null | undefined,
-  decimals: number = 0
-): string {
-  if (number === null || number === undefined) return '0';
+export function formatNumber(number: number | null | undefined, decimals: number = 0): string {
+  if (number === null || number === undefined) return '-';
   
-  const numValue = typeof number === 'string' ? parseFloat(number) : number;
-  
-  if (isNaN(numValue)) return '0';
-  
-  return numValue.toLocaleString('en-ZA', {
+  return new Intl.NumberFormat('en-ZA', {
     minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals
-  });
-}
-
-/**
- * Format a percentage value
- * 
- * @param value The percentage value (0-100)
- * @param decimals The number of decimal places to show (default: 0)
- * @returns A formatted percentage string
- */
-export function formatPercentage(
-  value: number | string | null | undefined,
-  decimals: number = 0
-): string {
-  if (value === null || value === undefined) return '0%';
-  
-  const numValue = typeof value === 'string' ? parseFloat(value) : value;
-  
-  if (isNaN(numValue)) return '0%';
-  
-  return `${numValue.toFixed(decimals)}%`;
-}
-
-/**
- * Format a number as a price with the specified currency symbol
- * This is similar to formatCurrency but specifically for product prices
- * 
- * @param price The price to format
- * @param currencySymbol The currency symbol to use (default: R)
- * @returns A formatted price string
- */
-export function formatPrice(
-  price: number | string | null | undefined,
-  currencySymbol: string = 'R'
-): string {
-  return formatCurrency(price, currencySymbol);
-}
-
-/**
- * Format a weight in grams to a readable format
- * 
- * @param weightInGrams The weight in grams
- * @returns A formatted weight string
- */
-export function formatWeight(weightInGrams: number | null | undefined): string {
-  if (weightInGrams === null || weightInGrams === undefined) return '0g';
-  
-  if (weightInGrams < 1000) {
-    return `${weightInGrams}g`;
-  } else {
-    const kg = weightInGrams / 1000;
-    return `${kg.toFixed(2)}kg`;
-  }
-}
-
-/**
- * Format dimensions (length, width, height) to a readable format
- * 
- * @param length The length in cm
- * @param width The width in cm
- * @param height The height in cm
- * @returns A formatted dimensions string
- */
-export function formatDimensions(
-  length: number | null | undefined,
-  width: number | null | undefined,
-  height: number | null | undefined
-): string {
-  if (
-    length === null || length === undefined ||
-    width === null || width === undefined ||
-    height === null || height === undefined
-  ) {
-    return 'N/A';
-  }
-  
-  return `${length} × ${width} × ${height} cm`;
+    maximumFractionDigits: decimals,
+  }).format(number);
 }

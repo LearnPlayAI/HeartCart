@@ -1,15 +1,14 @@
 /**
- * String Utilities Module
+ * String Utility Functions for TeeMeYou
  * 
- * This module provides utility functions for string manipulation
- * such as slug generation, SKU generation, etc.
+ * This module provides utility functions for string manipulation, 
+ * particularly focused on generating slugs, SKUs, and other product-related identifiers.
  */
 
 /**
- * Generates a URL-friendly slug from a string
- * 
- * @param text The text to convert to a slug
- * @returns A URL-friendly slug
+ * Generate a URL-friendly slug from a string
+ * @param text The input string to convert to a slug
+ * @returns A lowercase slug with spaces and special characters replaced with hyphens
  */
 export function generateSlug(text: string): string {
   if (!text) return '';
@@ -17,109 +16,69 @@ export function generateSlug(text: string): string {
   return text
     .toLowerCase()
     .trim()
-    .replace(/[^\w\s-]/g, '') // Remove non-word chars (keep spaces and hyphens)
-    .replace(/[\s_-]+/g, '-') // Replace spaces, underscores, and consecutive hyphens with a single hyphen
+    .replace(/[^\w\s-]/g, '') // Remove special characters
+    .replace(/[\s_-]+/g, '-') // Replace spaces and underscores with hyphens
     .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
 }
 
 /**
- * Generates a SKU (Stock Keeping Unit) from a product name
- * 
- * @param productName The product name to generate a SKU from
- * @returns A SKU string (uppercase, with random suffix)
+ * Generate a SKU (Stock Keeping Unit) from a product name
+ * @param productName The product name to convert to a SKU
+ * @returns An uppercase SKU code based on the product name with a random suffix
  */
 export function generateSku(productName: string): string {
   if (!productName) return '';
   
-  // Extract first letter of each word (up to 4 letters)
+  // Extract first 3 characters from each word, uppercase
   const prefix = productName
-    .split(/\s+/)
-    .slice(0, 4)
-    .map(word => word.charAt(0).toUpperCase())
+    .split(' ')
+    .map(word => word.substring(0, 3).toUpperCase())
     .join('');
   
-  // Add a random suffix (6 characters)
-  const randomSuffix = Math.random().toString(36).substring(2, 8).toUpperCase();
+  // Add random suffix for uniqueness
+  const randomSuffix = Math.floor(Math.random() * 10000)
+    .toString()
+    .padStart(4, '0');
   
   return `${prefix}-${randomSuffix}`;
 }
 
 /**
- * Truncates a string to a specified length and adds an ellipsis if needed
- * 
- * @param text The text to truncate
- * @param maxLength The maximum length of the text
- * @returns The truncated text with ellipsis if needed
+ * Truncate a string to a maximum length with ellipsis if needed
+ * @param text The input string to truncate
+ * @param maxLength The maximum allowed length
+ * @returns The truncated string with ellipsis if truncated
  */
 export function truncateText(text: string, maxLength: number): string {
-  if (!text) return '';
-  if (text.length <= maxLength) return text;
+  if (!text || text.length <= maxLength) return text || '';
   
   return text.substring(0, maxLength) + '...';
 }
 
 /**
- * Capitalizes the first letter of each word in a string
- * 
- * @param text The text to capitalize
- * @returns The capitalized text
+ * Generate a hashtag-friendly version of a string
+ * @param text The input string to convert to hashtag format
+ * @returns A hashtag-formatted string
  */
-export function capitalizeWords(text: string): string {
+export function toHashtag(text: string): string {
+  if (!text) return '';
+  
+  return '#' + text
+    .replace(/\s+/g, '') // Remove spaces
+    .replace(/[^\w\s]/g, ''); // Remove special characters
+}
+
+/**
+ * Capitalize the first letter of each word in a string
+ * @param text The input string to capitalize
+ * @returns The string with the first letter of each word capitalized
+ */
+export function toTitleCase(text: string): string {
   if (!text) return '';
   
   return text
-    .split(/\s+/)
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .toLowerCase()
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
-}
-
-/**
- * Formats a string as a filename by removing invalid characters
- * 
- * @param text The text to format as a filename
- * @returns A valid filename
- */
-export function formatFilename(text: string): string {
-  if (!text) return '';
-  
-  return text
-    .trim()
-    .replace(/[<>:"/\\|?*]/g, '-') // Replace invalid filename chars with hyphens
-    .replace(/\s+/g, '-') // Replace spaces with hyphens
-    .replace(/-+/g, '-') // Replace consecutive hyphens with single hyphen
-    .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
-}
-
-/**
- * Sanitizes a string for use in HTML, escaping special characters
- * 
- * @param text The text to sanitize
- * @returns Sanitized HTML text
- */
-export function escapeHtml(text: string): string {
-  if (!text) return '';
-  
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
-
-/**
- * Generates a random string of specified length
- * 
- * @param length The length of the random string
- * @returns A random string
- */
-export function generateRandomString(length: number = 8): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let result = '';
-  
-  for (let i = 0; i < length; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  
-  return result;
 }
