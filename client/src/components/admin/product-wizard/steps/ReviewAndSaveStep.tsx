@@ -316,9 +316,9 @@ export function ReviewAndSaveStep({ onComplete }: ReviewAndSaveStepProps = {}) {
         // Sales and promotions
         discountLabel: state.discountLabel || null,
         specialSaleText: state.specialSaleText || null,
-        // Convert dates to proper Date objects or null for the API
-        specialSaleStart: state.specialSaleStart ? new Date(state.specialSaleStart) : null,
-        specialSaleEnd: state.specialSaleEnd ? new Date(state.specialSaleEnd) : null,
+        // Format dates as ISO strings for proper handling by the API
+        specialSaleStart: state.specialSaleStart ? new Date(state.specialSaleStart).toISOString() : null,
+        specialSaleEnd: state.specialSaleEnd ? new Date(state.specialSaleEnd).toISOString() : null,
         
         // Attributes
         attributes: state.attributes || [],
