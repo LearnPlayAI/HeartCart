@@ -241,6 +241,11 @@ router.delete('/:attributeId/options/:optionId', asyncHandler(async (req: Reques
       return sendError(res, 'Failed to delete attribute option', 500);
     }
     
+    // Add cache control headers to ensure clients don't cache the response
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    
     sendSuccess(res, { success: true });
   } catch (error) {
     sendError(res, 'Failed to delete attribute option', 500);
@@ -361,6 +366,11 @@ router.delete('/:id', asyncHandler(async (req: Request, res: Response) => {
     if (!deleted) {
       return sendError(res, 'Failed to delete attribute', 500);
     }
+    
+    // Add cache control headers to ensure clients don't cache the response
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     
     sendSuccess(res, { success: true });
   } catch (error) {

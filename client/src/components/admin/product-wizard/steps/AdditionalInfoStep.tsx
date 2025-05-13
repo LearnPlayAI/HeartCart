@@ -123,6 +123,14 @@ export function AdditionalInfoStep() {
   const [formattedAttributes, setFormattedAttributes] = useState<ProductAttribute[]>([]);
   const [attributeValues, setAttributeValues] = useState<AttributeValue[]>([]);
   
+  // Effect to refetch attributes when the active tab changes to 'attributes'
+  useEffect(() => {
+    if (activeTab === 'attributes') {
+      // Force refetch of attributes data when on attributes tab
+      refetchAttributes();
+    }
+  }, [activeTab, refetchAttributes]);
+  
   // Auto-populate supplier information from catalog when available
   useEffect(() => {
     if (catalogData?.data && state.catalogId) {
