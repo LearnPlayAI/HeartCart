@@ -68,6 +68,12 @@ export function ReviewAndSaveStep() {
     queryKey: ['/api/categories'],
   });
   
+  // Query catalogs
+  const { data: catalogsResponse } = useQuery({
+    queryKey: ['/api/catalogs'],
+    enabled: true,
+  });
+  
   // Extract categories from the API response
   const categories = categoriesResponse && categoriesResponse.data && Array.isArray(categoriesResponse.data) 
     ? categoriesResponse.data 

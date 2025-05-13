@@ -204,6 +204,7 @@ class ObjectStoreService {
   
   /**
    * Move a file from temp storage to a permanent location
+   * using the old folder structure (only kept for backward compatibility)
    */
   async moveFromTemp(
     sourceKey: string,
@@ -233,6 +234,81 @@ class ObjectStoreService {
       console.error(`Failed to move file from ${sourceKey} to product ${productId}:`, error);
       throw new Error(`File move operation failed: ${error instanceof Error ? error.message : String(error)}`);
     }
+  }
+  
+  /**
+   * Move file from temporary location to final product location with the new folder structure
+   * @param sourceKey The original source key (current location)
+   * @param supplierName The supplier name
+   * @param catalogName The catalog name
+   * @param categoryName The category name 
+   * @param productName The product name
+   * @param productId The product ID
+   * @returns The new URL and object key
+   */
+  async moveToFinalLocation(
+    sourceKey: string,
+    supplierName: string,
+    catalogName: string,
+    categoryName: string,
+    productName: string,
+    productId: number
+  ): Promise<{ url: string, objectKey: string }> {
+    await this.initialize();
+    
+    try {
+      // Sanitize names for path safety
+      const sanitizedSupplier = this.sanitizePath(supplierName);
+      const sanitizedCatalog = this.sanitizePath(catalogName);
+      const sanitizedCategory = this.sanitizePath(categoryName);
+      const sanitizedProduct = this.sanitizePath(productName);
+      
+      // Extract the original filename from the source key
+      const filename = path.basename(sourceKey);
+      
+      // Build the new path following the required structure
+      // Format: root/{supplierName}/{catalogName}/{Category}/{ProductName}_{ProductID}/filename.xxx
+      const targetFolder = `${sanitizedSupplier}/${sanitizedCatalog}/${sanitizedCategory}/${sanitizedProduct}_${productId}`;
+      const targetKey = `${targetFolder}/${filename}`;
+      
+      // Get the source file as a buffer
+      const { data, contentType } = await this.getFileAsBuffer(sourceKey);
+      
+      if (!data) {
+        throw new Error(`Source file not found: ${sourceKey}`);
+      }
+      
+      // Upload to the new location
+      await this.uploadFromBuffer(targetKey, data, {
+        contentType: contentType || this.detectContentType(filename)
+      });
+      
+      // Delete the original file
+      await this.deleteFile(sourceKey);
+      
+      return {
+        url: this.getPublicUrl(targetKey),
+        objectKey: targetKey
+      };
+    } catch (error) {
+      console.error(`Error moving file from ${sourceKey} to final location:`, error);
+      throw new Error(`Failed to move file: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+  
+  /**
+   * Sanitize a path segment for file paths
+   */
+  private sanitizePath(input: string): string {
+    if (!input) return 'default';
+    
+    return input
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9-_]/g, '-')  // Replace invalid chars with hyphens
+      .replace(/-+/g, '-')           // Replace multiple hyphens with a single one
+      .replace(/^-|-$/g, '')         // Remove leading and trailing hyphens
+      || 'default';                  // If empty after sanitizing, use default
   }
   
   /**
