@@ -4362,26 +4362,9 @@ export class DatabaseStorage implements IStorage {
   
   // Removed createProductAttribute as part of centralized attribute system
   
-  async updateProductAttribute(id: number, productAttributeData: Partial<InsertProductAttribute>): Promise<ProductAttribute | undefined> {
-    const [updatedProductAttribute] = await db
-      .update(productAttributes)
-      .set(productAttributeData)
-      .where(eq(productAttributes.id, id))
-      .returning();
-    return updatedProductAttribute;
-  }
+  // Removed updateProductAttribute as part of centralized attribute system
   
-  async deleteProductAttribute(id: number): Promise<boolean> {
-    try {
-      await db
-        .delete(productAttributes)
-        .where(eq(productAttributes.id, id));
-      return true;
-    } catch (error) {
-      console.error(`Error deleting product attribute ${id}:`, error);
-      throw error; // Rethrow so the route handler can catch it and send a proper error response
-    }
-  }
+  // Removed deleteProductAttribute as part of centralized attribute system
   
   // Product attribute options operations
   async getProductAttributeOptions(productAttributeId: number): Promise<(ProductAttributeOption & { 
