@@ -107,8 +107,61 @@ export function ReviewAndSaveStep() {
           throw new Error(errorData.error?.message || 'Failed to create product');
         }
         
+        // Get created product data
+        const productResult = await response.json();
+        
+        // Move any temporary images to their final location
+        if (state.imageUrls.length > 0 && state.imageObjectKeys.length > 0) {
+          try {
+            console.log('Moving temporary product images to final location');
+            
+            // Get category name
+            const categoryName = getCategoryName(state.categoryId);
+            
+            // Find provider name based on catalog
+            const provider = state.catalogId && catalogsResponse?.data 
+              ? catalogsResponse.data.find((cat: any) => cat.id === state.catalogId)
+              : null;
+              
+            const supplierName = (provider?.supplierName || 'default');
+            const catalogName = (state.catalogName || provider?.name || 'default');
+            
+            await Promise.all(state.imageObjectKeys.map(async (objectKey, index) => {
+              // Determine if this is the main image
+              const isMain = index === state.mainImageIndex;
+              
+              try {
+                // Move image from temp storage to final product location
+                const moveResponse = await fetch('/api/files/products/images/move', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    sourceKey: objectKey,
+                    productId: productResult.data.id,
+                    isMain,
+                    supplierName,
+                    catalogName,
+                    categoryName,
+                    productName: state.name
+                  }),
+                });
+                
+                if (!moveResponse.ok) {
+                  console.error('Failed to move image:', await moveResponse.json());
+                }
+              } catch (moveError) {
+                console.error('Error moving image:', moveError);
+              }
+            }));
+          } catch (imageError) {
+            console.error('Error processing images:', imageError);
+          }
+        }
+        
         // Return created product data
-        return await response.json();
+        return productResult;
       } catch (error) {
         if (error instanceof Error) {
           setSavingError(error.message);
