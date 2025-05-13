@@ -1,207 +1,307 @@
 /**
- * File Manager Utilities
+ * File Manager Utility
  * 
- * This module provides centralized utilities for managing file uploads,
- * URL handling, and consistent file operations throughout the application.
- * It integrates with the server's Object Store implementation.
+ * Provides functions for handling file uploads, validations,
+ * and image processing integrated with the backend storage.
  */
 
-import { ensureValidImageUrl as validateImageUrl } from './file-utils';
+import axios from 'axios';
+
+// Types
+export interface FileUploadOptions {
+  bucket?: string;
+  folder?: string;
+  generateUniqueName?: boolean;
+  overwrite?: boolean;
+  metadata?: Record<string, string>;
+  responseType?: 'json' | 'text';
+}
+
+export interface FileUploadResponse {
+  success: boolean;
+  url: string;
+  objectKey: string;
+  message?: string;
+  error?: string;
+}
+
+export interface FileDeleteResponse {
+  success: boolean;
+  message?: string;
+  error?: string;
+}
 
 /**
- * Endpoints for file uploads to different storage locations
+ * Upload a file to the server's object storage
  */
-export const UPLOAD_ENDPOINTS = {
-  // Temporary storage
-  PRODUCT_TEMP: '/api/upload/products/images/temp',
-  // Direct product storage
-  PRODUCT: (productId: number | string) => `/api/upload/products/${productId}/images`,
-  // Category images
-  CATEGORY: '/api/upload/categories/images',
-  // Supplier logos
-  SUPPLIER: '/api/upload/suppliers/images',
-  // Catalog cover images
-  CATALOG: '/api/upload/catalogs/images',
-  // General file uploads
-  GENERIC: '/api/upload/files'
+export const uploadFile = async (file: File, options: FileUploadOptions = {}): Promise<FileUploadResponse> => {
+  const formData = new FormData();
+  formData.append('file', file);
+  
+  // Add options to formData
+  if (options.bucket) {
+    formData.append('bucket', options.bucket);
+  }
+  
+  if (options.folder) {
+    formData.append('folder', options.folder);
+  }
+  
+  if (options.generateUniqueName !== undefined) {
+    formData.append('generateUniqueName', options.generateUniqueName.toString());
+  }
+  
+  if (options.overwrite !== undefined) {
+    formData.append('overwrite', options.overwrite.toString());
+  }
+  
+  if (options.metadata) {
+    formData.append('metadata', JSON.stringify(options.metadata));
+  }
+  
+  try {
+    const response = await axios.post('/api/files/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    
+    return response.data;
+  } catch (error: any) {
+    console.error('Error uploading file:', error);
+    return {
+      success: false,
+      url: '',
+      objectKey: '',
+      error: error.response?.data?.error || 'Failed to upload file',
+    };
+  }
 };
 
 /**
- * Ensures image URLs are properly formatted and valid
- * Handles both full URLs and object paths
+ * Delete a file from the server's object storage
  */
-export const ensureValidImageUrl = (url: string | null | undefined): string => {
-  if (!url) return '';
+export const deleteFile = async (objectKey: string, bucket?: string): Promise<FileDeleteResponse> => {
+  try {
+    const response = await axios.delete('/api/files/delete', {
+      data: {
+        objectKey,
+        bucket,
+      },
+    });
+    
+    return response.data;
+  } catch (error: any) {
+    console.error('Error deleting file:', error);
+    return {
+      success: false,
+      error: error.response?.data?.error || 'Failed to delete file',
+    };
+  }
+};
 
-  // If it's already a full URL with protocol, validate it
-  if (url.startsWith('http')) {
-    return validateImageUrl(url);
+/**
+ * Validate file type against allowed extensions
+ */
+export const validateFileType = (file: File, allowedTypes: string[]): boolean => {
+  const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
+  return allowedTypes.includes(fileExtension);
+};
+
+/**
+ * Validate file size against maximum size in bytes
+ */
+export const validateFileSize = (file: File, maxSizeBytes: number): boolean => {
+  return file.size <= maxSizeBytes;
+};
+
+/**
+ * Checks if a file is an image
+ */
+export const isImageFile = (file: File): boolean => {
+  return file.type.startsWith('image/');
+};
+
+/**
+ * Converts a File object to a base64 string
+ */
+export const fileToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = error => reject(error);
+  });
+};
+
+/**
+ * Converts a base64 string to a Blob object
+ */
+export const base64ToBlob = (base64: string, mimeType: string): Blob => {
+  const byteString = atob(base64.split(',')[1]);
+  const ab = new ArrayBuffer(byteString.length);
+  const ia = new Uint8Array(ab);
+  
+  for (let i = 0; i < byteString.length; i++) {
+    ia[i] = byteString.charCodeAt(i);
   }
   
-  // If it's a data URL, return as is
-  if (url.startsWith('data:')) {
+  return new Blob([ab], { type: mimeType });
+};
+
+/**
+ * Ensures a URL is properly formatted, handling both relative and absolute URLs
+ */
+export const ensureValidImageUrl = (url: string): string => {
+  if (!url) return '';
+  
+  // If it's already an absolute URL, return it as is
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
     return url;
   }
   
-  // If it's just an object key without /api/files prefix
-  if (!url.startsWith('/api/files/') && !url.startsWith('/')) {
-    return validateImageUrl(`/api/files/${url}`);
+  // If it's a relative URL starting with a slash, add the base URL
+  if (url.startsWith('/')) {
+    return `${window.location.origin}${url}`;
   }
   
-  // If it already has the /api/files prefix or is a relative path
-  return validateImageUrl(url);
+  // Otherwise, assume it's a relative URL without a leading slash
+  return `${window.location.origin}/${url}`;
 };
 
 /**
- * Get the file path part from an object key
+ * Remove background from an image using the backend AI service
  */
-export const getPathFromObjectKey = (objectKey: string): string => {
-  // Remove any API prefix if present
-  if (objectKey.startsWith('/api/files/')) {
-    return objectKey.substring('/api/files/'.length);
-  }
-  
-  return objectKey;
-};
-
-/**
- * Creates a permanent object key for product images
- */
-export const createProductImageKey = (
-  productId: number | string,
-  filename: string,
-  index: number = 0
-): string => {
-  const sanitizedFilename = filename.replace(/[^a-z0-9.-]/gi, '-').toLowerCase();
-  return `products/${productId}/${index}_${sanitizedFilename}`;
-};
-
-/**
- * Creates a temporary object key with a timestamp
- */
-export const createTempImageKey = (filename: string): string => {
-  const timestamp = Date.now();
-  const randomString = Math.random().toString(36).substring(2, 10);
-  const sanitizedFilename = filename.replace(/[^a-z0-9.-]/gi, '-').toLowerCase();
-  return `temp/pending/${timestamp}_${randomString}_${sanitizedFilename}`;
-};
-
-/**
- * Extracts the original filename from an object key
- */
-export const getOriginalFilenameFromKey = (objectKey: string): string => {
-  // Get the last part of the path
-  const parts = objectKey.split('/');
-  const filename = parts[parts.length - 1];
-  
-  // If it's a temp file with timestamp and random string, remove those
-  if (objectKey.includes('temp/pending/')) {
-    const filenameWithoutPrefix = filename.split('_').slice(2).join('_');
-    return filenameWithoutPrefix;
-  }
-  
-  // If it's a product file with index, remove the index
-  if (objectKey.includes('products/')) {
-    const filenameWithoutIndex = filename.split('_').slice(1).join('_');
-    return filenameWithoutIndex;
-  }
-  
-  return filename;
-};
-
-/**
- * Moves temporary files to permanent storage for a product
- */
-export const moveTempFilesToProduct = async (
-  productId: number | string,
-  tempObjectKeys: string[]
-): Promise<{ success: boolean; data: any }> => {
+export const removeImageBackground = async (imageUrl: string): Promise<string | null> => {
   try {
-    const response = await fetch(`/api/move-temp-files/${productId}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ objectKeys: tempObjectKeys })
+    const response = await axios.post('/api/images/remove-background', {
+      imageUrl,
     });
-
-    if (!response.ok) {
-      throw new Error(`Failed to move files: ${response.status} ${response.statusText}`);
+    
+    if (response.data.success) {
+      return response.data.imageUrl;
     }
-
-    return await response.json();
+    
+    console.error('Background removal failed:', response.data.message);
+    return null;
   } catch (error) {
-    console.error('Error moving temporary files:', error);
-    throw error;
+    console.error('Error removing background:', error);
+    return null;
   }
 };
 
 /**
- * Deletes files from the Object Store
+ * Upload multiple files with progress tracking
  */
-export const deleteFiles = async (
-  objectKeys: string[]
-): Promise<{ success: boolean; data: any }> => {
+export const uploadMultipleFiles = async (
+  files: File[],
+  options: FileUploadOptions = {},
+  onProgress?: (progress: number) => void
+): Promise<FileUploadResponse[]> => {
+  const results: FileUploadResponse[] = [];
+  let completed = 0;
+  
+  for (const file of files) {
+    try {
+      const result = await uploadFile(file, options);
+      results.push(result);
+      
+      completed++;
+      if (onProgress) {
+        onProgress((completed / files.length) * 100);
+      }
+    } catch (error) {
+      results.push({
+        success: false,
+        url: '',
+        objectKey: '',
+        error: 'Failed to upload file',
+      });
+      
+      completed++;
+      if (onProgress) {
+        onProgress((completed / files.length) * 100);
+      }
+    }
+  }
+  
+  return results;
+};
+
+/**
+ * Generate a thumbnail from an image file
+ */
+export const generateThumbnail = async (file: File, maxWidth: number = 200, maxHeight: number = 200): Promise<Blob | null> => {
+  return new Promise((resolve) => {
+    if (!isImageFile(file)) {
+      resolve(null);
+      return;
+    }
+    
+    const img = new Image();
+    img.src = URL.createObjectURL(file);
+    
+    img.onload = () => {
+      // Calculate dimensions while maintaining aspect ratio
+      let width = img.width;
+      let height = img.height;
+      
+      if (width > maxWidth) {
+        height = (height * maxWidth) / width;
+        width = maxWidth;
+      }
+      
+      if (height > maxHeight) {
+        width = (width * maxHeight) / height;
+        height = maxHeight;
+      }
+      
+      // Create canvas and resize image
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        resolve(null);
+        return;
+      }
+      
+      ctx.drawImage(img, 0, 0, width, height);
+      
+      // Convert to blob
+      canvas.toBlob(
+        (blob) => {
+          URL.revokeObjectURL(img.src);
+          resolve(blob);
+        },
+        'image/jpeg',
+        0.8
+      );
+    };
+    
+    img.onerror = () => {
+      URL.revokeObjectURL(img.src);
+      resolve(null);
+    };
+  });
+};
+
+/**
+ * Get file information
+ */
+export const getFileInfo = async (objectKey: string, bucket?: string): Promise<any> => {
   try {
-    const response = await fetch('/api/delete-files', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
+    const response = await axios.get('/api/files/info', {
+      params: {
+        objectKey,
+        bucket,
       },
-      body: JSON.stringify({ objectKeys })
     });
-
-    if (!response.ok) {
-      throw new Error(`Failed to delete files: ${response.status} ${response.statusText}`);
-    }
-
-    return await response.json();
+    
+    return response.data;
   } catch (error) {
-    console.error('Error deleting files:', error);
-    throw error;
-  }
-};
-
-/**
- * Creates a revocable object URL for a file
- * Returns the URL and a cleanup function
- */
-export const createObjectURL = (file: File | Blob): { url: string; revoke: () => void } => {
-  const url = URL.createObjectURL(file);
-  
-  return {
-    url,
-    revoke: () => URL.revokeObjectURL(url)
-  };
-};
-
-/**
- * Gets an absolute URL for a file in the Object Store
- */
-export const getAbsoluteFileUrl = (objectKey: string): string => {
-  // First ensure the object key has the /api/files prefix
-  const objectPath = objectKey.startsWith('/api/files/')
-    ? objectKey
-    : `/api/files/${objectKey}`;
-  
-  // Then get the absolute URL by combining with the current host
-  const baseUrl = window.location.origin;
-  const absolutePath = objectPath.startsWith('/')
-    ? objectPath
-    : `/${objectPath}`;
-  
-  return `${baseUrl}${absolutePath}`;
-};
-
-/**
- * Check if an image exists and is accessible
- */
-export const checkImageExists = async (url: string): Promise<boolean> => {
-  try {
-    const response = await fetch(url, { method: 'HEAD' });
-    return response.ok;
-  } catch (error) {
-    console.error('Error checking image existence:', error);
-    return false;
+    console.error('Error getting file info:', error);
+    return { success: false, error: 'Failed to get file info' };
   }
 };

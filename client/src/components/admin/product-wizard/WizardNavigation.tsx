@@ -1,217 +1,203 @@
 /**
- * WizardNavigation Component
+ * Wizard Navigation Component
  * 
- * This component provides navigation between wizard steps,
- * with visual indicators for completed and current steps.
+ * Provides step navigation UI for the product creation wizard,
+ * showing progress and enabling navigation between steps.
  */
 
 import React from 'react';
-import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { 
-  CheckCircle2, 
-  Circle, 
-  ArrowLeft, 
-  ArrowRight, 
-  ChevronRight 
-} from 'lucide-react';
-import { WIZARD_STEPS, WizardStep, useProductWizardContext } from './context';
+import { cn } from '@/lib/utils';
+import { ChevronRightIcon, ChevronLeftIcon, CheckIcon, CircleIcon } from 'lucide-react';
+import { useProductWizardContext, WizardStep, WIZARD_STEPS } from './context';
 
-interface WizardNavigationProps {
-  onSave?: () => Promise<void>;
-  onCancel?: () => void;
-  saveLabel?: string;
-  showBackToProducts?: boolean;
-  backToProductsUrl?: string;
+interface StepIndicatorProps {
+  step: WizardStep;
+  index: number;
+  isActive: boolean;
+  isCompleted: boolean;
+  onClick: () => void;
+  disabled: boolean;
 }
 
-export const WizardNavigation: React.FC<WizardNavigationProps> = ({
-  onSave,
-  onCancel,
-  saveLabel = 'Save',
-  showBackToProducts = false,
-  backToProductsUrl = '/admin/products'
+const StepIndicator: React.FC<StepIndicatorProps> = ({
+  step,
+  index,
+  isActive,
+  isCompleted,
+  onClick,
+  disabled
+}) => {
+  return (
+    <div className="flex flex-1 items-center">
+      <div className="relative flex flex-col items-center flex-1">
+        {/* Connector Line */}
+        {index > 0 && (
+          <div 
+            className={cn(
+              "absolute left-0 top-1/2 h-0.5 w-full -translate-y-1/2 -translate-x-1/2",
+              isCompleted ? "bg-primary" : "bg-border"
+            )}
+          />
+        )}
+        
+        {/* Step Button */}
+        <button
+          type="button"
+          onClick={onClick}
+          disabled={disabled}
+          className={cn(
+            "relative flex h-8 w-8 items-center justify-center rounded-full border transition-colors",
+            isActive 
+              ? "border-primary bg-primary text-primary-foreground" 
+              : isCompleted
+                ? "border-primary bg-primary/10 text-primary"
+                : "border-border bg-background text-muted-foreground",
+            disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"
+          )}
+        >
+          {isCompleted ? (
+            <CheckIcon className="h-4 w-4" />
+          ) : (
+            <span className="text-sm">{index + 1}</span>
+          )}
+        </button>
+        
+        {/* Step Label */}
+        <span 
+          className={cn(
+            "mt-2 text-xs sm:text-sm",
+            isActive 
+              ? "font-medium text-foreground" 
+              : isCompleted
+                ? "font-medium text-primary"
+                : "text-muted-foreground"
+          )}
+        >
+          {step.label}
+        </span>
+      </div>
+    </div>
+  );
+};
+
+interface WizardNavigationProps {
+  showBackButton?: boolean;
+  showNextButton?: boolean;
+  showFinishButton?: boolean;
+  onBackClick?: () => void;
+  onNextClick?: () => void;
+  onFinishClick?: () => void;
+  loading?: boolean;
+}
+
+const WizardNavigation: React.FC<WizardNavigationProps> = ({
+  showBackButton = true,
+  showNextButton = true,
+  showFinishButton = false,
+  onBackClick,
+  onNextClick,
+  onFinishClick,
+  loading = false,
 }) => {
   const { 
-    currentStep, 
-    goToStep, 
-    goToNextStep, 
-    goToPreviousStep,
-    state,
-    validateStep,
-    isSubmitting,
-    createProduct,
-    updateProduct
+    currentStep,
+    completedSteps,
+    goToStep,
+    canGoToStep
   } = useProductWizardContext();
   
-  // Helper function to get step status
-  const getStepStatus = (step: WizardStep) => {
-    if (state.completedSteps.includes(step)) {
-      return 'completed';
-    }
-    if (step === currentStep) {
-      return 'current';
-    }
-    return 'pending';
-  };
+  // Find the current step index
+  const currentStepIndex = WIZARD_STEPS.findIndex(step => step.id === currentStep);
   
-  // Get human-readable step names
-  const getStepName = (step: WizardStep): string => {
-    switch (step) {
-      case 'basic-info':
-        return 'Basic Info';
-      case 'images':
-        return 'Images';
-      case 'additional-info':
-        return 'Additional Info';
-      case 'review':
-        return 'Review & Save';
-      default:
-        return step;
+  // Handle navigation to step
+  const handleStepClick = (stepId: string) => {
+    if (canGoToStep(stepId)) {
+      goToStep(stepId);
     }
   };
   
-  // Handle next button click with validation
-  const handleNext = async () => {
-    const isValid = validateStep();
-    if (isValid) {
-      goToNextStep();
-    }
-  };
-  
-  // Handle save button click
-  const handleSave = async () => {
-    // If custom save handler is provided, use it
-    if (onSave) {
-      await onSave();
-      return;
+  // Handle next button click
+  const handleNextClick = () => {
+    if (currentStepIndex < WIZARD_STEPS.length - 1) {
+      const nextStep = WIZARD_STEPS[currentStepIndex + 1];
+      if (canGoToStep(nextStep.id)) {
+        goToStep(nextStep.id);
+      }
     }
     
-    // Otherwise use the context's save methods
-    if (state.productId) {
-      // Update existing product
-      await updateProduct();
-    } else {
-      // Create new product
-      await createProduct();
+    if (onNextClick) {
+      onNextClick();
     }
   };
   
-  // Calculate if we're on the first or last step
-  const isFirstStep = currentStep === WIZARD_STEPS[0];
-  const isLastStep = currentStep === WIZARD_STEPS[WIZARD_STEPS.length - 1];
+  // Handle back button click
+  const handleBackClick = () => {
+    if (currentStepIndex > 0) {
+      const prevStep = WIZARD_STEPS[currentStepIndex - 1];
+      goToStep(prevStep.id);
+    }
+    
+    if (onBackClick) {
+      onBackClick();
+    }
+  };
   
   return (
     <div className="wizard-navigation">
-      {/* Steps indicator */}
-      <div className="flex items-center justify-center mb-8 w-full">
-        {WIZARD_STEPS.map((step, index) => {
-          const status = getStepStatus(step);
-          const isActive = status === 'current' || status === 'completed';
-          
-          return (
-            <React.Fragment key={step}>
-              {/* Step indicator */}
-              <div 
-                className={cn(
-                  "flex flex-col items-center cursor-pointer group",
-                  status === 'completed' && "text-primary",
-                  status === 'current' && "text-primary",
-                  status === 'pending' && "text-muted-foreground"
-                )}
-                onClick={() => goToStep(step)}
-              >
-                {/* Step circle */}
-                <div className="relative">
-                  {status === 'completed' ? (
-                    <CheckCircle2 className="h-8 w-8 text-primary" />
-                  ) : status === 'current' ? (
-                    <Circle className="h-8 w-8 text-primary border-2 border-primary rounded-full" />
-                  ) : (
-                    <Circle className="h-8 w-8 text-muted-foreground group-hover:text-gray-400" />
-                  )}
-                </div>
-                
-                {/* Step name */}
-                <span className={cn(
-                  "mt-2 text-xs font-medium",
-                  status === 'current' && "font-semibold"
-                )}>
-                  {getStepName(step)}
-                </span>
-              </div>
-              
-              {/* Connector line between steps */}
-              {index < WIZARD_STEPS.length - 1 && (
-                <div 
-                  className={cn(
-                    "w-16 h-0.5 mx-1",
-                    status === 'completed' ? "bg-primary" : "bg-muted"
-                  )}
-                />
-              )}
-            </React.Fragment>
-          );
-        })}
+      {/* Steps Indicator */}
+      <div className="mb-8">
+        <div className="flex justify-between">
+          {WIZARD_STEPS.map((step, index) => (
+            <StepIndicator
+              key={step.id}
+              step={step}
+              index={index}
+              isActive={currentStep === step.id}
+              isCompleted={completedSteps.includes(step.id)}
+              onClick={() => handleStepClick(step.id)}
+              disabled={!canGoToStep(step.id)}
+            />
+          ))}
+        </div>
       </div>
       
-      {/* Navigation buttons */}
-      <div className="flex justify-between py-4 border-t mt-4">
-        <div className="flex gap-2">
-          {/* Cancel button */}
-          {onCancel && (
+      {/* Navigation Buttons */}
+      <div className="flex justify-between mt-8">
+        <div>
+          {showBackButton && currentStepIndex > 0 && (
             <Button
+              type="button"
               variant="outline"
-              onClick={onCancel}
-              disabled={isSubmitting}
+              onClick={handleBackClick}
+              disabled={loading}
             >
-              Cancel
-            </Button>
-          )}
-          
-          {/* Back to products button */}
-          {showBackToProducts && (
-            <Button
-              variant="outline"
-              onClick={() => window.location.href = backToProductsUrl}
-              disabled={isSubmitting}
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" /> Back to Products
+              <ChevronLeftIcon className="mr-2 h-4 w-4" />
+              Back
             </Button>
           )}
         </div>
         
-        <div className="flex gap-2">
-          {/* Previous button */}
-          {!isFirstStep && (
+        <div>
+          {showNextButton && currentStepIndex < WIZARD_STEPS.length - 1 && (
             <Button
-              variant="outline"
-              onClick={goToPreviousStep}
-              disabled={isSubmitting}
+              type="button"
+              onClick={handleNextClick}
+              disabled={!completedSteps.includes(currentStep) || loading}
             >
-              <ArrowLeft className="h-4 w-4 mr-2" /> Previous
+              Next
+              <ChevronRightIcon className="ml-2 h-4 w-4" />
             </Button>
           )}
           
-          {/* Next button */}
-          {!isLastStep && (
+          {showFinishButton && currentStepIndex === WIZARD_STEPS.length - 1 && (
             <Button
-              variant="default"
-              onClick={handleNext}
-              disabled={isSubmitting}
+              type="button"
+              onClick={onFinishClick}
+              disabled={!completedSteps.includes(currentStep) || loading}
             >
-              Next <ArrowRight className="h-4 w-4 ml-2" />
-            </Button>
-          )}
-          
-          {/* Save button */}
-          {isLastStep && (
-            <Button
-              variant="default"
-              onClick={handleSave}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? 'Saving...' : saveLabel}
+              {loading ? "Saving..." : "Finish"}
+              {!loading && <CheckIcon className="ml-2 h-4 w-4" />}
             </Button>
           )}
         </div>
@@ -219,3 +205,5 @@ export const WizardNavigation: React.FC<WizardNavigationProps> = ({
     </div>
   );
 };
+
+export default WizardNavigation;
