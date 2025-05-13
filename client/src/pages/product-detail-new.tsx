@@ -294,27 +294,11 @@ const ProductDetailView = ({
         // Use async IIFE to call the calculatePriceAdjustments function
         (async () => {
           try {
-            // Convert selected attributes to arrays of numbers as required by the API
-            const formattedSelectedAttributes: Record<string, number[]> = {};
-            
-            // Convert each selected attribute value to an array containing the value as a number
-            Object.keys(selectedAttributes).forEach(attrIdStr => {
-              const attrId = attrIdStr;
-              const selectedValue = selectedAttributes[parseInt(attrId)];
-              
-              // Check if the value can be parsed as a number
-              const numValue = parseInt(selectedValue);
-              if (!isNaN(numValue)) {
-                formattedSelectedAttributes[attrId] = [numValue];
-              }
-            });
-            
-            console.log('Formatted selected attributes:', formattedSelectedAttributes);
-            
             // Get discount adjustments from the API
+            // The useAttributeDiscounts hook will handle the conversion to the right format
             const adjustmentResult = await calculatePriceAdjustments(
               product.id,
-              formattedSelectedAttributes,
+              selectedAttributes,
               quantity
             );
             

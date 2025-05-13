@@ -102,19 +102,37 @@ export function useAttributeDiscounts() {
   // Calculate price adjustments - memoized to prevent re-creation on each render
   const calculatePriceAdjustments = useCallback(async (
     productId: number,
-    selectedAttributes: Record<string, number[]>,
+    selectedAttributes: Record<string, any>,
     quantity: number = 1
   ): Promise<PriceAdjustmentResult> => {
     try {
       // Ensure all selectedAttributes are properly formatted as arrays of numbers
-      const formattedAttributes = Object.entries(selectedAttributes).reduce((acc, [key, value]) => {
-        // Ensure value is always an array of numbers
-        const valueArray = Array.isArray(value) ? value : [value];
-        acc[key] = valueArray.map(val => typeof val === 'number' ? val : parseInt(String(val)));
-        return acc;
-      }, {} as Record<string, number[]>);
+      const formattedAttributes: Record<string, number[]> = {};
       
-      console.log('Sending attributes to API:', formattedAttributes);
+      // Convert each attribute selection to the required format
+      Object.keys(selectedAttributes).forEach(attrId => {
+        const selection = selectedAttributes[attrId];
+        
+        if (selection !== undefined && selection !== null) {
+          // If selection is already an array, ensure it contains numbers
+          if (Array.isArray(selection)) {
+            formattedAttributes[attrId] = selection.map(val => 
+              typeof val === 'number' ? val : parseInt(String(val), 10)
+            );
+          } 
+          // If selection is a string or number, convert to a single-item array
+          else {
+            const numVal = typeof selection === 'number' ? 
+              selection : parseInt(String(selection), 10);
+              
+            if (!isNaN(numVal)) {
+              formattedAttributes[attrId] = [numVal];
+            }
+          }
+        }
+      });
+      
+      console.log('Formatted attributes for API:', formattedAttributes);
       
       const response = await apiRequest('POST', '/api/attribute-discount-rules/calculate', {
         productId,
