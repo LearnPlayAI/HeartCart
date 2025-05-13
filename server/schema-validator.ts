@@ -227,14 +227,8 @@ export function validateProductAttributeValueUpdate(data: unknown): Partial<sche
   return validateUpdate(data, schema.insertProductAttributeValueSchema, 'product attribute value');
 }
 
-// Attribute discount rule validation
-export function validateAttributeDiscountRuleInsert(data: unknown): schema.InsertAttributeDiscountRule {
-  return validateInsert(data, schema.insertAttributeDiscountRuleSchema, 'attribute discount rule');
-}
-
-export function validateAttributeDiscountRuleUpdate(data: unknown): Partial<schema.InsertAttributeDiscountRule> {
-  return validateUpdate(data, schema.insertAttributeDiscountRuleSchema, 'attribute discount rule');
-}
+// Attribute discount rule validation has been removed
+// as part of the centralized attribute system refactoring.
 
 /**
  * Specialized validators for query parameters
