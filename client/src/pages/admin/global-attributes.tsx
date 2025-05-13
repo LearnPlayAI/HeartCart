@@ -6,6 +6,7 @@ import { queryClient } from "@/lib/queryClient";
 import { ApiError } from "@/lib/exceptions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import AdminLayout from "@/components/admin/admin-layout";
 import { 
   Select,
   SelectContent,
@@ -531,18 +532,15 @@ function GlobalAttributesPage() {
   }
 
   return (
-    <>
+    <AdminLayout title="Global Attributes" subtitle="Manage global attributes that can be assigned to products, categories, and catalogs">
       <Helmet>
         <title>Global Attributes | TeeMeYou Admin</title>
       </Helmet>
 
-      <div className="container mx-auto py-8">
+      <div className="w-full">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-3xl font-bold">Global Attributes</h1>
-            <p className="text-gray-500 dark:text-gray-400 mt-1">
-              Manage global attributes that can be assigned to products, categories, and catalogs
-            </p>
+            {/* Title and subtitle are already in AdminLayout */}
           </div>
           <Button onClick={handleNewAttribute}>
             <Plus className="mr-2 h-4 w-4" />
@@ -1058,7 +1056,7 @@ function GlobalAttributesPage() {
           </DialogContent>
         </Dialog>
       </div>
-    </>
+    </AdminLayout>
   );
 }
 
