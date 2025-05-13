@@ -860,6 +860,19 @@ function GlobalAttributesPage() {
                   />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="sortOrder" className="text-right">
+                    Sort Order
+                  </Label>
+                  <Input
+                    id="sortOrder"
+                    name="sortOrder"
+                    type="number"
+                    placeholder="0"
+                    defaultValue={selectedAttribute?.sortOrder || 0}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="attributeType" className="text-right">
                     Type
                   </Label>
