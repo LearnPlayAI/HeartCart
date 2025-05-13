@@ -101,17 +101,22 @@ export function ReviewAndSaveStep({ onComplete }: ReviewAndSaveStepProps = {}) {
   const validationErrors = validateProduct(state);
   const hasErrors = validationErrors.length > 0;
   
-  // Mutation for creating a product
-  const createProductMutation = useMutation({
+  // Mutation for creating or updating a product
+  const saveProductMutation = useMutation({
     mutationFn: async (productData: any) => {
       // Set submitting state
       setIsSubmitting(true);
       setSavingError(null);
       
+      const isUpdate = !!state.productId;
+      
       try {
-        // API request to create product
-        const response = await fetch('/api/products', {
-          method: 'POST',
+        // API request to create or update product
+        const url = isUpdate ? `/api/products/${state.productId}` : '/api/products';
+        const method = isUpdate ? 'PUT' : 'POST';
+        
+        const response = await fetch(url, {
+          method,
           headers: {
             'Content-Type': 'application/json',
           },
@@ -121,10 +126,10 @@ export function ReviewAndSaveStep({ onComplete }: ReviewAndSaveStepProps = {}) {
         // Handle API errors
         if (!response.ok) {
           const errorData = await response.json();
-          throw new Error(errorData.error?.message || 'Failed to create product');
+          throw new Error(errorData.error?.message || `Failed to ${isUpdate ? 'update' : 'create'} product`);
         }
         
-        // Get created product data
+        // Get created/updated product data
         const productResult = await response.json();
         
         // Move any temporary images to their final location
@@ -200,8 +205,17 @@ export function ReviewAndSaveStep({ onComplete }: ReviewAndSaveStepProps = {}) {
       }
     },
     onSuccess: (data) => {
+      const isUpdate = !!state.productId;
+      
       // Invalidate queries to ensure fresh data
       queryClient.invalidateQueries({ queryKey: ['/api/products'] });
+      
+      if (state.productId) {
+        queryClient.invalidateQueries({ 
+          queryKey: ['/api/products', state.productId] 
+        });
+      }
+      
       if (state.catalogId) {
         queryClient.invalidateQueries({ 
           queryKey: ['/api/catalogs', state.catalogId, 'products'] 
@@ -211,16 +225,19 @@ export function ReviewAndSaveStep({ onComplete }: ReviewAndSaveStepProps = {}) {
       // Mark step complete
       markStepComplete('review');
       
-      // Clear any saved draft since the product was created successfully
+      // Clear any saved draft since the product was saved successfully
       clearProductDraft();
       
-      // Reset wizard state for a new product
-      resetWizard();
+      // Reset wizard state for a new product if creating
+      // If updating, don't reset as user might want to make more changes
+      if (!isUpdate) {
+        resetWizard();
+      }
       
       // Show success toast
       toast({
-        title: 'Product created',
-        description: `${state.name} has been created successfully`,
+        title: isUpdate ? 'Product updated' : 'Product created',
+        description: `${state.name} has been ${isUpdate ? 'updated' : 'created'} successfully`,
         variant: 'default',
       });
       
@@ -230,9 +247,11 @@ export function ReviewAndSaveStep({ onComplete }: ReviewAndSaveStepProps = {}) {
       }
     },
     onError: (error) => {
+      const isUpdate = !!state.productId;
+      
       // Show error toast
       toast({
-        title: 'Failed to create product',
+        title: `Failed to ${isUpdate ? 'update' : 'create'} product`,
         description: error instanceof Error ? error.message : 'An unknown error occurred',
         variant: 'destructive',
       });
@@ -245,6 +264,8 @@ export function ReviewAndSaveStep({ onComplete }: ReviewAndSaveStepProps = {}) {
       // Clear any previous errors
       setSavingError(null);
       setIsSubmitting(true);
+      
+      const isUpdate = !!state.productId;
       
       // Prepare product data for API - ensure numeric values for price fields
       const productData = {
@@ -297,24 +318,25 @@ export function ReviewAndSaveStep({ onComplete }: ReviewAndSaveStepProps = {}) {
         
         // Attributes
         attributes: state.attributes || [],
+        attributeValues: state.attributeValues || [],
         
         // Catalog context
         catalogId: state.catalogId ? Number(state.catalogId) : null,
       };
       
       // Log the product data for debugging
-      console.log('Submitting product data:', productData);
+      console.log(`${isUpdate ? 'Updating' : 'Creating'} product data:`, productData);
       
       // Submit data
-      await createProductMutation.mutateAsync(productData);
+      await saveProductMutation.mutateAsync(productData);
       
       // Success! Toast is handled by the mutation's onSuccess callback
     } catch (error) {
-      console.error('Product creation error:', error);
+      console.error(`Product ${state.productId ? 'update' : 'creation'} error:`, error);
       if (error instanceof Error) {
-        setSavingError(`Failed to create product: ${error.message}`);
+        setSavingError(`Failed to ${state.productId ? 'update' : 'create'} product: ${error.message}`);
       } else {
-        setSavingError('Failed to create product due to an unknown error');
+        setSavingError(`Failed to ${state.productId ? 'update' : 'create'} product due to an unknown error`);
       }
     } finally {
       setIsSubmitting(false);
