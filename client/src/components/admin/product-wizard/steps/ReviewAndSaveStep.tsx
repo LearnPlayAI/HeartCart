@@ -249,10 +249,52 @@ export function ReviewAndSaveStep({ onComplete }: ReviewAndSaveStepProps = {}) {
     onError: (error) => {
       const isUpdate = !!state.productId;
       
-      // Show error toast
+      // Detailed error logging
+      console.error('Product save error details:', error);
+      
+      // Try to extract more details from the error
+      let errorMessage = 'An unknown error occurred';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        
+        // Try to parse JSON error responses
+        try {
+          if (error.message.includes('{')) {
+            const jsonStart = error.message.indexOf('{');
+            const jsonPart = error.message.substring(jsonStart);
+            const errorData = JSON.parse(jsonPart);
+            console.error('Validation error details:', errorData);
+            
+            // Extract validation details if available
+            if (errorData.error?.details) {
+              const validationErrors = errorData.error.details;
+              const validationMessages = [];
+              
+              // Handle both object and array formats
+              if (Array.isArray(validationErrors)) {
+                validationErrors.forEach(err => {
+                  validationMessages.push(`${err.path}: ${err.message}`);
+                });
+              } else {
+                Object.entries(validationErrors).forEach(([field, msg]) => {
+                  validationMessages.push(`${field}: ${msg}`);
+                });
+              }
+              
+              if (validationMessages.length > 0) {
+                errorMessage = `Validation failed: ${validationMessages.join(', ')}`;
+              }
+            }
+          }
+        } catch (parseError) {
+          console.error('Could not parse error details:', parseError);
+        }
+      }
+      
+      // Show error toast with enhanced detail
       toast({
         title: `Failed to ${isUpdate ? 'update' : 'create'} product`,
-        description: error instanceof Error ? error.message : 'An unknown error occurred',
+        description: errorMessage,
         variant: 'destructive',
       });
     },
@@ -316,9 +358,9 @@ export function ReviewAndSaveStep({ onComplete }: ReviewAndSaveStepProps = {}) {
         // Sales and promotions
         discountLabel: state.discountLabel || null,
         specialSaleText: state.specialSaleText || null,
-        // Format dates as ISO strings for proper handling by the API
-        specialSaleStart: state.specialSaleStart ? new Date(state.specialSaleStart).toISOString() : null,
-        specialSaleEnd: state.specialSaleEnd ? new Date(state.specialSaleEnd).toISOString() : null,
+        // Convert date strings to Date objects for validation schema
+        specialSaleStart: state.specialSaleStart ? new Date(state.specialSaleStart) : null,
+        specialSaleEnd: state.specialSaleEnd ? new Date(state.specialSaleEnd) : null,
         
         // Attributes
         attributes: state.attributes || [],
@@ -337,8 +379,40 @@ export function ReviewAndSaveStep({ onComplete }: ReviewAndSaveStepProps = {}) {
       // Success! Toast is handled by the mutation's onSuccess callback
     } catch (error) {
       console.error(`Product ${state.productId ? 'update' : 'creation'} error:`, error);
+      
+      // Handle both Error objects and response errors
       if (error instanceof Error) {
-        setSavingError(`Failed to ${state.productId ? 'update' : 'create'} product: ${error.message}`);
+        // Try to extract more detail if possible
+        let errorMessage = error.message;
+        try {
+          if (error.message.includes('{')) {
+            const jsonStart = error.message.indexOf('{');
+            const jsonPart = error.message.substring(jsonStart);
+            const errorData = JSON.parse(jsonPart);
+            console.error('Detailed validation failure:', errorData);
+            
+            // Log raw data to help debugging
+            if (errorData.error?.details) {
+              console.error('Field validation details:', errorData.error.details);
+              
+              // Try to build a more descriptive error message
+              const detailsObj = errorData.error.details;
+              if (typeof detailsObj === 'object') {
+                const errorItems = Object.entries(detailsObj).map(([key, value]) => 
+                  `${key}: ${value}`
+                ).join(', ');
+                
+                if (errorItems) {
+                  errorMessage = `Validation errors: ${errorItems}`;
+                }
+              }
+            }
+          }
+        } catch (parseErr) {
+          console.error('Failed to parse error details', parseErr);
+        }
+        
+        setSavingError(`Failed to ${state.productId ? 'update' : 'create'} product: ${errorMessage}`);
       } else {
         setSavingError(`Failed to ${state.productId ? 'update' : 'create'} product due to an unknown error`);
       }
