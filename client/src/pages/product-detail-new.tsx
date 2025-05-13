@@ -193,18 +193,18 @@ const ProductDetailView = ({
     data: productAttributesResponse,
     error: productAttributesError
   } = useQuery<StandardApiResponse<CategoryAttribute[]>>({
-    queryKey: ['/api/products', product?.id, 'attributes'],
+    queryKey: [`/api/product-attributes/product/${product?.id}/attributes`],
     enabled: !!product?.id,
   });
   const productAttributes = productAttributesResponse?.success ? productAttributesResponse.data : [];
   
-  // Get product attribute options
+  // Get product attribute options - endpoint was changed during attribute system redesign
   const { 
     data: attributeOptionsResponse,
     error: attributeOptionsError
   } = useQuery<StandardApiResponse<{ [key: number]: ProductAttributeOption[] }>>({
-    queryKey: ['/api/products', product?.id, 'attribute-options'],
-    enabled: !!product?.id && !!productAttributes?.length,
+    queryKey: [`/api/categories/${product?.categoryId}/attributes`],
+    enabled: !!product?.id && !!product?.categoryId,
   });
   const attributeOptions = attributeOptionsResponse?.success ? attributeOptionsResponse.data : {};
   
@@ -213,7 +213,7 @@ const ProductDetailView = ({
     data: attributeValuesResponse,
     error: attributeValuesError
   } = useQuery<StandardApiResponse<ProductAttributeValue[]>>({
-    queryKey: ['/api/products', product?.id, 'attribute-values'],
+    queryKey: [`/api/product-attributes/product/${product?.id}/attribute-values`],
     enabled: !!product?.id,
   });
   const attributeValues = attributeValuesResponse?.success ? attributeValuesResponse.data : [];
