@@ -5,7 +5,7 @@
  * allowing users to upload, reorder, and set a main product image.
  */
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useProductWizardContext } from '../context';
 import { useToast } from '@/hooks/use-toast';
 import { formatFileSize } from '@/utils/format';

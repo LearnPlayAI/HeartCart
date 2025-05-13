@@ -188,12 +188,24 @@ const productWizardReducer = (
         },
       };
     
-    case 'ADD_IMAGE':
+    case 'ADD_IMAGE': {
+      // Normalize URL to ensure consistent handling
+      const normalizedUrl = action.url.startsWith('http') 
+        ? action.url 
+        : action.url.startsWith('/') 
+          ? action.url 
+          : `/${action.url}`;
+      
+      console.log('Adding image to context with normalized URL:', normalizedUrl);
+      
       return {
         ...state,
-        imageUrls: [...state.imageUrls, action.url],
+        imageUrls: [...state.imageUrls, normalizedUrl],
         imageObjectKeys: [...state.imageObjectKeys, action.objectKey],
+        // If this is the first image, automatically mark it as the main image
+        ...(state.imageUrls.length === 0 ? { mainImageIndex: 0 } : {})
       };
+    }
     
     case 'REMOVE_IMAGE': {
       const newUrls = [...state.imageUrls];
