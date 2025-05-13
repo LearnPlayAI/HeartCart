@@ -309,16 +309,48 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className 
   
   const confirmDeleteImage = () => {
     if (deleteImageId !== null) {
-      dispatch({
-        type: WizardActionType.REMOVE_UPLOADED_IMAGE,
-        payload: deleteImageId
-      });
-      setDeleteImageId(null);
+      // Find the image index in our local state
+      const imageIndex = uploadedImages.findIndex(img => 
+        String(img.id) === String(deleteImageId) || img.url === deleteImageId
+      );
       
-      toast({
-        title: "Image removed",
-        description: "The image has been removed from the product"
-      });
+      if (imageIndex >= 0) {
+        // Remove from local state
+        const updatedImages = uploadedImages.filter((_, idx) => idx !== imageIndex);
+        setUploadedImages(updatedImages);
+        
+        // Also update the context's imageUrls and imageObjectKeys arrays
+        const newImageUrls = updatedImages.map(item => item.url);
+        const newImageObjectKeys = updatedImages.map(item => item.objectKey || '');
+        
+        dispatch({ type: 'SET_FIELD', field: 'imageUrls', value: newImageUrls });
+        dispatch({ type: 'SET_FIELD', field: 'imageObjectKeys', value: newImageObjectKeys });
+        
+        // If we deleted the main image, update the main image index to the first image
+        if (imageIndex === state.mainImageIndex) {
+          dispatch({ 
+            type: 'SET_FIELD', 
+            field: 'mainImageIndex', 
+            value: updatedImages.length > 0 ? 0 : 0 
+          });
+          
+          // If there are still images, mark the first one as main
+          if (updatedImages.length > 0) {
+            const newImagesWithMain = updatedImages.map((img, idx) => ({
+              ...img,
+              isMain: idx === 0
+            }));
+            setUploadedImages(newImagesWithMain);
+          }
+        }
+        
+        toast({
+          title: "Image removed",
+          description: "The image has been removed from the product"
+        });
+      }
+      
+      setDeleteImageId(null);
     }
   };
   
@@ -382,9 +414,9 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className 
   
   // AI background removal handler
   const handleRemoveBackground = async (imageIdOrUrl: string | number) => {
-    // Find the image
-    const image = productData.uploadedImages.find(img => 
-      typeof imageIdOrUrl === 'number' ? img.id === imageIdOrUrl : img.url === imageIdOrUrl
+    // Find the image in our local state
+    const image = uploadedImages.find(img => 
+      String(img.id) === String(imageIdOrUrl) || img.url === imageIdOrUrl
     );
     
     if (!image) return;
@@ -425,10 +457,9 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className 
         throw new Error(result.message || 'Background removal failed');
       }
       
-      // Update the image in the state with the new processed image URL
-      const updatedImages = productData.uploadedImages.map(img => {
-        if ((typeof imageIdOrUrl === 'number' && img.id === imageIdOrUrl) || 
-            (typeof imageIdOrUrl === 'string' && img.url === imageIdOrUrl)) {
+      // Update the image in our local state with the new processed image URL
+      const updatedImages = uploadedImages.map(img => {
+        if (String(img.id) === String(imageIdOrUrl) || img.url === imageIdOrUrl) {
           return {
             ...img,
             url: result.processedImageUrl || img.url, // Use new URL if available
@@ -443,11 +474,15 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className 
         return img;
       });
       
-      // Update the state with the processed image
-      dispatch({
-        type: WizardActionType.REORDER_IMAGES,
-        payload: updatedImages
-      });
+      // Update the local state
+      setUploadedImages(updatedImages);
+      
+      // Also update the context state with the processed images
+      const newImageUrls = updatedImages.map(item => item.url);
+      const newImageObjectKeys = updatedImages.map(item => item.objectKey || '');
+      
+      dispatch({ type: 'SET_FIELD', field: 'imageUrls', value: newImageUrls });
+      dispatch({ type: 'SET_FIELD', field: 'imageObjectKeys', value: newImageObjectKeys });
       
       toast({
         title: "Background removed",
