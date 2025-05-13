@@ -254,7 +254,7 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
       quantity: quantity,
       combinationId: currentCombination?.id || null,
       selectedAttributes: selectedAttributes,
-      priceAdjustment: currentCombination?.priceAdjustment || 0,
+      // No price adjustment based on attributes as per requirements
     });
     
     toast({
@@ -266,8 +266,8 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
     onOpenChange(false);
   };
   
-  // Compute adjusted price
-  const adjustedPrice = (product.salePrice || product.price) + (currentCombination?.priceAdjustment || 0);
+  // No price adjustment based on attributes as per requirements
+  const adjustedPrice = (product.salePrice || product.price);
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

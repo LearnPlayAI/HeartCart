@@ -1383,20 +1383,7 @@ function ProductAttributesPage() {
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="priceAdjustment">Price Adjustment (Optional)</Label>
-                  <Input
-                    id="priceAdjustment"
-                    name="priceAdjustment"
-                    type="number"
-                    step="0.01"
-                    placeholder="0.00"
-                    defaultValue={selectedOption?.priceAdjustment || ""}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Price adjustment for this option (e.g., +50.00 for premium options)
-                  </p>
-                </div>
+                {/* Price adjustments based on attributes have been removed as per requirements */}
 
                 {selectedOption?.metadata && (
                   <div className="space-y-2">

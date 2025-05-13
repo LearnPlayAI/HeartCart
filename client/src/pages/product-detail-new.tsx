@@ -289,37 +289,10 @@ const ProductDetailView = ({
       // Store the selected attribute values for display/cart purposes
       setSelectedAttributeValues(selectedAttrValues);
       
-      // Calculate dynamic discounts based on selected attributes and quantity
-      if (product.id) {
-        // Use async IIFE to call the calculatePriceAdjustments function
-        (async () => {
-          try {
-            // Get discount adjustments from the API
-            // The useAttributeDiscounts hook will handle the conversion to the right format
-            const adjustmentResult = await calculatePriceAdjustments(
-              product.id,
-              selectedAttributes,
-              quantity
-            );
-            
-            // Store the adjustments for display
-            setPriceAdjustments(adjustmentResult);
-            
-            // Apply discounts to the adjusted price
-            const finalPrice = initialAdjustedPrice - adjustmentResult.totalAdjustment;
-            setCurrentPrice(finalPrice > 0 ? finalPrice : 0);
-          } catch (error) {
-            console.error('Failed to calculate attribute discounts:', error);
-            // Fallback to the base price adjustment if discount calculation fails
-            setCurrentPrice(initialAdjustedPrice);
-            setPriceAdjustments(null);
-          }
-        })();
-      } else {
-        // If we don't have a product ID, just use the base price adjustment
-        setCurrentPrice(initialAdjustedPrice);
-        setPriceAdjustments(null);
-      }
+      // No price adjustment based on attributes, as per requirement
+      // Simply use the base price without attribute-based adjustments
+      setCurrentPrice(initialAdjustedPrice);
+      setPriceAdjustments(null);
     } else {
       setCurrentPrice(null);
       setSelectedAttributeValues([]);
@@ -790,30 +763,7 @@ const ProductDetailView = ({
                       </span>
                     </div>
 
-                    {/* Display attribute discount details if available */}
-                    {priceAdjustments && priceAdjustments.adjustments.length > 0 && (
-                      <div className="mt-2 pt-2 border-t border-green-200">
-                        <h4 className="text-xs font-semibold text-green-800 mb-1">Applied Discounts:</h4>
-                        <ul className="space-y-1">
-                          {priceAdjustments.adjustments.map((adjustment, idx) => (
-                            <li key={idx} className="text-xs flex justify-between text-green-700">
-                              <span>{adjustment.ruleName}</span>
-                              <span className="font-medium">
-                                {adjustment.discountType === 'percentage' 
-                                  ? `${adjustment.discountValue}% off` 
-                                  : `-${formatCurrency(adjustment.appliedValue)}`}
-                              </span>
-                            </li>
-                          ))}
-                          {priceAdjustments.totalAdjustment > 0 && (
-                            <li className="text-xs font-semibold flex justify-between text-green-800 pt-1 border-t border-green-200 mt-1">
-                              <span>Total Savings:</span>
-                              <span>{formatCurrency(priceAdjustments.totalAdjustment)}</span>
-                            </li>
-                          )}
-                        </ul>
-                      </div>
-                    )}
+                    {/* No price adjustments based on product attributes as per requirements */}
                   </div>
                 )}
               </div>
