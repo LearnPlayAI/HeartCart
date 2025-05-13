@@ -192,13 +192,13 @@ export function BasicInfoStep() {
   
   return (
     <div className="wizard-step">
-      <h3 className="wizard-step-header">Basic Product Information</h3>
-      <Card className="bg-white border-gray-200">
+      <h3 className="text-2xl font-semibold mb-4 text-[#FF69B4]">Basic Product Information</h3>
+      <Card className="bg-white border-[#E5E7EB]">
         <CardContent className="pt-6">
           <Tabs defaultValue="general" className="w-full">
             <TabsList className="mb-4">
-              <TabsTrigger value="general" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">General Info</TabsTrigger>
-              <TabsTrigger value="pricing" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Pricing</TabsTrigger>
+              <TabsTrigger value="general" className="data-[state=active]:bg-[#FF69B4] data-[state=active]:text-white">General Info</TabsTrigger>
+              <TabsTrigger value="pricing" className="data-[state=active]:bg-[#FF69B4] data-[state=active]:text-white">Pricing</TabsTrigger>
             </TabsList>
             
             <Form {...form}>
@@ -210,7 +210,7 @@ export function BasicInfoStep() {
                     name="name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="flex">Product Name <span className="text-red-500 ml-1">*</span></FormLabel>
+                        <FormLabel className="flex">Product Name <span className="text-[#FF6B6B] ml-1">*</span></FormLabel>
                         <FormControl>
                           <Input
                             placeholder="Enter product name"
@@ -402,22 +402,22 @@ export function BasicInfoStep() {
                     name="costPrice"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="flex">Cost Price <span className="text-red-500 ml-1">*</span></FormLabel>
+                        <FormLabel className="flex">Cost Price <span className="text-[#FF6B6B] ml-1">*</span></FormLabel>
                         <FormControl>
                           <div className="relative">
-                            <span className="absolute left-3 top-2.5">R</span>
+                            <span className="absolute left-3 top-2.5 text-[#777777]">R</span>
                             <Input
                               type="number"
                               min="0"
                               step="0.01"
-                              className="pl-7"
+                              className="pl-7 border-[#E5E7EB] focus-visible:ring-[#FF69B4]"
                               placeholder="0.00"
                               {...field}
                               onChange={handleCostPriceChange}
                             />
                           </div>
                         </FormControl>
-                        <FormDescription>
+                        <FormDescription className="text-[#777777]">
                           The price you pay for the product
                         </FormDescription>
                         <FormMessage />
@@ -507,10 +507,10 @@ export function BasicInfoStep() {
                     control={form.control}
                     name="onSale"
                     render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border border-[#E5E7EB] bg-[#F8F9FA] p-4">
                         <div className="space-y-0.5">
                           <FormLabel>On Sale</FormLabel>
-                          <FormDescription>
+                          <FormDescription className="text-[#777777]">
                             Apply a discounted price
                           </FormDescription>
                         </div>
