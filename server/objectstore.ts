@@ -881,14 +881,14 @@ export class ObjectStorageService {
    * Helper method to upload a temporary file
    * @param fileBuffer The file buffer
    * @param originalFilename The original filename
-   * @param productId The product ID (or 'pending' for products not yet created)
+   * @param supplierCatalogPathOrProductId The supplier/catalog path or legacy productId
    * @param contentType Optional content type
    * @returns The public URL and object key
    */
   async uploadTempFile(
     fileBuffer: Buffer,
     originalFilename: string,
-    productId: string | number = 'pending',
+    supplierCatalogPathOrProductId: string = 'pending',
     contentType?: string
   ): Promise<{ url: string, objectKey: string }> {
     // Ensure storage is initialized
@@ -904,7 +904,7 @@ export class ObjectStorageService {
       throw new Error(`Empty buffer for temp file: ${originalFilename}`);
     }
     
-    console.log(`Uploading temp file for product ${productId}: ${originalFilename}, size: ${fileBuffer.length} bytes`);
+    console.log(`Uploading temp file: ${originalFilename}, size: ${fileBuffer.length} bytes`);
     
     // Generate a unique filename with timestamp to avoid collisions
     const timestamp = Date.now();
@@ -912,11 +912,19 @@ export class ObjectStorageService {
     const baseName = path.basename(originalFilename, ext);
     const uniqueFilename = `${baseName}_${timestamp}${ext}`;
     
-    // Build the object key with product ID in the folder structure
-    const objectKey = `${STORAGE_FOLDERS.TEMP}/${productId}/${uniqueFilename}`;
+    // Build the object key with the supplier/catalog structure
+    // Format: root/{supplierName}/{catalogName}/pending/filename.xxx
+    let objectKey = '';
     
-    // Ensure the folder exists
-    await this.createFolder(`${STORAGE_FOLDERS.TEMP}/${productId}`);
+    if (supplierCatalogPathOrProductId === 'pending' || !isNaN(Number(supplierCatalogPathOrProductId))) {
+      // Legacy format - temporary backward compatibility
+      objectKey = `${STORAGE_FOLDERS.TEMP}/${supplierCatalogPathOrProductId}/${uniqueFilename}`;
+      await this.createFolder(`${STORAGE_FOLDERS.TEMP}/${supplierCatalogPathOrProductId}`);
+    } else {
+      // New format: supplier/catalog structure
+      objectKey = `${supplierCatalogPathOrProductId}/pending/${uniqueFilename}`;
+      await this.createFolder(`${supplierCatalogPathOrProductId}/pending`);
+    }
     
     const MAX_RETRIES = 3;
     let lastError: any = null;
