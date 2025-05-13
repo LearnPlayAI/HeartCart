@@ -38,7 +38,7 @@ export function ImageStep() {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // Debug log current images
+  // Debug log current images and handle initial loading
   useEffect(() => {
     console.log('ImageStep state:', {
       imageCount: state.imageUrls.length,
@@ -46,7 +46,12 @@ export function ImageStep() {
       imageObjectKeys: state.imageObjectKeys,
       mainImageIndex: state.mainImageIndex
     });
-  }, [state.imageUrls, state.imageObjectKeys, state.mainImageIndex]);
+    
+    // Mark step complete if we have images
+    if (state.imageUrls.length > 0) {
+      markStepComplete('images');
+    }
+  }, [state.imageUrls, state.imageObjectKeys, state.mainImageIndex, markStepComplete]);
   
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);

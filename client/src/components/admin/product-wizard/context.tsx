@@ -505,16 +505,24 @@ export const ProductWizardProvider: React.FC<ProductWizardProviderProps> = ({
               
               // Load images if available
               if (product.images && product.images.length > 0) {
+                console.log('Loading product images:', product.images);
                 // Extract image URLs and object keys
                 const imageUrls = product.images.map(img => img.url);
-                const imageObjectKeys = product.images.map(img => img.objectKey);
+                const imageObjectKeys = product.images.map(img => img.objectKey || '');
                 
-                // Find main image index
-                const mainImageIndex = product.images.findIndex(img => img.isMain) || 0;
+                // Find main image index (ensure it's a proper numeric value)
+                const mainImageIndex = product.images.findIndex(img => img.isMain);
+                const validMainIndex = mainImageIndex >= 0 ? mainImageIndex : 0;
+                
+                console.log('Image data being loaded:', {
+                  imageUrls,
+                  imageObjectKeys,
+                  mainImageIndex: validMainIndex
+                });
                 
                 dispatch({ type: 'SET_FIELD', field: 'imageUrls', value: imageUrls });
                 dispatch({ type: 'SET_FIELD', field: 'imageObjectKeys', value: imageObjectKeys });
-                dispatch({ type: 'SET_FIELD', field: 'mainImageIndex', value: mainImageIndex >= 0 ? mainImageIndex : 0 });
+                dispatch({ type: 'SET_FIELD', field: 'mainImageIndex', value: validMainIndex });
               }
               
               // Inventory - API returns stock instead of stockLevel

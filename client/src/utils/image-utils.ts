@@ -31,7 +31,18 @@ export const ensureValidImageUrl = (
       return window.location.origin + image;
     }
     
-    return image; // Assume it's a valid absolute URL
+    // Make sure http or https URLs are properly formed
+    if (image.match(/^https?:\/\//i)) {
+      return image;
+    }
+    
+    // If it doesn't start with http(s):// but contains periods (likely a domain),
+    // assume it's an HTTP URL
+    if (image.includes('.') && !image.startsWith('//')) {
+      return 'https://' + image;
+    }
+    
+    return image; // Assume it's a valid URL
   }
   
   // If image is an object, try to extract the URL
