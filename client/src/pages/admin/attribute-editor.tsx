@@ -27,9 +27,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Attribute, ATTRIBUTE_TYPES } from "@/types/attribute-types";
-// Debug
-console.log("Attribute Types:", ATTRIBUTE_TYPES);
+import { Attribute } from "@/types/attribute-types";
 
 function AttributeEditorPage() {
   const { toast } = useToast();
@@ -37,11 +35,23 @@ function AttributeEditorPage() {
   const params = useParams();
   const isNewAttribute = params.id === "new";
   const attributeId = !isNewAttribute ? parseInt(params.id as string) : undefined;
+  
+  // Fetch available attribute types
+  const { 
+    data: attributeTypesResponse,
+    isLoading: attributeTypesLoading,
+  } = useQuery({
+    queryKey: ["/api/attributes/types"],
+    retry: 2,
+  });
+  
+  const attributeTypes = attributeTypesResponse?.data || ["text", "select"];
+  
   const [formData, setFormData] = useState<Partial<Attribute>>({
     name: "",
     displayName: "",
     description: "",
-    attributeType: ATTRIBUTE_TYPES[0],
+    attributeType: "select", // Default to select
     isFilterable: false,
     isSwatch: false,
     isRequired: false,

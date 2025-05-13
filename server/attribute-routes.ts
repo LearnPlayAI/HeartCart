@@ -404,6 +404,31 @@ router.delete('/:id', asyncHandler(async (req: Request, res: Response) => {
 }));
 
 // Function to register routes with the app
+// Get all available attribute types
+router.get('/types', asyncHandler(async (req: Request, res: Response) => {
+  try {
+    // Define the supported attribute types
+    const attributeTypes = [
+      "text",       // Simple text values (e.g., Material: "Cotton", "Polyester")
+      "number",     // Numeric values (e.g., Weight: 5, 10)
+      "boolean",    // True/false values
+      "color",      // Color values, typically with associated hex codes
+      "size",       // Size values (e.g., "S", "M", "L")
+      "date",       // Date values
+      "select"      // Select from predefined options
+    ];
+    
+    // Add cache control headers to ensure clients always get fresh data
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    
+    sendSuccess(res, attributeTypes);
+  } catch (error) {
+    sendError(res, 'Failed to retrieve attribute types', 500);
+  }
+}));
+
 function registerAttributeRoutes(app: Express) {
   app.use('/api/attributes', router);
   
