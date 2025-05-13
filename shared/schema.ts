@@ -405,6 +405,10 @@ export const insertProductSchema = createInsertSchema(products).omit({
 }).extend({
   displayOrder: z.number().default(999).optional(),
   stock: z.number().int().nonnegative().default(0), // Add default value for stock column
+  // Allow date fields to accept either ISO strings or Date objects
+  specialSaleStart: z.union([z.string(), z.date()]).nullable().optional(),
+  specialSaleEnd: z.union([z.string(), z.date()]).nullable().optional(),
+  flashDealEnd: z.union([z.string(), z.date()]).nullable().optional(),
 });
 
 export const insertCartItemSchema = createInsertSchema(cartItems).omit({
