@@ -112,6 +112,7 @@ const defaultInitialState: ProductWizardState = {
   
   // Attributes
   attributes: [],
+  attributeValues: [], // For attribute-based pricing config
   
   // Product details
   supplier: null,
