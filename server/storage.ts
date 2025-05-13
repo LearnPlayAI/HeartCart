@@ -4328,102 +4328,19 @@ export class DatabaseStorage implements IStorage {
   
   // Removed catalog attribute options operations as part of centralized attribute system
   
-  async getCatalogAttributeOptionById(id: number): Promise<CatalogAttributeOption | undefined> {
-    const [option] = await db
-      .select()
-      .from(catalogAttributeOptions)
-      .where(eq(catalogAttributeOptions.id, id));
-    return option;
-  }
+  // Removed getCatalogAttributeOptionById as part of centralized attribute system
   
-  async createCatalogAttributeOption(option: InsertCatalogAttributeOption): Promise<CatalogAttributeOption> {
-    const [newOption] = await db
-      .insert(catalogAttributeOptions)
-      .values(option)
-      .returning();
-    return newOption;
-  }
+  // Removed createCatalogAttributeOption as part of centralized attribute system
   
-  async updateCatalogAttributeOption(id: number, optionData: Partial<InsertCatalogAttributeOption>): Promise<CatalogAttributeOption | undefined> {
-    const [updatedOption] = await db
-      .update(catalogAttributeOptions)
-      .set(optionData)
-      .where(eq(catalogAttributeOptions.id, id))
-      .returning();
-    return updatedOption;
-  }
+  // Removed updateCatalogAttributeOption as part of centralized attribute system
   
-  async deleteCatalogAttributeOption(id: number): Promise<boolean> {
-    try {
-      await db
-        .delete(catalogAttributeOptions)
-        .where(eq(catalogAttributeOptions.id, id));
-      return true;
-    } catch (error) {
-      console.error(`Error deleting catalog attribute option ${id}:`, error);
-      throw error; // Rethrow so the route handler can catch it and send a proper error response
-    }
-  }
+  // Removed deleteCatalogAttributeOption as part of centralized attribute system
   
-  async updateCatalogAttributeOptionsOrder(catalogAttributeId: number, optionIds: number[]): Promise<boolean> {
-    try {
-      // Start a transaction
-      await db.transaction(async (tx) => {
-        // Update the sort order for each option
-        for (let i = 0; i < optionIds.length; i++) {
-          await tx
-            .update(catalogAttributeOptions)
-            .set({ sortOrder: i })
-            .where(and(
-              eq(catalogAttributeOptions.id, optionIds[i]),
-              eq(catalogAttributeOptions.catalogAttributeId, catalogAttributeId)
-            ));
-        }
-      });
-      return true;
-    } catch (error) {
-      console.error(`Error updating catalog attribute options order for catalogAttributeId ${catalogAttributeId}:`, error);
-      throw error; // Rethrow so the route handler can catch it and send a proper error response
-    }
-  }
+  // Removed updateCatalogAttributeOptionsOrder as part of centralized attribute system
   
-  // Category attribute operations
-  async getCategoryAttributes(categoryId: number): Promise<(CategoryAttribute & { attribute: Attribute })[]> {
-    const result = await db
-      .select({
-        categoryAttribute: categoryAttributes,
-        attribute: attributes
-      })
-      .from(categoryAttributes)
-      .innerJoin(attributes, eq(categoryAttributes.attributeId, attributes.id))
-      .where(eq(categoryAttributes.categoryId, categoryId))
-      .orderBy(asc(categoryAttributes.sortOrder));
-    
-    return result.map(row => ({
-      ...row.categoryAttribute,
-      attribute: row.attribute
-    }));
-  }
+  // Removed category attribute operations as part of centralized attribute system
   
-  async getCategoryAttributeById(id: number): Promise<(CategoryAttribute & { attribute: Attribute }) | undefined> {
-    const result = await db
-      .select({
-        categoryAttribute: categoryAttributes,
-        attribute: attributes
-      })
-      .from(categoryAttributes)
-      .innerJoin(attributes, eq(categoryAttributes.attributeId, attributes.id))
-      .where(eq(categoryAttributes.id, id));
-    
-    if (result.length === 0) {
-      return undefined;
-    }
-    
-    return {
-      ...result[0].categoryAttribute,
-      attribute: result[0].attribute
-    };
-  }
+  // Removed getCategoryAttributeById as part of centralized attribute system
   
   async createCategoryAttribute(categoryAttribute: InsertCategoryAttribute): Promise<CategoryAttribute> {
     const [newCategoryAttribute] = await db
