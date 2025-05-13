@@ -16,7 +16,7 @@ function calculateMarkupPercentage(costPrice: number, sellingPrice: number): num
 }
 
 // Define the steps in the wizard
-export type WizardStep = 'basic-info' | 'images' | 'additional-info' | 'review';
+export type WizardStep = 'basic-info' | 'images' | 'additional-info' | 'sales-promotions' | 'review';
 
 // Define the state interface for the wizard
 interface ProductWizardState {

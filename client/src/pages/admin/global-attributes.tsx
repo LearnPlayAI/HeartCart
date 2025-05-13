@@ -454,6 +454,16 @@ function GlobalAttributesPage() {
       sortOrder: parseInt(formData.get("sortOrder") as string) || 0,
       metadata: selectedOption?.metadata || null,
     };
+
+    // Validate the value field to ensure it's not empty
+    if (!optionData.value || optionData.value.trim() === '') {
+      toast({
+        title: "Value is required",
+        description: "Please enter a value for this option",
+        variant: "destructive",
+      });
+      return;
+    }
     
     if (optionFormMode === "create") {
       createOptionMutation.mutate(optionData);
@@ -720,7 +730,9 @@ function GlobalAttributesPage() {
                       {options?.map((option: AttributeOption) => (
                         <TableRow key={option.id}>
                           <TableCell>{option.sortOrder}</TableCell>
-                          <TableCell className="font-medium">{option.value}</TableCell>
+                          <TableCell className="font-medium">
+                            {option.value || <span className="text-muted-foreground italic">No value set</span>}
+                          </TableCell>
                           <TableCell>{option.displayValue}</TableCell>
                           <TableCell>
                             {option.metadata ? (
