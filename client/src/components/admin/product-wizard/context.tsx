@@ -1,15 +1,16 @@
 /**
  * Product Wizard Context
  * 
- * This module provides a React context for managing the state and logic
- * of the product creation/editing wizard.
+ * This context provides state management for the product creation wizard.
+ * It handles the step navigation, form data, validation, and saving.
  */
 
-import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import slugify from 'slugify';
+import { UPLOAD_ENDPOINTS, moveTempFilesToProduct } from '@/utils/file-manager';
 
-// Define the steps of the wizard
+// Define the wizard steps
 export const WIZARD_STEPS = [
   'basic-info',
   'images',
@@ -19,217 +20,234 @@ export const WIZARD_STEPS = [
 
 export type WizardStep = typeof WIZARD_STEPS[number];
 
-// Define the state interface for the product wizard
-export interface ProductWizardState {
-  // Basic product info
-  productId?: number;
+// Interface for catalog context data
+export interface CatalogContextData {
+  id: number;
   name: string;
-  slug: string;
-  description: string;
-  costPrice: number;
-  regularPrice: number;
-  salePrice?: number;
-  minimumPrice?: number;
-  markupPercentage: number;
-  sku: string;
-  stockLevel: number;
-  minOrderQty: number;
-  brand?: string;
-  tags: string[];
-  
-  // Category and catalog info
-  categoryId?: number;
-  categoryName?: string;
-  catalogId?: number;
-  catalogName?: string;
-  supplierId?: number;
-  supplierName?: string;
-  
-  // Images
-  imageUrls: string[];
-  tempImagePaths: string[];
-  mainImageIndex: number;
-  
-  // Additional info
-  isActive: boolean;
-  isPhysical: boolean;
-  weight?: number;
-  length?: number;
-  width?: number;
-  height?: number;
-  weightUnit: 'g' | 'kg' | 'oz' | 'lb';
-  dimensionUnit: 'cm' | 'mm' | 'in';
-  freeShipping: boolean;
-  isFeatured: boolean;
-  
-  // Special promotions
-  hasFlashDeal: boolean;
-  flashDealStartDate?: string;
-  flashDealEndDate?: string;
-  flashDealPrice?: number;
-  
-  // Status tracking
-  isDraft: boolean;
+  description: string | null;
+  supplierId: number;
+  supplierName: string;
+  defaultBrand: string | null;
+  defaultCategory: {
+    id: number;
+    name: string;
+  } | null;
+  defaultTags: string[];
+  defaultShippingInfo: {
+    weight?: number;
+    weightUnit?: string;
+    dimensions?: {
+      length?: number;
+      width?: number;
+      height?: number;
+      unit?: string;
+    };
+    freeShipping?: boolean;
+  };
+  defaultPricing: {
+    markupPercentage?: number;
+    recommendedMarkup?: number;
+  };
+}
+
+// Product wizard state interface
+interface ProductWizardState {
   currentStep: WizardStep;
   completedSteps: WizardStep[];
   
-  // Extras
-  attributeValues: Record<string, any>;
-  notes?: string;
-}
-
-// Define validation error interface
-export interface ProductWizardErrors {
-  [key: string]: string;
-}
-
-// Define catalog context data for default values
-export interface CatalogContextData {
-  defaultMarkupPercentage: number;
+  // Product data
+  productId?: number;
+  catalogId?: number;
+  
+  // Basic info
+  name: string;
+  slug: string;
+  description: string;
+  sku: string;
+  brand: string;
+  categoryId: number | null;
+  categoryName: string;
+  
+  // Pricing
+  costPrice: number;
+  markupPercentage: number;
+  regularPrice: number;
+  salePrice: number | null;
+  saleStartDate: string | null;
+  saleEndDate: string | null;
+  
+  // Inventory
+  stockLevel: number;
+  backorderEnabled: boolean;
+  lowStockThreshold: number;
+  
+  // Images
+  imageUrls: string[];
+  imageObjectKeys: string[];
+  tempImageObjectKeys: string[];
+  mainImageIndex: number;
+  
+  // Additional info
+  isPhysical: boolean;
+  weight: number | null;
+  weightUnit: string;
+  length: number | null;
+  width: number | null;
+  height: number | null;
+  dimensionUnit: string;
+  
+  // Tags
+  tags: string[];
+  
+  // Visibility
+  isActive: boolean;
+  isDraft: boolean;
+  isFeatured: boolean;
+  isNew: boolean;
   freeShipping: boolean;
-  categoryId?: number;
-  supplierName?: string;
-  supplierContactInfo?: string;
+  
+  // Dates
+  publishDate: string | null;
+  expiryDate: string | null;
 }
 
-// Define the context value interface
-interface ProductWizardContextValue {
+// Context interface
+interface ProductWizardContextType {
   state: ProductWizardState;
-  updateState: (update: Partial<ProductWizardState>) => void;
-  resetState: () => void;
-  createProduct: () => Promise<number | undefined>;
-  updateProduct: () => Promise<boolean>;
-  errors: ProductWizardErrors;
+  setState: React.Dispatch<React.SetStateAction<ProductWizardState>>;
   currentStep: WizardStep;
   goToStep: (step: WizardStep) => void;
   goToNextStep: () => void;
   goToPreviousStep: () => void;
+  updateField: <K extends keyof ProductWizardState>(field: K, value: ProductWizardState[K]) => void;
   isValid: (step?: WizardStep) => boolean;
   validateStep: (step?: WizardStep) => boolean;
-  setError: (field: string, message: string) => void;
-  clearError: (field: string) => void;
+  markStepComplete: (step: WizardStep) => void;
+  markStepIncomplete: (step: WizardStep) => void;
+  createProduct: () => Promise<number | undefined>;
+  updateProduct: () => Promise<boolean>;
   isSubmitting: boolean;
   catalogContext: CatalogContextData | null;
   isCatalogContextLoading: boolean;
 }
 
-// Default state
-const defaultState: ProductWizardState = {
+// Initial state
+const initialWizardState: ProductWizardState = {
+  currentStep: 'basic-info',
+  completedSteps: [],
+  
   name: '',
   slug: '',
   description: '',
-  costPrice: 0,
-  regularPrice: 0,
-  markupPercentage: 40, // Default markup percentage
   sku: '',
-  stockLevel: 0,
-  minOrderQty: 1,
-  tags: [],
+  brand: '',
+  categoryId: null,
+  categoryName: '',
+  
+  costPrice: 0,
+  markupPercentage: 30, // Default markup percentage
+  regularPrice: 0,
+  salePrice: null,
+  saleStartDate: null,
+  saleEndDate: null,
+  
+  stockLevel: 1,
+  backorderEnabled: false,
+  lowStockThreshold: 5,
+  
   imageUrls: [],
-  tempImagePaths: [],
-  mainImageIndex: -1,
-  isActive: true,
+  imageObjectKeys: [],
+  tempImageObjectKeys: [],
+  mainImageIndex: 0,
+  
   isPhysical: true,
-  weightUnit: 'g',
+  weight: null,
+  weightUnit: 'kg',
+  length: null,
+  width: null,
+  height: null,
   dimensionUnit: 'cm',
-  freeShipping: false,
-  isFeatured: false,
-  hasFlashDeal: false,
+  
+  tags: [],
+  
+  isActive: true,
   isDraft: false,
-  currentStep: 'basic-info',
-  completedSteps: [],
-  attributeValues: {}
+  isFeatured: false,
+  isNew: true,
+  freeShipping: false,
+  
+  publishDate: null,
+  expiryDate: null
 };
 
-// Create the context
-const ProductWizardContext = createContext<ProductWizardContextValue | undefined>(undefined);
+// Create context
+const ProductWizardContext = createContext<ProductWizardContextType | undefined>(undefined);
 
-// Create the provider component
-export const ProductWizardProvider: React.FC<{
-  children: ReactNode;
+// Provider props interface
+interface ProductWizardProviderProps {
+  children: React.ReactNode;
   initialState?: Partial<ProductWizardState>;
   catalogId?: number;
-}> = ({ children, initialState, catalogId }) => {
+}
+
+/**
+ * Product Wizard Context Provider
+ */
+export const ProductWizardProvider: React.FC<ProductWizardProviderProps> = ({
+  children,
+  initialState,
+  catalogId
+}) => {
+  // Initialize state with defaults and any provided initial state
   const [state, setState] = useState<ProductWizardState>({
-    ...defaultState,
+    ...initialWizardState,
     ...initialState,
     catalogId
   });
-  const [errors, setErrors] = useState<ProductWizardErrors>({});
+  
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
   const queryClient = useQueryClient();
-
+  
   // Fetch catalog context if catalogId is provided
-  const {
-    data: catalogContext,
-    isLoading: isCatalogContextLoading
+  const { 
+    data: catalogContext, 
+    isLoading: isCatalogContextLoading 
   } = useQuery({
-    queryKey: ['catalog-context', catalogId],
+    queryKey: catalogId ? [`/api/catalogs/${catalogId}/context`] : null,
     queryFn: async () => {
       if (!catalogId) return null;
-      
       const response = await fetch(`/api/catalogs/${catalogId}/context`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch catalog context');
-      }
-      
-      const data = await response.json();
-      return data.data as CatalogContextData;
+      if (!response.ok) throw new Error('Failed to fetch catalog context');
+      return response.json().then(res => res.data);
     },
     enabled: !!catalogId
   });
-
-  // Apply catalog defaults when context is loaded
+  
+  // Apply catalog defaults when catalog context is loaded
   useEffect(() => {
-    if (catalogContext && !initialState?.productId) {
-      setState(prev => ({
-        ...prev,
-        markupPercentage: catalogContext.defaultMarkupPercentage || prev.markupPercentage,
-        freeShipping: catalogContext.freeShipping,
-        categoryId: catalogContext.categoryId,
-        supplierName: catalogContext.supplierName
+    if (catalogContext && !state.productId) {
+      setState(prevState => ({
+        ...prevState,
+        brand: catalogContext.defaultBrand || prevState.brand,
+        categoryId: catalogContext.defaultCategory?.id || prevState.categoryId,
+        categoryName: catalogContext.defaultCategory?.name || prevState.categoryName,
+        tags: prevState.tags.length ? prevState.tags : catalogContext.defaultTags,
+        markupPercentage: prevState.markupPercentage || catalogContext.defaultPricing?.markupPercentage || 30,
+        weight: prevState.weight || catalogContext.defaultShippingInfo?.weight,
+        weightUnit: prevState.weightUnit || catalogContext.defaultShippingInfo?.weightUnit || 'kg',
+        length: prevState.length || catalogContext.defaultShippingInfo?.dimensions?.length,
+        width: prevState.width || catalogContext.defaultShippingInfo?.dimensions?.width,
+        height: prevState.height || catalogContext.defaultShippingInfo?.dimensions?.height,
+        dimensionUnit: prevState.dimensionUnit || catalogContext.defaultShippingInfo?.dimensions?.unit || 'cm',
+        freeShipping: prevState.freeShipping || catalogContext.defaultShippingInfo?.freeShipping || false
       }));
     }
-  }, [catalogContext, initialState]);
-
-  // Auto-generate slug when name changes
-  useEffect(() => {
-    if (state.name && (!state.slug || state.slug === slugify(state.name.substring(0, state.name.length - 1), { lower: true }))) {
-      setState(prev => ({
-        ...prev,
-        slug: slugify(state.name, { lower: true })
-      }));
-    }
-  }, [state.name]);
-
-  // Update state function
-  const updateState = useCallback((update: Partial<ProductWizardState>) => {
-    setState(prev => ({
-      ...prev,
-      ...update
-    }));
-    
-    // Clear any errors for updated fields
-    if (update && Object.keys(update).length > 0) {
-      setErrors(prev => {
-        const newErrors = { ...prev };
-        Object.keys(update).forEach(key => {
-          delete newErrors[key];
-        });
-        return newErrors;
-      });
-    }
-  }, []);
-
-  // Reset state function
-  const resetState = useCallback(() => {
-    setState(defaultState);
-    setErrors({});
-  }, []);
-
-  // Create product mutation
+  }, [catalogContext, state.productId]);
+  
+  // Mutations for creating and updating products
   const createProductMutation = useMutation({
-    mutationFn: async (productData: ProductWizardState) => {
+    mutationFn: async (productData: any) => {
       const response = await fetch('/api/products', {
         method: 'POST',
         headers: {
@@ -239,27 +257,24 @@ export const ProductWizardProvider: React.FC<{
       });
       
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to create product');
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || 'Failed to create product');
       }
       
-      const data = await response.json();
-      return data.data;
+      return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/products'] });
+      if (catalogId) {
+        queryClient.invalidateQueries({ queryKey: [`/api/catalogs/${catalogId}/products`] });
+      }
     }
   });
-
-  // Update product mutation
+  
   const updateProductMutation = useMutation({
-    mutationFn: async (productData: ProductWizardState) => {
-      if (!productData.productId) {
-        throw new Error('Product ID is required for updates');
-      }
-      
-      const response = await fetch(`/api/products/${productData.productId}`, {
-        method: 'PUT',
+    mutationFn: async ({ productId, productData }: { productId: number, productData: any }) => {
+      const response = await fetch(`/api/products/${productId}`, {
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json'
         },
@@ -267,262 +282,493 @@ export const ProductWizardProvider: React.FC<{
       });
       
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to update product');
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || 'Failed to update product');
       }
       
-      const data = await response.json();
-      return data.data;
+      return response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['products'] });
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/products'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/products/${variables.productId}`] });
+      if (catalogId) {
+        queryClient.invalidateQueries({ queryKey: [`/api/catalogs/${catalogId}/products`] });
+      }
     }
   });
-
-  // Create product function
+  
+  // Navigation functions
+  const goToStep = useCallback((step: WizardStep) => {
+    setState(prevState => ({
+      ...prevState,
+      currentStep: step
+    }));
+  }, []);
+  
+  const goToNextStep = useCallback(() => {
+    setState(prevState => {
+      const currentIndex = WIZARD_STEPS.indexOf(prevState.currentStep);
+      const nextIndex = Math.min(currentIndex + 1, WIZARD_STEPS.length - 1);
+      return {
+        ...prevState,
+        currentStep: WIZARD_STEPS[nextIndex]
+      };
+    });
+  }, []);
+  
+  const goToPreviousStep = useCallback(() => {
+    setState(prevState => {
+      const currentIndex = WIZARD_STEPS.indexOf(prevState.currentStep);
+      const prevIndex = Math.max(currentIndex - 1, 0);
+      return {
+        ...prevState,
+        currentStep: WIZARD_STEPS[prevIndex]
+      };
+    });
+  }, []);
+  
+  // Update a specific field in the state
+  const updateField = useCallback(<K extends keyof ProductWizardState>(
+    field: K,
+    value: ProductWizardState[K]
+  ) => {
+    setState(prevState => ({
+      ...prevState,
+      [field]: value
+    }));
+  }, []);
+  
+  // Mark a step as complete or incomplete
+  const markStepComplete = useCallback((step: WizardStep) => {
+    setState(prevState => {
+      if (prevState.completedSteps.includes(step)) {
+        return prevState;
+      }
+      return {
+        ...prevState,
+        completedSteps: [...prevState.completedSteps, step]
+      };
+    });
+  }, []);
+  
+  const markStepIncomplete = useCallback((step: WizardStep) => {
+    setState(prevState => ({
+      ...prevState,
+      completedSteps: prevState.completedSteps.filter(s => s !== step)
+    }));
+  }, []);
+  
+  // Step validation functions
+  const validateBasicInfoStep = useCallback((state: ProductWizardState): boolean => {
+    if (!state.name || state.name.trim() === '') {
+      toast({
+        title: "Validation Error",
+        description: "Product name is required",
+        variant: "destructive"
+      });
+      return false;
+    }
+    
+    if (!state.slug || state.slug.trim() === '') {
+      toast({
+        title: "Validation Error",
+        description: "Product slug is required",
+        variant: "destructive"
+      });
+      return false;
+    }
+    
+    if (state.costPrice <= 0) {
+      toast({
+        title: "Validation Error",
+        description: "Cost price must be greater than zero",
+        variant: "destructive"
+      });
+      return false;
+    }
+    
+    if (state.regularPrice <= 0) {
+      toast({
+        title: "Validation Error",
+        description: "Regular price must be greater than zero",
+        variant: "destructive"
+      });
+      return false;
+    }
+    
+    return true;
+  }, [toast]);
+  
+  const validateImagesStep = useCallback((state: ProductWizardState): boolean => {
+    // Images are technically optional, but we'll warn if there are none
+    if (state.imageUrls.length === 0) {
+      toast({
+        title: "Warning",
+        description: "No images have been added. Products with images perform better.",
+        variant: "warning"
+      });
+    }
+    
+    return true;
+  }, [toast]);
+  
+  const validateAdditionalInfoStep = useCallback((state: ProductWizardState): boolean => {
+    // If physical, validate physical properties
+    if (state.isPhysical) {
+      if (state.weight !== null && state.weight <= 0) {
+        toast({
+          title: "Validation Error",
+          description: "Weight must be greater than zero",
+          variant: "destructive"
+        });
+        return false;
+      }
+    }
+    
+    return true;
+  }, [toast]);
+  
+  const validateReviewStep = useCallback((state: ProductWizardState): boolean => {
+    // The review step is a summary, so we validate all previous steps
+    const isBasicValid = validateBasicInfoStep(state);
+    const isImagesValid = validateImagesStep(state);
+    const isAdditionalValid = validateAdditionalInfoStep(state);
+    
+    return isBasicValid && isImagesValid && isAdditionalValid;
+  }, [validateBasicInfoStep, validateImagesStep, validateAdditionalInfoStep]);
+  
+  // Validate a specific step or the current step
+  const validateStep = useCallback((step?: WizardStep): boolean => {
+    const stepToValidate = step || state.currentStep;
+    
+    let isValid = false;
+    
+    switch (stepToValidate) {
+      case 'basic-info':
+        isValid = validateBasicInfoStep(state);
+        break;
+      case 'images':
+        isValid = validateImagesStep(state);
+        break;
+      case 'additional-info':
+        isValid = validateAdditionalInfoStep(state);
+        break;
+      case 'review':
+        isValid = validateReviewStep(state);
+        break;
+      default:
+        isValid = false;
+    }
+    
+    if (isValid) {
+      markStepComplete(stepToValidate);
+    } else {
+      markStepIncomplete(stepToValidate);
+    }
+    
+    return isValid;
+  }, [
+    state,
+    validateBasicInfoStep,
+    validateImagesStep,
+    validateAdditionalInfoStep,
+    validateReviewStep,
+    markStepComplete,
+    markStepIncomplete
+  ]);
+  
+  // Check if a step is valid without displaying errors
+  const isValid = useCallback((step?: WizardStep): boolean => {
+    if (!step) {
+      // Check all steps
+      return WIZARD_STEPS.every(step => {
+        switch (step) {
+          case 'basic-info':
+            return validateBasicInfoStep(state);
+          case 'images':
+            return validateImagesStep(state);
+          case 'additional-info':
+            return validateAdditionalInfoStep(state);
+          case 'review':
+            return validateReviewStep(state);
+          default:
+            return false;
+        }
+      });
+    }
+    
+    switch (step) {
+      case 'basic-info':
+        return validateBasicInfoStep(state);
+      case 'images':
+        return validateImagesStep(state);
+      case 'additional-info':
+        return validateAdditionalInfoStep(state);
+      case 'review':
+        return validateReviewStep(state);
+      default:
+        return false;
+    }
+  }, [
+    state,
+    validateBasicInfoStep,
+    validateImagesStep,
+    validateAdditionalInfoStep,
+    validateReviewStep
+  ]);
+  
+  // Create or update product
   const createProduct = useCallback(async (): Promise<number | undefined> => {
     try {
       setIsSubmitting(true);
       
-      // Validate all steps first
-      if (!validateStep()) {
-        setIsSubmitting(false);
+      // Validate all steps
+      if (!isValid()) {
+        toast({
+          title: "Validation Error",
+          description: "Please fix the errors in all steps before saving",
+          variant: "destructive"
+        });
         return undefined;
       }
       
-      const result = await createProductMutation.mutateAsync(state);
+      // Prepare product data
+      const productData = {
+        name: state.name,
+        slug: state.slug,
+        description: state.description,
+        sku: state.sku,
+        brand: state.brand,
+        categoryId: state.categoryId,
+        
+        costPrice: state.costPrice,
+        regularPrice: state.regularPrice,
+        salePrice: state.salePrice,
+        saleStartDate: state.saleStartDate,
+        saleEndDate: state.saleEndDate,
+        
+        stockLevel: state.stockLevel,
+        backorderEnabled: state.backorderEnabled,
+        lowStockThreshold: state.lowStockThreshold,
+        
+        isPhysical: state.isPhysical,
+        weight: state.weight,
+        weightUnit: state.weightUnit,
+        length: state.length,
+        width: state.width,
+        height: state.height,
+        dimensionUnit: state.dimensionUnit,
+        
+        tags: state.tags,
+        
+        isActive: state.isActive && !state.isDraft,
+        isDraft: state.isDraft,
+        isFeatured: state.isFeatured,
+        isNew: state.isNew,
+        freeShipping: state.freeShipping,
+        
+        publishDate: state.publishDate,
+        expiryDate: state.expiryDate,
+        
+        catalogId: state.catalogId,
+        
+        // Image data
+        imageObjectKeys: state.tempImageObjectKeys,
+        mainImageIndex: state.mainImageIndex
+      };
       
-      if (result && result.id) {
+      // Create the product
+      const result = await createProductMutation.mutateAsync(productData);
+      
+      if (result.data?.id) {
+        // Success
+        toast({
+          title: "Success",
+          description: "Product created successfully",
+        });
+        
+        // If there are temporary images, move them to the product
+        if (state.tempImageObjectKeys.length > 0) {
+          try {
+            await moveTempFilesToProduct(result.data.id, state.tempImageObjectKeys);
+          } catch (error) {
+            console.error('Error moving temporary images:', error);
+            toast({
+              title: "Warning",
+              description: "Product created, but there was an issue with moving image files",
+              variant: "warning"
+            });
+          }
+        }
+        
         // Update state with the new product ID
-        updateState({ productId: result.id });
-        return result.id;
+        setState(prevState => ({
+          ...prevState,
+          productId: result.data.id
+        }));
+        
+        return result.data.id;
       }
       
       return undefined;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating product:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create product",
+        variant: "destructive"
+      });
       return undefined;
     } finally {
       setIsSubmitting(false);
     }
-  }, [state, updateState, createProductMutation]);
-
-  // Update product function
+  }, [
+    state,
+    isValid,
+    createProductMutation,
+    toast
+  ]);
+  
   const updateProduct = useCallback(async (): Promise<boolean> => {
+    if (!state.productId) {
+      return false;
+    }
+    
     try {
       setIsSubmitting(true);
       
-      if (!state.productId) {
-        console.error('Cannot update product: No product ID');
+      // Validate all steps
+      if (!isValid()) {
+        toast({
+          title: "Validation Error",
+          description: "Please fix the errors in all steps before saving",
+          variant: "destructive"
+        });
         return false;
       }
       
-      await updateProductMutation.mutateAsync(state);
+      // Prepare product data
+      const productData = {
+        name: state.name,
+        slug: state.slug,
+        description: state.description,
+        sku: state.sku,
+        brand: state.brand,
+        categoryId: state.categoryId,
+        
+        costPrice: state.costPrice,
+        regularPrice: state.regularPrice,
+        salePrice: state.salePrice,
+        saleStartDate: state.saleStartDate,
+        saleEndDate: state.saleEndDate,
+        
+        stockLevel: state.stockLevel,
+        backorderEnabled: state.backorderEnabled,
+        lowStockThreshold: state.lowStockThreshold,
+        
+        isPhysical: state.isPhysical,
+        weight: state.weight,
+        weightUnit: state.weightUnit,
+        length: state.length,
+        width: state.width,
+        height: state.height,
+        dimensionUnit: state.dimensionUnit,
+        
+        tags: state.tags,
+        
+        isActive: state.isActive && !state.isDraft,
+        isDraft: state.isDraft,
+        isFeatured: state.isFeatured,
+        isNew: state.isNew,
+        freeShipping: state.freeShipping,
+        
+        publishDate: state.publishDate,
+        expiryDate: state.expiryDate,
+        
+        catalogId: state.catalogId,
+        
+        // Image data
+        imageObjectKeys: [
+          ...state.imageObjectKeys,
+          ...state.tempImageObjectKeys
+        ],
+        mainImageIndex: state.mainImageIndex
+      };
+      
+      // Update the product
+      await updateProductMutation.mutateAsync({
+        productId: state.productId,
+        productData
+      });
+      
+      // If there are temporary images, move them to the product
+      if (state.tempImageObjectKeys.length > 0) {
+        try {
+          await moveTempFilesToProduct(state.productId, state.tempImageObjectKeys);
+          
+          // Clear temp image keys after moving
+          setState(prevState => ({
+            ...prevState,
+            tempImageObjectKeys: [],
+            imageObjectKeys: [
+              ...prevState.imageObjectKeys,
+              ...prevState.tempImageObjectKeys
+            ]
+          }));
+        } catch (error) {
+          console.error('Error moving temporary images:', error);
+          toast({
+            title: "Warning",
+            description: "Product updated, but there was an issue with moving image files",
+            variant: "warning"
+          });
+        }
+      }
+      
+      toast({
+        title: "Success",
+        description: "Product updated successfully",
+      });
+      
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating product:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update product",
+        variant: "destructive"
+      });
       return false;
     } finally {
       setIsSubmitting(false);
     }
-  }, [state, updateProductMutation]);
-
-  // Navigation functions
-  const goToStep = useCallback((step: WizardStep) => {
-    setState(prev => ({
-      ...prev,
-      currentStep: step
-    }));
-  }, []);
-
-  const goToNextStep = useCallback(() => {
-    const currentIndex = WIZARD_STEPS.indexOf(state.currentStep);
-    if (currentIndex < WIZARD_STEPS.length - 1) {
-      const nextStep = WIZARD_STEPS[currentIndex + 1];
-      
-      // Add current step to completed steps if not already there
-      setState(prev => ({
-        ...prev,
-        currentStep: nextStep,
-        completedSteps: prev.completedSteps.includes(prev.currentStep)
-          ? prev.completedSteps
-          : [...prev.completedSteps, prev.currentStep]
-      }));
-    }
-  }, [state.currentStep]);
-
-  const goToPreviousStep = useCallback(() => {
-    const currentIndex = WIZARD_STEPS.indexOf(state.currentStep);
-    if (currentIndex > 0) {
-      const previousStep = WIZARD_STEPS[currentIndex - 1];
-      setState(prev => ({
-        ...prev,
-        currentStep: previousStep
-      }));
-    }
-  }, [state.currentStep]);
-
-  // Validation functions
-  const validateStep = useCallback((step?: WizardStep): boolean => {
-    const stepToValidate = step || state.currentStep;
-    const newErrors: ProductWizardErrors = {};
-    
-    if (stepToValidate === 'basic-info') {
-      // Validate basic info
-      if (!state.name) {
-        newErrors.name = 'Product name is required';
-      } else if (state.name.length < 3) {
-        newErrors.name = 'Product name must be at least 3 characters';
-      }
-      
-      if (!state.slug) {
-        newErrors.slug = 'Product slug is required';
-      } else if (!/^[a-z0-9-]+$/.test(state.slug)) {
-        newErrors.slug = 'Slug can only contain lowercase letters, numbers, and hyphens';
-      }
-      
-      if (state.costPrice <= 0) {
-        newErrors.costPrice = 'Cost price must be greater than zero';
-      }
-      
-      if (state.regularPrice <= 0) {
-        newErrors.regularPrice = 'Regular price must be greater than zero';
-      } else if (state.regularPrice < state.costPrice) {
-        newErrors.regularPrice = 'Regular price cannot be less than cost price';
-      }
-      
-      if (state.salePrice !== undefined && state.salePrice > 0) {
-        if (state.salePrice >= state.regularPrice) {
-          newErrors.salePrice = 'Sale price must be less than regular price';
-        }
-      }
-      
-      if (state.markupPercentage <= 0) {
-        newErrors.markupPercentage = 'Markup percentage must be greater than zero';
-      }
-    } else if (stepToValidate === 'images') {
-      // Validate images
-      if (state.imageUrls.length === 0 && state.tempImagePaths.length === 0) {
-        newErrors.imageUrls = 'At least one product image is required';
-      }
-    } else if (stepToValidate === 'additional-info') {
-      // Validate additional info
-      if (state.isPhysical && state.weight !== undefined && state.weight <= 0) {
-        newErrors.weight = 'Weight must be greater than zero';
-      }
-      
-      if (state.hasFlashDeal) {
-        if (!state.flashDealPrice) {
-          newErrors.flashDealPrice = 'Flash deal price is required';
-        } else if (state.flashDealPrice >= state.regularPrice) {
-          newErrors.flashDealPrice = 'Flash deal price must be less than regular price';
-        }
-        
-        if (!state.flashDealStartDate) {
-          newErrors.flashDealStartDate = 'Start date is required for flash deals';
-        }
-        
-        if (!state.flashDealEndDate) {
-          newErrors.flashDealEndDate = 'End date is required for flash deals';
-        } else if (state.flashDealStartDate && new Date(state.flashDealEndDate) <= new Date(state.flashDealStartDate)) {
-          newErrors.flashDealEndDate = 'End date must be after start date';
-        }
-      }
-    } else if (stepToValidate === 'review') {
-      // Validate all previous steps
-      const isBasicInfoValid = validateStep('basic-info');
-      const isImagesValid = validateStep('images');
-      const isAdditionalInfoValid = validateStep('additional-info');
-      
-      return isBasicInfoValid && isImagesValid && isAdditionalInfoValid;
-    }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  }, [state]);
-
-  // Check if step is valid (without updating errors)
-  const isValid = useCallback((step?: WizardStep): boolean => {
-    const stepToValidate = step || state.currentStep;
-    
-    if (stepToValidate === 'basic-info') {
-      return (
-        !!state.name &&
-        state.name.length >= 3 &&
-        !!state.slug &&
-        /^[a-z0-9-]+$/.test(state.slug) &&
-        state.costPrice > 0 &&
-        state.regularPrice > 0 &&
-        state.regularPrice >= state.costPrice &&
-        (state.salePrice === undefined || state.salePrice <= 0 || state.salePrice < state.regularPrice) &&
-        state.markupPercentage > 0
-      );
-    } else if (stepToValidate === 'images') {
-      return state.imageUrls.length > 0 || state.tempImagePaths.length > 0;
-    } else if (stepToValidate === 'additional-info') {
-      if (state.isPhysical && state.weight !== undefined && state.weight <= 0) {
-        return false;
-      }
-      
-      if (state.hasFlashDeal) {
-        if (!state.flashDealPrice || state.flashDealPrice >= state.regularPrice) {
-          return false;
-        }
-        
-        if (!state.flashDealStartDate || !state.flashDealEndDate) {
-          return false;
-        }
-        
-        if (new Date(state.flashDealEndDate) <= new Date(state.flashDealStartDate)) {
-          return false;
-        }
-      }
-      
-      return true;
-    } else if (stepToValidate === 'review') {
-      return isValid('basic-info') && isValid('images') && isValid('additional-info');
-    }
-    
-    return true;
-  }, [state]);
-
-  // Error management functions
-  const setError = useCallback((field: string, message: string) => {
-    setErrors(prev => ({
-      ...prev,
-      [field]: message
-    }));
-  }, []);
-
-  const clearError = useCallback((field: string) => {
-    setErrors(prev => {
-      const newErrors = { ...prev };
-      delete newErrors[field];
-      return newErrors;
-    });
-  }, []);
-
-  // Combine everything into the context value
-  const contextValue: ProductWizardContextValue = {
+  }, [
     state,
-    updateState,
-    resetState,
-    createProduct,
-    updateProduct,
-    errors,
+    isValid,
+    updateProductMutation,
+    toast
+  ]);
+  
+  // Context value
+  const contextValue: ProductWizardContextType = {
+    state,
+    setState,
     currentStep: state.currentStep,
     goToStep,
     goToNextStep,
     goToPreviousStep,
+    updateField,
     isValid,
     validateStep,
-    setError,
-    clearError,
+    markStepComplete,
+    markStepIncomplete,
+    createProduct,
+    updateProduct,
     isSubmitting,
     catalogContext,
     isCatalogContextLoading
   };
-
+  
   return (
     <ProductWizardContext.Provider value={contextValue}>
       {children}
@@ -530,13 +776,11 @@ export const ProductWizardProvider: React.FC<{
   );
 };
 
-// Create a hook to use the context
+// Hook for using the context
 export const useProductWizardContext = () => {
   const context = useContext(ProductWizardContext);
-  
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useProductWizardContext must be used within a ProductWizardProvider');
   }
-  
   return context;
 };

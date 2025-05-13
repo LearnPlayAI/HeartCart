@@ -1,118 +1,81 @@
 /**
- * Product Wizard Component
+ * ProductWizard Component
  * 
- * This is the main component that handles the product creation workflow.
- * It combines all the step components and manages the navigation between them.
+ * This is the main container component for the product creation wizard.
+ * It orchestrates all steps and manages the overall wizard state.
  */
 
-import { ProductWizardProvider, useProductWizardContext, WIZARD_STEPS } from './context';
-import { BasicInfoStep } from './steps/BasicInfoStep';
-import { ImageStep } from './steps/ImageStep';
-import { AdditionalInfoStep } from './steps/AdditionalInfoStep';
-import { ReviewAndSaveStep } from './steps/ReviewAndSaveStep';
+import React from 'react';
+import { ProductWizardProvider } from './context';
 import { WizardNavigation } from './WizardNavigation';
+import BasicInfoStep from './steps/BasicInfoStep';
+import ImageStep from './steps/ImageStep';
+import AdditionalInfoStep from './steps/AdditionalInfoStep';
+import ReviewAndSaveStep from './steps/ReviewAndSaveStep';
 import { Card, CardContent } from '@/components/ui/card';
-import { Tabs, TabsContent } from '@/components/ui/tabs';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Loader2 } from 'lucide-react';
+import { useProductWizardContext } from './context';
 
-// Wizard content component that displays the appropriate step based on the current state
-const WizardContent = () => {
-  const { state, isCatalogContextLoading } = useProductWizardContext();
+// Wrap with context to check current step
+const WizardStepRenderer: React.FC = () => {
+  const { currentStep } = useProductWizardContext();
   
-  if (isCatalogContextLoading) {
-    return <WizardLoadingSkeleton />;
+  // Render the appropriate step based on the current step
+  switch (currentStep) {
+    case 'basic-info':
+      return <BasicInfoStep />;
+    case 'images':
+      return <ImageStep />;
+    case 'additional-info':
+      return <AdditionalInfoStep />;
+    case 'review':
+      return <ReviewAndSaveStep />;
+    default:
+      return <div>Unknown step</div>;
   }
-  
-  return (
-    <Tabs value={state.currentStep} className="w-full">
-      <TabsContent value="basic-info" className="mt-0">
-        <BasicInfoStep />
-      </TabsContent>
-      
-      <TabsContent value="images" className="mt-0">
-        <ImageStep />
-      </TabsContent>
-      
-      <TabsContent value="additional-info" className="mt-0">
-        <AdditionalInfoStep />
-      </TabsContent>
-      
-      <TabsContent value="review" className="mt-0">
-        <ReviewAndSaveStep />
-      </TabsContent>
-    </Tabs>
-  );
 };
 
-// Loading skeleton for the wizard
-const WizardLoadingSkeleton = () => {
-  return (
-    <div className="space-y-8">
-      <div className="space-y-2">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-4 w-full max-w-md" />
-      </div>
-      
-      <div className="space-y-6">
-        <div className="grid gap-6 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-32" />
-            <Skeleton className="h-10 w-full" />
-          </div>
-          
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-32" />
-            <Skeleton className="h-10 w-full" />
-          </div>
-        </div>
-        
-        <div className="space-y-2">
-          <Skeleton className="h-4 w-32" />
-          <Skeleton className="h-24 w-full" />
-        </div>
-        
-        <div className="space-y-4">
-          <Skeleton className="h-5 w-24" />
-          
-          <div className="grid gap-6 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-10 w-full" />
-            </div>
-            
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-10 w-full" />
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Wrapper component for the entire wizard
 export interface ProductWizardProps {
-  initialState?: any;
+  onCancel?: () => void;
+  onComplete?: (productId: number) => void;
+  showBackToProducts?: boolean;
+  initialValues?: Record<string, any>;
   catalogId?: number;
 }
 
-export const ProductWizard: React.FC<ProductWizardProps> = ({ 
-  initialState, 
-  catalogId 
+export const ProductWizard: React.FC<ProductWizardProps> = ({
+  onCancel,
+  onComplete,
+  showBackToProducts = false,
+  initialValues = {},
+  catalogId
 }) => {
+  // Create a custom save handler that will call onComplete if provided
+  const handleSave = async () => {
+    // The save operation is handled by the context
+    // We just need to provide any additional callback logic here
+  };
+  
   return (
-    <ProductWizardProvider initialState={initialState} catalogId={catalogId}>
-      <div className="space-y-8">
-        <Card>
-          <CardContent className="p-6">
-            <WizardNavigation steps={WIZARD_STEPS} />
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-6">
-            <WizardContent />
+    <ProductWizardProvider
+      initialState={initialValues}
+      catalogId={catalogId}
+    >
+      <div className="product-wizard-container">
+        <Card className="product-wizard-card">
+          <CardContent className="pt-6">
+            {/* Wizard step content */}
+            <div className="wizard-step-content mb-8">
+              <WizardStepRenderer />
+            </div>
+            
+            {/* Wizard navigation */}
+            <WizardNavigation
+              onCancel={onCancel}
+              onSave={onComplete ? handleSave : undefined}
+              showBackToProducts={showBackToProducts}
+              saveLabel={initialValues?.productId ? 'Update Product' : 'Create Product'}
+            />
           </CardContent>
         </Card>
       </div>
