@@ -161,7 +161,14 @@ const ensureValidImageUrl = (image: UploadedImage): string => {
 }
 
 export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className }) => {
-  const { state, dispatch } = useProductWizardContext();
+  const { 
+    state, 
+    addImage, 
+    removeImage, 
+    setMainImage, 
+    reorderImages, 
+    setField 
+  } = useProductWizardContext();
   const { toast } = useToast();
   
   // Create a local state for the uploaded images
@@ -190,9 +197,9 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className 
         console.log('Successfully fetched existing product images:', result.data);
         
         // Convert the API response to our UploadedImage format
-        const existingImages = result.data.map((image, index) => {
+        const existingImages: UploadedImage[] = result.data.map((image: any, index: number) => {
           const newImage: UploadedImage = {
-            id: image.id || `existing-${index}`,
+            id: typeof image.id === 'number' ? image.id : index,
             url: image.imageUrl || image.url || '',
             objectKey: image.objectKey || '',
             isMain: image.isMain || index === 0,
@@ -210,10 +217,10 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className 
         });
         
         // Sort images by order/displayOrder
-        existingImages.sort((a, b) => a.order - b.order);
+        existingImages.sort((a: UploadedImage, b: UploadedImage) => a.order - b.order);
         
         // Find the main image index
-        const mainImageIndex = existingImages.findIndex(img => img.isMain);
+        const mainImageIndex = existingImages.findIndex((img: UploadedImage) => img.isMain);
         
         // If no main image is marked, use the first one
         if (mainImageIndex === -1 && existingImages.length > 0) {
@@ -224,17 +231,13 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className 
         setUploadedImages(existingImages);
         
         // Extract URLs and objectKeys for the context
-        const imageUrls = existingImages.map(img => img.url);
-        const imageObjectKeys = existingImages.map(img => img.objectKey || '');
+        const imageUrls = existingImages.map((img: UploadedImage) => img.url);
+        const imageObjectKeys = existingImages.map((img: UploadedImage) => img.objectKey || '');
         
         // Update the context state with these images
-        dispatch({ type: 'SET_FIELD', field: 'imageUrls', value: imageUrls });
-        dispatch({ type: 'SET_FIELD', field: 'imageObjectKeys', value: imageObjectKeys });
-        dispatch({ 
-          type: 'SET_FIELD', 
-          field: 'mainImageIndex', 
-          value: Math.max(0, mainImageIndex)
-        });
+        setField('imageUrls', imageUrls);
+        setField('imageObjectKeys', imageObjectKeys);
+        setField('mainImageIndex', Math.max(0, mainImageIndex));
         
         console.log('Updated context with fetched images:', {
           imageUrls,
@@ -254,7 +257,7 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className 
     } finally {
       setIsLoadingExistingImages(false);
     }
-  }, [dispatch, toast]);
+  }, [setField, toast]);
   
   // Initialize images - either from state or by fetching for existing products
   useEffect(() => {
@@ -276,8 +279,8 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className 
       });
       
       // Convert the imageUrls and imageObjectKeys to uploadedImages format
-      const newUploadedImages = imageUrls.map((url, index) => ({
-        id: `existing-${index}`,
+      const newUploadedImages: UploadedImage[] = imageUrls.map((url: string, index: number) => ({
+        id: index, // use a number instead of string
         url: url,
         objectKey: imageObjectKeys[index] || '',
         isMain: index === mainImageIndex,
