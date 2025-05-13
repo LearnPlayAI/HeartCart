@@ -4320,52 +4320,13 @@ export class DatabaseStorage implements IStorage {
   
   // Removed getCatalogAttributeById as part of centralized attribute system
   
-  async createCatalogAttribute(catalogAttribute: InsertCatalogAttribute): Promise<CatalogAttribute> {
-    const [newCatalogAttribute] = await db
-      .insert(catalogAttributes)
-      .values(catalogAttribute)
-      .returning();
-    return newCatalogAttribute;
-  }
+  // Removed createCatalogAttribute as part of centralized attribute system
   
-  async updateCatalogAttribute(id: number, catalogAttributeData: Partial<InsertCatalogAttribute>): Promise<CatalogAttribute | undefined> {
-    const [updatedCatalogAttribute] = await db
-      .update(catalogAttributes)
-      .set(catalogAttributeData)
-      .where(eq(catalogAttributes.id, id))
-      .returning();
-    return updatedCatalogAttribute;
-  }
+  // Removed updateCatalogAttribute as part of centralized attribute system
   
-  async deleteCatalogAttribute(id: number): Promise<boolean> {
-    try {
-      await db
-        .delete(catalogAttributes)
-        .where(eq(catalogAttributes.id, id));
-      return true;
-    } catch (error) {
-      console.error(`Error deleting catalog attribute ${id}:`, error);
-      throw error; // Rethrow so the route handler can catch it and send a proper error response
-    }
-  }
+  // Removed deleteCatalogAttribute as part of centralized attribute system
   
-  // Catalog attribute options operations
-  async getCatalogAttributeOptions(catalogAttributeId: number): Promise<(CatalogAttributeOption & { baseOption?: AttributeOption })[]> {
-    const result = await db
-      .select({
-        catalogOption: catalogAttributeOptions,
-        baseOption: attributeOptions
-      })
-      .from(catalogAttributeOptions)
-      .leftJoin(attributeOptions, eq(catalogAttributeOptions.baseOptionId, attributeOptions.id))
-      .where(eq(catalogAttributeOptions.catalogAttributeId, catalogAttributeId))
-      .orderBy(asc(catalogAttributeOptions.sortOrder));
-    
-    return result.map(row => ({
-      ...row.catalogOption,
-      baseOption: row.baseOption || undefined
-    }));
-  }
+  // Removed catalog attribute options operations as part of centralized attribute system
   
   async getCatalogAttributeOptionById(id: number): Promise<CatalogAttributeOption | undefined> {
     const [option] = await db
