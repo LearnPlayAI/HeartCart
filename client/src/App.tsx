@@ -3,6 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { CartProvider } from "@/hooks/use-cart";
 import { AuthProvider } from "@/hooks/use-auth";
+import { ThemeProvider } from "@/styles/ThemeProvider";
 import { ProtectedRoute } from "@/lib/protected-route";
 import Header from "@/components/layout/header";
 import Footer from "@/components/layout/footer";
@@ -107,11 +108,12 @@ function AdminProtectedRoute({
 
 function App() {
   return (
-    <AuthProvider>
-      <CartProvider>
-        <TooltipProvider>
-          <Toaster />
-          <SessionExpiryWarning />
+    <ThemeProvider>
+      <AuthProvider>
+        <CartProvider>
+          <TooltipProvider>
+            <Toaster />
+            <SessionExpiryWarning />
           <div className="flex flex-col min-h-screen">
             <Switch>
               {/* Admin Routes - No header/footer */}
@@ -187,6 +189,7 @@ function App() {
         </TooltipProvider>
       </CartProvider>
     </AuthProvider>
+  </ThemeProvider>
   );
 }
 
