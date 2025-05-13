@@ -13,6 +13,17 @@ import asyncHandler from 'express-async-handler';
 
 const router = Router();
 
+// Get all attributes
+router.get('/', asyncHandler(async (req: Request, res: Response) => {
+  try {
+    // In a real application, this would fetch from the database
+    // For now, we'll return the mock data
+    sendSuccess(res, attributeDefinitions);
+  } catch (error) {
+    sendError(res, 'Failed to retrieve attributes', 500);
+  }
+}));
+
 // Schema for attribute creation/update
 const attributeSchema = z.object({
   name: z.string().min(1, 'Name is required'),
