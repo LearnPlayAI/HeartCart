@@ -1,25 +1,56 @@
-import { Request, Response, Router } from 'express';
+import { Request, Response, Router, NextFunction } from 'express';
 import multer from 'multer';
 import path from 'path';
 import { enhancedObjectStorage, STORAGE_FOLDERS, logClientAPIMethods } from './objectstore-enhanced';
-import { isAuthenticated } from './auth-middleware';
+import { isAuthenticated, isAdmin } from './auth-middleware';
 import { sanitizeFilename, getContentTypeFromFilename, generateUniqueFilename } from '../shared/utils/file-utils';
+import { sendSuccess, sendError } from './api-response';
+import { logger } from './logger';
 
 const router = Router();
 
 /**
+ * File browser admin check middleware
+ */
+const fileBrowserAdminCheck = (req: Request, res: Response, next: NextFunction) => {
+  // Check if user exists and has admin role
+  const user = req.user as any;
+  if (user && user.role === 'admin') {
+    logger.debug('File browser admin check passed', { 
+      userId: user.id,
+      path: req.path,
+      method: req.method
+    });
+    return next();
+  } else {
+    logger.warn('Unauthorized access attempt to file browser', {
+      path: req.path,
+      method: req.method,
+      userId: user?.id || 'unauthenticated'
+    });
+    return sendError(res, 'Unauthorized access', 'UNAUTHORIZED', 403);
+  }
+};
+
+/**
  * Get Client API Methods (diagnostic route)
  */
-router.get('/api-methods', isAuthenticated, async (req: Request, res: Response) => {
+router.get('/api-methods', fileBrowserAdminCheck, async (req: Request, res: Response) => {
   try {
+    logger.debug('Logging client API methods');
     await logClientAPIMethods();
-    return res.json({
-      success: true,
+    
+    return sendSuccess(res, {
       message: 'Client API methods logged to console. Check server logs.'
     });
-  } catch (error) {
-    console.error('Error checking API methods:', error);
-    return res.status(500).json({ success: false, error: 'Failed to check API methods' });
+  } catch (error: any) {
+    logger.error('Error checking API methods', { error });
+    return sendError(res, 
+      'Failed to check API methods', 
+      'API_METHOD_ERROR', 
+      500, 
+      { message: error.message }
+    );
   }
 });
 
@@ -56,22 +87,23 @@ const upload = multer({
  */
 router.get('/buckets', isAuthenticated, async (req: Request, res: Response) => {
   try {
+    logger.debug('Retrieving available storage buckets');
+    
     const buckets = enhancedObjectStorage.getAvailableBuckets();
     const currentBucket = enhancedObjectStorage.getCurrentBucket();
     
-    res.json({
-      success: true,
-      data: {
-        buckets,
-        currentBucket
-      }
+    return sendSuccess(res, {
+      buckets,
+      currentBucket
     });
   } catch (error: any) {
-    console.error('Error listing buckets:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message || 'Failed to list buckets'
-    });
+    logger.error('Error listing storage buckets', { error });
+    return sendError(res, 
+      'Failed to list storage buckets', 
+      'BUCKET_LIST_ERROR', 
+      500, 
+      { message: error.message }
+    );
   }
 });
 

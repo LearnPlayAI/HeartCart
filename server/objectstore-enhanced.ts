@@ -295,25 +295,28 @@ export class EnhancedObjectStorageService {
       // Safely handle various result formats
       let storageObjects: any[] = [];
       
-      if (result.ok) {
-        if (Array.isArray(result.ok)) {
-          storageObjects = result.ok;
-        } else if (typeof result.ok === 'object' && result.ok !== null) {
+      // Type assertion to handle any result format
+      const typedResult = result as any;
+      
+      if (typedResult.ok) {
+        if (Array.isArray(typedResult.ok)) {
+          storageObjects = typedResult.ok;
+        } else if (typeof typedResult.ok === 'object' && typedResult.ok !== null) {
           // Handle case where result.ok is an object with entries/items property
-          if (Array.isArray(result.ok.entries)) {
-            storageObjects = result.ok.entries;
-          } else if (Array.isArray(result.ok.items)) {
-            storageObjects = result.ok.items;
+          if (Array.isArray(typedResult.ok.entries)) {
+            storageObjects = typedResult.ok.entries;
+          } else if (Array.isArray(typedResult.ok.items)) {
+            storageObjects = typedResult.ok.items;
           } else {
-            console.warn('Unexpected result.ok format:', result.ok);
+            console.warn('Unexpected result.ok format:', typedResult.ok);
           }
         } else {
-          console.error('Unexpected result format:', result);
+          console.error('Unexpected result format:', typedResult);
         }
-      } else if (result.error) {
-        console.error('Failed to list objects:', result.error);
+      } else if (typedResult.error) {
+        console.error('Failed to list objects:', typedResult.error);
       } else {
-        console.error('Unknown result format:', result);
+        console.error('Unknown result format:', typedResult);
       }
       
       // Process the results to simulate delimiter behavior

@@ -697,13 +697,33 @@ export class ObjectStorageService {
       }
       
       // We're using any here since we know the structure but TypeScript doesn't
-      const storageObjects = result.ok as any[];
+      // Handle different possible return formats
+      let storageObjects: any[] = [];
+      
+      if (Array.isArray(result.ok)) {
+        storageObjects = result.ok;
+      } else if (result.ok && typeof result.ok === 'object') {
+        // Handle case where result.ok is an object with entries/items property
+        if (Array.isArray(result.ok.entries)) {
+          storageObjects = result.ok.entries;
+        } else if (Array.isArray(result.ok.items)) {
+          storageObjects = result.ok.items;
+        }
+      }
       
       // Process the results to simulate delimiter behavior
       const filteredObjects: string[] = [];
       const prefixes = new Set<string>();
       
+      // Ensure storageObjects is iterable
+      if (!Array.isArray(storageObjects)) {
+        console.error('Error listing files with prefix', prefix, ': storageObjects is not an array:', storageObjects);
+        storageObjects = [];
+      }
+      
       for (const obj of storageObjects) {
+        // Skip null or undefined objects
+        if (!obj || typeof obj !== 'object' || !obj.name) continue;
         // Skip metadata files
         if (obj.name.endsWith('.metadata')) {
           continue;
