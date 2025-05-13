@@ -342,6 +342,9 @@ interface ProductWizardContextType {
   isStepValid: (step: WizardStep) => boolean;
   generateDefaults: (productName: string) => void;
   updatePrices: (costPrice: number, markupPercentage: number) => void;
+  saveProductDraft: () => void;
+  loadProductDraft: () => boolean;
+  clearProductDraft: () => void;
 }
 
 const ProductWizardContext = createContext<ProductWizardContextType | undefined>(undefined);
@@ -356,9 +359,25 @@ export const ProductWizardProvider: React.FC<ProductWizardProviderProps> = ({
   children,
   initialState = {},
 }) => {
+  // Initialize with saved draft if available, otherwise use defaults
+  const getInitialState = () => {
+    const savedDraft = localStorage.getItem('product_wizard_draft');
+    if (savedDraft) {
+      try {
+        const parsedDraft = JSON.parse(savedDraft);
+        // Merge the saved draft with any passed initialState and defaults
+        return { ...defaultInitialState, ...parsedDraft, ...initialState };
+      } catch (error) {
+        console.error('Error parsing saved product draft:', error);
+        return { ...defaultInitialState, ...initialState };
+      }
+    }
+    return { ...defaultInitialState, ...initialState };
+  };
+
   const [state, dispatch] = useReducer(
     productWizardReducer,
-    { ...defaultInitialState, ...initialState }
+    getInitialState()
   );
   
   // Action dispatchers
@@ -543,6 +562,60 @@ export const ProductWizardProvider: React.FC<ProductWizardProviderProps> = ({
     }
   }, [state.onSale, state.salePrice, state.regularPrice]);
   
+  // Auto-save functions
+  const saveProductDraft = useCallback(() => {
+    try {
+      const draftData = JSON.stringify(state);
+      localStorage.setItem('product_wizard_draft', draftData);
+      console.log('Product draft saved automatically');
+      return true;
+    } catch (error) {
+      console.error('Error saving product draft:', error);
+      return false;
+    }
+  }, [state]);
+
+  const loadProductDraft = useCallback(() => {
+    try {
+      const savedDraft = localStorage.getItem('product_wizard_draft');
+      if (savedDraft) {
+        const parsedDraft = JSON.parse(savedDraft);
+        // Apply saved draft to current state
+        Object.keys(parsedDraft).forEach(key => {
+          if (key in state) {
+            dispatch({ 
+              type: 'SET_FIELD', 
+              field: key as keyof ProductWizardState, 
+              value: parsedDraft[key] 
+            });
+          }
+        });
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error loading product draft:', error);
+      return false;
+    }
+  }, [state]);
+
+  const clearProductDraft = useCallback(() => {
+    localStorage.removeItem('product_wizard_draft');
+    console.log('Product draft cleared');
+  }, []);
+
+  // Set up auto-save on state changes
+  React.useEffect(() => {
+    // Don't save if state is at default values or if we're just initializing
+    if (state.name || state.description || state.imageUrls.length > 0) {
+      const timer = setTimeout(() => {
+        saveProductDraft();
+      }, 2000); // Auto-save 2 seconds after changes stop
+      
+      return () => clearTimeout(timer);
+    }
+  }, [state, saveProductDraft]);
+  
   // Create context value
   const value = {
     state,
@@ -565,6 +638,9 @@ export const ProductWizardProvider: React.FC<ProductWizardProviderProps> = ({
     isStepValid,
     generateDefaults,
     updatePrices,
+    saveProductDraft,
+    loadProductDraft,
+    clearProductDraft,
   };
   
   return (
