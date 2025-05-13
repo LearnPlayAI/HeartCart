@@ -16,6 +16,7 @@ import { AppError, ErrorCode, ForbiddenError, NotFoundError } from "./error-hand
 import { validateCredentialFields, loginSchema, registrationSchema } from "./utils/auth-validation";
 import { validateRequest, validateAuthRequest } from "./middlewares/validation-middleware";
 import { isAuthenticated, isAdmin } from "./auth-middleware";
+import { createCustomPgSessionStore } from "./custom-session-store";
 
 const PostgresSessionStore = connectPg(session);
 
@@ -117,13 +118,8 @@ export function setupAuth(app: Express): void {
       maxAge: SESSION_MAX_AGE, // Maximum lifetime
       path: '/', // Restrict cookie to root path
     },
-    store: new PostgresSessionStore({
-      pool,
-      tableName: 'session',
-      createTableIfMissing: true,
-      // Cleanup expired sessions periodically
-      pruneSessionInterval: 60, // Check for expired sessions every minute
-    })
+    // Use custom store with text-date compatibility
+    store: createCustomPgSessionStore(pool)
   };
 
   app.set("trust proxy", 1);
