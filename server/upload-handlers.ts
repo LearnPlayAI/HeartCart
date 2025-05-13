@@ -306,4 +306,67 @@ router.delete('/:objectKey(*)', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * General-purpose single file upload
+ * This route handles single file uploads from various parts of the application
+ */
+router.post('/', upload.single('file'), async (req: Request, res: Response) => {
+  try {
+    const file = req.file;
+    
+    if (!file) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'No file uploaded' 
+      });
+    }
+    
+    const { originalname, buffer, mimetype } = file;
+    const bucket = req.body.bucket || 'general';
+    
+    // Sanitize the filename
+    const sanitizedName = sanitizeFilename(originalname);
+    
+    // Generate a unique filename
+    const timestamp = Date.now();
+    const randomString = Math.random().toString(36).substring(2, 15);
+    const filename = `${timestamp}_${randomString}_${sanitizedName}`;
+    
+    // Upload the file based on bucket type
+    let result;
+    
+    if (bucket === 'products') {
+      result = await objectStore.uploadTempFile(
+        buffer,
+        filename,
+        'pending',
+        mimetype
+      );
+    } else {
+      // Use general upload for other bucket types
+      result = await objectStore.uploadFile(
+        buffer,
+        filename,
+        bucket,
+        mimetype
+      );
+    }
+    
+    res.json({ 
+      success: true, 
+      url: result.url, 
+      objectKey: result.objectKey 
+    });
+  } catch (error) {
+    console.error('Error uploading file:', error);
+    
+    // Ensure we always return JSON, not HTML error pages
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error uploading file',
+      error: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
+
 export default router;
