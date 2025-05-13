@@ -20,7 +20,7 @@ import {
   Trash2Icon, 
   StarIcon, 
   AlertCircleIcon, 
-  Loader2Icon,
+  Loader2,
   MoveVerticalIcon,
   AlertTriangleIcon
 } from 'lucide-react';
@@ -46,16 +46,6 @@ export function ImageStep() {
       imageObjectKeys: state.imageObjectKeys,
       mainImageIndex: state.mainImageIndex
     });
-    
-    // Check all images for loadability
-    if (state.imageUrls.length > 0) {
-      state.imageUrls.forEach((url, index) => {
-        const img = new Image();
-        img.onload = () => console.log(`Image ${index} loaded successfully:`, url);
-        img.onerror = () => console.error(`Image ${index} failed to load:`, url);
-        img.src = url.startsWith('http') ? url : window.location.origin + url;
-      });
-    }
   }, [state.imageUrls, state.imageObjectKeys, state.mainImageIndex]);
   
   const [isUploading, setIsUploading] = useState(false);
@@ -397,7 +387,7 @@ export function ImageStep() {
           {isUploading && (
             <div className="space-y-2">
               <div className="flex items-center">
-                <Loader2Icon className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 <span>Uploading...</span>
               </div>
               <div className="bg-muted h-2 rounded-full overflow-hidden">
@@ -416,7 +406,7 @@ export function ImageStep() {
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                 {state.imageUrls.map((url, index) => (
                   <div
-                    key={url}
+                    key={`image-${index}-${url}`}
                     draggable
                     onDragStart={() => handleImageDragStart(index)}
                     onDragOver={(e) => handleImageDragOver(e, index)}
@@ -428,159 +418,63 @@ export function ImageStep() {
                       ${index === state.mainImageIndex ? 'ring-2 ring-primary' : ''}
                     `}
                   >
-                    <div className="aspect-square bg-muted/20">
-                      {/* Enhanced image loading with multiple fallback strategies */}
-                      <img 
-                        key={`img-${index}-${Date.now()}`} // Force re-render on changes
-                        src={url.startsWith('http') ? url : window.location.origin + url} 
-                        alt={`Product image ${index + 1}`}
-                        className="w-full h-full object-cover"
-                        onLoad={(e) => {
-                          console.log('Image loaded successfully:', (e.target as HTMLImageElement).src);
-                        }}
-                        onError={(e) => {
-                          console.error('Image failed to load:', (e.target as HTMLImageElement).src);
-                          
-                          const target = e.target as HTMLImageElement;
-                          const currentSrc = target.src;
-                          const originalUrl = url;
-                          
-                          // Keep track of attempts to prevent loops
-                          const attemptCount = parseInt(target.dataset.attempts || '0', 10) + 1;
-                          target.dataset.attempts = attemptCount.toString();
-                          
-                          if (attemptCount > 3) {
-                            // Too many attempts, use fallback
-                            console.log('Too many attempts, using fallback image');
-                            target.onerror = null; // Prevent infinite loop
-                            target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjIwMCIgaGVpZ2h0PSIyMDAiIGZpbGw9IiNFNUU3RUIiLz48cGF0aCBkPSJNMTAwIDc0QzkxLjcxNTcgNzQgODUgODAuNzE1NyA4NSA4OUM4NSA5Ny4yODQzIDkxLjcxNTcgMTA0IDEwMCAxMDRDMTA4LjI4NCAxMDQgMTE1IDk3LjI4NDMgMTE1IDg5QzExNSA4MC43MTU3IDEwOC4yODQgNzQgMTAwIDc0WiIgZmlsbD0iIzk0YTNiOCIvPjxwYXRoIGQ9Ik0xNTUgMTI2LjVDMTU1IDEzMy40MDQgMTQ3LjYyOCAxMzkgMTM4LjUgMTM5QzEyOS4zNzIgMTM5IDEyMiAxMzMuNDA0IDEyMiAxMjYuNUMxMjIgMTE5LjU5NiAxMjkuMzcyIDExNCAxMzguNSAxMTRDMTQ3LjYyOCAxMTQgMTU1IDExOS41OTYgMTU1IDEyNi41WiIgZmlsbD0iIzk0YTNiOCIvPjxwYXRoIGQ9Ik0xNjggMTQ0LjVDMTU1LjUyMSAxMzguODg4IDEzNy42MjggMTM1IDEyNyAxMzVDMTExLjUzNiAxMzUgOTguODkzNiAxMzcuMDUzIDkwIDE0MC41IiBzdHJva2U9IiM5NGEzYjgiIHN0cm9rZS13aWR0aD0iMTAiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg==';
-                            return;
-                          }
-                          
-                          // Try different URL formats based on attempt number
-                          switch (attemptCount) {
-                            case 1:
-                              // First attempt: Try with /temp/ direct URL if original is /api/files/temp
-                              if (originalUrl.includes('/api/files/temp')) {
-                                const fileName = originalUrl.split('/').pop();
-                                if (fileName) {
-                                  console.log('Attempt 1: Trying direct temp URL format');
-                                  target.src = `${window.location.origin}/temp/${fileName}`;
-                                  return;
-                                }
-                              }
-                              // If we can't do the temp conversion, fall through to next attempt
-                              
-                            case 2:
-                              // Second attempt: Try removing origin and adding it again
-                              // This fixes issues when the URL already has origin in it
-                              {
-                                console.log('Attempt 2: Trying with reconstructed URL');
-                                let path = originalUrl;
-                                
-                                // Strip any potential origin
-                                const originPattern = new RegExp(`^${window.location.origin}`);
-                                path = path.replace(originPattern, '');
-                                
-                                // Ensure it starts with a slash
-                                if (!path.startsWith('/')) {
-                                  path = '/' + path;
-                                }
-                                
-                                target.src = window.location.origin + path;
-                                return;
-                              }
-                              
-                            case 3:
-                              // Third attempt: Try direct object key URL format (for compatibility with older code)
-                              if (state.imageObjectKeys[index]) {
-                                console.log('Attempt 3: Trying with object key format');
-                                const objectKey = state.imageObjectKeys[index];
-                                target.src = `${window.location.origin}/api/files/${objectKey}`;
-                                return;
-                              }
-                              break;
-                              
-                            default:
-                              // Use fallback for all other cases
-                              target.onerror = null;
-                              target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjIwMCIgaGVpZ2h0PSIyMDAiIGZpbGw9IiNFNUU3RUIiLz48cGF0aCBkPSJNMTAwIDc0QzkxLjcxNTcgNzQgODUgODAuNzE1NyA4NSA4OUM4NSA5Ny4yODQzIDkxLjcxNTcgMTA0IDEwMCAxMDRDMTA4LjI4NCAxMDQgMTE1IDk3LjI4NDMgMTE1IDg5QzExNSA4MC43MTU3IDEwOC4yODQgNzQgMTAwIDc0WiIgZmlsbD0iIzk0YTNiOCIvPjxwYXRoIGQ9Ik0xNTUgMTI2LjVDMTU1IDEzMy40MDQgMTQ3LjYyOCAxMzkgMTM4LjUgMTM5QzEyOS4zNzIgMTM5IDEyMiAxMzMuNDA0IDEyMiAxMjYuNUMxMjIgMTE5LjU5NiAxMjkuMzcyIDExNCAxMzguNSAxMTRDMTQ3LjYyOCAxMTQgMTU1IDExOS41OTYgMTU1IDEyNi41WiIgZmlsbD0iIzk0YTNiOCIvPjxwYXRoIGQ9Ik0xNjggMTQ0LjVDMTU1LjUyMSAxMzguODg4IDEzNy42MjggMTM1IDEyNyAxMzVDMTExLjUzNiAxMzUgOTguODkzNiAxMzcuMDUzIDkwIDE0MC41IiBzdHJva2U9IiM5NGEzYjgiIHN0cm9rZS13aWR0aD0iMTAiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg==';
-                          }
-                        }}
-                      />
-                    </div>
+                    {/* Use ProductImage component for standardized image display */}
+                    <ProductImage 
+                      image={url}
+                      index={index}
+                      mainImageIndex={state.mainImageIndex}
+                      aspectRatio="square"
+                      objectFit="cover"
+                      className="w-full h-full"
+                      onLoad={() => console.log('ProductImage loaded:', url)}
+                      onError={(error) => console.error('ProductImage load error:', error)}
+                    />
                     
                     {/* Image overlay with actions */}
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity duration-200">
-                      <div className="flex gap-2 mb-2">
-                        <Button
-                          variant="secondary"
-                          size="icon"
-                          className="w-8 h-8 rounded-full"
+                    <div className="absolute bottom-0 left-0 right-0 p-2 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex justify-between gap-1">
+                        <Button 
+                          variant="secondary" 
+                          size="sm"
+                          className="flex-1 h-8"
                           onClick={() => handleSetMainImage(index)}
                           disabled={index === state.mainImageIndex}
                         >
-                          <StarIcon className="h-3.5 w-3.5" />
+                          <StarIcon className="h-3 w-3 mr-1" />
+                          <span className="text-xs">{index === state.mainImageIndex ? 'Main' : 'Set Main'}</span>
                         </Button>
-                        <Button
-                          variant="destructive"
-                          size="icon"
-                          className="w-8 h-8 rounded-full"
+                        <Button 
+                          variant="destructive" 
+                          size="sm"
+                          className="h-8 px-2"
                           onClick={() => handleRemoveImage(index)}
                         >
-                          <Trash2Icon className="h-3.5 w-3.5" />
+                          <Trash2Icon className="h-3 w-3" />
                         </Button>
                       </div>
-                      <div className="opacity-70 text-white text-xs flex items-center">
-                        <MoveVerticalIcon className="h-3 w-3 mr-1" />
-                        <span>Drag to reorder</span>
-                      </div>
                     </div>
-                    
-                    {/* Main image indicator */}
-                    {index === state.mainImageIndex && (
-                      <div className="absolute top-1 left-1">
-                        <Badge variant="secondary" className="bg-primary text-primary-foreground text-xs">
-                          Main
-                        </Badge>
-                      </div>
-                    )}
                   </div>
                 ))}
               </div>
-              
-              <Alert variant="default" className="bg-muted/40">
-                <AlertTriangleIcon className="h-4 w-4" />
-                <AlertDescription>
-                  The image marked as "Main" will be used as the primary product image in listings, 
-                  search results, and the product details page.
-                </AlertDescription>
-              </Alert>
+              <div className="mt-2 text-muted-foreground text-sm">
+                <p>Drag images to change the order. Set one image as the main product image.</p>
+              </div>
             </div>
           ) : (
-            <div className="text-center py-8">
+            <div className="text-center py-8 border rounded-md bg-muted/20">
               <ImageIcon className="h-12 w-12 mx-auto text-muted-foreground" />
               <p className="mt-2 text-muted-foreground">No images uploaded yet</p>
+              <p className="text-xs text-muted-foreground mt-1">Upload product images to continue</p>
             </div>
           )}
         </CardContent>
-        <CardFooter className="flex justify-between flex-wrap">
-          <p className="text-sm text-muted-foreground">
-            {state.imageUrls.length === 0 ? (
-              'Images are optional but recommended for better product presentation.'
-            ) : (
-              `${state.imageUrls.length} image${state.imageUrls.length !== 1 ? 's' : ''} uploaded.`
-            )}
-          </p>
-          <Button
-            variant="outline"
-            onClick={handleSelectFiles}
-            disabled={isUploading}
-            className="gap-1"
-          >
-            <UploadIcon className="h-4 w-4" />
-            <span>Upload More</span>
-          </Button>
+        <CardFooter className="border-t px-6 py-4">
+          <Alert variant="info" className="w-full">
+            <AlertCircleIcon className="h-4 w-4" />
+            <AlertDescription className="text-xs">
+              Product images will appear in the order shown here. The main image will be used as the primary product display image.
+            </AlertDescription>
+          </Alert>
         </CardFooter>
       </Card>
     </div>
