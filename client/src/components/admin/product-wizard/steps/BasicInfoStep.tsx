@@ -47,12 +47,14 @@ export function BasicInfoStep() {
   const { state, setField, markStepComplete, markStepValid, generateDefaults, updatePrices } = useProductWizardContext();
   
   // Fetch categories
-  const { data: categories, isLoading: categoriesLoading, isError: categoriesError } = useQuery({
+  const { data: categoriesResponse, isLoading: categoriesLoading, isError: categoriesError } = useQuery({
     queryKey: ['/api/categories'],
   });
   
-  // Ensure categories is an array even if the API call fails
-  const categoriesList = Array.isArray(categories) ? categories : [];
+  // Extract categories from the API response (handles the success response format {data: [...categories]})
+  const categoriesList = categoriesResponse && categoriesResponse.data && Array.isArray(categoriesResponse.data) 
+    ? categoriesResponse.data 
+    : [];
   
   // Initialize form with values from context
   const form = useForm<BasicInfoFormValues>({

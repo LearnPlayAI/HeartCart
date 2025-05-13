@@ -64,9 +64,14 @@ export function ReviewAndSaveStep() {
   const [savingError, setSavingError] = useState<string | null>(null);
   
   // Fetch categories for display
-  const { data: categories = [] } = useQuery({
+  const { data: categoriesResponse } = useQuery({
     queryKey: ['/api/categories'],
   });
+  
+  // Extract categories from the API response
+  const categories = categoriesResponse && categoriesResponse.data && Array.isArray(categoriesResponse.data) 
+    ? categoriesResponse.data 
+    : [];
   
   // Get category name
   const getCategoryName = (categoryId: number | null) => {
