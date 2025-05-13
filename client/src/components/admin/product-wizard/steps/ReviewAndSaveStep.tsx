@@ -358,12 +358,12 @@ export function ReviewAndSaveStep({ onComplete }: ReviewAndSaveStepProps = {}) {
         // Sales and promotions
         discountLabel: state.discountLabel || null,
         specialSaleText: state.specialSaleText || null,
-        // Convert date strings to Date objects for validation schema
-        specialSaleStart: state.specialSaleStart ? new Date(state.specialSaleStart) : null,
-        specialSaleEnd: state.specialSaleEnd ? new Date(state.specialSaleEnd) : null,
+        // Initially set date fields (will be properly formatted later)
+        specialSaleStart: state.specialSaleStart,
+        specialSaleEnd: state.specialSaleEnd,
         // Flash deal configuration
         isFlashDeal: state.isFlashDeal || false,
-        flashDealEnd: state.flashDealEnd ? new Date(state.flashDealEnd) : null,
+        flashDealEnd: state.flashDealEnd,
         
         // Attributes
         attributes: state.attributes || [],
@@ -373,20 +373,42 @@ export function ReviewAndSaveStep({ onComplete }: ReviewAndSaveStepProps = {}) {
         catalogName: state.catalogName || null,
       };
       
-      // Log the product data for debugging (with detailed date inspection)
+      // Function to safely format date values for API submission
+      const formatDateForApi = (value: any): string | null => {
+        if (!value) return null;
+        
+        try {
+          // If it's a Date object, convert to ISO string
+          if (value instanceof Date) {
+            return value.toISOString();
+          }
+          
+          // If it's a string that looks like a date, parse and convert
+          if (typeof value === 'string' && !isNaN(Date.parse(value))) {
+            return new Date(value).toISOString();
+          }
+          
+          // Otherwise return null
+          return null;
+        } catch (error) {
+          console.error('Error formatting date:', error);
+          return null;
+        }
+      };
+      
+      // Update date fields with properly formatted values
+      productData.specialSaleStart = formatDateForApi(productData.specialSaleStart);
+      productData.specialSaleEnd = formatDateForApi(productData.specialSaleEnd);
+      productData.flashDealEnd = formatDateForApi(productData.flashDealEnd);
+      
+      // Log the product data for debugging
       console.log(`${isUpdate ? 'Updating' : 'Creating'} product data:`, productData);
       
-      // Special debugging for date fields
+      // Debug date fields
       console.log('Date fields being sent:');
-      console.log('specialSaleStart:', productData.specialSaleStart, 
-                  typeof productData.specialSaleStart, 
-                  productData.specialSaleStart instanceof Date);
-      console.log('specialSaleEnd:', productData.specialSaleEnd, 
-                  typeof productData.specialSaleEnd, 
-                  productData.specialSaleEnd instanceof Date);
-      console.log('flashDealEnd:', productData.flashDealEnd, 
-                  typeof productData.flashDealEnd, 
-                  productData.flashDealEnd instanceof Date);
+      console.log('specialSaleStart:', productData.specialSaleStart, typeof productData.specialSaleStart);
+      console.log('specialSaleEnd:', productData.specialSaleEnd, typeof productData.specialSaleEnd);
+      console.log('flashDealEnd:', productData.flashDealEnd, typeof productData.flashDealEnd);
       
       // Submit data
       await saveProductMutation.mutateAsync(productData);
