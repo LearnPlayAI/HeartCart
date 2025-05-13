@@ -109,7 +109,7 @@ export function SalesPromotionsStep() {
                     <Input
                       type="number"
                       placeholder="0.00"
-                      value={state.salePrice || ''}
+                      value={salePrice || ''}
                       onChange={(e) => setField('salePrice', parseFloat(e.target.value))}
                       min={0}
                       step={0.01}
@@ -139,7 +139,7 @@ export function SalesPromotionsStep() {
                   <Input
                     type="text"
                     placeholder="e.g., 20% OFF"
-                    value={state.discountLabel || ''}
+                    value={discountLabel || ''}
                     onChange={(e) => setField('discountLabel', e.target.value)}
                   />
                 </FormControl>
@@ -158,7 +158,7 @@ export function SalesPromotionsStep() {
                   <Input
                     type="text"
                     placeholder="e.g., Summer Sale"
-                    value={state.specialSaleText || ''}
+                    value={specialSaleText || ''}
                     onChange={(e) => setField('specialSaleText', e.target.value)}
                   />
                 </FormControl>
@@ -182,11 +182,11 @@ export function SalesPromotionsStep() {
                             variant="outline"
                             className={cn(
                               "w-full pl-3 text-left font-normal",
-                              !state.specialSaleStart && "text-muted-foreground"
+                              !specialSaleStart && "text-muted-foreground"
                             )}
                           >
-                            {state.specialSaleStart ? (
-                              format(new Date(state.specialSaleStart), 'PPP')
+                            {specialSaleStart ? (
+                              format(new Date(specialSaleStart), 'PPP')
                             ) : (
                               <span>Pick a date</span>
                             )}
