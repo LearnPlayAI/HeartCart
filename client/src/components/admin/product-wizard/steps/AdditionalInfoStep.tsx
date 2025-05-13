@@ -228,29 +228,54 @@ export function AdditionalInfoStep() {
   
   // Handle attribute values changes from pricing component
   const handleAttributeValuesChange = (newValues: AttributeValue[]) => {
+    console.log('AdditionalInfoStep: Attribute values changed:', newValues);
+    
+    // Store these values immediately in state
     setAttributeValues(newValues);
     
-    // Store these values in the form and context
-    form.setValue('attributeValues', newValues);
-    setField('attributeValues', newValues);
-    
-    // Extract size-based metadata like weight and dimensions
-    const sizeAttribute = newValues.find(attr => 
-      attr.attributeName.toLowerCase().includes('size'));
-    
-    if (sizeAttribute?.metadata) {
-      // Update weight if provided in the metadata
-      if (sizeAttribute.metadata.weight !== undefined) {
-        form.setValue('weight', sizeAttribute.metadata.weight);
-        setField('weight', sizeAttribute.metadata.weight);
+    // Ensure immediate update to form and context
+    setTimeout(() => {
+      console.log('Saving attribute values to form and context:', newValues);
+      form.setValue('attributeValues', newValues);
+      setField('attributeValues', newValues);
+      
+      // Update attributes in context as well to ensure toggles persist
+      const requiredAttributeIds = newValues
+        .filter(val => val.isRequired)
+        .map(val => val.attributeId);
+      
+      console.log('Required attribute IDs:', requiredAttributeIds);
+      
+      // Map through all attributes and update their isRequired property
+      const updatedAttributes = formattedAttributes.map(attr => ({
+        ...attr,
+        isRequired: requiredAttributeIds.includes(attr.id)
+      }));
+      
+      // Update attributes in context if they're different from current
+      if (JSON.stringify(updatedAttributes) !== JSON.stringify(state.attributes)) {
+        console.log('Updating attributes in context:', updatedAttributes);
+        setField('attributes', updatedAttributes);
       }
       
-      // Update dimensions if provided in the metadata
-      if (sizeAttribute.metadata.dimensions) {
-        form.setValue('dimensions', sizeAttribute.metadata.dimensions);
-        setField('dimensions', sizeAttribute.metadata.dimensions);
+      // Extract size-based metadata like weight and dimensions
+      const sizeAttribute = newValues.find(attr => 
+        attr.attributeName.toLowerCase().includes('size'));
+      
+      if (sizeAttribute?.metadata) {
+        // Update weight if provided in the metadata
+        if (sizeAttribute.metadata.weight !== undefined) {
+          form.setValue('weight', sizeAttribute.metadata.weight);
+          setField('weight', sizeAttribute.metadata.weight);
+        }
+        
+        // Update dimensions if provided in the metadata
+        if (sizeAttribute.metadata.dimensions) {
+          form.setValue('dimensions', sizeAttribute.metadata.dimensions);
+          setField('dimensions', sizeAttribute.metadata.dimensions);
+        }
       }
-    }
+    }, 0);
   };
   
   // Initialize form with values from context

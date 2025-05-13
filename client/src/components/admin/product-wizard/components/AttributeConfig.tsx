@@ -103,13 +103,28 @@ export function AttributeConfig({
   
   // Handle required change
   const handleRequiredChange = (attrId: number, isRequired: boolean) => {
-    setValues(prevValues => 
-      prevValues.map(val => 
+    console.log(`Setting attribute ${attrId} isRequired to ${isRequired}`);
+    
+    // Create a copy of the values array with updated isRequired values
+    const updatedValues = prevValues => {
+      // Map through all values and update those with matching attributeId
+      const result = prevValues.map(val => 
         val.attributeId === attrId 
           ? { ...val, isRequired } 
           : val
-      )
-    );
+      );
+      console.log('Updated attribute values:', result);
+      return result;
+    };
+    
+    // Update the state
+    setValues(updatedValues);
+    
+    // Immediately notify parent to ensure changes are saved
+    setTimeout(() => {
+      const currentValues = updatedValues(values);
+      onChange(currentValues);
+    }, 0);
   };
   
   // Handle weight change for size attributes
