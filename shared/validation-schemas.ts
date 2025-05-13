@@ -214,10 +214,10 @@ export const productWizardAdditionalInfoSchema = z.object({
   isActive: z.boolean().default(true),
   isFeatured: z.boolean().default(false),
   isFlashDeal: z.boolean().default(false),
-  flashDealEnd: z.date().optional(),
+  flashDealEnd: z.string().optional(),
   specialSaleText: z.string().max(100).optional(),
-  specialSaleStart: z.date().optional(),
-  specialSaleEnd: z.date().optional(),
+  specialSaleStart: z.string().optional(),
+  specialSaleEnd: z.string().optional(),
   freeShipping: z.boolean().default(false),
 });
 

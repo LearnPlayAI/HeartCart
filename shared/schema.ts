@@ -62,10 +62,10 @@ export const products = pgTable("products", {
   isActive: boolean("is_active").default(true).notNull(),
   isFeatured: boolean("is_featured").default(false).notNull(),
   isFlashDeal: boolean("is_flash_deal").default(false).notNull(),
-  flashDealEnd: timestamp("flash_deal_end", { withTimezone: true }),
+  flashDealEnd: text("flash_deal_end"), // Changed from timestamp to text
   specialSaleText: text("special_sale_text"), // New field for custom sale messaging
-  specialSaleStart: timestamp("special_sale_start", { withTimezone: true }), // New field for special sale start date
-  specialSaleEnd: timestamp("special_sale_end", { withTimezone: true }), // New field for special sale end date
+  specialSaleStart: text("special_sale_start"), // Changed from timestamp to text
+  specialSaleEnd: text("special_sale_end"), // Changed from timestamp to text
   soldCount: integer("sold_count").default(0),
   supplier: text("supplier"),
   freeShipping: boolean("free_shipping").default(false),
@@ -405,10 +405,10 @@ export const insertProductSchema = createInsertSchema(products).omit({
 }).extend({
   displayOrder: z.number().default(999).optional(),
   stock: z.number().int().nonnegative().default(0), // Add default value for stock column
-  // Allow date fields to accept either ISO strings or Date objects
-  specialSaleStart: z.union([z.string(), z.date()]).nullable().optional(),
-  specialSaleEnd: z.union([z.string(), z.date()]).nullable().optional(),
-  flashDealEnd: z.union([z.string(), z.date()]).nullable().optional(),
+  // Date fields as strings
+  specialSaleStart: z.string().nullable().optional(),
+  specialSaleEnd: z.string().nullable().optional(),
+  flashDealEnd: z.string().nullable().optional(),
 });
 
 export const insertCartItemSchema = createInsertSchema(cartItems).omit({

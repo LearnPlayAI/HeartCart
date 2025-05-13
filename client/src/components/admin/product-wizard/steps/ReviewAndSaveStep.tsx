@@ -373,7 +373,7 @@ export function ReviewAndSaveStep({ onComplete }: ReviewAndSaveStepProps = {}) {
         catalogName: state.catalogName || null,
       };
       
-      // Function to safely format date values for API submission
+      // Function to safely format date values for API submission as strings
       const formatDateForApi = (value: any): string | null => {
         if (!value) return null;
         
@@ -383,9 +383,9 @@ export function ReviewAndSaveStep({ onComplete }: ReviewAndSaveStepProps = {}) {
             return value.toISOString();
           }
           
-          // If it's a string that looks like a date, parse and convert
-          if (typeof value === 'string' && !isNaN(Date.parse(value))) {
-            return new Date(value).toISOString();
+          // If it's already a string, return as is (even if not a valid date)
+          if (typeof value === 'string') {
+            return value;
           }
           
           // Otherwise return null
