@@ -5012,8 +5012,17 @@ export class DatabaseStorage implements IStorage {
     if (!product) {
       throw new Error("Product not found");
     }
-
+    
+    // As per requirements, NO attribute-based price adjustments should be made
+    // Return empty adjustments with zero total adjustment
+    return {
+      adjustments: [],
+      totalAdjustment: 0
+    };
+    
+    /* The following code is no longer used but kept for reference
     // Get all active discount rules that apply to this product
+    */
     const directRules = await this.getAttributeDiscountRulesByProduct(productId);
     
     // Get category-based rules

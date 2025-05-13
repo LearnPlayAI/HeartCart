@@ -273,18 +273,12 @@ const ProductDetailView = ({
            value.textValue === selectedOptionId);
       });
       
-      // Calculate total base price adjustment from all selected attribute values
-      let totalPriceAdjustment = 0;
+      // No price adjustments based on attributes as per requirements
+      // Selected attributes are stored for display purposes only
       
-      selectedAttrValues.forEach(value => {
-        if (value.priceAdjustment) {
-          totalPriceAdjustment += parseFloat(value.priceAdjustment);
-        }
-      });
-      
-      // Apply base price adjustment 
+      // Apply base product price without any attribute-based adjustments
       const basePrice = product.salePrice || product.price;
-      const initialAdjustedPrice = Number(basePrice) + totalPriceAdjustment;
+      const initialAdjustedPrice = Number(basePrice);
       
       // Store the selected attribute values for display/cart purposes
       setSelectedAttributeValues(selectedAttrValues);
@@ -374,25 +368,20 @@ const ProductDetailView = ({
       });
     }
     
-    // Apply price adjustments and discounts
+    // Use base price without adjustments per requirements
     const basePrice = product.salePrice || product.price;
-    const attributePriceAdjustment = currentPrice !== null ? currentPrice - basePrice : 0;
     
-    // Create the cart item with discount information
+    // Create the cart item with NO price adjustments or discounts based on attributes
     const cartItem = {
       productId: product.id,
       product,
       quantity,
       combinationHash: combinationHash || null,
       selectedAttributes: Object.keys(formattedAttributes).length > 0 ? formattedAttributes : null,
-      priceAdjustment: attributePriceAdjustment,
-      // Include discount information
-      discounts: priceAdjustments ? {
-        adjustments: priceAdjustments.adjustments,
-        totalAdjustment: priceAdjustments.totalAdjustment
-      } : null,
-      // Store the final price for the item
-      itemPrice: currentPrice !== null ? currentPrice : basePrice
+      // No price adjustment based on attributes as per requirements
+      // No discount information as per requirements
+      // Store the base price for the item
+      itemPrice: basePrice
     };
     
     addItem(cartItem);
@@ -402,7 +391,7 @@ const ProductDetailView = ({
       description: `${quantity} x ${product.name} has been added to your cart.`,
       duration: 2000,
     });
-  }, [product, selectedAttributes, productAttributes, attributeOptions, currentPrice, quantity, priceAdjustments, addItem, toast]);
+  }, [product, selectedAttributes, productAttributes, attributeOptions, quantity, addItem, toast]);
   
   // Render star ratings (memoized to prevent re-renders)
   const renderStars = useCallback((rating: number | null = 0) => {
