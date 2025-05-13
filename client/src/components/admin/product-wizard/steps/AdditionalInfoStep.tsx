@@ -425,8 +425,8 @@ export function AdditionalInfoStep() {
                 <span>Attributes</span>
               </TabsTrigger>
               <TabsTrigger value="shipping" className="flex items-center gap-1">
-                <TruckIcon className="h-4 w-4" />
-                <span>Shipping & SEO</span>
+                <InfoIcon className="h-4 w-4" />
+                <span>SEO</span>
               </TabsTrigger>
             </TabsList>
             
