@@ -308,20 +308,25 @@ function AttributeEditorPage() {
                   name="attributeType"
                   value={formData.attributeType}
                   onValueChange={(value) => handleSelectChange("attributeType", value)}
-                  disabled={!isNewAttribute}
+                  disabled={!isNewAttribute || attributeTypesLoading}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select attribute type" />
                   </SelectTrigger>
                   <SelectContent>
-                    {Array.isArray(ATTRIBUTE_TYPES) && ATTRIBUTE_TYPES.length > 0 ? (
-                      ATTRIBUTE_TYPES.map(type => (
+                    {attributeTypesLoading ? (
+                      <div className="flex items-center justify-center p-2">
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        <span className="text-sm">Loading types...</span>
+                      </div>
+                    ) : Array.isArray(attributeTypes) && attributeTypes.length > 0 ? (
+                      attributeTypes.map(type => (
                         <SelectItem key={type} value={type}>
                           {type.charAt(0).toUpperCase() + type.slice(1)}
                         </SelectItem>
                       ))
                     ) : (
-                      // Fallback if ATTRIBUTE_TYPES is not available
+                      // Fallback if no types are returned from API
                       ["text", "number", "select", "color", "size", "date", "boolean"].map(type => (
                         <SelectItem key={type} value={type}>
                           {type.charAt(0).toUpperCase() + type.slice(1)}
