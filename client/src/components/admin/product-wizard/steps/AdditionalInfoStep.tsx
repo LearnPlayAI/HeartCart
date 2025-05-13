@@ -183,7 +183,6 @@ export function AdditionalInfoStep() {
               attributeName: attr.name,
               value: opt.value,
               displayValue: opt.displayValue,
-              priceAdjustment: 0,
               isRequired: attr.isRequired,
               sortOrder: 0,
               metadata: {}
@@ -476,7 +475,7 @@ export function AdditionalInfoStep() {
                 <TabsContent value="attributes" className="space-y-6">
                   {/* Attribute-Based Pricing Configuration */}
                   <div className="space-y-6">
-                    <h3 className="text-lg font-medium">Attribute Pricing & Configuration</h3>
+                    <h3 className="text-lg font-medium">Attribute Configuration</h3>
                     <p className="text-sm text-muted-foreground">
                       Configure weight, dimensions, and mark attributes as required for checkout.
                     </p>
