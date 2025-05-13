@@ -4401,17 +4401,7 @@ export class DatabaseStorage implements IStorage {
 
   // Removed createAttributeDiscountRule as part of centralized attribute system
 
-  async deleteAttributeDiscountRule(id: number): Promise<boolean> {
-    try {
-      await db
-        .delete(attributeDiscountRules)
-        .where(eq(attributeDiscountRules.id, id));
-      return true;
-    } catch (error) {
-      console.error(`Error deleting attribute discount rule ${id}:`, error);
-      throw error; // Rethrow so the route handler can catch it and send a proper error response
-    }
-  }
+  // Removed deleteAttributeDiscountRule as part of centralized attribute system
 
   async calculateAttributeBasedPriceAdjustments(
     productId: number, 
