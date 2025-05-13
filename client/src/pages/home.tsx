@@ -1,7 +1,6 @@
 import React from 'react';
 import HeroBanner from '@/components/home/hero-banner';
 import FlashDealsSection from '@/components/home/flash-deals';
-import CategoriesShowcase from '@/components/home/categories-showcase';
 import FeaturedProductsSection from '@/components/home/featured-products';
 import AIRecommendedProducts from '@/components/home/ai-recommended';
 import AppBanner from '@/components/home/app-banner';
@@ -40,7 +39,6 @@ const Home = () => {
           {/* Main Content */}
           <div className="flex-1">
             <FlashDealsSection />
-            <CategoriesShowcase />
             <FeaturedProductsSection />
             <AIRecommendedProducts />
             <AppBanner />

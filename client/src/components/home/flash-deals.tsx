@@ -4,20 +4,9 @@ import { useQuery } from '@tanstack/react-query';
 import { Zap } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import ProductCard from '@/components/product/product-card';
-import { useCountdown } from '@/hooks/use-countdown';
 import type { Product } from '@shared/schema';
 
 const FlashDealsSection = () => {
-  // Set end time for the flash deals - 5 hours from now
-  // Using React.useMemo to prevent creating a new date on every render
-  const endTime = React.useMemo(() => {
-    const date = new Date();
-    date.setHours(date.getHours() + 5);
-    return date;
-  }, []);
-  
-  const { timeRemaining, formattedTime } = useCountdown(endTime);
-  
   // Define the standardized API response type
   interface ApiResponse {
     success: boolean;
@@ -40,16 +29,10 @@ const FlashDealsSection = () => {
   
   return (
     <section className="mb-8 bg-white rounded-lg shadow-md overflow-hidden">
-      <div className="bg-gradient-to-r from-[#FF69B4] to-[#FF1493] p-4 flex justify-between items-center">
+      <div className="bg-gradient-to-r from-[#FF69B4] to-[#FF1493] p-4">
         <h2 className="text-white text-xl font-bold flex items-center">
           <Zap className="mr-2" /> Flash Deals
         </h2>
-        <div className="flex items-center space-x-1 bg-white/20 px-3 py-1 rounded-full">
-          <span className="text-white text-xs">Ends in:</span>
-          <div className="countdown-timer text-white font-mono font-bold text-sm">
-            {formattedTime}
-          </div>
-        </div>
       </div>
       
       <div className="p-4">

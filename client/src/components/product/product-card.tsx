@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'wouter';
-import { Star, StarHalf, Eye, ShoppingCart, ImageOff } from 'lucide-react';
+import { Star, StarHalf, Eye, ShoppingCart, ImageOff, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/hooks/use-cart';
 import { formatCurrency, calculateDiscount } from '@/lib/utils';
@@ -9,6 +9,18 @@ import QuickViewModal from './quick-view-modal';
 import { Badge } from '@/components/ui/badge';
 import type { Product } from '@shared/schema';
 import { ensureValidImageUrl } from '@/utils/file-manager';
+import { useCountdown } from '@/hooks/use-countdown';
+
+// Flash Deal Timer Component 
+const FlashDealTimer = ({ endDate }: { endDate: Date }) => {
+  const { formattedTime } = useCountdown(endDate);
+  
+  return (
+    <span className="text-xs font-mono bg-gray-100 px-2 py-0.5 rounded">
+      {formattedTime}
+    </span>
+  );
+};
 
 type ProductCardProps = {
   product: Product;
@@ -121,6 +133,15 @@ const ProductCard: React.FC<ProductCardProps> = ({
           
           {isFlashDeal && typeof soldPercentage === 'number' && (
             <>
+              <div className="flex items-center justify-between mt-1 mb-1">
+                <Badge variant="outline" className="bg-[#FF69B4]/10 text-[#FF69B4] border-[#FF69B4]/30 flex items-center gap-1 px-2 py-0.5">
+                  <Zap className="h-3 w-3" />
+                  <span className="text-xs">Flash Deal</span>
+                </Badge>
+                {product.flashDealEnd && (
+                  <FlashDealTimer endDate={new Date(product.flashDealEnd)} />
+                )}
+              </div>
               <div className="mt-1 h-2 bg-gray-200 rounded-full overflow-hidden">
                 <div 
                   className="bg-[#FF69B4] h-full rounded-full pulse-animation"
