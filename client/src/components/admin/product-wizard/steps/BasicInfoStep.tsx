@@ -274,14 +274,18 @@ export function BasicInfoStep() {
                       name="brand"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Brand</FormLabel>
+                          <FormLabel className="text-[#333333]">Brand</FormLabel>
                           <FormControl>
                             <Input
                               placeholder="Brand name (optional)"
+                              className="border-[#E5E7EB] focus-visible:ring-[#FF69B4]"
                               {...field}
                               value={field.value || ''}
                             />
                           </FormControl>
+                          <FormDescription className="text-[#777777]">
+                            Manufacturer or company name
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -293,7 +297,7 @@ export function BasicInfoStep() {
                       name="categoryId"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Category</FormLabel>
+                          <FormLabel className="text-[#333333]">Category</FormLabel>
                           <Select
                             value={field.value?.toString() || "none"}
                             onValueChange={(value) => {
@@ -303,25 +307,29 @@ export function BasicInfoStep() {
                             }}
                           >
                             <FormControl>
-                              <SelectTrigger>
+                              <SelectTrigger className="border-[#E5E7EB] focus-visible:ring-[#FF69B4]">
                                 <SelectValue placeholder="Select a category" />
                               </SelectTrigger>
                             </FormControl>
-                            <SelectContent>
-                              <SelectItem value="none">None</SelectItem>
+                            <SelectContent className="border-[#E5E7EB]">
+                              <SelectItem value="none" className="focus:bg-[#FFE6F0]">None</SelectItem>
                               {categoriesList && categoriesList.length > 0 
                                 ? categoriesList.map((category: any) => (
                                     <SelectItem
                                       key={category.id}
                                       value={category.id.toString()}
+                                      className="focus:bg-[#FFE6F0]"
                                     >
                                       {category.name}
                                     </SelectItem>
                                   ))
-                                : <SelectItem value="no-categories">No categories available</SelectItem>
+                                : <SelectItem value="no-categories" className="focus:bg-[#FFE6F0]">No categories available</SelectItem>
                               }
                             </SelectContent>
                           </Select>
+                          <FormDescription className="text-[#777777]">
+                            Product classification for organization
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -334,15 +342,18 @@ export function BasicInfoStep() {
                     name="description"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Description</FormLabel>
+                        <FormLabel className="text-[#333333]">Description</FormLabel>
                         <FormControl>
                           <Textarea
                             placeholder="Enter product description (optional)"
-                            className="min-h-32"
+                            className="min-h-32 border-[#E5E7EB] focus-visible:ring-[#FF69B4]"
                             {...field}
                             value={field.value || ''}
                           />
                         </FormControl>
+                        <FormDescription className="text-[#777777]">
+                          Detailed information about the product's features and benefits
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
