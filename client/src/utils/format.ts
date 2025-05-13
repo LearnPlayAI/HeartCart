@@ -128,3 +128,26 @@ export function formatNumber(number: number | null | undefined, decimals: number
     maximumFractionDigits: decimals,
   }).format(number);
 }
+
+/**
+ * Format product dimensions in a human-readable format
+ * @param length Product length in cm
+ * @param width Product width in cm
+ * @param height Product height in cm
+ * @param unit The unit of measurement (default: 'cm')
+ * @returns Formatted dimension string (e.g. "10 x 5 x 2 cm")
+ */
+export function formatDimensions(
+  length: number | null | undefined, 
+  width: number | null | undefined, 
+  height: number | null | undefined,
+  unit: string = 'cm'
+): string {
+  if (length === null || length === undefined || 
+      width === null || width === undefined || 
+      height === null || height === undefined) {
+    return '-';
+  }
+  
+  return `${length} × ${width} × ${height} ${unit}`;
+}

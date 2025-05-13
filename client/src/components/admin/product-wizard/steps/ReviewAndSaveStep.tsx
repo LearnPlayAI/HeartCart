@@ -10,8 +10,8 @@ import React, { useState } from 'react';
 import { useProductWizardContext } from '../context';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { formatCurrency, formatDimensions } from '@/utils/format';
-import { truncateText } from '@/utils/string-utils';
+import { formatCurrency, formatDimensions } from '../../../../utils/format';
+import { truncateText } from '../../../../utils/string-utils';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
