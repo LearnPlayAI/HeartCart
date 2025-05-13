@@ -354,32 +354,10 @@ router.post(
   })
 );
 
-// Universal file serving endpoint
-router.get('/files/:path(*)', catchErrors(async (req: Request, res: Response) => {
-  const filePath = req.params.path;
-  
-  if (!filePath) {
-    return sendError(res, 'No file path provided', 400);
-  }
-  
-  try {
-    // Get file from storage
-    const { data, contentType } = await objectStore.getFileAsBuffer(filePath);
-    
-    // Set content type header
-    if (contentType) {
-      res.setHeader('Content-Type', contentType);
-    }
-    
-    // Set cache control headers
-    res.setHeader('Cache-Control', 'public, max-age=31536000'); // 1 year
-    
-    // Send file
-    res.send(data);
-  } catch (error) {
-    console.error(`Error serving file ${filePath}:`, error);
-    return sendError(res, 'File not found', 404);
-  }
-}));
+/**
+ * Note: The universal file serving endpoint is handled by the main routes.ts
+ * file at the path /api/files/:path(*) and does not require authentication.
+ * This ensures images are publicly accessible without auth as required.
+ */
 
 export default router;
