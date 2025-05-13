@@ -220,12 +220,12 @@ export function ImageStep() {
   
   return (
     <div className="wizard-step">
-      <h3 className="wizard-step-header">Product Images</h3>
-      <Card className="bg-white border-gray-200">
+      <h3 className="text-2xl font-semibold mb-4 text-primary">Product Images</h3>
+      <Card className="bg-white border-gray-200 shadow-sm">
         <CardContent className="pt-6 space-y-4">
           {/* Drag and drop area */}
           <div
-            className="image-dropzone border-2 border-dashed border-gray-200 rounded-md p-8 text-center cursor-pointer hover:bg-gray-50 transition-colors"
+            className="image-dropzone border-2 border-dashed border-gray-300 rounded-md p-8 text-center cursor-pointer hover:bg-primary/5 hover:border-primary/50 transition-colors"
             onDragEnter={handleDragEnter}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
@@ -233,9 +233,9 @@ export function ImageStep() {
             onClick={handleSelectFiles}
           >
             <div className="flex flex-col items-center justify-center gap-2">
-              <UploadIcon className="h-10 w-10 text-primary/70" />
-              <h3 className="font-medium text-gray-700">Drag and drop images here</h3>
-              <p className="text-sm text-gray-500">
+              <UploadIcon className="h-10 w-10 text-primary" />
+              <h3 className="font-medium text-primary">Drag and drop images here</h3>
+              <p className="text-sm text-secondary">
                 Or click to browse your files
               </p>
               <p className="text-xs text-gray-400 mt-2">
@@ -284,7 +284,8 @@ export function ImageStep() {
                       relative rounded-md overflow-hidden border shadow-sm group
                       ${index === draggingIndex ? 'opacity-50' : ''}
                       ${index === dragOverIndex ? 'border-secondary border-2' : ''}
-                      ${index === state.mainImageIndex ? 'ring-2 ring-primary' : ''}
+                      ${index === state.mainImageIndex ? 'ring-2 ring-primary ring-offset-1' : ''}
+                      transition-all duration-200 hover:shadow-md
                     `}
                   >
                     <div className="aspect-square bg-gray-50">
@@ -296,12 +297,12 @@ export function ImageStep() {
                     </div>
                     
                     {/* Image overlay with actions */}
-                    <div className="absolute inset-0 bg-primary/80 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity duration-200">
+                    <div className="absolute inset-0 bg-primary/85 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity duration-200">
                       <div className="flex gap-2 mb-2">
                         <Button
                           variant="secondary"
                           size="icon"
-                          className="w-8 h-8 rounded-full bg-white hover:bg-secondary hover:text-white"
+                          className="w-8 h-8 rounded-full bg-white hover:bg-secondary hover:text-white transition-colors duration-200"
                           onClick={() => handleSetMainImage(index)}
                           disabled={index === state.mainImageIndex}
                         >
@@ -310,7 +311,7 @@ export function ImageStep() {
                         <Button
                           variant="destructive"
                           size="icon"
-                          className="w-8 h-8 rounded-full"
+                          className="w-8 h-8 rounded-full bg-white text-red-500 hover:bg-red-500 hover:text-white transition-colors duration-200"
                           onClick={() => handleRemoveImage(index)}
                         >
                           <Trash2Icon className="h-3.5 w-3.5" />
