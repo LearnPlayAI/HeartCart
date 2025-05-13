@@ -168,12 +168,14 @@ const defaultInitialState: ProductWizardState = {
     'basic-info': false,
     'images': false,
     'additional-info': false,
+    'sales-promotions': false,
     'review': false,
   },
   validSteps: {
     'basic-info': false,
     'images': false,
     'additional-info': false,
+    'sales-promotions': false,
     'review': false,
   },
   
