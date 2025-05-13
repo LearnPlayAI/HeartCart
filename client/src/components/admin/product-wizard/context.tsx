@@ -551,24 +551,9 @@ export const ProductWizardProvider: React.FC<ProductWizardProviderProps> = ({
                 });
               }
               
-              // Shipping
+              // Tax settings
               dispatch({ type: 'SET_FIELD', field: 'taxable', value: product.taxable ?? true });
               dispatch({ type: 'SET_FIELD', field: 'taxClass', value: product.taxClass || 'standard' });
-              dispatch({ type: 'SET_FIELD', field: 'shippingRequired', value: product.shippingRequired ?? true });
-              dispatch({ type: 'SET_FIELD', field: 'shippingWeight', value: product.shippingWeight || null });
-              
-              // Shipping dimensions
-              if (product.shippingDimensions) {
-                dispatch({ 
-                  type: 'SET_FIELD', 
-                  field: 'shippingDimensions', 
-                  value: {
-                    length: product.shippingDimensions.length || null,
-                    width: product.shippingDimensions.width || null,
-                    height: product.shippingDimensions.height || null,
-                  } 
-                });
-              }
               
               // SEO
               dispatch({ type: 'SET_FIELD', field: 'metaTitle', value: product.metaTitle || '' });

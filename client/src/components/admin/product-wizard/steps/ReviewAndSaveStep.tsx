@@ -10,7 +10,7 @@ import React, { useState } from 'react';
 import { useProductWizardContext } from '../context';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { formatCurrency, formatDimensions } from '../../../../utils/format';
+import { formatCurrency } from '../../../../utils/format';
 import { truncateText } from '../../../../utils/string-utils';
 
 import { Button } from '@/components/ui/button';
