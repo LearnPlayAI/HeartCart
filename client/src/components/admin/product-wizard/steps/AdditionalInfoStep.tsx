@@ -64,12 +64,6 @@ const additionalInfoSchema = z.object({
   weight: z.coerce.number().min(0).nullable().optional(),
   dimensions: z.string().optional(),
   
-  // Sales & Promotions
-  discountLabel: z.string().optional(),
-  specialSaleText: z.string().optional(),
-  specialSaleStart: z.union([z.string(), z.date()]).optional().nullable(),
-  specialSaleEnd: z.union([z.string(), z.date()]).optional().nullable(),
-  
   // SEO
   metaTitle: z.string().optional(),
   metaDescription: z.string().optional(),
@@ -283,12 +277,6 @@ export function AdditionalInfoStep() {
       weight: state.weight || null,
       dimensions: state.dimensions || '',
       
-      // Sales & Promotions
-      discountLabel: state.discountLabel || '',
-      specialSaleText: state.specialSaleText || '',
-      specialSaleStart: state.specialSaleStart ? new Date(state.specialSaleStart) : null,
-      specialSaleEnd: state.specialSaleEnd ? new Date(state.specialSaleEnd) : null,
-      
       // SEO
       metaTitle: state.metaTitle || state.name,
       metaDescription: state.metaDescription || state.description,
@@ -320,18 +308,6 @@ export function AdditionalInfoStep() {
       form.setValue('weight', state.weight || null);
       form.setValue('dimensions', state.dimensions || '');
       
-      // Sales & Promotions
-      form.setValue('discountLabel', state.discountLabel || '');
-      form.setValue('specialSaleText', state.specialSaleText || '');
-      
-      if (state.specialSaleStart) {
-        form.setValue('specialSaleStart', new Date(state.specialSaleStart));
-      }
-      
-      if (state.specialSaleEnd) {
-        form.setValue('specialSaleEnd', new Date(state.specialSaleEnd));
-      }
-      
       // SEO
       form.setValue('metaTitle', state.metaTitle || state.name || '');
       form.setValue('metaDescription', state.metaDescription || state.description || '');
@@ -360,12 +336,6 @@ export function AdditionalInfoStep() {
     setField('supplier', values.supplier);
     setField('weight', values.weight);
     setField('dimensions', values.dimensions);
-    
-    // Sales & Promotions
-    setField('discountLabel', values.discountLabel);
-    setField('specialSaleText', values.specialSaleText);
-    setField('specialSaleStart', values.specialSaleStart);
-    setField('specialSaleEnd', values.specialSaleEnd);
     
     // SEO fields
     setField('metaTitle', values.metaTitle);
