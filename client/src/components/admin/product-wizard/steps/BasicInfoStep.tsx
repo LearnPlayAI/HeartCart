@@ -191,13 +191,14 @@ export function BasicInfoStep() {
   }, [form, onSubmit]);
   
   return (
-    <div className="space-y-6">
-      <Card>
+    <div className="wizard-step">
+      <h3 className="wizard-step-header">Basic Product Information</h3>
+      <Card className="bg-white border-gray-200">
         <CardContent className="pt-6">
           <Tabs defaultValue="general" className="w-full">
             <TabsList className="mb-4">
-              <TabsTrigger value="general">General Info</TabsTrigger>
-              <TabsTrigger value="pricing">Pricing</TabsTrigger>
+              <TabsTrigger value="general" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">General Info</TabsTrigger>
+              <TabsTrigger value="pricing" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Pricing</TabsTrigger>
             </TabsList>
             
             <Form {...form}>
