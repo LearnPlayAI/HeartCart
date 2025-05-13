@@ -213,6 +213,27 @@ export function BasicInfoStep() {
   const watchMarkupPercentage = form.watch('markupPercentage');
   const watchOnSale = form.watch('onSale');
   
+  // Update form values from state when product data is loaded
+  useEffect(() => {
+    if (state.productId) {
+      console.log('Updating form with state values:', state);
+      
+      form.setValue('name', state.name || '');
+      form.setValue('slug', state.slug || '');
+      form.setValue('sku', state.sku || generateSku(state.name || ''));
+      form.setValue('description', state.description || '');
+      form.setValue('brand', state.brand || '');
+      form.setValue('categoryId', state.categoryId ? String(state.categoryId) : undefined);
+      form.setValue('isActive', state.isActive);
+      form.setValue('isFeatured', state.isFeatured);
+      form.setValue('costPrice', state.costPrice || 0);
+      form.setValue('markupPercentage', state.markupPercentage || 40);
+      form.setValue('regularPrice', state.regularPrice || 0);
+      form.setValue('onSale', state.onSale || false);
+      form.setValue('salePrice', state.salePrice || 0);
+    }
+  }, [state, form, state.productId]);
+  
   // Auto-save form values to context when they change
   useEffect(() => {
     const subscription = form.watch((value, { name, type }) => {
