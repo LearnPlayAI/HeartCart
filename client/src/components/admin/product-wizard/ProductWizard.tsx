@@ -359,6 +359,31 @@ const ProductWizard: React.FC<ProductWizardProps> = ({ catalogId, productId }) =
     enabled: !!catalogId
   });
   
+  // Fetch catalog context data for pre-filled values
+  const { data: catalogContextResponse, isLoading: isContextLoading } = useQuery({
+    queryKey: [`/api/catalogs/${catalogId}/context`],
+    queryFn: async () => {
+      if (!catalogId) return null;
+      try {
+        const res = await fetch(`/api/catalogs/${catalogId}/context`);
+        if (!res.ok) {
+          console.warn(`Failed to fetch catalog context: ${res.status} ${res.statusText}`);
+          return null;
+        }
+        return res.json();
+      } catch (error) {
+        console.error('Error fetching catalog context:', error);
+        return null;
+      }
+    },
+    enabled: !!catalogId,
+    // Don't treat network errors as fatal for this query
+    retry: 1,
+    onError: (error) => {
+      console.warn('Error fetching catalog context (handled):', error);
+    }
+  });
+  
   // Fetch product data if productId is provided
   const { data: productResponse, isLoading: isProductLoading } = useQuery({
     queryKey: [`/api/products/${productId}`],
@@ -395,7 +420,39 @@ const ProductWizard: React.FC<ProductWizardProps> = ({ catalogId, productId }) =
     }
   }, [catalogResponse]);
   
-  // Process product data when available
+  // Initialize defaults from catalog context when not editing an existing product
+  useEffect(() => {
+    // Only run if we're creating a new product (no productId) and we have catalog context data
+    if (!productId && catalogContextResponse?.data && !initialProductData) {
+      console.log('Setting up defaults from catalog context:', catalogContextResponse.data);
+      
+      const contextData = catalogContextResponse.data;
+      const defaultMarkupPercentage = contextData.catalog?.defaultMarkupPercentage || '40';
+      
+      // Start with an empty product with defaults from catalog context
+      const newProductDefaults: Partial<ProductWizardData> = {
+        // Use catalog default markup percentage if available
+        markupPercentage: defaultMarkupPercentage.toString(),
+        
+        // Default minimum stock and order quantities
+        stockLevel: 10,
+        minimumOrderQuantity: 1,
+        
+        // Pre-select a category if available from context
+        categoryId: contextData.categories?.[0]?.id,
+        
+        // Default to active product
+        isActive: true,
+        
+        // Add required attributes if any
+        attributes: contextData.requiredAttributes || []
+      };
+      
+      setInitialProductData(newProductDefaults);
+    }
+  }, [productId, catalogContextResponse, initialProductData]);
+  
+  // Process product data when available (for editing existing products)
   useEffect(() => {
     if (productResponse?.data) {
       const product = productResponse.data;
@@ -445,7 +502,7 @@ const ProductWizard: React.FC<ProductWizardProps> = ({ catalogId, productId }) =
   }, [productResponse]);
   
   // Show loading state while fetching data
-  if ((catalogId && isCatalogLoading) || (productId && isProductLoading)) {
+  if ((catalogId && (isCatalogLoading || isContextLoading)) || (productId && isProductLoading)) {
     return (
       <div className="flex items-center justify-center h-[600px]">
         <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" />
