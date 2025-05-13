@@ -87,11 +87,11 @@ export function AdditionalInfoStep() {
   }[]>([]);
   const [, navigate] = useLocation();
   
-  // Fetch global attributes (always refetch to ensure we have latest data)
-  const { data: globalAttributesData, refetch: refetchAttributes } = useQuery({
+  // Fetch global attributes only once when the component mounts
+  const { data: globalAttributesData } = useQuery({
     queryKey: ['/api/attributes'],
-    refetchOnMount: true,
-    staleTime: 0 // Consider data stale immediately
+    refetchOnMount: false,
+    staleTime: Infinity // Keep the data cached and never consider it stale
   });
   
   // Format global attributes for our component
@@ -125,13 +125,7 @@ export function AdditionalInfoStep() {
   const [formattedAttributes, setFormattedAttributes] = useState<ProductAttribute[]>([]);
   const [attributeValues, setAttributeValues] = useState<AttributeValue[]>([]);
   
-  // Effect to refetch attributes when the active tab changes to 'attributes'
-  useEffect(() => {
-    if (activeTab === 'attributes') {
-      // Force refetch of attributes data when on attributes tab
-      refetchAttributes();
-    }
-  }, [activeTab, refetchAttributes]);
+  // Removed automatic refetching on tab change to prevent UI updates while editing
   
   // Auto-populate supplier information from catalog when available
   useEffect(() => {
@@ -237,52 +231,41 @@ export function AdditionalInfoStep() {
   const handleAttributeValuesChange = (newValues: AttributeValue[]) => {
     console.log('AdditionalInfoStep: Attribute values changed:', newValues);
     
-    // Store these values immediately in state
+    // Store these values in local state for the current step session
     setAttributeValues(newValues);
     
-    // Ensure immediate update to form and context
-    setTimeout(() => {
-      console.log('Saving attribute values to form and context:', newValues);
-      form.setValue('attributeValues', newValues);
-      setField('attributeValues', newValues);
-      
-      // Update attributes in context as well to ensure toggles persist
-      const requiredAttributeIds = newValues
-        .filter(val => val.isRequired)
-        .map(val => val.attributeId);
-      
-      console.log('Required attribute IDs:', requiredAttributeIds);
-      
-      // Map through all attributes and update their isRequired property
-      const updatedAttributes = formattedAttributes.map(attr => ({
-        ...attr,
-        isRequired: requiredAttributeIds.includes(attr.id)
-      }));
-      
-      // Update attributes in context if they're different from current
-      if (JSON.stringify(updatedAttributes) !== JSON.stringify(state.attributes)) {
-        console.log('Updating attributes in context:', updatedAttributes);
-        setField('attributes', updatedAttributes);
+    // Update the form value without updating the context immediately
+    form.setValue('attributeValues', newValues);
+    
+    // Extract required attribute information
+    const requiredAttributeIds = newValues
+      .filter(val => val.isRequired)
+      .map(val => val.attributeId);
+    
+    // Update local state for formatted attributes 
+    const updatedAttributes = formattedAttributes.map(attr => ({
+      ...attr,
+      isRequired: requiredAttributeIds.includes(attr.id)
+    }));
+    
+    // Only update formatted attributes in local state
+    setFormattedAttributes(updatedAttributes);
+    
+    // Extract size-based metadata like weight and dimensions
+    const sizeAttribute = newValues.find(attr => 
+      attr.attributeName.toLowerCase().includes('size'));
+    
+    if (sizeAttribute?.metadata) {
+      // Update weight if provided in the metadata
+      if (sizeAttribute.metadata.weight !== undefined) {
+        form.setValue('weight', sizeAttribute.metadata.weight);
       }
       
-      // Extract size-based metadata like weight and dimensions
-      const sizeAttribute = newValues.find(attr => 
-        attr.attributeName.toLowerCase().includes('size'));
-      
-      if (sizeAttribute?.metadata) {
-        // Update weight if provided in the metadata
-        if (sizeAttribute.metadata.weight !== undefined) {
-          form.setValue('weight', sizeAttribute.metadata.weight);
-          setField('weight', sizeAttribute.metadata.weight);
-        }
-        
-        // Update dimensions if provided in the metadata
-        if (sizeAttribute.metadata.dimensions) {
-          form.setValue('dimensions', sizeAttribute.metadata.dimensions);
-          setField('dimensions', sizeAttribute.metadata.dimensions);
-        }
+      // Update dimensions if provided in the metadata
+      if (sizeAttribute.metadata.dimensions) {
+        form.setValue('dimensions', sizeAttribute.metadata.dimensions);
       }
-    }, 0);
+    }
   };
   
   // Initialize form with values from context
@@ -362,14 +345,13 @@ export function AdditionalInfoStep() {
     markStepValid('additional-info', true);
   };
   
-  // Auto-save form values to context when they change
+  // Only save when the component unmounts or the user clicks next
   useEffect(() => {
-    const subscription = form.watch((value, { name, type }) => {
-      if (type === 'change') {
-        onSubmit(form.getValues());
-      }
-    });
-    return () => subscription.unsubscribe();
+    return () => {
+      // Save all form values to context when the component unmounts
+      const values = form.getValues();
+      onSubmit(values);
+    };
   }, [form, onSubmit]);
   
   // Handle adding a custom attribute
