@@ -135,6 +135,7 @@ export interface IStorage {
   updateCatalog(id: number, catalogData: Partial<InsertCatalog>): Promise<Catalog | undefined>;
   deleteCatalog(id: number): Promise<boolean>;
   getProductsByCatalogId(catalogId: number, activeOnly?: boolean, limit?: number, offset?: number): Promise<Product[]>;
+  getProductCountByCatalogId(catalogId: number, includeInactive?: boolean): Promise<number>;
   bulkUpdateCatalogProducts(catalogId: number, updateData: Partial<InsertProduct>): Promise<number>;
   updateProductDisplayOrder(catalogId: number, productIds: number[]): Promise<{ count: number }>;
   
