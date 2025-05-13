@@ -89,6 +89,10 @@ interface ProductWizardState {
   // Catalog context
   catalogId: number | null;
   catalogName: string | null;
+  
+  // Supplier context
+  supplierId: number | null;
+  supplierName: string | null;
 }
 
 // Initial state for the wizard
@@ -172,6 +176,10 @@ const defaultInitialState: ProductWizardState = {
   // Catalog context
   catalogId: null,
   catalogName: null,
+  
+  // Supplier context
+  supplierId: null,
+  supplierName: null,
 };
 
 // Action types for the reducer

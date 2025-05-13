@@ -275,6 +275,9 @@ export function ReviewAndSaveStep({ onComplete }: ReviewAndSaveStepProps = {}) {
         brand: state.brand || null,
         description: state.description || null,
         categoryId: Number(state.categoryId),
+        // Important: Make sure catalogId is included
+        catalogId: state.catalogId ? Number(state.catalogId) : null,
+        supplierId: state.supplierId ? Number(state.supplierId) : null,
         price: Number(state.regularPrice), // Required field in schema
         costPrice: Number(state.costPrice),
         regularPrice: Number(state.regularPrice),
@@ -321,8 +324,8 @@ export function ReviewAndSaveStep({ onComplete }: ReviewAndSaveStepProps = {}) {
         attributes: state.attributes || [],
         attributeValues: state.attributeValues || [],
         
-        // Catalog context
-        catalogId: state.catalogId ? Number(state.catalogId) : null,
+        // Catalog context - we already defined catalogId above
+        catalogName: state.catalogName || null,
       };
       
       // Log the product data for debugging
