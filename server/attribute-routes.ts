@@ -10,15 +10,15 @@ import { z } from 'zod';
 import { storage } from './storage';
 import { sendSuccess, sendError } from './api-response';
 import asyncHandler from 'express-async-handler';
+import { Attribute, InsertAttribute } from '@shared/schema';
 
 const router = Router();
 
 // Get all attributes
 router.get('/', asyncHandler(async (req: Request, res: Response) => {
   try {
-    // In a real application, this would fetch from the database
-    // For now, we'll return the mock data
-    sendSuccess(res, attributeDefinitions);
+    const attributes = await storage.getAllAttributes();
+    sendSuccess(res, attributes);
   } catch (error) {
     sendError(res, 'Failed to retrieve attributes', 500);
   }
@@ -27,74 +27,49 @@ router.get('/', asyncHandler(async (req: Request, res: Response) => {
 // Schema for attribute creation/update
 const attributeSchema = z.object({
   name: z.string().min(1, 'Name is required'),
-  type: z.string().optional().default('select'),
+  displayName: z.string().min(1, 'Display name is required'),
+  description: z.string().optional().nullable(),
+  attributeType: z.string().default('select'),
+  isRequired: z.boolean().optional().default(false),
+  isFilterable: z.boolean().optional().default(false),
+  isComparable: z.boolean().optional().default(false),
+  isSwatch: z.boolean().optional().default(false),
+  displayInProductSummary: z.boolean().optional().default(false),
+  sortOrder: z.number().optional().default(0),
   options: z.array(
     z.object({
       value: z.string(),
       displayValue: z.string().optional(),
+      sortOrder: z.number().optional(),
+      metadata: z.record(z.any()).optional().nullable(),
     })
   ).optional(),
-  isRequired: z.boolean().optional().default(false),
 });
-
-type Attribute = z.infer<typeof attributeSchema>;
-
-// Mock data for attribute definitions
-const attributeDefinitions = [
-  {
-    id: 1,
-    name: 'Size',
-    type: 'select',
-    isRequired: true,
-    options: [
-      { id: 1, value: 'S', displayValue: 'Small' },
-      { id: 2, value: 'M', displayValue: 'Medium' },
-      { id: 3, value: 'L', displayValue: 'Large' },
-      { id: 4, value: 'XL', displayValue: 'X-Large' },
-      { id: 5, value: '2XL', displayValue: '2X-Large' },
-    ]
-  },
-  {
-    id: 2,
-    name: 'Color',
-    type: 'select',
-    isRequired: true,
-    options: [
-      { id: 1, value: 'black', displayValue: 'Black' },
-      { id: 2, value: 'white', displayValue: 'White' },
-      { id: 3, value: 'red', displayValue: 'Red' },
-      { id: 4, value: 'blue', displayValue: 'Blue' },
-      { id: 5, value: 'green', displayValue: 'Green' },
-    ]
-  },
-  {
-    id: 3,
-    name: 'Material',
-    type: 'select',
-    isRequired: false,
-    options: [
-      { id: 1, value: 'cotton', displayValue: 'Cotton' },
-      { id: 2, value: 'polyester', displayValue: 'Polyester' },
-      { id: 3, value: 'blend', displayValue: 'Cotton/Polyester Blend' },
-    ]
-  }
-];
 
 // Get all attribute definitions
 router.get('/definitions', asyncHandler(async (req: Request, res: Response) => {
   try {
-    // In a real implementation, this would come from the database
-    sendSuccess(res, attributeDefinitions);
+    const attributes = await storage.getAllAttributes();
+    sendSuccess(res, attributes);
   } catch (error) {
     sendError(res, 'Failed to retrieve attribute definitions', 500);
   }
 }));
 
-// Get available attributes for a product (or all available)
+// Get available attributes for a product or category
 router.get('/available', asyncHandler(async (req: Request, res: Response) => {
   try {
-    // This would be customized based on product category in a real implementation
-    sendSuccess(res, attributeDefinitions);
+    const categoryId = req.query.categoryId ? parseInt(req.query.categoryId as string) : undefined;
+    
+    if (categoryId) {
+      // If category ID is provided, get attributes for that category
+      const categoryAttributes = await storage.getCategoryAttributes(categoryId);
+      sendSuccess(res, categoryAttributes);
+    } else {
+      // Otherwise return all global attributes
+      const attributes = await storage.getAllAttributes();
+      sendSuccess(res, attributes);
+    }
   } catch (error) {
     sendError(res, 'Failed to retrieve available attributes', 500);
   }
@@ -109,7 +84,7 @@ router.get('/:id', asyncHandler(async (req: Request, res: Response) => {
       return sendError(res, 'Invalid attribute ID', 400);
     }
     
-    const attribute = attributeDefinitions.find(attr => attr.id === attributeId);
+    const attribute = await storage.getAttributeById(attributeId);
     
     if (!attribute) {
       return sendError(res, 'Attribute not found', 404);
@@ -130,14 +105,13 @@ router.get('/:id/options', asyncHandler(async (req: Request, res: Response) => {
       return sendError(res, 'Invalid attribute ID', 400);
     }
     
-    const attribute = attributeDefinitions.find(attr => attr.id === attributeId);
+    const options = await storage.getAttributeOptions(attributeId);
     
-    if (!attribute) {
-      return sendError(res, 'Attribute not found', 404);
+    if (!options) {
+      return sendError(res, 'Attribute not found or has no options', 404);
     }
     
-    // Send back just the options array
-    sendSuccess(res, attribute.options || []);
+    sendSuccess(res, options);
   } catch (error) {
     sendError(res, 'Failed to retrieve attribute options', 500);
   }
@@ -152,7 +126,7 @@ router.post('/:id/options', asyncHandler(async (req: Request, res: Response) => 
       return sendError(res, 'Invalid attribute ID', 400);
     }
     
-    const attribute = attributeDefinitions.find(attr => attr.id === attributeId);
+    const attribute = await storage.getAttributeById(attributeId);
     
     if (!attribute) {
       return sendError(res, 'Attribute not found', 404);
@@ -161,25 +135,21 @@ router.post('/:id/options', asyncHandler(async (req: Request, res: Response) => 
     const optionSchema = z.object({
       value: z.string().min(1, 'Value is required'),
       displayValue: z.string().optional(),
-      metadata: z.record(z.any()).optional(),
+      metadata: z.record(z.any()).optional().nullable(),
       sortOrder: z.number().optional()
     });
     
     const validatedData = optionSchema.parse(req.body);
     
-    const newOption = {
-      id: (attribute.options?.length || 0) + 1,
+    const newOptionData = {
+      attributeId,
       value: validatedData.value,
       displayValue: validatedData.displayValue || validatedData.value,
       metadata: validatedData.metadata || null,
-      sortOrder: validatedData.sortOrder || (attribute.options?.length || 0) + 1
+      sortOrder: validatedData.sortOrder || 0
     };
     
-    if (!attribute.options) {
-      attribute.options = [];
-    }
-    
-    attribute.options.push(newOption);
+    const newOption = await storage.createAttributeOption(newOptionData);
     
     sendSuccess(res, newOption, 201);
   } catch (error) {
@@ -200,37 +170,38 @@ router.put('/:attributeId/options/:optionId', asyncHandler(async (req: Request, 
       return sendError(res, 'Invalid ID', 400);
     }
     
-    const attribute = attributeDefinitions.find(attr => attr.id === attributeId);
+    // Check if attribute exists
+    const attribute = await storage.getAttributeById(attributeId);
     
-    if (!attribute || !attribute.options) {
+    if (!attribute) {
       return sendError(res, 'Attribute not found', 404);
     }
     
-    const optionIndex = attribute.options.findIndex(opt => opt.id === optionId);
+    // Check if option exists
+    const option = await storage.getAttributeOptionById(optionId);
     
-    if (optionIndex === -1) {
+    if (!option || option.attributeId !== attributeId) {
       return sendError(res, 'Option not found', 404);
     }
     
     const optionSchema = z.object({
       value: z.string().min(1, 'Value is required'),
       displayValue: z.string().optional(),
-      metadata: z.record(z.any()).optional(),
+      metadata: z.record(z.any()).optional().nullable(),
       sortOrder: z.number().optional()
     });
     
     const validatedData = optionSchema.parse(req.body);
     
     // Update the option
-    attribute.options[optionIndex] = {
-      ...attribute.options[optionIndex],
+    const updatedOption = await storage.updateAttributeOption(optionId, {
       value: validatedData.value,
       displayValue: validatedData.displayValue || validatedData.value,
-      metadata: validatedData.metadata || attribute.options[optionIndex].metadata,
-      sortOrder: validatedData.sortOrder || attribute.options[optionIndex].sortOrder
-    };
+      metadata: validatedData.metadata,
+      sortOrder: validatedData.sortOrder
+    });
     
-    sendSuccess(res, attribute.options[optionIndex]);
+    sendSuccess(res, updatedOption);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return sendError(res, 'Validation error', 400, error.format());
@@ -249,20 +220,26 @@ router.delete('/:attributeId/options/:optionId', asyncHandler(async (req: Reques
       return sendError(res, 'Invalid ID', 400);
     }
     
-    const attribute = attributeDefinitions.find(attr => attr.id === attributeId);
+    // Check if attribute exists
+    const attribute = await storage.getAttributeById(attributeId);
     
-    if (!attribute || !attribute.options) {
+    if (!attribute) {
       return sendError(res, 'Attribute not found', 404);
     }
     
-    const optionIndex = attribute.options.findIndex(opt => opt.id === optionId);
+    // Check if option exists
+    const option = await storage.getAttributeOptionById(optionId);
     
-    if (optionIndex === -1) {
+    if (!option || option.attributeId !== attributeId) {
       return sendError(res, 'Option not found', 404);
     }
     
-    // Remove the option
-    attribute.options.splice(optionIndex, 1);
+    // Delete the option
+    const deleted = await storage.deleteAttributeOption(optionId);
+    
+    if (!deleted) {
+      return sendError(res, 'Failed to delete attribute option', 500);
+    }
     
     sendSuccess(res, { success: true });
   } catch (error) {
@@ -275,23 +252,44 @@ router.post('/', asyncHandler(async (req: Request, res: Response) => {
   try {
     const validatedData = attributeSchema.parse(req.body);
     
-    // In a real implementation, this would be saved to the database
-    // and would generate a real ID
-    const newAttribute = {
-      id: attributeDefinitions.length + 1,
-      ...validatedData,
-      options: validatedData.options?.map((opt, index) => ({
-        id: index + 1,
-        value: opt.value,
-        displayValue: opt.displayValue || opt.value,
-        sortOrder: index + 1
-      })) || []
+    // Create the attribute in the database
+    const attributeToCreate = {
+      name: validatedData.name,
+      displayName: validatedData.displayName,
+      description: validatedData.description,
+      attributeType: validatedData.attributeType,
+      isRequired: validatedData.isRequired,
+      isFilterable: validatedData.isFilterable,
+      isComparable: validatedData.isComparable,
+      isSwatch: validatedData.isSwatch,
+      displayInProductSummary: validatedData.displayInProductSummary,
+      sortOrder: validatedData.sortOrder || 0,
+      validationRules: validatedData.options ? { options: validatedData.options } : null
     };
     
-    // For demonstration purposes only
-    attributeDefinitions.push(newAttribute);
+    const newAttribute = await storage.createAttribute(attributeToCreate);
     
-    sendSuccess(res, newAttribute, 201);
+    // If options were provided, create them as well
+    if (validatedData.options && validatedData.options.length > 0) {
+      for (let i = 0; i < validatedData.options.length; i++) {
+        const option = validatedData.options[i];
+        await storage.createAttributeOption({
+          attributeId: newAttribute.id,
+          value: option.value,
+          displayValue: option.displayValue || option.value,
+          sortOrder: option.sortOrder || i + 1,
+          metadata: option.metadata || null
+        });
+      }
+      
+      // Fetch the attribute with options
+      const attributeWithOptions = await storage.getAttributeById(newAttribute.id);
+      const options = await storage.getAttributeOptions(newAttribute.id);
+      
+      sendSuccess(res, { ...attributeWithOptions, options }, 201);
+    } else {
+      sendSuccess(res, newAttribute, 201);
+    }
   } catch (error) {
     if (error instanceof z.ZodError) {
       return sendError(res, 'Validation error', 400, error.format());
@@ -309,23 +307,31 @@ router.put('/:id', asyncHandler(async (req: Request, res: Response) => {
       return sendError(res, 'Invalid attribute ID', 400);
     }
     
-    const attributeIndex = attributeDefinitions.findIndex(attr => attr.id === attributeId);
+    const attribute = await storage.getAttributeById(attributeId);
     
-    if (attributeIndex === -1) {
+    if (!attribute) {
       return sendError(res, 'Attribute not found', 404);
     }
     
     const validatedData = attributeSchema.parse(req.body);
     
     // Update the attribute
-    attributeDefinitions[attributeIndex] = {
-      ...attributeDefinitions[attributeIndex],
+    const attributeToUpdate = {
       name: validatedData.name,
-      type: validatedData.type || attributeDefinitions[attributeIndex].type,
-      isRequired: validatedData.isRequired !== undefined ? validatedData.isRequired : attributeDefinitions[attributeIndex].isRequired
+      displayName: validatedData.displayName,
+      description: validatedData.description,
+      attributeType: validatedData.attributeType,
+      isRequired: validatedData.isRequired,
+      isFilterable: validatedData.isFilterable,
+      isComparable: validatedData.isComparable,
+      isSwatch: validatedData.isSwatch,
+      displayInProductSummary: validatedData.displayInProductSummary,
+      sortOrder: validatedData.sortOrder
     };
     
-    sendSuccess(res, attributeDefinitions[attributeIndex]);
+    const updatedAttribute = await storage.updateAttribute(attributeId, attributeToUpdate);
+    
+    sendSuccess(res, updatedAttribute);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return sendError(res, 'Validation error', 400, error.format());
@@ -343,14 +349,18 @@ router.delete('/:id', asyncHandler(async (req: Request, res: Response) => {
       return sendError(res, 'Invalid attribute ID', 400);
     }
     
-    const attributeIndex = attributeDefinitions.findIndex(attr => attr.id === attributeId);
+    const attribute = await storage.getAttributeById(attributeId);
     
-    if (attributeIndex === -1) {
+    if (!attribute) {
       return sendError(res, 'Attribute not found', 404);
     }
     
-    // Remove the attribute
-    attributeDefinitions.splice(attributeIndex, 1);
+    // Delete the attribute
+    const deleted = await storage.deleteAttribute(attributeId);
+    
+    if (!deleted) {
+      return sendError(res, 'Failed to delete attribute', 500);
+    }
     
     sendSuccess(res, { success: true });
   } catch (error) {
@@ -361,6 +371,43 @@ router.delete('/:id', asyncHandler(async (req: Request, res: Response) => {
 // Function to register routes with the app
 function registerAttributeRoutes(app: Express) {
   app.use('/api/attributes', router);
+  
+  // Additional API route for frontend to get all attribute options
+  app.get('/api/attributes/all-options', asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const allAttributes = await storage.getAllAttributes();
+      
+      const attributesWithOptions = await Promise.all(
+        allAttributes.map(async (attr) => {
+          const options = await storage.getAttributeOptions(attr.id);
+          return {
+            ...attr,
+            options: options || []
+          };
+        })
+      );
+      
+      sendSuccess(res, attributesWithOptions);
+    } catch (error) {
+      sendError(res, 'Failed to retrieve all attributes with options', 500);
+    }
+  }));
+  
+  // Additional API route for frontend to get attributes for a product
+  app.get('/api/products/:productId/attributes', asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const productId = parseInt(req.params.productId);
+      
+      if (isNaN(productId)) {
+        return sendError(res, 'Invalid product ID', 400);
+      }
+      
+      const productAttributes = await storage.getProductAttributes(productId);
+      sendSuccess(res, productAttributes);
+    } catch (error) {
+      sendError(res, 'Failed to retrieve product attributes', 500);
+    }
+  }));
 }
 
 export default registerAttributeRoutes;
