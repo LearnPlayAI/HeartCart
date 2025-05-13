@@ -214,7 +214,15 @@ router.post('/products/:productId/images', upload.array('images', 10), async (re
  */
 router.post('/products/images/move', async (req: Request, res: Response) => {
   try {
-    const { sourceKey, productId, isMain = false } = req.body;
+    const { 
+      sourceKey, 
+      productId, 
+      isMain = false,
+      supplierName,
+      catalogName,
+      categoryName,
+      productName
+    } = req.body;
     
     if (!sourceKey || !productId) {
       return res.status(400).json({ 
@@ -223,11 +231,67 @@ router.post('/products/images/move', async (req: Request, res: Response) => {
       });
     }
     
-    // Move file from temp to product folder
-    const result = await objectStore.moveFromTemp(sourceKey, parseInt(productId));
-    
     // Import storage for database operations
     const { storage } = await import('./storage');
+    
+    // Get product, supplier, catalog, and category information if not provided
+    let finalSupplierName = supplierName;
+    let finalCatalogName = catalogName;
+    let finalCategoryName = categoryName;
+    let finalProductName = productName;
+    
+    if (!supplierName || !catalogName || !categoryName || !productName) {
+      try {
+        // Get product details
+        const product = await storage.getProductById(parseInt(productId));
+        
+        if (!product) {
+          return res.status(404).json({
+            success: false,
+            message: 'Product not found'
+          });
+        }
+        
+        // Get category info
+        let category = null;
+        if (product.categoryId) {
+          category = await storage.getCategoryById(product.categoryId);
+        }
+        
+        // Get catalog info from product
+        const catalog = product.catalogId 
+          ? await storage.getCatalogById(product.catalogId)
+          : null;
+          
+        // Get supplier info from catalog
+        const supplier = catalog && catalog.supplierId
+          ? await storage.getSupplierById(catalog.supplierId)
+          : null;
+          
+        // Set the values with fallbacks
+        finalProductName = finalProductName || product.name || 'product';
+        finalCategoryName = finalCategoryName || (category ? category.name : 'uncategorized');
+        finalCatalogName = finalCatalogName || (catalog ? catalog.name : 'default');
+        finalSupplierName = finalSupplierName || (supplier ? supplier.name : 'default');
+      } catch (error) {
+        console.error('Error fetching product details:', error);
+        // Use fallback values if we can't get the real ones
+        finalProductName = finalProductName || 'product';
+        finalCategoryName = finalCategoryName || 'uncategorized';
+        finalCatalogName = finalCatalogName || 'default';
+        finalSupplierName = finalSupplierName || 'default';
+      }
+    }
+    
+    // Move file from temp to final product folder using the new path structure
+    const result = await objectStore.moveToFinalLocation(
+      sourceKey,
+      finalSupplierName,
+      finalCatalogName,
+      finalCategoryName,
+      finalProductName,
+      parseInt(productId)
+    );
     
     try {
       // Check if any existing images for this product
@@ -240,8 +304,8 @@ router.post('/products/images/move', async (req: Request, res: Response) => {
         productId: parseInt(productId),
         url: result.url,
         objectKey: result.objectKey,
-        isMain: isMain || !hasExistingImages
-        // Removed alt field as it doesn't exist in the database
+        isMain: isMain || !hasExistingImages,
+        hasBgRemoved: false
       });
       
       console.log(`Successfully created product image record for ${result.objectKey}`);

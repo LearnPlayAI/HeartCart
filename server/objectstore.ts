@@ -977,6 +977,87 @@ export class ObjectStorageService {
     // If we got here, all attempts failed
     throw new Error(`Failed to upload temp file after ${MAX_RETRIES} attempts: ${lastError?.message || 'Unknown error'}`);
   }
+
+  /**
+   * Move file from temporary location to final product location
+   * @param sourceKey The original source key (current location)
+   * @param supplierName The supplier name
+   * @param catalogName The catalog name
+   * @param categoryName The category name 
+   * @param productName The product name
+   * @param productId The product ID
+   * @returns The new URL and object key
+   */
+  async moveToFinalLocation(
+    sourceKey: string,
+    supplierName: string,
+    catalogName: string,
+    categoryName: string,
+    productName: string,
+    productId: number
+  ): Promise<{ url: string, objectKey: string }> {
+    // Ensure storage is initialized
+    await this.ensureInitialized();
+    
+    // Sanitize names for path safety
+    const sanitizedSupplier = this.sanitizePathSegment(supplierName);
+    const sanitizedCatalog = this.sanitizePathSegment(catalogName);
+    const sanitizedCategory = this.sanitizePathSegment(categoryName);
+    const sanitizedProduct = this.sanitizePathSegment(productName);
+    
+    // Extract the original filename from the source key
+    const filename = path.basename(sourceKey);
+    
+    // Build the new path following the required structure
+    // Format: root/{supplierName}/{catalogName}/{Category}/{ProductName}_{ProductID}/filename.xxx
+    const targetFolder = `${sanitizedSupplier}/${sanitizedCatalog}/${sanitizedCategory}/${sanitizedProduct}_${productId}`;
+    const targetKey = `${targetFolder}/${filename}`;
+    
+    // Ensure the target directory exists
+    await this.createFolder(targetFolder);
+    
+    try {
+      // Download the file from source
+      const fileData = await this.downloadAsBuffer(sourceKey);
+      
+      if (!fileData) {
+        throw new Error(`Source file not found: ${sourceKey}`);
+      }
+      
+      // Get content type
+      const contentType = this.detectContentType(filename);
+      
+      // Upload to the new location
+      const url = await this.uploadFromBuffer(targetKey, fileData, {
+        contentType,
+        cacheControl: 'public, max-age=31536000' // Cache for 1 year
+      });
+      
+      // Delete the original file
+      await this.deleteFile(sourceKey);
+      
+      return {
+        url: `/api/files/${targetKey}`, // Use our file serving endpoint
+        objectKey: targetKey
+      };
+    } catch (error) {
+      console.error(`Error moving file from ${sourceKey} to ${targetKey}:`, error);
+      throw new Error(`Failed to move file: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+  
+  /**
+   * Sanitize a path segment for safe use in file paths
+   */
+  private sanitizePathSegment(segment: string): string {
+    // Remove spaces, special characters, and ensure valid path segments
+    return segment
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9-_]/g, '-')
+      .replace(/-+/g, '-') // Replace multiple consecutive hyphens with a single one
+      .replace(/^-|-$/g, ''); // Remove leading and trailing hyphens
+  }
 }
 
 // Export a singleton instance
