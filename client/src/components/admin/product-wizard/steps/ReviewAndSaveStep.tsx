@@ -280,12 +280,11 @@ export function ReviewAndSaveStep() {
   };
   
   return (
-    <div className="wizard-step">
-      <h3 className="wizard-step-header">Review and Save Product</h3>
-      <Card className="bg-white border-gray-200">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg text-secondary">Review Product Information</CardTitle>
-          <p className="text-sm text-gray-500">
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Review Product Information</CardTitle>
+          <p className="text-sm text-muted-foreground">
             Review all product details before saving. You can go back to any step to make changes.
           </p>
         </CardHeader>
@@ -308,11 +307,11 @@ export function ReviewAndSaveStep() {
           {/* Basic Info Section */}
           <div className="space-y-6">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium text-primary">Basic Information</h3>
+              <h3 className="text-lg font-medium">Basic Information</h3>
               <Button 
                 variant="outline" 
                 size="sm" 
-                className="flex items-center gap-1 bg-white hover:bg-primary hover:text-white"
+                className="flex items-center gap-1"
                 onClick={() => handleNavigateToStep('basic-info')}
               >
                 <Edit className="h-3 w-3" />
@@ -372,11 +371,11 @@ export function ReviewAndSaveStep() {
           {/* Pricing Section */}
           <div className="mt-8 space-y-6">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium text-secondary">Pricing</h3>
+              <h3 className="text-lg font-medium">Pricing</h3>
               <Button 
                 variant="outline" 
                 size="sm" 
-                className="flex items-center gap-1 bg-white hover:bg-secondary hover:text-white"
+                className="flex items-center gap-1"
                 onClick={() => handleNavigateToStep('basic-info')}
               >
                 <Edit className="h-3 w-3" />
@@ -426,11 +425,11 @@ export function ReviewAndSaveStep() {
           {/* Images Section */}
           <div className="mt-8 space-y-6">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium text-primary">Images</h3>
+              <h3 className="text-lg font-medium">Images</h3>
               <Button 
                 variant="outline" 
                 size="sm" 
-                className="flex items-center gap-1 bg-white hover:bg-primary hover:text-white"
+                className="flex items-center gap-1"
                 onClick={() => handleNavigateToStep('images')}
               >
                 <Edit className="h-3 w-3" />
@@ -482,11 +481,11 @@ export function ReviewAndSaveStep() {
           {/* Inventory Section */}
           <div className="mt-8 space-y-6">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium text-secondary">Inventory</h3>
+              <h3 className="text-lg font-medium">Inventory</h3>
               <Button 
                 variant="outline" 
                 size="sm" 
-                className="flex items-center gap-1 bg-white hover:bg-secondary hover:text-white"
+                className="flex items-center gap-1"
                 onClick={() => handleNavigateToStep('additional-info')}
               >
                 <Edit className="h-3 w-3" />
@@ -679,7 +678,7 @@ export function ReviewAndSaveStep() {
             <Button 
               variant="default"
               size="lg"
-              className="w-full md:w-auto bg-primary hover:bg-primary/80 text-white"
+              className="w-full md:w-auto"
               onClick={handleSaveProduct}
               disabled={isSubmitting || (hasErrors && validationErrors.some(err => !err.includes('recommended')))}
             >

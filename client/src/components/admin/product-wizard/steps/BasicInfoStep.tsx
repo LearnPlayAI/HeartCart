@@ -191,14 +191,13 @@ export function BasicInfoStep() {
   }, [form, onSubmit]);
   
   return (
-    <div className="wizard-step">
-      <h3 className="wizard-step-header">Basic Product Information</h3>
-      <Card className="bg-white border-gray-200">
+    <div className="space-y-6">
+      <Card>
         <CardContent className="pt-6">
           <Tabs defaultValue="general" className="w-full">
             <TabsList className="mb-4">
-              <TabsTrigger value="general" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">General Info</TabsTrigger>
-              <TabsTrigger value="pricing" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Pricing</TabsTrigger>
+              <TabsTrigger value="general">General Info</TabsTrigger>
+              <TabsTrigger value="pricing">Pricing</TabsTrigger>
             </TabsList>
             
             <Form {...form}>
@@ -556,8 +555,8 @@ export function BasicInfoStep() {
                   
                   {/* Price Summary */}
                   {watchCostPrice > 0 && (
-                    <div className="mt-4 p-4 border rounded-md bg-background shadow-sm">
-                      <h4 className="font-medium mb-2 text-primary">Pricing Summary</h4>
+                    <div className="mt-4 p-4 border rounded-md bg-muted/30">
+                      <h4 className="font-medium mb-2">Pricing Summary</h4>
                       <div className="space-y-1 text-sm">
                         <div className="flex justify-between">
                           <span>Cost Price:</span>
@@ -567,19 +566,19 @@ export function BasicInfoStep() {
                           <span>Markup ({watchMarkupPercentage || 0}%):</span>
                           <span>R{((parseFloat(watchCostPrice) || 0) * ((parseFloat(watchMarkupPercentage) || 0) / 100)).toFixed(2)}</span>
                         </div>
-                        <div className="flex justify-between font-medium text-accent">
+                        <div className="flex justify-between font-medium">
                           <span>Regular Price:</span>
                           <span>R{parseFloat(form.getValues('regularPrice') || 0).toFixed(2)}</span>
                         </div>
                         {watchOnSale && (
                           <>
-                            <div className="flex justify-between text-secondary">
+                            <div className="flex justify-between text-destructive">
                               <span>Discount:</span>
                               <span>-{Math.round((1 - (parseFloat(form.getValues('salePrice') || 0) / parseFloat(form.getValues('regularPrice') || 1))) * 100)}%</span>
                             </div>
                             <div className="flex justify-between font-medium">
                               <span>Sale Price:</span>
-                              <span className="text-primary">R{parseFloat(form.getValues('salePrice') || 0).toFixed(2)}</span>
+                              <span>R{parseFloat(form.getValues('salePrice') || 0).toFixed(2)}</span>
                             </div>
                           </>
                         )}

@@ -71,7 +71,7 @@ function ProductWizardContent({
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-semibold text-primary">
+        <h2 className="text-2xl font-semibold">
           {state.catalogName 
             ? `Add Product to ${state.catalogName}` 
             : 'Add New Product'
@@ -81,14 +81,14 @@ function ProductWizardContent({
           variant="ghost"
           size="icon"
           onClick={handleCancel}
-          className="rounded-full text-gray-600 hover:text-primary hover:bg-primary/5"
+          className="rounded-full"
           aria-label="Cancel"
         >
           <XIcon className="h-5 w-5" />
         </Button>
       </div>
       
-      <div className="space-y-8 bg-background p-6 rounded-lg">
+      <div className="space-y-8">
         <WizardNavigation onComplete={handleComplete} />
         
         <div className="mt-8 pb-8">
