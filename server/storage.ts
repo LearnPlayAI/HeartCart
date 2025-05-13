@@ -4367,230 +4367,39 @@ export class DatabaseStorage implements IStorage {
   // Removed deleteProductAttribute as part of centralized attribute system
   
   // Product attribute options operations
-  async getProductAttributeOptions(productAttributeId: number): Promise<(ProductAttributeOption & { 
-    baseOption?: AttributeOption, 
-    catalogOption?: CatalogAttributeOption,
-    categoryOption?: CategoryAttributeOption
-  })[]> {
-    const result = await db
-      .select({
-        productOption: productAttributeOptions,
-        baseOption: attributeOptions,
-        catalogOption: catalogAttributeOptions,
-        categoryOption: categoryAttributeOptions
-      })
-      .from(productAttributeOptions)
-      .leftJoin(attributeOptions, eq(productAttributeOptions.baseOptionId, attributeOptions.id))
-      .leftJoin(catalogAttributeOptions, eq(productAttributeOptions.catalogOptionId, catalogAttributeOptions.id))
-      .leftJoin(categoryAttributeOptions, eq(productAttributeOptions.categoryOptionId, categoryAttributeOptions.id))
-      .where(eq(productAttributeOptions.productAttributeId, productAttributeId))
-      .orderBy(asc(productAttributeOptions.sortOrder));
-    
-    return result.map(row => ({
-      ...row.productOption,
-      baseOption: row.baseOption || undefined,
-      catalogOption: row.catalogOption || undefined,
-      categoryOption: row.categoryOption || undefined
-    }));
-  }
+  // Removed getProductAttributeOptions as part of centralized attribute system
   
-  async getProductAttributeOptionById(id: number): Promise<ProductAttributeOption | undefined> {
-    const [option] = await db
-      .select()
-      .from(productAttributeOptions)
-      .where(eq(productAttributeOptions.id, id));
-    return option;
-  }
+  // Removed getProductAttributeOptionById as part of centralized attribute system
   
-  async createProductAttributeOption(option: InsertProductAttributeOption): Promise<ProductAttributeOption> {
-    const [newOption] = await db
-      .insert(productAttributeOptions)
-      .values(option)
-      .returning();
-    return newOption;
-  }
+  // Removed createProductAttributeOption as part of centralized attribute system
   
-  async updateProductAttributeOption(id: number, optionData: Partial<InsertProductAttributeOption>): Promise<ProductAttributeOption | undefined> {
-    const [updatedOption] = await db
-      .update(productAttributeOptions)
-      .set(optionData)
-      .where(eq(productAttributeOptions.id, id))
-      .returning();
-    return updatedOption;
-  }
+  // Removed updateProductAttributeOption as part of centralized attribute system
   
-  async deleteProductAttributeOption(id: number): Promise<boolean> {
-    try {
-      await db
-        .delete(productAttributeOptions)
-        .where(eq(productAttributeOptions.id, id));
-      return true;
-    } catch (error) {
-      console.error(`Error deleting product attribute option ${id}:`, error);
-      throw error; // Rethrow so the route handler can catch it and send a proper error response
-    }
-  }
+  // Removed deleteProductAttributeOption as part of centralized attribute system
   
-  async updateProductAttributeOptionsOrder(productAttributeId: number, optionIds: number[]): Promise<boolean> {
-    try {
-      // Start a transaction
-      await db.transaction(async (tx) => {
-        // Update the sort order for each option
-        for (let i = 0; i < optionIds.length; i++) {
-          await tx
-            .update(productAttributeOptions)
-            .set({ sortOrder: i })
-            .where(and(
-              eq(productAttributeOptions.id, optionIds[i]),
-              eq(productAttributeOptions.productAttributeId, productAttributeId)
-            ));
-        }
-      });
-      return true;
-    } catch (error) {
-      console.error(`Error updating product attribute options order for productAttributeId ${productAttributeId}:`, error);
-      throw error; // Rethrow so the route handler can catch it and send a proper error response
-    }
-  }
+  // Removed updateProductAttributeOptionsOrder as part of centralized attribute system
   
   // Product attribute values operations
-  async getProductAttributeValues(productId: number): Promise<ProductAttributeValue[]> {
-    return await db
-      .select()
-      .from(productAttributeValues)
-      .where(eq(productAttributeValues.productId, productId))
-      .orderBy(asc(productAttributeValues.sortOrder));
-  }
+  // Removed getProductAttributeValues as part of centralized attribute system
   
-  async getProductAttributeValueById(id: number): Promise<ProductAttributeValue | undefined> {
-    const [value] = await db
-      .select()
-      .from(productAttributeValues)
-      .where(eq(productAttributeValues.id, id));
-    return value;
-  }
+  // Removed getProductAttributeValueById as part of centralized attribute system
   
-  async createProductAttributeValue(value: InsertProductAttributeValue): Promise<ProductAttributeValue> {
-    const [newValue] = await db
-      .insert(productAttributeValues)
-      .values(value)
-      .returning();
-    return newValue;
-  }
+  // Removed createProductAttributeValue as part of centralized attribute system
   
-  async updateProductAttributeValue(id: number, valueData: Partial<InsertProductAttributeValue>): Promise<ProductAttributeValue | undefined> {
-    const [updatedValue] = await db
-      .update(productAttributeValues)
-      .set(valueData)
-      .where(eq(productAttributeValues.id, id))
-      .returning();
-    return updatedValue;
-  }
+  // Removed updateProductAttributeValue as part of centralized attribute system
   
-  async deleteProductAttributeValue(id: number): Promise<boolean> {
-    try {
-      await db
-        .delete(productAttributeValues)
-        .where(eq(productAttributeValues.id, id));
-      return true;
-    } catch (error) {
-      console.error(`Error deleting product attribute value ${id}:`, error);
-      throw error; // Rethrow so the route handler can catch it and send a proper error response
-    }
-  }
+  // Removed deleteProductAttributeValue as part of centralized attribute system
 
   // Attribute discount rules operations
-  async getAllAttributeDiscountRules(): Promise<AttributeDiscountRule[]> {
-    return await db
-      .select()
-      .from(attributeDiscountRules)
-      .orderBy(asc(attributeDiscountRules.name));
-  }
+  // Removed getAllAttributeDiscountRules as part of centralized attribute system
+  
+  // Removed getAttributeDiscountRulesByCategory as part of centralized attribute system
+  
+  // Removed getAttributeDiscountRulesByCatalog as part of centralized attribute system
+  
+  // Removed getAttributeDiscountRulesByAttribute as part of centralized attribute system
 
-  async getAttributeDiscountRule(id: number): Promise<AttributeDiscountRule | undefined> {
-    const [rule] = await db
-      .select()
-      .from(attributeDiscountRules)
-      .where(eq(attributeDiscountRules.id, id));
-    return rule;
-  }
-
-  async getAttributeDiscountRulesByProduct(productId: number): Promise<AttributeDiscountRule[]> {
-    const rules = await db
-      .select()
-      .from(attributeDiscountRules)
-      .where(
-        and(
-          eq(attributeDiscountRules.productId, productId),
-          eq(attributeDiscountRules.isActive, true)
-        )
-      )
-      .orderBy(asc(attributeDiscountRules.name));
-
-    return rules;
-  }
-
-  async getAttributeDiscountRulesByCategory(categoryId: number): Promise<AttributeDiscountRule[]> {
-    const rules = await db
-      .select()
-      .from(attributeDiscountRules)
-      .where(
-        and(
-          eq(attributeDiscountRules.categoryId, categoryId),
-          eq(attributeDiscountRules.isActive, true)
-        )
-      )
-      .orderBy(asc(attributeDiscountRules.name));
-
-    return rules;
-  }
-
-  async getAttributeDiscountRulesByCatalog(catalogId: number): Promise<AttributeDiscountRule[]> {
-    const rules = await db
-      .select()
-      .from(attributeDiscountRules)
-      .where(
-        and(
-          eq(attributeDiscountRules.catalogId, catalogId),
-          eq(attributeDiscountRules.isActive, true)
-        )
-      )
-      .orderBy(asc(attributeDiscountRules.name));
-
-    return rules;
-  }
-
-  async getAttributeDiscountRulesByAttribute(attributeId: number): Promise<AttributeDiscountRule[]> {
-    const rules = await db
-      .select()
-      .from(attributeDiscountRules)
-      .where(
-        and(
-          eq(attributeDiscountRules.attributeId, attributeId),
-          eq(attributeDiscountRules.isActive, true)
-        )
-      )
-      .orderBy(asc(attributeDiscountRules.name));
-
-    return rules;
-  }
-
-  async createAttributeDiscountRule(rule: InsertAttributeDiscountRule): Promise<AttributeDiscountRule> {
-    const [newRule] = await db
-      .insert(attributeDiscountRules)
-      .values(rule)
-      .returning();
-    return newRule;
-  }
-
-  async updateAttributeDiscountRule(id: number, ruleData: Partial<InsertAttributeDiscountRule>): Promise<AttributeDiscountRule | undefined> {
-    const [updatedRule] = await db
-      .update(attributeDiscountRules)
-      .set(ruleData)
-      .where(eq(attributeDiscountRules.id, id))
-      .returning();
-    return updatedRule;
-  }
+  // Removed createAttributeDiscountRule as part of centralized attribute system
 
   async deleteAttributeDiscountRule(id: number): Promise<boolean> {
     try {
