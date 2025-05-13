@@ -70,6 +70,12 @@ function GlobalAttributesPage() {
   const [selectedOption, setSelectedOption] = useState<AttributeOption | null>(null);
   const [confirmDeleteDialogOpen, setConfirmDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<{ type: 'attribute' | 'option', id: number } | null>(null);
+  const [attributeDialogOpen, setAttributeDialogOpen] = useState(false);
+  const [optionDialogOpen, setOptionDialogOpen] = useState(false);
+  const [optionMetadataDialogOpen, setOptionMetadataDialogOpen] = useState(false);
+  const [attributeFormMode, setAttributeFormMode] = useState<"create" | "edit">("create");
+  const [optionFormMode, setOptionFormMode] = useState<"create" | "edit">("create");
+  const [optionMetadata, setOptionMetadata] = useState<string>("");
 
   // Fetch global attributes
   const {
@@ -426,9 +432,11 @@ function GlobalAttributesPage() {
     }
   };
 
-  // Navigate to attribute creation page
+  // Show dialog to create a new attribute
   const handleNewAttribute = () => {
-    navigate("/admin/attributes/new");
+    setSelectedAttribute(null);
+    setAttributeFormMode("create");
+    setAttributeDialogOpen(true);
   };
 
   // Navigate to attribute edit page

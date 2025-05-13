@@ -137,12 +137,18 @@ function AttributeOptionEditorPage() {
   const updateOptionMutation = useMutation({
     mutationFn: async (updatedOption: Partial<AttributeOption> & { id: number }) => {
       const { id, ...data } = updatedOption;
+      // Fix the API endpoint URL by using attributeId in path params
       const response = await fetch(`/api/attributes/${attributeId}/options/${id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          value: data.value,
+          displayValue: data.displayValue || data.value,
+          metadata: data.metadata,
+          sortOrder: data.sortOrder || 0
+        }),
       });
 
       if (!response.ok) {
@@ -378,7 +384,7 @@ function AttributeOptionEditorPage() {
 
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-6">
-          <Button variant="outline" onClick={() => navigate("/admin/attributes")}>
+          <Button variant="outline" onClick={() => navigate("/admin/global-attributes")}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Attributes
           </Button>
