@@ -5,12 +5,12 @@
  * allowing the user to upload, manage, and organize product images.
  */
 
-import React, { useState, useCallback } from 'react';
-import { useProductWizard } from '../context';
+import React, { useState, useCallback, useEffect } from 'react';
+import { useProductWizardContext } from '../context';
 import { WizardActionType, UploadedImage } from '../types';
 import { useDropzone } from 'react-dropzone';
 import { Loader2, Plus, XCircle, StarIcon, Upload, ImageIcon, Trash2 } from 'lucide-react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 
@@ -161,28 +161,120 @@ const ensureValidImageUrl = (image: UploadedImage): string => {
 }
 
 export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className }) => {
-  const { state, dispatch } = useProductWizard();
+  const { state, dispatch } = useProductWizardContext();
   const { toast } = useToast();
   
   // Create a local state for the uploaded images
-  const [uploadedImages, setUploadedImages] = useState<any[]>([]);
+  const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [deleteImageId, setDeleteImageId] = useState<string | number | null>(null);
   const [isRemovingBackground, setIsRemovingBackground] = useState(false);
+  const [isLoadingExistingImages, setIsLoadingExistingImages] = useState(false);
   
-  // Initialize the uploadedImages from the imageUrls in the state
+  // Function to fetch images for an existing product
+  const fetchExistingProductImages = useCallback(async (productId: number) => {
+    if (!productId) return;
+    
+    setIsLoadingExistingImages(true);
+    
+    try {
+      const response = await fetch(`/api/products/${productId}/images`);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch product images: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      
+      if (result.success && Array.isArray(result.data)) {
+        console.log('Successfully fetched existing product images:', result.data);
+        
+        // Convert the API response to our UploadedImage format
+        const existingImages = result.data.map((image, index) => {
+          const newImage: UploadedImage = {
+            id: image.id || `existing-${index}`,
+            url: image.imageUrl || image.url || '',
+            objectKey: image.objectKey || '',
+            isMain: image.isMain || index === 0,
+            order: image.displayOrder || index,
+            metadata: {
+              size: image.size || 0,
+              width: image.width,
+              height: image.height,
+              backgroundRemoved: image.backgroundRemoved || false,
+              alt: image.altText || '',
+              processedAt: image.processedAt
+            }
+          };
+          return newImage;
+        });
+        
+        // Sort images by order/displayOrder
+        existingImages.sort((a, b) => a.order - b.order);
+        
+        // Find the main image index
+        const mainImageIndex = existingImages.findIndex(img => img.isMain);
+        
+        // If no main image is marked, use the first one
+        if (mainImageIndex === -1 && existingImages.length > 0) {
+          existingImages[0].isMain = true;
+        }
+        
+        // Update both local state and context
+        setUploadedImages(existingImages);
+        
+        // Extract URLs and objectKeys for the context
+        const imageUrls = existingImages.map(img => img.url);
+        const imageObjectKeys = existingImages.map(img => img.objectKey || '');
+        
+        // Update the context state with these images
+        dispatch({ type: 'SET_FIELD', field: 'imageUrls', value: imageUrls });
+        dispatch({ type: 'SET_FIELD', field: 'imageObjectKeys', value: imageObjectKeys });
+        dispatch({ 
+          type: 'SET_FIELD', 
+          field: 'mainImageIndex', 
+          value: Math.max(0, mainImageIndex)
+        });
+        
+        console.log('Updated context with fetched images:', {
+          imageUrls,
+          imageObjectKeys,
+          mainImageIndex: Math.max(0, mainImageIndex)
+        });
+      } else {
+        throw new Error('Invalid server response format');
+      }
+    } catch (error) {
+      console.error('Error fetching product images:', error);
+      toast({
+        title: "Failed to load product images",
+        description: error instanceof Error ? error.message : "There was an unexpected error loading images",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoadingExistingImages(false);
+    }
+  }, [dispatch, toast]);
+  
+  // Initialize images - either from state or by fetching for existing products
   useEffect(() => {
-    const imageUrls = state.imageUrls || [];
-    const imageObjectKeys = state.imageObjectKeys || [];
-    const mainImageIndex = state.mainImageIndex || 0;
-    
-    console.log('Initializing uploaded images from state:', {
-      imageUrls,
-      imageObjectKeys,
-      mainImageIndex
-    });
-    
-    if (imageUrls.length > 0) {
+    // If product ID exists, fetch images from the API directly
+    if (state.productId) {
+      console.log('Product is in edit mode, fetching images for product ID:', state.productId);
+      fetchExistingProductImages(state.productId);
+    } 
+    // Otherwise, initialize from context state if available
+    else if (state.imageUrls && state.imageUrls.length > 0) {
+      const imageUrls = state.imageUrls || [];
+      const imageObjectKeys = state.imageObjectKeys || [];
+      const mainImageIndex = state.mainImageIndex || 0;
+      
+      console.log('Initializing uploaded images from state for new product:', {
+        imageUrls,
+        imageObjectKeys,
+        mainImageIndex
+      });
+      
       // Convert the imageUrls and imageObjectKeys to uploadedImages format
       const newUploadedImages = imageUrls.map((url, index) => ({
         id: `existing-${index}`,
@@ -192,14 +284,16 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className 
         order: index,
         metadata: {
           size: 0,
-          originalname: url.split('/').pop() || 'image'
+          width: 0,
+          height: 0,
+          backgroundRemoved: false,
+          alt: url.split('/').pop() || 'image'
         }
       }));
       
       setUploadedImages(newUploadedImages);
-      console.log('Set uploaded images to:', newUploadedImages);
     }
-  }, [state.imageUrls, state.imageObjectKeys, state.mainImageIndex]);
+  }, [state.productId, state.imageUrls, state.imageObjectKeys, state.mainImageIndex, fetchExistingProductImages]);
   
   // Image upload handler
   const handleImageUpload = useCallback(async (acceptedFiles: File[]) => {
@@ -209,15 +303,15 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className 
     
     try {
       // Check if this is the first upload (no existing images)
-      const isFirstUpload = productData.uploadedImages.length === 0;
-      let startingOrder = productData.uploadedImages.length;
+      const isFirstUpload = uploadedImages.length === 0;
+      let startingOrder = uploadedImages.length;
       
       // Create form data for batch upload
       const formData = new FormData();
       
       // Append productId if we already have one (editing mode)
-      if (productData.id) {
-        formData.append('productId', productData.id.toString());
+      if (state.productId) {
+        formData.append('productId', state.productId.toString());
       }
       
       // Append each file to the form data
@@ -228,8 +322,8 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className 
       // Determine the correct endpoint
       // For new products, use the temp upload endpoint
       // For existing products, use the product-specific endpoint
-      const endpoint = productData.id 
-        ? `/api/upload/products/${productData.id}/images` 
+      const endpoint = state.productId 
+        ? `/api/upload/products/${state.productId}/images` 
         : '/api/upload/products/images/temp';
       
       console.log('Uploading images to endpoint:', endpoint);
