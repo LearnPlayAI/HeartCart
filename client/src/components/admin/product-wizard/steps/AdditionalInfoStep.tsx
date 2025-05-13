@@ -60,7 +60,7 @@ const additionalInfoSchema = z.object({
 
   // Product details
   supplier: z.string().optional(),
-  attributeValues: z.array(z.any()).optional(), // For attribute-based pricing, weight, dimensions
+  attributeValues: z.array(z.any()).optional(), // For attribute metadata like weight, dimensions
   weight: z.coerce.number().min(0).nullable().optional(),
   dimensions: z.string().optional(),
   
@@ -124,7 +124,7 @@ export function AdditionalInfoStep() {
     return [];
   }, [globalAttributesData]);
   
-  // Format attributes for our pricing component
+  // Format attributes for our attribute configuration component
   const [formattedAttributes, setFormattedAttributes] = useState<ProductAttribute[]>([]);
   const [attributeValues, setAttributeValues] = useState<AttributeValue[]>([]);
   
@@ -183,7 +183,7 @@ export function AdditionalInfoStep() {
     }
   }, [state.attributes]);
 
-  // Format available product attributes for our pricing component
+  // Format available product attributes for our attribute configuration component
   useEffect(() => {
     if (globalAttributesData?.data && globalAttributesData.data.length > 0) {
       // Convert global attributes to the format expected by AttributePricingConfig
