@@ -82,6 +82,7 @@ function GlobalAttributesPage() {
     data: attributesResponse,
     isLoading: attributesLoading,
     error: attributesError,
+    refetch: refetchAttributes
   } = useQuery({
     queryKey: ["/api/attributes"],
     retry: 1,
@@ -97,6 +98,7 @@ function GlobalAttributesPage() {
     data: optionsResponse,
     isLoading: optionsLoading,
     error: optionsError,
+    refetch: refetchOptions
   } = useQuery({
     queryKey: ["/api/attributes", selectedAttribute?.id, "options"],
     enabled: !!selectedAttribute?.id,
@@ -257,10 +259,20 @@ function GlobalAttributesPage() {
       return await response.json();
     },
     onSuccess: () => {
+      // Invalidate both options and attributes
       queryClient.invalidateQueries({ 
         queryKey: ["/api/attributes", selectedAttribute?.id, "options"] 
       });
+      queryClient.invalidateQueries({ 
+        queryKey: ["/api/attributes"] 
+      });
       setOptionDialogOpen(false);
+      
+      // Explicitly refetch options to ensure UI updates
+      if (selectedAttribute) {
+        refetchOptions();
+      }
+      
       toast({
         title: "Option created successfully",
         variant: "default",
@@ -362,6 +374,11 @@ function GlobalAttributesPage() {
           );
         }
       });
+      
+      // Explicitly refetch options to ensure UI is updated immediately
+      if (selectedAttribute) {
+        refetchOptions();
+      }
       
       setConfirmDeleteDialogOpen(false);
       setItemToDelete(null);
