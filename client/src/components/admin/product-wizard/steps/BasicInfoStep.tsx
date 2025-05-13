@@ -438,7 +438,7 @@ export function BasicInfoStep() {
                               type="button"
                               variant="outline"
                               size="icon"
-                              className="h-8 w-8"
+                              className="h-8 w-8 border-[#E5E7EB] hover:bg-[#FFE6F0] hover:text-[#FF69B4] hover:border-[#FF69B4]"
                               onClick={() => adjustMarkup(-5)}
                             >
                               <MinusCircleIcon className="h-4 w-4" />
@@ -448,25 +448,25 @@ export function BasicInfoStep() {
                                 type="number"
                                 min="0"
                                 step="1"
-                                className="pr-7"
+                                className="pr-7 border-[#E5E7EB] focus-visible:ring-[#FF69B4]"
                                 placeholder="0"
                                 {...field}
                                 onChange={handleMarkupChange}
                               />
-                              <span className="absolute right-3 top-2.5">%</span>
+                              <span className="absolute right-3 top-2.5 text-[#777777]">%</span>
                             </div>
                             <Button
                               type="button"
                               variant="outline"
                               size="icon"
-                              className="h-8 w-8"
+                              className="h-8 w-8 border-[#E5E7EB] hover:bg-[#FFE6F0] hover:text-[#FF69B4] hover:border-[#FF69B4]"
                               onClick={() => adjustMarkup(5)}
                             >
                               <PlusCircleIcon className="h-4 w-4" />
                             </Button>
                           </div>
                         </FormControl>
-                        <FormDescription>
+                        <FormDescription className="text-[#777777]">
                           Percentage added to cost price
                         </FormDescription>
                         <FormMessage />
@@ -480,21 +480,21 @@ export function BasicInfoStep() {
                     name="regularPrice"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="flex">Regular Price <span className="text-red-500 ml-1">*</span></FormLabel>
+                        <FormLabel className="flex">Regular Price <span className="text-[#FF6B6B] ml-1">*</span></FormLabel>
                         <FormControl>
                           <div className="relative">
-                            <span className="absolute left-3 top-2.5">R</span>
+                            <span className="absolute left-3 top-2.5 text-[#777777]">R</span>
                             <Input
                               type="number"
                               min="0"
                               step="0.01"
-                              className="pl-7"
+                              className="pl-7 border-[#E5E7EB] focus-visible:ring-[#FF69B4]"
                               placeholder="0.00"
                               {...field}
                             />
                           </div>
                         </FormControl>
-                        <FormDescription>
+                        <FormDescription className="text-[#777777]">
                           The standard selling price
                         </FormDescription>
                         <FormMessage />
@@ -518,6 +518,7 @@ export function BasicInfoStep() {
                           <Switch
                             checked={field.value}
                             onCheckedChange={handleSaleToggle}
+                            className="data-[state=checked]:bg-[#FF69B4]"
                           />
                         </FormControl>
                       </FormItem>
@@ -531,21 +532,21 @@ export function BasicInfoStep() {
                       name="salePrice"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="flex">Sale Price <span className="text-red-500 ml-1">*</span></FormLabel>
+                          <FormLabel className="flex">Sale Price <span className="text-[#FF6B6B] ml-1">*</span></FormLabel>
                           <FormControl>
                             <div className="relative">
-                              <span className="absolute left-3 top-2.5">R</span>
+                              <span className="absolute left-3 top-2.5 text-[#777777]">R</span>
                               <Input
                                 type="number"
                                 min="0"
                                 step="0.01"
-                                className="pl-7"
+                                className="pl-7 border-[#E5E7EB] focus-visible:ring-[#FF69B4]"
                                 placeholder="0.00"
                                 {...field}
                               />
                             </div>
                           </FormControl>
-                          <FormDescription>
+                          <FormDescription className="text-[#777777]">
                             The discounted selling price
                           </FormDescription>
                           <FormMessage />
