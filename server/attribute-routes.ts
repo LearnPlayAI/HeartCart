@@ -54,6 +54,11 @@ const attributeSchema = z.object({
 // Get all attribute definitions
 router.get('/definitions', asyncHandler(async (req: Request, res: Response) => {
   try {
+    // Add cache control headers to ensure clients always get fresh data
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    
     const attributes = await storage.getAllAttributes();
     sendSuccess(res, attributes);
   } catch (error) {
@@ -65,6 +70,11 @@ router.get('/definitions', asyncHandler(async (req: Request, res: Response) => {
 router.get('/available', asyncHandler(async (req: Request, res: Response) => {
   try {
     const categoryId = req.query.categoryId ? parseInt(req.query.categoryId as string) : undefined;
+    
+    // Add cache control headers to ensure clients always get fresh data
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     
     if (categoryId) {
       // If category ID is provided, get attributes for that category
