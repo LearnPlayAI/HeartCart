@@ -61,16 +61,8 @@ export function WizardNavigation({ onComplete }: WizardNavigationProps) {
   
   // Handle clicking on a step
   const handleStepClick = (step: WizardStep) => {
-    // Only allow navigation to steps that are complete or the current one
-    const currentStepIndex = steps.findIndex(s => s.id === state.currentStep);
-    const targetStepIndex = steps.findIndex(s => s.id === step);
-    
-    // Check current step validation before allowing to move forward
-    if (targetStepIndex > currentStepIndex) {
-      const isValid = validateCurrentStep();
-      if (!isValid) return;
-    }
-    
+    // Allow navigation to any step, regardless of validation status
+    // This enables jumping directly to any wizard step as requested by the user
     setCurrentStep(step);
   };
   
@@ -107,7 +99,8 @@ export function WizardNavigation({ onComplete }: WizardNavigationProps) {
         <TooltipProvider>
           {steps.map((step, index) => {
             const status = getStepStatus(step.id);
-            const isClickable = status !== 'upcoming';
+            // Make all steps clickable, regardless of status
+            const isClickable = true;
             
             return (
               <div key={step.id} className="flex items-center">

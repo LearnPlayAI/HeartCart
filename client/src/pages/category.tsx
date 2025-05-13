@@ -45,10 +45,13 @@ const CategoryPage = () => {
     enabled: !!slug,
   });
   
-  const { data: products, isLoading: isLoadingProducts } = useQuery<Product[]>({
+  const { data: productsResponse, isLoading: isLoadingProducts } = useQuery<StandardApiResponse<Product[]>>({
     queryKey: [`/api/products/category/${category?.id}`],
     enabled: !!category?.id,
   });
+  
+  // Extract the products from the standardized response
+  const products = productsResponse?.data || [];
   
   // Fetch all categories for the sidebar
   const { data: categories } = useQuery<Category[]>({
