@@ -14,39 +14,6 @@ import { logger } from './logger';
 
 const router = Router();
 
-// Mock data for product attributes - will use real database values in the future
-const mockProductAttributes = [
-  {
-    id: 1,
-    name: 'Size',
-    displayName: 'Size',
-    type: 'select',
-    isRequired: true,
-    options: [
-      { id: 1, value: 'S', displayValue: 'Small' },
-      { id: 2, value: 'M', displayValue: 'Medium' },
-      { id: 3, value: 'L', displayValue: 'Large' },
-      { id: 4, value: 'XL', displayValue: 'Extra Large' }
-    ],
-    categoryId: 7,
-    sortOrder: 1
-  },
-  {
-    id: 2,
-    name: 'Color',
-    displayName: 'Color',
-    type: 'select',
-    isRequired: true,
-    options: [
-      { id: 5, value: 'PINK', displayValue: 'Pink' },
-      { id: 6, value: 'BLUE', displayValue: 'Blue' },
-      { id: 7, value: 'WHITE', displayValue: 'White' }
-    ],
-    categoryId: 7,
-    sortOrder: 2
-  }
-];
-
 // Get attributes for a specific product
 router.get('/product/:productId/attributes', asyncHandler(async (req: Request, res: Response) => {
   try {
@@ -70,14 +37,49 @@ router.get('/product/:productId/attributes', asyncHandler(async (req: Request, r
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
     
-    // In a real implementation, we would query the database for attributes based on product and category
-    // For now, if the product belongs to category 7 (Bedding), return the mock data
-    if (product.categoryId === 7) {
-      sendSuccess(res, mockProductAttributes);
-    } else {
-      // Otherwise return empty array
-      sendSuccess(res, []);
+    // Get all product attributes from the database
+    const productAttributes = await storage.getProductAttributes(productId);
+    
+    // Format the response to match the expected structure
+    const formattedAttributes = [];
+    
+    // Group by attribute and collect options
+    const attributeGroups = {};
+    
+    for (const prodAttr of productAttributes) {
+      const attributeId = prodAttr.attribute.id;
+      
+      if (!attributeGroups[attributeId]) {
+        attributeGroups[attributeId] = {
+          id: prodAttr.attribute.id,
+          name: prodAttr.attribute.name,
+          displayName: prodAttr.attribute.displayName,
+          type: prodAttr.attribute.attributeType,
+          isRequired: prodAttr.attribute.isRequired,
+          options: [],
+          categoryId: product.categoryId,
+          sortOrder: prodAttr.attribute.sortOrder || 0
+        };
+      }
+      
+      // Get options for this attribute
+      if (!attributeGroups[attributeId].optionsLoaded) {
+        const options = await storage.getAttributeOptions(attributeId);
+        if (options && options.length > 0) {
+          attributeGroups[attributeId].options = options.map(opt => ({
+            id: opt.id,
+            value: opt.value,
+            displayValue: opt.displayValue || opt.value
+          }));
+          attributeGroups[attributeId].optionsLoaded = true;
+        }
+      }
     }
+    
+    // Convert attribute groups to array
+    const result = Object.values(attributeGroups);
+    
+    sendSuccess(res, result);
   } catch (error) {
     logger.error('Failed to retrieve product attributes', { error, path: req.path });
     sendError(res, 'Failed to retrieve product attributes', 500);
@@ -105,16 +107,18 @@ router.get('/product/:productId/attribute-values', asyncHandler(async (req: Requ
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
     
-    // In a real implementation, we would query the database for attribute values
-    // For now, return mock values for the Bedding category
-    if (product.categoryId === 7) {
-      sendSuccess(res, [
-        { productId, attributeId: 1, attributeOptionId: 2, valueText: null }, // Medium size
-        { productId, attributeId: 2, attributeOptionId: 5, valueText: null }  // Pink color
-      ]);
-    } else {
-      sendSuccess(res, []);
-    }
+    // Get attribute values from the database
+    const productAttributeValues = await storage.getProductAttributeValues(productId);
+    
+    // Format the response
+    const formattedAttributeValues = productAttributeValues.map(attrValue => ({
+      productId,
+      attributeId: attrValue.attributeId,
+      attributeOptionId: attrValue.attributeOptionId,
+      valueText: attrValue.valueText || null
+    }));
+    
+    sendSuccess(res, formattedAttributeValues);
   } catch (error) {
     logger.error('Failed to retrieve product attribute values', { error, path: req.path });
     sendError(res, 'Failed to retrieve product attribute values', 500);
