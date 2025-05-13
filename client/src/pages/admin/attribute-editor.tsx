@@ -28,6 +28,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Attribute, ATTRIBUTE_TYPES } from "@/types/attribute-types";
+// Debug
+console.log("Attribute Types:", ATTRIBUTE_TYPES);
 
 function AttributeEditorPage() {
   const { toast } = useToast();
@@ -302,11 +304,20 @@ function AttributeEditorPage() {
                     <SelectValue placeholder="Select attribute type" />
                   </SelectTrigger>
                   <SelectContent>
-                    {ATTRIBUTE_TYPES.map(type => (
-                      <SelectItem key={type} value={type}>
-                        {type.charAt(0).toUpperCase() + type.slice(1)}
-                      </SelectItem>
-                    ))}
+                    {Array.isArray(ATTRIBUTE_TYPES) && ATTRIBUTE_TYPES.length > 0 ? (
+                      ATTRIBUTE_TYPES.map(type => (
+                        <SelectItem key={type} value={type}>
+                          {type.charAt(0).toUpperCase() + type.slice(1)}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      // Fallback if ATTRIBUTE_TYPES is not available
+                      ["text", "number", "select", "color", "size", "date", "boolean"].map(type => (
+                        <SelectItem key={type} value={type}>
+                          {type.charAt(0).toUpperCase() + type.slice(1)}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
                 {!isNewAttribute && (
