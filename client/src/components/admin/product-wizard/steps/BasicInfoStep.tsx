@@ -52,8 +52,9 @@ export function BasicInfoStep() {
   });
   
   // Extract categories from the API response (handles the success response format {data: [...categories]})
+  // Filter to only show ACTIVE categories
   const categoriesList = categoriesResponse && categoriesResponse.data && Array.isArray(categoriesResponse.data) 
-    ? categoriesResponse.data 
+    ? categoriesResponse.data.filter((category: any) => category.isActive === true)
     : [];
   
   // Initialize form with values from context
@@ -559,25 +560,25 @@ export function BasicInfoStep() {
                       <div className="space-y-1 text-sm">
                         <div className="flex justify-between">
                           <span>Cost Price:</span>
-                          <span>R{watchCostPrice.toFixed(2)}</span>
+                          <span>R{(parseFloat(watchCostPrice) || 0).toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span>Markup ({watchMarkupPercentage}%):</span>
-                          <span>R{(watchCostPrice * (watchMarkupPercentage / 100)).toFixed(2)}</span>
+                          <span>Markup ({watchMarkupPercentage || 0}%):</span>
+                          <span>R{((parseFloat(watchCostPrice) || 0) * ((parseFloat(watchMarkupPercentage) || 0) / 100)).toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between font-medium">
                           <span>Regular Price:</span>
-                          <span>R{form.getValues('regularPrice').toFixed(2)}</span>
+                          <span>R{parseFloat(form.getValues('regularPrice') || 0).toFixed(2)}</span>
                         </div>
                         {watchOnSale && (
                           <>
                             <div className="flex justify-between text-destructive">
                               <span>Discount:</span>
-                              <span>-{Math.round((1 - (form.getValues('salePrice') / form.getValues('regularPrice'))) * 100)}%</span>
+                              <span>-{Math.round((1 - (parseFloat(form.getValues('salePrice') || 0) / parseFloat(form.getValues('regularPrice') || 1))) * 100)}%</span>
                             </div>
                             <div className="flex justify-between font-medium">
                               <span>Sale Price:</span>
-                              <span>R{form.getValues('salePrice').toFixed(2)}</span>
+                              <span>R{parseFloat(form.getValues('salePrice') || 0).toFixed(2)}</span>
                             </div>
                           </>
                         )}
