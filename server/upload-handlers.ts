@@ -2,7 +2,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import multer from 'multer';
 import sharp from 'sharp';
 import path from 'path';
-import { objectStore, STORAGE_FOLDERS } from './object-store';
+import { objectStorageService as objectStore, STORAGE_FOLDERS } from './objectstore';
 
 const router = express.Router();
 
@@ -158,10 +158,10 @@ router.post('/products/:productId/images', upload.array('images', 10), async (re
       const filename = `${timestamp}_${randomString}_${sanitizedName}`;
       
       // Upload directly to product folder
-      const { url, objectKey } = await objectStore.uploadProductFile(
+      const { url, objectKey } = await objectStore.uploadProductImage(
+        productId,
         buffer,
         filename,
-        productId,
         mimetype
       );
       

@@ -155,14 +155,30 @@ export function ReviewAndSaveStep() {
                 });
                 
                 if (!moveResponse.ok) {
-                  console.error('Failed to move image:', await moveResponse.json());
+                  const errorData = await moveResponse.json();
+                  console.error('Failed to move image:', errorData);
+                  // We don't throw here to continue with other images
+                  // But we add a note to the UI about partial success
+                  setSavingError(prev => 
+                    prev ? `${prev}. Some images may not have been properly saved.` : 
+                    'Some images may not have been properly saved. Product data was saved successfully.'
+                  );
                 }
               } catch (moveError) {
                 console.error('Error moving image:', moveError);
+                // Add error feedback but continue with other images
+                setSavingError(prev => 
+                  prev ? `${prev}. Error moving some images.` : 
+                  'Error moving some images. Product data was saved successfully.'
+                );
               }
             }));
           } catch (imageError) {
             console.error('Error processing images:', imageError);
+            setSavingError(prev => 
+              prev ? `${prev}. Error processing images.` : 
+              'Error processing images. Product data was saved successfully but images could not be processed.'
+            );
           }
         }
         
