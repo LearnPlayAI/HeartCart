@@ -3,70 +3,63 @@
 @tailwind utilities;
 
 :root {
-  /* New color palette for TeeMeYou */
-  --background: 210 33% 98%; /* Neutral #F8F9FA */
-  --foreground: 0 0% 20%; /* Neutral-dark #333333 */
-  --muted: 210 33% 98%; /* Neutral background */
-  --muted-foreground: 0 0% 40%;
+  --background: 0 0% 88%; /* Soft Gray #E0E0E0 */
+  --foreground: 20 14.3% 4.1%;
+  --muted: 0 0% 88%; /* Soft Gray background */
+  --muted-foreground: 25 5.3% 44.7%;
   --popover: 0 0% 100%;
-  --popover-foreground: 0 0% 20%;
+  --popover-foreground: 20 14.3% 4.1%;
   --card: 0 0% 100%;
-  --card-foreground: 0 0% 20%;
-  --border: 0 0% 90%;
-  --input: 0 0% 90%;
-  --primary: 330 100% 71%; /* Hot Pink #FF69B4 */
-  --primary-foreground: 0 0% 100%;
-  --secondary: 153 50% 47%; /* Soft Mint #A8E6CF */
-  --secondary-foreground: 0 0% 20%;
-  --accent: 330 100% 92%; /* Primary Light #FFE6F0 */
-  --accent-foreground: 330 100% 40%;
-  --destructive: 0 83% 70%; /* Error #FF6B6B */
-  --destructive-foreground: 0 0% 100%;
-  --success: 122 39% 49%; /* Success #4CAF50 */
-  --success-foreground: 0 0% 100%;
-  --ring: 330 100% 71%;
+  --card-foreground: 20 14.3% 4.1%;
+  --border: 20 5.9% 90%;
+  --input: 20 5.9% 90%;
+  --primary: 330 100% 71%; /* Hot Pink #FF1493 */
+  --primary-foreground: 211 100% 99%;
+  --secondary: 181 100% 41%; /* Teal #00CED1 */
+  --secondary-foreground: 0 0% 100%;
+  --accent: 180 100% 25%; /* Darker Teal #008080 */
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 60 9.1% 97.8%;
+  --ring: 20 14.3% 4.1%;
   --radius: 0.5rem;
   
-  /* Direct color variables */
-  --primary-color: #FF69B4; /* Hot Pink (Base) */
-  --primary-light: #FFE6F0; /* Light shade for form backgrounds */
-  --primary-dark: #D94C97; /* Darker for hover/active states */
-  --neutral: #F8F9FA; /* Background/base color */
-  --neutral-dark: #333333; /* Border/text color */
-  --accent-color: #A8E6CF; /* Soft Mint for contrast */
-  --error: #FF6B6B; /* Form validation error */
-  --success-color: #4CAF50; /* Success messages */
+  /* Custom colors for TEE ME YOU */
+  --hotpink: 330, 100%, 71%; /* Hot Pink #FF1493 */
+  --lightpink: 330, 100%, 81%; /* Lighter Hot Pink */
+  --darkpink: 330, 100%, 61%; /* Darker Hot Pink */
+  --teal: 180, 100%, 25%; /* Teal #008080 */
+  --aqua: 181, 100%, 41%; /* Aqua #00CED1 */
+  --softgray: 0, 0%, 88%; /* Soft Gray #E0E0E0 */
   
   /* Chart colors */
-  --chart-1: 330, 100%, 71%; /* Hot Pink */
-  --chart-2: 153, 50%, 47%; /* Soft Mint */
-  --chart-3: 199, 89%, 54%; /* Blue */
-  --chart-4: 41, 100%, 59%; /* Yellow */
-  --chart-5: 120, 100%, 33%; /* Green */
+  --chart-1: var(--hotpink);
+  --chart-2: var(--teal);
+  --chart-3: 199, 89%, 54%;
+  --chart-4: 41, 100%, 59%;
+  --chart-5: 120, 100%, 33%;
 }
 
 .dark {
-  --background: 0 0% 10%; /* Dark background */
-  --foreground: 0 0% 98%; /* Light text */
-  --muted: 0 0% 15%;
-  --muted-foreground: 0 0% 80%;
-  --popover: 0 0% 12%;
+  --background: 240 10% 3.9%;
+  --foreground: 0 0% 98%;
+  --muted: 240 3.7% 15.9%;
+  --muted-foreground: 240 5% 64.9%;
+  --popover: 240 10% 3.9%;
   --popover-foreground: 0 0% 98%;
-  --card: 0 0% 12%;
+  --card: 240 10% 3.9%;
   --card-foreground: 0 0% 98%;
-  --border: 0 0% 20%;
-  --input: 0 0% 20%;
-  --primary: 330 100% 71%; /* Hot Pink #FF69B4 */
-  --primary-foreground: 0 0% 100%;
-  --secondary: 153 50% 47%; /* Soft Mint #A8E6CF */
-  --secondary-foreground: 0 0% 20%;
-  --accent: 330 100% 92%; /* Primary Light #FFE6F0 */
-  --accent-foreground: 330 100% 40%;
-  --destructive: 0 83% 70%; /* Error #FF6B6B */
-  --destructive-foreground: 0 0% 100%;
-  --success: 122 39% 49%; /* Success #4CAF50 */
-  --success-foreground: 0 0% 100%;
-  --ring: 330 100% 71%;
+  --border: 240 3.7% 15.9%;
+  --input: 240 3.7% 15.9%;
+  --primary: 330 100% 71%; /* Hot Pink #FF1493 */
+  --primary-foreground: 211 100% 99%;
+  --secondary: 181 100% 41%; /* Teal #00CED1 */
+  --secondary-foreground: 0 0% 98%;
+  --accent: 180 100% 25%; /* Darker Teal #008080 */
+  --accent-foreground: 0 0% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 0 0% 98%;
+  --ring: 240 4.9% 83.9%;
   --radius: 0.5rem;
 }
 
@@ -149,11 +142,11 @@
   
   /* Product Wizard Styles */
   .wizard-step {
-    @apply border border-[#E5E7EB] rounded-lg p-6 bg-white shadow-sm;
+    @apply border border-gray-200 rounded-lg p-6 bg-white shadow-sm;
   }
   
   .wizard-step-header {
-    @apply text-xl font-bold mb-4 text-[#FF69B4];
+    @apply text-xl font-bold mb-4 text-primary;
   }
   
   .wizard-buttons {
@@ -161,15 +154,15 @@
   }
   
   .wizard-button-back {
-    @apply bg-white text-[#333333] border border-[#E5E7EB] hover:bg-[#F8F9FA] transition-colors;
+    @apply bg-white text-gray-600 border border-gray-300 hover:bg-gray-50;
   }
   
   .wizard-button-next {
-    @apply bg-[#FF69B4] text-white hover:bg-[#D94C97] transition-colors;
+    @apply bg-primary text-white hover:bg-[#FF1493];
   }
   
   .wizard-button-submit {
-    @apply bg-[#4CAF50] text-white hover:bg-[#3d9140] transition-colors;
+    @apply bg-accent text-white hover:bg-[#008080];
   }
   
   .wizard-stepnav {
@@ -181,23 +174,19 @@
   }
   
   .wizard-stepnav-number {
-    @apply w-8 h-8 rounded-full flex items-center justify-center text-sm transition-colors;
+    @apply w-8 h-8 rounded-full flex items-center justify-center text-sm;
   }
   
   .wizard-stepnav-number.active {
-    @apply bg-[#FF69B4] text-white;
+    @apply bg-primary text-white;
   }
   
   .wizard-stepnav-number.completed {
-    @apply bg-[#A8E6CF] text-[#333333];
-  }
-  
-  .wizard-stepnav-number.error {
-    @apply bg-[#FF6B6B] text-white;
+    @apply bg-secondary text-white;
   }
   
   .wizard-stepnav-number.incomplete {
-    @apply bg-[#F1F1F1] text-[#777777];
+    @apply bg-gray-200 text-gray-600;
   }
   
   .wizard-stepnav-label {
@@ -205,19 +194,19 @@
   }
   
   .wizard-stepnav-line {
-    @apply flex-1 h-0.5 self-center mx-2 transition-colors;
+    @apply flex-1 h-0.5 self-center mx-2;
   }
   
   .wizard-stepnav-line.active {
-    @apply bg-[#FF69B4];
+    @apply bg-primary;
   }
   
   .wizard-stepnav-line.completed {
-    @apply bg-[#A8E6CF];
+    @apply bg-secondary;
   }
   
   .wizard-stepnav-line.incomplete {
-    @apply bg-[#F1F1F1];
+    @apply bg-gray-200;
   }
   
   .image-dropzone {
@@ -225,11 +214,11 @@
   }
   
   .image-dropzone.active {
-    @apply border-[#FF69B4] bg-[#FFE6F0];
+    @apply border-primary bg-primary/10;
   }
   
   .image-dropzone:hover {
-    @apply border-[#FF69B4] bg-[#FFE6F0]/50;
+    @apply border-primary/70 bg-primary/5;
   }
   
   .image-preview-container {
@@ -237,27 +226,10 @@
   }
   
   .image-preview-item {
-    @apply relative rounded-lg overflow-hidden border border-[#E5E7EB] group;
+    @apply relative rounded-lg overflow-hidden border border-gray-200 group;
   }
   
   .image-preview-overlay {
     @apply absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2;
-  }
-  
-  /* Form validation styles */
-  .field-error-message {
-    @apply text-[#FF6B6B] text-sm mt-1;
-  }
-  
-  .success-message {
-    @apply text-[#4CAF50] flex items-center gap-1;
-  }
-  
-  .form-group-title {
-    @apply text-lg font-medium text-[#333333] mb-2;
-  }
-  
-  .form-group {
-    @apply border border-[#E5E7EB] rounded-md p-4 bg-[#F8F9FA];
   }
 }

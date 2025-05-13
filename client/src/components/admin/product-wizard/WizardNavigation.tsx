@@ -139,7 +139,7 @@ export function WizardNavigation({ onComplete }: WizardNavigationProps) {
                             : status === 'complete' 
                             ? 'completed' 
                             : status === 'error'
-                            ? 'error'
+                            ? 'bg-destructive/10 text-destructive border border-destructive'
                             : 'incomplete'
                         }`}
                       >
@@ -148,27 +148,17 @@ export function WizardNavigation({ onComplete }: WizardNavigationProps) {
                       <span 
                         className={`wizard-stepnav-label ${
                           status === 'current' 
-                            ? 'text-[#FF69B4]'
+                            ? 'text-primary'
                             : status === 'error'
-                            ? 'text-[#FF6B6B]'
-                            : status === 'complete'
-                            ? 'text-[#333333]'
-                            : 'text-[#777777]'
+                            ? 'text-destructive'
+                            : 'text-muted-foreground'
                         }`}
                       >
                         {step.label}
                       </span>
                     </button>
                   </TooltipTrigger>
-                  <TooltipContent className={
-                    status === 'error' 
-                      ? 'bg-[#FFE6E6] text-[#FF6B6B] border border-[#FF6B6B]'
-                      : status === 'complete' 
-                      ? 'bg-[#E6F9E6] text-[#4CAF50] border border-[#4CAF50]' 
-                      : status === 'current'
-                      ? 'bg-[#FFE6F0] text-[#FF69B4] border border-[#FF69B4]'
-                      : 'bg-[#F8F9FA] text-[#777777] border border-[#E5E7EB]'
-                  }>
+                  <TooltipContent>
                     {status === 'error' 
                       ? 'Step has validation errors'
                       : status === 'complete' 

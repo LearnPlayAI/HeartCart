@@ -192,13 +192,13 @@ export function BasicInfoStep() {
   
   return (
     <div className="wizard-step">
-      <h3 className="text-2xl font-semibold mb-4 text-[#FF69B4]">Basic Product Information</h3>
-      <Card className="bg-white border border-[#E5E7EB] shadow-sm">
+      <h3 className="wizard-step-header">Basic Product Information</h3>
+      <Card className="bg-white border-gray-200">
         <CardContent className="pt-6">
           <Tabs defaultValue="general" className="w-full">
             <TabsList className="mb-4">
-              <TabsTrigger value="general" className="data-[state=active]:bg-[#FF69B4] data-[state=active]:text-white">General Info</TabsTrigger>
-              <TabsTrigger value="pricing" className="data-[state=active]:bg-[#FF69B4] data-[state=active]:text-white">Pricing</TabsTrigger>
+              <TabsTrigger value="general" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">General Info</TabsTrigger>
+              <TabsTrigger value="pricing" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Pricing</TabsTrigger>
             </TabsList>
             
             <Form {...form}>
@@ -210,7 +210,7 @@ export function BasicInfoStep() {
                     name="name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="flex">Product Name <span className="text-[#FF6B6B] ml-1">*</span></FormLabel>
+                        <FormLabel className="flex">Product Name <span className="text-red-500 ml-1">*</span></FormLabel>
                         <FormControl>
                           <Input
                             placeholder="Enter product name"
@@ -229,15 +229,14 @@ export function BasicInfoStep() {
                     name="slug"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="flex">URL Slug <span className="text-[#FF6B6B] ml-1">*</span></FormLabel>
+                        <FormLabel className="flex">URL Slug <span className="text-red-500 ml-1">*</span></FormLabel>
                         <FormControl>
                           <Input
                             placeholder="product-url-slug"
-                            className="border-[#E5E7EB] focus-visible:ring-[#FF69B4]"
                             {...field}
                           />
                         </FormControl>
-                        <FormDescription className="text-[#777777]">
+                        <FormDescription>
                           The URL-friendly identifier for this product
                         </FormDescription>
                         <FormMessage />
@@ -251,15 +250,14 @@ export function BasicInfoStep() {
                     name="sku"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="flex">SKU <span className="text-[#FF6B6B] ml-1">*</span></FormLabel>
+                        <FormLabel className="flex">SKU <span className="text-red-500 ml-1">*</span></FormLabel>
                         <FormControl>
                           <Input
                             placeholder="PROD123"
-                            className="border-[#E5E7EB] focus-visible:ring-[#FF69B4]"
                             {...field}
                           />
                         </FormControl>
-                        <FormDescription className="text-[#777777]">
+                        <FormDescription>
                           Stock Keeping Unit - unique identifier for inventory
                         </FormDescription>
                         <FormMessage />
@@ -274,18 +272,14 @@ export function BasicInfoStep() {
                       name="brand"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-[#333333]">Brand</FormLabel>
+                          <FormLabel>Brand</FormLabel>
                           <FormControl>
                             <Input
                               placeholder="Brand name (optional)"
-                              className="border-[#E5E7EB] focus-visible:ring-[#FF69B4]"
                               {...field}
                               value={field.value || ''}
                             />
                           </FormControl>
-                          <FormDescription className="text-[#777777]">
-                            Manufacturer or company name
-                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -297,7 +291,7 @@ export function BasicInfoStep() {
                       name="categoryId"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-[#333333]">Category</FormLabel>
+                          <FormLabel>Category</FormLabel>
                           <Select
                             value={field.value?.toString() || "none"}
                             onValueChange={(value) => {
@@ -307,29 +301,25 @@ export function BasicInfoStep() {
                             }}
                           >
                             <FormControl>
-                              <SelectTrigger className="border-[#E5E7EB] focus-visible:ring-[#FF69B4]">
+                              <SelectTrigger>
                                 <SelectValue placeholder="Select a category" />
                               </SelectTrigger>
                             </FormControl>
-                            <SelectContent className="border-[#E5E7EB]">
-                              <SelectItem value="none" className="focus:bg-[#FFE6F0]">None</SelectItem>
+                            <SelectContent>
+                              <SelectItem value="none">None</SelectItem>
                               {categoriesList && categoriesList.length > 0 
                                 ? categoriesList.map((category: any) => (
                                     <SelectItem
                                       key={category.id}
                                       value={category.id.toString()}
-                                      className="focus:bg-[#FFE6F0]"
                                     >
                                       {category.name}
                                     </SelectItem>
                                   ))
-                                : <SelectItem value="no-categories" className="focus:bg-[#FFE6F0]">No categories available</SelectItem>
+                                : <SelectItem value="no-categories">No categories available</SelectItem>
                               }
                             </SelectContent>
                           </Select>
-                          <FormDescription className="text-[#777777]">
-                            Product classification for organization
-                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -342,18 +332,15 @@ export function BasicInfoStep() {
                     name="description"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-[#333333]">Description</FormLabel>
+                        <FormLabel>Description</FormLabel>
                         <FormControl>
                           <Textarea
                             placeholder="Enter product description (optional)"
-                            className="min-h-32 border-[#E5E7EB] focus-visible:ring-[#FF69B4]"
+                            className="min-h-32"
                             {...field}
                             value={field.value || ''}
                           />
                         </FormControl>
-                        <FormDescription className="text-[#777777]">
-                          Detailed information about the product's features and benefits
-                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -415,22 +402,22 @@ export function BasicInfoStep() {
                     name="costPrice"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="flex">Cost Price <span className="text-[#FF6B6B] ml-1">*</span></FormLabel>
+                        <FormLabel className="flex">Cost Price <span className="text-red-500 ml-1">*</span></FormLabel>
                         <FormControl>
                           <div className="relative">
-                            <span className="absolute left-3 top-2.5 text-[#777777]">R</span>
+                            <span className="absolute left-3 top-2.5">R</span>
                             <Input
                               type="number"
                               min="0"
                               step="0.01"
-                              className="pl-7 border-[#E5E7EB] focus-visible:ring-[#FF69B4]"
+                              className="pl-7"
                               placeholder="0.00"
                               {...field}
                               onChange={handleCostPriceChange}
                             />
                           </div>
                         </FormControl>
-                        <FormDescription className="text-[#777777]">
+                        <FormDescription>
                           The price you pay for the product
                         </FormDescription>
                         <FormMessage />
@@ -451,7 +438,7 @@ export function BasicInfoStep() {
                               type="button"
                               variant="outline"
                               size="icon"
-                              className="h-8 w-8 border-[#E5E7EB] hover:bg-[#FFE6F0] hover:text-[#FF69B4] hover:border-[#FF69B4]"
+                              className="h-8 w-8"
                               onClick={() => adjustMarkup(-5)}
                             >
                               <MinusCircleIcon className="h-4 w-4" />
@@ -461,25 +448,25 @@ export function BasicInfoStep() {
                                 type="number"
                                 min="0"
                                 step="1"
-                                className="pr-7 border-[#E5E7EB] focus-visible:ring-[#FF69B4]"
+                                className="pr-7"
                                 placeholder="0"
                                 {...field}
                                 onChange={handleMarkupChange}
                               />
-                              <span className="absolute right-3 top-2.5 text-[#777777]">%</span>
+                              <span className="absolute right-3 top-2.5">%</span>
                             </div>
                             <Button
                               type="button"
                               variant="outline"
                               size="icon"
-                              className="h-8 w-8 border-[#E5E7EB] hover:bg-[#FFE6F0] hover:text-[#FF69B4] hover:border-[#FF69B4]"
+                              className="h-8 w-8"
                               onClick={() => adjustMarkup(5)}
                             >
                               <PlusCircleIcon className="h-4 w-4" />
                             </Button>
                           </div>
                         </FormControl>
-                        <FormDescription className="text-[#777777]">
+                        <FormDescription>
                           Percentage added to cost price
                         </FormDescription>
                         <FormMessage />
@@ -493,21 +480,21 @@ export function BasicInfoStep() {
                     name="regularPrice"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="flex">Regular Price <span className="text-[#FF6B6B] ml-1">*</span></FormLabel>
+                        <FormLabel className="flex">Regular Price <span className="text-red-500 ml-1">*</span></FormLabel>
                         <FormControl>
                           <div className="relative">
-                            <span className="absolute left-3 top-2.5 text-[#777777]">R</span>
+                            <span className="absolute left-3 top-2.5">R</span>
                             <Input
                               type="number"
                               min="0"
                               step="0.01"
-                              className="pl-7 border-[#E5E7EB] focus-visible:ring-[#FF69B4]"
+                              className="pl-7"
                               placeholder="0.00"
                               {...field}
                             />
                           </div>
                         </FormControl>
-                        <FormDescription className="text-[#777777]">
+                        <FormDescription>
                           The standard selling price
                         </FormDescription>
                         <FormMessage />
@@ -520,10 +507,10 @@ export function BasicInfoStep() {
                     control={form.control}
                     name="onSale"
                     render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-lg border border-[#E5E7EB] bg-[#F8F9FA] p-4">
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                         <div className="space-y-0.5">
                           <FormLabel>On Sale</FormLabel>
-                          <FormDescription className="text-[#777777]">
+                          <FormDescription>
                             Apply a discounted price
                           </FormDescription>
                         </div>
@@ -531,7 +518,6 @@ export function BasicInfoStep() {
                           <Switch
                             checked={field.value}
                             onCheckedChange={handleSaleToggle}
-                            className="data-[state=checked]:bg-[#FF69B4]"
                           />
                         </FormControl>
                       </FormItem>
@@ -545,21 +531,21 @@ export function BasicInfoStep() {
                       name="salePrice"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="flex">Sale Price <span className="text-[#FF6B6B] ml-1">*</span></FormLabel>
+                          <FormLabel className="flex">Sale Price <span className="text-red-500 ml-1">*</span></FormLabel>
                           <FormControl>
                             <div className="relative">
-                              <span className="absolute left-3 top-2.5 text-[#777777]">R</span>
+                              <span className="absolute left-3 top-2.5">R</span>
                               <Input
                                 type="number"
                                 min="0"
                                 step="0.01"
-                                className="pl-7 border-[#E5E7EB] focus-visible:ring-[#FF69B4]"
+                                className="pl-7"
                                 placeholder="0.00"
                                 {...field}
                               />
                             </div>
                           </FormControl>
-                          <FormDescription className="text-[#777777]">
+                          <FormDescription>
                             The discounted selling price
                           </FormDescription>
                           <FormMessage />
@@ -570,30 +556,30 @@ export function BasicInfoStep() {
                   
                   {/* Price Summary */}
                   {watchCostPrice > 0 && (
-                    <div className="mt-4 p-4 border border-[#E5E7EB] rounded-md bg-[#F8F9FA] shadow-sm">
-                      <h4 className="font-medium mb-2 text-[#FF69B4]">Pricing Summary</h4>
+                    <div className="mt-4 p-4 border rounded-md bg-background shadow-sm">
+                      <h4 className="font-medium mb-2 text-primary">Pricing Summary</h4>
                       <div className="space-y-1 text-sm">
                         <div className="flex justify-between">
-                          <span className="text-[#555555]">Cost Price:</span>
-                          <span className="text-[#555555]">R{(parseFloat(watchCostPrice) || 0).toFixed(2)}</span>
+                          <span>Cost Price:</span>
+                          <span>R{(parseFloat(watchCostPrice) || 0).toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-[#555555]">Markup ({watchMarkupPercentage || 0}%):</span>
-                          <span className="text-[#555555]">R{((parseFloat(watchCostPrice) || 0) * ((parseFloat(watchMarkupPercentage) || 0) / 100)).toFixed(2)}</span>
+                          <span>Markup ({watchMarkupPercentage || 0}%):</span>
+                          <span>R{((parseFloat(watchCostPrice) || 0) * ((parseFloat(watchMarkupPercentage) || 0) / 100)).toFixed(2)}</span>
                         </div>
-                        <div className="flex justify-between font-medium text-[#D94C97]">
+                        <div className="flex justify-between font-medium text-accent">
                           <span>Regular Price:</span>
                           <span>R{parseFloat(form.getValues('regularPrice') || 0).toFixed(2)}</span>
                         </div>
                         {watchOnSale && (
                           <>
-                            <div className="flex justify-between text-[#FF6B6B]">
+                            <div className="flex justify-between text-secondary">
                               <span>Discount:</span>
                               <span>-{Math.round((1 - (parseFloat(form.getValues('salePrice') || 0) / parseFloat(form.getValues('regularPrice') || 1))) * 100)}%</span>
                             </div>
                             <div className="flex justify-between font-medium">
-                              <span className="text-[#555555]">Sale Price:</span>
-                              <span className="text-[#4CAF50]">R{parseFloat(form.getValues('salePrice') || 0).toFixed(2)}</span>
+                              <span>Sale Price:</span>
+                              <span className="text-primary">R{parseFloat(form.getValues('salePrice') || 0).toFixed(2)}</span>
                             </div>
                           </>
                         )}
