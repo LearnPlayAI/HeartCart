@@ -708,13 +708,20 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className 
                                 }`}
                               >
                                 <img 
-                                  src={ensureValidImageUrl(image)}
+                                  src={image.url}
                                   alt={image.metadata?.alt || "Product"} 
                                   className="w-full h-40 object-cover"
                                   onLoad={() => console.log(`Image loaded successfully: ${image.metadata?.originalname || 'Unknown image'}`)}
                                   onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
                                     console.error('Failed to load image:', image.url);
                                     console.log('Image details:', image);
+                                    console.log('Trying direct object URL...');
+                                    
+                                    // Try using the direct objectKey URL path
+                                    if (image.objectKey) {
+                                      const directObjectUrl = `/api/files/${image.objectKey}`;
+                                      console.log('Trying direct object URL:', directObjectUrl);
+                                      e.currentTarget.src = directObjectUrl;
                                     
                                     // Try with direct API access as second attempt
                                     if (image.objectKey) {
