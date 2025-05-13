@@ -29,8 +29,16 @@ import {
   ChevronDownIcon, 
   ChevronRightIcon,
   PlusIcon,
-  XIcon
+  XIcon,
+  InfoIcon
 } from 'lucide-react';
+
+// Import our new attribute pricing component
+import { 
+  AttributePricingConfig, 
+  type AttributeValue, 
+  type ProductAttribute 
+} from '../components/AttributePricingConfig';
 
 // Form validation schema
 const additionalInfoSchema = z.object({
