@@ -524,8 +524,17 @@ class ObjectStoreService {
   /**
    * Get a public URL for a file
    */
+  /**
+   * Get the public URL for an object, ensuring it starts with the right path
+   * This method will always return a URL starting with '/api/files/' for consistency,
+   * and does not include the host/origin as that's handled by the client
+   */
   getPublicUrl(objectKey: string): string {
-    return `${BASE_URL}/${objectKey}`;
+    // Remove any leading slashes from objectKey for consistency
+    const sanitizedKey = objectKey.replace(/^\/+/, '');
+    
+    // Ensure proper format: /api/files/path/to/object
+    return `${BASE_URL}/${sanitizedKey}`;
   }
   
   /**
