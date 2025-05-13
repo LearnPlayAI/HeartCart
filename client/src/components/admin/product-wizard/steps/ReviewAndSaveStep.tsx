@@ -1,439 +1,622 @@
 /**
- * Review and Save Step Component
+ * ReviewAndSaveStep Component
  * 
- * Displays a summary of all product information for final review
- * before saving, allowing the user to verify their inputs.
+ * This component presents a summary of all product information for review
+ * before saving the product. It also allows going back to previous steps
+ * to make changes if needed.
  */
 
-import React, { useEffect } from 'react';
+import React, { useState } from 'react';
 import { useProductWizardContext } from '../context';
+import { useToast } from '@/hooks/use-toast';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { formatCurrency, formatDimensions } from '@/utils/format';
+import { truncateText } from '@/utils/string-utils';
+
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { 
-  AlertTriangle, 
-  CheckCircle, 
-  EditIcon, 
-  StarIcon, 
-  TagIcon,
-  PackageIcon,
-  DollarSignIcon,
-  InfoIcon,
-  ImageIcon,
-  CornerDownRightIcon,
-  ShoppingCartIcon,
-  TruckIcon,
-  CalendarIcon,
-  ClockIcon,
+  CheckIcon, 
+  ImageIcon, 
+  Package, 
+  Edit, 
+  SaveIcon, 
+  AlertTriangleIcon, 
   Loader2
 } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { formatPrice } from '@/utils/string-utils';
-import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
-import { WIZARD_STEPS } from '../context';
-import { ensureValidImageUrl } from '@/utils/file-manager';
 
-const ReviewAndSaveStep: React.FC = () => {
-  const { 
-    state, 
-    goToStep, 
-    validateStep, 
-    markStepComplete, 
-    createProduct, 
-    updateProduct,
-    isSubmitting 
-  } = useProductWizardContext();
+/**
+ * Simple schema validator that checks for required fields
+ */
+const validateProduct = (state: any) => {
+  const errors: string[] = [];
   
-  // Auto-validate on mount to check for errors and mark completed steps
-  useEffect(() => {
-    const isValid = validateStep('review');
-    
-    if (isValid) {
+  // Basic Info validation
+  if (!state.name) errors.push('Product name is required');
+  if (!state.slug) errors.push('Product slug is required');
+  if (!state.sku) errors.push('Product SKU is required');
+  if (state.costPrice <= 0) errors.push('Cost price must be greater than 0');
+  if (state.regularPrice <= 0) errors.push('Regular price must be greater than 0');
+  
+  // If sale is enabled, ensure a sale price is set
+  if (state.onSale && (!state.salePrice || state.salePrice <= 0)) {
+    errors.push('Sale price must be set when product is on sale');
+  }
+  
+  // Warn if main image is not set
+  if (state.imageUrls.length === 0) {
+    errors.push('Product has no images - at least one is recommended');
+  }
+  
+  return errors;
+};
+
+export function ReviewAndSaveStep() {
+  const { state, markStepComplete, setCurrentStep } = useProductWizardContext();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [savingError, setSavingError] = useState<string | null>(null);
+  
+  // Fetch categories for display
+  const { data: categories = [] } = useQuery({
+    queryKey: ['/api/categories'],
+  });
+  
+  // Get category name
+  const getCategoryName = (categoryId: number | null) => {
+    if (!categoryId) return 'None';
+    const category = categories.find((cat: any) => cat.id === categoryId);
+    return category ? category.name : 'Unknown';
+  };
+  
+  // Validate product data
+  const validationErrors = validateProduct(state);
+  const hasErrors = validationErrors.length > 0;
+  
+  // Mutation for creating a product
+  const createProductMutation = useMutation({
+    mutationFn: async (productData: any) => {
+      // Set submitting state
+      setIsSubmitting(true);
+      setSavingError(null);
+      
+      try {
+        // API request to create product
+        const response = await fetch('/api/products', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(productData),
+        });
+        
+        // Handle API errors
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error?.message || 'Failed to create product');
+        }
+        
+        // Return created product data
+        return await response.json();
+      } catch (error) {
+        if (error instanceof Error) {
+          setSavingError(error.message);
+        } else {
+          setSavingError('An unknown error occurred');
+        }
+        throw error;
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    onSuccess: (data) => {
+      // Invalidate queries to ensure fresh data
+      queryClient.invalidateQueries({ queryKey: ['/api/products'] });
+      if (state.catalogId) {
+        queryClient.invalidateQueries({ 
+          queryKey: ['/api/catalogs', state.catalogId, 'products'] 
+        });
+      }
+      
+      // Mark step complete
       markStepComplete('review');
-    }
-  }, [validateStep, markStepComplete]);
+      
+      // Show success toast
+      toast({
+        title: 'Product created',
+        description: `${state.name} has been created successfully`,
+        variant: 'default',
+      });
+    },
+    onError: (error) => {
+      // Show error toast
+      toast({
+        title: 'Failed to create product',
+        description: error instanceof Error ? error.message : 'An unknown error occurred',
+        variant: 'destructive',
+      });
+    },
+  });
   
-  // Format date helper
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'Not set';
-    return format(new Date(dateString), 'PP');
+  // Handle save product
+  const handleSaveProduct = async () => {
+    // Prepare product data for API
+    const productData = {
+      name: state.name,
+      slug: state.slug,
+      sku: state.sku,
+      brand: state.brand || null,
+      description: state.description || null,
+      categoryId: state.categoryId,
+      costPrice: state.costPrice,
+      regularPrice: state.regularPrice,
+      salePrice: state.onSale ? state.salePrice : null,
+      markupPercentage: state.markupPercentage,
+      isActive: state.isActive,
+      isFeatured: state.isFeatured,
+      
+      // Inventory
+      stockLevel: state.stockLevel,
+      lowStockThreshold: state.lowStockThreshold,
+      backorderEnabled: state.backorderEnabled,
+      
+      // Images
+      imageUrls: state.imageUrls,
+      imageObjectKeys: state.imageObjectKeys,
+      mainImageIndex: state.mainImageIndex,
+      
+      // SEO
+      metaTitle: state.metaTitle,
+      metaDescription: state.metaDescription,
+      metaKeywords: state.metaKeywords,
+      
+      // Shipping
+      taxable: state.taxable,
+      taxClass: state.taxClass,
+      shippingRequired: state.shippingRequired,
+      shippingWeight: state.shippingWeight,
+      shippingDimensions: state.shippingDimensions,
+      
+      // Attributes
+      attributes: state.attributes,
+      
+      // Catalog context
+      catalogId: state.catalogId || null,
+    };
+    
+    // Submit data
+    await createProductMutation.mutateAsync(productData);
   };
   
-  // Handle save/update
-  const handleSave = async () => {
-    if (state.productId) {
-      await updateProduct();
-    } else {
-      await createProduct();
-    }
+  // Handle navigate to step
+  const handleNavigateToStep = (step: string) => {
+    setCurrentStep(step as any);
   };
-
+  
   return (
-    <div className="product-wizard-review space-y-6">
-      <h2 className="text-2xl font-bold">Review & Save</h2>
-      <p className="text-muted-foreground">
-        Review your product information before saving. Make any necessary changes by going back to the previous steps.
-      </p>
-      
-      {/* Basic Information */}
+    <div className="space-y-6">
       <Card>
-        <CardHeader className="pb-3">
-          <div className="flex justify-between items-center">
-            <CardTitle className="text-lg flex items-center">
-              <InfoIcon className="h-5 w-5 mr-2" />
-              Basic Information
-            </CardTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 gap-1"
-              onClick={() => goToStep('basic-info')}
-            >
-              <EditIcon className="h-3.5 w-3.5" /> Edit
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-          <div className="space-y-1">
-            <div className="text-muted-foreground">Product Name</div>
-            <div className="font-medium">{state.name || 'Not set'}</div>
-          </div>
-          
-          <div className="space-y-1">
-            <div className="text-muted-foreground">SKU</div>
-            <div className="font-medium">{state.sku || 'Not set'}</div>
-          </div>
-          
-          <div className="space-y-1">
-            <div className="text-muted-foreground">URL Slug</div>
-            <div className="font-medium text-primary-foreground/80">
-              {state.slug || 'Not set'}
-            </div>
-          </div>
-          
-          <div className="space-y-1">
-            <div className="text-muted-foreground">Brand</div>
-            <div className="font-medium">{state.brand || 'Not set'}</div>
-          </div>
-          
-          <div className="space-y-1">
-            <div className="text-muted-foreground">Category</div>
-            <div className="font-medium">{state.categoryName || 'Not set'}</div>
-          </div>
-          
-          <div className="space-y-1 md:col-span-2">
-            <div className="text-muted-foreground">Description</div>
-            <div className="font-medium">
-              {state.description || 'No description provided'}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-      
-      {/* Pricing & Inventory */}
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex justify-between items-center">
-            <CardTitle className="text-lg flex items-center">
-              <DollarSignIcon className="h-5 w-5 mr-2" />
-              Pricing & Inventory
-            </CardTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 gap-1"
-              onClick={() => goToStep('basic-info')}
-            >
-              <EditIcon className="h-3.5 w-3.5" /> Edit
-            </Button>
-          </div>
+        <CardHeader>
+          <CardTitle className="text-lg">Review Product Information</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Review all product details before saving. You can go back to any step to make changes.
+          </p>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mb-6">
-            <div className="space-y-1">
-              <div className="text-muted-foreground">Cost Price</div>
-              <div className="font-medium">
-                {state.costPrice ? `$${state.costPrice.toFixed(2)}` : 'Not set'}
-              </div>
-            </div>
-            
-            <div className="space-y-1">
-              <div className="text-muted-foreground">Markup</div>
-              <div className="font-medium">
-                {state.markupPercentage}%
-              </div>
-            </div>
-            
-            <div className="space-y-1">
-              <div className="text-muted-foreground">Regular Price</div>
-              <div className="font-medium">
-                {state.regularPrice ? `$${state.regularPrice.toFixed(2)}` : 'Not set'}
-              </div>
-            </div>
-            
-            {state.salePrice && (
-              <>
-                <div className="space-y-1">
-                  <div className="text-muted-foreground">Sale Price</div>
-                  <div className="font-medium text-red-500">
-                    ${state.salePrice.toFixed(2)}
-                  </div>
-                </div>
-                
-                <div className="space-y-1">
-                  <div className="text-muted-foreground">Sale Start</div>
-                  <div className="font-medium">
-                    {formatDate(state.saleStartDate)}
-                  </div>
-                </div>
-                
-                <div className="space-y-1">
-                  <div className="text-muted-foreground">Sale End</div>
-                  <div className="font-medium">
-                    {formatDate(state.saleEndDate)}
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-          
-          <Separator />
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mt-6">
-            <div className="space-y-1">
-              <div className="text-muted-foreground">Stock Level</div>
-              <div className="font-medium">{state.stockLevel}</div>
-            </div>
-            
-            <div className="space-y-1">
-              <div className="text-muted-foreground">Low Stock Threshold</div>
-              <div className="font-medium">{state.lowStockThreshold}</div>
-            </div>
-            
-            <div className="space-y-1">
-              <div className="text-muted-foreground">Backorders</div>
-              <div className="font-medium">
-                {state.backorderEnabled ? 'Allowed' : 'Not allowed'}
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-      
-      {/* Images */}
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex justify-between items-center">
-            <CardTitle className="text-lg flex items-center">
-              <ImageIcon className="h-5 w-5 mr-2" />
-              Images
-            </CardTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 gap-1"
-              onClick={() => goToStep('images')}
-            >
-              <EditIcon className="h-3.5 w-3.5" /> Edit
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {state.imageUrls.length > 0 ? (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {state.imageUrls.map((url, index) => (
-                <div key={index} className="relative group">
-                  <div 
-                    className={cn(
-                      "border rounded-md overflow-hidden aspect-square",
-                      index === state.mainImageIndex ? "border-primary" : "border-border"
-                    )}
-                  >
-                    <img 
-                      src={ensureValidImageUrl(url)}
-                      alt={`Product image ${index + 1}`}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  {index === state.mainImageIndex && (
-                    <Badge className="absolute top-2 left-2 bg-primary">
-                      <StarIcon className="h-3 w-3 mr-1" /> Main
-                    </Badge>
-                  )}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-6 text-muted-foreground">
-              No images have been added to this product.
-            </div>
+          {/* Validation Errors */}
+          {hasErrors && (
+            <Alert variant="destructive" className="mb-6">
+              <AlertTriangleIcon className="h-4 w-4" />
+              <AlertTitle>Validation Errors</AlertTitle>
+              <AlertDescription>
+                <ul className="list-disc pl-5 mt-2">
+                  {validationErrors.map((error, index) => (
+                    <li key={index}>{error}</li>
+                  ))}
+                </ul>
+              </AlertDescription>
+            </Alert>
           )}
-        </CardContent>
-      </Card>
-      
-      {/* Additional Information */}
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex justify-between items-center">
-            <CardTitle className="text-lg flex items-center">
-              <PackageIcon className="h-5 w-5 mr-2" />
-              Additional Information
-            </CardTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 gap-1"
-              onClick={() => goToStep('additional-info')}
-            >
-              <EditIcon className="h-3.5 w-3.5" /> Edit
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
+          
+          {/* Basic Info Section */}
           <div className="space-y-6">
-            {/* Physical Properties */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-              <div className="space-y-1">
-                <div className="text-muted-foreground">Product Type</div>
-                <div className="font-medium">
-                  {state.isPhysical ? 'Physical Product' : 'Digital Product'}
-                </div>
-              </div>
-              
-              {state.isPhysical && (
-                <>
-                  <div className="space-y-1">
-                    <div className="text-muted-foreground">Free Shipping</div>
-                    <div className="font-medium">
-                      {state.freeShipping ? 'Yes' : 'No'}
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-1">
-                    <div className="text-muted-foreground">Weight</div>
-                    <div className="font-medium">
-                      {state.weight ? `${state.weight} ${state.weightUnit}` : 'Not set'}
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-1">
-                    <div className="text-muted-foreground">Dimensions</div>
-                    <div className="font-medium">
-                      {state.length && state.width && state.height ? 
-                        `${state.length} × ${state.width} × ${state.height} ${state.dimensionUnit}` : 
-                        'Not set'
-                      }
-                    </div>
-                  </div>
-                </>
-              )}
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-medium">Basic Information</h3>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="flex items-center gap-1"
+                onClick={() => handleNavigateToStep('basic-info')}
+              >
+                <Edit className="h-3 w-3" />
+                <span>Edit</span>
+              </Button>
             </div>
             
             <Separator />
             
-            {/* Tags & Dates */}
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <div className="text-muted-foreground">Tags</div>
-                <div className="flex flex-wrap gap-2">
-                  {state.tags.length > 0 ? (
-                    state.tags.map(tag => (
-                      <Badge key={tag} variant="secondary">
-                        {tag}
-                      </Badge>
-                    ))
-                  ) : (
-                    <span className="text-muted-foreground">No tags added</span>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
+              <div className="space-y-1">
+                <Label className="text-muted-foreground">Product Name</Label>
+                <p className="font-medium">{state.name || 'Not specified'}</p>
+              </div>
+              
+              <div className="space-y-1">
+                <Label className="text-muted-foreground">SKU</Label>
+                <p className="font-medium">{state.sku || 'Not specified'}</p>
+              </div>
+              
+              <div className="space-y-1">
+                <Label className="text-muted-foreground">URL Slug</Label>
+                <p className="font-medium">{state.slug || 'Not specified'}</p>
+              </div>
+              
+              <div className="space-y-1">
+                <Label className="text-muted-foreground">Brand</Label>
+                <p className="font-medium">{state.brand || 'Not specified'}</p>
+              </div>
+              
+              <div className="space-y-1">
+                <Label className="text-muted-foreground">Category</Label>
+                <p className="font-medium">{getCategoryName(state.categoryId)}</p>
+              </div>
+              
+              <div className="space-y-1">
+                <Label className="text-muted-foreground">Status</Label>
+                <div className="flex items-center gap-2">
+                  <Badge variant={state.isActive ? "default" : "outline"}>
+                    {state.isActive ? 'Active' : 'Inactive'}
+                  </Badge>
+                  {state.isFeatured && (
+                    <Badge variant="secondary">Featured</Badge>
                   )}
                 </div>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div className="space-y-1">
-                  <div className="text-muted-foreground">Publish Date</div>
-                  <div className="font-medium">
-                    {formatDate(state.publishDate)}
-                  </div>
-                </div>
-                
-                <div className="space-y-1">
-                  <div className="text-muted-foreground">Expiry Date</div>
-                  <div className="font-medium">
-                    {formatDate(state.expiryDate)}
-                  </div>
-                </div>
+              <div className="space-y-1 col-span-2">
+                <Label className="text-muted-foreground">Description</Label>
+                <p className="font-medium whitespace-pre-wrap">
+                  {state.description || 'No description provided'}
+                </p>
               </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
-      
-      {/* Status & Visibility */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg flex items-center">
-            <ShoppingCartIcon className="h-5 w-5 mr-2" />
-            Status & Visibility
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-3">
-            <Badge variant={state.isActive && !state.isDraft ? "default" : "outline"}>
-              {state.isActive && !state.isDraft ? 'Active' : 'Inactive'}
-            </Badge>
+          
+          {/* Pricing Section */}
+          <div className="mt-8 space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-medium">Pricing</h3>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="flex items-center gap-1"
+                onClick={() => handleNavigateToStep('basic-info')}
+              >
+                <Edit className="h-3 w-3" />
+                <span>Edit</span>
+              </Button>
+            </div>
             
-            {state.isDraft && (
-              <Badge variant="outline" className="bg-amber-100 text-amber-800 hover:bg-amber-100">
-                Draft
-              </Badge>
-            )}
+            <Separator />
             
-            {state.isFeatured && (
-              <Badge variant="outline" className="bg-purple-100 text-purple-800 hover:bg-purple-100">
-                <StarIcon className="h-3 w-3 mr-1" /> Featured
-              </Badge>
-            )}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-6">
+              <div className="space-y-1">
+                <Label className="text-muted-foreground">Cost Price</Label>
+                <p className="font-medium">{formatCurrency(state.costPrice)}</p>
+              </div>
+              
+              <div className="space-y-1">
+                <Label className="text-muted-foreground">Markup</Label>
+                <p className="font-medium">{state.markupPercentage}%</p>
+              </div>
+              
+              <div className="space-y-1">
+                <Label className="text-muted-foreground">Regular Price</Label>
+                <p className="font-medium">{formatCurrency(state.regularPrice)}</p>
+              </div>
+              
+              {state.onSale && (
+                <>
+                  <div className="space-y-1">
+                    <Label className="text-muted-foreground">Sale Price</Label>
+                    <p className="font-medium">{formatCurrency(state.salePrice)}</p>
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <Label className="text-muted-foreground">Discount</Label>
+                    <Badge variant="destructive" className="font-medium">
+                      {state.salePrice && state.regularPrice 
+                        ? `${Math.round((1 - state.salePrice / state.regularPrice) * 100)}% OFF` 
+                        : 'N/A'
+                      }
+                    </Badge>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+          
+          {/* Images Section */}
+          <div className="mt-8 space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-medium">Images</h3>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="flex items-center gap-1"
+                onClick={() => handleNavigateToStep('images')}
+              >
+                <Edit className="h-3 w-3" />
+                <span>Edit</span>
+              </Button>
+            </div>
             
-            {state.isNew && (
-              <Badge variant="outline" className="bg-green-100 text-green-800 hover:bg-green-100">
-                New
-              </Badge>
-            )}
+            <Separator />
             
-            {state.freeShipping && (
-              <Badge variant="outline" className="bg-blue-100 text-blue-800 hover:bg-blue-100">
-                <TruckIcon className="h-3 w-3 mr-1" /> Free Shipping
-              </Badge>
+            {state.imageUrls.length === 0 ? (
+              <div className="text-center py-8 border rounded-md bg-muted/20">
+                <ImageIcon className="h-12 w-12 mx-auto text-muted-foreground" />
+                <p className="mt-2 text-muted-foreground">No images uploaded</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                  {state.imageUrls.map((url: string, index: number) => (
+                    <div 
+                      key={url}
+                      className={`relative rounded-md overflow-hidden border ${
+                        index === state.mainImageIndex ? 'ring-2 ring-primary' : ''
+                      }`}
+                    >
+                      <div className="aspect-square bg-muted/20">
+                        <img 
+                          src={url} 
+                          alt={`Product image ${index + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      {index === state.mainImageIndex && (
+                        <div className="absolute top-1 left-1">
+                          <Badge variant="secondary" className="bg-primary text-primary-foreground text-xs">
+                            Main
+                          </Badge>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {state.imageUrls.length} image{state.imageUrls.length !== 1 ? 's' : ''} uploaded
+                </p>
+              </div>
             )}
+          </div>
+          
+          {/* Inventory Section */}
+          <div className="mt-8 space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-medium">Inventory</h3>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="flex items-center gap-1"
+                onClick={() => handleNavigateToStep('additional-info')}
+              >
+                <Edit className="h-3 w-3" />
+                <span>Edit</span>
+              </Button>
+            </div>
+            
+            <Separator />
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-6">
+              <div className="space-y-1">
+                <Label className="text-muted-foreground">Stock Level</Label>
+                <p className="font-medium">{state.stockLevel}</p>
+              </div>
+              
+              <div className="space-y-1">
+                <Label className="text-muted-foreground">Low Stock Threshold</Label>
+                <p className="font-medium">{state.lowStockThreshold}</p>
+              </div>
+              
+              <div className="space-y-1">
+                <Label className="text-muted-foreground">Backorders</Label>
+                <Badge variant={state.backorderEnabled ? "default" : "outline"}>
+                  {state.backorderEnabled ? 'Allowed' : 'Not Allowed'}
+                </Badge>
+              </div>
+            </div>
+          </div>
+          
+          {/* Attributes Section */}
+          {state.attributes.length > 0 && (
+            <div className="mt-8 space-y-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-medium">Attributes</h3>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex items-center gap-1"
+                  onClick={() => handleNavigateToStep('additional-info')}
+                >
+                  <Edit className="h-3 w-3" />
+                  <span>Edit</span>
+                </Button>
+              </div>
+              
+              <Separator />
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {state.attributes.map((attr: any) => (
+                  <div key={attr.id} className="flex items-start gap-2 p-3 rounded-md border">
+                    <div className="w-1/3 font-medium">{attr.name}:</div>
+                    <div className="flex-1">{attr.value || 'Not specified'}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {/* Shipping Section */}
+          <div className="mt-8 space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-medium">Shipping & Tax</h3>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="flex items-center gap-1"
+                onClick={() => handleNavigateToStep('additional-info')}
+              >
+                <Edit className="h-3 w-3" />
+                <span>Edit</span>
+              </Button>
+            </div>
+            
+            <Separator />
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+              <div className="space-y-1">
+                <Label className="text-muted-foreground">Requires Shipping</Label>
+                <Badge variant={state.shippingRequired ? "default" : "outline"}>
+                  {state.shippingRequired ? 'Yes' : 'No'}
+                </Badge>
+              </div>
+              
+              <div className="space-y-1">
+                <Label className="text-muted-foreground">Taxable</Label>
+                <Badge variant={state.taxable ? "default" : "outline"}>
+                  {state.taxable ? 'Yes' : 'No'}
+                </Badge>
+              </div>
+              
+              {state.taxable && (
+                <div className="space-y-1">
+                  <Label className="text-muted-foreground">Tax Class</Label>
+                  <p className="font-medium">{state.taxClass || 'Standard'}</p>
+                </div>
+              )}
+              
+              {state.shippingRequired && (
+                <>
+                  <div className="space-y-1">
+                    <Label className="text-muted-foreground">Weight</Label>
+                    <p className="font-medium">
+                      {state.shippingWeight ? `${state.shippingWeight} kg` : 'Not specified'}
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-1 col-span-2">
+                    <Label className="text-muted-foreground">Dimensions (L × W × H)</Label>
+                    <p className="font-medium">
+                      {state.shippingDimensions.length && state.shippingDimensions.width && state.shippingDimensions.height
+                        ? formatDimensions(
+                            state.shippingDimensions.length,
+                            state.shippingDimensions.width,
+                            state.shippingDimensions.height
+                          )
+                        : 'Not specified'
+                      }
+                    </p>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+          
+          {/* SEO Section */}
+          <div className="mt-8 space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-medium">SEO Information</h3>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="flex items-center gap-1"
+                onClick={() => handleNavigateToStep('additional-info')}
+              >
+                <Edit className="h-3 w-3" />
+                <span>Edit</span>
+              </Button>
+            </div>
+            
+            <Separator />
+            
+            <div className="grid grid-cols-1 gap-y-6">
+              <div className="space-y-1">
+                <Label className="text-muted-foreground">Meta Title</Label>
+                <p className="font-medium">{state.metaTitle || state.name || 'Not specified'}</p>
+              </div>
+              
+              <div className="space-y-1">
+                <Label className="text-muted-foreground">Meta Description</Label>
+                <p className="font-medium">{state.metaDescription || truncateText(state.description || '', 150) || 'Not specified'}</p>
+              </div>
+              
+              <div className="space-y-1">
+                <Label className="text-muted-foreground">Meta Keywords</Label>
+                <p className="font-medium">{state.metaKeywords || 'Not specified'}</p>
+              </div>
+            </div>
+          </div>
+          
+          {/* Catalog Context */}
+          {state.catalogId && (
+            <div className="mt-8 space-y-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-medium">Catalog Information</h3>
+              </div>
+              
+              <Separator />
+              
+              <div className="p-4 border rounded-md bg-muted/10">
+                <p className="text-sm">
+                  This product will be added to the <strong>{state.catalogName || 'Selected'}</strong> catalog.
+                </p>
+              </div>
+            </div>
+          )}
+          
+          {/* Saving Error */}
+          {savingError && (
+            <Alert variant="destructive" className="mt-8">
+              <AlertTriangleIcon className="h-4 w-4" />
+              <AlertTitle>Error Saving Product</AlertTitle>
+              <AlertDescription>
+                {savingError}
+              </AlertDescription>
+            </Alert>
+          )}
+          
+          {/* Save Button */}
+          <div className="mt-8 flex justify-end gap-4">
+            <Button 
+              variant="default"
+              size="lg"
+              className="w-full md:w-auto"
+              onClick={handleSaveProduct}
+              disabled={isSubmitting || (hasErrors && validationErrors.some(err => !err.includes('recommended')))}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <span>Saving...</span>
+                </>
+              ) : (
+                <>
+                  <SaveIcon className="mr-2 h-4 w-4" />
+                  <span>Save Product</span>
+                </>
+              )}
+            </Button>
           </div>
         </CardContent>
       </Card>
-      
-      {/* Save Button */}
-      <div className="flex justify-center mt-8">
-        <Button
-          size="lg"
-          className="min-w-[200px]"
-          onClick={handleSave}
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              {state.productId ? 'Updating...' : 'Creating...'}
-            </>
-          ) : (
-            <>
-              <CheckCircle className="mr-2 h-5 w-5" />
-              {state.productId ? 'Update Product' : 'Create Product'}
-            </>
-          )}
-        </Button>
-      </div>
     </div>
   );
-};
-
-export default ReviewAndSaveStep;
+}

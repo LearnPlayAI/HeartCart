@@ -2,153 +2,206 @@
  * WizardNavigation Component
  * 
  * This component provides navigation controls for the product wizard,
- * showing steps, progress, and allowing movement between steps.
+ * including step indicators, next/previous buttons, and validation checks.
  */
 
 import React from 'react';
-import { useProductWizardContext, WIZARD_STEPS } from './context';
+import { useProductWizardContext, WizardStep } from './context';
 import { Button } from '@/components/ui/button';
-import { Check, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { 
+  CheckIcon, 
+  XIcon, 
+  ChevronLeftIcon, 
+  ChevronRightIcon, 
+  AlertCircleIcon, 
+  LoaderIcon
+} from 'lucide-react';
+
+// Possible step statuses
+type StepStatus = 'complete' | 'current' | 'upcoming' | 'error';
 
 interface WizardNavigationProps {
-  showFinishButton?: boolean;
-  onFinishClick?: () => void;
-  loading?: boolean;
+  onComplete?: () => void;
 }
 
-const WizardNavigation: React.FC<WizardNavigationProps> = ({
-  showFinishButton = false,
-  onFinishClick,
-  loading = false,
-}) => {
-  const { 
-    currentStep,
-    goToStep,
-    canGoToStep,
-    completedSteps,
-    validateStep,
-    markStepComplete
+export function WizardNavigation({ onComplete }: WizardNavigationProps) {
+  const {
+    state,
+    setCurrentStep,
+    nextStep,
+    previousStep,
+    validateCurrentStep,
+    isStepComplete,
+    isStepValid
   } = useProductWizardContext();
   
-  // Get current step index
-  const currentStepIndex = WIZARD_STEPS.findIndex(step => step.id === currentStep);
+  // Define the steps in the wizard
+  const steps: { id: WizardStep; label: string }[] = [
+    { id: 'basic-info', label: 'Basic Info' },
+    { id: 'images', label: 'Images' },
+    { id: 'additional-info', label: 'Additional Info' },
+    { id: 'review', label: 'Review & Save' }
+  ];
   
-  // Determine if can go to next or previous step
-  const canGoPrevious = currentStepIndex > 0;
-  const canGoNext = currentStepIndex < WIZARD_STEPS.length - 1 && validateStep(currentStep);
+  // Get status icon for a step
+  const getStatusIcon = (status: StepStatus) => {
+    switch (status) {
+      case 'complete':
+        return <CheckIcon className="h-4 w-4" />;
+      case 'current':
+        return <LoaderIcon className="h-4 w-4 animate-spin" />;
+      case 'error':
+        return <AlertCircleIcon className="h-4 w-4" />;
+      case 'upcoming':
+        return null;
+    }
+  };
+  
+  // Handle clicking on a step
+  const handleStepClick = (step: WizardStep) => {
+    // Only allow navigation to steps that are complete or the current one
+    const currentStepIndex = steps.findIndex(s => s.id === state.currentStep);
+    const targetStepIndex = steps.findIndex(s => s.id === step);
+    
+    // Check current step validation before allowing to move forward
+    if (targetStepIndex > currentStepIndex) {
+      const isValid = validateCurrentStep();
+      if (!isValid) return;
+    }
+    
+    setCurrentStep(step);
+  };
   
   // Handle next button click
-  const handleNextClick = () => {
-    if (validateStep(currentStep)) {
-      markStepComplete(currentStep);
-      goToStep(WIZARD_STEPS[currentStepIndex + 1].id);
+  const handleNext = () => {
+    // Validate current step
+    const isValid = validateCurrentStep();
+    if (isValid) {
+      nextStep();
     }
   };
   
   // Handle previous button click
-  const handlePreviousClick = () => {
-    goToStep(WIZARD_STEPS[currentStepIndex - 1].id);
+  const handlePrevious = () => {
+    previousStep();
+  };
+  
+  // Determine status for a step
+  const getStepStatus = (stepId: WizardStep): StepStatus => {
+    if (stepId === state.currentStep) return 'current';
+    
+    // Check completion status
+    if (isStepComplete(stepId)) {
+      return isStepValid(stepId) ? 'complete' : 'error';
+    }
+    
+    return 'upcoming';
   };
   
   return (
-    <div className="wizard-navigation">
-      {/* Steps Indicator */}
-      <div className="steps-indicator mb-6">
-        <div className="flex justify-between items-center">
-          {WIZARD_STEPS.map((step, index) => {
-            const isActive = step.id === currentStep;
-            const isCompleted = completedSteps.includes(step.id);
-            const isClickable = canGoToStep(step.id);
+    <div className="space-y-6">
+      {/* Step Indicator */}
+      <div className="flex justify-between items-center">
+        <TooltipProvider>
+          {steps.map((step, index) => {
+            const status = getStepStatus(step.id);
+            const isClickable = status !== 'upcoming';
             
             return (
-              <div key={step.id} className="flex-1 relative">
-                {/* Step connector (line between steps) */}
+              <React.Fragment key={step.id}>
                 {index > 0 && (
                   <div 
-                    className={cn(
-                      "absolute top-1/2 h-1 w-full -left-1/2 -translate-y-1/2 transition-colors",
-                      isCompleted || (isActive && index === currentStepIndex) ? "bg-primary" : "bg-muted"
-                    )}
+                    className={`flex-1 h-1 mx-2 rounded ${
+                      status === 'upcoming' ? 'bg-muted' : 'bg-primary/60'
+                    }`}
                   />
                 )}
                 
-                {/* Step button */}
-                <div className="flex flex-col items-center">
-                  <button
-                    className={cn(
-                      "relative z-10 flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all",
-                      isActive 
-                        ? "border-primary bg-primary text-primary-foreground" 
-                        : isCompleted 
-                          ? "border-primary bg-primary text-primary-foreground" 
-                          : "border-muted bg-background text-muted-foreground",
-                      isClickable ? "cursor-pointer hover:scale-105" : "cursor-default"
-                    )}
-                    onClick={() => isClickable && goToStep(step.id)}
-                    disabled={!isClickable}
-                  >
-                    {isCompleted ? (
-                      <Check className="h-5 w-5" />
-                    ) : (
-                      <span>{index + 1}</span>
-                    )}
-                  </button>
-                  <span 
-                    className={cn(
-                      "mt-2 text-sm font-medium text-center",
-                      isActive ? "text-primary" : "text-muted-foreground"
-                    )}
-                  >
-                    {step.label}
-                  </span>
-                </div>
-              </div>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      disabled={!isClickable}
+                      onClick={() => isClickable && handleStepClick(step.id)}
+                      className={`relative flex flex-col items-center group ${
+                        !isClickable ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
+                      }`}
+                    >
+                      <div 
+                        className={`w-10 h-10 rounded-full flex items-center justify-center border ${
+                          status === 'current' 
+                            ? 'bg-primary text-primary-foreground border-primary' 
+                            : status === 'complete' 
+                            ? 'bg-primary/10 text-primary border-primary' 
+                            : status === 'error'
+                            ? 'bg-destructive/10 text-destructive border-destructive'
+                            : 'bg-muted text-muted-foreground border-muted-foreground/30'
+                        }`}
+                      >
+                        {getStatusIcon(status) || (index + 1)}
+                      </div>
+                      <span 
+                        className={`mt-2 text-sm ${
+                          status === 'current' 
+                            ? 'font-medium text-primary'
+                            : status === 'error'
+                            ? 'font-medium text-destructive'
+                            : 'text-muted-foreground'
+                        }`}
+                      >
+                        {step.label}
+                      </span>
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {status === 'error' 
+                      ? 'Step has validation errors'
+                      : status === 'complete' 
+                      ? 'Step complete'
+                      : status === 'current' 
+                      ? 'Current step'
+                      : 'Complete previous steps first'
+                    }
+                  </TooltipContent>
+                </Tooltip>
+              </React.Fragment>
             );
           })}
-        </div>
+        </TooltipProvider>
       </div>
       
       {/* Navigation Buttons */}
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between mt-6">
         <Button
           variant="outline"
-          onClick={handlePreviousClick}
-          disabled={!canGoPrevious || loading}
+          onClick={handlePrevious}
+          disabled={steps[0].id === state.currentStep}
+          className="gap-1"
         >
-          <ChevronLeft className="mr-2 h-4 w-4" />
-          Previous
+          <ChevronLeftIcon className="h-4 w-4" />
+          <span>Previous</span>
         </Button>
         
-        {showFinishButton ? (
-          <Button 
-            onClick={onFinishClick}
-            disabled={loading}
+        {state.currentStep !== 'review' ? (
+          <Button
+            onClick={handleNext}
+            className="gap-1"
           >
-            {loading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              <>
-                Finish
-                <Check className="ml-2 h-4 w-4" />
-              </>
-            )}
+            <span>Next</span>
+            <ChevronRightIcon className="h-4 w-4" />
           </Button>
         ) : (
           <Button
-            onClick={handleNextClick}
-            disabled={!canGoNext || loading}
+            onClick={onComplete}
+            variant="default"
+            className="gap-1"
           >
-            Next
-            <ChevronRight className="ml-2 h-4 w-4" />
+            <span>Complete</span>
+            <CheckIcon className="h-4 w-4" />
           </Button>
         )}
       </div>
     </div>
   );
-};
-
-export default WizardNavigation;
+}

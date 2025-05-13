@@ -1,116 +1,125 @@
 /**
- * String Utility functions for the application
+ * String Utilities Module
+ * 
+ * This module provides utility functions for string manipulation
+ * such as slug generation, SKU generation, etc.
  */
 
 /**
- * Convert a string to a URL-friendly slug
+ * Generates a URL-friendly slug from a string
+ * 
  * @param text The text to convert to a slug
- * @returns A lowercase, hyphenated slug with no special characters
+ * @returns A URL-friendly slug
  */
-export function slugify(text: string): string {
+export function generateSlug(text: string): string {
+  if (!text) return '';
+  
   return text
-    .toString()
     .toLowerCase()
     .trim()
-    // Replace spaces with hyphens
-    .replace(/\s+/g, '-')
-    // Remove special characters
-    .replace(/[^\w\-]+/g, '')
-    // Replace multiple hyphens with a single hyphen
-    .replace(/\-\-+/g, '-')
-    // Remove leading and trailing hyphens
-    .replace(/^-+/, '')
-    .replace(/-+$/, '');
+    .replace(/[^\w\s-]/g, '') // Remove non-word chars (keep spaces and hyphens)
+    .replace(/[\s_-]+/g, '-') // Replace spaces, underscores, and consecutive hyphens with a single hyphen
+    .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
 }
 
 /**
- * Truncate a string to a specified length with ellipsis
+ * Generates a SKU (Stock Keeping Unit) from a product name
+ * 
+ * @param productName The product name to generate a SKU from
+ * @returns A SKU string (uppercase, with random suffix)
+ */
+export function generateSku(productName: string): string {
+  if (!productName) return '';
+  
+  // Extract first letter of each word (up to 4 letters)
+  const prefix = productName
+    .split(/\s+/)
+    .slice(0, 4)
+    .map(word => word.charAt(0).toUpperCase())
+    .join('');
+  
+  // Add a random suffix (6 characters)
+  const randomSuffix = Math.random().toString(36).substring(2, 8).toUpperCase();
+  
+  return `${prefix}-${randomSuffix}`;
+}
+
+/**
+ * Truncates a string to a specified length and adds an ellipsis if needed
+ * 
  * @param text The text to truncate
- * @param maxLength The maximum length of the truncated text
+ * @param maxLength The maximum length of the text
  * @returns The truncated text with ellipsis if needed
  */
 export function truncateText(text: string, maxLength: number): string {
-  if (!text || text.length <= maxLength) {
-    return text;
-  }
+  if (!text) return '';
+  if (text.length <= maxLength) return text;
   
   return text.substring(0, maxLength) + '...';
 }
 
 /**
- * Format a price as a currency string
- * @param price The price to format
- * @param currencyCode The currency code (default: ZAR for South African Rand)
- * @returns The formatted price string
+ * Capitalizes the first letter of each word in a string
+ * 
+ * @param text The text to capitalize
+ * @returns The capitalized text
  */
-export function formatPrice(price: number, currencyCode: string = 'ZAR'): string {
-  return new Intl.NumberFormat('en-ZA', {
-    style: 'currency',
-    currency: currencyCode,
-  }).format(price);
-}
-
-/**
- * Convert a string to title case
- * @param text The text to convert
- * @returns The text in title case
- */
-export function toTitleCase(text: string): string {
+export function capitalizeWords(text: string): string {
   if (!text) return '';
   
   return text
-    .toLowerCase()
-    .split(' ')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .split(/\s+/)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(' ');
 }
 
 /**
- * Check if a string contains another string (case insensitive)
- * @param haystack The string to search in
- * @param needle The string to search for
- * @returns True if the haystack contains the needle
+ * Formats a string as a filename by removing invalid characters
+ * 
+ * @param text The text to format as a filename
+ * @returns A valid filename
  */
-export function containsText(haystack: string, needle: string): boolean {
-  if (!haystack || !needle) return false;
+export function formatFilename(text: string): string {
+  if (!text) return '';
   
-  return haystack.toLowerCase().includes(needle.toLowerCase());
+  return text
+    .trim()
+    .replace(/[<>:"/\\|?*]/g, '-') // Replace invalid filename chars with hyphens
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
+    .replace(/-+/g, '-') // Replace consecutive hyphens with single hyphen
+    .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
 }
 
 /**
- * Generate a random string of specified length
+ * Sanitizes a string for use in HTML, escaping special characters
+ * 
+ * @param text The text to sanitize
+ * @returns Sanitized HTML text
+ */
+export function escapeHtml(text: string): string {
+  if (!text) return '';
+  
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+/**
+ * Generates a random string of specified length
+ * 
  * @param length The length of the random string
  * @returns A random string
  */
 export function generateRandomString(length: number = 8): string {
-  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   let result = '';
   
   for (let i = 0; i < length; i++) {
-    result += characters.charAt(Math.floor(Math.random() * characters.length));
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   
   return result;
-}
-
-/**
- * Generate a product SKU based on product name and optional category prefix
- * @param productName The name of the product
- * @param categoryPrefix Optional category prefix
- * @returns A formatted SKU
- */
-export function generateProductSku(productName: string, categoryPrefix?: string): string {
-  // Take the first 3 letters of the product name
-  const productPart = productName
-    .replace(/[^a-zA-Z0-9]/g, '')
-    .substring(0, 3)
-    .toUpperCase();
-  
-  // Use category prefix if provided
-  const prefix = categoryPrefix ? categoryPrefix.toUpperCase() : 'PRD';
-  
-  // Add a random 4-digit number
-  const randomPart = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-  
-  return `${prefix}-${productPart}${randomPart}`;
 }

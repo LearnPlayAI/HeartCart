@@ -1,459 +1,650 @@
 /**
- * Additional Info Step Component
+ * AdditionalInfoStep Component
  * 
- * Handles collection of additional product information including
- * physical properties, shipping information, and tags.
+ * This component handles the third step of the product wizard,
+ * collecting additional product information including attributes,
+ * inventory settings, and shipping details.
  */
 
-import React, { useEffect } from 'react';
+import React, { useState } from 'react';
 import { useProductWizardContext } from '../context';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { 
+import { useToast } from '@/hooks/use-toast';
+import { useQuery } from '@tanstack/react-query';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import * as z from 'zod';
+
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue 
+  SelectValue,
 } from '@/components/ui/select';
-import { 
-  RulerIcon, 
-  TruckIcon, 
-  TagIcon, 
-  CalendarIcon, 
-  PlusCircle,
-  X
-} from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
-import { 
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { format } from 'date-fns';
-import { Calendar } from '@/components/ui/calendar';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { X, Plus } from 'lucide-react';
 
-const AdditionalInfoStep: React.FC = () => {
-  const { 
-    state, 
-    updateField, 
-    markStepComplete, 
-    validateStep,
-    catalogContext
-  } = useProductWizardContext();
+// Form validation schema
+const additionalInfoSchema = z.object({
+  // Inventory
+  stockLevel: z.number().min(0, 'Stock level cannot be negative'),
+  lowStockThreshold: z.number().min(0, 'Low stock threshold cannot be negative'),
+  backorderEnabled: z.boolean().default(false),
   
-  // Local state for tag input
-  const [tagInput, setTagInput] = React.useState('');
+  // SEO
+  metaTitle: z.string().optional().nullable(),
+  metaDescription: z.string().optional().nullable(),
+  metaKeywords: z.string().optional().nullable(),
   
-  // Auto-validate on mount to set completedSteps correctly
-  useEffect(() => {
-    const isValid = validateStep('additional-info');
-    
-    if (isValid) {
-      markStepComplete('additional-info');
-    }
-  }, [validateStep, markStepComplete]);
+  // Shipping
+  taxable: z.boolean().default(true),
+  taxClass: z.string().optional().nullable(),
+  shippingRequired: z.boolean().default(true),
+  shippingWeight: z.number().optional().nullable(),
+  shippingDimensions: z.object({
+    length: z.number().optional().nullable(),
+    width: z.number().optional().nullable(),
+    height: z.number().optional().nullable(),
+  }),
+});
+
+type AdditionalInfoFormValues = z.infer<typeof additionalInfoSchema>;
+
+// Attribute form validation schema
+const attributeSchema = z.object({
+  id: z.number(),
+  value: z.union([z.string(), z.number()]).optional().nullable(),
+});
+
+type AttributeFormValues = z.infer<typeof attributeSchema>;
+
+export function AdditionalInfoStep() {
+  const { state, updateField, markStepComplete } = useProductWizardContext();
+  const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState('inventory');
   
-  // Apply catalog context defaults when catalogContext changes
-  useEffect(() => {
-    if (catalogContext && !state.productId) {
-      // Apply shipping defaults if they aren't already set
-      if (catalogContext.defaultShippingInfo) {
-        if (state.weight === null && catalogContext.defaultShippingInfo.weight) {
-          updateField('weight', catalogContext.defaultShippingInfo.weight);
-        }
-        
-        if (catalogContext.defaultShippingInfo.weightUnit) {
-          updateField('weightUnit', catalogContext.defaultShippingInfo.weightUnit);
-        }
-        
-        if (catalogContext.defaultShippingInfo.dimensions) {
-          if (state.length === null && catalogContext.defaultShippingInfo.dimensions.length) {
-            updateField('length', catalogContext.defaultShippingInfo.dimensions.length);
-          }
-          
-          if (state.width === null && catalogContext.defaultShippingInfo.dimensions.width) {
-            updateField('width', catalogContext.defaultShippingInfo.dimensions.width);
-          }
-          
-          if (state.height === null && catalogContext.defaultShippingInfo.dimensions.height) {
-            updateField('height', catalogContext.defaultShippingInfo.dimensions.height);
-          }
-          
-          if (catalogContext.defaultShippingInfo.dimensions.unit) {
-            updateField('dimensionUnit', catalogContext.defaultShippingInfo.dimensions.unit);
-          }
-        }
-        
-        if (catalogContext.defaultShippingInfo.freeShipping !== undefined) {
-          updateField('freeShipping', catalogContext.defaultShippingInfo.freeShipping);
-        }
+  // Fetch attributes
+  const { data: attributes = [] } = useQuery({
+    queryKey: ['/api/attributes'],
+  });
+  
+  // Fetch tax classes
+  const { data: taxClasses = [] } = useQuery({
+    queryKey: ['/api/tax-classes'],
+  });
+  
+  // Initialize form with values from context
+  const form = useForm<AdditionalInfoFormValues>({
+    resolver: zodResolver(additionalInfoSchema),
+    defaultValues: {
+      stockLevel: state.stockLevel,
+      lowStockThreshold: state.lowStockThreshold,
+      backorderEnabled: state.backorderEnabled,
+      metaTitle: state.metaTitle,
+      metaDescription: state.metaDescription,
+      metaKeywords: state.metaKeywords,
+      taxable: state.taxable,
+      taxClass: state.taxClass,
+      shippingRequired: state.shippingRequired,
+      shippingWeight: state.shippingWeight,
+      shippingDimensions: {
+        length: state.shippingDimensions.length,
+        width: state.shippingDimensions.width,
+        height: state.shippingDimensions.height,
+      },
+    },
+  });
+  
+  // Handle form submission
+  const onSubmit = (values: AdditionalInfoFormValues) => {
+    // Update main form values
+    Object.entries(values).forEach(([key, value]) => {
+      if (key !== 'shippingDimensions') {
+        updateField(key as keyof typeof state, value);
       }
-      
-      // Apply default tags if none are set
-      if (catalogContext.defaultTags.length > 0 && state.tags.length === 0) {
-        updateField('tags', [...catalogContext.defaultTags]);
-      }
-    }
-  }, [catalogContext, state.productId, state.weight, state.length, state.width, state.height, state.tags.length, updateField]);
-  
-  // Handle text/number input changes
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type } = e.target;
+    });
     
-    if (type === 'number') {
-      updateField(name as keyof typeof state, value ? parseFloat(value) : null);
-    } else {
-      updateField(name as keyof typeof state, value);
+    // Handle shipping dimensions separately
+    updateField('shippingDimensions', values.shippingDimensions);
+    
+    // Mark step as complete
+    markStepComplete('additional-info');
+    
+    toast({
+      title: 'Additional information saved',
+      description: 'Continue to the final step to review and save the product.',
+    });
+  };
+  
+  // Handle adding an attribute
+  const addAttribute = (attributeId: number, attributeName: string) => {
+    // Check if attribute already exists
+    const attributeExists = state.attributes.some(attr => attr.id === attributeId);
+    
+    if (attributeExists) {
+      toast({
+        title: 'Attribute already added',
+        description: 'This attribute is already in the list.',
+        variant: 'warning',
+      });
+      return;
     }
+    
+    // Add the attribute
+    const newAttribute = {
+      id: attributeId,
+      name: attributeName,
+      value: null
+    };
+    
+    updateField('attributes', [...state.attributes, newAttribute]);
+    
+    toast({
+      title: 'Attribute added',
+      description: `${attributeName} has been added to the product.`,
+    });
   };
   
-  // Handle checkbox changes
-  const handleCheckboxChange = (name: keyof typeof state, checked: boolean) => {
-    updateField(name, checked);
+  // Handle removing an attribute
+  const removeAttribute = (attributeId: number) => {
+    const updatedAttributes = state.attributes.filter(attr => attr.id !== attributeId);
+    updateField('attributes', updatedAttributes);
+    
+    toast({
+      title: 'Attribute removed',
+      description: 'Attribute has been removed from the product.',
+    });
   };
   
-  // Handle select changes
-  const handleSelectChange = (name: keyof typeof state, value: string) => {
-    updateField(name, value);
-  };
-  
-  // Tag handling functions
-  const addTag = () => {
-    if (tagInput.trim() && !state.tags.includes(tagInput.trim())) {
-      updateField('tags', [...state.tags, tagInput.trim()]);
-      setTagInput('');
-    }
-  };
-  
-  const removeTag = (tag: string) => {
-    updateField('tags', state.tags.filter(t => t !== tag));
-  };
-  
-  const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      addTag();
-    }
-  };
-  
-  // Format date for display
-  const formatDate = (date: string | null) => {
-    if (!date) return '';
-    return format(new Date(date), 'PPP');
+  // Handle updating an attribute value
+  const updateAttributeValue = (attributeId: number, value: string | number | null) => {
+    const updatedAttributes = state.attributes.map(attr => {
+      if (attr.id === attributeId) {
+        return { ...attr, value };
+      }
+      return attr;
+    });
+    
+    updateField('attributes', updatedAttributes);
   };
   
   return (
-    <div className="product-wizard-additional-info space-y-6">
-      <h2 className="text-2xl font-bold">Additional Information</h2>
-      <p className="text-muted-foreground">
-        Add more details about this product to improve its listing and classification.
-      </p>
-      
-      {/* Physical Properties Section */}
-      <div className="physical-properties">
-        <h3 className="text-lg font-semibold mb-4 flex items-center">
-          <RulerIcon className="mr-2 h-5 w-5" />
-          Physical Properties
-        </h3>
+    <div className="space-y-8">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="inventory">Inventory</TabsTrigger>
+          <TabsTrigger value="attributes">Attributes</TabsTrigger>
+          <TabsTrigger value="seo-shipping">SEO & Shipping</TabsTrigger>
+        </TabsList>
         
-        {/* Is Physical Toggle */}
-        <div className="flex items-center space-x-2 mb-6">
-          <Checkbox
-            id="isPhysical"
-            checked={state.isPhysical}
-            onCheckedChange={(checked) => 
-              handleCheckboxChange('isPhysical', checked === true)
-            }
-          />
-          <Label htmlFor="isPhysical" className="cursor-pointer">
-            This is a physical product
-          </Label>
-        </div>
-        
-        {/* Physical Properties Fields (conditionally shown) */}
-        {state.isPhysical && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Weight */}
-            <div className="space-y-2">
-              <Label htmlFor="weight">Weight</Label>
-              <div className="flex space-x-2">
-                <div className="flex-1">
-                  <Input
-                    id="weight"
-                    name="weight"
-                    type="number"
-                    value={state.weight === null ? '' : state.weight}
-                    onChange={handleInputChange}
-                    placeholder="0.00"
-                    min={0}
-                    step={0.01}
-                  />
-                </div>
-                <Select
-                  value={state.weightUnit}
-                  onValueChange={(value) => handleSelectChange('weightUnit', value)}
-                >
-                  <SelectTrigger className="w-24">
-                    <SelectValue placeholder="Unit" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="kg">kg</SelectItem>
-                    <SelectItem value="g">g</SelectItem>
-                    <SelectItem value="lb">lb</SelectItem>
-                    <SelectItem value="oz">oz</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pt-4">
+            <TabsContent value="inventory" className="space-y-6">
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">Inventory Settings</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Manage stock levels and inventory options for this product.
+                    </p>
+                    
+                    <Separator />
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="stockLevel"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Stock Level</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                min="0" 
+                                {...field}
+                                onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              Current quantity in stock
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="lowStockThreshold"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Low Stock Threshold</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                min="0" 
+                                {...field}
+                                onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              Quantity at which to trigger low stock alerts
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    
+                    <FormField
+                      control={form.control}
+                      name="backorderEnabled"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                          <div className="space-y-0.5">
+                            <FormLabel className="text-base">Allow Backorders</FormLabel>
+                            <FormDescription>
+                              Allow customers to purchase this product when out of stock
+                            </FormDescription>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
             
-            {/* Length */}
-            <div className="space-y-2">
-              <Label htmlFor="length">Length</Label>
-              <Input
-                id="length"
-                name="length"
-                type="number"
-                value={state.length === null ? '' : state.length}
-                onChange={handleInputChange}
-                placeholder="0.00"
-                min={0}
-                step={0.01}
-              />
-            </div>
+            <TabsContent value="attributes" className="space-y-6">
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-medium">Product Attributes</h3>
+                      <Select
+                        onValueChange={(value) => {
+                          const [id, name] = value.split('|');
+                          addAttribute(parseInt(id), name);
+                        }}
+                      >
+                        <SelectTrigger className="w-[180px]">
+                          <SelectValue placeholder="Add attribute" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {attributes.map((attr: any) => (
+                            <SelectItem 
+                              key={attr.id} 
+                              value={`${attr.id}|${attr.name}`}
+                            >
+                              {attr.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <p className="text-sm text-muted-foreground">
+                      Add and configure product attributes like color, size, material, etc.
+                    </p>
+                    
+                    <Separator />
+                    
+                    {state.attributes.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <p>No attributes added yet.</p>
+                        <p className="text-sm mt-1">Use the dropdown above to add attributes.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {state.attributes.map((attribute) => (
+                          <div 
+                            key={attribute.id} 
+                            className="flex items-start justify-between gap-4 border rounded-md p-4"
+                          >
+                            <div className="min-w-[160px]">
+                              <h4 className="font-medium">{attribute.name}</h4>
+                            </div>
+                            <div className="flex-grow">
+                              <Input 
+                                placeholder={`Enter ${attribute.name.toLowerCase()} value`}
+                                value={attribute.value as string || ''}
+                                onChange={(e) => updateAttributeValue(attribute.id, e.target.value)}
+                              />
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeAttribute(attribute.id)}
+                              className="text-muted-foreground hover:text-destructive"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
             
-            {/* Width */}
-            <div className="space-y-2">
-              <Label htmlFor="width">Width</Label>
-              <Input
-                id="width"
-                name="width"
-                type="number"
-                value={state.width === null ? '' : state.width}
-                onChange={handleInputChange}
-                placeholder="0.00"
-                min={0}
-                step={0.01}
-              />
-            </div>
+            <TabsContent value="seo-shipping" className="space-y-6">
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">SEO Information</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Optimize product visibility in search engines with SEO details.
+                    </p>
+                    
+                    <Separator />
+                    
+                    <FormField
+                      control={form.control}
+                      name="metaTitle"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Meta Title</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="Custom page title for search engines" 
+                              {...field}
+                              value={field.value || ''}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Recommended length: 50-60 characters
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="metaDescription"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Meta Description</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Short description for search engines" 
+                              className="resize-none"
+                              {...field}
+                              value={field.value || ''}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Recommended length: 150-160 characters
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="metaKeywords"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Meta Keywords</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="Comma-separated keywords" 
+                              {...field}
+                              value={field.value || ''}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Example: t-shirt, cotton, apparel
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">Shipping & Tax</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Configure shipping and tax settings for this product.
+                    </p>
+                    
+                    <Separator />
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="taxable"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                            <div className="space-y-0.5">
+                              <FormLabel className="text-base">Taxable</FormLabel>
+                              <FormDescription>
+                                Apply taxes to this product
+                              </FormDescription>
+                            </div>
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="shippingRequired"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                            <div className="space-y-0.5">
+                              <FormLabel className="text-base">Physical Product</FormLabel>
+                              <FormDescription>
+                                Requires shipping
+                              </FormDescription>
+                            </div>
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    
+                    {form.watch('taxable') && (
+                      <FormField
+                        control={form.control}
+                        name="taxClass"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Tax Class</FormLabel>
+                            <Select
+                              onValueChange={field.onChange}
+                              value={field.value || ''}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select tax class" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="standard">Standard Rate</SelectItem>
+                                <SelectItem value="reduced">Reduced Rate</SelectItem>
+                                <SelectItem value="zero">Zero Rate</SelectItem>
+                                {taxClasses.map((taxClass: any) => (
+                                  <SelectItem key={taxClass.id} value={taxClass.code}>
+                                    {taxClass.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormDescription>
+                              Tax classification for this product
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
+                    
+                    {form.watch('shippingRequired') && (
+                      <>
+                        <FormField
+                          control={form.control}
+                          name="shippingWeight"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Weight (kg)</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  type="number" 
+                                  step="0.01" 
+                                  min="0" 
+                                  placeholder="0.00" 
+                                  {...field}
+                                  value={field.value === null ? '' : field.value}
+                                  onChange={(e) => {
+                                    const value = e.target.value === '' 
+                                      ? null 
+                                      : parseFloat(e.target.value);
+                                    field.onChange(value);
+                                  }}
+                                />
+                              </FormControl>
+                              <FormDescription>
+                                Product weight in kilograms
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <div className="grid grid-cols-3 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="shippingDimensions.length"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Length (cm)</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    type="number" 
+                                    step="0.1" 
+                                    min="0" 
+                                    placeholder="0.0" 
+                                    {...field}
+                                    value={field.value === null ? '' : field.value}
+                                    onChange={(e) => {
+                                      const value = e.target.value === '' 
+                                        ? null 
+                                        : parseFloat(e.target.value);
+                                      field.onChange(value);
+                                    }}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <FormField
+                            control={form.control}
+                            name="shippingDimensions.width"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Width (cm)</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    type="number" 
+                                    step="0.1" 
+                                    min="0" 
+                                    placeholder="0.0" 
+                                    {...field}
+                                    value={field.value === null ? '' : field.value}
+                                    onChange={(e) => {
+                                      const value = e.target.value === '' 
+                                        ? null 
+                                        : parseFloat(e.target.value);
+                                      field.onChange(value);
+                                    }}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <FormField
+                            control={form.control}
+                            name="shippingDimensions.height"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Height (cm)</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    type="number" 
+                                    step="0.1" 
+                                    min="0" 
+                                    placeholder="0.0" 
+                                    {...field}
+                                    value={field.value === null ? '' : field.value}
+                                    onChange={(e) => {
+                                      const value = e.target.value === '' 
+                                        ? null 
+                                        : parseFloat(e.target.value);
+                                      field.onChange(value);
+                                    }}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
             
-            {/* Height */}
-            <div className="space-y-2">
-              <Label htmlFor="height">Height</Label>
-              <Input
-                id="height"
-                name="height"
-                type="number"
-                value={state.height === null ? '' : state.height}
-                onChange={handleInputChange}
-                placeholder="0.00"
-                min={0}
-                step={0.01}
-              />
+            <div className="flex justify-end">
+              <Button type="submit" className="w-32">Save & Continue</Button>
             </div>
-            
-            {/* Dimension Unit */}
-            <div className="space-y-2">
-              <Label htmlFor="dimensionUnit">Dimension Unit</Label>
-              <Select
-                value={state.dimensionUnit}
-                onValueChange={(value) => handleSelectChange('dimensionUnit', value)}
-              >
-                <SelectTrigger id="dimensionUnit">
-                  <SelectValue placeholder="Select unit" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="cm">cm</SelectItem>
-                  <SelectItem value="m">m</SelectItem>
-                  <SelectItem value="in">inches</SelectItem>
-                  <SelectItem value="ft">feet</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        )}
-      </div>
-      
-      <Separator />
-      
-      {/* Shipping & Availability Section */}
-      <div className="shipping">
-        <h3 className="text-lg font-semibold mb-4 flex items-center">
-          <TruckIcon className="mr-2 h-5 w-5" />
-          Shipping & Availability
-        </h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Free Shipping Option */}
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="freeShipping"
-              checked={state.freeShipping}
-              onCheckedChange={(checked) => 
-                handleCheckboxChange('freeShipping', checked === true)
-              }
-            />
-            <Label htmlFor="freeShipping" className="cursor-pointer">
-              Free Shipping
-            </Label>
-          </div>
-          
-          {/* Publish Date */}
-          <div className="space-y-2">
-            <Label htmlFor="publishDate">Publish Date (Optional)</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <button
-                  id="publishDate"
-                  className={cn(
-                    "w-full flex items-center justify-start rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background",
-                    "placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
-                    "disabled:cursor-not-allowed disabled:opacity-50"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {state.publishDate ? (
-                    formatDate(state.publishDate)
-                  ) : (
-                    <span className="text-muted-foreground">Pick a date</span>
-                  )}
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={state.publishDate ? new Date(state.publishDate) : undefined}
-                  onSelect={(date) => 
-                    updateField('publishDate', date ? date.toISOString() : null)
-                  }
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-            <p className="text-xs text-muted-foreground mt-1">
-              If set, the product will only be published on or after this date
-            </p>
-          </div>
-          
-          {/* Expiry Date */}
-          <div className="space-y-2">
-            <Label htmlFor="expiryDate">Expiry Date (Optional)</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <button
-                  id="expiryDate"
-                  className={cn(
-                    "w-full flex items-center justify-start rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background",
-                    "placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
-                    "disabled:cursor-not-allowed disabled:opacity-50"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {state.expiryDate ? (
-                    formatDate(state.expiryDate)
-                  ) : (
-                    <span className="text-muted-foreground">Pick a date</span>
-                  )}
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={state.expiryDate ? new Date(state.expiryDate) : undefined}
-                  onSelect={(date) => 
-                    updateField('expiryDate', date ? date.toISOString() : null)
-                  }
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-            <p className="text-xs text-muted-foreground mt-1">
-              If set, the product will be automatically unpublished on this date
-            </p>
-          </div>
-        </div>
-      </div>
-      
-      <Separator />
-      
-      {/* Tags Section */}
-      <div className="tags">
-        <h3 className="text-lg font-semibold mb-4 flex items-center">
-          <TagIcon className="mr-2 h-5 w-5" />
-          Tags
-        </h3>
-        
-        <div className="space-y-4">
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <Input
-                value={tagInput}
-                onChange={(e) => setTagInput(e.target.value)}
-                onKeyDown={handleTagInputKeyDown}
-                placeholder="Enter a tag and press Enter"
-              />
-            </div>
-            <Button
-              type="button"
-              onClick={addTag}
-              size="icon"
-              variant="secondary"
-            >
-              <PlusCircle className="h-4 w-4" />
-            </Button>
-          </div>
-          
-          <div className="flex flex-wrap gap-2 mt-2">
-            {state.tags.map(tag => (
-              <Badge key={tag} variant="secondary" className="flex items-center gap-1 pl-2 pr-1">
-                {tag}
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-5 w-5 rounded-full"
-                  onClick={() => removeTag(tag)}
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              </Badge>
-            ))}
-            {state.tags.length === 0 && (
-              <p className="text-sm text-muted-foreground">
-                No tags added yet. Tags improve discoverability in search.
-              </p>
-            )}
-          </div>
-          
-          {catalogContext?.defaultTags.length > 0 && (
-            <div className="mt-4">
-              <p className="text-sm font-medium mb-2">Suggested tags from catalog:</p>
-              <div className="flex flex-wrap gap-2">
-                {catalogContext.defaultTags.map(tag => (
-                  <Badge 
-                    key={tag} 
-                    variant="outline" 
-                    className="cursor-pointer hover:bg-secondary"
-                    onClick={() => {
-                      if (!state.tags.includes(tag)) {
-                        updateField('tags', [...state.tags, tag]);
-                      }
-                    }}
-                  >
-                    {state.tags.includes(tag) ? `✓ ${tag}` : `+ ${tag}`}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+          </form>
+        </Form>
+      </Tabs>
     </div>
   );
-};
-
-export default AdditionalInfoStep;
+}

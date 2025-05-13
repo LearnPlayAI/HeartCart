@@ -2,604 +2,616 @@
  * BasicInfoStep Component
  * 
  * This component handles the first step of the product wizard,
- * collecting basic product information such as name, description, category, etc.
+ * collecting basic product information including name, SKU, pricing, etc.
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useProductWizardContext } from '../context';
+import { useToast } from '@/hooks/use-toast';
+import { useQuery } from '@tanstack/react-query';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
+import { generateSlug, generateSku } from '@/utils/string-utils';
 import * as z from 'zod';
-import axios from 'axios';
-import { generateProductSku } from '@/utils/string-utils';
 
-// UI Components
-import { Button } from '@/components/ui/button';
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Checkbox } from '@/components/ui/checkbox';
-import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Info, AlertCircle } from 'lucide-react';
+import { formatCurrency } from '@/utils/format';
 
-// Define the form schema with validation
+// Form validation schema
 const basicInfoSchema = z.object({
-  name: z.string().min(2, { message: 'Product name must be at least 2 characters.' }),
-  slug: z.string().min(2, { message: 'Product slug must be at least 2 characters.' }),
-  sku: z.string().min(2, { message: 'SKU must be at least 2 characters.' }),
+  name: z.string().min(1, 'Product name is required'),
+  slug: z.string().min(1, 'Slug is required'),
+  sku: z.string().min(1, 'SKU is required'),
   brand: z.string().optional(),
   description: z.string().optional(),
-  categoryId: z.string().optional(),
-  costPrice: z.number().min(0, { message: 'Cost price must be a positive number.' }),
-  markupPercentage: z.number().min(0, { message: 'Markup percentage must be a positive number.' }),
-  regularPrice: z.number().min(0, { message: 'Regular price must be a positive number.' }),
-  salePrice: z.number().min(0, { message: 'Sale price must be a positive number.' }).optional().nullable(),
-  stockLevel: z.number().min(0, { message: 'Stock level must be a positive number.' }).default(0),
-  lowStockThreshold: z.number().min(0, { message: 'Low stock threshold must be a positive number.' }).default(5),
-  backorderEnabled: z.boolean().default(false),
+  categoryId: z.coerce.number().nullable(),
+  costPrice: z.coerce.number().min(0, 'Cost price must be at least 0'),
+  markupPercentage: z.coerce.number().min(0, 'Markup percentage must be at least 0'),
+  regularPrice: z.coerce.number().min(0, 'Regular price must be at least 0'),
+  salePrice: z.coerce.number().nullable().optional(),
+  onSale: z.boolean().default(false),
   isActive: z.boolean().default(true),
-  isDraft: z.boolean().default(true),
   isFeatured: z.boolean().default(false),
-  isNew: z.boolean().default(true),
 });
 
-// BasicInfoStep component
-const BasicInfoStep: React.FC = () => {
+// Type for form values
+type BasicInfoFormValues = z.infer<typeof basicInfoSchema>;
+
+// Standard markups for quick selection
+const STANDARD_MARKUPS = [
+  { label: '15%', value: 15 },
+  { label: '20%', value: 20 },
+  { label: '25%', value: 25 },
+  { label: '30%', value: 30 },
+  { label: '40%', value: 40 },
+  { label: '50%', value: 50 },
+  { label: '75%', value: 75 },
+  { label: '100%', value: 100 },
+];
+
+export function BasicInfoStep() {
+  const { state, updateField, markStepComplete, markStepInProgress } = useProductWizardContext();
   const { toast } = useToast();
-  const [categories, setCategories] = useState<{id: number, name: string}[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('general');
+  const [isAutoSlugEnabled, setIsAutoSlugEnabled] = useState(true);
+  const [isAutoSkuEnabled, setIsAutoSkuEnabled] = useState(true);
+  const [isAutoPriceEnabled, setIsAutoPriceEnabled] = useState(true);
   
-  const { 
-    state, 
-    updateField, 
-    validateStep, 
-    markStepComplete,
-    currentStep,
-    goToStep,
-  } = useProductWizardContext();
+  // Fetch categories
+  const { data: categories = [] } = useQuery({
+    queryKey: ['/api/categories'],
+  });
   
-  // Initialize the form with values from context
-  const form = useForm<z.infer<typeof basicInfoSchema>>({
+  // Initialize form with values from context
+  const form = useForm<BasicInfoFormValues>({
     resolver: zodResolver(basicInfoSchema),
     defaultValues: {
-      name: state.name || '',
-      slug: state.slug || '',
-      sku: state.sku || '',
-      brand: state.brand || '',
-      description: state.description || '',
-      categoryId: state.categoryId ? String(state.categoryId) : undefined,
-      costPrice: state.costPrice || 0,
-      markupPercentage: state.markupPercentage || 30,
-      regularPrice: state.regularPrice || 0,
-      salePrice: state.salePrice || undefined,
-      stockLevel: state.stockLevel || 0,
-      lowStockThreshold: state.lowStockThreshold || 5,
-      backorderEnabled: state.backorderEnabled || false,
+      name: state.name,
+      slug: state.slug,
+      sku: state.sku,
+      brand: state.brand,
+      description: state.description,
+      categoryId: state.categoryId,
+      costPrice: state.costPrice,
+      markupPercentage: state.markupPercentage,
+      regularPrice: state.regularPrice,
+      salePrice: state.salePrice,
+      onSale: state.onSale,
       isActive: state.isActive,
-      isDraft: state.isDraft,
       isFeatured: state.isFeatured,
-      isNew: state.isNew,
     },
   });
   
-  // Fetch categories when component mounts
+  // Auto-generate slug when name changes
   useEffect(() => {
-    const fetchCategories = async () => {
-      setIsLoading(true);
-      try {
-        const response = await axios.get('/api/categories');
-        if (response.data && response.data.success) {
-          setCategories(response.data.data);
-        }
-      } catch (error) {
-        console.error('Failed to fetch categories:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to load categories. Please try again.',
-          variant: 'destructive',
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    fetchCategories();
-  }, [toast]);
+    if (isAutoSlugEnabled && form.watch('name')) {
+      const generatedSlug = generateSlug(form.watch('name'));
+      form.setValue('slug', generatedSlug);
+    }
+  }, [form.watch('name'), isAutoSlugEnabled, form]);
   
-  // Generate SKU based on product name and category if SKU is empty
+  // Auto-generate SKU when name changes
   useEffect(() => {
-    const name = form.watch('name');
-    const sku = form.watch('sku');
-    const categoryId = form.watch('categoryId');
-    
-    if (name && !sku && categoryId) {
-      const category = categories.find(cat => cat.id === parseInt(categoryId));
-      const categoryPrefix = category ? category.name.substring(0, 3).toUpperCase() : undefined;
-      const generatedSku = generateProductSku(name, categoryPrefix);
+    if (isAutoSkuEnabled && form.watch('name')) {
+      const generatedSku = generateSku(form.watch('name'));
       form.setValue('sku', generatedSku);
     }
-  }, [form.watch('name'), form.watch('categoryId'), categories, form]);
+  }, [form.watch('name'), isAutoSkuEnabled, form]);
   
-  // Callback when form is submitted
-  const onSubmit = (data: z.infer<typeof basicInfoSchema>) => {
-    // Update all fields in the context
-    updateField('name', data.name);
-    updateField('slug', data.slug);
-    updateField('sku', data.sku);
-    updateField('brand', data.brand || null);
-    updateField('description', data.description || null);
-    updateField('categoryId', data.categoryId ? parseInt(data.categoryId) : null);
-    
-    if (data.categoryId) {
-      const category = categories.find(cat => cat.id === parseInt(data.categoryId));
-      updateField('categoryName', category?.name || null);
+  // Calculate regular price based on cost price and markup
+  useEffect(() => {
+    if (isAutoPriceEnabled) {
+      const costPrice = parseFloat(form.watch('costPrice').toString()) || 0;
+      const markupPercentage = parseFloat(form.watch('markupPercentage').toString()) || 0;
+      
+      // Calculate regular price
+      const regularPrice = costPrice * (1 + markupPercentage / 100);
+      form.setValue('regularPrice', parseFloat(regularPrice.toFixed(2)));
     }
-    
-    updateField('costPrice', data.costPrice);
-    updateField('markupPercentage', data.markupPercentage);
-    updateField('regularPrice', data.regularPrice);
-    updateField('salePrice', data.salePrice || null);
-    updateField('stockLevel', data.stockLevel);
-    updateField('lowStockThreshold', data.lowStockThreshold);
-    updateField('backorderEnabled', data.backorderEnabled);
-    updateField('isActive', data.isActive);
-    updateField('isDraft', data.isDraft);
-    updateField('isFeatured', data.isFeatured);
-    updateField('isNew', data.isNew);
-    
-    // Mark this step as completed
-    if (validateStep(currentStep)) {
-      markStepComplete(currentStep);
-      goToStep('images');
+  }, [form.watch('costPrice'), form.watch('markupPercentage'), isAutoPriceEnabled, form]);
+  
+  // Update sale price when regular price or onSale changes
+  useEffect(() => {
+    if (!form.watch('onSale')) {
+      form.setValue('salePrice', null);
     }
+  }, [form.watch('onSale'), form]);
+  
+  // Mark step as in progress when form values change
+  useEffect(() => {
+    markStepInProgress('basic-info');
+  }, [
+    form.watch('name'),
+    form.watch('slug'),
+    form.watch('sku'),
+    form.watch('description'),
+    form.watch('categoryId'),
+    form.watch('costPrice'),
+    form.watch('regularPrice'),
+    form.watch('salePrice'),
+    markStepInProgress
+  ]);
+  
+  // Handle form submission
+  const onSubmit = (values: BasicInfoFormValues) => {
+    // Update context with form values
+    Object.entries(values).forEach(([key, value]) => {
+      updateField(key as keyof typeof state, value);
+    });
+    
+    // Mark step as complete
+    markStepComplete('basic-info');
+    
+    toast({
+      title: 'Basic information saved',
+      description: 'Continue to the next step to upload product images.',
+    });
+  };
+  
+  // Handle setting markup percentage
+  const handleSetMarkup = (percentage: number) => {
+    form.setValue('markupPercentage', percentage);
   };
   
   return (
-    <div className="basic-info-step">
-      <h2 className="text-2xl font-semibold mb-6">Basic Product Information</h2>
-      
-      {isLoading ? (
-        <div className="flex items-center justify-center py-8">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      ) : (
+    <div className="space-y-8">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="general">General</TabsTrigger>
+          <TabsTrigger value="pricing">Pricing</TabsTrigger>
+        </TabsList>
+        
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Product Name */}
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Product Name <span className="text-destructive">*</span></FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter product name" {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      The name of your product as it will appear to customers.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              {/* SKU */}
-              <FormField
-                control={form.control}
-                name="sku"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>SKU <span className="text-destructive">*</span></FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter product SKU" {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      Unique identifier for inventory management. Auto-generated if left empty.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              {/* Slug */}
-              <FormField
-                control={form.control}
-                name="slug"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>URL Slug <span className="text-destructive">*</span></FormLabel>
-                    <FormControl>
-                      <Input placeholder="url-friendly-product-name" {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      URL-friendly version of the product name. Auto-generated from product name.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              {/* Brand */}
-              <FormField
-                control={form.control}
-                name="brand"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Brand</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter brand name" {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      The brand or manufacturer of the product.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              {/* Category */}
-              <FormField
-                control={form.control}
-                name="categoryId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Category</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a category" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {categories && categories.map((category) => (
-                          <SelectItem 
-                            key={category.id} 
-                            value={String(category.id)}
-                          >
-                            {category.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormDescription>
-                      Select the category this product belongs to.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              {/* Description */}
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem className="md:col-span-2">
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Textarea 
-                        placeholder="Enter product description" 
-                        className="min-h-[120px]" 
-                        {...field} 
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pt-4">
+            <TabsContent value="general" className="space-y-6">
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">Product Information</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Enter the basic details of your product.
+                    </p>
+                    
+                    <Separator />
+                    
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Product Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter product name" {...field} />
+                          </FormControl>
+                          <FormDescription>
+                            The name of your product as it will appear on your site
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="slug"
+                        render={({ field }) => (
+                          <FormItem>
+                            <div className="flex items-center justify-between">
+                              <FormLabel>URL Slug</FormLabel>
+                              <div className="flex items-center space-x-2">
+                                <span className="text-xs text-muted-foreground">Auto-generate</span>
+                                <Switch
+                                  checked={isAutoSlugEnabled}
+                                  onCheckedChange={setIsAutoSlugEnabled}
+                                  size="sm"
+                                />
+                              </div>
+                            </div>
+                            <FormControl>
+                              <Input 
+                                placeholder="product-url-slug" 
+                                {...field}
+                                readOnly={isAutoSlugEnabled}
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              Used in product URLs for SEO
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
                       />
-                    </FormControl>
-                    <FormDescription>
-                      Detailed description of the product.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            
-            <div className="border-t pt-6 mt-6">
-              <h3 className="text-xl font-semibold mb-4">Pricing & Inventory</h3>
+                      
+                      <FormField
+                        control={form.control}
+                        name="sku"
+                        render={({ field }) => (
+                          <FormItem>
+                            <div className="flex items-center justify-between">
+                              <FormLabel>SKU</FormLabel>
+                              <div className="flex items-center space-x-2">
+                                <span className="text-xs text-muted-foreground">Auto-generate</span>
+                                <Switch
+                                  checked={isAutoSkuEnabled}
+                                  onCheckedChange={setIsAutoSkuEnabled}
+                                  size="sm"
+                                />
+                              </div>
+                            </div>
+                            <FormControl>
+                              <Input 
+                                placeholder="PROD123" 
+                                {...field}
+                                readOnly={isAutoSkuEnabled}
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              Stock Keeping Unit, unique product identifier
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    
+                    <FormField
+                      control={form.control}
+                      name="brand"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Brand</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Product brand or manufacturer" {...field} value={field.value || ''} />
+                          </FormControl>
+                          <FormDescription>
+                            The manufacturer or brand of the product
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="categoryId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Category</FormLabel>
+                          <Select
+                            onValueChange={(value) => field.onChange(value ? parseInt(value) : null)}
+                            value={field.value?.toString() || ""}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select a category" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="">None</SelectItem>
+                              {categories.map((category: any) => (
+                                <SelectItem 
+                                  key={category.id} 
+                                  value={category.id.toString()}
+                                >
+                                  {category.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormDescription>
+                            The category this product belongs to
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Description</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Enter product description" 
+                              className="min-h-[120px]"
+                              {...field}
+                              value={field.value || ''}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Detailed description of the product
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Cost Price */}
-                <FormField
-                  control={form.control}
-                  name="costPrice"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Cost Price <span className="text-destructive">*</span></FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          min="0" 
-                          step="0.01" 
-                          placeholder="0.00" 
-                          {...field}
-                          onChange={(e) => {
-                            const value = parseFloat(e.target.value);
-                            field.onChange(isNaN(value) ? 0 : value);
-                          }}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Your cost to acquire or manufacture the product.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                {/* Markup Percentage */}
-                <FormField
-                  control={form.control}
-                  name="markupPercentage"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Markup % <span className="text-destructive">*</span></FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          min="0" 
-                          step="1" 
-                          placeholder="30" 
-                          {...field}
-                          onChange={(e) => {
-                            const value = parseFloat(e.target.value);
-                            field.onChange(isNaN(value) ? 0 : value);
-                          }}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Percentage markup over cost price.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                {/* Regular Price */}
-                <FormField
-                  control={form.control}
-                  name="regularPrice"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Regular Price <span className="text-destructive">*</span></FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          min="0" 
-                          step="0.01" 
-                          placeholder="0.00" 
-                          {...field}
-                          onChange={(e) => {
-                            const value = parseFloat(e.target.value);
-                            field.onChange(isNaN(value) ? 0 : value);
-                          }}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Regular selling price (calculated from cost and markup).
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                {/* Sale Price */}
-                <FormField
-                  control={form.control}
-                  name="salePrice"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Sale Price</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          min="0" 
-                          step="0.01" 
-                          placeholder="0.00" 
-                          value={field.value || ''}
-                          onChange={(e) => {
-                            const value = e.target.value === '' ? undefined : parseFloat(e.target.value);
-                            field.onChange(typeof value === 'number' && isNaN(value) ? 0 : value);
-                          }}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Optional discounted price (leave empty if not on sale).
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                {/* Stock Level */}
-                <FormField
-                  control={form.control}
-                  name="stockLevel"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Stock Level</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          min="0" 
-                          step="1" 
-                          placeholder="0" 
-                          {...field}
-                          onChange={(e) => {
-                            const value = parseInt(e.target.value);
-                            field.onChange(isNaN(value) ? 0 : value);
-                          }}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Current inventory quantity.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                {/* Low Stock Threshold */}
-                <FormField
-                  control={form.control}
-                  name="lowStockThreshold"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Low Stock Threshold</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          min="0" 
-                          step="1" 
-                          placeholder="5" 
-                          {...field}
-                          onChange={(e) => {
-                            const value = parseInt(e.target.value);
-                            field.onChange(isNaN(value) ? 0 : value);
-                          }}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Quantity at which to show "low stock" warning.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              
-              <div className="mt-4 space-y-2">
-                {/* Backorder Enabled */}
-                <FormField
-                  control={form.control}
-                  name="backorderEnabled"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>Allow Backorders</FormLabel>
-                        <FormDescription>
-                          Allow customers to order even when out of stock.
-                        </FormDescription>
-                      </div>
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">Product Status</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Control the visibility and status of your product
+                    </p>
+                    
+                    <Separator />
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="isActive"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                            <div className="space-y-0.5">
+                              <FormLabel className="text-base">
+                                Active Product
+                              </FormLabel>
+                              <FormDescription>
+                                Product will be visible on your store
+                              </FormDescription>
+                            </div>
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="isFeatured"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                            <div className="space-y-0.5">
+                              <FormLabel className="text-base">
+                                Featured Product
+                              </FormLabel>
+                              <FormDescription>
+                                Highlight this product on your homepage
+                              </FormDescription>
+                            </div>
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
             
-            <div className="border-t pt-6 mt-6">
-              <h3 className="text-xl font-semibold mb-4">Product Status</h3>
-              
-              <div className="space-y-4">
-                {/* Is Active */}
-                <FormField
-                  control={form.control}
-                  name="isActive"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>Active</FormLabel>
-                        <FormDescription>
-                          Product is visible to customers.
-                        </FormDescription>
+            <TabsContent value="pricing" className="space-y-6">
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">Product Pricing</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Set your cost price, markup, and selling prices
+                    </p>
+                    
+                    <Separator />
+                    
+                    <FormField
+                      control={form.control}
+                      name="costPrice"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Cost Price</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              min="0" 
+                              step="0.01" 
+                              placeholder="0.00"
+                              {...field}
+                              onChange={(e) => {
+                                field.onChange(parseFloat(e.target.value) || 0);
+                              }}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Your cost to acquire this product
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="markupPercentage"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Markup Percentage</FormLabel>
+                            <div className="flex items-center space-x-2">
+                              <FormControl>
+                                <Input 
+                                  type="number" 
+                                  min="0" 
+                                  step="0.1" 
+                                  placeholder="0"
+                                  {...field}
+                                  onChange={(e) => {
+                                    field.onChange(parseFloat(e.target.value) || 0);
+                                  }}
+                                />
+                              </FormControl>
+                              <span className="text-muted-foreground">%</span>
+                            </div>
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {STANDARD_MARKUPS.map((markup) => (
+                                <Badge
+                                  key={markup.value}
+                                  variant={field.value === markup.value ? "default" : "outline"}
+                                  className="cursor-pointer"
+                                  onClick={() => handleSetMarkup(markup.value)}
+                                >
+                                  {markup.label}
+                                </Badge>
+                              ))}
+                            </div>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <div className="flex flex-col space-y-2 justify-end">
+                        <div className="text-sm font-medium">Price Calculation</div>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-xs text-muted-foreground">Auto-calculate prices</span>
+                          <Switch
+                            checked={isAutoPriceEnabled}
+                            onCheckedChange={setIsAutoPriceEnabled}
+                            size="sm"
+                          />
+                        </div>
+                        <div className="text-sm text-muted-foreground pt-1">
+                          <p>Cost: {formatCurrency(form.watch('costPrice'))}</p>
+                          <p>+ Markup: {form.watch('markupPercentage')}%</p>
+                          <Separator className="my-2" />
+                          <p className="font-medium">
+                            = Price: {formatCurrency(form.watch('regularPrice'))}
+                          </p>
+                        </div>
                       </div>
-                    </FormItem>
-                  )}
-                />
-                
-                {/* Is Draft */}
-                <FormField
-                  control={form.control}
-                  name="isDraft"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>Draft</FormLabel>
-                        <FormDescription>
-                          Save as draft (not published yet).
-                        </FormDescription>
-                      </div>
-                    </FormItem>
-                  )}
-                />
-                
-                {/* Is Featured */}
-                <FormField
-                  control={form.control}
-                  name="isFeatured"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>Featured</FormLabel>
-                        <FormDescription>
-                          Show in featured product sections.
-                        </FormDescription>
-                      </div>
-                    </FormItem>
-                  )}
-                />
-                
-                {/* Is New */}
-                <FormField
-                  control={form.control}
-                  name="isNew"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>New</FormLabel>
-                        <FormDescription>
-                          Mark as a new product.
-                        </FormDescription>
-                      </div>
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
+                    </div>
+                    
+                    <FormField
+                      control={form.control}
+                      name="regularPrice"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Regular Price</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              min="0" 
+                              step="0.01" 
+                              placeholder="0.00"
+                              {...field}
+                              onChange={(e) => {
+                                field.onChange(parseFloat(e.target.value) || 0);
+                              }}
+                              readOnly={isAutoPriceEnabled}
+                              className={isAutoPriceEnabled ? "bg-gray-50" : ""}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Regular selling price of the product
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="onSale"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                          <div className="space-y-0.5">
+                            <FormLabel className="text-base">
+                              On Sale
+                            </FormLabel>
+                            <FormDescription>
+                              Product is currently on sale
+                            </FormDescription>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    
+                    {form.watch('onSale') && (
+                      <FormField
+                        control={form.control}
+                        name="salePrice"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Sale Price</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                min="0" 
+                                step="0.01" 
+                                placeholder="0.00"
+                                {...field}
+                                value={field.value === null ? '' : field.value}
+                                onChange={(e) => {
+                                  const value = e.target.value === '' ? null : parseFloat(e.target.value);
+                                  field.onChange(value);
+                                }}
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              Discounted selling price
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
             
-            <div className="border-t pt-6 mt-6">
-              <Button type="submit" className="w-full md:w-auto">
-                Continue to Images
-              </Button>
+            <div className="flex justify-end">
+              <Button type="submit" className="w-32">Save & Continue</Button>
             </div>
           </form>
         </Form>
-      )}
+      </Tabs>
     </div>
   );
-};
-
-export default BasicInfoStep;
+}

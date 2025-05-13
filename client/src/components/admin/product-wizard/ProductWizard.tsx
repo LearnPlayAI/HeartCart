@@ -1,72 +1,60 @@
 /**
  * ProductWizard Component
  * 
- * This is the main container component for the product creation wizard.
- * It orchestrates all steps and manages the overall wizard state.
+ * The main component that orchestrates the product creation wizard.
+ * It handles the step navigation and coordinating the wizard context.
  */
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { useLocation } from 'wouter';
-import { ProductWizardProvider, useProductWizardContext, WIZARD_STEPS } from './context';
-import WizardNavigation from './WizardNavigation';
-import BasicInfoStep from './steps/BasicInfoStep';
-import ImageStep from './steps/ImageStep';
-import AdditionalInfoStep from './steps/AdditionalInfoStep';
-import ReviewAndSaveStep from './steps/ReviewAndSaveStep';
+import { ProductWizardProvider, useProductWizardContext } from './context';
+import { WizardNavigation } from './WizardNavigation';
+import { BasicInfoStep } from './steps/BasicInfoStep';
+import { ImageStep } from './steps/ImageStep';
+import { AdditionalInfoStep } from './steps/AdditionalInfoStep';
+import { ReviewAndSaveStep } from './steps/ReviewAndSaveStep';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { XIcon } from 'lucide-react';
 
-// Props for the wizard
-export interface ProductWizardProps {
-  onCancel?: () => void;
-  onComplete?: (productId: number) => void;
-  showBackToProducts?: boolean;
-  initialValues?: Record<string, any>;
+interface ProductWizardProps {
   catalogId?: number;
+  catalogName?: string;
+  onComplete?: (product: any) => void;
+  onCancel?: () => void;
 }
 
-// Inner component that uses the context
-const ProductWizardInner: React.FC<ProductWizardProps> = ({
-  onCancel,
+// Internal Wizard wrapper that has access to context
+function ProductWizardContent({
   onComplete,
-  showBackToProducts = true,
-}) => {
+  onCancel
+}: Omit<ProductWizardProps, 'catalogId' | 'catalogName'>) {
+  const { state, resetWizard } = useProductWizardContext();
   const [, setLocation] = useLocation();
-  const { 
-    currentStep, 
-    createProduct, 
-    updateProduct, 
-    state: { productId },
-    isSubmitting,
-  } = useProductWizardContext();
   
-  // Handle completion
-  const handleComplete = async () => {
-    let success = false;
-    
-    if (productId) {
-      success = await updateProduct();
+  // Handle completion of the wizard
+  const handleComplete = useCallback((product: any) => {
+    if (onComplete) {
+      onComplete(product);
     } else {
-      success = await createProduct();
+      // Default completion behavior if no handler is provided
+      setLocation('/admin/products');
     }
-    
-    if (success && onComplete) {
-      onComplete(productId || 0);
-    }
-  };
+  }, [onComplete, setLocation]);
   
-  // Handle navigation back to products list
-  const handleBackToProducts = () => {
+  // Handle cancellation of the wizard
+  const handleCancel = useCallback(() => {
     if (onCancel) {
       onCancel();
     } else {
+      // Default cancellation behavior if no handler is provided
+      resetWizard();
       setLocation('/admin/products');
     }
-  };
+  }, [onCancel, resetWizard, setLocation]);
   
-  // Render the current step
-  const renderStep = () => {
-    switch (currentStep) {
+  // Render the appropriate step based on the current step in context
+  const renderStep = (step: string) => {
+    switch (step) {
       case 'basic-info':
         return <BasicInfoStep />;
       case 'images':
@@ -76,80 +64,60 @@ const ProductWizardInner: React.FC<ProductWizardProps> = ({
       case 'review':
         return <ReviewAndSaveStep />;
       default:
-        return <div>Unknown step</div>;
+        return <BasicInfoStep />;
     }
   };
   
   return (
-    <div className="product-wizard">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex justify-between items-center mb-4">
-          <h1 className="text-3xl font-bold">
-            {productId ? 'Edit Product' : 'Create New Product'}
-          </h1>
-          
-          {showBackToProducts && (
-            <Button
-              variant="outline"
-              onClick={handleBackToProducts}
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Products
-            </Button>
-          )}
-        </div>
+    <div className="space-y-8">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-semibold">
+          {state.catalogName 
+            ? `Add Product to ${state.catalogName}` 
+            : 'Add New Product'
+          }
+        </h2>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handleCancel}
+          className="rounded-full"
+          aria-label="Cancel"
+        >
+          <XIcon className="h-5 w-5" />
+        </Button>
+      </div>
+      
+      <div className="space-y-8">
+        <WizardNavigation onComplete={handleComplete} />
         
-        <p className="text-muted-foreground text-lg">
-          {productId 
-            ? 'Update your product information using the step-by-step wizard below.' 
-            : 'Create a new product using the step-by-step wizard below.'}
-        </p>
+        <div className="mt-8 pb-8">
+          {renderStep(state.currentStep)}
+        </div>
       </div>
-      
-      {/* Wizard Navigation */}
-      <WizardNavigation 
-        showFinishButton={currentStep === 'review'}
-        onFinishClick={handleComplete}
-        loading={isSubmitting}
-      />
-      
-      {/* Step Content */}
-      <div className="my-8 py-4">
-        {renderStep()}
-      </div>
-      
-      {/* Wizard Navigation (bottom) */}
-      <WizardNavigation 
-        showFinishButton={currentStep === 'review'}
-        onFinishClick={handleComplete}
-        loading={isSubmitting}
-      />
     </div>
   );
-};
+}
 
-// Main public component
-export const ProductWizard: React.FC<ProductWizardProps> = ({
-  onCancel,
-  onComplete,
-  showBackToProducts,
-  initialValues,
+// Main export component with Provider
+export function ProductWizard({ 
   catalogId,
-}) => {
+  catalogName,
+  onComplete,
+  onCancel
+}: ProductWizardProps) {
+  // Initial state overrides
+  const initialState = {
+    catalogId,
+    catalogName,
+  };
+  
   return (
-    <ProductWizardProvider 
-      initialValues={initialValues}
-      catalogId={catalogId}
-      onComplete={onComplete}
-    >
-      <ProductWizardInner 
-        onCancel={onCancel}
+    <ProductWizardProvider initialState={initialState}>
+      <ProductWizardContent
         onComplete={onComplete}
-        showBackToProducts={showBackToProducts}
+        onCancel={onCancel}
       />
     </ProductWizardProvider>
   );
-};
-
-export default ProductWizard;
+}

@@ -1,464 +1,517 @@
 /**
- * Product Wizard Context
+ * ProductWizardContext
  * 
- * Provides state management and business logic for the product creation wizard.
- * Manages step transitions, validation, and API interactions.
+ * This module provides a React context to manage the state for the product creation wizard.
+ * It handles multi-step form validation, navigation between steps, and state persistence.
  */
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import axios from 'axios';
-import { useToast } from '@/hooks/use-toast';
-import { slugify } from '@/utils/string-utils';
+import React, { createContext, useContext, useReducer, useCallback, ReactNode } from 'react';
+import { generateSlug, generateSku } from '@/utils/string-utils';
 
-// Define step structure
-export interface WizardStep {
-  id: string;
-  label: string;
-  description?: string;
-}
+// Define the steps in the wizard
+export type WizardStep = 'basic-info' | 'images' | 'additional-info' | 'review';
 
-// Define all wizard steps
-export const WIZARD_STEPS: WizardStep[] = [
-  { id: 'basic-info', label: 'Basic Info' },
-  { id: 'images', label: 'Images' },
-  { id: 'additional-info', label: 'Additional Info' },
-  { id: 'review', label: 'Review & Save' },
-];
-
-// State structure for the wizard
-export interface ProductWizardState {
-  // Basic info
-  productId: number | null;
+// Define the state interface for the wizard
+interface ProductWizardState {
+  // Core product info
   name: string;
   slug: string;
   sku: string;
-  brand: string | null;
-  description: string | null;
+  description: string;
+  brand: string;
   categoryId: number | null;
-  categoryName: string | null;
+  isActive: boolean;
+  isFeatured: boolean;
   
-  // Pricing & inventory
+  // Pricing
   costPrice: number;
-  markupPercentage: number;
   regularPrice: number;
   salePrice: number | null;
-  saleStartDate: string | null;
-  saleEndDate: string | null;
-  stockLevel: number;
-  lowStockThreshold: number;
-  backorderEnabled: boolean;
-  
-  // Status flags
-  isActive: boolean;
-  isDraft: boolean;
-  isFeatured: boolean;
-  isNew: boolean;
+  onSale: boolean;
+  markupPercentage: number;
   
   // Images
   imageUrls: string[];
   imageObjectKeys: string[];
   mainImageIndex: number;
   
-  // Physical properties
-  isPhysical: boolean;
-  weight: number | null;
-  weightUnit: string;
-  length: number | null;
-  width: number | null;
-  height: number | null;
-  dimensionUnit: string;
+  // Inventory
+  stockLevel: number;
+  lowStockThreshold: number;
+  backorderEnabled: boolean;
   
-  // Shipping & availability
-  freeShipping: boolean;
-  publishDate: string | null;
-  expiryDate: string | null;
+  // Attributes
+  attributes: any[];
   
-  // Tags
-  tags: string[];
+  // Shipping
+  taxable: boolean;
+  taxClass: string;
+  shippingRequired: boolean;
+  shippingWeight: number | null;
+  shippingDimensions: {
+    length: number | null;
+    width: number | null;
+    height: number | null;
+  };
+  
+  // SEO
+  metaTitle: string;
+  metaDescription: string;
+  metaKeywords: string;
+  
+  // Wizard state
+  currentStep: WizardStep;
+  completedSteps: Record<WizardStep, boolean>;
+  validSteps: Record<WizardStep, boolean>;
+  
+  // Catalog context
+  catalogId: number | null;
+  catalogName: string | null;
 }
 
-// Default initial state
+// Initial state for the wizard
 const defaultInitialState: ProductWizardState = {
-  // Basic info
-  productId: null,
+  // Core product info
   name: '',
   slug: '',
   sku: '',
-  brand: null,
-  description: null,
+  description: '',
+  brand: '',
   categoryId: null,
-  categoryName: null,
+  isActive: true,
+  isFeatured: false,
   
-  // Pricing & inventory
+  // Pricing
   costPrice: 0,
-  markupPercentage: 30, // Default markup percentage
   regularPrice: 0,
   salePrice: null,
-  saleStartDate: null,
-  saleEndDate: null,
-  stockLevel: 0,
-  lowStockThreshold: 5,
-  backorderEnabled: false,
-  
-  // Status flags
-  isActive: true,
-  isDraft: true,
-  isFeatured: false,
-  isNew: true,
+  onSale: false,
+  markupPercentage: 40, // Default markup
   
   // Images
   imageUrls: [],
   imageObjectKeys: [],
-  mainImageIndex: -1, // -1 means no main image selected
+  mainImageIndex: 0,
   
-  // Physical properties
-  isPhysical: true,
-  weight: null,
-  weightUnit: 'kg',
-  length: null,
-  width: null,
-  height: null,
-  dimensionUnit: 'cm',
+  // Inventory
+  stockLevel: 0,
+  lowStockThreshold: 5,
+  backorderEnabled: false,
   
-  // Shipping & availability
-  freeShipping: false,
-  publishDate: null,
-  expiryDate: null,
+  // Attributes
+  attributes: [],
   
-  // Tags
-  tags: [],
+  // Shipping
+  taxable: true,
+  taxClass: 'standard',
+  shippingRequired: true,
+  shippingWeight: null,
+  shippingDimensions: {
+    length: null,
+    width: null,
+    height: null,
+  },
+  
+  // SEO
+  metaTitle: '',
+  metaDescription: '',
+  metaKeywords: '',
+  
+  // Wizard state
+  currentStep: 'basic-info',
+  completedSteps: {
+    'basic-info': false,
+    'images': false,
+    'additional-info': false,
+    'review': false,
+  },
+  validSteps: {
+    'basic-info': false,
+    'images': false,
+    'additional-info': false,
+    'review': false,
+  },
+  
+  // Catalog context
+  catalogId: null,
+  catalogName: null,
 };
 
-// Catalog context type
-export interface CatalogContext {
-  id: number;
-  name: string;
-  defaultTags: string[];
-  defaultShippingInfo?: {
-    weight?: number;
-    weightUnit?: string;
-    dimensions?: {
-      length?: number;
-      width?: number;
-      height?: number;
-      unit?: string;
-    };
-    freeShipping?: boolean;
-  };
-}
+// Action types for the reducer
+type ProductWizardAction =
+  | { type: 'SET_FIELD'; field: keyof ProductWizardState; value: any }
+  | { type: 'SET_CURRENT_STEP'; step: WizardStep }
+  | { type: 'MARK_STEP_COMPLETE'; step: WizardStep }
+  | { type: 'MARK_STEP_VALID'; step: WizardStep; isValid: boolean }
+  | { type: 'ADD_IMAGE'; url: string; objectKey: string }
+  | { type: 'REMOVE_IMAGE'; index: number }
+  | { type: 'SET_MAIN_IMAGE'; index: number }
+  | { type: 'REORDER_IMAGES'; newOrder: number[] }
+  | { type: 'ADD_ATTRIBUTE'; attribute: any }
+  | { type: 'UPDATE_ATTRIBUTE'; index: number; attribute: any }
+  | { type: 'REMOVE_ATTRIBUTE'; index: number }
+  | { type: 'RESET_WIZARD' };
 
-// Product wizard context interface
+// Reducer function for state management
+const productWizardReducer = (
+  state: ProductWizardState,
+  action: ProductWizardAction
+): ProductWizardState => {
+  switch (action.type) {
+    case 'SET_FIELD':
+      return {
+        ...state,
+        [action.field]: action.value,
+      };
+    
+    case 'SET_CURRENT_STEP':
+      return {
+        ...state,
+        currentStep: action.step,
+      };
+    
+    case 'MARK_STEP_COMPLETE':
+      return {
+        ...state,
+        completedSteps: {
+          ...state.completedSteps,
+          [action.step]: true,
+        },
+      };
+    
+    case 'MARK_STEP_VALID':
+      return {
+        ...state,
+        validSteps: {
+          ...state.validSteps,
+          [action.step]: action.isValid,
+        },
+      };
+    
+    case 'ADD_IMAGE':
+      return {
+        ...state,
+        imageUrls: [...state.imageUrls, action.url],
+        imageObjectKeys: [...state.imageObjectKeys, action.objectKey],
+      };
+    
+    case 'REMOVE_IMAGE': {
+      const newUrls = [...state.imageUrls];
+      const newKeys = [...state.imageObjectKeys];
+      newUrls.splice(action.index, 1);
+      newKeys.splice(action.index, 1);
+      
+      // If we're removing the main image, reset main index to 0 if there are still images
+      let mainIndex = state.mainImageIndex;
+      if (action.index === state.mainImageIndex) {
+        mainIndex = newUrls.length > 0 ? 0 : -1;
+      } else if (action.index < state.mainImageIndex) {
+        // Adjust main index if removing an image before it
+        mainIndex--;
+      }
+      
+      return {
+        ...state,
+        imageUrls: newUrls,
+        imageObjectKeys: newKeys,
+        mainImageIndex: mainIndex,
+      };
+    }
+    
+    case 'SET_MAIN_IMAGE':
+      return {
+        ...state,
+        mainImageIndex: action.index,
+      };
+    
+    case 'REORDER_IMAGES': {
+      const newUrls: string[] = [];
+      const newKeys: string[] = [];
+      let newMainIndex = state.mainImageIndex;
+      
+      // Create new arrays based on the new order
+      action.newOrder.forEach((oldIndex, newIndex) => {
+        newUrls[newIndex] = state.imageUrls[oldIndex];
+        newKeys[newIndex] = state.imageObjectKeys[oldIndex];
+        
+        // Update main image index if needed
+        if (oldIndex === state.mainImageIndex) {
+          newMainIndex = newIndex;
+        }
+      });
+      
+      return {
+        ...state,
+        imageUrls: newUrls,
+        imageObjectKeys: newKeys,
+        mainImageIndex: newMainIndex,
+      };
+    }
+    
+    case 'ADD_ATTRIBUTE':
+      return {
+        ...state,
+        attributes: [...state.attributes, action.attribute],
+      };
+    
+    case 'UPDATE_ATTRIBUTE': {
+      const newAttributes = [...state.attributes];
+      newAttributes[action.index] = action.attribute;
+      return {
+        ...state,
+        attributes: newAttributes,
+      };
+    }
+    
+    case 'REMOVE_ATTRIBUTE': {
+      const newAttributes = [...state.attributes];
+      newAttributes.splice(action.index, 1);
+      return {
+        ...state,
+        attributes: newAttributes,
+      };
+    }
+    
+    case 'RESET_WIZARD':
+      return {
+        ...defaultInitialState,
+        // Preserve catalog context during reset
+        catalogId: state.catalogId,
+        catalogName: state.catalogName,
+      };
+    
+    default:
+      return state;
+  }
+};
+
+// Create the context
 interface ProductWizardContextType {
   state: ProductWizardState;
-  updateField: <K extends keyof ProductWizardState>(
-    field: K,
-    value: ProductWizardState[K]
-  ) => void;
-  currentStep: string;
-  goToStep: (stepId: string) => void;
-  canGoToStep: (stepId: string) => boolean;
-  completedSteps: string[];
-  markStepComplete: (stepId: string) => void;
-  validateStep: (stepId: string) => boolean;
-  submitStatus: 'idle' | 'submitting' | 'success' | 'error';
-  isSubmitting: boolean;
-  createProduct: () => Promise<boolean>;
-  updateProduct: () => Promise<boolean>;
-  catalogId: number | null;
-  catalogContext: CatalogContext | null;
-  imageOperationInProgress: boolean;
-  setImageOperationInProgress: (inProgress: boolean) => void;
+  setField: (field: keyof ProductWizardState, value: any) => void;
+  setCurrentStep: (step: WizardStep) => void;
+  markStepComplete: (step: WizardStep) => void;
+  markStepValid: (step: WizardStep, isValid: boolean) => void;
+  nextStep: () => void;
+  previousStep: () => void;
+  addImage: (url: string, objectKey: string) => void;
+  removeImage: (index: number) => void;
+  setMainImage: (index: number) => void;
+  reorderImages: (newOrder: number[]) => void;
+  addAttribute: (attribute: any) => void;
+  updateAttribute: (index: number, attribute: any) => void;
+  removeAttribute: (index: number) => void;
+  resetWizard: () => void;
+  validateCurrentStep: () => boolean;
+  isStepComplete: (step: WizardStep) => boolean;
+  isStepValid: (step: WizardStep) => boolean;
+  generateDefaults: (productName: string) => void;
+  updatePrices: (costPrice: number, markupPercentage: number) => void;
 }
 
-// Create context
 const ProductWizardContext = createContext<ProductWizardContextType | undefined>(undefined);
 
-// Props interface for the context provider
+// Provider component
 interface ProductWizardProviderProps {
   children: ReactNode;
-  initialValues?: Partial<ProductWizardState>;
-  initialStep?: string;
-  catalogId?: number;
-  onComplete?: (productId: number) => void;
-  onError?: (error: Error) => void;
+  initialState?: Partial<ProductWizardState>;
 }
 
-// Context provider component
 export const ProductWizardProvider: React.FC<ProductWizardProviderProps> = ({
   children,
-  initialValues = {},
-  initialStep = WIZARD_STEPS[0].id,
-  catalogId = null,
-  onComplete,
-  onError,
+  initialState = {},
 }) => {
-  const { toast } = useToast();
-  const [state, setState] = useState<ProductWizardState>({
-    ...defaultInitialState,
-    ...initialValues,
-  });
-  const [currentStep, setCurrentStep] = useState<string>(initialStep);
-  const [completedSteps, setCompletedSteps] = useState<string[]>([]);
-  const [submitStatus, setSubmitStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
-  const [catalogContext, setCatalogContext] = useState<CatalogContext | null>(null);
-  const [imageOperationInProgress, setImageOperationInProgress] = useState(false);
+  const [state, dispatch] = useReducer(
+    productWizardReducer,
+    { ...defaultInitialState, ...initialState }
+  );
   
-  // Load catalog data if catalogId is provided
-  useEffect(() => {
-    const loadCatalogData = async () => {
-      if (!catalogId) return;
-      
-      try {
-        const response = await axios.get(`/api/catalogs/${catalogId}`);
-        if (response.data && response.data.success) {
-          setCatalogContext(response.data.data);
-          
-          // Apply catalog defaults to state if product is new
-          if (!state.productId) {
-            setState(prevState => ({
-              ...prevState,
-              catalogId,
-            }));
-          }
-        }
-      } catch (error) {
-        console.error('Failed to load catalog data:', error);
-      }
-    };
-    
-    loadCatalogData();
-  }, [catalogId]);
+  // Action dispatchers
+  const setField = useCallback((field: keyof ProductWizardState, value: any) => {
+    dispatch({ type: 'SET_FIELD', field, value });
+  }, []);
   
-  // Auto-populate slug when name changes, if slug is empty or auto-generated
-  useEffect(() => {
-    if (state.name && (!state.slug || state.slug === slugify(state.name.slice(0, -1)))) {
-      updateField('slug', slugify(state.name));
+  const setCurrentStep = useCallback((step: WizardStep) => {
+    dispatch({ type: 'SET_CURRENT_STEP', step });
+  }, []);
+  
+  const markStepComplete = useCallback((step: WizardStep) => {
+    dispatch({ type: 'MARK_STEP_COMPLETE', step });
+  }, []);
+  
+  const markStepValid = useCallback((step: WizardStep, isValid: boolean) => {
+    dispatch({ type: 'MARK_STEP_VALID', step, isValid });
+  }, []);
+  
+  const addImage = useCallback((url: string, objectKey: string) => {
+    dispatch({ type: 'ADD_IMAGE', url, objectKey });
+  }, []);
+  
+  const removeImage = useCallback((index: number) => {
+    dispatch({ type: 'REMOVE_IMAGE', index });
+  }, []);
+  
+  const setMainImage = useCallback((index: number) => {
+    dispatch({ type: 'SET_MAIN_IMAGE', index });
+  }, []);
+  
+  const reorderImages = useCallback((newOrder: number[]) => {
+    dispatch({ type: 'REORDER_IMAGES', newOrder });
+  }, []);
+  
+  const addAttribute = useCallback((attribute: any) => {
+    dispatch({ type: 'ADD_ATTRIBUTE', attribute });
+  }, []);
+  
+  const updateAttribute = useCallback((index: number, attribute: any) => {
+    dispatch({ type: 'UPDATE_ATTRIBUTE', index, attribute });
+  }, []);
+  
+  const removeAttribute = useCallback((index: number) => {
+    dispatch({ type: 'REMOVE_ATTRIBUTE', index });
+  }, []);
+  
+  const resetWizard = useCallback(() => {
+    dispatch({ type: 'RESET_WIZARD' });
+  }, []);
+  
+  // Wizard step navigation
+  const nextStep = useCallback(() => {
+    const currentIndex = ['basic-info', 'images', 'additional-info', 'review'].indexOf(state.currentStep);
+    if (currentIndex < 3) {
+      const nextStep = ['basic-info', 'images', 'additional-info', 'review'][currentIndex + 1] as WizardStep;
+      dispatch({ type: 'SET_CURRENT_STEP', step: nextStep });
     }
-  }, [state.name]);
+  }, [state.currentStep]);
   
-  // Auto-calculate regular price based on cost price and markup
-  useEffect(() => {
-    if (state.costPrice > 0 && state.markupPercentage >= 0) {
-      const calculatedPrice = state.costPrice * (1 + state.markupPercentage / 100);
-      updateField('regularPrice', Math.round(calculatedPrice * 100) / 100); // Round to 2 decimal places
+  const previousStep = useCallback(() => {
+    const currentIndex = ['basic-info', 'images', 'additional-info', 'review'].indexOf(state.currentStep);
+    if (currentIndex > 0) {
+      const prevStep = ['basic-info', 'images', 'additional-info', 'review'][currentIndex - 1] as WizardStep;
+      dispatch({ type: 'SET_CURRENT_STEP', step: prevStep });
     }
-  }, [state.costPrice, state.markupPercentage]);
+  }, [state.currentStep]);
   
-  // Helper function to update a field in the state
-  const updateField = <K extends keyof ProductWizardState>(
-    field: K,
-    value: ProductWizardState[K]
-  ) => {
-    setState(prevState => ({
-      ...prevState,
-      [field]: value,
-    }));
-  };
-  
-  // Navigate to a specific step
-  const goToStep = (stepId: string) => {
-    if (canGoToStep(stepId)) {
-      setCurrentStep(stepId);
-    } else {
-      toast({
-        title: 'Cannot proceed',
-        description: 'Please complete the current step before proceeding.',
-        variant: 'destructive',
-      });
-    }
-  };
-  
-  // Check if we can navigate to a specific step
-  const canGoToStep = (stepId: string): boolean => {
-    const currentStepIndex = WIZARD_STEPS.findIndex(step => step.id === currentStep);
-    const targetStepIndex = WIZARD_STEPS.findIndex(step => step.id === stepId);
-    
-    // Can always go back
-    if (targetStepIndex < currentStepIndex) {
-      return true;
-    }
-    
-    // Can only go forward if all previous steps are completed
-    if (targetStepIndex > currentStepIndex) {
-      const previousSteps = WIZARD_STEPS.slice(0, targetStepIndex).map(step => step.id);
-      return previousSteps.every(step => completedSteps.includes(step));
-    }
-    
-    // Can always stay on current step
-    return true;
-  };
-  
-  // Mark a step as completed
-  const markStepComplete = (stepId: string) => {
-    if (!completedSteps.includes(stepId)) {
-      setCompletedSteps(prevSteps => [...prevSteps, stepId]);
-    }
-  };
-  
-  // Validate a specific step
-  const validateStep = (stepId: string): boolean => {
-    switch (stepId) {
-      case 'basic-info':
-        return Boolean(
+  // Step validation
+  const validateCurrentStep = useCallback((): boolean => {
+    const stepValidators: Record<WizardStep, () => boolean> = {
+      'basic-info': () => {
+        const isValid = Boolean(
           state.name &&
           state.slug &&
           state.costPrice > 0 &&
-          state.regularPrice > 0
+          state.regularPrice > 0 &&
+          (!state.onSale || (state.onSale && state.salePrice !== null && state.salePrice > 0))
         );
         
-      case 'images':
-        // Images step is optional, but if there are images, there must be a main image
-        return state.imageUrls.length === 0 || state.mainImageIndex >= 0;
-        
-      case 'additional-info':
-        // Additional info step is optional
+        dispatch({ type: 'MARK_STEP_VALID', step: 'basic-info', isValid });
+        dispatch({ type: 'MARK_STEP_COMPLETE', step: 'basic-info' });
+        return isValid;
+      },
+      'images': () => {
+        // Images are optional but we mark the step as complete
+        dispatch({ type: 'MARK_STEP_VALID', step: 'images', isValid: true });
+        dispatch({ type: 'MARK_STEP_COMPLETE', step: 'images' });
         return true;
-        
-      case 'review':
-        // Review step requires all previous steps to be completed
-        return WIZARD_STEPS.slice(0, 3).map(step => step.id).every(step => 
-          completedSteps.includes(step)
+      },
+      'additional-info': () => {
+        // Most fields are optional here
+        const isValid = true;
+        dispatch({ type: 'MARK_STEP_VALID', step: 'additional-info', isValid });
+        dispatch({ type: 'MARK_STEP_COMPLETE', step: 'additional-info' });
+        return isValid;
+      },
+      'review': () => {
+        // Final validation before submission
+        const isBasicInfoValid = Boolean(
+          state.name &&
+          state.slug &&
+          state.costPrice > 0 &&
+          state.regularPrice > 0 &&
+          (!state.onSale || (state.onSale && state.salePrice !== null && state.salePrice > 0))
         );
         
-      default:
-        return false;
-    }
-  };
-  
-  // Create a new product
-  const createProduct = async (): Promise<boolean> => {
-    try {
-      setSubmitStatus('submitting');
-      
-      const payload = {
-        ...state,
-        imageObjectKeys: state.imageObjectKeys,
-        mainImageIndex: state.mainImageIndex,
-      };
-      
-      const response = await axios.post('/api/products', payload);
-      
-      if (response.data && response.data.success) {
-        setSubmitStatus('success');
+        const isValid = isBasicInfoValid;
         
-        const newProductId = response.data.data.id;
-        updateField('productId', newProductId);
-        updateField('isDraft', false);
-        
-        toast({
-          title: 'Product created',
-          description: 'Product has been successfully created.',
-        });
-        
-        if (onComplete) {
-          onComplete(newProductId);
-        }
-        
-        return true;
-      } else {
-        throw new Error(response.data.error || 'Failed to create product');
+        dispatch({ type: 'MARK_STEP_VALID', step: 'review', isValid });
+        dispatch({ type: 'MARK_STEP_COMPLETE', step: 'review' });
+        return isValid;
       }
-    } catch (error: any) {
-      console.error('Error creating product:', error);
-      setSubmitStatus('error');
-      
-      toast({
-        title: 'Failed to create product',
-        description: error.message || 'An error occurred during product creation.',
-        variant: 'destructive',
-      });
-      
-      if (onError) {
-        onError(error);
-      }
-      
-      return false;
-    }
-  };
-  
-  // Update an existing product
-  const updateProduct = async (): Promise<boolean> => {
-    if (!state.productId) {
-      console.error('Cannot update: Product ID is missing');
-      return false;
-    }
+    };
     
-    try {
-      setSubmitStatus('submitting');
-      
-      const payload = {
-        ...state,
-        imageObjectKeys: state.imageObjectKeys,
-        mainImageIndex: state.mainImageIndex,
-      };
-      
-      const response = await axios.put(`/api/products/${state.productId}`, payload);
-      
-      if (response.data && response.data.success) {
-        setSubmitStatus('success');
-        
-        toast({
-          title: 'Product updated',
-          description: 'Product has been successfully updated.',
-        });
-        
-        if (onComplete) {
-          onComplete(state.productId);
-        }
-        
-        return true;
-      } else {
-        throw new Error(response.data.error || 'Failed to update product');
-      }
-    } catch (error: any) {
-      console.error('Error updating product:', error);
-      setSubmitStatus('error');
-      
-      toast({
-        title: 'Failed to update product',
-        description: error.message || 'An error occurred during product update.',
-        variant: 'destructive',
-      });
-      
-      if (onError) {
-        onError(error);
-      }
-      
-      return false;
+    return stepValidators[state.currentStep]();
+  }, [state]);
+  
+  // Helper methods
+  const isStepComplete = useCallback((step: WizardStep): boolean => {
+    return state.completedSteps[step];
+  }, [state.completedSteps]);
+  
+  const isStepValid = useCallback((step: WizardStep): boolean => {
+    return state.validSteps[step];
+  }, [state.validSteps]);
+  
+  // Generate defaults for new products
+  const generateDefaults = useCallback((productName: string) => {
+    const slug = generateSlug(productName);
+    const sku = generateSku(productName);
+    
+    dispatch({ type: 'SET_FIELD', field: 'slug', value: slug });
+    dispatch({ type: 'SET_FIELD', field: 'sku', value: sku });
+    dispatch({ type: 'SET_FIELD', field: 'metaTitle', value: productName });
+  }, []);
+  
+  // Update prices based on cost and markup
+  const updatePrices = useCallback((costPrice: number, markupPercentage: number) => {
+    if (costPrice <= 0) return;
+    
+    const regularPrice = Math.ceil(costPrice * (1 + markupPercentage / 100));
+    
+    dispatch({ type: 'SET_FIELD', field: 'regularPrice', value: regularPrice });
+    
+    // If on sale, adjust sale price to maintain same discount percentage
+    if (state.onSale && state.salePrice !== null && state.regularPrice > 0) {
+      const currentDiscount = 1 - (state.salePrice / state.regularPrice);
+      const newSalePrice = Math.ceil(regularPrice * (1 - currentDiscount));
+      dispatch({ type: 'SET_FIELD', field: 'salePrice', value: newSalePrice });
     }
+  }, [state.onSale, state.salePrice, state.regularPrice]);
+  
+  // Create context value
+  const value = {
+    state,
+    setField,
+    setCurrentStep,
+    markStepComplete,
+    markStepValid,
+    nextStep,
+    previousStep,
+    addImage,
+    removeImage,
+    setMainImage,
+    reorderImages,
+    addAttribute,
+    updateAttribute,
+    removeAttribute,
+    resetWizard,
+    validateCurrentStep,
+    isStepComplete,
+    isStepValid,
+    generateDefaults,
+    updatePrices,
   };
   
-  // Context value to be provided
-  const contextValue: ProductWizardContextType = {
-    state,
-    updateField,
-    currentStep,
-    goToStep,
-    canGoToStep,
-    completedSteps,
-    markStepComplete,
-    validateStep,
-    submitStatus,
-    isSubmitting: submitStatus === 'submitting',
-    createProduct,
-    updateProduct,
-    catalogId,
-    catalogContext,
-    imageOperationInProgress,
-    setImageOperationInProgress,
-  };
-
   return (
-    <ProductWizardContext.Provider value={contextValue}>
+    <ProductWizardContext.Provider value={value}>
       {children}
     </ProductWizardContext.Provider>
   );
 };
 
-// Custom hook to use the product wizard context
-export const useProductWizardContext = () => {
+// Hook for using the context
+export const useProductWizardContext = (): ProductWizardContextType => {
   const context = useContext(ProductWizardContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useProductWizardContext must be used within a ProductWizardProvider');
   }
   return context;
