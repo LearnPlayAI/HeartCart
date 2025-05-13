@@ -36,6 +36,26 @@ export function ImageStep() {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
+  // Debug log current images
+  useEffect(() => {
+    console.log('ImageStep state:', {
+      imageCount: state.imageUrls.length,
+      imageUrls: state.imageUrls,
+      imageObjectKeys: state.imageObjectKeys,
+      mainImageIndex: state.mainImageIndex
+    });
+    
+    // Check all images for loadability
+    if (state.imageUrls.length > 0) {
+      state.imageUrls.forEach((url, index) => {
+        const img = new Image();
+        img.onload = () => console.log(`Image ${index} loaded successfully:`, url);
+        img.onerror = () => console.error(`Image ${index} failed to load:`, url);
+        img.src = url.startsWith('http') ? url : window.location.origin + url;
+      });
+    }
+  }, [state.imageUrls, state.imageObjectKeys, state.mainImageIndex]);
+  
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
@@ -113,9 +133,23 @@ export function ImageStep() {
       return;
     }
     
+    // Progress interval reference for cleanup
+    let progressInterval: any = null;
+    
     try {
       setIsUploading(true);
       setUploadProgress(0);
+      
+      console.log('Starting upload for file:', {
+        name: file.name,
+        size: file.size,
+        type: file.type
+      });
+      
+      // Update progress (simulated for small files since it's so fast)
+      progressInterval = setInterval(() => {
+        setUploadProgress(prev => Math.min(prev + 5, 90));
+      }, 100);
       
       // Create form data
       const formData = new FormData();
@@ -128,6 +162,12 @@ export function ImageStep() {
         body: formData,
       });
       
+      // Clear progress interval
+      if (progressInterval) {
+        clearInterval(progressInterval);
+        progressInterval = null;
+      }
+      
       if (!response.ok) {
         // Try to get error message from response if it's JSON
         try {
@@ -139,10 +179,13 @@ export function ImageStep() {
         }
       }
       
+      console.log('Upload response status:', response.status);
+      
       // Safely try to parse JSON response
       let result;
       try {
         result = await response.json();
+        console.log('Upload API response:', result);
       } catch (jsonError) {
         console.error('Error parsing response:', jsonError);
         const responseText = await response.text();
@@ -150,41 +193,116 @@ export function ImageStep() {
         throw new Error('Invalid response format from server');
       }
       
-      // Add image to state - handle API response formats for backwards compatibility
-      console.log('Upload response:', result);
+      // Extract image URL and object key from various response formats
+      let imageUrl = '';
+      let objectKey = '';
       
-      // Use different fields depending on what the server returns
+      // Handle different response formats
       if (result.data && result.data.url) {
-        // Format from some API endpoints
-        addImage(result.data.url, result.data.objectKey);
+        // Format 1: Data object with url field
+        imageUrl = result.data.url;
+        objectKey = result.data.objectKey || '';
+        console.log('Using image URL from data.url');
       } else if (result.absoluteUrl) {
-        // New format with absolute URL directly provided
-        addImage(result.absoluteUrl, result.objectKey);
+        // Format 2: Direct absoluteUrl field
+        imageUrl = result.absoluteUrl;
+        objectKey = result.objectKey || '';
+        console.log('Using image URL from absoluteUrl');
       } else if (result.url) {
-        // Ensure we use a full URL by adding origin if needed
-        const imageUrl = result.url.startsWith('http') ? result.url : (window.location.origin + result.url);
-        console.log('Adding image with URL:', imageUrl);
-        addImage(imageUrl, result.objectKey);
+        // Format 3: Direct url field
+        imageUrl = result.url;
+        objectKey = result.objectKey || '';
+        console.log('Using image URL from url field');
       } else if (result.files && result.files.length > 0) {
-        // If the API returns a files array, use the first file
-        const file = result.files[0];
-        const imageUrl = file.absoluteUrl || (file.path.startsWith('http') ? file.path : window.location.origin + file.path);
-        console.log('Adding image from files array:', imageUrl);
-        addImage(imageUrl, file.objectKey);
+        // Format 4: Files array
+        const fileInfo = result.files[0];
+        imageUrl = fileInfo.absoluteUrl || fileInfo.path || '';
+        objectKey = fileInfo.objectKey || '';
+        console.log('Using image URL from files array');
       } else {
         console.error('Unexpected response format:', result);
-        throw new Error('Invalid response format from server');
+        throw new Error('The server response did not contain a valid image URL');
       }
       
-      // Mark step as complete
-      markStepComplete('images');
+      // Ensure URL is absolute
+      if (imageUrl && !imageUrl.startsWith('http') && !imageUrl.startsWith('data:')) {
+        // Ensure it has a leading slash
+        if (!imageUrl.startsWith('/')) {
+          imageUrl = '/' + imageUrl;
+        }
+        // Add origin
+        imageUrl = window.location.origin + imageUrl;
+      }
       
-      // Show success toast
-      toast({
-        title: 'Image uploaded',
-        description: `${file.name} has been uploaded successfully.`,
+      console.log('Processed image URL:', imageUrl);
+      console.log('Object key:', objectKey);
+      
+      if (!imageUrl) {
+        throw new Error('No valid image URL found in server response');
+      }
+      
+      // Preload the image to verify it loads correctly
+      const imgTest = new Image();
+      
+      // Create a promise for image loading
+      const imageLoadPromise = new Promise((resolve, reject) => {
+        imgTest.onload = () => {
+          console.log('Image preload successful');
+          resolve(true);
+        };
+        
+        imgTest.onerror = (err) => {
+          console.error('Image preload failed:', err);
+          reject(new Error('The uploaded image could not be loaded. Server may be processing it.'));
+        };
+        
+        // Set a timeout in case the image loading gets stuck
+        setTimeout(() => {
+          if (!imgTest.complete) {
+            reject(new Error('Image loading timed out'));
+          }
+        }, 5000);
       });
+      
+      // Start loading the image
+      imgTest.src = imageUrl;
+      
+      try {
+        // Wait for image to load or fail
+        await imageLoadPromise;
+        
+        // Image loaded successfully, now add it to the state
+        addImage(imageUrl, objectKey);
+        
+        // Mark step as complete
+        markStepComplete('images');
+        
+        // Show success toast
+        toast({
+          title: 'Image uploaded',
+          description: `${file.name} has been uploaded successfully.`,
+        });
+      } catch (imgError) {
+        // The image failed to load after uploading
+        console.error('Error verifying uploaded image:', imgError);
+        
+        // Try a workaround: Add the image anyway with a delay
+        console.log('Adding image anyway, even though preloading failed');
+        addImage(imageUrl, objectKey);
+        
+        toast({
+          title: 'Image uploaded',
+          description: 'Image uploaded but preview may be delayed.',
+          variant: 'default',
+        });
+      }
     } catch (error) {
+      // Clear progress interval if it's still running
+      if (progressInterval) {
+        clearInterval(progressInterval);
+      }
+      
+      console.error('Upload error:', error);
       toast({
         title: 'Upload failed',
         description: error instanceof Error ? error.message : 'An unknown error occurred',
@@ -192,7 +310,9 @@ export function ImageStep() {
       });
     } finally {
       setIsUploading(false);
-      setUploadProgress(0);
+      setUploadProgress(100);
+      // Reset progress after a brief delay to show completion
+      setTimeout(() => setUploadProgress(0), 500);
     }
   };
   
@@ -307,12 +427,13 @@ export function ImageStep() {
                     `}
                   >
                     <div className="aspect-square bg-muted/20">
+                      {/* Enhanced image loading with multiple fallback strategies */}
                       <img 
+                        key={`img-${index}-${Date.now()}`} // Force re-render on changes
                         src={url.startsWith('http') ? url : window.location.origin + url} 
                         alt={`Product image ${index + 1}`}
                         className="w-full h-full object-cover"
                         onLoad={(e) => {
-                          // Log successful image loads
                           console.log('Image loaded successfully:', (e.target as HTMLImageElement).src);
                         }}
                         onError={(e) => {
@@ -320,21 +441,69 @@ export function ImageStep() {
                           
                           const target = e.target as HTMLImageElement;
                           const currentSrc = target.src;
+                          const originalUrl = url;
                           
-                          // Try different URL formats if the initial one fails
-                          if (currentSrc.includes('/api/files/temp')) {
-                            // Try with a direct temp URL format
-                            console.log('Trying alternative temp URL format');
-                            const fileName = url.split('/').pop();
-                            if (fileName) {
-                              target.src = `${window.location.origin}/temp/${fileName}`;
-                              return; // Let this attempt run its course
-                            }
+                          // Keep track of attempts to prevent loops
+                          const attemptCount = parseInt(target.dataset.attempts || '0', 10) + 1;
+                          target.dataset.attempts = attemptCount.toString();
+                          
+                          if (attemptCount > 3) {
+                            // Too many attempts, use fallback
+                            console.log('Too many attempts, using fallback image');
+                            target.onerror = null; // Prevent infinite loop
+                            target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjIwMCIgaGVpZ2h0PSIyMDAiIGZpbGw9IiNFNUU3RUIiLz48cGF0aCBkPSJNMTAwIDc0QzkxLjcxNTcgNzQgODUgODAuNzE1NyA4NSA4OUM4NSA5Ny4yODQzIDkxLjcxNTcgMTA0IDEwMCAxMDRDMTA4LjI4NCAxMDQgMTE1IDk3LjI4NDMgMTE1IDg5QzExNSA4MC43MTU3IDEwOC4yODQgNzQgMTAwIDc0WiIgZmlsbD0iIzk0YTNiOCIvPjxwYXRoIGQ9Ik0xNTUgMTI2LjVDMTU1IDEzMy40MDQgMTQ3LjYyOCAxMzkgMTM4LjUgMTM5QzEyOS4zNzIgMTM5IDEyMiAxMzMuNDA0IDEyMiAxMjYuNUMxMjIgMTE5LjU5NiAxMjkuMzcyIDExNCAxMzguNSAxMTRDMTQ3LjYyOCAxMTQgMTU1IDExOS41OTYgMTU1IDEyNi41WiIgZmlsbD0iIzk0YTNiOCIvPjxwYXRoIGQ9Ik0xNjggMTQ0LjVDMTU1LjUyMSAxMzguODg4IDEzNy42MjggMTM1IDEyNyAxMzVDMTExLjUzNiAxMzUgOTguODkzNiAxMzcuMDUzIDkwIDE0MC41IiBzdHJva2U9IiM5NGEzYjgiIHN0cm9rZS13aWR0aD0iMTAiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg==';
+                            return;
                           }
                           
-                          // If all attempts fail, show placeholder
-                          target.onerror = null; // Prevent infinite loop
-                          target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjIwMCIgaGVpZ2h0PSIyMDAiIGZpbGw9IiNFNUU3RUIiLz48cGF0aCBkPSJNMTAwIDc0QzkxLjcxNTcgNzQgODUgODAuNzE1NyA4NSA4OUM4NSA5Ny4yODQzIDkxLjcxNTcgMTA0IDEwMCAxMDRDMTA4LjI4NCAxMDQgMTE1IDk3LjI4NDMgMTE1IDg5QzExNSA4MC43MTU3IDEwOC4yODQgNzQgMTAwIDc0WiIgZmlsbD0iIzk0YTNiOCIvPjxwYXRoIGQ9Ik0xNTUgMTI2LjVDMTU1IDEzMy40MDQgMTQ3LjYyOCAxMzkgMTM4LjUgMTM5QzEyOS4zNzIgMTM5IDEyMiAxMzMuNDA0IDEyMiAxMjYuNUMxMjIgMTE5LjU5NiAxMjkuMzcyIDExNCAxMzguNSAxMTRDMTQ3LjYyOCAxMTQgMTU1IDExOS41OTYgMTU1IDEyNi41WiIgZmlsbD0iIzk0YTNiOCIvPjxwYXRoIGQ9Ik0xNjggMTQ0LjVDMTU1LjUyMSAxMzguODg4IDEzNy42MjggMTM1IDEyNyAxMzVDMTExLjUzNiAxMzUgOTguODkzNiAxMzcuMDUzIDkwIDE0MC41IiBzdHJva2U9IiM5NGEzYjgiIHN0cm9rZS13aWR0aD0iMTAiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg==';
+                          // Try different URL formats based on attempt number
+                          switch (attemptCount) {
+                            case 1:
+                              // First attempt: Try with /temp/ direct URL if original is /api/files/temp
+                              if (originalUrl.includes('/api/files/temp')) {
+                                const fileName = originalUrl.split('/').pop();
+                                if (fileName) {
+                                  console.log('Attempt 1: Trying direct temp URL format');
+                                  target.src = `${window.location.origin}/temp/${fileName}`;
+                                  return;
+                                }
+                              }
+                              // If we can't do the temp conversion, fall through to next attempt
+                              
+                            case 2:
+                              // Second attempt: Try removing origin and adding it again
+                              // This fixes issues when the URL already has origin in it
+                              {
+                                console.log('Attempt 2: Trying with reconstructed URL');
+                                let path = originalUrl;
+                                
+                                // Strip any potential origin
+                                const originPattern = new RegExp(`^${window.location.origin}`);
+                                path = path.replace(originPattern, '');
+                                
+                                // Ensure it starts with a slash
+                                if (!path.startsWith('/')) {
+                                  path = '/' + path;
+                                }
+                                
+                                target.src = window.location.origin + path;
+                                return;
+                              }
+                              
+                            case 3:
+                              // Third attempt: Try direct object key URL format (for compatibility with older code)
+                              if (state.imageObjectKeys[index]) {
+                                console.log('Attempt 3: Trying with object key format');
+                                const objectKey = state.imageObjectKeys[index];
+                                target.src = `${window.location.origin}/api/files/${objectKey}`;
+                                return;
+                              }
+                              break;
+                              
+                            default:
+                              // Use fallback for all other cases
+                              target.onerror = null;
+                              target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjIwMCIgaGVpZ2h0PSIyMDAiIGZpbGw9IiNFNUU3RUIiLz48cGF0aCBkPSJNMTAwIDc0QzkxLjcxNTcgNzQgODUgODAuNzE1NyA4NSA4OUM4NSA5Ny4yODQzIDkxLjcxNTcgMTA0IDEwMCAxMDRDMTA4LjI4NCAxMDQgMTE1IDk3LjI4NDMgMTE1IDg5QzExNSA4MC43MTU3IDEwOC4yODQgNzQgMTAwIDc0WiIgZmlsbD0iIzk0YTNiOCIvPjxwYXRoIGQ9Ik0xNTUgMTI2LjVDMTU1IDEzMy40MDQgMTQ3LjYyOCAxMzkgMTM4LjUgMTM5QzEyOS4zNzIgMTM5IDEyMiAxMzMuNDA0IDEyMiAxMjYuNUMxMjIgMTE5LjU5NiAxMjkuMzcyIDExNCAxMzguNSAxMTRDMTQ3LjYyOCAxMTQgMTU1IDExOS41OTYgMTU1IDEyNi41WiIgZmlsbD0iIzk0YTNiOCIvPjxwYXRoIGQ9Ik0xNjggMTQ0LjVDMTU1LjUyMSAxMzguODg4IDEzNy42MjggMTM1IDEyNyAxMzVDMTExLjUzNiAxMzUgOTguODkzNiAxMzcuMDUzIDkwIDE0MC41IiBzdHJva2U9IiM5NGEzYjgiIHN0cm9rZS13aWR0aD0iMTAiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg==';
+                          }
                         }}
                       />
                     </div>
