@@ -4342,34 +4342,11 @@ export class DatabaseStorage implements IStorage {
   
   // Removed getCategoryAttributeById as part of centralized attribute system
   
-  async createCategoryAttribute(categoryAttribute: InsertCategoryAttribute): Promise<CategoryAttribute> {
-    const [newCategoryAttribute] = await db
-      .insert(categoryAttributes)
-      .values(categoryAttribute)
-      .returning();
-    return newCategoryAttribute;
-  }
+  // Removed createCategoryAttribute as part of centralized attribute system
   
-  async updateCategoryAttribute(id: number, categoryAttributeData: Partial<InsertCategoryAttribute>): Promise<CategoryAttribute | undefined> {
-    const [updatedCategoryAttribute] = await db
-      .update(categoryAttributes)
-      .set(categoryAttributeData)
-      .where(eq(categoryAttributes.id, id))
-      .returning();
-    return updatedCategoryAttribute;
-  }
+  // Removed updateCategoryAttribute as part of centralized attribute system
   
-  async deleteCategoryAttribute(id: number): Promise<boolean> {
-    try {
-      await db
-        .delete(categoryAttributes)
-        .where(eq(categoryAttributes.id, id));
-      return true;
-    } catch (error) {
-      console.error(`Error deleting category attribute ${id}:`, error);
-      throw error; // Rethrow so the route handler can catch it and send a proper error response
-    }
-  }
+  // Removed deleteCategoryAttribute as part of centralized attribute system
   
   // Category attribute options operations
   async getCategoryAttributeOptions(categoryAttributeId: number): Promise<(CategoryAttributeOption & { 
