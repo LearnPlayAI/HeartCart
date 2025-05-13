@@ -220,22 +220,28 @@ const ProductDetailView = ({
   
   // Handle secondary query errors
   useEffect(() => {
-    const errors = [
-      { error: relatedProductsError, name: 'related products' },
-      { error: productAttributesError, name: 'product attributes' },
-      { error: attributeOptionsError, name: 'attribute options' },
-      { error: attributeValuesError, name: 'attribute values' }
-    ].filter(item => item.error);
-    
-    if (errors.length > 0) {
-      errors.forEach(({ error, name }) => {
-        console.error(`Error fetching ${name}:`, error);
-        toast({
-          title: `Failed to load ${name}`,
-          description: error instanceof Error ? error.message : "An unexpected error occurred",
-          variant: "destructive",
-        });
+    // Only report errors for relatedProducts - attribute errors can be ignored
+    // since not all products will have attributes
+    if (relatedProductsError) {
+      console.error('Error fetching related products:', relatedProductsError);
+      toast({
+        title: "Failed to load related products",
+        description: relatedProductsError instanceof Error 
+          ? relatedProductsError.message 
+          : "An unexpected error occurred",
+        variant: "destructive",
       });
+    }
+    
+    // Log attribute errors only for debugging, don't show toasts for these
+    if (productAttributesError) {
+      console.error('Error fetching product attributes:', productAttributesError);
+    }
+    if (attributeOptionsError) {
+      console.error('Error fetching attribute options:', attributeOptionsError);
+    }
+    if (attributeValuesError) {
+      console.error('Error fetching attribute values:', attributeValuesError);
     }
   }, [relatedProductsError, productAttributesError, attributeOptionsError, attributeValuesError, toast]);
   
