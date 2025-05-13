@@ -31,7 +31,9 @@ import {
   ChevronRightIcon,
   PlusIcon,
   XIcon,
-  InfoIcon
+  InfoIcon,
+  SearchIcon,
+  GlobeIcon
 } from 'lucide-react';
 
 // Import our attribute configuration component
@@ -403,7 +405,7 @@ export function AdditionalInfoStep() {
                 <span>Attributes</span>
               </TabsTrigger>
               <TabsTrigger value="seo" className="flex items-center gap-1">
-                <InfoIcon className="h-4 w-4" />
+                <GlobeIcon className="h-4 w-4" />
                 <span>SEO</span>
               </TabsTrigger>
             </TabsList>
