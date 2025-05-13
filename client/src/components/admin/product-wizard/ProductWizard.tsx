@@ -32,14 +32,22 @@ function ProductWizardContent({
   const [, setLocation] = useLocation();
   
   // Handle completion of the wizard
-  const handleComplete = useCallback((product: any) => {
-    if (onComplete) {
-      onComplete(product);
+  const handleComplete = useCallback(() => {
+    // Call the product save function in the ReviewAndSaveStep component
+    const reviewStep = document.querySelector('[data-save-product-button]');
+    if (reviewStep) {
+      // Simulate a click on the save button in the ReviewAndSaveStep
+      // Cast to HTMLButtonElement to fix TypeScript error
+      (reviewStep as HTMLButtonElement).click();
+      // The onComplete callback will be called by the mutation's onSuccess handler
+    } else if (onComplete) {
+      // Fallback if we can't find the save button
+      onComplete(state);
     } else {
       // Default completion behavior if no handler is provided
       setLocation('/admin/products');
     }
-  }, [onComplete, setLocation]);
+  }, [onComplete, setLocation, state]);
   
   // Handle cancellation of the wizard
   const handleCancel = useCallback(() => {

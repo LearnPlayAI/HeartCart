@@ -193,7 +193,14 @@ export function WizardNavigation({ onComplete }: WizardNavigationProps) {
           </Button>
         ) : (
           <Button
-            onClick={onComplete}
+            onClick={() => {
+              // First validate the step
+              const isValid = validateCurrentStep();
+              if (isValid && onComplete) {
+                // Only call onComplete if validation passes
+                onComplete();
+              }
+            }}
             variant="default"
             className="gap-1"
           >

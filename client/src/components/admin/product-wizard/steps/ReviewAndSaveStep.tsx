@@ -709,6 +709,7 @@ export function ReviewAndSaveStep() {
               className="w-full md:w-auto"
               onClick={handleSaveProduct}
               disabled={isSubmitting || (hasErrors && validationErrors.some(err => !err.includes('recommended')))}
+              data-save-product-button
             >
               {isSubmitting ? (
                 <>
