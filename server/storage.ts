@@ -1017,22 +1017,24 @@ export class DatabaseStorage implements IStorage {
   async createProductWithWizard(product: InsertProduct): Promise<Product> {
     try {
       // Use a transaction to ensure all operations succeed or fail together
-      return await db.transaction(async (tx) => {
+      const createdProduct = await db.transaction(async (tx) => {
         // Insert the product with all wizard fields
-        const [createdProduct] = await tx.insert(products).values(product).returning();
+        const [createdProductRecord] = await tx.insert(products).values(product).returning();
         
-        if (!createdProduct) {
+        if (!createdProductRecord) {
           throw new Error('Failed to create product');
         }
         
         // Handle required attributes if specified
         if (product.requiredAttributeIds && product.requiredAttributeIds.length > 0) {
-          console.log(`Setting required attributes for product ${createdProduct.id}:`, product.requiredAttributeIds);
+          logger.debug(`Setting required attributes for product ${createdProductRecord.id}:`, {
+            attributes: product.requiredAttributeIds
+          });
           
           // Update product attributes to mark them as required
           for (const attributeId of product.requiredAttributeIds) {
             const existingAttr = await tx.query.productAttributes.findFirst({
-              where: eq(productAttributes.productId, createdProduct.id) && eq(productAttributes.attributeId, attributeId)
+              where: eq(productAttributes.productId, createdProductRecord.id) && eq(productAttributes.attributeId, attributeId)
             });
             
             if (existingAttr) {
@@ -1046,17 +1048,92 @@ export class DatabaseStorage implements IStorage {
         
         // Handle special sale configuration if specified
         if (product.specialSaleText && (product.specialSaleStart || product.specialSaleEnd)) {
-          console.log(`Setting special sale for product ${createdProduct.id}:`, {
+          logger.debug(`Setting special sale for product ${createdProductRecord.id}:`, {
             text: product.specialSaleText,
             start: product.specialSaleStart,
             end: product.specialSaleEnd
           });
         }
         
-        return createdProduct;
+        return createdProductRecord;
       });
+      
+      // Now that the product is created, handle image movement outside the transaction
+      // (This is done outside the transaction to prevent long-running transactions for file operations)
+      if (createdProduct) {
+        // Get the category information for proper path construction
+        const category = createdProduct.categoryId 
+          ? await this.getCategoryById(createdProduct.categoryId) 
+          : null;
+        
+        // Get catalog information if this product is part of a catalog
+        const catalog = product.catalogId 
+          ? await this.getCatalogById(product.catalogId) 
+          : null;
+        
+        // Get supplier information if catalog exists
+        const supplier = catalog?.supplierId 
+          ? await this.getSupplierById(catalog.supplierId) 
+          : null;
+        
+        // Only proceed with image relocation if we have image data in the request
+        if (Array.isArray(product.imageObjectKeys) && product.imageObjectKeys.length > 0) {
+          logger.info(`Moving ${product.imageObjectKeys.length} images for product ${createdProduct.id}`, {
+            productId: createdProduct.id,
+            imageCount: product.imageObjectKeys.length
+          });
+          
+          // Process each image
+          for (let i = 0; i < product.imageObjectKeys.length; i++) {
+            const sourceKey = product.imageObjectKeys[i];
+            const imageUrl = product.imageUrls[i];
+            
+            if (!sourceKey || !imageUrl) continue;
+            
+            try {
+              // Determine if this is the main product image
+              const isMainImage = product.mainImageIndex === i;
+              
+              // Move the file to its final location with the expected folder structure
+              const result = await objectStore.moveToFinalLocation(
+                sourceKey,
+                supplier ? supplier.name : 'unsorted',
+                catalog ? catalog.name : 'uncategorized',
+                category ? category.name : 'uncategorized',
+                createdProduct.name,
+                createdProduct.id
+              );
+              
+              // Store image information in the database
+              await this.createProductImage({
+                productId: createdProduct.id,
+                url: result.url,
+                objectKey: result.objectKey,
+                isMain: isMainImage,
+                sortOrder: i
+              });
+              
+              logger.debug(`Moved product image to final location`, {
+                productId: createdProduct.id,
+                from: sourceKey,
+                to: result.objectKey,
+                isMain: isMainImage
+              });
+            } catch (imageError) {
+              // Log error but continue with other images
+              logger.error(`Error moving image for product ${createdProduct.id}:`, {
+                sourceKey,
+                productId: createdProduct.id,
+                error: imageError
+              });
+            }
+          }
+        }
+      }
+      
+      return createdProduct;
     } catch (error) {
-      console.error(`Error creating product with wizard "${product.name}":`, error);
+      logger.error(`Error creating product with wizard "${product.name}":`, { error });
       throw error;
     }
   }
