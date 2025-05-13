@@ -175,7 +175,7 @@ export function AttributePricingConfig({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <span>Attribute-Based Pricing & Configuration</span>
-            <InfoCircledIcon className="h-5 w-5 text-muted-foreground" />
+            <InfoIcon className="h-5 w-5 text-muted-foreground" />
           </CardTitle>
           <CardDescription>
             Configure pricing variations based on attributes and set which attributes are required.

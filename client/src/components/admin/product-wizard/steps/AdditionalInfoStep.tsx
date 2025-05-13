@@ -58,6 +58,7 @@ const additionalInfoSchema = z.object({
 
   // Product details
   supplier: z.string().optional(),
+  attributeValues: z.array(z.any()).optional(), // For attribute-based pricing, weight, dimensions
   weight: z.coerce.number().min(0).nullable().optional(),
   dimensions: z.string().optional(),
   
@@ -90,6 +91,85 @@ export function AdditionalInfoStep() {
   const { data: suppliers = [] } = useQuery({
     queryKey: ['/api/suppliers'],
   });
+  
+  // Fetch catalog supplier information if we have a catalogId
+  const { data: catalogData } = useQuery({
+    queryKey: ['/api/catalogs', state.catalogId],
+    enabled: !!state.catalogId, // Only run query if catalogId exists
+  });
+  
+  // Fetch available attributes
+  const { data: productAttributes = [] } = useQuery({
+    queryKey: ['/api/attributes/available'],
+  });
+  
+  // Format attributes for our pricing component
+  const [formattedAttributes, setFormattedAttributes] = useState<ProductAttribute[]>([]);
+  const [attributeValues, setAttributeValues] = useState<AttributeValue[]>([]);
+  
+  // Auto-populate supplier information from catalog when available
+  useEffect(() => {
+    if (catalogData?.data && state.catalogId) {
+      const catalog = catalogData.data;
+      if (catalog.supplierId && catalog.supplierName) {
+        // Update the supplier in the state
+        setField('supplier', catalog.supplierName);
+        // Reset form with new supplier value
+        form.setValue('supplier', catalog.supplierName);
+      }
+    }
+  }, [catalogData, state.catalogId, setField]);
+  
+  // Format available product attributes for our pricing component
+  useEffect(() => {
+    if (productAttributes && productAttributes.length > 0) {
+      const formatted = productAttributes.map(attr => ({
+        id: attr.id,
+        name: attr.name,
+        type: attr.type || 'select',
+        isRequired: attr.isRequired || false,
+        options: attr.options?.map(opt => ({
+          id: opt.id,
+          value: opt.value,
+          displayValue: opt.displayValue || opt.value
+        })) || []
+      }));
+      
+      setFormattedAttributes(formatted);
+      
+      // Initialize attribute values if not already set
+      if (attributeValues.length === 0 && formatted.length > 0) {
+        const values: AttributeValue[] = [];
+        
+        // Create initial attribute values from all options
+        formatted.forEach(attr => {
+          attr.options.forEach(opt => {
+            values.push({
+              id: `${attr.id}-${opt.id}`,
+              attributeId: attr.id,
+              attributeName: attr.name,
+              value: opt.value,
+              displayValue: opt.displayValue,
+              priceAdjustment: 0,
+              isRequired: attr.isRequired,
+              sortOrder: 0,
+              metadata: {}
+            });
+          });
+        });
+        
+        setAttributeValues(values);
+      }
+    }
+  }, [productAttributes, attributeValues.length]);
+  
+  // Handle attribute values changes from pricing component
+  const handleAttributeValuesChange = (newValues: AttributeValue[]) => {
+    setAttributeValues(newValues);
+    // Store these values in context or form state as needed
+    // For simplicity, we'll store them in a special field in the form
+    form.setValue('attributeValues', newValues);
+  };
   
   // Initialize form with values from context
   const form = useForm<AdditionalInfoFormValues>({
