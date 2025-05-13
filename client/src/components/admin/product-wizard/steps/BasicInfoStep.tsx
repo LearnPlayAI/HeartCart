@@ -82,7 +82,7 @@ export function BasicInfoStep() {
     setField('sku', values.sku);
     setField('description', values.description);
     setField('brand', values.brand);
-    setField('categoryId', values.categoryId ? parseInt(values.categoryId) : null);
+    setField('categoryId', values.categoryId && values.categoryId !== 'none' ? parseInt(values.categoryId) : null);
     setField('isActive', values.isActive);
     setField('isFeatured', values.isFeatured);
     setField('costPrice', values.costPrice);
@@ -206,7 +206,7 @@ export function BasicInfoStep() {
                     name="name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel required>Product Name</FormLabel>
+                        <FormLabel className="flex">Product Name <span className="text-red-500 ml-1">*</span></FormLabel>
                         <FormControl>
                           <Input
                             placeholder="Enter product name"
@@ -225,7 +225,7 @@ export function BasicInfoStep() {
                     name="slug"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel required>URL Slug</FormLabel>
+                        <FormLabel className="flex">URL Slug <span className="text-red-500 ml-1">*</span></FormLabel>
                         <FormControl>
                           <Input
                             placeholder="product-url-slug"
@@ -246,7 +246,7 @@ export function BasicInfoStep() {
                     name="sku"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel required>SKU</FormLabel>
+                        <FormLabel className="flex">SKU <span className="text-red-500 ml-1">*</span></FormLabel>
                         <FormControl>
                           <Input
                             placeholder="PROD123"
@@ -298,7 +298,7 @@ export function BasicInfoStep() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="">None</SelectItem>
+                              <SelectItem value="none">None</SelectItem>
                               {categoriesList.map((category: any) => (
                                 <SelectItem
                                   key={category.id}
@@ -391,7 +391,7 @@ export function BasicInfoStep() {
                     name="costPrice"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel required>Cost Price</FormLabel>
+                        <FormLabel className="flex">Cost Price <span className="text-red-500 ml-1">*</span></FormLabel>
                         <FormControl>
                           <div className="relative">
                             <span className="absolute left-3 top-2.5">R</span>
@@ -469,7 +469,7 @@ export function BasicInfoStep() {
                     name="regularPrice"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel required>Regular Price</FormLabel>
+                        <FormLabel className="flex">Regular Price <span className="text-red-500 ml-1">*</span></FormLabel>
                         <FormControl>
                           <div className="relative">
                             <span className="absolute left-3 top-2.5">R</span>
