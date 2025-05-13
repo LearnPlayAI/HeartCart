@@ -1018,11 +1018,80 @@ export class DatabaseStorage implements IStorage {
     try {
       // Use a transaction to ensure all operations succeed or fail together
       const createdProduct = await db.transaction(async (tx) => {
+        // Add created_at timestamp if not specified
+        if (!product.created_at) {
+          product.created_at = new Date();
+        }
+        
         // Insert the product with all wizard fields
         const [createdProductRecord] = await tx.insert(products).values(product).returning();
         
         if (!createdProductRecord) {
           throw new Error('Failed to create product');
+        }
+        
+        // Process images if they were provided via the wizard
+        if (Array.isArray(product.imageObjectKeys) && product.imageObjectKeys.length > 0) {
+          logger.debug(`Processing ${product.imageObjectKeys.length} product images`, {
+            productId: createdProductRecord.id,
+            imageCount: product.imageObjectKeys.length
+          });
+          
+          // Extract main image index (defaulting to 0 if not specified)
+          const mainImageIndex = typeof product.mainImageIndex === 'number' ? 
+            product.mainImageIndex : 0;
+          
+          // Process each image
+          for (let i = 0; i < product.imageObjectKeys.length; i++) {
+            const objectKey = product.imageObjectKeys[i];
+            const imageUrl = Array.isArray(product.imageUrls) && i < product.imageUrls.length ? 
+              product.imageUrls[i] : null;
+              
+            // If this is the main image, use it for the product's main image URL
+            const isMainImage = i === mainImageIndex;
+            
+            try {
+              // Create product image record in database
+              const imageRecord = await this.createProductImage({
+                productId: createdProductRecord.id,
+                url: imageUrl || `/api/files/${objectKey}`,
+                objectKey: objectKey,
+                isMain: isMainImage,
+                sortOrder: i,
+                hasBgRemoved: false,
+                bgRemovedUrl: null,
+                bgRemovedObjectKey: null,
+                created_at: new Date()
+              });
+              
+              // If this is the main image, update the product record
+              if (isMainImage && imageRecord) {
+                // Update product's main image URL
+                await tx.update(products)
+                  .set({ 
+                    image_url: imageRecord.url,
+                    original_image_object_key: imageRecord.objectKey
+                  })
+                  .where(eq(products.id, createdProductRecord.id));
+                  
+                // Also update our local copy of the record
+                createdProductRecord.image_url = imageRecord.url;
+                createdProductRecord.original_image_object_key = imageRecord.objectKey;
+              }
+              
+              logger.debug(`Created product image record`, { 
+                productId: createdProductRecord.id, 
+                imageUrl: imageUrl, 
+                isMain: isMainImage
+              });
+            } catch (imageError) {
+              logger.error(`Error creating product image record`, {
+                error: imageError,
+                productId: createdProductRecord.id,
+                objectKey: objectKey
+              });
+            }
+          }
         }
         
         // Handle required attributes if specified

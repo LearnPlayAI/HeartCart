@@ -47,6 +47,17 @@ const additionalInfoSchema = z.object({
   shippingLength: z.coerce.number().min(0).nullable().optional(),
   shippingWidth: z.coerce.number().min(0).nullable().optional(),
   shippingHeight: z.coerce.number().min(0).nullable().optional(),
+
+  // Product details
+  supplier: z.string().optional(),
+  weight: z.coerce.number().min(0).nullable().optional(),
+  dimensions: z.string().optional(),
+  
+  // Sales & Promotions
+  discountLabel: z.string().optional(),
+  specialSaleText: z.string().optional(),
+  specialSaleStart: z.union([z.string(), z.date()]).optional().nullable(),
+  specialSaleEnd: z.union([z.string(), z.date()]).optional().nullable(),
   
   // SEO
   metaTitle: z.string().optional(),
@@ -67,6 +78,11 @@ export function AdditionalInfoStep() {
     queryKey: ['/api/attributes/definitions'],
   });
   
+  // Fetch suppliers list
+  const { data: suppliers = [] } = useQuery({
+    queryKey: ['/api/suppliers'],
+  });
+  
   // Initialize form with values from context
   const form = useForm<AdditionalInfoFormValues>({
     resolver: zodResolver(additionalInfoSchema),
@@ -84,6 +100,17 @@ export function AdditionalInfoStep() {
       shippingLength: state.shippingDimensions.length,
       shippingWidth: state.shippingDimensions.width,
       shippingHeight: state.shippingDimensions.height,
+      
+      // Product details
+      supplier: state.supplier || '',
+      weight: state.weight || null,
+      dimensions: state.dimensions || '',
+      
+      // Sales & Promotions
+      discountLabel: state.discountLabel || '',
+      specialSaleText: state.specialSaleText || '',
+      specialSaleStart: state.specialSaleStart ? new Date(state.specialSaleStart) : null,
+      specialSaleEnd: state.specialSaleEnd ? new Date(state.specialSaleEnd) : null,
       
       // SEO
       metaTitle: state.metaTitle || state.name,

@@ -284,6 +284,17 @@ export function ReviewAndSaveStep({ onComplete }: ReviewAndSaveStepProps = {}) {
         shippingWeight: state.shippingWeight ? Number(state.shippingWeight) : null,
         shippingDimensions: state.shippingDimensions,
         
+        // Add missing fields
+        supplier: state.supplier || null,
+        weight: state.weight ? Number(state.weight) : null,
+        dimensions: state.dimensions || null,
+        
+        // Sales and promotions
+        discount_label: state.discountLabel || null,
+        special_sale_text: state.specialSaleText || null,
+        special_sale_start: state.specialSaleStart || null,
+        special_sale_end: state.specialSaleEnd || null,
+        
         // Attributes
         attributes: state.attributes || [],
         
