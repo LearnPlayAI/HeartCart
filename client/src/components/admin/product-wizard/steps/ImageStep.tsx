@@ -24,6 +24,8 @@ import {
   MoveVerticalIcon,
   AlertTriangleIcon
 } from 'lucide-react';
+import ProductImage from '../ProductImage';
+import ProductImageGallery from '../ProductImageGallery';
 
 // Maximum file size (5MB)
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
