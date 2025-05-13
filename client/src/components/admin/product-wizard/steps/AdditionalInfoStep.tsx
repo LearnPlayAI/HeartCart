@@ -49,15 +49,10 @@ const additionalInfoSchema = z.object({
   lowStockThreshold: z.coerce.number().min(0, 'Threshold must be 0 or greater'),
   backorderEnabled: z.boolean().default(false),
   
-  // Shipping
+  // Tax settings
   taxable: z.boolean().default(true),
   taxClass: z.string().optional(),
-  shippingRequired: z.boolean().default(true),
-  shippingWeight: z.coerce.number().min(0).nullable().optional(),
-  shippingLength: z.coerce.number().min(0).nullable().optional(),
-  shippingWidth: z.coerce.number().min(0).nullable().optional(),
-  shippingHeight: z.coerce.number().min(0).nullable().optional(),
-
+  
   // Product details
   supplier: z.string().optional(),
   attributeValues: z.array(z.any()).optional(), // For attribute metadata like weight, dimensions
@@ -287,14 +282,9 @@ export function AdditionalInfoStep() {
       lowStockThreshold: state.lowStockThreshold,
       backorderEnabled: state.backorderEnabled,
       
-      // Shipping
+      // Tax settings
       taxable: state.taxable,
       taxClass: state.taxClass,
-      shippingRequired: state.shippingRequired,
-      shippingWeight: state.shippingWeight,
-      shippingLength: state.shippingDimensions.length,
-      shippingWidth: state.shippingDimensions.width,
-      shippingHeight: state.shippingDimensions.height,
       
       // Product details
       supplier: state.supplier || '',
@@ -349,13 +339,6 @@ export function AdditionalInfoStep() {
     
     setField('taxable', values.taxable);
     setField('taxClass', values.taxClass);
-    setField('shippingRequired', values.shippingRequired);
-    setField('shippingWeight', values.shippingWeight);
-    setField('shippingDimensions', {
-      length: values.shippingLength,
-      width: values.shippingWidth,
-      height: values.shippingHeight,
-    });
     
     // Product details
     setField('supplier', values.supplier);
@@ -868,198 +851,8 @@ export function AdditionalInfoStep() {
                   </div>
                 </TabsContent>
                 
-                {/* Shipping & SEO Tab */}
+                {/* SEO Tab */}
                 <TabsContent value="shipping" className="space-y-6">
-                  <Collapsible
-                    defaultOpen
-                    className="border rounded-md overflow-hidden"
-                  >
-                    <CollapsibleTrigger className="flex w-full items-center justify-between px-4 py-3 bg-muted/30 hover:bg-muted transition-colors">
-                      <div className="flex items-center">
-                        <TruckIcon className="h-5 w-5 mr-2" />
-                        <h3 className="font-medium">Shipping Information</h3>
-                      </div>
-                      <ChevronDownIcon className="h-4 w-4" />
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="px-4 py-3 space-y-4">
-                      {/* Shipping Required */}
-                      <FormField
-                        control={form.control}
-                        name="shippingRequired"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                            <div className="space-y-0.5">
-                              <FormLabel>Requires Shipping</FormLabel>
-                              <FormDescription>
-                                Turn off for digital/virtual products
-                              </FormDescription>
-                            </div>
-                            <FormControl>
-                              <Switch
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      
-                      {form.watch('shippingRequired') && (
-                        <>
-                          {/* Shipping Weight */}
-                          <FormField
-                            control={form.control}
-                            name="shippingWeight"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Weight (kg)</FormLabel>
-                                <FormControl>
-                                  <Input
-                                    type="number"
-                                    min="0"
-                                    step="0.01"
-                                    placeholder="0.00"
-                                    {...field}
-                                    value={field.value === null ? '' : field.value}
-                                    onChange={(e) => {
-                                      const val = e.target.value === '' ? null : parseFloat(e.target.value);
-                                      field.onChange(val);
-                                    }}
-                                  />
-                                </FormControl>
-                                <FormDescription>
-                                  Product weight for shipping calculations
-                                </FormDescription>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          
-                          {/* Shipping Dimensions */}
-                          <div className="grid grid-cols-3 gap-3">
-                            <FormField
-                              control={form.control}
-                              name="shippingLength"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Length (cm)</FormLabel>
-                                  <FormControl>
-                                    <Input
-                                      type="number"
-                                      min="0"
-                                      step="0.1"
-                                      placeholder="0.0"
-                                      {...field}
-                                      value={field.value === null ? '' : field.value}
-                                      onChange={(e) => {
-                                        const val = e.target.value === '' ? null : parseFloat(e.target.value);
-                                        field.onChange(val);
-                                      }}
-                                    />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            <FormField
-                              control={form.control}
-                              name="shippingWidth"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Width (cm)</FormLabel>
-                                  <FormControl>
-                                    <Input
-                                      type="number"
-                                      min="0"
-                                      step="0.1"
-                                      placeholder="0.0"
-                                      {...field}
-                                      value={field.value === null ? '' : field.value}
-                                      onChange={(e) => {
-                                        const val = e.target.value === '' ? null : parseFloat(e.target.value);
-                                        field.onChange(val);
-                                      }}
-                                    />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            <FormField
-                              control={form.control}
-                              name="shippingHeight"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Height (cm)</FormLabel>
-                                  <FormControl>
-                                    <Input
-                                      type="number"
-                                      min="0"
-                                      step="0.1"
-                                      placeholder="0.0"
-                                      {...field}
-                                      value={field.value === null ? '' : field.value}
-                                      onChange={(e) => {
-                                        const val = e.target.value === '' ? null : parseFloat(e.target.value);
-                                        field.onChange(val);
-                                      }}
-                                    />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-                        </>
-                      )}
-                      
-                      {/* Tax Info */}
-                      <FormField
-                        control={form.control}
-                        name="taxable"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                            <div className="space-y-0.5">
-                              <FormLabel>Taxable</FormLabel>
-                              <FormDescription>
-                                Apply tax to this product
-                              </FormDescription>
-                            </div>
-                            <FormControl>
-                              <Switch
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      
-                      {/* Tax Class (only if taxable) */}
-                      {form.watch('taxable') && (
-                        <FormField
-                          control={form.control}
-                          name="taxClass"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Tax Class</FormLabel>
-                              <FormControl>
-                                <Input
-                                  placeholder="Standard"
-                                  {...field}
-                                  value={field.value || ''}
-                                />
-                              </FormControl>
-                              <FormDescription>
-                                Leave empty for standard tax rates
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      )}
-                    </CollapsibleContent>
-                  </Collapsible>
                   
                   {/* Product Details Section */}
                   <Collapsible
