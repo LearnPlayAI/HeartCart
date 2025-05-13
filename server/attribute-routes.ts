@@ -121,6 +121,155 @@ router.get('/:id', asyncHandler(async (req: Request, res: Response) => {
   }
 }));
 
+// Get options for a specific attribute
+router.get('/:id/options', asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const attributeId = parseInt(req.params.id);
+    
+    if (isNaN(attributeId)) {
+      return sendError(res, 'Invalid attribute ID', 400);
+    }
+    
+    const attribute = attributeDefinitions.find(attr => attr.id === attributeId);
+    
+    if (!attribute) {
+      return sendError(res, 'Attribute not found', 404);
+    }
+    
+    // Send back just the options array
+    sendSuccess(res, attribute.options || []);
+  } catch (error) {
+    sendError(res, 'Failed to retrieve attribute options', 500);
+  }
+}));
+
+// Create a new option for an attribute
+router.post('/:id/options', asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const attributeId = parseInt(req.params.id);
+    
+    if (isNaN(attributeId)) {
+      return sendError(res, 'Invalid attribute ID', 400);
+    }
+    
+    const attribute = attributeDefinitions.find(attr => attr.id === attributeId);
+    
+    if (!attribute) {
+      return sendError(res, 'Attribute not found', 404);
+    }
+    
+    const optionSchema = z.object({
+      value: z.string().min(1, 'Value is required'),
+      displayValue: z.string().optional(),
+      metadata: z.record(z.any()).optional(),
+      sortOrder: z.number().optional()
+    });
+    
+    const validatedData = optionSchema.parse(req.body);
+    
+    const newOption = {
+      id: (attribute.options?.length || 0) + 1,
+      value: validatedData.value,
+      displayValue: validatedData.displayValue || validatedData.value,
+      metadata: validatedData.metadata || null,
+      sortOrder: validatedData.sortOrder || (attribute.options?.length || 0) + 1
+    };
+    
+    if (!attribute.options) {
+      attribute.options = [];
+    }
+    
+    attribute.options.push(newOption);
+    
+    sendSuccess(res, newOption, 201);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return sendError(res, 'Validation error', 400, error.format());
+    }
+    sendError(res, 'Failed to create attribute option', 500);
+  }
+}));
+
+// Update an option for an attribute
+router.put('/:attributeId/options/:optionId', asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const attributeId = parseInt(req.params.attributeId);
+    const optionId = parseInt(req.params.optionId);
+    
+    if (isNaN(attributeId) || isNaN(optionId)) {
+      return sendError(res, 'Invalid ID', 400);
+    }
+    
+    const attribute = attributeDefinitions.find(attr => attr.id === attributeId);
+    
+    if (!attribute || !attribute.options) {
+      return sendError(res, 'Attribute not found', 404);
+    }
+    
+    const optionIndex = attribute.options.findIndex(opt => opt.id === optionId);
+    
+    if (optionIndex === -1) {
+      return sendError(res, 'Option not found', 404);
+    }
+    
+    const optionSchema = z.object({
+      value: z.string().min(1, 'Value is required'),
+      displayValue: z.string().optional(),
+      metadata: z.record(z.any()).optional(),
+      sortOrder: z.number().optional()
+    });
+    
+    const validatedData = optionSchema.parse(req.body);
+    
+    // Update the option
+    attribute.options[optionIndex] = {
+      ...attribute.options[optionIndex],
+      value: validatedData.value,
+      displayValue: validatedData.displayValue || validatedData.value,
+      metadata: validatedData.metadata || attribute.options[optionIndex].metadata,
+      sortOrder: validatedData.sortOrder || attribute.options[optionIndex].sortOrder
+    };
+    
+    sendSuccess(res, attribute.options[optionIndex]);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return sendError(res, 'Validation error', 400, error.format());
+    }
+    sendError(res, 'Failed to update attribute option', 500);
+  }
+}));
+
+// Delete an option from an attribute
+router.delete('/:attributeId/options/:optionId', asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const attributeId = parseInt(req.params.attributeId);
+    const optionId = parseInt(req.params.optionId);
+    
+    if (isNaN(attributeId) || isNaN(optionId)) {
+      return sendError(res, 'Invalid ID', 400);
+    }
+    
+    const attribute = attributeDefinitions.find(attr => attr.id === attributeId);
+    
+    if (!attribute || !attribute.options) {
+      return sendError(res, 'Attribute not found', 404);
+    }
+    
+    const optionIndex = attribute.options.findIndex(opt => opt.id === optionId);
+    
+    if (optionIndex === -1) {
+      return sendError(res, 'Option not found', 404);
+    }
+    
+    // Remove the option
+    attribute.options.splice(optionIndex, 1);
+    
+    sendSuccess(res, { success: true });
+  } catch (error) {
+    sendError(res, 'Failed to delete attribute option', 500);
+  }
+}));
+
 // Create a new attribute (would be admin-only in production)
 router.post('/', asyncHandler(async (req: Request, res: Response) => {
   try {
