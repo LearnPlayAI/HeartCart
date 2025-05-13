@@ -139,16 +139,9 @@ const defaultInitialState: ProductWizardState = {
   isFlashDeal: false,
   flashDealEnd: null,
   
-  // Shipping
+  // Tax settings
   taxable: true,
   taxClass: 'standard',
-  shippingRequired: true,
-  shippingWeight: null,
-  shippingDimensions: {
-    length: null,
-    width: null,
-    height: null,
-  },
   
   // SEO
   metaTitle: '',

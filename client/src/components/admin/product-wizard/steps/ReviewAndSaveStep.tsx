@@ -343,12 +343,9 @@ export function ReviewAndSaveStep({ onComplete }: ReviewAndSaveStepProps = {}) {
         metaDescription: state.metaDescription || state.description || null,
         metaKeywords: state.metaKeywords || '',
         
-        // Shipping
+        // Tax settings
         taxable: Boolean(state.taxable),
         taxClass: state.taxClass || '',
-        shippingRequired: Boolean(state.shippingRequired),
-        shippingWeight: state.shippingWeight ? Number(state.shippingWeight) : null,
-        shippingDimensions: state.shippingDimensions,
         
         // Product details
         supplier: state.supplier || null,
@@ -791,10 +788,10 @@ export function ReviewAndSaveStep({ onComplete }: ReviewAndSaveStepProps = {}) {
             </div>
           )}
           
-          {/* Shipping Section */}
+          {/* Tax Section */}
           <div className="mt-8 space-y-6">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium">Shipping & Tax</h3>
+              <h3 className="text-lg font-medium">Tax Information</h3>
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -810,13 +807,6 @@ export function ReviewAndSaveStep({ onComplete }: ReviewAndSaveStepProps = {}) {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
               <div className="space-y-1">
-                <Label className="text-muted-foreground">Requires Shipping</Label>
-                <Badge variant={state.shippingRequired ? "default" : "outline"}>
-                  {state.shippingRequired ? 'Yes' : 'No'}
-                </Badge>
-              </div>
-              
-              <div className="space-y-1">
                 <Label className="text-muted-foreground">Taxable</Label>
                 <Badge variant={state.taxable ? "default" : "outline"}>
                   {state.taxable ? 'Yes' : 'No'}
@@ -828,31 +818,6 @@ export function ReviewAndSaveStep({ onComplete }: ReviewAndSaveStepProps = {}) {
                   <Label className="text-muted-foreground">Tax Class</Label>
                   <p className="font-medium">{state.taxClass || 'Standard'}</p>
                 </div>
-              )}
-              
-              {state.shippingRequired && (
-                <>
-                  <div className="space-y-1">
-                    <Label className="text-muted-foreground">Weight</Label>
-                    <p className="font-medium">
-                      {state.shippingWeight ? `${state.shippingWeight} kg` : 'Not specified'}
-                    </p>
-                  </div>
-                  
-                  <div className="space-y-1 col-span-2">
-                    <Label className="text-muted-foreground">Dimensions (L × W × H)</Label>
-                    <p className="font-medium">
-                      {state.shippingDimensions.length && state.shippingDimensions.width && state.shippingDimensions.height
-                        ? formatDimensions(
-                            state.shippingDimensions.length,
-                            state.shippingDimensions.width,
-                            state.shippingDimensions.height
-                          )
-                        : 'Not specified'
-                      }
-                    </p>
-                  </div>
-                </>
               )}
             </div>
           </div>
