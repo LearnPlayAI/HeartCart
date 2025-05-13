@@ -12,18 +12,10 @@ import {
   suppliers, type Supplier, type InsertSupplier,
   catalogs, type Catalog, type InsertCatalog,
   productDrafts,
-  // New attribute system imports
+  // Centralized attribute system imports - we've removed the hierarchy to simplify
   attributes, type Attribute, type InsertAttribute,
   attributeOptions, type AttributeOption, type InsertAttributeOption,
-  catalogAttributes, type CatalogAttribute, type InsertCatalogAttribute,
-  catalogAttributeOptions, type CatalogAttributeOption, type InsertCatalogAttributeOption,
-  categoryAttributes, type CategoryAttribute, type InsertCategoryAttribute,
-  categoryAttributeOptions, type CategoryAttributeOption, type InsertCategoryAttributeOption,
-  productAttributes, type ProductAttribute, type InsertProductAttribute,
-  productAttributeOptions, type ProductAttributeOption, type InsertProductAttributeOption,
-  productAttributeValues, type ProductAttributeValue, type InsertProductAttributeValue,
-  // Attribute discount rules
-  attributeDiscountRules, type AttributeDiscountRule, type InsertAttributeDiscountRule
+  productAttributes, type ProductAttribute, type InsertProductAttribute
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, like, and, desc, asc, sql, inArray, isNull, not, or, SQL, count } from "drizzle-orm";
@@ -139,7 +131,7 @@ export interface IStorage {
   bulkUpdateCatalogProducts(catalogId: number, updateData: Partial<InsertProduct>): Promise<number>;
   updateProductDisplayOrder(catalogId: number, productIds: number[]): Promise<{ count: number }>;
   
-  // Attribute system operations
+  // Centralized attribute system operations
   // Core attribute operations
   getAllAttributes(): Promise<Attribute[]>;
   getAttributeById(id: number): Promise<Attribute | undefined>;
@@ -155,36 +147,6 @@ export interface IStorage {
   updateAttributeOption(id: number, optionData: Partial<InsertAttributeOption>): Promise<AttributeOption | undefined>;
   deleteAttributeOption(id: number): Promise<boolean>;
   updateAttributeOptionsOrder(attributeId: number, optionIds: number[]): Promise<boolean>;
-
-  // Catalog attribute operations
-  getCatalogAttributes(catalogId: number): Promise<(CatalogAttribute & { attribute: Attribute })[]>;
-  getCatalogAttributeById(id: number): Promise<(CatalogAttribute & { attribute: Attribute }) | undefined>;
-  createCatalogAttribute(catalogAttribute: InsertCatalogAttribute): Promise<CatalogAttribute>;
-  updateCatalogAttribute(id: number, catalogAttributeData: Partial<InsertCatalogAttribute>): Promise<CatalogAttribute | undefined>;
-  deleteCatalogAttribute(id: number): Promise<boolean>;
-  
-  // Catalog attribute options operations
-  getCatalogAttributeOptions(catalogAttributeId: number): Promise<(CatalogAttributeOption & { baseOption?: AttributeOption })[]>;
-  getCatalogAttributeOptionById(id: number): Promise<CatalogAttributeOption | undefined>;
-  createCatalogAttributeOption(option: InsertCatalogAttributeOption): Promise<CatalogAttributeOption>;
-  updateCatalogAttributeOption(id: number, optionData: Partial<InsertCatalogAttributeOption>): Promise<CatalogAttributeOption | undefined>;
-  deleteCatalogAttributeOption(id: number): Promise<boolean>;
-  updateCatalogAttributeOptionsOrder(catalogAttributeId: number, optionIds: number[]): Promise<boolean>;
-  
-  // Category attribute operations
-  getCategoryAttributes(categoryId: number): Promise<(CategoryAttribute & { attribute: Attribute })[]>;
-  getCategoryAttributeById(id: number): Promise<(CategoryAttribute & { attribute: Attribute }) | undefined>;
-  createCategoryAttribute(categoryAttribute: InsertCategoryAttribute): Promise<CategoryAttribute>;
-  updateCategoryAttribute(id: number, categoryAttributeData: Partial<InsertCategoryAttribute>): Promise<CategoryAttribute | undefined>;
-  deleteCategoryAttribute(id: number): Promise<boolean>;
-  
-  // Category attribute options operations
-  getCategoryAttributeOptions(categoryAttributeId: number): Promise<(CategoryAttributeOption & { baseOption?: AttributeOption, catalogOption?: CatalogAttributeOption })[]>;
-  getCategoryAttributeOptionById(id: number): Promise<CategoryAttributeOption | undefined>;
-  createCategoryAttributeOption(option: InsertCategoryAttributeOption): Promise<CategoryAttributeOption>;
-  updateCategoryAttributeOption(id: number, optionData: Partial<InsertCategoryAttributeOption>): Promise<CategoryAttributeOption | undefined>;
-  deleteCategoryAttributeOption(id: number): Promise<boolean>;
-  updateCategoryAttributeOptionsOrder(categoryAttributeId: number, optionIds: number[]): Promise<boolean>;
   
   // Product attribute operations
   getProductAttributes(productId: number): Promise<(ProductAttribute & { attribute: Attribute })[]>;
@@ -192,46 +154,6 @@ export interface IStorage {
   createProductAttribute(productAttribute: InsertProductAttribute): Promise<ProductAttribute>;
   updateProductAttribute(id: number, productAttributeData: Partial<InsertProductAttribute>): Promise<ProductAttribute | undefined>;
   deleteProductAttribute(id: number): Promise<boolean>;
-  
-  // Product attribute options operations
-  getProductAttributeOptions(productAttributeId: number): Promise<(ProductAttributeOption & { 
-    baseOption?: AttributeOption, 
-    catalogOption?: CatalogAttributeOption,
-    categoryOption?: CategoryAttributeOption
-  })[]>;
-  getProductAttributeOptionById(id: number): Promise<ProductAttributeOption | undefined>;
-  createProductAttributeOption(option: InsertProductAttributeOption): Promise<ProductAttributeOption>;
-  updateProductAttributeOption(id: number, optionData: Partial<InsertProductAttributeOption>): Promise<ProductAttributeOption | undefined>;
-  deleteProductAttributeOption(id: number): Promise<boolean>;
-  updateProductAttributeOptionsOrder(productAttributeId: number, optionIds: number[]): Promise<boolean>;
-  
-  // Product attribute values operations
-  getProductAttributeValues(productId: number): Promise<ProductAttributeValue[]>;
-  getProductAttributeValueById(id: number): Promise<ProductAttributeValue | undefined>;
-  createProductAttributeValue(value: InsertProductAttributeValue): Promise<ProductAttributeValue>;
-  updateProductAttributeValue(id: number, valueData: Partial<InsertProductAttributeValue>): Promise<ProductAttributeValue | undefined>;
-  deleteProductAttributeValue(id: number): Promise<boolean>;
-  
-  // Attribute discount rules operations
-  getAllAttributeDiscountRules(): Promise<AttributeDiscountRule[]>;
-  getAttributeDiscountRule(id: number): Promise<AttributeDiscountRule | undefined>;
-  getAttributeDiscountRulesByProduct(productId: number): Promise<AttributeDiscountRule[]>;
-  getAttributeDiscountRulesByCategory(categoryId: number): Promise<AttributeDiscountRule[]>;
-  getAttributeDiscountRulesByCatalog(catalogId: number): Promise<AttributeDiscountRule[]>;
-  getAttributeDiscountRulesByAttribute(attributeId: number): Promise<AttributeDiscountRule[]>;
-  createAttributeDiscountRule(rule: InsertAttributeDiscountRule): Promise<AttributeDiscountRule>;
-  updateAttributeDiscountRule(id: number, ruleData: Partial<InsertAttributeDiscountRule>): Promise<AttributeDiscountRule | undefined>;
-  deleteAttributeDiscountRule(id: number): Promise<boolean>;
-  calculateAttributeBasedPriceAdjustments(productId: number, selectedAttributes: Record<string, any>, quantity?: number): Promise<{
-    adjustments: Array<{
-      ruleId: number,
-      ruleName: string,
-      discountType: string,
-      discountValue: number,
-      appliedValue: number
-    }>,
-    totalAdjustment: number
-  }>;
   
   // Product draft operations for wizard auto-save functionality
   saveProductDraft(userId: number, draftData: any, step: number, draftId?: string, catalogId?: number): Promise<any>;

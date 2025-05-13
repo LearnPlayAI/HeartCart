@@ -253,88 +253,32 @@ export const attributeOptions = pgTable("attribute_options", {
   };
 });
 
-// Catalog Attributes - attributes assigned to a catalog
-export const catalogAttributes = pgTable("catalog_attributes", {
-  id: serial("id").primaryKey(),
-  catalogId: integer("catalog_id").notNull().references(() => catalogs.id, { onDelete: "cascade" }),
-  attributeId: integer("attribute_id").notNull().references(() => attributes.id, { onDelete: "cascade" }),
-  overrideDisplayName: varchar("override_display_name", { length: 100 }), // Optional custom name for this catalog
-  overrideDescription: text("override_description"), // Optional custom description for this catalog
-  isRequired: boolean("is_required"), // Override the base attribute's isRequired flag
-  isFilterable: boolean("is_filterable"), // Override the base attribute's isFilterable flag
-  sortOrder: integer("sort_order").default(0),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-}, (table) => {
-  return {
-    catalogAttrUnique: unique().on(table.catalogId, table.attributeId),
-  };
-});
-
-// Catalog Attribute Options - custom options for catalog level attributes (can override or add to base options)
-export const catalogAttributeOptions = pgTable("catalog_attribute_options", {
-  id: serial("id").primaryKey(),
-  catalogAttributeId: integer("catalog_attribute_id").notNull().references(() => catalogAttributes.id, { onDelete: "cascade" }),
-  value: varchar("value", { length: 255 }).notNull(),
-  displayValue: varchar("display_value", { length: 255 }).notNull(),
-  baseOptionId: integer("base_option_id").references(() => attributeOptions.id), // May link to a base option, or null if custom
-  metadata: jsonb("metadata"), // Additional data
-  sortOrder: integer("sort_order").default(0),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-}, (table) => {
-  return {
-    catalogAttrOptionUnique: unique().on(table.catalogAttributeId, table.value),
-  };
-});
-
-// Category Attributes - attributes assigned to a category
-export const categoryAttributes = pgTable("category_attributes", {
-  id: serial("id").primaryKey(),
-  categoryId: integer("category_id").notNull().references(() => categories.id, { onDelete: "cascade" }),
-  attributeId: integer("attribute_id").notNull().references(() => attributes.id, { onDelete: "cascade" }),
-  catalogAttributeId: integer("catalog_attribute_id").references(() => catalogAttributes.id), // Can inherit from catalog or be null
-  overrideDisplayName: varchar("override_display_name", { length: 100 }),
-  overrideDescription: text("override_description"),
-  isRequired: boolean("is_required"),
-  isFilterable: boolean("is_filterable"),
-  inheritFromParent: boolean("inherit_from_parent").default(false), // Whether to inherit from parent category
-  sortOrder: integer("sort_order").default(0),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-}, (table) => {
-  return {
-    categoryAttrUnique: unique().on(table.categoryId, table.attributeId),
-  };
-});
-
-// Category Attribute Options - custom options for category level attributes
-export const categoryAttributeOptions = pgTable("category_attribute_options", {
-  id: serial("id").primaryKey(),
-  categoryAttributeId: integer("category_attribute_id").notNull().references(() => categoryAttributes.id, { onDelete: "cascade" }),
-  value: varchar("value", { length: 255 }).notNull(),
-  displayValue: varchar("display_value", { length: 255 }).notNull(),
-  baseOptionId: integer("base_option_id").references(() => attributeOptions.id), // May link to base option or catalog option
-  catalogOptionId: integer("catalog_option_id").references(() => catalogAttributeOptions.id),
-  metadata: jsonb("metadata"),
-  sortOrder: integer("sort_order").default(0),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-}, (table) => {
-  return {
-    categoryAttrOptionUnique: unique().on(table.categoryAttributeId, table.value),
-  };
-});
+// We're removing the tables:
+// - catalogAttributes
+// - catalogAttributeOptions
+// - categoryAttributes
+// - categoryAttributeOptions
+// to centralize all attribute functionality to only use:
+// - attributes
+// - attributeOptions
+// - productAttributes
 
 // Product Attributes - attributes assigned to a product
 export const productAttributes = pgTable("product_attributes", {
   id: serial("id").primaryKey(),
   productId: integer("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
   attributeId: integer("attribute_id").notNull().references(() => attributes.id, { onDelete: "cascade" }),
-  categoryAttributeId: integer("category_attribute_id").references(() => categoryAttributes.id), // Can inherit or be custom
+  // We're removing the reference to categoryAttributes as part of centralization
   overrideDisplayName: varchar("override_display_name", { length: 100 }),
   overrideDescription: text("override_description"),
   isRequired: boolean("is_required"),
+  // Store the selected attribute options as JSON to avoid need for separate tables
+  selectedOptions: jsonb("selected_options").default([]),
+  // Store custom values (for text type attributes) directly here
+  textValue: text("text_value"),
+  // This field will never affect pricing as per requirements, but we'll keep it for reference
+  // and always ensure it's set to 0 in the application code
+  priceAdjustment: decimal("price_adjustment", { precision: 10, scale: 2 }).default("0"),
   sortOrder: integer("sort_order").default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
@@ -344,40 +288,10 @@ export const productAttributes = pgTable("product_attributes", {
   };
 });
 
-// Product Attribute Options - custom options for product level attributes
-export const productAttributeOptions = pgTable("product_attribute_options", {
-  id: serial("id").primaryKey(),
-  productAttributeId: integer("product_attribute_id").notNull().references(() => productAttributes.id, { onDelete: "cascade" }),
-  value: varchar("value", { length: 255 }).notNull(),
-  displayValue: varchar("display_value", { length: 255 }).notNull(),
-  baseOptionId: integer("base_option_id").references(() => attributeOptions.id),
-  categoryOptionId: integer("category_option_id").references(() => categoryAttributeOptions.id),
-  catalogOptionId: integer("catalog_option_id").references(() => catalogAttributeOptions.id),
-  priceAdjustment: decimal("price_adjustment", { precision: 10, scale: 2 }).default("0"),
-  metadata: jsonb("metadata"),
-  sortOrder: integer("sort_order").default(0),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-}, (table) => {
-  return {
-    productAttrOptionUnique: unique().on(table.productAttributeId, table.value),
-  };
-});
-
-// Product Attribute Values - selected attribute values for a specific product
-export const productAttributeValues = pgTable("product_attribute_values", {
-  id: serial("id").primaryKey(),
-  productId: integer("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
-  attributeId: integer("attribute_id").notNull().references(() => attributes.id, { onDelete: "cascade" }),
-  optionId: integer("option_id").references(() => productAttributeOptions.id), // For select/radio/color types
-  textValue: text("text_value"), // For text/textarea types
-  dateValue: timestamp("date_value", { withTimezone: true }), // For date types
-  numericValue: decimal("numeric_value", { precision: 10, scale: 2 }), // For numeric types
-  priceAdjustment: decimal("price_adjustment", { precision: 10, scale: 2 }).default("0"),
-  sortOrder: integer("sort_order").default(0),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-});
+// We're removing the tables:
+// - productAttributeOptions
+// - productAttributeValues
+// All attribute data will now be stored in productAttributes table with the selectedOptions field
 
 // Create insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
@@ -491,73 +405,14 @@ export const insertAttributeOptionSchema = createInsertSchema(attributeOptions).
 });
 
 // Catalog attribute insert schema
-export const insertCatalogAttributeSchema = createInsertSchema(catalogAttributes).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-// Catalog attribute option insert schema
-export const insertCatalogAttributeOptionSchema = createInsertSchema(catalogAttributeOptions).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-}).extend({
-  metadata: z.record(z.any()).optional(),
-  baseOptionId: z.number().nullable().optional(),
-});
-
-// Category attribute insert schema
-export const insertCategoryAttributeSchema = createInsertSchema(categoryAttributes).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-}).extend({
-  catalogAttributeId: z.number().nullable().optional(),
-});
-
-// Category attribute option insert schema
-export const insertCategoryAttributeOptionSchema = createInsertSchema(categoryAttributeOptions).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-}).extend({
-  metadata: z.record(z.any()).optional(),
-  baseOptionId: z.number().nullable().optional(),
-  catalogOptionId: z.number().nullable().optional(),
-});
-
-// Product attribute insert schema
+// Product attribute insert schema - Updated for the centralized three-table model
 export const insertProductAttributeSchema = createInsertSchema(productAttributes).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
 }).extend({
-  categoryAttributeId: z.number().nullable().optional(),
-});
-
-// Product attribute option insert schema
-export const insertProductAttributeOptionSchema = createInsertSchema(productAttributeOptions).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-}).extend({
-  metadata: z.record(z.any()).optional(),
-  baseOptionId: z.number().nullable().optional(),
-  categoryOptionId: z.number().nullable().optional(),
-  catalogOptionId: z.number().nullable().optional(),
-});
-
-// Product attribute value insert schema
-export const insertProductAttributeValueSchema = createInsertSchema(productAttributeValues).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-}).extend({
-  optionId: z.number().nullable().optional(),
+  selectedOptions: z.array(z.number()).optional(),
   textValue: z.string().nullable().optional(),
-  dateValue: z.date().nullable().optional(),
-  numericValue: z.number().nullable().optional(),
 });
 
 // Export types
@@ -607,26 +462,13 @@ export type InsertAttribute = z.infer<typeof insertAttributeSchema>;
 export type AttributeOption = typeof attributeOptions.$inferSelect;
 export type InsertAttributeOption = z.infer<typeof insertAttributeOptionSchema>;
 
-export type CatalogAttribute = typeof catalogAttributes.$inferSelect;
-export type InsertCatalogAttribute = z.infer<typeof insertCatalogAttributeSchema>;
+// Removed catalog attribute types as part of centralization
 
-export type CatalogAttributeOption = typeof catalogAttributeOptions.$inferSelect;
-export type InsertCatalogAttributeOption = z.infer<typeof insertCatalogAttributeOptionSchema>;
-
-export type CategoryAttribute = typeof categoryAttributes.$inferSelect;
-export type InsertCategoryAttribute = z.infer<typeof insertCategoryAttributeSchema>;
-
-export type CategoryAttributeOption = typeof categoryAttributeOptions.$inferSelect;
-export type InsertCategoryAttributeOption = z.infer<typeof insertCategoryAttributeOptionSchema>;
+// Removed type definitions for eliminated tables 
+// Now using centralized attribute system
 
 export type ProductAttribute = typeof productAttributes.$inferSelect;
 export type InsertProductAttribute = z.infer<typeof insertProductAttributeSchema>;
-
-export type ProductAttributeOption = typeof productAttributeOptions.$inferSelect;
-export type InsertProductAttributeOption = z.infer<typeof insertProductAttributeOptionSchema>;
-
-export type ProductAttributeValue = typeof productAttributeValues.$inferSelect;
-export type InsertProductAttributeValue = z.infer<typeof insertProductAttributeValueSchema>;
 
 // Define all table relations after all tables and types are defined
 export const categoriesRelations = relations(categories, ({ one, many }) => ({
@@ -679,10 +521,7 @@ export const suppliersRelations = relations(suppliers, ({ many }) => ({
 // Attribute relations
 export const attributesRelations = relations(attributes, ({ many }) => ({
   options: many(attributeOptions),
-  catalogAttributes: many(catalogAttributes),
-  categoryAttributes: many(categoryAttributes),
-  productAttributes: many(productAttributes),
-  productAttributeValues: many(productAttributeValues)
+  productAttributes: many(productAttributes)
 }));
 
 // Attribute options relations
@@ -693,73 +532,12 @@ export const attributeOptionsRelations = relations(attributeOptions, ({ one }) =
   })
 }));
 
-// Catalog attributes relations
-export const catalogAttributesRelations = relations(catalogAttributes, ({ one, many }) => ({
-  catalog: one(catalogs, {
-    fields: [catalogAttributes.catalogId],
-    references: [catalogs.id]
-  }),
-  attribute: one(attributes, {
-    fields: [catalogAttributes.attributeId],
-    references: [attributes.id]
-  }),
-  options: many(catalogAttributeOptions),
-  categoryAttributes: many(categoryAttributes, {
-    relationName: "catalog_relation"
-  })
-}));
+// Removed catalog attributes relations as part of centralization
 
-// Catalog attribute options relations
-export const catalogAttributeOptionsRelations = relations(catalogAttributeOptions, ({ one }) => ({
-  catalogAttribute: one(catalogAttributes, {
-    fields: [catalogAttributeOptions.catalogAttributeId],
-    references: [catalogAttributes.id]
-  }),
-  baseOption: one(attributeOptions, {
-    fields: [catalogAttributeOptions.baseOptionId],
-    references: [attributeOptions.id]
-  })
-}));
-
-// Category attributes relations
-export const categoryAttributesRelations = relations(categoryAttributes, ({ one, many }) => ({
-  category: one(categories, {
-    fields: [categoryAttributes.categoryId],
-    references: [categories.id]
-  }),
-  attribute: one(attributes, {
-    fields: [categoryAttributes.attributeId],
-    references: [attributes.id]
-  }),
-  catalogAttribute: one(catalogAttributes, {
-    fields: [categoryAttributes.catalogAttributeId],
-    references: [catalogAttributes.id],
-    relationName: "catalog_relation"
-  }),
-  options: many(categoryAttributeOptions),
-  productAttributes: many(productAttributes, {
-    relationName: "category_relation"
-  })
-}));
-
-// Category attribute options relations
-export const categoryAttributeOptionsRelations = relations(categoryAttributeOptions, ({ one }) => ({
-  categoryAttribute: one(categoryAttributes, {
-    fields: [categoryAttributeOptions.categoryAttributeId],
-    references: [categoryAttributes.id]
-  }),
-  baseOption: one(attributeOptions, {
-    fields: [categoryAttributeOptions.baseOptionId],
-    references: [attributeOptions.id]
-  }),
-  catalogOption: one(catalogAttributeOptions, {
-    fields: [categoryAttributeOptions.catalogOptionId],
-    references: [catalogAttributeOptions.id]
-  })
-}));
+// Removed category attributes relations as part of centralization
 
 // Product attributes relations
-export const productAttributesRelations = relations(productAttributes, ({ one, many }) => ({
+export const productAttributesRelations = relations(productAttributes, ({ one }) => ({
   product: one(products, {
     fields: [productAttributes.productId],
     references: [products.id]
@@ -767,50 +545,15 @@ export const productAttributesRelations = relations(productAttributes, ({ one, m
   attribute: one(attributes, {
     fields: [productAttributes.attributeId],
     references: [attributes.id]
-  }),
-  categoryAttribute: one(categoryAttributes, {
-    fields: [productAttributes.categoryAttributeId],
-    references: [categoryAttributes.id],
-    relationName: "category_relation"
-  }),
-  options: many(productAttributeOptions)
+  })
+  // Removed references to tables we're eliminating
 }));
 
-// Product attribute options relations
-export const productAttributeOptionsRelations = relations(productAttributeOptions, ({ one }) => ({
-  productAttribute: one(productAttributes, {
-    fields: [productAttributeOptions.productAttributeId],
-    references: [productAttributes.id]
-  }),
-  baseOption: one(attributeOptions, {
-    fields: [productAttributeOptions.baseOptionId],
-    references: [attributeOptions.id]
-  }),
-  categoryOption: one(categoryAttributeOptions, {
-    fields: [productAttributeOptions.categoryOptionId],
-    references: [categoryAttributeOptions.id]
-  }),
-  catalogOption: one(catalogAttributeOptions, {
-    fields: [productAttributeOptions.catalogOptionId],
-    references: [catalogAttributeOptions.id]
-  })
-}));
-
-// Product attribute values relations
-export const productAttributeValuesRelations = relations(productAttributeValues, ({ one }) => ({
-  product: one(products, {
-    fields: [productAttributeValues.productId],
-    references: [products.id]
-  }),
-  attribute: one(attributes, {
-    fields: [productAttributeValues.attributeId],
-    references: [attributes.id]
-  }),
-  option: one(productAttributeOptions, {
-    fields: [productAttributeValues.optionId],
-    references: [productAttributeOptions.id]
-  })
-}));
+// Removed relation definitions for eliminated tables
+// Now using centralized attribute system with three tables:
+// - attributes
+// - attributeOptions
+// - productAttributes
 
 // Batch upload tables - for mass product upload tracking
 export const batchUploads = pgTable("batch_uploads", {

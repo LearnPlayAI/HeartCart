@@ -17,10 +17,7 @@ import {
   suppliers,
   attributes,
   attributeOptions,
-  productAttributeValues,
-  catalogAttributes,
   productAttributes,
-  productAttributeOptions,
   InsertBatchUpload,
   InsertBatchUploadError,
   InsertProduct,
@@ -723,38 +720,12 @@ export class BatchUploadService {
         attrValue.attributeId = attribute.id;
       }
       
-      // Find or create product attribute
-      const [productAttribute] = await tx
-        .select()
-        .from(productAttributes)
-        .where(
-          and(
-            eq(productAttributes.productId, productId),
-            eq(productAttributes.attributeId, attrValue.attributeId)
-          )
-        );
-        
-      let productAttributeId: number;
+      // Process each attribute value and collect option IDs
+      const selectedOptionIds: number[] = [];
+      let textValue: string | null = null;
       
-      if (!productAttribute) {
-        const [newProductAttribute] = await tx
-          .insert(productAttributes)
-          .values({
-            productId,
-            attributeId: attrValue.attributeId,
-          })
-          .returning();
-          
-        productAttributeId = newProductAttribute.id;
-      } else {
-        productAttributeId = productAttribute.id;
-      }
-      
-      // Process each attribute value
       for (const value of attrValue.values) {
         // Find or create attribute option
-        let attributeOptionId: number | undefined = undefined;
-        
         const [existingOption] = await tx
           .select()
           .from(attributeOptions)
@@ -766,7 +737,7 @@ export class BatchUploadService {
           );
           
         if (existingOption) {
-          attributeOptionId = existingOption.id;
+          selectedOptionIds.push(existingOption.id);
         } else {
           const [newOption] = await tx
             .insert(attributeOptions)
@@ -777,45 +748,46 @@ export class BatchUploadService {
             })
             .returning();
             
-          attributeOptionId = newOption.id;
+          selectedOptionIds.push(newOption.id);
         }
         
-        // Find or create product attribute option
-        let productAttributeOptionId: number | undefined = undefined;
-        
-        const [existingProductOption] = await tx
-          .select()
-          .from(productAttributeOptions)
-          .where(
-            and(
-              eq(productAttributeOptions.productAttributeId, productAttributeId),
-              eq(productAttributeOptions.value, value)
-            )
-          );
-          
-        if (existingProductOption) {
-          productAttributeOptionId = existingProductOption.id;
-        } else {
-          const [newProductOption] = await tx
-            .insert(productAttributeOptions)
-            .values({
-              productAttributeId,
-              attributeOptionId,
-              value,
-              displayValue: value,
-            })
-            .returning();
-            
-          productAttributeOptionId = newProductOption.id;
+        // If it's a text-based attribute and this is the first value,
+        // also store as text value
+        if (attribute && (attribute.attributeType === 'text' || attribute.attributeType === 'textarea') && !textValue) {
+          textValue = value;
         }
+      }
+      
+      // Find or update product attribute with the new selectedOptions array
+      const [existingProductAttribute] = await tx
+        .select()
+        .from(productAttributes)
+        .where(
+          and(
+            eq(productAttributes.productId, productId),
+            eq(productAttributes.attributeId, attrValue.attributeId)
+          )
+        );
         
-        // Create product attribute value
+      if (existingProductAttribute) {
+        // Update existing product attribute with new selected options
         await tx
-          .insert(productAttributeValues)
+          .update(productAttributes)
+          .set({
+            selectedOptions: selectedOptionIds,
+            textValue: textValue,
+            updatedAt: new Date()
+          })
+          .where(eq(productAttributes.id, existingProductAttribute.id));
+      } else {
+        // Create new product attribute
+        await tx
+          .insert(productAttributes)
           .values({
             productId,
             attributeId: attrValue.attributeId,
-            optionId: productAttributeOptionId,
+            selectedOptions: selectedOptionIds,
+            textValue: textValue,
           });
       }
     }

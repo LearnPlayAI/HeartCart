@@ -19,8 +19,7 @@ import {
   insertCatalogSchema,
   insertProductAttributeSchema,
   insertAttributeSchema,
-  insertAttributeOptionSchema,
-  insertProductAttributeValueSchema
+  insertAttributeOptionSchema
 } from './schema';
 
 /**
@@ -113,9 +112,8 @@ export const createAttributeOptionSchema = insertAttributeOptionSchema;
 
 export const updateAttributeOptionSchema = insertAttributeOptionSchema.partial();
 
-export const createProductAttributeValueSchema = insertProductAttributeValueSchema;
-
-export const updateProductAttributeValueSchema = insertProductAttributeValueSchema.partial();
+// Product attribute value validation schemas are removed as part of centralization
+// Now using the centralized productAttributes table with selectedOptions array
 
 /**
  * Product Image validation schemas
