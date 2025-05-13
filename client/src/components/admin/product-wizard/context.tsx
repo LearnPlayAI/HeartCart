@@ -67,16 +67,9 @@ interface ProductWizardState {
   isFlashDeal: boolean;
   flashDealEnd: string | null;
   
-  // Shipping
+  // Tax settings
   taxable: boolean;
   taxClass: string;
-  shippingRequired: boolean;
-  shippingWeight: number | null;
-  shippingDimensions: {
-    length: number | null;
-    width: number | null;
-    height: number | null;
-  };
   
   // SEO
   metaTitle: string;

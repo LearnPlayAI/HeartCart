@@ -41,10 +41,12 @@ type SalesPromotionsFormValues = z.infer<typeof salesPromotionsSchema>;
 export function SalesPromotionsStep() {
   const { state, setField } = useProductWizardContext();
 
-  const handleDateChange = (field: 'specialSaleStart' | 'specialSaleEnd' | 'flashDealEnd', date: Date | undefined) => {
+  const handleDateChange = (field: 'specialSaleStart' | 'specialSaleEnd' | 'flashDealEnd', date: Date | undefined | null) => {
     if (date) {
+      // If there's a valid date, convert to ISO string
       setField(field, date.toISOString());
     } else {
+      // If date is undefined or null, set field to null
       setField(field, null);
     }
   };
@@ -84,11 +86,19 @@ export function SalesPromotionsStep() {
     Object.entries(values).forEach(([key, value]) => {
       // Convert dates to ISO strings for storage
       if (value instanceof Date) {
+        // Store dates as ISO strings
         setField(key as any, value.toISOString());
+      } else if (key === 'specialSaleStart' || key === 'specialSaleEnd' || key === 'flashDealEnd') {
+        // Handle null date values properly
+        setField(key as any, value === null ? null : value);
       } else {
+        // Handle other values
         setField(key as any, value);
       }
     });
+    
+    // Make step complete
+    setField('salesPromotionsComplete', true);
   };
 
   return (

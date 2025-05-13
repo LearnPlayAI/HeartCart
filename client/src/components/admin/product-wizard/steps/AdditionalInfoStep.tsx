@@ -309,14 +309,9 @@ export function AdditionalInfoStep() {
       form.setValue('lowStockThreshold', state.lowStockThreshold || 5);
       form.setValue('backorderEnabled', state.backorderEnabled || false);
       
-      // Shipping
+      // Tax settings
       form.setValue('taxable', state.taxable || true);
       form.setValue('taxClass', state.taxClass || '');
-      form.setValue('shippingRequired', state.shippingRequired || true);
-      form.setValue('shippingWeight', state.shippingWeight || null);
-      form.setValue('shippingLength', state.shippingDimensions?.length || null);
-      form.setValue('shippingWidth', state.shippingDimensions?.width || null);
-      form.setValue('shippingHeight', state.shippingDimensions?.height || null);
       
       // Product details
       form.setValue('supplier', state.supplier || '');
