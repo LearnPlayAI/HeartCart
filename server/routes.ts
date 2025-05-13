@@ -28,7 +28,7 @@ import uploadHandlers from "./upload-handlers";
 import fileBrowserRoutes from "./file-browser-routes";
 import registerAttributeRoutes from "./attribute-routes";
 import registerProductAttributeRoutes from "./attribute-routes-product";
-import attributeDiscountRoutes from "./attribute-discount-routes";
+// Removed attributeDiscountRoutes import as part of centralized attribute system
 import pricingRoutes from "./pricing-routes";
 import batchUploadRoutes from "./batch-upload-routes";
 import { registerAuthTestRoutes } from "./auth-test-routes";
@@ -5344,7 +5344,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerProductAttributeRoutes(app);
   
   // Register attribute discount rules routes
-  app.use('/api', attributeDiscountRoutes);
+  // Removed attribute discount routes as part of centralized attribute system
   
   // Register pricing routes
   app.use('/api', pricingRoutes);

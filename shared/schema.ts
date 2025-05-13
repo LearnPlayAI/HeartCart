@@ -604,6 +604,9 @@ export const batchUploadErrors = pgTable("batch_upload_errors", {
 });
 
 // Attribute-based discount rules
+// @deprecated - This table will be removed in a future migration
+// as part of the centralized attribute system refactoring.
+// Product attributes should never affect pricing in the new system.
 export const attributeDiscountRules = pgTable("attribute_discount_rules", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
@@ -624,6 +627,7 @@ export const attributeDiscountRules = pgTable("attribute_discount_rules", {
 });
 
 // Attribute discount rules relations
+// @deprecated - These relations will be removed with the attributeDiscountRules table
 export const attributeDiscountRulesRelations = relations(attributeDiscountRules, ({ one }) => ({
   attribute: one(attributes, {
     fields: [attributeDiscountRules.attributeId],
