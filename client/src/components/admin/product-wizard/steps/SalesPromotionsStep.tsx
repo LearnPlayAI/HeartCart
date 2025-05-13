@@ -132,13 +132,17 @@ export function SalesPromotionsStep() {
             />
 
             <FormField
+              control={form.control}
               name="onSale"
-              render={() => (
+              render={({ field }) => (
                 <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
                   <FormControl>
                     <Checkbox
-                      checked={onSale}
-                      onCheckedChange={(checked) => setField('onSale', checked)}
+                      checked={field.value}
+                      onCheckedChange={(checked) => {
+                        field.onChange(checked);
+                        setField('onSale', checked);
+                      }}
                     />
                   </FormControl>
                   <div className="space-y-1 leading-none">
@@ -152,18 +156,24 @@ export function SalesPromotionsStep() {
             />
           </div>
 
-          {onSale && (
+          {form.watch('onSale') && (
             <FormField
+              control={form.control}
               name="salePrice"
-              render={() => (
+              render={({ field }) => (
                 <FormItem>
                   <FormLabel>Sale Price (R)</FormLabel>
                   <FormControl>
                     <Input
                       type="number"
                       placeholder="0.00"
-                      value={salePrice || ''}
-                      onChange={(e) => setField('salePrice', parseFloat(e.target.value))}
+                      {...field}
+                      value={field.value || ''}
+                      onChange={(e) => {
+                        const value = e.target.value === '' ? null : parseFloat(e.target.value);
+                        field.onChange(value);
+                        setField('salePrice', value);
+                      }}
                       min={0}
                       step={0.01}
                     />
@@ -184,16 +194,21 @@ export function SalesPromotionsStep() {
         </CardHeader>
         <CardContent className="space-y-4">
           <FormField
+            control={form.control}
             name="discountLabel"
-            render={() => (
+            render={({ field }) => (
               <FormItem>
                 <FormLabel>Discount Label</FormLabel>
                 <FormControl>
                   <Input
                     type="text"
                     placeholder="e.g., 20% OFF"
-                    value={discountLabel || ''}
-                    onChange={(e) => setField('discountLabel', e.target.value)}
+                    {...field}
+                    value={field.value || ''}
+                    onChange={(e) => {
+                      field.onChange(e.target.value);
+                      setField('discountLabel', e.target.value);
+                    }}
                   />
                 </FormControl>
                 <FormDescription>Display this label on the product (optional)</FormDescription>
@@ -203,16 +218,21 @@ export function SalesPromotionsStep() {
           />
 
           <FormField
+            control={form.control}
             name="specialSaleText"
-            render={() => (
+            render={({ field }) => (
               <FormItem>
                 <FormLabel>Special Sale Text</FormLabel>
                 <FormControl>
                   <Input
                     type="text"
                     placeholder="e.g., Summer Sale"
-                    value={specialSaleText || ''}
-                    onChange={(e) => setField('specialSaleText', e.target.value)}
+                    {...field}
+                    value={field.value || ''}
+                    onChange={(e) => {
+                      field.onChange(e.target.value);
+                      setField('specialSaleText', e.target.value);
+                    }}
                   />
                 </FormControl>
                 <FormDescription>Promotional text to display on the product</FormDescription>
@@ -221,11 +241,12 @@ export function SalesPromotionsStep() {
             )}
           />
 
-          {state.specialSaleText && (
+          {form.watch('specialSaleText') && (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <FormField
+                control={form.control}
                 name="specialSaleStart"
-                render={() => (
+                render={({ field }) => (
                   <FormItem className="flex flex-col">
                     <FormLabel>Special Sale Start Date</FormLabel>
                     <Popover>
@@ -235,11 +256,11 @@ export function SalesPromotionsStep() {
                             variant="outline"
                             className={cn(
                               "w-full pl-3 text-left font-normal",
-                              !specialSaleStart && "text-muted-foreground"
+                              !field.value && "text-muted-foreground"
                             )}
                           >
-                            {specialSaleStart ? (
-                              format(new Date(specialSaleStart), 'PPP')
+                            {field.value ? (
+                              format(new Date(field.value), 'PPP')
                             ) : (
                               <span>Pick a date</span>
                             )}
@@ -250,8 +271,12 @@ export function SalesPromotionsStep() {
                       <PopoverContent className="w-auto p-0" align="start">
                         <Calendar
                           mode="single"
-                          selected={state.specialSaleStart ? new Date(state.specialSaleStart) : undefined}
-                          onSelect={(date) => handleDateChange('specialSaleStart', date)}
+                          selected={field.value ? new Date(field.value) : undefined}
+                          onSelect={(date) => {
+                            const dateValue = date || null;
+                            field.onChange(dateValue);
+                            handleDateChange('specialSaleStart', dateValue);
+                          }}
                           initialFocus
                         />
                       </PopoverContent>
@@ -265,8 +290,9 @@ export function SalesPromotionsStep() {
               />
 
               <FormField
+                control={form.control}
                 name="specialSaleEnd"
-                render={() => (
+                render={({ field }) => (
                   <FormItem className="flex flex-col">
                     <FormLabel>Special Sale End Date</FormLabel>
                     <Popover>
@@ -276,11 +302,11 @@ export function SalesPromotionsStep() {
                             variant="outline"
                             className={cn(
                               "w-full pl-3 text-left font-normal",
-                              !specialSaleEnd && "text-muted-foreground"
+                              !field.value && "text-muted-foreground"
                             )}
                           >
-                            {specialSaleEnd ? (
-                              format(new Date(specialSaleEnd), 'PPP')
+                            {field.value ? (
+                              format(new Date(field.value), 'PPP')
                             ) : (
                               <span>Pick a date</span>
                             )}
@@ -291,8 +317,12 @@ export function SalesPromotionsStep() {
                       <PopoverContent className="w-auto p-0" align="start">
                         <Calendar
                           mode="single"
-                          selected={state.specialSaleEnd ? new Date(state.specialSaleEnd) : undefined}
-                          onSelect={(date) => handleDateChange('specialSaleEnd', date)}
+                          selected={field.value ? new Date(field.value) : undefined}
+                          onSelect={(date) => {
+                            const dateValue = date || null;
+                            field.onChange(dateValue);
+                            handleDateChange('specialSaleEnd', dateValue);
+                          }}
                           initialFocus
                         />
                       </PopoverContent>
@@ -316,13 +346,17 @@ export function SalesPromotionsStep() {
         </CardHeader>
         <CardContent className="space-y-4">
           <FormField
+            control={form.control}
             name="isFlashDeal"
-            render={() => (
+            render={({ field }) => (
               <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
                 <FormControl>
                   <Checkbox
-                    checked={isFlashDeal}
-                    onCheckedChange={(checked) => setField('isFlashDeal', checked)}
+                    checked={field.value}
+                    onCheckedChange={(checked) => {
+                      field.onChange(checked);
+                      setField('isFlashDeal', checked);
+                    }}
                   />
                 </FormControl>
                 <div className="space-y-1 leading-none">
@@ -335,10 +369,11 @@ export function SalesPromotionsStep() {
             )}
           />
 
-          {isFlashDeal && (
+          {form.watch('isFlashDeal') && (
             <FormField
+              control={form.control}
               name="flashDealEnd"
-              render={() => (
+              render={({ field }) => (
                 <FormItem className="flex flex-col">
                   <FormLabel>Flash Deal End Date & Time</FormLabel>
                   <Popover>
@@ -348,11 +383,11 @@ export function SalesPromotionsStep() {
                           variant="outline"
                           className={cn(
                             "w-full pl-3 text-left font-normal",
-                            !flashDealEnd && "text-muted-foreground"
+                            !field.value && "text-muted-foreground"
                           )}
                         >
-                          {flashDealEnd ? (
-                            format(new Date(flashDealEnd), 'PPP')
+                          {field.value ? (
+                            format(new Date(field.value), 'PPP')
                           ) : (
                             <span>Pick a date</span>
                           )}
@@ -363,8 +398,12 @@ export function SalesPromotionsStep() {
                     <PopoverContent className="w-auto p-0" align="start">
                       <Calendar
                         mode="single"
-                        selected={state.flashDealEnd ? new Date(state.flashDealEnd) : undefined}
-                        onSelect={(date) => handleDateChange('flashDealEnd', date)}
+                        selected={field.value ? new Date(field.value) : undefined}
+                        onSelect={(date) => {
+                          const dateValue = date || null;
+                          field.onChange(dateValue);
+                          handleDateChange('flashDealEnd', dateValue);
+                        }}
                         initialFocus
                       />
                     </PopoverContent>
