@@ -341,86 +341,34 @@ export function registerFileManagerTestRoutes(app: Express): void {
     try {
       logger.debug('Running all file system tests');
       
-      // Run all tests sequentially and collect results
-      const endpoints = [
-        '/api/file-test/api-methods',
-        '/api/file-test/buckets',
-        '/api/file-test/operations',
-        '/api/file-test/filename-utils'
-      ];
+      // Collect results from individual test endpoints
+      const apiMethodsResult = await runTestEndpoint(app, '/api/file-test/api-methods', req.user);
+      const bucketsResult = await runTestEndpoint(app, '/api/file-test/buckets', req.user);
+      const operationsResult = await runTestEndpoint(app, '/api/file-test/operations', req.user);
+      const filenameUtilsResult = await runTestEndpoint(app, '/api/file-test/filename-utils', req.user);
       
-      const testResults = {};
-      
-      for (const endpoint of endpoints) {
-        // Get the test name from the endpoint
-        const testName = endpoint.split('/').pop();
-        
-        try {
-          // Manually call the handler for each test
-          let result;
-          switch (endpoint) {
-            case '/api/file-test/api-methods':
-              result = await new Promise((resolve) => {
-                app._router.handle(
-                  { method: 'GET', url: endpoint, path: endpoint, query: {}, user: req.user } as any,
-                  { json: resolve } as any,
-                  () => {}
-                );
-              });
-              break;
-            case '/api/file-test/buckets':
-              result = await new Promise((resolve) => {
-                app._router.handle(
-                  { method: 'GET', url: endpoint, path: endpoint, query: {}, user: req.user } as any,
-                  { json: resolve } as any,
-                  () => {}
-                );
-              });
-              break;
-            case '/api/file-test/operations':
-              result = await new Promise((resolve) => {
-                app._router.handle(
-                  { method: 'GET', url: endpoint, path: endpoint, query: {}, user: req.user } as any,
-                  { json: resolve } as any,
-                  () => {}
-                );
-              });
-              break;
-            case '/api/file-test/filename-utils':
-              result = await new Promise((resolve) => {
-                app._router.handle(
-                  { method: 'GET', url: endpoint, path: endpoint, query: {}, user: req.user } as any,
-                  { json: resolve } as any,
-                  () => {}
-                );
-              });
-              break;
-          }
-          
-          testResults[testName] = {
-            endpoint,
-            status: result.success ? 'passed' : 'failed',
-            data: result.data
-          };
-        } catch (error) {
-          testResults[testName] = {
-            endpoint,
-            status: 'failed',
-            error: String(error)
-          };
-        }
-      }
+      // Compile all results
+      const testResults = {
+        'api-methods': apiMethodsResult,
+        'buckets': bucketsResult,
+        'operations': operationsResult,
+        'filename-utils': filenameUtilsResult
+      };
       
       // Determine overall status
-      const overallStatus = Object.values(testResults).some(
+      const failedTests = Object.values(testResults).filter(
         (result: any) => result.status === 'failed'
-      ) ? 'failed' : 'passed';
+      );
+      
+      const overallStatus = failedTests.length > 0 ? 'failed' : 'passed';
       
       return sendSuccess(res, {
         status: overallStatus,
         message: 'All file system tests completed',
         tests: testResults
       });
+      
+
     } catch (error: any) {
       logger.error('Error running all file tests', { error });
       return sendError(res, 

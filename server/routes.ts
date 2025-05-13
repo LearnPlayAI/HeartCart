@@ -25,7 +25,7 @@ import path from "path";
 import fs from "fs";
 import fileRoutes from "./file-routes";
 import uploadHandlers from "./upload-handlers";
-import fileBrowserRoutes from "./file-browsing-routes";
+import fileBrowserRoutes from "./file-browser-routes";
 import registerAttributeRoutes from "./attribute-routes";
 import registerProductAttributeRoutes from "./attribute-routes-product";
 import attributeDiscountRoutes from "./attribute-discount-routes";
@@ -98,6 +98,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register Storage testing routes
   registerStorageTestRoutes(app);
+  
+  // Register File Manager testing routes
+  registerFileManagerTestRoutes(app);
   
   // Apply response wrapper middleware to standardize API responses
   app.use(responseWrapperMiddleware);
