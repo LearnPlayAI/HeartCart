@@ -352,9 +352,9 @@ export function ReviewAndSaveStep({ onComplete }: ReviewAndSaveStepProps = {}) {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Review Product Information</CardTitle>
+          <CardTitle className="text-lg">Review {state.productId ? 'and Update' : ''} Product Information</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Review all product details before saving. You can go back to any step to make changes.
+            Review all product details before {state.productId ? 'updating' : 'saving'}. You can go back to any step to make changes.
           </p>
         </CardHeader>
         <CardContent>
@@ -788,7 +788,7 @@ export function ReviewAndSaveStep({ onComplete }: ReviewAndSaveStepProps = {}) {
               
               <div className="p-4 border rounded-md bg-muted/10">
                 <p className="text-sm">
-                  This product will be added to the <strong>{state.catalogName || 'Selected'}</strong> catalog.
+                  This product will be {state.productId ? 'updated in' : 'added to'} the <strong>{state.catalogName || 'Selected'}</strong> catalog.
                 </p>
               </div>
             </div>
@@ -798,7 +798,7 @@ export function ReviewAndSaveStep({ onComplete }: ReviewAndSaveStepProps = {}) {
           {savingError && (
             <Alert variant="destructive" className="mt-8">
               <AlertTriangleIcon className="h-4 w-4" />
-              <AlertTitle>Error Saving Product</AlertTitle>
+              <AlertTitle>Error {state.productId ? 'Updating' : 'Saving'} Product</AlertTitle>
               <AlertDescription>
                 {savingError}
               </AlertDescription>
@@ -818,12 +818,12 @@ export function ReviewAndSaveStep({ onComplete }: ReviewAndSaveStepProps = {}) {
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  <span>Saving...</span>
+                  <span>{state.productId ? 'Updating...' : 'Saving...'}</span>
                 </>
               ) : (
                 <>
                   <SaveIcon className="mr-2 h-4 w-4" />
-                  <span>Save Product</span>
+                  <span>{state.productId ? 'Update Product' : 'Save Product'}</span>
                 </>
               )}
             </Button>
