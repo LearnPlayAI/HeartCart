@@ -5022,7 +5022,6 @@ export class DatabaseStorage implements IStorage {
     
     /* The following code is no longer used but kept for reference
     // Get all active discount rules that apply to this product
-    */
     const directRules = await this.getAttributeDiscountRulesByProduct(productId);
     
     // Get category-based rules
@@ -5101,6 +5100,7 @@ export class DatabaseStorage implements IStorage {
       adjustments,
       totalAdjustment
     };
+    */
   }
   // Authentication testing utilities
   
