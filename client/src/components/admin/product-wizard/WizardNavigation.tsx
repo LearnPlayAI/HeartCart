@@ -133,7 +133,7 @@ export function WizardNavigation({ onComplete }: WizardNavigationProps) {
                           status === 'current' 
                             ? 'bg-primary text-primary-foreground border-primary' 
                             : status === 'complete' 
-                            ? 'bg-primary/10 text-primary border-primary' 
+                            ? 'bg-pink-200 text-pink-700 border-pink-400' 
                             : status === 'error'
                             ? 'bg-destructive/10 text-destructive border-destructive'
                             : 'bg-muted text-muted-foreground border-muted-foreground/30'
@@ -145,6 +145,8 @@ export function WizardNavigation({ onComplete }: WizardNavigationProps) {
                         className={`mt-2 text-sm ${
                           status === 'current' 
                             ? 'font-medium text-primary'
+                            : status === 'complete'
+                            ? 'font-medium text-pink-600'
                             : status === 'error'
                             ? 'font-medium text-destructive'
                             : 'text-muted-foreground'
