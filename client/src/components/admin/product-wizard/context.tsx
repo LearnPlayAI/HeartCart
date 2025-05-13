@@ -13,6 +13,9 @@ export type WizardStep = 'basic-info' | 'images' | 'additional-info' | 'review';
 
 // Define the state interface for the wizard
 interface ProductWizardState {
+  // Product ID (only set when editing existing product)
+  productId?: number;
+  
   // Core product info
   name: string;
   slug: string;
@@ -83,6 +86,9 @@ interface ProductWizardState {
 
 // Initial state for the wizard
 const defaultInitialState: ProductWizardState = {
+  // Product ID (only set when editing)
+  productId: undefined,
+  
   // Core product info
   name: '',
   slug: '',
@@ -334,9 +340,10 @@ const productWizardReducer = (
     case 'RESET_WIZARD':
       return {
         ...defaultInitialState,
-        // Preserve catalog context during reset
+        // Preserve context during reset
         catalogId: state.catalogId,
         catalogName: state.catalogName,
+        productId: state.productId,
       };
     
     default:
@@ -385,6 +392,13 @@ export const ProductWizardProvider: React.FC<ProductWizardProviderProps> = ({
 }) => {
   // Initialize with saved draft if available, otherwise use defaults
   const getInitialState = () => {
+    // If we're editing a product (i.e., initialState.productId is set), we'll load from API
+    // and skip the draft
+    if (initialState.productId) {
+      return { ...defaultInitialState, ...initialState };
+    }
+    
+    // Otherwise, check for a draft
     const savedDraft = localStorage.getItem('product_wizard_draft');
     if (savedDraft) {
       try {
@@ -403,6 +417,137 @@ export const ProductWizardProvider: React.FC<ProductWizardProviderProps> = ({
     productWizardReducer,
     getInitialState()
   );
+  
+  // Load product data if we're editing
+  React.useEffect(() => {
+    const loadProductData = async () => {
+      if (state.productId) {
+        try {
+          const response = await fetch(`/api/products/${state.productId}`);
+          if (response.ok) {
+            const data = await response.json();
+            
+            if (data.success && data.data) {
+              const product = data.data;
+              
+              // Update all fields with product data
+              dispatch({ type: 'SET_FIELD', field: 'name', value: product.name || '' });
+              dispatch({ type: 'SET_FIELD', field: 'slug', value: product.slug || '' });
+              dispatch({ type: 'SET_FIELD', field: 'sku', value: product.sku || '' });
+              dispatch({ type: 'SET_FIELD', field: 'description', value: product.description || '' });
+              dispatch({ type: 'SET_FIELD', field: 'brand', value: product.brand || '' });
+              dispatch({ type: 'SET_FIELD', field: 'categoryId', value: product.categoryId });
+              dispatch({ type: 'SET_FIELD', field: 'isActive', value: product.isActive ?? true });
+              dispatch({ type: 'SET_FIELD', field: 'isFeatured', value: product.isFeatured ?? false });
+              
+              // Pricing
+              dispatch({ type: 'SET_FIELD', field: 'costPrice', value: product.costPrice || 0 });
+              dispatch({ type: 'SET_FIELD', field: 'regularPrice', value: product.regularPrice || 0 });
+              dispatch({ type: 'SET_FIELD', field: 'salePrice', value: product.salePrice || null });
+              dispatch({ type: 'SET_FIELD', field: 'onSale', value: product.onSale ?? false });
+              dispatch({ type: 'SET_FIELD', field: 'markupPercentage', value: product.markupPercentage || 40 });
+              
+              // Load images if available
+              if (product.images && product.images.length > 0) {
+                // Extract image URLs and object keys
+                const imageUrls = product.images.map(img => img.url);
+                const imageObjectKeys = product.images.map(img => img.objectKey);
+                
+                // Find main image index
+                const mainImageIndex = product.images.findIndex(img => img.isMain) || 0;
+                
+                dispatch({ type: 'SET_FIELD', field: 'imageUrls', value: imageUrls });
+                dispatch({ type: 'SET_FIELD', field: 'imageObjectKeys', value: imageObjectKeys });
+                dispatch({ type: 'SET_FIELD', field: 'mainImageIndex', value: mainImageIndex >= 0 ? mainImageIndex : 0 });
+              }
+              
+              // Inventory
+              dispatch({ type: 'SET_FIELD', field: 'stockLevel', value: product.stockLevel || 0 });
+              dispatch({ type: 'SET_FIELD', field: 'lowStockThreshold', value: product.lowStockThreshold || 5 });
+              dispatch({ type: 'SET_FIELD', field: 'backorderEnabled', value: product.backorderEnabled ?? false });
+              
+              // Attributes - load existing attributes and attribute values
+              if (product.attributes) {
+                dispatch({ type: 'SET_FIELD', field: 'attributes', value: product.attributes || [] });
+              }
+              
+              if (product.attributeValues) {
+                dispatch({ type: 'SET_FIELD', field: 'attributeValues', value: product.attributeValues || [] });
+              }
+              
+              // Product details
+              dispatch({ type: 'SET_FIELD', field: 'supplier', value: product.supplier || null });
+              dispatch({ type: 'SET_FIELD', field: 'weight', value: product.weight || null });
+              dispatch({ type: 'SET_FIELD', field: 'dimensions', value: product.dimensions || null });
+              
+              // Sales & Promotions
+              dispatch({ type: 'SET_FIELD', field: 'discountLabel', value: product.discountLabel || null });
+              dispatch({ type: 'SET_FIELD', field: 'specialSaleText', value: product.specialSaleText || null });
+              
+              // Convert date strings to Date objects if they exist
+              if (product.specialSaleStart) {
+                dispatch({ 
+                  type: 'SET_FIELD', 
+                  field: 'specialSaleStart', 
+                  value: new Date(product.specialSaleStart) 
+                });
+              }
+              
+              if (product.specialSaleEnd) {
+                dispatch({ 
+                  type: 'SET_FIELD', 
+                  field: 'specialSaleEnd', 
+                  value: new Date(product.specialSaleEnd) 
+                });
+              }
+              
+              // Shipping
+              dispatch({ type: 'SET_FIELD', field: 'taxable', value: product.taxable ?? true });
+              dispatch({ type: 'SET_FIELD', field: 'taxClass', value: product.taxClass || 'standard' });
+              dispatch({ type: 'SET_FIELD', field: 'shippingRequired', value: product.shippingRequired ?? true });
+              dispatch({ type: 'SET_FIELD', field: 'shippingWeight', value: product.shippingWeight || null });
+              
+              // Shipping dimensions
+              if (product.shippingDimensions) {
+                dispatch({ 
+                  type: 'SET_FIELD', 
+                  field: 'shippingDimensions', 
+                  value: {
+                    length: product.shippingDimensions.length || null,
+                    width: product.shippingDimensions.width || null,
+                    height: product.shippingDimensions.height || null,
+                  } 
+                });
+              }
+              
+              // SEO
+              dispatch({ type: 'SET_FIELD', field: 'metaTitle', value: product.metaTitle || '' });
+              dispatch({ type: 'SET_FIELD', field: 'metaDescription', value: product.metaDescription || '' });
+              dispatch({ type: 'SET_FIELD', field: 'metaKeywords', value: product.metaKeywords || '' });
+              
+              // Mark basic info step as valid
+              dispatch({ type: 'MARK_STEP_VALID', step: 'basic-info', isValid: true });
+              dispatch({ type: 'MARK_STEP_COMPLETE', step: 'basic-info' });
+              
+              // Mark images step as valid if there are images
+              if (product.images && product.images.length > 0) {
+                dispatch({ type: 'MARK_STEP_VALID', step: 'images', isValid: true });
+                dispatch({ type: 'MARK_STEP_COMPLETE', step: 'images' });
+              }
+              
+              console.log('Loaded product data for editing:', product);
+            }
+          } else {
+            console.error('Failed to load product data for editing');
+          }
+        } catch (error) {
+          console.error('Error loading product data for editing:', error);
+        }
+      }
+    };
+    
+    loadProductData();
+  }, [state.productId]);
   
   // Action dispatchers
   const setField = useCallback((field: keyof ProductWizardState, value: any) => {
