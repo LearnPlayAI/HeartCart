@@ -460,8 +460,8 @@ function GlobalAttributesPage() {
       isFilterable: formData.has("isFilterable"),
       isSwatch: formData.has("isSwatch"),
       isRequired: formData.has("isRequired"),
-      isVariant: formData.has("isVariant"),
-      validationRules: formData.get("validationRules") as string || null,
+      displayInProductSummary: formData.has("displayInProductSummary"),
+      sortOrder: parseInt(formData.get("sortOrder") as string) || 0,
     };
     
     if (attributeFormMode === "create") {
@@ -644,7 +644,7 @@ function GlobalAttributesPage() {
                     <TableHead className="text-center">Filterable</TableHead>
                     <TableHead className="text-center">Swatch</TableHead>
                     <TableHead className="text-center">Required</TableHead>
-                    <TableHead className="text-center">Variant</TableHead>
+                    <TableHead className="text-center">Show in Summary</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -684,7 +684,7 @@ function GlobalAttributesPage() {
                           {attribute.isRequired ? "Yes" : "No"}
                         </TableCell>
                         <TableCell className="text-center">
-                          {attribute.isVariant ? "Yes" : "No"}
+                          {attribute.displayInProductSummary ? "Yes" : "No"}
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end space-x-2">
@@ -908,11 +908,11 @@ function GlobalAttributesPage() {
                     </div>
                     <div className="flex items-center space-x-2">
                       <Checkbox 
-                        id="isVariant" 
-                        name="isVariant"
-                        defaultChecked={selectedAttribute?.isVariant || false}
+                        id="displayInProductSummary" 
+                        name="displayInProductSummary"
+                        defaultChecked={selectedAttribute?.displayInProductSummary || false}
                       />
-                      <Label htmlFor="isVariant">Use for product variants</Label>
+                      <Label htmlFor="displayInProductSummary">Display in product summary</Label>
                     </div>
                   </div>
                 </div>
