@@ -439,9 +439,11 @@ function GlobalAttributesPage() {
     setAttributeDialogOpen(true);
   };
 
-  // Navigate to attribute edit page
+  // Show dialog to edit an existing attribute
   const handleEditAttribute = (attribute: Attribute) => {
-    navigate(`/admin/attributes/${attribute.id}/edit`);
+    setSelectedAttribute(attribute);
+    setAttributeFormMode("edit");
+    setAttributeDialogOpen(true);
   };
 
   // Handle opening the option dialog for creating a new option
@@ -729,7 +731,235 @@ function GlobalAttributesPage() {
           </Card>
         )}
 
-        {/* All attribute and option editing dialogs have been moved to dedicated pages */}
+        {/* Attribute Creation/Edit Dialog */}
+        <Dialog open={attributeDialogOpen} onOpenChange={setAttributeDialogOpen}>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle>
+                {attributeFormMode === "create" ? "Create New Attribute" : "Edit Attribute"}
+              </DialogTitle>
+              <DialogDescription>
+                Fill in the details for this attribute. Click save when you're done.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleAttributeSubmit}>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="name" className="text-right">
+                    Name
+                  </Label>
+                  <Input
+                    id="name"
+                    name="name"
+                    placeholder="color"
+                    defaultValue={selectedAttribute?.name || ""}
+                    className="col-span-3"
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="displayName" className="text-right">
+                    Display Name
+                  </Label>
+                  <Input
+                    id="displayName"
+                    name="displayName"
+                    placeholder="Color"
+                    defaultValue={selectedAttribute?.displayName || ""}
+                    className="col-span-3"
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="description" className="text-right">
+                    Description
+                  </Label>
+                  <Textarea
+                    id="description"
+                    name="description"
+                    placeholder="Product color selection"
+                    defaultValue={selectedAttribute?.description || ""}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="attributeType" className="text-right">
+                    Type
+                  </Label>
+                  <Select 
+                    name="attributeType" 
+                    defaultValue={selectedAttribute?.attributeType || "select"}
+                  >
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue placeholder="Select" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ATTRIBUTE_TYPES.map((type) => (
+                        <SelectItem key={type.value} value={type.value}>
+                          {type.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label className="text-right">Options</Label>
+                  <div className="col-span-3 space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="isRequired" 
+                        name="isRequired"
+                        defaultChecked={selectedAttribute?.isRequired || false}
+                      />
+                      <Label htmlFor="isRequired">Required at checkout</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="isFilterable" 
+                        name="isFilterable"
+                        defaultChecked={selectedAttribute?.isFilterable || false}
+                      />
+                      <Label htmlFor="isFilterable">Use for product filtering</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="isSwatch" 
+                        name="isSwatch"
+                        defaultChecked={selectedAttribute?.isSwatch || false}
+                      />
+                      <Label htmlFor="isSwatch">Display as color swatch</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="isVariant" 
+                        name="isVariant"
+                        defaultChecked={selectedAttribute?.isVariant || false}
+                      />
+                      <Label htmlFor="isVariant">Use for product variants</Label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setAttributeDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={createAttributeMutation.isPending || updateAttributeMutation.isPending}>
+                  {(createAttributeMutation.isPending || updateAttributeMutation.isPending) && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Save
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Option Creation/Edit Dialog */}
+        <Dialog open={optionDialogOpen} onOpenChange={setOptionDialogOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>
+                {optionFormMode === "create" ? "Add Option" : "Edit Option"}
+              </DialogTitle>
+              <DialogDescription>
+                {optionFormMode === "create" 
+                  ? `Add a new option to ${selectedAttribute?.displayName}`
+                  : `Edit option for ${selectedAttribute?.displayName}`
+                }
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleOptionSubmit}>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="value" className="text-right">
+                    Value
+                  </Label>
+                  <Input
+                    id="value"
+                    name="value"
+                    placeholder="red"
+                    defaultValue={selectedOption?.value || ""}
+                    className="col-span-3"
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="displayValue" className="text-right">
+                    Display Value
+                  </Label>
+                  <Input
+                    id="displayValue"
+                    name="displayValue"
+                    placeholder="Red"
+                    defaultValue={selectedOption?.displayValue || ""}
+                    className="col-span-3"
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="sortOrder" className="text-right">
+                    Sort Order
+                  </Label>
+                  <Input
+                    id="sortOrder"
+                    name="sortOrder"
+                    type="number"
+                    min="0"
+                    defaultValue={selectedOption?.sortOrder || 0}
+                    className="col-span-3"
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setOptionDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={createOptionMutation.isPending || updateOptionMutation.isPending}>
+                  {(createOptionMutation.isPending || updateOptionMutation.isPending) && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Save
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Option Metadata Dialog */}
+        <Dialog open={optionMetadataDialogOpen} onOpenChange={setOptionMetadataDialogOpen}>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle>Edit Metadata</DialogTitle>
+              <DialogDescription>
+                Edit the metadata for {selectedOption?.displayValue}. Use valid JSON format.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-1 gap-2">
+                <Label htmlFor="metadata">Metadata (JSON)</Label>
+                <Textarea
+                  id="metadata"
+                  value={optionMetadata}
+                  onChange={(e) => setOptionMetadata(e.target.value)}
+                  className="font-mono"
+                  rows={10}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setOptionMetadataDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSaveMetadata} disabled={updateOptionMutation.isPending}>
+                {updateOptionMutation.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Save
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Confirm Delete Dialog */}
         <Dialog open={confirmDeleteDialogOpen} onOpenChange={setConfirmDeleteDialogOpen}>
