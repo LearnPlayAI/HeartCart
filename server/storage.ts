@@ -3444,6 +3444,29 @@ export class DatabaseStorage implements IStorage {
         .offset(offset);
     }
   }
+  
+  async getProductCountByCatalogId(catalogId: number, includeInactive = false): Promise<number> {
+    // Count query to get total number of products in a catalog
+    const query = db
+      .select({ count: count() })
+      .from(products);
+    
+    if (includeInactive) {
+      // Include all products regardless of active status
+      query.where(eq(products.catalogId, catalogId));
+    } else {
+      // Only include active products
+      query.where(
+        and(
+          eq(products.catalogId, catalogId),
+          eq(products.isActive, true)
+        )
+      );
+    }
+    
+    const result = await query;
+    return result[0]?.count || 0;
+  }
 
   async bulkUpdateCatalogProducts(catalogId: number, updateData: Partial<InsertProduct>): Promise<number> {
     // Update all products in a catalog with the provided data

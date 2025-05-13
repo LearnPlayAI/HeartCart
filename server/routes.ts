@@ -4342,7 +4342,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Check if catalog has products
-      const catalogProducts = await storage.getProductsByCatalogId(id, { includeInactive: true });
+      const catalogProducts = await storage.getProductsByCatalogId(id, true);
       
       // Delete all products in the catalog if there are any
       if (catalogProducts.length > 0) {
@@ -4476,7 +4476,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Get all products in this catalog
-      const products = await storage.getProductsByCatalogId(id, { includeInactive: true });
+      const products = await storage.getProductsByCatalogId(id, true);
       let updatedCount = 0;
       
       // Update status of all products
@@ -4544,9 +4544,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw new ValidationError("Invalid pagination parameters");
       }
       
-      const products = await storage.getProductsByCatalogId(catalogId, { 
-        includeInactive: !activeOnly
-      }, limit, offset);
+      const products = await storage.getProductsByCatalogId(catalogId, !activeOnly, limit, offset);
       
       // Get total count for pagination
       const totalCount = await storage.getProductCountByCatalogId(catalogId, !activeOnly);
@@ -4958,7 +4956,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Check if all products exist and belong to this catalog
-      const existingProducts = await storage.getProductsByCatalogId(catalogId, { includeInactive: true });
+      const existingProducts = await storage.getProductsByCatalogId(catalogId, true);
       const existingProductIds = new Set(existingProducts.map(p => p.id));
       
       const invalidIds = productIds.filter(id => !existingProductIds.has(id));
