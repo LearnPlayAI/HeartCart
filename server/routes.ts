@@ -185,6 +185,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         logger.debug(`Getting attributes for category ${categoryId}`);
         
+        // Add cache control headers to ensure clients always get fresh data
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+        
         // In a real implementation, this would query the database
         // for now we'll return mockup data for bedding category (ID 7)
         if (categoryId === 7) {

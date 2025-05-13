@@ -65,6 +65,11 @@ router.get('/product/:productId/attributes', asyncHandler(async (req: Request, r
     
     logger.debug(`Getting attributes for product ${productId} with category ${product.categoryId}`);
     
+    // Add cache control headers to ensure clients always get fresh data
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    
     // In a real implementation, we would query the database for attributes based on product and category
     // For now, if the product belongs to category 7 (Bedding), return the mock data
     if (product.categoryId === 7) {
@@ -94,6 +99,11 @@ router.get('/product/:productId/attribute-values', asyncHandler(async (req: Requ
     if (!product) {
       return sendError(res, 'Product not found', 404);
     }
+    
+    // Add cache control headers to ensure clients always get fresh data
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     
     // In a real implementation, we would query the database for attribute values
     // For now, return mock values for the Bedding category
