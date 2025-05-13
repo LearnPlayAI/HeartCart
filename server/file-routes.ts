@@ -9,7 +9,7 @@
 
 import express, { Request, Response, NextFunction } from 'express';
 import multer from 'multer';
-import { objectStore, STORAGE_FOLDERS } from './object-store';
+import { objectStoreAdapter, STORAGE_FOLDERS } from './object-store-adapter';
 import { isAuthenticated } from './auth-middleware';
 import { storage } from './storage';
 import { productImages } from '@shared/schema';
@@ -77,7 +77,7 @@ router.post(
     const folder = req.body.folder || `${STORAGE_FOLDERS.TEMP}/pending`;
     
     // Process the image for optimization
-    const processedBuffer = await objectStore.processImage(req.file.buffer, {
+    const processedBuffer = await objectStoreAdapter.processImage(req.file.buffer, {
       width: 1200,
       height: 1200,
       fit: 'inside',
@@ -93,9 +93,10 @@ router.post(
     const filename = `${timestamp}_${randomString}_${originalName}`;
     
     // Upload the file
-    const result = await objectStore.uploadFromBuffer(
+    const objectKey = `${folder}/${filename}`;
+    const result = await objectStoreAdapter.uploadFromBuffer(
+      objectKey,
       processedBuffer,
-      `${folder}/${filename}`,
       {
         contentType: req.file.mimetype,
         metadata: {
@@ -107,8 +108,7 @@ router.post(
     );
     
     // Get the public URL
-    const url = result.url;
-    const objectKey = result.objectKey;
+    const url = objectStoreAdapter.getPublicUrl(objectKey);
     
     // Create absolute URL for client
     const absoluteUrl = req.protocol + '://' + req.get('host') + url;
@@ -148,7 +148,7 @@ router.post(
     const uploadResults = await Promise.all(files.map(async (file, index) => {
       try {
         // Process the image to optimize it
-        const processedBuffer = await objectStore.processImage(file.buffer, {
+        const processedBuffer = await objectStoreAdapter.processImage(file.buffer, {
           width: 1200,
           height: 1200,
           fit: 'inside',
@@ -158,7 +158,7 @@ router.post(
         });
         
         // Upload to temporary storage
-        const result = await objectStore.uploadTempFile(
+        const result = await objectStoreAdapter.uploadTempFile(
           processedBuffer,
           file.originalname,
           identifier,
