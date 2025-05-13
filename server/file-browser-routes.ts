@@ -356,16 +356,15 @@ router.get('/files/:path(*)', async (req: Request, res: Response) => {
 router.get('/files/:path(*)/download', async (req: Request, res: Response) => {
   try {
     const filePath = sanitizePath(req.params.path);
+    logger.debug('Downloading file', { filePath });
     
     await enhancedObjectStorage.initialize();
     
     // Check if file exists
     const exists = await enhancedObjectStorage.fileExists(filePath);
     if (!exists) {
-      return res.status(404).json({
-        success: false,
-        error: 'File not found'
-      });
+      logger.warn('File not found for download', { filePath });
+      return sendError(res, 'File not found', 404, 'FILE_NOT_FOUND');
     }
     
     // Get file metadata
@@ -374,13 +373,11 @@ router.get('/files/:path(*)/download', async (req: Request, res: Response) => {
     // Get file content
     const fileContent = await enhancedObjectStorage.getFile(filePath);
     if (!fileContent) {
-      return res.status(404).json({
-        success: false,
-        error: 'File content not found'
-      });
+      logger.warn('File content not found for download', { filePath });
+      return sendError(res, 'File content not found', 404, 'FILE_CONTENT_NOT_FOUND');
     }
     
-    // Set headers
+    // Set basic headers
     if (metadata?.contentType) {
       res.set('Content-Type', metadata.contentType);
     }
@@ -389,18 +386,33 @@ router.get('/files/:path(*)/download', async (req: Request, res: Response) => {
       res.set('Content-Length', metadata.size.toString());
     }
     
-    // Set download headers
+    // Set download-specific headers
     const filename = path.basename(filePath);
     res.set('Content-Disposition', `attachment; filename="${filename}"`);
     
-    // Send file
+    // Set cache control for improved performance
+    res.set('Cache-Control', 'private, max-age=3600'); // 1 hour cache
+    
+    // Log download event
+    logger.debug('File download initiated', { 
+      filePath, 
+      size: metadata?.size,
+      contentType: metadata?.contentType 
+    });
+    
+    // Send file directly to client
     res.send(fileContent);
   } catch (error: any) {
-    console.error(`Error downloading file '${req.params.path}':`, error);
-    res.status(500).json({
-      success: false,
-      error: error.message || 'Failed to download file'
+    logger.error('Error downloading file', { 
+      filePath: req.params.path,
+      error
     });
+    return sendError(res, 
+      'Failed to download file', 
+      500, 
+      'FILE_DOWNLOAD_ERROR', 
+      { message: error.message }
+    );
   }
 });
 
@@ -410,14 +422,18 @@ router.get('/files/:path(*)/download', async (req: Request, res: Response) => {
 router.post('/upload/:path(*)', isAuthenticated, upload.single('file'), async (req: Request, res: Response) => {
   try {
     if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        error: 'No file provided'
-      });
+      return sendError(res, 'No file provided', 400, 'FILE_MISSING');
     }
     
     const folderPath = sanitizePath(req.params.path);
     const originalFilename = req.file.originalname;
+    
+    logger.debug('Processing file upload', { 
+      folderPath, 
+      originalFilename,
+      size: req.file.size,
+      mimetype: req.file.mimetype
+    });
     
     // Sanitize filename using utility function
     const sanitizedFilename = sanitizeFilename(originalFilename);
@@ -438,24 +454,30 @@ router.post('/upload/:path(*)', isAuthenticated, upload.single('file'), async (r
       contentType
     });
     
-    res.json({
-      success: true,
-      data: {
-        originalName: originalFilename,
-        fileName: uniqueFilename,
-        sanitizedName: sanitizedFilename,
-        path: filePath,
-        size: req.file.size,
-        mimetype: contentType,
-        url: `/api/file-browser/files/${filePath}`
-      }
-    });
+    logger.debug('File upload successful', { filePath, size: req.file.size });
+    
+    return sendSuccess(res, {
+      originalName: originalFilename,
+      fileName: uniqueFilename,
+      sanitizedName: sanitizedFilename,
+      path: filePath,
+      size: req.file.size,
+      mimetype: contentType,
+      url: `/api/file-browser/files/${filePath}`,
+      bucket: enhancedObjectStorage.getCurrentBucket()
+    }, 201); // Created status code
   } catch (error: any) {
-    console.error('Error uploading file:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message || 'Failed to upload file'
+    logger.error('Error uploading file', { 
+      folderPath: req.params.path,
+      filename: req.file?.originalname,
+      error
     });
+    return sendError(res, 
+      'Failed to upload file', 
+      500, 
+      'FILE_UPLOAD_ERROR', 
+      { message: error.message }
+    );
   }
 });
 
@@ -465,40 +487,48 @@ router.post('/upload/:path(*)', isAuthenticated, upload.single('file'), async (r
 router.delete('/files/:path(*)', isAuthenticated, async (req: Request, res: Response) => {
   try {
     const filePath = sanitizePath(req.params.path);
+    logger.debug('Deleting file', { filePath });
     
     await enhancedObjectStorage.initialize();
     
     // Check if file exists
     const exists = await enhancedObjectStorage.fileExists(filePath);
     if (!exists) {
-      return res.status(404).json({
-        success: false,
-        error: 'File not found'
-      });
+      logger.warn('File not found for deletion', { filePath });
+      return sendError(res, 'File not found', 404, 'FILE_NOT_FOUND');
     }
+    
+    // Get file metadata before deletion (for response)
+    const metadata = await enhancedObjectStorage.getFileMetadata(filePath);
     
     // Delete file
     const deleted = await enhancedObjectStorage.deleteFile(filePath);
     
     if (!deleted) {
-      return res.status(500).json({
-        success: false,
-        error: 'Failed to delete file'
-      });
+      logger.error('File deletion failed', { filePath });
+      return sendError(res, 'Failed to delete file', 500, 'FILE_DELETE_FAILED');
     }
     
-    res.json({
-      success: true,
-      data: {
-        path: filePath
-      }
+    logger.debug('File deleted successfully', { filePath });
+    
+    return sendSuccess(res, {
+      path: filePath,
+      deleted: true,
+      size: metadata?.size,
+      type: metadata?.contentType,
+      timestamp: new Date().toISOString()
     });
   } catch (error: any) {
-    console.error(`Error deleting file '${req.params.path}':`, error);
-    res.status(500).json({
-      success: false,
-      error: error.message || 'Failed to delete file'
+    logger.error('Error deleting file', { 
+      filePath: req.params.path,
+      error
     });
+    return sendError(res, 
+      'Failed to delete file', 
+      500, 
+      'FILE_DELETE_ERROR', 
+      { message: error.message }
+    );
   }
 });
 
