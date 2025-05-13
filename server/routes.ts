@@ -162,6 +162,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const categories = await storage.getAllCategories(options);
     return categories;
   }));
+  
+  // Get category attributes
+  app.get("/api/categories/:categoryId/attributes", 
+    validateRequest({
+      params: z.object({
+        categoryId: z.string().refine(val => !isNaN(parseInt(val)), { 
+          message: "Category ID must be a number"
+        })
+      })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const categoryId = parseInt(req.params.categoryId);
+        
+        // Get the category to make sure it exists
+        const category = await storage.getCategoryById(categoryId);
+        
+        if (!category) {
+          throw new NotFoundError(`Category with ID ${categoryId} not found`, 'category');
+        }
+        
+        logger.debug(`Getting attributes for category ${categoryId}`);
+        
+        // In a real implementation, this would query the database
+        // for now we'll return mockup data for bedding category (ID 7)
+        if (categoryId === 7) {
+          return res.json({
+            success: true,
+            data: {
+              1: [
+                { id: 1, value: 'S', displayValue: 'Small' },
+                { id: 2, value: 'M', displayValue: 'Medium' },
+                { id: 3, value: 'L', displayValue: 'Large' },
+                { id: 4, value: 'XL', displayValue: 'Extra Large' }
+              ],
+              2: [
+                { id: 5, value: 'PINK', displayValue: 'Pink' },
+                { id: 6, value: 'BLUE', displayValue: 'Blue' },
+                { id: 7, value: 'WHITE', displayValue: 'White' }
+              ]
+            }
+          });
+        } else {
+          // For other categories, return empty data
+          return res.json({
+            success: true,
+            data: {}
+          });
+        }
+      } catch (error) {
+        logger.error("Error fetching category attributes", { 
+          error, 
+          categoryId: req.params.categoryId 
+        });
+        
+        throw error;
+      }
+    }));
 
   app.get("/api/categories/:slug", withStandardResponse(async (req: Request, res: Response) => {
     const { slug } = req.params;
