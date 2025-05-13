@@ -361,6 +361,9 @@ export function ReviewAndSaveStep({ onComplete }: ReviewAndSaveStepProps = {}) {
         // Convert date strings to Date objects for validation schema
         specialSaleStart: state.specialSaleStart ? new Date(state.specialSaleStart) : null,
         specialSaleEnd: state.specialSaleEnd ? new Date(state.specialSaleEnd) : null,
+        // Flash deal configuration
+        isFlashDeal: state.isFlashDeal || false,
+        flashDealEnd: state.flashDealEnd ? new Date(state.flashDealEnd) : null,
         
         // Attributes
         attributes: state.attributes || [],
@@ -370,8 +373,20 @@ export function ReviewAndSaveStep({ onComplete }: ReviewAndSaveStepProps = {}) {
         catalogName: state.catalogName || null,
       };
       
-      // Log the product data for debugging
+      // Log the product data for debugging (with detailed date inspection)
       console.log(`${isUpdate ? 'Updating' : 'Creating'} product data:`, productData);
+      
+      // Special debugging for date fields
+      console.log('Date fields being sent:');
+      console.log('specialSaleStart:', productData.specialSaleStart, 
+                  typeof productData.specialSaleStart, 
+                  productData.specialSaleStart instanceof Date);
+      console.log('specialSaleEnd:', productData.specialSaleEnd, 
+                  typeof productData.specialSaleEnd, 
+                  productData.specialSaleEnd instanceof Date);
+      console.log('flashDealEnd:', productData.flashDealEnd, 
+                  typeof productData.flashDealEnd, 
+                  productData.flashDealEnd instanceof Date);
       
       // Submit data
       await saveProductMutation.mutateAsync(productData);
