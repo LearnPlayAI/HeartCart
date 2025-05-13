@@ -143,6 +143,8 @@ const defaultInitialState: ProductWizardState = {
   specialSaleText: null,
   specialSaleStart: null,
   specialSaleEnd: null,
+  isFlashDeal: false,
+  flashDealEnd: null,
   
   // Shipping
   taxable: true,
