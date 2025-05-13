@@ -603,66 +603,17 @@ export const batchUploadErrors = pgTable("batch_upload_errors", {
   createdAt: text("created_at").default(String(new Date().toISOString())),
 });
 
-// Attribute-based discount rules
-// @deprecated - This table will be removed in a future migration
-// as part of the centralized attribute system refactoring.
-// Product attributes should never affect pricing in the new system.
-export const attributeDiscountRules = pgTable("attribute_discount_rules", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  description: text("description"),
-  discountType: text("discount_type").notNull().default("percentage"), // 'percentage', 'fixed'
-  discountValue: decimal("discount_value", { precision: 10, scale: 2 }).notNull(),
-  attributeId: integer("attribute_id").references(() => attributes.id).notNull(),
-  optionId: integer("option_id").references(() => attributeOptions.id),
-  productId: integer("product_id").references(() => products.id),
-  categoryId: integer("category_id").references(() => categories.id),
-  catalogId: integer("catalog_id").references(() => catalogs.id),
-  minQuantity: integer("min_quantity").default(1),
-  startDate: text("start_date"),
-  endDate: text("end_date"),
-  isActive: boolean("is_active").default(true).notNull(),
-  createdAt: text("created_at").default(String(new Date().toISOString())).notNull(),
-  updatedAt: text("updated_at").default(String(new Date().toISOString())).notNull(),
-});
-
-// Attribute discount rules relations
-// @deprecated - These relations will be removed with the attributeDiscountRules table
-export const attributeDiscountRulesRelations = relations(attributeDiscountRules, ({ one }) => ({
-  attribute: one(attributes, {
-    fields: [attributeDiscountRules.attributeId],
-    references: [attributes.id]
-  }),
-  attributeOption: one(attributeOptions, {
-    fields: [attributeDiscountRules.optionId],
-    references: [attributeOptions.id]
-  }),
-  product: one(products, {
-    fields: [attributeDiscountRules.productId],
-    references: [products.id]
-  }),
-  category: one(categories, {
-    fields: [attributeDiscountRules.categoryId],
-    references: [categories.id]
-  }),
-  catalog: one(catalogs, {
-    fields: [attributeDiscountRules.catalogId],
-    references: [catalogs.id]
-  })
-}));
-
-// Create insert schema for attribute discount rules
-export const insertAttributeDiscountRuleSchema = createInsertSchema(attributeDiscountRules).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true
-}).extend({
-  startDate: z.string().or(z.date()).optional(),
-  endDate: z.string().or(z.date()).nullable().optional(),
-});
-
-export type AttributeDiscountRule = typeof attributeDiscountRules.$inferSelect;
-export type InsertAttributeDiscountRule = z.infer<typeof insertAttributeDiscountRuleSchema>;
+// Attribute Discount Rules and their relations have been completely removed
+// As part of the centralized attribute system refactoring, product attributes
+// no longer affect pricing anywhere in the application.
+/* 
+ * The following tables and types have been removed:
+ * - attributeDiscountRules table
+ * - attributeDiscountRulesRelations
+ * - AttributeDiscountRule type
+ * - InsertAttributeDiscountRule type
+ * - insertAttributeDiscountRuleSchema
+ */
 
 // Create insert schema for batch uploads
 export const insertBatchUploadSchema = createInsertSchema(batchUploads).omit({
