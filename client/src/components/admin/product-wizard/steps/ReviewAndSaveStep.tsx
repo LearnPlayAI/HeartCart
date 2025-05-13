@@ -284,16 +284,16 @@ export function ReviewAndSaveStep({ onComplete }: ReviewAndSaveStepProps = {}) {
         shippingWeight: state.shippingWeight ? Number(state.shippingWeight) : null,
         shippingDimensions: state.shippingDimensions,
         
-        // Add missing fields
+        // Product details
         supplier: state.supplier || null,
         weight: state.weight ? Number(state.weight) : null,
         dimensions: state.dimensions || null,
         
         // Sales and promotions
-        discount_label: state.discountLabel || null,
-        special_sale_text: state.specialSaleText || null,
-        special_sale_start: state.specialSaleStart || null,
-        special_sale_end: state.specialSaleEnd || null,
+        discountLabel: state.discountLabel || null,
+        specialSaleText: state.specialSaleText || null,
+        specialSaleStart: state.specialSaleStart || null,
+        specialSaleEnd: state.specialSaleEnd || null,
         
         // Attributes
         attributes: state.attributes || [],
@@ -547,6 +547,80 @@ export function ReviewAndSaveStep({ onComplete }: ReviewAndSaveStepProps = {}) {
                 <Badge variant={state.backorderEnabled ? "default" : "outline"}>
                   {state.backorderEnabled ? 'Allowed' : 'Not Allowed'}
                 </Badge>
+              </div>
+            </div>
+          </div>
+          
+          {/* Product Details Section */}
+          <div className="mt-8 space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-medium">Product Details</h3>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="flex items-center gap-1"
+                onClick={() => handleNavigateToStep('additional-info')}
+              >
+                <Edit className="h-3 w-3" />
+                <span>Edit</span>
+              </Button>
+            </div>
+            
+            <Separator />
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-6">
+              <div className="space-y-1">
+                <Label className="text-muted-foreground">Supplier</Label>
+                <p className="font-medium">{state.supplier || 'Not specified'}</p>
+              </div>
+              
+              <div className="space-y-1">
+                <Label className="text-muted-foreground">Weight</Label>
+                <p className="font-medium">{state.weight ? `${state.weight} kg` : 'Not specified'}</p>
+              </div>
+              
+              <div className="space-y-1">
+                <Label className="text-muted-foreground">Dimensions</Label>
+                <p className="font-medium">{state.dimensions || 'Not specified'}</p>
+              </div>
+            </div>
+          </div>
+          
+          {/* Sales & Promotions Section */}
+          <div className="mt-8 space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-medium">Sales & Promotions</h3>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="flex items-center gap-1"
+                onClick={() => handleNavigateToStep('additional-info')}
+              >
+                <Edit className="h-3 w-3" />
+                <span>Edit</span>
+              </Button>
+            </div>
+            
+            <Separator />
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+              <div className="space-y-1">
+                <Label className="text-muted-foreground">Discount Label</Label>
+                <p className="font-medium">{state.discountLabel || 'Not specified'}</p>
+              </div>
+              
+              <div className="space-y-1">
+                <Label className="text-muted-foreground">Special Sale Text</Label>
+                <p className="font-medium">{state.specialSaleText || 'Not specified'}</p>
+              </div>
+              
+              <div className="space-y-1">
+                <Label className="text-muted-foreground">Special Sale Period</Label>
+                <p className="font-medium">
+                  {state.specialSaleStart && state.specialSaleEnd 
+                    ? `${new Date(state.specialSaleStart).toLocaleDateString()} - ${new Date(state.specialSaleEnd).toLocaleDateString()}`
+                    : 'Not specified'}
+                </p>
               </div>
             </div>
           </div>

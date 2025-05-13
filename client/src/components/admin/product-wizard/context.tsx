@@ -43,6 +43,17 @@ interface ProductWizardState {
   // Attributes
   attributes: any[];
   
+  // Product details
+  supplier: string | null;
+  weight: number | null;
+  dimensions: string | null;
+  
+  // Sales & Promotions
+  discountLabel: string | null;
+  specialSaleText: string | null;
+  specialSaleStart: Date | null;
+  specialSaleEnd: Date | null;
+  
   // Shipping
   taxable: boolean;
   taxClass: string;
@@ -100,6 +111,17 @@ const defaultInitialState: ProductWizardState = {
   
   // Attributes
   attributes: [],
+  
+  // Product details
+  supplier: null,
+  weight: null,
+  dimensions: null,
+  
+  // Sales & Promotions
+  discountLabel: null,
+  specialSaleText: null,
+  specialSaleStart: null,
+  specialSaleEnd: null,
   
   // Shipping
   taxable: true,
