@@ -99,7 +99,7 @@ export const cartItems = pgTable("cart_items", {
   discountData: jsonb("discount_data"),
   totalDiscount: doublePrecision("total_discount").default(0),
   itemPrice: doublePrecision("item_price"),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  createdAt: text("created_at").default(String(new Date().toISOString())).notNull(),
 });
 
 // Orders table
@@ -111,7 +111,7 @@ export const orders = pgTable("orders", {
   shippingAddress: text("shipping_address").notNull(),
   shippingMethod: text("shipping_method"),
   paymentMethod: text("payment_method"),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  createdAt: text("created_at").default(String(new Date().toISOString())).notNull(),
 });
 
 // Order items table
@@ -135,7 +135,7 @@ export const productImages = pgTable("product_images", {
   bgRemovedObjectKey: text("bg_removed_object_key"),
   // Note: 'alt' field removed as it doesn't exist in the database
   sortOrder: integer("sort_order").default(0),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  createdAt: text("created_at").default(String(new Date().toISOString())).notNull(),
 }, (table) => {
   return {
     productIdIdx: index("product_images_product_id_idx").on(table.productId),
