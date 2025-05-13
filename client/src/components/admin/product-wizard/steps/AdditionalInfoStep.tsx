@@ -34,13 +34,13 @@ import {
   InfoIcon
 } from 'lucide-react';
 
-// Import our new attribute pricing component
+// Import our attribute configuration component
 import { 
-  AttributePricingConfig, 
+  AttributeConfig, 
   type AttributeValue, 
   type ProductAttribute,
   type AttributeOption
-} from '../components/AttributePricingConfig';
+} from '../components/AttributeConfig';
 
 // Form validation schema
 const additionalInfoSchema = z.object({
@@ -478,18 +478,14 @@ export function AdditionalInfoStep() {
                   <div className="space-y-6">
                     <h3 className="text-lg font-medium">Attribute Pricing & Configuration</h3>
                     <p className="text-sm text-muted-foreground">
-                      Configure size-based pricing, weight, dimensions, and mark attributes as required for checkout.
+                      Configure weight, dimensions, and mark attributes as required for checkout.
                     </p>
                     
                     {formattedAttributes.length > 0 ? (
-                      <AttributePricingConfig
-                        basePrice={state.costPrice}
+                      <AttributeConfig
                         attributes={formattedAttributes}
                         attributeValues={attributeValues}
                         onChange={handleAttributeValuesChange}
-                        regularPrice={state.regularPrice}
-                        salePrice={state.salePrice}
-                        onSale={state.onSale}
                       />
                     ) : (
                       <div className="text-center py-8 border rounded-md bg-muted/20">
