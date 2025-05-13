@@ -154,9 +154,14 @@ export function ImageStep() {
       if (result.data && result.data.url) {
         // New standardized format
         addImage(result.data.url, result.data.objectKey);
+      } else if (result.url) {
+        // Legacy format - ensure we use the full URL
+        const imageUrl = result.url.startsWith('http') ? result.url : (window.location.origin + result.url);
+        console.log('Adding image with URL:', imageUrl);
+        addImage(imageUrl, result.objectKey);
       } else {
-        // Legacy format
-        addImage(result.url, result.objectKey);
+        console.error('Unexpected response format:', result);
+        throw new Error('Invalid response format from server');
       }
       
       // Mark step as complete
@@ -294,6 +299,18 @@ export function ImageStep() {
                         src={url} 
                         alt={`Product image ${index + 1}`}
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          // If image fails to load, try with origin prefix
+                          const target = e.target as HTMLImageElement;
+                          if (!target.src.startsWith(window.location.origin) && !target.src.startsWith('http')) {
+                            console.log('Image failed to load, trying with origin prefix:', target.src);
+                            target.src = window.location.origin + url;
+                          } else {
+                            console.error('Image failed to load:', target.src);
+                            target.onerror = null; // Prevent infinite loop
+                            target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjIwMCIgaGVpZ2h0PSIyMDAiIGZpbGw9IiNFNUU3RUIiLz48cGF0aCBkPSJNMTAwIDc0QzkxLjcxNTcgNzQgODUgODAuNzE1NyA4NSA4OUM4NSA5Ny4yODQzIDkxLjcxNTcgMTA0IDEwMCAxMDRDMTA4LjI4NCAxMDQgMTE1IDk3LjI4NDMgMTE1IDg5QzExNSA4MC43MTU3IDEwOC4yODQgNzQgMTAwIDc0WiIgZmlsbD0iIzk0YTNiOCIvPjxwYXRoIGQ9Ik0xNTUgMTI2LjVDMTU1IDEzMy40MDQgMTQ3LjYyOCAxMzkgMTM4LjUgMTM5QzEyOS4zNzIgMTM5IDEyMiAxMzMuNDA0IDEyMiAxMjYuNUMxMjIgMTE5LjU5NiAxMjkuMzcyIDExNCAxMzguNSAxMTRDMTQ3LjYyOCAxMTQgMTU1IDExOS41OTYgMTU1IDEyNi41WiIgZmlsbD0iIzk0YTNiOCIvPjxwYXRoIGQ9Ik0xNjggMTQ0LjVDMTU1LjUyMSAxMzguODg4IDEzNy42MjggMTM1IDEyNyAxMzVDMTExLjUzNiAxMzUgOTguODkzNiAxMzcuMDUzIDkwIDE0MC41IiBzdHJva2U9IiM5NGEzYjgiIHN0cm9rZS13aWR0aD0iMTAiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg==';
+                          }
+                        }}
                       />
                     </div>
                     
