@@ -313,8 +313,9 @@ export function ReviewAndSaveStep({ onComplete }: ReviewAndSaveStepProps = {}) {
         // Sales and promotions
         discountLabel: state.discountLabel || null,
         specialSaleText: state.specialSaleText || null,
-        specialSaleStart: state.specialSaleStart || null,
-        specialSaleEnd: state.specialSaleEnd || null,
+        // Convert dates to proper Date objects or null for the API
+        specialSaleStart: state.specialSaleStart ? new Date(state.specialSaleStart) : null,
+        specialSaleEnd: state.specialSaleEnd ? new Date(state.specialSaleEnd) : null,
         
         // Attributes
         attributes: state.attributes || [],
