@@ -17,6 +17,11 @@ const router = Router();
 // Get all attributes
 router.get('/', asyncHandler(async (req: Request, res: Response) => {
   try {
+    // Add cache control headers to ensure clients always get fresh data
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    
     const attributes = await storage.getAllAttributes();
     sendSuccess(res, attributes);
   } catch (error) {
@@ -104,6 +109,11 @@ router.get('/:id/options', asyncHandler(async (req: Request, res: Response) => {
     if (isNaN(attributeId)) {
       return sendError(res, 'Invalid attribute ID', 400);
     }
+    
+    // Add cache control headers to ensure clients always get fresh attribute options
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     
     const options = await storage.getAttributeOptions(attributeId);
     

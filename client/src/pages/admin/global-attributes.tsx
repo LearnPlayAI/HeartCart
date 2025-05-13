@@ -85,6 +85,8 @@ function GlobalAttributesPage() {
   } = useQuery({
     queryKey: ["/api/attributes"],
     retry: 1,
+    refetchOnMount: true,
+    staleTime: 0 // Consider data stale immediately to force refetch
   });
   
   // Extract the attributes data from the standardized response
@@ -98,6 +100,8 @@ function GlobalAttributesPage() {
   } = useQuery({
     queryKey: ["/api/attributes", selectedAttribute?.id, "options"],
     enabled: !!selectedAttribute?.id,
+    refetchOnMount: true,
+    staleTime: 0, // Consider data stale immediately to force refetch
     retry: 1,
   });
   
