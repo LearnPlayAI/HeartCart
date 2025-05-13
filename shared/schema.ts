@@ -836,16 +836,16 @@ export const batchUploads = pgTable("batch_uploads", {
   // New fields for capacity checks and tracking
   catalogCapacity: integer("catalog_capacity"),
   catalogCurrentCount: integer("catalog_current_count"),
-  // Timestamps
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-  // Event timestamps
-  startedAt: timestamp("started_at", { withTimezone: true }),
-  completedAt: timestamp("completed_at", { withTimezone: true }),
-  canceledAt: timestamp("canceled_at", { withTimezone: true }),
-  pausedAt: timestamp("paused_at", { withTimezone: true }),
-  resumedAt: timestamp("resumed_at", { withTimezone: true }),
-  failedAt: timestamp("failed_at", { withTimezone: true }),
+  // Timestamps (as text strings with ISO format)
+  createdAt: text("created_at").default(String(new Date().toISOString())).notNull(),
+  updatedAt: text("updated_at").default(String(new Date().toISOString())).notNull(),
+  // Event timestamps (as text strings with ISO format)
+  startedAt: text("started_at"),
+  completedAt: text("completed_at"),
+  canceledAt: text("canceled_at"),
+  pausedAt: text("paused_at"),
+  resumedAt: text("resumed_at"),
+  failedAt: text("failed_at"),
 });
 
 // Batch upload error logs for detailed error tracking
@@ -857,7 +857,7 @@ export const batchUploadErrors = pgTable("batch_upload_errors", {
   errorMessage: text("message").notNull(),
   severity: text("severity").default("error"), // error, warning
   field: text("field"), // The specific field that caused the error
-  createdAt: timestamp("created_at", { withTimezone: true }),
+  createdAt: text("created_at").default(String(new Date().toISOString())),
 });
 
 // Attribute-based discount rules
@@ -873,11 +873,11 @@ export const attributeDiscountRules = pgTable("attribute_discount_rules", {
   categoryId: integer("category_id").references(() => categories.id),
   catalogId: integer("catalog_id").references(() => catalogs.id),
   minQuantity: integer("min_quantity").default(1),
-  startDate: timestamp("start_date", { withTimezone: true }),
-  endDate: timestamp("end_date", { withTimezone: true }),
+  startDate: text("start_date"),
+  endDate: text("end_date"),
   isActive: boolean("is_active").default(true).notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  createdAt: text("created_at").default(String(new Date().toISOString())).notNull(),
+  updatedAt: text("updated_at").default(String(new Date().toISOString())).notNull(),
 });
 
 // Attribute discount rules relations
