@@ -1,225 +1,166 @@
 /**
- * File Utility Functions
+ * File Utilities Module
  * 
- * This module provides standardized utility functions for file handling
- * across the application. Functions include filename sanitization,
- * file validation, content type determination, and URL encoding.
+ * Provides utility functions for handling files, filenames, and file URLs
+ * throughout the application.
  */
 
 /**
- * Sanitizes a filename by removing invalid characters and replacing spaces
- * @param filename - The original filename to sanitize
- * @returns Sanitized filename safe for storage and URLs
+ * Sanitize a filename to remove any invalid characters
+ * to ensure compatibility with various systems and object stores
  */
-export function sanitizeFilename(filename: string): string {
+export const sanitizeFilename = (filename: string): string => {
   if (!filename) return '';
   
-  // First replace any path-traversal characters
-  let sanitized = filename.replace(/(\.\.|\/|\\)/g, '');
-  
-  // Replace spaces with hyphens and remove other unsafe characters
-  sanitized = sanitized
-    .replace(/\s+/g, '-')
-    .replace(/[^a-zA-Z0-9.\-_]/g, '');
-  
-  // Ensure we don't have multiple consecutive hyphens
-  sanitized = sanitized.replace(/-+/g, '-');
-  
-  // Ensure filename doesn't start or end with a hyphen
-  sanitized = sanitized.replace(/^-|-$/g, '');
-  
-  // Limit filename length to prevent issues with storage systems
-  if (sanitized.length > 200) {
-    const extension = getFileExtension(sanitized);
-    sanitized = sanitized.substring(0, 195 - extension.length) + extension;
-  }
-  
-  return sanitized;
-}
+  // Replace any character that's not alphanumeric, dot, hyphen, or underscore
+  return filename
+    .replace(/[^\w.-]/g, '-') // Replace invalid characters with hyphens
+    .replace(/\.{2,}/g, '.') // Replace multiple dots with a single dot
+    .replace(/^[.-]+|[.-]+$/g, '') // Remove leading/trailing dots and hyphens
+    .toLowerCase(); // Convert to lowercase for consistency
+};
 
 /**
- * Extracts the file extension from a filename
- * @param filename - The filename to extract extension from
- * @returns The extracted file extension including the dot (e.g. ".jpg")
+ * Check if a file has an allowed extension
  */
-export function getFileExtension(filename: string): string {
-  if (!filename) return '';
+export const hasAllowedExtension = (
+  filename: string, 
+  allowedExtensions: string[] = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg']
+): boolean => {
+  if (!filename) return false;
   
-  const lastDotIndex = filename.lastIndexOf('.');
-  if (lastDotIndex === -1) return '';
-  
-  return filename.substring(lastDotIndex).toLowerCase();
-}
+  const extension = filename.split('.').pop()?.toLowerCase() || '';
+  return allowedExtensions.includes(extension);
+};
 
 /**
- * Checks if a filename has one of the allowed extensions
- * @param filename - The filename to check
- * @param allowedExtensions - Array of allowed extensions (e.g. ['.jpg', '.png'])
- * @returns Boolean indicating if the file has an allowed extension
+ * Check if a file is an image based on its extension
  */
-export function hasAllowedExtension(filename: string, allowedExtensions: string[]): boolean {
-  if (!filename || !allowedExtensions?.length) return false;
-  
-  const extension = getFileExtension(filename);
-  return allowedExtensions.includes(extension.toLowerCase());
-}
+export const isImageFile = (filename: string): boolean => {
+  return hasAllowedExtension(filename, ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'tiff', 'tif']);
+};
 
 /**
- * Checks if a file is an image based on its extension
- * @param filename - The filename to check
- * @returns Boolean indicating if the file is an image
+ * Generate a unique filename by adding a timestamp
  */
-export function isImageFile(filename: string): boolean {
-  const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp'];
-  return hasAllowedExtension(filename, imageExtensions);
-}
-
-/**
- * Generates a unique filename to avoid collisions
- * @param filename - The original filename
- * @returns A unique filename with timestamp added
- */
-export function generateUniqueFilename(filename: string): string {
-  if (!filename) return '';
-  
+export const generateUniqueFilename = (filename: string): string => {
   const timestamp = Date.now();
-  const extension = getFileExtension(filename);
-  const baseName = filename.substring(0, filename.length - extension.length);
+  const randomStr = Math.random().toString(36).substring(2, 10);
   
-  return `${sanitizeFilename(baseName)}-${timestamp}${extension}`;
-}
+  const parts = filename.split('.');
+  const extension = parts.pop() || '';
+  const baseName = parts.join('.');
+  
+  return `${baseName}_${timestamp}_${randomStr}.${extension}`;
+};
 
 /**
- * Determines the content type (MIME type) from a filename
- * @param filename - The filename to analyze
- * @returns The content type or 'application/octet-stream' if unknown
+ * Get content type from filename
  */
-export function getContentTypeFromFilename(filename: string): string {
-  if (!filename) return 'application/octet-stream';
+export const getContentTypeFromFilename = (filename: string): string => {
+  const extension = filename.split('.').pop()?.toLowerCase() || '';
   
-  const extension = getFileExtension(filename).toLowerCase();
-  
-  const mimeTypes: Record<string, string> = {
-    '.jpg': 'image/jpeg',
-    '.jpeg': 'image/jpeg',
-    '.png': 'image/png',
-    '.gif': 'image/gif',
-    '.webp': 'image/webp',
-    '.svg': 'image/svg+xml',
-    '.bmp': 'image/bmp',
-    '.pdf': 'application/pdf',
-    '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-    '.doc': 'application/msword',
-    '.xls': 'application/vnd.ms-excel',
-    '.ppt': 'application/vnd.ms-powerpoint',
-    '.txt': 'text/plain',
-    '.csv': 'text/csv',
-    '.json': 'application/json',
-    '.xml': 'application/xml',
-    '.zip': 'application/zip',
-    '.rar': 'application/x-rar-compressed',
-    '.mp3': 'audio/mpeg',
-    '.mp4': 'video/mp4',
-    '.mov': 'video/quicktime',
-    '.avi': 'video/x-msvideo',
-    '.html': 'text/html',
-    '.css': 'text/css',
-    '.js': 'application/javascript'
+  const contentTypeMap: Record<string, string> = {
+    'jpg': 'image/jpeg',
+    'jpeg': 'image/jpeg',
+    'png': 'image/png',
+    'gif': 'image/gif',
+    'webp': 'image/webp',
+    'svg': 'image/svg+xml',
+    'pdf': 'application/pdf',
+    'doc': 'application/msword',
+    'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'xls': 'application/vnd.ms-excel',
+    'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'txt': 'text/plain',
+    'csv': 'text/csv',
+    'zip': 'application/zip',
+    'rar': 'application/x-rar-compressed',
+    'mp4': 'video/mp4',
+    'mp3': 'audio/mpeg',
   };
   
-  return mimeTypes[extension] || 'application/octet-stream';
-}
+  return contentTypeMap[extension] || 'application/octet-stream';
+};
 
 /**
- * Validates image URL format and ensures proper URL encoding
- * Also handles relative URL paths correctly
- * @param url - The image URL to validate/encode
- * @returns Properly formatted and encoded URL
+ * Calculate file size in readable format
  */
-export function ensureValidImageUrl(url: string): string {
+export const formatFileSize = (bytes: number): string => {
+  if (bytes === 0) return '0 Bytes';
+  
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
+
+/**
+ * Encode a filename for use in URLs
+ */
+export const encodeFileUrl = (filename: string): string => {
+  // Split the path to encode each part separately
+  const parts = filename.split('/');
+  const encodedParts = parts.map(part => encodeURIComponent(part));
+  
+  return encodedParts.join('/');
+};
+
+/**
+ * Ensure a file URL is valid and properly encoded
+ */
+export const ensureValidImageUrl = (url: string): string => {
   if (!url) return '';
   
-  // If the URL is already a data URL, return it as is
+  // If it's already a data URL, return as is
   if (url.startsWith('data:')) {
     return url;
   }
   
-  // For relative URLs (no protocol), just ensure the path is properly encoded
-  if (!url.match(/^(https?:\/\/|\/)/)) {
-    // Add leading slash for relative URLs that don't have one
-    url = url.startsWith('/') ? url : `/${url}`;
+  // If it's not an absolute URL (no protocol), assume it's a relative path
+  if (!url.match(/^(https?:)?\/\//)) {
+    // Don't double-encode URLs that already have encoded parts
+    if (!url.includes('%')) {
+      // Handle API endpoint paths specifically for files
+      if (url.startsWith('/api/files/')) {
+        const basePath = '/api/files/';
+        const filePath = url.substring(basePath.length);
+        return `${basePath}${encodeFileUrl(filePath)}`;
+      }
+      
+      return encodeFileUrl(url);
+    }
   }
   
-  try {
-    // Parse URL to get parts
-    const urlObj = new URL(url, window.location.origin);
-    
-    // Ensure the path is properly encoded
-    urlObj.pathname = urlObj.pathname
-      .split('/')
-      .map(segment => encodeURIComponent(decodeURIComponent(segment)))
-      .join('/');
-    
-    return urlObj.toString();
-  } catch (error) {
-    // If URL parsing fails, do basic encoding as a fallback
-    return url
-      .split('/')
-      .map((part, index) => {
-        // Don't encode protocol or domain parts
-        if (index < 3 && url.startsWith('http')) return part;
-        return encodeURIComponent(decodeURIComponent(part));
-      })
-      .join('/');
+  return url;
+};
+
+/**
+ * Convert a data URL to a File object
+ */
+export const dataURLtoFile = (dataurl: string, filename: string): File => {
+  // Extract the content type and base64 data
+  const arr = dataurl.split(',');
+  const mime = arr[0].match(/:(.*?);/)?.[1] || '';
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  
+  // Convert to Uint8Array
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n);
   }
-}
+  
+  // Create a File object
+  return new File([u8arr], sanitizeFilename(filename), { type: mime });
+};
 
 /**
- * Calculates human-readable file size
- * @param bytes - File size in bytes
- * @param decimals - Number of decimal places to show
- * @returns Human-readable size string (e.g. "1.5 MB")
+ * Create a File object from a URL (fetches the content)
  */
-export function formatFileSize(bytes: number, decimals: number = 2): string {
-  if (bytes === 0) return '0 Bytes';
-  
-  const k = 1024;
-  const dm = decimals < 0 ? 0 : decimals;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-  
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
-}
-
-/**
- * Creates object storage paths for files based on type and ID
- * @param type - The type of object (e.g. 'product', 'category', 'user')
- * @param id - The ID of the object
- * @param filename - The filename to store
- * @returns Standardized object storage path
- */
-export function createObjectStoragePath(type: string, id: number | string, filename: string): string {
-  const sanitizedType = type.replace(/[^a-z0-9]/gi, '').toLowerCase();
-  const sanitizedFilename = sanitizeFilename(filename);
-  
-  return `${sanitizedType}/${id}/${sanitizedFilename}`;
-}
-
-/**
- * Extracts filename from a path or URL
- * @param path - The full path or URL
- * @returns The extracted filename
- */
-export function extractFilenameFromPath(path: string): string {
-  if (!path) return '';
-  
-  // Remove query string if present
-  const pathWithoutQuery = path.split('?')[0];
-  
-  // Get the part after the last slash
-  const parts = pathWithoutQuery.split('/');
-  return parts[parts.length - 1];
-}
+export const urlToFile = async (url: string, filename: string): Promise<File> => {
+  const response = await fetch(url);
+  const blob = await response.blob();
+  return new File([blob], sanitizeFilename(filename), { type: blob.type });
+};

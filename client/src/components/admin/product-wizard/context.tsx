@@ -1,318 +1,541 @@
 /**
  * Product Wizard Context
  * 
- * This module provides comprehensive context and state management for the product wizard.
- * It implements a React Context + useReducer pattern for maintaining wizard state across
- * multiple steps, handling validation, and managing the overall wizard flow.
- * 
- * The context provides:
- * - State management through a reducer pattern
- * - Step-based validation rules
- * - Navigation guards between steps
- * - Form state persistence
- * - Draft saving and loading capabilities
- * 
- * @module ProductWizardContext
+ * This module provides a React context for managing the state and logic
+ * of the product creation/editing wizard.
  */
 
-import React, { createContext, useContext, useReducer, ReactNode } from 'react';
-import { 
-  WizardState, 
-  WizardAction, 
-  WizardStep, 
-  WizardActionType,
-  ProductWizardData,
-  UploadedImage
-} from './types';
+import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import slugify from 'slugify';
 
-/**
- * Step configuration interface defining the metadata and validation for each wizard step
- * @interface StepConfig
- */
-interface StepConfig {
-  /** Display label for the step */
-  label: string;
-  /** Description text explaining the step's purpose */
+// Define the steps of the wizard
+export const WIZARD_STEPS = [
+  'basic-info',
+  'images',
+  'additional-info',
+  'review'
+] as const;
+
+export type WizardStep = typeof WIZARD_STEPS[number];
+
+// Define the state interface for the product wizard
+export interface ProductWizardState {
+  // Basic product info
+  productId?: number;
+  name: string;
+  slug: string;
   description: string;
-  /** Validation function that checks if the step data is complete and valid */
-  validation: (data: ProductWizardData) => boolean;
-}
-
-/**
- * Returns the configuration for a specific wizard step
- * @param {WizardStep} step - The wizard step to get configuration for
- * @returns {StepConfig} Configuration object for the requested step
- */
-export const getStepConfig = (step: WizardStep): StepConfig => {
-  const stepConfigs: Record<WizardStep, StepConfig> = {
-    [WizardStep.BASIC_INFO]: {
-      label: 'Basic Info',
-      description: 'Enter essential product information',
-      validation: (data) => !!(data.name && data.slug && data.price && data.categoryId)
-    },
-    [WizardStep.PRODUCT_IMAGES]: {
-      label: 'Images',
-      description: 'Upload product images',
-      validation: (data) => data.uploadedImages.length > 0
-    },
-    [WizardStep.ADDITIONAL_INFO]: {
-      label: 'Additional Info',
-      description: 'Add specifications and details',
-      validation: () => true // Optional section, always valid
-    },
-    [WizardStep.REVIEW_SAVE]: {
-      label: 'Review & Save',
-      description: 'Review and submit product',
-      validation: () => true // Review step is always valid
-    }
-  };
+  costPrice: number;
+  regularPrice: number;
+  salePrice?: number;
+  minimumPrice?: number;
+  markupPercentage: number;
+  sku: string;
+  stockLevel: number;
+  minOrderQty: number;
+  brand?: string;
+  tags: string[];
   
-  return stepConfigs[step];
-};
-
-/**
- * Validates if a step's data meets all requirements
- * 
- * @param {WizardStep} step - The step to validate
- * @param {ProductWizardData} data - The current product data
- * @returns {boolean} True if the step data is valid, false otherwise
- */
-export const isStepValid = (step: WizardStep, data: ProductWizardData): boolean => {
-  return getStepConfig(step).validation(data);
-};
-
-/**
- * Determines if navigation to a target step is allowed based on the current state
- * Navigation is only allowed if:
- * 1. Going backward (to a previous step)
- * 2. Going forward one step and the current step is valid
- * 3. Going to any step if all required steps up to that point are valid
- * 
- * @param {WizardStep} currentStep - The current active step
- * @param {WizardStep} targetStep - The step to navigate to
- * @param {ProductWizardData} data - The current product data
- * @returns {boolean} True if navigation is allowed, false otherwise
- */
-export const canNavigateToStep = (
-  currentStep: WizardStep,
-  targetStep: WizardStep,
-  data: ProductWizardData
-): boolean => {
-  // Can always move backward
-  if (targetStep < currentStep) {
-    return true;
-  }
-  
-  // For forward navigation, check all previous steps
-  for (let step = WizardStep.BASIC_INFO; step < targetStep; step++) {
-    if (!isStepValid(step, data)) {
-      return false;
-    }
-  }
-  
-  return true;
-};
-
-// Default initial state
-const initialState: WizardState = {
-  currentStep: WizardStep.BASIC_INFO,
-  productData: {
-    name: '',
-    slug: '',
-    description: '',
-    price: 0,
-    costPrice: 0,
-    stock: 0, // Add default stock value
-    uploadedImages: []
-  },
-  isFormDirty: false,
-  isLoading: false
-};
-
-/**
- * React Context for the Product Wizard
- * Provides state and dispatch function to all child components
- */
-const ProductWizardContext = createContext<{
-  state: WizardState;
-  dispatch: React.Dispatch<WizardAction>;
-} | undefined>(undefined);
-
-/**
- * Reducer function that handles all state transitions in the wizard
- * Follows standard Redux-style reducer pattern with actions and immutable updates
- * 
- * @param {WizardState} state - Current wizard state
- * @param {WizardAction} action - Action to be performed
- * @returns {WizardState} New state after applying the action
- */
-function wizardReducer(state: WizardState, action: WizardAction): WizardState {
-  switch (action.type) {
-    case WizardActionType.SET_STEP:
-      return {
-        ...state,
-        currentStep: action.payload
-      };
-      
-    case WizardActionType.UPDATE_PRODUCT_DATA:
-      return {
-        ...state,
-        productData: {
-          ...state.productData,
-          ...action.payload
-        },
-        isFormDirty: true
-      };
-      
-    case WizardActionType.UPDATE_MULTIPLE_FIELDS:
-      return {
-        ...state,
-        productData: {
-          ...state.productData,
-          ...action.payload
-        },
-        isFormDirty: true
-      };
-      
-    case WizardActionType.SET_CATALOG_ID:
-      return {
-        ...state,
-        catalogId: action.payload
-      };
-      
-    case WizardActionType.SET_SUPPLIER_ID:
-      return {
-        ...state,
-        supplierId: action.payload
-      };
-      
-    case WizardActionType.ADD_UPLOADED_IMAGE:
-      return {
-        ...state,
-        productData: {
-          ...state.productData,
-          uploadedImages: [...state.productData.uploadedImages, action.payload],
-        },
-        isFormDirty: true
-      };
-      
-    case WizardActionType.REMOVE_UPLOADED_IMAGE:
-      return {
-        ...state,
-        productData: {
-          ...state.productData,
-          uploadedImages: state.productData.uploadedImages.filter(img => {
-            if (typeof action.payload === 'number') {
-              return img.id !== action.payload;
-            } else {
-              return img.url !== action.payload;
-            }
-          }),
-        },
-        isFormDirty: true
-      };
-      
-    case WizardActionType.SET_MAIN_IMAGE:
-      return {
-        ...state,
-        productData: {
-          ...state.productData,
-          uploadedImages: state.productData.uploadedImages.map(img => {
-            if ((typeof action.payload === 'number' && img.id === action.payload) ||
-                (typeof action.payload === 'string' && img.url === action.payload)) {
-              return { ...img, isMain: true };
-            }
-            return { ...img, isMain: false };
-          }),
-        },
-        isFormDirty: true
-      };
-      
-    case WizardActionType.REORDER_IMAGES:
-      return {
-        ...state,
-        productData: {
-          ...state.productData,
-          uploadedImages: action.payload,
-        },
-        isFormDirty: true
-      };
-      
-    case WizardActionType.RESET_WIZARD:
-      return {
-        ...initialState,
-        catalogId: state.catalogId, // Preserve catalog ID if set
-        supplierId: state.supplierId // Preserve supplier ID if set
-      };
-      
-    default:
-      return state;
-  }
-}
-
-/**
- * Props interface for the ProductWizardProvider component
- * @interface ProductWizardProviderProps
- */
-interface ProductWizardProviderProps {
-  /** React child components */
-  children: ReactNode;
-  /** Optional initial data to pre-populate the wizard */
-  initialData?: Partial<ProductWizardData>;
-  /** Optional catalog ID if creating a product for a specific catalog */
+  // Category and catalog info
+  categoryId?: number;
+  categoryName?: string;
   catalogId?: number;
-  /** Optional supplier ID if creating a product for a specific supplier */
+  catalogName?: string;
   supplierId?: number;
+  supplierName?: string;
+  
+  // Images
+  imageUrls: string[];
+  tempImagePaths: string[];
+  mainImageIndex: number;
+  
+  // Additional info
+  isActive: boolean;
+  isPhysical: boolean;
+  weight?: number;
+  length?: number;
+  width?: number;
+  height?: number;
+  weightUnit: 'g' | 'kg' | 'oz' | 'lb';
+  dimensionUnit: 'cm' | 'mm' | 'in';
+  freeShipping: boolean;
+  isFeatured: boolean;
+  
+  // Special promotions
+  hasFlashDeal: boolean;
+  flashDealStartDate?: string;
+  flashDealEndDate?: string;
+  flashDealPrice?: number;
+  
+  // Status tracking
+  isDraft: boolean;
+  currentStep: WizardStep;
+  completedSteps: WizardStep[];
+  
+  // Extras
+  attributeValues: Record<string, any>;
+  notes?: string;
 }
 
-/**
- * Provider component that wraps the application with the ProductWizard context
- * Initializes the state with defaults and any provided initial data
- * 
- * @param {ReactNode} children - Child components that will have access to the context
- * @param {Partial<ProductWizardData>} initialData - Optional initial data for the product
- * @param {number} catalogId - Optional catalog ID for the product
- * @param {number} supplierId - Optional supplier ID for the product
- * @returns {JSX.Element} Provider component with context
- */
-export const ProductWizardProvider: React.FC<ProductWizardProviderProps> = ({ 
-  children, 
-  initialData, 
-  catalogId, 
-  supplierId 
-}) => {
-  const mergedInitialState: WizardState = {
+// Define validation error interface
+export interface ProductWizardErrors {
+  [key: string]: string;
+}
+
+// Define catalog context data for default values
+export interface CatalogContextData {
+  defaultMarkupPercentage: number;
+  freeShipping: boolean;
+  categoryId?: number;
+  supplierName?: string;
+  supplierContactInfo?: string;
+}
+
+// Define the context value interface
+interface ProductWizardContextValue {
+  state: ProductWizardState;
+  updateState: (update: Partial<ProductWizardState>) => void;
+  resetState: () => void;
+  createProduct: () => Promise<number | undefined>;
+  updateProduct: () => Promise<boolean>;
+  errors: ProductWizardErrors;
+  currentStep: WizardStep;
+  goToStep: (step: WizardStep) => void;
+  goToNextStep: () => void;
+  goToPreviousStep: () => void;
+  isValid: (step?: WizardStep) => boolean;
+  validateStep: (step?: WizardStep) => boolean;
+  setError: (field: string, message: string) => void;
+  clearError: (field: string) => void;
+  isSubmitting: boolean;
+  catalogContext: CatalogContextData | null;
+  isCatalogContextLoading: boolean;
+}
+
+// Default state
+const defaultState: ProductWizardState = {
+  name: '',
+  slug: '',
+  description: '',
+  costPrice: 0,
+  regularPrice: 0,
+  markupPercentage: 40, // Default markup percentage
+  sku: '',
+  stockLevel: 0,
+  minOrderQty: 1,
+  tags: [],
+  imageUrls: [],
+  tempImagePaths: [],
+  mainImageIndex: -1,
+  isActive: true,
+  isPhysical: true,
+  weightUnit: 'g',
+  dimensionUnit: 'cm',
+  freeShipping: false,
+  isFeatured: false,
+  hasFlashDeal: false,
+  isDraft: false,
+  currentStep: 'basic-info',
+  completedSteps: [],
+  attributeValues: {}
+};
+
+// Create the context
+const ProductWizardContext = createContext<ProductWizardContextValue | undefined>(undefined);
+
+// Create the provider component
+export const ProductWizardProvider: React.FC<{
+  children: ReactNode;
+  initialState?: Partial<ProductWizardState>;
+  catalogId?: number;
+}> = ({ children, initialState, catalogId }) => {
+  const [state, setState] = useState<ProductWizardState>({
+    ...defaultState,
     ...initialState,
-    productData: {
-      ...initialState.productData,
-      ...(initialData || {})
+    catalogId
+  });
+  const [errors, setErrors] = useState<ProductWizardErrors>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const queryClient = useQueryClient();
+
+  // Fetch catalog context if catalogId is provided
+  const {
+    data: catalogContext,
+    isLoading: isCatalogContextLoading
+  } = useQuery({
+    queryKey: ['catalog-context', catalogId],
+    queryFn: async () => {
+      if (!catalogId) return null;
+      
+      const response = await fetch(`/api/catalogs/${catalogId}/context`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch catalog context');
+      }
+      
+      const data = await response.json();
+      return data.data as CatalogContextData;
     },
-    catalogId,
-    supplierId,
-    isFormDirty: false
+    enabled: !!catalogId
+  });
+
+  // Apply catalog defaults when context is loaded
+  useEffect(() => {
+    if (catalogContext && !initialState?.productId) {
+      setState(prev => ({
+        ...prev,
+        markupPercentage: catalogContext.defaultMarkupPercentage || prev.markupPercentage,
+        freeShipping: catalogContext.freeShipping,
+        categoryId: catalogContext.categoryId,
+        supplierName: catalogContext.supplierName
+      }));
+    }
+  }, [catalogContext, initialState]);
+
+  // Auto-generate slug when name changes
+  useEffect(() => {
+    if (state.name && (!state.slug || state.slug === slugify(state.name.substring(0, state.name.length - 1), { lower: true }))) {
+      setState(prev => ({
+        ...prev,
+        slug: slugify(state.name, { lower: true })
+      }));
+    }
+  }, [state.name]);
+
+  // Update state function
+  const updateState = useCallback((update: Partial<ProductWizardState>) => {
+    setState(prev => ({
+      ...prev,
+      ...update
+    }));
+    
+    // Clear any errors for updated fields
+    if (update && Object.keys(update).length > 0) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        Object.keys(update).forEach(key => {
+          delete newErrors[key];
+        });
+        return newErrors;
+      });
+    }
+  }, []);
+
+  // Reset state function
+  const resetState = useCallback(() => {
+    setState(defaultState);
+    setErrors({});
+  }, []);
+
+  // Create product mutation
+  const createProductMutation = useMutation({
+    mutationFn: async (productData: ProductWizardState) => {
+      const response = await fetch('/api/products', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(productData)
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to create product');
+      }
+      
+      const data = await response.json();
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+    }
+  });
+
+  // Update product mutation
+  const updateProductMutation = useMutation({
+    mutationFn: async (productData: ProductWizardState) => {
+      if (!productData.productId) {
+        throw new Error('Product ID is required for updates');
+      }
+      
+      const response = await fetch(`/api/products/${productData.productId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(productData)
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to update product');
+      }
+      
+      const data = await response.json();
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+    }
+  });
+
+  // Create product function
+  const createProduct = useCallback(async (): Promise<number | undefined> => {
+    try {
+      setIsSubmitting(true);
+      
+      // Validate all steps first
+      if (!validateStep()) {
+        setIsSubmitting(false);
+        return undefined;
+      }
+      
+      const result = await createProductMutation.mutateAsync(state);
+      
+      if (result && result.id) {
+        // Update state with the new product ID
+        updateState({ productId: result.id });
+        return result.id;
+      }
+      
+      return undefined;
+    } catch (error) {
+      console.error('Error creating product:', error);
+      return undefined;
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [state, updateState, createProductMutation]);
+
+  // Update product function
+  const updateProduct = useCallback(async (): Promise<boolean> => {
+    try {
+      setIsSubmitting(true);
+      
+      if (!state.productId) {
+        console.error('Cannot update product: No product ID');
+        return false;
+      }
+      
+      await updateProductMutation.mutateAsync(state);
+      return true;
+    } catch (error) {
+      console.error('Error updating product:', error);
+      return false;
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [state, updateProductMutation]);
+
+  // Navigation functions
+  const goToStep = useCallback((step: WizardStep) => {
+    setState(prev => ({
+      ...prev,
+      currentStep: step
+    }));
+  }, []);
+
+  const goToNextStep = useCallback(() => {
+    const currentIndex = WIZARD_STEPS.indexOf(state.currentStep);
+    if (currentIndex < WIZARD_STEPS.length - 1) {
+      const nextStep = WIZARD_STEPS[currentIndex + 1];
+      
+      // Add current step to completed steps if not already there
+      setState(prev => ({
+        ...prev,
+        currentStep: nextStep,
+        completedSteps: prev.completedSteps.includes(prev.currentStep)
+          ? prev.completedSteps
+          : [...prev.completedSteps, prev.currentStep]
+      }));
+    }
+  }, [state.currentStep]);
+
+  const goToPreviousStep = useCallback(() => {
+    const currentIndex = WIZARD_STEPS.indexOf(state.currentStep);
+    if (currentIndex > 0) {
+      const previousStep = WIZARD_STEPS[currentIndex - 1];
+      setState(prev => ({
+        ...prev,
+        currentStep: previousStep
+      }));
+    }
+  }, [state.currentStep]);
+
+  // Validation functions
+  const validateStep = useCallback((step?: WizardStep): boolean => {
+    const stepToValidate = step || state.currentStep;
+    const newErrors: ProductWizardErrors = {};
+    
+    if (stepToValidate === 'basic-info') {
+      // Validate basic info
+      if (!state.name) {
+        newErrors.name = 'Product name is required';
+      } else if (state.name.length < 3) {
+        newErrors.name = 'Product name must be at least 3 characters';
+      }
+      
+      if (!state.slug) {
+        newErrors.slug = 'Product slug is required';
+      } else if (!/^[a-z0-9-]+$/.test(state.slug)) {
+        newErrors.slug = 'Slug can only contain lowercase letters, numbers, and hyphens';
+      }
+      
+      if (state.costPrice <= 0) {
+        newErrors.costPrice = 'Cost price must be greater than zero';
+      }
+      
+      if (state.regularPrice <= 0) {
+        newErrors.regularPrice = 'Regular price must be greater than zero';
+      } else if (state.regularPrice < state.costPrice) {
+        newErrors.regularPrice = 'Regular price cannot be less than cost price';
+      }
+      
+      if (state.salePrice !== undefined && state.salePrice > 0) {
+        if (state.salePrice >= state.regularPrice) {
+          newErrors.salePrice = 'Sale price must be less than regular price';
+        }
+      }
+      
+      if (state.markupPercentage <= 0) {
+        newErrors.markupPercentage = 'Markup percentage must be greater than zero';
+      }
+    } else if (stepToValidate === 'images') {
+      // Validate images
+      if (state.imageUrls.length === 0 && state.tempImagePaths.length === 0) {
+        newErrors.imageUrls = 'At least one product image is required';
+      }
+    } else if (stepToValidate === 'additional-info') {
+      // Validate additional info
+      if (state.isPhysical && state.weight !== undefined && state.weight <= 0) {
+        newErrors.weight = 'Weight must be greater than zero';
+      }
+      
+      if (state.hasFlashDeal) {
+        if (!state.flashDealPrice) {
+          newErrors.flashDealPrice = 'Flash deal price is required';
+        } else if (state.flashDealPrice >= state.regularPrice) {
+          newErrors.flashDealPrice = 'Flash deal price must be less than regular price';
+        }
+        
+        if (!state.flashDealStartDate) {
+          newErrors.flashDealStartDate = 'Start date is required for flash deals';
+        }
+        
+        if (!state.flashDealEndDate) {
+          newErrors.flashDealEndDate = 'End date is required for flash deals';
+        } else if (state.flashDealStartDate && new Date(state.flashDealEndDate) <= new Date(state.flashDealStartDate)) {
+          newErrors.flashDealEndDate = 'End date must be after start date';
+        }
+      }
+    } else if (stepToValidate === 'review') {
+      // Validate all previous steps
+      const isBasicInfoValid = validateStep('basic-info');
+      const isImagesValid = validateStep('images');
+      const isAdditionalInfoValid = validateStep('additional-info');
+      
+      return isBasicInfoValid && isImagesValid && isAdditionalInfoValid;
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  }, [state]);
+
+  // Check if step is valid (without updating errors)
+  const isValid = useCallback((step?: WizardStep): boolean => {
+    const stepToValidate = step || state.currentStep;
+    
+    if (stepToValidate === 'basic-info') {
+      return (
+        !!state.name &&
+        state.name.length >= 3 &&
+        !!state.slug &&
+        /^[a-z0-9-]+$/.test(state.slug) &&
+        state.costPrice > 0 &&
+        state.regularPrice > 0 &&
+        state.regularPrice >= state.costPrice &&
+        (state.salePrice === undefined || state.salePrice <= 0 || state.salePrice < state.regularPrice) &&
+        state.markupPercentage > 0
+      );
+    } else if (stepToValidate === 'images') {
+      return state.imageUrls.length > 0 || state.tempImagePaths.length > 0;
+    } else if (stepToValidate === 'additional-info') {
+      if (state.isPhysical && state.weight !== undefined && state.weight <= 0) {
+        return false;
+      }
+      
+      if (state.hasFlashDeal) {
+        if (!state.flashDealPrice || state.flashDealPrice >= state.regularPrice) {
+          return false;
+        }
+        
+        if (!state.flashDealStartDate || !state.flashDealEndDate) {
+          return false;
+        }
+        
+        if (new Date(state.flashDealEndDate) <= new Date(state.flashDealStartDate)) {
+          return false;
+        }
+      }
+      
+      return true;
+    } else if (stepToValidate === 'review') {
+      return isValid('basic-info') && isValid('images') && isValid('additional-info');
+    }
+    
+    return true;
+  }, [state]);
+
+  // Error management functions
+  const setError = useCallback((field: string, message: string) => {
+    setErrors(prev => ({
+      ...prev,
+      [field]: message
+    }));
+  }, []);
+
+  const clearError = useCallback((field: string) => {
+    setErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors[field];
+      return newErrors;
+    });
+  }, []);
+
+  // Combine everything into the context value
+  const contextValue: ProductWizardContextValue = {
+    state,
+    updateState,
+    resetState,
+    createProduct,
+    updateProduct,
+    errors,
+    currentStep: state.currentStep,
+    goToStep,
+    goToNextStep,
+    goToPreviousStep,
+    isValid,
+    validateStep,
+    setError,
+    clearError,
+    isSubmitting,
+    catalogContext,
+    isCatalogContextLoading
   };
-  
-  const [state, dispatch] = useReducer(wizardReducer, mergedInitialState);
-  
+
   return (
-    <ProductWizardContext.Provider value={{ state, dispatch }}>
+    <ProductWizardContext.Provider value={contextValue}>
       {children}
     </ProductWizardContext.Provider>
   );
 };
 
-/**
- * Custom hook for accessing the ProductWizard context
- * Provides a convenient way to access the wizard state and dispatch functions
- * 
- * @returns {Object} The context object containing state and dispatch function
- * @throws {Error} If used outside of a ProductWizardProvider component
- */
-export const useProductWizard = () => {
+// Create a hook to use the context
+export const useProductWizardContext = () => {
   const context = useContext(ProductWizardContext);
   
   if (context === undefined) {
-    throw new Error('useProductWizard must be used within a ProductWizardProvider');
+    throw new Error('useProductWizardContext must be used within a ProductWizardProvider');
   }
   
   return context;

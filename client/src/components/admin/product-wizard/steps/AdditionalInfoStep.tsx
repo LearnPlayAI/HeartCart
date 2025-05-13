@@ -1,766 +1,424 @@
 /**
- * Additional Product Information Step
+ * Additional Info Step Component for Product Wizard
  * 
- * This component implements Step 3 of the product wizard,
- * collecting additional details like SKU, brand, minimum order,
- * tags, attributes, and sales configuration.
+ * This component handles the third step of the product creation process,
+ * focusing on additional product details and specifications.
  */
 
-import React, { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { 
-  Calendar, Clock, Loader2, Tag, X,
-  Tags, Star, TruckIcon, Sparkles, BellDot 
-} from 'lucide-react';
-
-import { useProductWizard } from '../context';
-import { WizardActionType } from '../types';
-
-// Form components have been replaced with standard HTML elements
+import { useState } from 'react';
+import { useProductWizardContext } from '../context';
+import { ContextualHelp } from '../contextual-help';
+import { ArrowLeftCircle, ArrowRightCircle, CalendarIcon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+import { Label } from '@/components/ui/label';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
 } from '@/components/ui/select';
-import {
+import { Textarea } from '@/components/ui/textarea';
+import { Separator } from '@/components/ui/separator';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { 
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { 
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger, 
-} from '@/components/ui/accordion';
-import { Separator } from '@/components/ui/separator';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardFooter, 
+  CardHeader, 
+  CardTitle 
+} from '@/components/ui/card';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
 
-interface AdditionalInfoStepProps {
-  className?: string;
-}
+export const AdditionalInfoStep = () => {
+  const { 
+    state, 
+    updateState, 
+    goToPreviousStep, 
+    goToNextStep,
+    validateStep,
+    errors,
+  } = useProductWizardContext();
+  
+  const [activeTab, setActiveTab] = useState<string>('specifications');
 
-const AdditionalInfoStep: React.FC<AdditionalInfoStepProps> = ({ className }) => {
-  const { state, dispatch } = useProductWizard();
-  const { productData } = state;
-  
-  // State for tag input
-  const [tagInput, setTagInput] = useState('');
-  
-  // State for attribute values
-  const [attributeValues, setAttributeValues] = useState<Record<number, any>>({});
-  
-  // State for attribute generation
-  const [isGeneratingAttributes, setIsGeneratingAttributes] = useState(false);
-  
-  // Initialize attribute values from product data
-  useEffect(() => {
-    if (productData?.attributes?.length) {
-      const initialValues: Record<number, any> = {};
-      
-      productData.attributes.forEach((attr: any) => {
-        const { attributeId, ...values } = attr;
-        initialValues[attributeId] = values;
-      });
-      
-      setAttributeValues(initialValues);
-    }
-  }, [productData.attributes]);
-  
-  // Fetch attributes
-  const { data: attributesResponse, isLoading: isAttributesLoading } = useQuery({
-    queryKey: ['/api/attributes'],
-    queryFn: async () => {
-      const res = await fetch('/api/attributes');
-      if (!res.ok) throw new Error('Failed to fetch attributes');
-      return res.json();
-    }
-  });
-  
-  const attributes = attributesResponse?.data || [];
-  
-  // Handle field change
-  const handleFieldChange = (field: string, value: any) => {
-    // Numeric field conversion
-    if (['minimumOrder'].includes(field)) {
-      value = value === '' ? 1 : Number(value);
-    }
-    
-    dispatch({
-      type: WizardActionType.UPDATE_PRODUCT_DATA,
-      payload: { [field]: value }
-    });
-  };
-  
-  // Handle date fields
-  const handleDateChange = (field: string, date: Date | null) => {
-    dispatch({
-      type: WizardActionType.UPDATE_PRODUCT_DATA,
-      payload: { [field]: date }
-    });
-  };
-  
-  // Handle tag addition
-  const handleAddTag = () => {
-    if (tagInput.trim() && !productData.tags?.includes(tagInput.trim())) {
-      const newTags = [...(productData.tags || []), tagInput.trim()];
-      handleFieldChange('tags', newTags);
-      setTagInput('');
+  // Handle form submission to go to next step
+  const handleContinue = () => {
+    if (validateStep('additional-info')) {
+      goToNextStep();
     }
   };
-  
-  // Handle tag removal
-  const handleRemoveTag = (tag: string) => {
-    const newTags = (productData.tags || []).filter(t => t !== tag);
-    handleFieldChange('tags', newTags);
+
+  // Format date as ISO string for the datetime input
+  const formatDateForInput = (dateString?: string) => {
+    if (!dateString) return '';
+    return dateString.split('T')[0];
   };
-  
-  // Handle tag input keypress
-  const handleTagKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleAddTag();
-    }
-  };
-  
-  // Generate AI tag suggestions
-  const generateTagSuggestions = async () => {
-    // This would be implemented with the AI service
-    // For now, we'll just show a placeholder implementation
-    alert('AI Tag Suggestion feature will be implemented soon!');
-  };
-  
-  // Handle attribute changes
-  const handleAttributeChange = (attributeId: number, valueField: string, value: any) => {
-    setAttributeValues(prev => {
-      const updatedValues = {
-        ...prev,
-        [attributeId]: {
-          ...prev[attributeId],
-          [valueField]: value
-        }
-      };
-      
-      // Update product attributes in wizard state
-      dispatch({
-        type: WizardActionType.UPDATE_PRODUCT_DATA,
-        payload: { attributes: formatAttributesForSave(updatedValues) }
-      });
-      
-      return updatedValues;
-    });
-  };
-  
-  // Format attributes for saving to API
-  const formatAttributesForSave = (attributeValues: Record<number, any>) => {
-    return Object.entries(attributeValues).map(([attributeId, values]) => ({
-      attributeId: Number(attributeId),
-      ...values
-    }));
-  };
-  
-  // Get a preview of attribute value for display in accordion header
-  const getAttributeValuePreview = (attributeValue: any) => {
-    if (attributeValue.textValue) return attributeValue.textValue;
-    if (attributeValue.numericValue) return attributeValue.numericValue;
-    if (attributeValue.booleanValue !== undefined) return attributeValue.booleanValue ? 'Yes' : 'No';
-    if (attributeValue.dateValue) return new Date(attributeValue.dateValue).toLocaleDateString();
-    return 'Set';
-  };
-  
-  // Generate attribute suggestions using AI
-  const handleGenerateAttributeSuggestions = async () => {
-    if (!productData.categoryId || !productData.name) return;
-    
-    setIsGeneratingAttributes(true);
-    
-    try {
-      const response = await fetch('/api/products/wizard/suggest-attributes', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          categoryId: productData.categoryId,
-          productName: productData.name,
-          productDescription: productData.description,
-          existingAttributes: Object.entries(attributeValues).map(([id, value]) => ({
-            id: Number(id),
-            name: attributes.find(attr => attr.id === Number(id))?.name || '',
-            value: getAttributeValuePreview(value)
-          }))
-        })
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to generate attribute suggestions');
-      }
-      
-      const result = await response.json();
-      
-      if (result.success && result.data) {
-        // Apply the suggestions to the current attributes
-        const newAttributeValues = { ...attributeValues };
-        
-        result.data.forEach((suggestion: any) => {
-          const { attributeId, suggestedValue } = suggestion;
-          const attribute = attributes.find(attr => attr.id === attributeId);
-          
-          if (attribute) {
-            if (attribute.type === 'text') {
-              newAttributeValues[attributeId] = {
-                ...newAttributeValues[attributeId],
-                textValue: suggestedValue
-              };
-            } else if (attribute.type === 'number') {
-              const numValue = parseFloat(suggestedValue);
-              if (!isNaN(numValue)) {
-                newAttributeValues[attributeId] = {
-                  ...newAttributeValues[attributeId],
-                  numericValue: numValue.toString()
-                };
-              }
-            } else if (attribute.type === 'boolean') {
-              const boolValue = 
-                suggestedValue.toLowerCase() === 'yes' || 
-                suggestedValue.toLowerCase() === 'true' || 
-                suggestedValue === '1';
-              
-              newAttributeValues[attributeId] = {
-                ...newAttributeValues[attributeId],
-                booleanValue: boolValue
-              };
-            }
-            // Date values usually need manual input
-          }
-        });
-        
-        setAttributeValues(newAttributeValues);
-        
-        // Update product attributes in wizard state
-        dispatch({
-          type: WizardActionType.UPDATE_PRODUCT_DATA,
-          payload: { attributes: formatAttributesForSave(newAttributeValues) }
-        });
-      }
-    } catch (error) {
-      console.error('Error generating attribute suggestions:', error);
-    } finally {
-      setIsGeneratingAttributes(false);
-    }
-  };
-  
-  if (isAttributesLoading) {
-    return (
-      <div className="flex items-center justify-center h-60">
-        <Loader2 className="w-6 h-6 animate-spin text-primary" />
-        <span className="ml-2">Loading data...</span>
-      </div>
-    );
-  }
-  
+
   return (
-    <div className={className}>
-      <div className="mb-4">
-        <h2 className="text-xl font-semibold mb-2">Additional Product Information</h2>
+    <div className="space-y-8">
+      <div>
+        <h2 className="text-2xl font-bold mb-2">Additional Product Information</h2>
         <p className="text-muted-foreground">
-          Add product details, attributes, and sales configuration.
+          Enter additional details and specifications for your product to help customers make informed decisions.
         </p>
       </div>
-      
-      <div className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Product Details</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* SKU */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">SKU (Stock Keeping Unit)</label>
-                <Input
-                  placeholder="Enter product SKU"
-                  value={productData.sku || ''}
-                  onChange={(e) => handleFieldChange('sku', e.target.value)}
-                />
-                <p className="text-sm text-muted-foreground">
-                  A unique identifier for your product
-                </p>
-              </div>
-              
-              {/* Brand */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Brand</label>
-                <Input
-                  placeholder="Enter product brand"
-                  value={productData.brand || ''}
-                  onChange={(e) => handleFieldChange('brand', e.target.value)}
-                />
-                <p className="text-sm text-muted-foreground">
-                  The manufacturer or brand name
-                </p>
-              </div>
-              
-              {/* Minimum Order */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Minimum Order Quantity</label>
-                <Input
-                  type="number"
-                  min="1"
-                  step="1"
-                  placeholder="1"
-                  value={productData.minimumOrder || ''}
-                  onChange={(e) => handleFieldChange('minimumOrder', e.target.value)}
-                />
-                <p className="text-sm text-muted-foreground">
-                  Minimum quantity customers must order
-                </p>
-              </div>
-            </div>
-            
-            {/* Short Description */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Short Description</label>
-              <Textarea
-                placeholder="Brief summary of the product..."
-                rows={2}
-                value={productData.shortDescription || ''}
-                onChange={(e) => handleFieldChange('shortDescription', e.target.value)}
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid grid-cols-4 mb-8">
+          <TabsTrigger value="specifications">Specifications</TabsTrigger>
+          <TabsTrigger value="shipping">Shipping</TabsTrigger>
+          <TabsTrigger value="promotions">Promotions</TabsTrigger>
+          <TabsTrigger value="visibility">Visibility</TabsTrigger>
+        </TabsList>
+
+        {/* Specifications Tab */}
+        <TabsContent value="specifications" className="space-y-6">
+          <div className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="is-physical"
+                checked={state.isPhysical}
+                onCheckedChange={(checked) => updateState({ isPhysical: !!checked })}
               />
-              <p className="text-sm text-muted-foreground">
-                A concise summary shown in product listings (max 200 characters)
-              </p>
+              <Label htmlFor="is-physical">This is a physical product</Label>
             </div>
-            
-            {/* Tags */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Product Tags</label>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Add a tag (press Enter)"
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  onKeyPress={handleTagKeyPress}
-                />
-                <Button type="button" onClick={handleAddTag} size="sm">
-                  <Tag className="h-4 w-4 mr-2" />
-                  Add
-                </Button>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={generateTagSuggestions}
-                      >
-                        <Sparkles className="h-4 w-4 mr-2" />
-                        Suggest
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      Generate AI tag suggestions based on product info
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {(productData.tags || []).map((tag, index) => (
-                  <Badge key={index} variant="secondary" className="px-2 py-1">
-                    {tag}
-                    <button 
-                      type="button"
-                      className="ml-2 text-muted-foreground hover:text-foreground"
-                      onClick={() => handleRemoveTag(tag)}
+
+            {state.isPhysical && (
+              <div className="grid gap-6 sm:grid-cols-2 mt-4">
+                <div className="space-y-2">
+                  <Label htmlFor="weight">Weight</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="weight"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={state.weight || ''}
+                      onChange={(e) => updateState({ weight: e.target.value ? parseFloat(e.target.value) : undefined })}
+                      placeholder="0.00"
+                      className={errors.weight ? 'border-red-500' : ''}
+                    />
+
+                    <Select
+                      value={state.weightUnit}
+                      onValueChange={(value) => updateState({ weightUnit: value as 'g' | 'kg' | 'oz' | 'lb' })}
                     >
-                      ×
-                    </button>
-                  </Badge>
-                ))}
-                {(productData.tags || []).length === 0 && (
-                  <p className="text-sm text-muted-foreground italic">No tags added yet</p>
-                )}
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Tags help customers find your product
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>Product Attributes</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex justify-between items-center mb-4">
-              <div>
-                <h4 className="font-medium">Product Attributes</h4>
-                <p className="text-sm text-muted-foreground">
-                  Add specific details about your product
-                </p>
-              </div>
-              {productData.categoryId && (
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={handleGenerateAttributeSuggestions}
-                  disabled={isGeneratingAttributes}
-                >
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  {isGeneratingAttributes ? 'Generating...' : 'Suggest Attributes'}
-                </Button>
-              )}
-            </div>
-            
-            {productData.categoryId ? (
-              <>
-                {attributes.length > 0 ? (
-                  <Accordion type="multiple" className="w-full">
-                    {attributes.map((attribute, index) => (
-                      <AccordionItem key={attribute.id} value={`attribute-${attribute.id}`}>
-                        <AccordionTrigger className="hover:no-underline">
-                          <div className="flex items-center justify-between w-full pr-4">
-                            <span>{attribute.name}</span>
-                            {attributeValues[attribute.id] && (
-                              <Badge className="ml-2 text-xs" variant="outline">
-                                {getAttributeValuePreview(attributeValues[attribute.id])}
-                              </Badge>
-                            )}
-                          </div>
-                        </AccordionTrigger>
-                        <AccordionContent>
-                          <div className="py-2">
-                            {attribute.description && (
-                              <p className="text-sm text-muted-foreground mb-3">{attribute.description}</p>
-                            )}
-                            
-                            {attribute.type === 'text' && (
-                              <Input
-                                placeholder={`Enter ${attribute.name.toLowerCase()}`}
-                                value={attributeValues[attribute.id]?.textValue || ''}
-                                onChange={(e) => handleAttributeChange(attribute.id, 'textValue', e.target.value)}
-                              />
-                            )}
-                            
-                            {attribute.type === 'number' && (
-                              <Input
-                                type="number"
-                                placeholder={`Enter ${attribute.name.toLowerCase()}`}
-                                value={attributeValues[attribute.id]?.numericValue || ''}
-                                onChange={(e) => handleAttributeChange(attribute.id, 'numericValue', e.target.value)}
-                              />
-                            )}
-                            
-                            {attribute.type === 'boolean' && (
-                              <div className="flex items-center space-x-2">
-                                <Switch
-                                  checked={attributeValues[attribute.id]?.booleanValue || false}
-                                  onCheckedChange={(checked) => 
-                                    handleAttributeChange(attribute.id, 'booleanValue', checked)
-                                  }
-                                />
-                                <span className="text-sm">
-                                  {attributeValues[attribute.id]?.booleanValue ? 'Yes' : 'No'}
-                                </span>
-                              </div>
-                            )}
-                            
-                            {attribute.type === 'date' && (
-                              <Popover>
-                                <PopoverTrigger asChild>
-                                  <Button
-                                    variant="outline"
-                                    className="w-full justify-start text-left font-normal"
-                                  >
-                                    <Calendar className="mr-2 h-4 w-4" />
-                                    {attributeValues[attribute.id]?.dateValue ? (
-                                      new Date(attributeValues[attribute.id].dateValue).toLocaleDateString()
-                                    ) : (
-                                      <span>Pick a date</span>
-                                    )}
-                                  </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0">
-                                  <CalendarComponent
-                                    mode="single"
-                                    selected={attributeValues[attribute.id]?.dateValue ? 
-                                      new Date(attributeValues[attribute.id].dateValue) : undefined}
-                                    onSelect={(date) => 
-                                      handleAttributeChange(attribute.id, 'dateValue', date)
-                                    }
-                                    initialFocus
-                                  />
-                                </PopoverContent>
-                              </Popover>
-                            )}
-                          </div>
-                        </AccordionContent>
-                      </AccordionItem>
-                    ))}
-                  </Accordion>
-                ) : (
-                  <div className="text-center p-6 border border-dashed rounded-md">
-                    <p className="text-muted-foreground">No attributes defined for this category</p>
+                      <SelectTrigger className="w-24">
+                        <SelectValue placeholder="Unit" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="g">Grams</SelectItem>
+                        <SelectItem value="kg">Kilograms</SelectItem>
+                        <SelectItem value="oz">Ounces</SelectItem>
+                        <SelectItem value="lb">Pounds</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                )}
-              </>
-            ) : (
-              <div className="text-center p-6 border border-dashed rounded-md">
-                <p className="text-muted-foreground">Select a category to view available attributes</p>
+                  {errors.weight && <p className="text-sm text-red-500">{errors.weight}</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Dimensions (Optional)</Label>
+                  <div className="grid grid-cols-4 gap-2">
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      value={state.length || ''}
+                      onChange={(e) => updateState({ length: e.target.value ? parseFloat(e.target.value) : undefined })}
+                      placeholder="Length"
+                    />
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      value={state.width || ''}
+                      onChange={(e) => updateState({ width: e.target.value ? parseFloat(e.target.value) : undefined })}
+                      placeholder="Width"
+                    />
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      value={state.height || ''}
+                      onChange={(e) => updateState({ height: e.target.value ? parseFloat(e.target.value) : undefined })}
+                      placeholder="Height"
+                    />
+                    <Select
+                      value={state.dimensionUnit}
+                      onValueChange={(value) => updateState({ dimensionUnit: value as 'cm' | 'mm' | 'in' })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Unit" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="cm">cm</SelectItem>
+                        <SelectItem value="mm">mm</SelectItem>
+                        <SelectItem value="in">in</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </div>
             )}
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>Sales Configuration</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Flash Sale Configuration */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-medium">Flash Deal</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Time-limited promotion with special visibility
-                    </p>
-                  </div>
-                  <Switch
-                    checked={productData.isFlashDeal || false}
-                    onCheckedChange={(checked) => handleFieldChange('isFlashDeal', checked)}
-                  />
+
+            <div className="space-y-2 mt-4">
+              <Label htmlFor="tags">Tags (Optional)</Label>
+              <p className="text-xs text-muted-foreground mb-2">
+                Enter tags separated by commas. These help with product discovery in search results.
+              </p>
+              <Input
+                id="tags"
+                value={state.tags.join(', ')}
+                onChange={(e) => {
+                  const tagsArray = e.target.value
+                    .split(',')
+                    .map(tag => tag.trim())
+                    .filter(tag => tag !== '');
+                  updateState({ tags: tagsArray });
+                }}
+                placeholder="e.g. cotton, summer, casual"
+              />
+            </div>
+
+            <div className="space-y-2 mt-4">
+              <Label htmlFor="notes">Internal Notes (Not visible to customers)</Label>
+              <Textarea
+                id="notes"
+                value={state.notes || ''}
+                onChange={(e) => updateState({ notes: e.target.value })}
+                placeholder="Add any internal notes about this product here"
+                className="min-h-[100px]"
+              />
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* Shipping Tab */}
+        <TabsContent value="shipping" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Shipping Options</CardTitle>
+              <CardDescription>
+                Configure how this product will be shipped to customers
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="free-shipping" className="text-base">Free Shipping</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Offer free shipping for this product regardless of order value
+                  </p>
                 </div>
-                
-                {productData.isFlashDeal && (
-                  <div className="space-y-4 pt-2">
-                    {/* Flash Deal Start */}
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Flash Deal Start</label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className="w-full justify-start text-left font-normal"
-                          >
-                            <Calendar className="mr-2 h-4 w-4" />
-                            {productData.flashDealStart ? (
-                              new Date(productData.flashDealStart).toLocaleDateString()
-                            ) : (
-                              <span>Pick a start date</span>
-                            )}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                          <CalendarComponent
-                            mode="single"
-                            selected={productData.flashDealStart ? new Date(productData.flashDealStart) : undefined}
-                            onSelect={(date) => handleDateChange('flashDealStart', date)}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                    
-                    {/* Flash Deal End */}
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Flash Deal End</label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className="w-full justify-start text-left font-normal"
-                          >
-                            <Calendar className="mr-2 h-4 w-4" />
-                            {productData.flashDealEnd ? (
-                              new Date(productData.flashDealEnd).toLocaleDateString()
-                            ) : (
-                              <span>Pick an end date</span>
-                            )}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                          <CalendarComponent
-                            mode="single"
-                            selected={productData.flashDealEnd ? new Date(productData.flashDealEnd) : undefined}
-                            onSelect={(date) => handleDateChange('flashDealEnd', date)}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                  </div>
-                )}
+                <Switch
+                  id="free-shipping"
+                  checked={state.freeShipping}
+                  onCheckedChange={(checked) => updateState({ freeShipping: checked })}
+                />
               </div>
               
-              {/* Special Sale Configuration */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-medium">Special Sale</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Custom promotion with special messaging
-                    </p>
-                  </div>
-                  <Switch
-                    checked={!!productData.specialSaleText}
-                    onCheckedChange={(checked) => {
-                      if (!checked) {
-                        handleFieldChange('specialSaleText', '');
-                      } else {
-                        handleFieldChange('specialSaleText', 'Special Offer!');
-                      }
-                    }}
-                  />
+              {/* Other shipping options could be added here */}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Promotions Tab */}
+        <TabsContent value="promotions" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Flash Deal</CardTitle>
+              <CardDescription>
+                Configure a time-limited flash deal for this product
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="flash-deal" className="text-base">Enable Flash Deal</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Create urgency with a limited-time special price
+                  </p>
                 </div>
-                
-                {productData.specialSaleText && (
-                  <div className="space-y-4 pt-2">
-                    {/* Special Sale Text */}
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Special Sale Text</label>
+                <Switch
+                  id="flash-deal"
+                  checked={state.hasFlashDeal}
+                  onCheckedChange={(checked) => updateState({ hasFlashDeal: checked })}
+                />
+              </div>
+              
+              {state.hasFlashDeal && (
+                <div className="grid gap-4 mt-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="flash-deal-price" className="required">Flash Deal Price</Label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2">R</span>
                       <Input
-                        placeholder="Special Offer!"
-                        value={productData.specialSaleText}
-                        onChange={(e) => handleFieldChange('specialSaleText', e.target.value)}
+                        id="flash-deal-price"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={state.flashDealPrice || ''}
+                        onChange={(e) => updateState({ 
+                          flashDealPrice: e.target.value ? parseFloat(e.target.value) : undefined 
+                        })}
+                        placeholder="0.00"
+                        className={`pl-8 ${errors.flashDealPrice ? 'border-red-500' : ''}`}
                       />
                     </div>
-                    
-                    {/* Special Sale Start */}
+                    {errors.flashDealPrice && (
+                      <p className="text-sm text-red-500">{errors.flashDealPrice}</p>
+                    )}
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Special Sale Start</label>
+                      <Label htmlFor="flash-deal-start" className="required">Start Date</Label>
                       <Popover>
                         <PopoverTrigger asChild>
                           <Button
                             variant="outline"
-                            className="w-full justify-start text-left font-normal"
+                            className={`w-full justify-start text-left font-normal ${errors.flashDealStartDate ? 'border-red-500' : ''}`}
                           >
-                            <Calendar className="mr-2 h-4 w-4" />
-                            {productData.specialSaleStart ? (
-                              new Date(productData.specialSaleStart).toLocaleDateString()
+                            <CalendarIcon className="h-4 w-4 mr-2" />
+                            {state.flashDealStartDate ? (
+                              format(new Date(state.flashDealStartDate), 'PP')
                             ) : (
-                              <span>Pick a start date</span>
+                              <span>Select date</span>
                             )}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0">
-                          <CalendarComponent
+                          <Calendar
                             mode="single"
-                            selected={productData.specialSaleStart ? new Date(productData.specialSaleStart) : undefined}
-                            onSelect={(date) => handleDateChange('specialSaleStart', date)}
+                            selected={state.flashDealStartDate ? new Date(state.flashDealStartDate) : undefined}
+                            onSelect={(date) => updateState({
+                              flashDealStartDate: date ? date.toISOString() : undefined
+                            })}
                             initialFocus
                           />
                         </PopoverContent>
                       </Popover>
+                      {errors.flashDealStartDate && (
+                        <p className="text-sm text-red-500">{errors.flashDealStartDate}</p>
+                      )}
                     </div>
                     
-                    {/* Special Sale End */}
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Special Sale End</label>
+                      <Label htmlFor="flash-deal-end" className="required">End Date</Label>
                       <Popover>
                         <PopoverTrigger asChild>
                           <Button
                             variant="outline"
-                            className="w-full justify-start text-left font-normal"
+                            className={`w-full justify-start text-left font-normal ${errors.flashDealEndDate ? 'border-red-500' : ''}`}
                           >
-                            <Calendar className="mr-2 h-4 w-4" />
-                            {productData.specialSaleEnd ? (
-                              new Date(productData.specialSaleEnd).toLocaleDateString()
+                            <CalendarIcon className="h-4 w-4 mr-2" />
+                            {state.flashDealEndDate ? (
+                              format(new Date(state.flashDealEndDate), 'PP')
                             ) : (
-                              <span>Pick an end date</span>
+                              <span>Select date</span>
                             )}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0">
-                          <CalendarComponent
+                          <Calendar
                             mode="single"
-                            selected={productData.specialSaleEnd ? new Date(productData.specialSaleEnd) : undefined}
-                            onSelect={(date) => handleDateChange('specialSaleEnd', date)}
+                            selected={state.flashDealEndDate ? new Date(state.flashDealEndDate) : undefined}
+                            onSelect={(date) => updateState({
+                              flashDealEndDate: date ? date.toISOString() : undefined
+                            })}
                             initialFocus
                           />
                         </PopoverContent>
                       </Popover>
+                      {errors.flashDealEndDate && (
+                        <p className="text-sm text-red-500">{errors.flashDealEndDate}</p>
+                      )}
                     </div>
                   </div>
-                )}
-              </div>
-            </div>
-            
-            <Separator className="my-4" />
-            
-            <div className="space-y-4">
-              {/* Feature Toggles */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Free Shipping */}
-                <div className="flex flex-row items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
-                    <label className="text-base font-medium">Free Shipping</label>
-                    <p className="text-sm text-muted-foreground">
-                      Offer free shipping for this product
-                    </p>
-                  </div>
-                  <Switch
-                    checked={productData.freeShipping || false}
-                    onCheckedChange={(checked) => handleFieldChange('freeShipping', checked)}
-                  />
                 </div>
-                
-                {/* Featured Product */}
-                <div className="flex flex-row items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
-                    <label className="text-base font-medium">Featured Product</label>
-                    <p className="text-sm text-muted-foreground">
-                      Show in featured products section
-                    </p>
-                  </div>
-                  <Switch
-                    checked={productData.isFeatured || false}
-                    onCheckedChange={(checked) => handleFieldChange('isFeatured', checked)}
-                  />
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Visibility Tab */}
+        <TabsContent value="visibility" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Product Visibility</CardTitle>
+              <CardDescription>
+                Control how and where this product appears in your store
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="is-active" className="text-base">Product Active</Label>
+                  <p className="text-sm text-muted-foreground">
+                    When active, the product will be visible and available for purchase
+                  </p>
                 </div>
+                <Switch
+                  id="is-active"
+                  checked={state.isActive}
+                  onCheckedChange={(checked) => updateState({ isActive: checked })}
+                />
               </div>
               
-              {/* Product Status */}
-              <div className="pt-4 space-y-2">
-                <label className="text-sm font-medium">Product Status</label>
-                <Select
-                  value={productData.status || 'draft'}
-                  onValueChange={(value) => handleFieldChange('status', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select product status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="draft">Draft (Not Visible)</SelectItem>
-                    <SelectItem value="inactive">Inactive (Hidden)</SelectItem>
-                    <SelectItem value="active">Active (Visible)</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-sm text-muted-foreground">
-                  Control the visibility of this product
-                </p>
+              <Separator className="my-4" />
+              
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="is-featured" className="text-base">Featured Product</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Featured products appear in special sections on your homepage
+                  </p>
+                </div>
+                <Switch
+                  id="is-featured"
+                  checked={state.isFeatured}
+                  onCheckedChange={(checked) => updateState({ isFeatured: checked })}
+                />
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+      
+      <Separator />
+      
+      {/* Navigation buttons */}
+      <div className="flex justify-between">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={goToPreviousStep}
+          className="flex items-center gap-2"
+        >
+          <ArrowLeftCircle className="h-4 w-4" />
+          <span>Back to Images</span>
+        </Button>
+        
+        <Button
+          type="button"
+          onClick={handleContinue}
+          className="flex items-center gap-2"
+        >
+          <span>Continue to Review</span>
+          <ArrowRightCircle className="h-4 w-4" />
+        </Button>
       </div>
     </div>
   );

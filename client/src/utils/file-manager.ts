@@ -1,396 +1,207 @@
 /**
- * File Manager Utility
+ * File Manager Utilities
  * 
- * A centralized utility for handling file operations in the application.
- * This includes URL management, image transformations, and file uploads.
+ * This module provides centralized utilities for managing file uploads,
+ * URL handling, and consistent file operations throughout the application.
+ * It integrates with the server's Object Store implementation.
  */
 
-import { UploadedImage } from '../components/admin/product-wizard/types';
+import { ensureValidImageUrl as validateImageUrl } from './file-utils';
 
-// File storage root folders
-export const STORAGE_FOLDERS = {
-  PRODUCTS: 'products',
-  CATEGORIES: 'categories',
-  SUPPLIERS: 'suppliers',
-  CATALOGS: 'catalogs',
-  TEMP: 'temp',
-  OPTIMIZED: 'optimized',
-  THUMBNAILS: 'thumbnails'
-};
-
-// Upload endpoints
+/**
+ * Endpoints for file uploads to different storage locations
+ */
 export const UPLOAD_ENDPOINTS = {
+  // Temporary storage
   PRODUCT_TEMP: '/api/upload/products/images/temp',
-  PRODUCT_IMAGES: (productId: number | string) => `/api/upload/products/${productId}/images`,
-  CATEGORY_IMAGES: '/api/upload/categories/images',
-  SUPPLIER_LOGO: '/api/upload/suppliers/logo',
-  CATALOG_COVER: '/api/upload/catalogs/cover'
+  // Direct product storage
+  PRODUCT: (productId: number | string) => `/api/upload/products/${productId}/images`,
+  // Category images
+  CATEGORY: '/api/upload/categories/images',
+  // Supplier logos
+  SUPPLIER: '/api/upload/suppliers/images',
+  // Catalog cover images
+  CATALOG: '/api/upload/catalogs/images',
+  // General file uploads
+  GENERIC: '/api/upload/files'
 };
 
-// API base URL for files
-export const API_FILES_BASE = '/api/files';
-
 /**
- * Sanitize a filename by replacing spaces with hyphens and removing special characters
- * 
- * This is the central sanitization function used across the application.
- * IMPORTANT: This function should remain synchronized with the server-side version
- * in upload-handlers.ts to ensure consistent behavior.
+ * Ensures image URLs are properly formatted and valid
+ * Handles both full URLs and object paths
  */
-export function sanitizeFilename(filename: string): string {
-  if (!filename) return '';
-  
-  // Extract file extension to preserve it
-  const lastDotIndex = filename.lastIndexOf('.');
-  const extension = lastDotIndex !== -1 ? filename.slice(lastDotIndex) : '';
-  const baseName = lastDotIndex !== -1 ? filename.slice(0, lastDotIndex) : filename;
-  
-  // Replace spaces with hyphens
-  let sanitizedBase = baseName.replace(/\s+/g, '-');
-  
-  // Remove other problematic characters, but preserve hyphens, underscores, periods
-  sanitizedBase = sanitizedBase.replace(/[^a-zA-Z0-9-_.]/g, '');
-  
-  // Combine sanitized base name with original extension
-  const sanitized = sanitizedBase + extension;
-  
-  // Silently sanitize the filename without logging
-  // Sanitization creates consistent filenames without spaces or special characters
-  
-  return sanitized;
-}
-
-/**
- * Create a File object with a sanitized filename
- */
-export function createFileWithSanitizedName(file: File): File {
-  const sanitizedName = sanitizeFilename(file.name);
-  
-  // If the name is already sanitized, return the original
-  if (sanitizedName === file.name) {
-    return file;
-  }
-  
-  // Create a new File object with the sanitized name
-  // We need to use the File constructor to change the filename
-  return new File([file], sanitizedName, { type: file.type });
-}
-
-/**
- * Process an array of File objects into FormData for upload
- * Sanitizes filenames before upload by replacing spaces with hyphens
- */
-export function prepareFilesFormData(
-  files: File[], 
-  additionalData?: Record<string, string | number | boolean>
-): FormData {
-  const formData = new FormData();
-  
-  // Sanitize filenames and append to form data
-  files.forEach(file => {
-    // Create a new file with sanitized name
-    const sanitizedFile = createFileWithSanitizedName(file);
-    
-    // Silently sanitize filenames without logging
-    
-    formData.append('images', sanitizedFile);
-  });
-  
-  // Add any additional data
-  if (additionalData) {
-    Object.entries(additionalData).forEach(([key, value]) => {
-      formData.append(key, String(value));
-    });
-  }
-  
-  return formData;
-}
-
-/**
- * Upload multiple files to the server
- * @returns Array of uploaded image metadata
- */
-export async function uploadFiles(
-  files: File[], 
-  endpoint: string,
-  additionalData?: Record<string, string | number | boolean>
-): Promise<UploadedImage[]> {
-  if (files.length === 0) {
-    return [];
-  }
-  
-  // Prepare form data with files and any additional data
-  const formData = prepareFilesFormData(files, additionalData);
-  
-  // Upload the files
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    body: formData
-  });
-  
-  if (!response.ok) {
-    throw new Error(`Upload failed with status: ${response.status}`);
-  }
-  
-  const result = await response.json();
-  
-  if (!result.success || !Array.isArray(result.files)) {
-    throw new Error('Invalid server response format');
-  }
-  
-  // Map the API response to our UploadedImage format
-  return result.files.map((file: any, index: number) => ({
-    id: file.id, // Use ID from server if available
-    url: file.url, // URL for accessing the file via API
-    objectKey: file.objectKey, // Storage path to the file
-    isMain: false, // Default to false, caller can update as needed
-    order: index,
-    metadata: {
-      size: file.size,
-      width: file.width,
-      height: file.height,
-      originalname: file.originalname || file.filename,
-    }
-  }));
-}
-
-/**
- * Create a local object URL for a file object (browser-only)
- */
-export function createLocalImageUrl(file: File): string {
-  return URL.createObjectURL(file);
-}
-
-/**
- * Revoke a local object URL to prevent memory leaks
- */
-export function revokeLocalImageUrl(url: string): void {
-  if (url && url.startsWith('blob:')) {
-    URL.revokeObjectURL(url);
-  }
-}
-
-/**
- * Ensures a valid image URL for display
- * This is a centralized function used across components to consistently handle image URLs
- */
-export function ensureValidImageUrl(image: UploadedImage | string): string {
-  // Handle string URLs directly (simplified use case)
-  if (typeof image === 'string') {
-    return formatUrlPath(image);
-  }
-  
-  // Handle UploadedImage objects (full featured case)
-  if (!image.url && !image.objectKey) {
-    return '';
-  }
-  
-  // When we have a file object (client-side), create an object URL
-  if (image.file) {
-    // Return existing URL if already created
-    if (image.url && image.url.startsWith('blob:')) {
-      return image.url;
-    }
-    return URL.createObjectURL(image.file);
-  }
-  
-  // If URL is already absolute (starts with http), return as is
-  if (image.url && image.url.startsWith('http')) {
-    return image.url;
-  }
-  
-  // Direct access to Object Store URLs using objectKey (preferred method)
-  if (image.objectKey) {
-    return formatObjectKeyPath(image.objectKey);
-  }
-  
-  // Use image URL as fallback with proper encoding
-  if (image.url) {
-    return formatUrlPath(image.url);
-  }
-  
-  return '';
-}
-
-/**
- * Format an object key path into a proper API URL with encoding
- */
-export function formatObjectKeyPath(objectKey: string): string {
-  if (!objectKey) {
-    return '';
-  }
-  
-  // Handle temp folder paths
-  if (objectKey.includes(`${STORAGE_FOLDERS.TEMP}/`)) {
-    const parts = objectKey.split('/');
-    
-    // Special handling for temp/pending folder (used for batch uploads)
-    if (parts.length >= 3 && parts[1] === 'pending') {
-      // This is a special case for the 'pending' folder before products are created
-      const filename = parts[2]; // Just get the filename
-      
-      // Ensure we're not double-encoding paths with already encoded components
-      const safeFilename = filename.includes('%') ? filename : encodeURIComponent(filename);
-      return `${API_FILES_BASE}/${STORAGE_FOLDERS.TEMP}/pending/${safeFilename}`;
-    }
-    
-    if (parts.length >= 3) {
-      // Get all parts after 'temp/{id}/'
-      const productId = parts[1];
-      const filename = parts.slice(2).join('/');
-      
-      // Ensure we're not double-encoding paths with already encoded components
-      const safeFilename = filename.includes('%') ? filename : encodeURIComponent(filename);
-      return `${API_FILES_BASE}/${STORAGE_FOLDERS.TEMP}/${productId}/${safeFilename}`;
-    }
-  }
-  
-  // Handle product specific paths
-  if (objectKey.startsWith(`${STORAGE_FOLDERS.PRODUCTS}/`)) {
-    const parts = objectKey.split('/');
-    if (parts.length >= 3) {
-      const productId = parts[1];
-      // Join all remaining parts to handle filenames with folders
-      const filename = parts.slice(2).join('/');
-      
-      // Ensure we're not double-encoding paths with already encoded components
-      const safeFilename = filename.includes('%') ? filename : encodeURIComponent(filename);
-      return `${API_FILES_BASE}/${STORAGE_FOLDERS.PRODUCTS}/${productId}/${safeFilename}`;
-    }
-  }
-  
-  // Generic object key handling
-  const pathSegments = objectKey.split('/');
-  const encodedPath = pathSegments.map(segment => {
-    // Ensure we're not double-encoding paths with already encoded components
-    return segment.includes('%') ? segment : encodeURIComponent(segment);
-  }).join('/');
-  
-  return `${API_FILES_BASE}/${encodedPath}`;
-}
-
-/**
- * Format a URL path with proper encoding
- */
-export function formatUrlPath(url: string): string {
+export const ensureValidImageUrl = (url: string | null | undefined): string => {
   if (!url) return '';
+
+  // If it's already a full URL with protocol, validate it
+  if (url.startsWith('http')) {
+    return validateImageUrl(url);
+  }
   
-  // Handle already absolute URLs
-  if (url.startsWith('http') || url.startsWith('blob:')) {
+  // If it's a data URL, return as is
+  if (url.startsWith('data:')) {
     return url;
   }
   
-  // Handle API files URLs
-  if (url.startsWith('/api/files/')) {
-    try {
-      // Don't re-encode URLs that already contain encoded components (%)
-      if (url.includes('%')) {
-        return url;
-      }
-      
-      const urlParts = url.split('/');
-      
-      // Special handling for temp folder with file upload paths
-      if (url.includes('/temp/pending/')) {
-        // Special case for pending uploads (before product ID exists)
-        const pendingPathRegex = /^\/api\/files\/temp\/pending\/(.*)/;
-        const pendingMatch = url.match(pendingPathRegex);
-        
-        if (pendingMatch && pendingMatch[1]) {
-          const filename = pendingMatch[1];
-          // Only encode if not already encoded
-          const encodedFilename = filename.includes('%') ? filename : encodeURIComponent(filename);
-          return `/api/files/temp/pending/${encodedFilename}`;
-        }
-        
-        // Fallback for other formats - handle timestamp_randomstring_filename pattern
-        const parts = url.split('/');
-        const lastPart = parts[parts.length - 1];
-        
-        // Check if this is the filename part (should contain timestamp prefix)
-        if (lastPart && lastPart.includes('_')) {
-          // We need to encode just the filename portion
-          const prefix = parts.slice(0, parts.length - 1).join('/');
-          const encodedLastPart = encodeURIComponent(lastPart);
-          return `${prefix}/${encodedLastPart}`;
-        }
-      }
-      
-      // Standard API files URL handling
-      // Reconstruct with proper encoding for segments after /api/files/
-      if (urlParts.length >= 3 && urlParts[1] === 'api' && urlParts[2] === 'files') {
-        const apiBase = `/${urlParts[1]}/${urlParts[2]}`;
-        const remainingParts = urlParts.slice(3);
-        const encodedParts = remainingParts.map(part => encodeURIComponent(part));
-        return `${apiBase}/${encodedParts.join('/')}`;
-      }
-    } catch (error) {
-      // Silent error, return the original URL in case of any issues
-      return url;
-    }
+  // If it's just an object key without /api/files prefix
+  if (!url.startsWith('/api/files/') && !url.startsWith('/')) {
+    return validateImageUrl(`/api/files/${url}`);
   }
   
-  // For other relative paths, encode all segments
-  try {
-    const segments = url.split('/').filter(s => s.length > 0);
-    const encodedSegments = segments.map(segment => {
-      // Don't re-encode segments that already have encoded characters
-      return segment.includes('%') ? segment : encodeURIComponent(segment);
-    });
-    return `/${encodedSegments.join('/')}`;
-  } catch (error) {
-    return url;
+  // If it already has the /api/files prefix or is a relative path
+  return validateImageUrl(url);
+};
+
+/**
+ * Get the file path part from an object key
+ */
+export const getPathFromObjectKey = (objectKey: string): string => {
+  // Remove any API prefix if present
+  if (objectKey.startsWith('/api/files/')) {
+    return objectKey.substring('/api/files/'.length);
   }
-}
+  
+  return objectKey;
+};
 
 /**
- * Get file extension from filename
+ * Creates a permanent object key for product images
  */
-export function getFileExtension(filename: string): string {
-  return filename.split('.').pop()?.toLowerCase() || '';
-}
+export const createProductImageKey = (
+  productId: number | string,
+  filename: string,
+  index: number = 0
+): string => {
+  const sanitizedFilename = filename.replace(/[^a-z0-9.-]/gi, '-').toLowerCase();
+  return `products/${productId}/${index}_${sanitizedFilename}`;
+};
 
 /**
- * Check if a file is an image based on its extension
+ * Creates a temporary object key with a timestamp
  */
-export function isImageFile(filename: string): boolean {
-  const ext = getFileExtension(filename);
-  return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext);
-}
-
-/**
- * Generate a timestamp-based filename to prevent collisions
- */
-export function generateUniqueFilename(originalFilename: string): string {
+export const createTempImageKey = (filename: string): string => {
   const timestamp = Date.now();
-  const randomPart = Math.floor(Math.random() * 1000000);
-  const ext = getFileExtension(originalFilename);
-  const sanitizedName = originalFilename
-    .split('.')[0]
-    .replace(/[^a-zA-Z0-9]/g, '-')
-    .substring(0, 20);
+  const randomString = Math.random().toString(36).substring(2, 10);
+  const sanitizedFilename = filename.replace(/[^a-z0-9.-]/gi, '-').toLowerCase();
+  return `temp/pending/${timestamp}_${randomString}_${sanitizedFilename}`;
+};
+
+/**
+ * Extracts the original filename from an object key
+ */
+export const getOriginalFilenameFromKey = (objectKey: string): string => {
+  // Get the last part of the path
+  const parts = objectKey.split('/');
+  const filename = parts[parts.length - 1];
   
-  return `${timestamp}-${randomPart}-${sanitizedName}.${ext}`;
-}
+  // If it's a temp file with timestamp and random string, remove those
+  if (objectKey.includes('temp/pending/')) {
+    const filenameWithoutPrefix = filename.split('_').slice(2).join('_');
+    return filenameWithoutPrefix;
+  }
+  
+  // If it's a product file with index, remove the index
+  if (objectKey.includes('products/')) {
+    const filenameWithoutIndex = filename.split('_').slice(1).join('_');
+    return filenameWithoutIndex;
+  }
+  
+  return filename;
+};
 
 /**
- * Validate file size
- * @param file File to validate
- * @param maxSizeMB Maximum size in MB
+ * Moves temporary files to permanent storage for a product
  */
-export function validateFileSize(file: File, maxSizeMB: number = 5): boolean {
-  const maxSizeBytes = maxSizeMB * 1024 * 1024;
-  return file.size <= maxSizeBytes;
-}
+export const moveTempFilesToProduct = async (
+  productId: number | string,
+  tempObjectKeys: string[]
+): Promise<{ success: boolean; data: any }> => {
+  try {
+    const response = await fetch(`/api/move-temp-files/${productId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ objectKeys: tempObjectKeys })
+    });
 
-/**
- * Cleanup function that should be called when component unmounts
- * to prevent memory leaks from local object URLs
- */
-export function cleanupLocalImageUrls(images: UploadedImage[]): void {
-  images.forEach(image => {
-    if (image.url && image.url.startsWith('blob:')) {
-      revokeLocalImageUrl(image.url);
+    if (!response.ok) {
+      throw new Error(`Failed to move files: ${response.status} ${response.statusText}`);
     }
-  });
-}
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error moving temporary files:', error);
+    throw error;
+  }
+};
+
+/**
+ * Deletes files from the Object Store
+ */
+export const deleteFiles = async (
+  objectKeys: string[]
+): Promise<{ success: boolean; data: any }> => {
+  try {
+    const response = await fetch('/api/delete-files', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ objectKeys })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to delete files: ${response.status} ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error deleting files:', error);
+    throw error;
+  }
+};
+
+/**
+ * Creates a revocable object URL for a file
+ * Returns the URL and a cleanup function
+ */
+export const createObjectURL = (file: File | Blob): { url: string; revoke: () => void } => {
+  const url = URL.createObjectURL(file);
+  
+  return {
+    url,
+    revoke: () => URL.revokeObjectURL(url)
+  };
+};
+
+/**
+ * Gets an absolute URL for a file in the Object Store
+ */
+export const getAbsoluteFileUrl = (objectKey: string): string => {
+  // First ensure the object key has the /api/files prefix
+  const objectPath = objectKey.startsWith('/api/files/')
+    ? objectKey
+    : `/api/files/${objectKey}`;
+  
+  // Then get the absolute URL by combining with the current host
+  const baseUrl = window.location.origin;
+  const absolutePath = objectPath.startsWith('/')
+    ? objectPath
+    : `/${objectPath}`;
+  
+  return `${baseUrl}${absolutePath}`;
+};
+
+/**
+ * Check if an image exists and is accessible
+ */
+export const checkImageExists = async (url: string): Promise<boolean> => {
+  try {
+    const response = await fetch(url, { method: 'HEAD' });
+    return response.ok;
+  } catch (error) {
+    console.error('Error checking image existence:', error);
+    return false;
+  }
+};

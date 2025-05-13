@@ -1,300 +1,364 @@
 /**
- * File Upload Hook
+ * useFileUpload Hook
  * 
- * Custom React hook for handling file uploads, providing a consistent
- * interface for file validation, upload, and progress tracking.
- * Uses the enhanced file utility functions for validation and sanitization.
+ * A custom hook for managing file uploads in the application.
+ * Provides functionality for selecting, validating, previewing, and uploading files.
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { formatFileSize, hasAllowedExtension, isImageFile } from '@/utils/file-utils';
+import { createObjectURL } from '@/utils/file-manager';
 import { useToast } from '@/hooks/use-toast';
-import {
-  sanitizeFilename,
-  hasAllowedExtension,
-  formatFileSize,
-  generateUniqueFilename
-} from '@/utils/file-utils';
 
-interface FileUploadOptions {
-  endpoint: string;
-  maxFileSize?: number; // in MB
-  allowedExtensions?: string[];
-  additionalData?: Record<string, string>;
-  autoUpload?: boolean;
-  multiple?: boolean;
-  onSuccess?: (response: any) => void;
-  onError?: (error: Error) => void;
+type FileUploadErrors = {
+  [key: string]: string;
+};
+
+interface FilePreview {
+  file: File;
+  preview: string;
+  objectKey?: string;
+  isMain: boolean;
+  order: number;
+  metadata?: Record<string, any>;
 }
 
-interface FileUploadResult {
-  isUploading: boolean;
-  progress: number;
-  error: string | null;
-  selectedFiles: File[];
-  results: any[];
-  selectFiles: (files: FileList | null) => void;
-  uploadFiles: () => Promise<void>;
-  clearFiles: () => void;
-  validateFiles: (files: FileList) => {
-    validFiles: File[];
-    invalidFiles: { file: File; reason: string }[];
-  };
+interface FileUploadOptions {
+  maxFiles?: number;
+  maxSizeMB?: number;
+  allowedExtensions?: string[];
+  endpoint: string;
+  additionalData?: Record<string, any>;
+  onSuccess?: (uploadedFiles: FileUploadResult[]) => void;
+  onError?: (error: any) => void;
+}
+
+export interface FileUploadResult {
+  url: string;
+  objectKey: string;
+  isMain: boolean;
+  order: number;
+  metadata?: Record<string, any>;
 }
 
 /**
- * Custom hook for handling file uploads with validation and progress tracking
+ * Custom hook for managing file uploads with previews and validation
  */
-export function useFileUpload(options: FileUploadOptions): FileUploadResult {
+export const useFileUpload = ({
+  maxFiles = 5,
+  maxSizeMB = 5,
+  allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'],
+  endpoint,
+  additionalData = {},
+  onSuccess,
+  onError
+}: FileUploadOptions) => {
+  const [selectedFiles, setSelectedFiles] = useState<FilePreview[]>([]);
+  const [results, setResults] = useState<FileUploadResult[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [results, setResults] = useState<any[]>([]);
   const { toast } = useToast();
-
-  const {
-    endpoint,
-    maxFileSize = 5, // Default 5MB
-    allowedExtensions = [],
-    additionalData = {},
-    autoUpload = false,
-    multiple = false,
-    onSuccess,
-    onError
-  } = options;
-
-  /**
-   * Validates files against size and extension constraints
-   */
-  const validateFiles = useCallback(
-    (files: FileList) => {
-      const validFiles: File[] = [];
-      const invalidFiles: { file: File; reason: string }[] = [];
-
-      Array.from(files).forEach((file) => {
-        // Check file size
-        if (file.size > maxFileSize * 1024 * 1024) {
-          invalidFiles.push({
-            file,
-            reason: `File exceeds maximum size (${formatFileSize(file.size)} > ${maxFileSize}MB)`
-          });
-          return;
+  
+  // Clean up object URLs when component unmounts
+  useEffect(() => {
+    return () => {
+      selectedFiles.forEach(preview => {
+        if (preview.preview.startsWith('blob:')) {
+          URL.revokeObjectURL(preview.preview);
         }
-
-        // Check file extension if restrictions are provided
-        if (allowedExtensions.length > 0) {
-          const sanitizedName = sanitizeFilename(file.name);
-          if (!hasAllowedExtension(sanitizedName, allowedExtensions)) {
-            invalidFiles.push({
-              file,
-              reason: `File type not allowed (must be one of: ${allowedExtensions.join(', ')})`
-            });
-            return;
-          }
-        }
-
-        validFiles.push(file);
       });
-
-      return { validFiles, invalidFiles };
-    },
-    [allowedExtensions, maxFileSize]
-  );
-
+    };
+  }, [selectedFiles]);
+  
   /**
-   * Handles file selection and optionally triggers upload
+   * Validate files before adding them to the selection
    */
-  const selectFiles = useCallback(
-    (files: FileList | null) => {
-      setError(null);
-
-      if (!files || files.length === 0) {
+  const validateFiles = useCallback((files: File[]): { valid: File[], errors: FileUploadErrors } => {
+    const validFiles: File[] = [];
+    const errors: FileUploadErrors = {};
+    
+    files.forEach(file => {
+      // Check file size
+      if (file.size > maxSizeMB * 1024 * 1024) {
+        errors[file.name] = `File size exceeds ${maxSizeMB}MB limit. This file is ${formatFileSize(file.size)}.`;
         return;
       }
-
-      const { validFiles, invalidFiles } = validateFiles(files);
-
-      // Handle invalid files by showing an error message
-      if (invalidFiles.length > 0) {
-        const errorMessages = invalidFiles.map(
-          ({ file, reason }) => `${file.name}: ${reason}`
-        );
-
+      
+      // Check file extension
+      if (!hasAllowedExtension(file.name, allowedExtensions)) {
+        errors[file.name] = `File type not allowed. Allowed types: ${allowedExtensions.join(', ')}`;
+        return;
+      }
+      
+      validFiles.push(file);
+    });
+    
+    return { valid: validFiles, errors };
+  }, [maxSizeMB, allowedExtensions]);
+  
+  /**
+   * Add files to the selection
+   */
+  const addFiles = useCallback((files: File[]) => {
+    if (!files.length) return;
+    
+    const { valid, errors } = validateFiles(files);
+    
+    // Show errors if any
+    if (Object.keys(errors).length > 0) {
+      Object.values(errors).forEach(errorMsg => {
         toast({
-          title: 'Some files could not be uploaded',
-          description: (
-            <div className="mt-2">
-              <p>The following files couldn't be uploaded:</p>
-              <ul className="list-disc pl-4 mt-1">
-                {errorMessages.map((msg, i) => (
-                  <li key={i} className="text-sm">{msg}</li>
-                ))}
-              </ul>
-            </div>
-          ),
-          variant: 'destructive',
+          title: 'File validation error',
+          description: errorMsg,
+          variant: 'destructive'
         });
-      }
-
-      // Update selected files state
-      setSelectedFiles((prev) =>
-        multiple ? [...prev, ...validFiles] : validFiles.slice(0, 1)
-      );
-
-      // Auto-upload if enabled
-      if (autoUpload && validFiles.length > 0) {
-        const filesToUpload = multiple 
-          ? [...selectedFiles, ...validFiles] 
-          : validFiles.slice(0, 1);
-          
-        uploadFilesToServer(filesToUpload);
-      }
-    },
-    [
-      multiple,
-      autoUpload,
-      validateFiles,
-      selectedFiles,
-      toast
-    ]
-  );
-
+      });
+    }
+    
+    // Check if adding these files would exceed the maximum
+    if (selectedFiles.length + valid.length > maxFiles) {
+      toast({
+        title: 'Too many files',
+        description: `You can upload a maximum of ${maxFiles} files.`,
+        variant: 'destructive'
+      });
+      
+      // Only add up to the maximum
+      const remainingSlots = Math.max(0, maxFiles - selectedFiles.length);
+      valid.splice(remainingSlots);
+    }
+    
+    // Add valid files to the selection
+    setSelectedFiles(prev => [
+      ...prev,
+      ...valid.map((file, index) => ({
+        file,
+        preview: createObjectURL(file).url,
+        isMain: prev.length === 0 && index === 0, // First file is main by default
+        order: prev.length + index,
+        metadata: {
+          originalname: file.name
+        }
+      }))
+    ]);
+  }, [selectedFiles, validateFiles, maxFiles, toast]);
+  
   /**
-   * Core upload function that sends files to the server
+   * Remove a file from the selection
    */
-  const uploadFilesToServer = useCallback(
-    async (filesToUpload: File[]) => {
-      if (filesToUpload.length === 0) {
-        setError('No files selected for upload');
-        return;
+  const removeFile = useCallback((index: number) => {
+    setSelectedFiles(prev => {
+      const newFiles = [...prev];
+      
+      // If removing the main image, set the first remaining image as main
+      if (newFiles[index]?.isMain && newFiles.length > 1) {
+        const nextIndex = index === 0 ? 1 : 0;
+        newFiles[nextIndex].isMain = true;
       }
-
-      setIsUploading(true);
-      setProgress(0);
-      setError(null);
-
-      try {
+      
+      // Clean up the object URL
+      if (newFiles[index]?.preview.startsWith('blob:')) {
+        URL.revokeObjectURL(newFiles[index].preview);
+      }
+      
+      // Remove the file
+      newFiles.splice(index, 1);
+      
+      // Update order numbers
+      newFiles.forEach((file, i) => {
+        file.order = i;
+      });
+      
+      return newFiles;
+    });
+  }, []);
+  
+  /**
+   * Set a file as the main image
+   */
+  const setMainImage = useCallback((index: number) => {
+    setSelectedFiles(prev => {
+      const newFiles = [...prev];
+      
+      // Update isMain status for all files
+      newFiles.forEach((file, i) => {
+        file.isMain = i === index;
+      });
+      
+      return newFiles;
+    });
+  }, []);
+  
+  /**
+   * Reorder the files
+   */
+  const reorderImages = useCallback((sourceIndex: number, destinationIndex: number) => {
+    setSelectedFiles(prev => {
+      const newFiles = [...prev];
+      const [removed] = newFiles.splice(sourceIndex, 1);
+      newFiles.splice(destinationIndex, 0, removed);
+      
+      // Update order numbers
+      newFiles.forEach((file, i) => {
+        file.order = i;
+      });
+      
+      return newFiles;
+    });
+  }, []);
+  
+  /**
+   * Upload all selected files
+   */
+  const uploadAllFiles = useCallback(async (): Promise<FileUploadResult[]> => {
+    if (selectedFiles.length === 0) {
+      setError('No files selected for upload');
+      return [];
+    }
+    
+    setIsUploading(true);
+    setProgress(0);
+    setError(null);
+    
+    try {
+      const uploadPromises = selectedFiles.map(async (filePreview, index) => {
         const formData = new FormData();
-
-        // Append files to form data
-        filesToUpload.forEach((file) => {
-          // Generate a unique filename to prevent collisions
-          const uniqueFilename = generateUniqueFilename(file.name);
-          
-          // Create a new File object with the unique name
-          const renamedFile = new File([file], uniqueFilename, { type: file.type });
-          
-          formData.append('files', renamedFile);
-        });
-
-        // Append any additional data
+        formData.append('file', filePreview.file);
+        formData.append('isMain', filePreview.isMain ? 'true' : 'false');
+        formData.append('order', filePreview.order.toString());
+        
+        // Add any additional data to the form
         Object.entries(additionalData).forEach(([key, value]) => {
-          formData.append(key, value);
+          formData.append(key, value?.toString() || '');
         });
-
-        // Track upload progress if supported
-        const xhr = new XMLHttpRequest();
-        xhr.open('POST', endpoint);
-
-        xhr.upload.addEventListener('progress', (event) => {
-          if (event.lengthComputable) {
-            const percentComplete = Math.round((event.loaded / event.total) * 100);
-            setProgress(percentComplete);
-          }
-        });
-
-        // Promise wrapper for the XHR request
-        const uploadPromise = new Promise<any>((resolve, reject) => {
-          xhr.onload = () => {
-            if (xhr.status >= 200 && xhr.status < 300) {
-              try {
-                const response = JSON.parse(xhr.responseText);
-                resolve(response);
-              } catch (e) {
-                reject(new Error('Invalid response format'));
-              }
-            } else {
-              let errorMessage = `Upload failed with status ${xhr.status}`;
-              try {
-                const errorResponse = JSON.parse(xhr.responseText);
-                errorMessage = errorResponse.error?.message || errorMessage;
-              } catch (e) {
-                // Parsing error, use default message
-              }
-              reject(new Error(errorMessage));
-            }
-          };
-
-          xhr.onerror = () => {
-            reject(new Error('Network error during upload'));
-          };
-
-          xhr.onabort = () => {
-            reject(new Error('Upload aborted'));
-          };
-        });
-
-        // Send the request
-        xhr.send(formData);
-
-        // Wait for completion
-        const response = await uploadPromise;
-
-        // Set results and call success callback
-        setResults((prev) => [...prev, ...response.data]);
-        if (onSuccess) {
-          onSuccess(response);
-        }
-
-        return response;
-      } catch (error: any) {
-        const errorMessage = error?.message || 'Unknown upload error';
-        setError(errorMessage);
         
-        if (onError) {
-          onError(error instanceof Error ? error : new Error(errorMessage));
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          body: formData
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Upload failed: ${response.status} ${response.statusText}`);
         }
         
-        toast({
-          title: 'Upload Failed',
-          description: errorMessage,
-          variant: 'destructive',
-        });
+        const result = await response.json();
         
-        console.error('File upload error:', error);
-      } finally {
-        setIsUploading(false);
+        // Update progress
+        setProgress(prev => prev + (100 / selectedFiles.length));
+        
+        return result.data;
+      });
+      
+      // Wait for all uploads to complete
+      const uploadResults = await Promise.all(uploadPromises);
+      setResults(uploadResults);
+      
+      // Call success callback if provided
+      if (onSuccess) {
+        onSuccess(uploadResults);
       }
-    },
-    [endpoint, additionalData, onSuccess, onError, toast]
-  );
-
+      
+      return uploadResults;
+    } catch (err: any) {
+      setError(err.message || 'Failed to upload files');
+      
+      // Call error callback if provided
+      if (onError) {
+        onError(err);
+      }
+      
+      toast({
+        title: 'Upload failed',
+        description: err.message || 'Failed to upload files',
+        variant: 'destructive'
+      });
+      
+      return [];
+    } finally {
+      setIsUploading(false);
+    }
+  }, [selectedFiles, endpoint, additionalData, onSuccess, onError, toast]);
+  
   /**
-   * Public method to trigger file upload
+   * Upload a single file
    */
-  const uploadFiles = useCallback(async () => {
-    await uploadFilesToServer(selectedFiles);
-  }, [selectedFiles, uploadFilesToServer]);
-
+  const uploadFile = useCallback(async (file: File, isMain: boolean = false, orderPosition: number = 0): Promise<FileUploadResult | null> => {
+    setIsUploading(true);
+    setError(null);
+    
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('isMain', isMain ? 'true' : 'false');
+      formData.append('order', orderPosition.toString());
+      
+      // Add any additional data to the form
+      Object.entries(additionalData).forEach(([key, value]) => {
+        formData.append(key, value?.toString() || '');
+      });
+      
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Upload failed: ${response.status} ${response.statusText}`);
+      }
+      
+      const result = await response.json();
+      return result.data;
+    } catch (err: any) {
+      setError(err.message || 'Failed to upload file');
+      
+      if (onError) {
+        onError(err);
+      }
+      
+      toast({
+        title: 'Upload failed',
+        description: err.message || 'Failed to upload file',
+        variant: 'destructive'
+      });
+      
+      return null;
+    } finally {
+      setIsUploading(false);
+    }
+  }, [endpoint, additionalData, onError, toast]);
+  
   /**
-   * Clears all selected files
+   * Clear all selected files
    */
   const clearFiles = useCallback(() => {
+    selectedFiles.forEach(preview => {
+      if (preview.preview.startsWith('blob:')) {
+        URL.revokeObjectURL(preview.preview);
+      }
+    });
+    
     setSelectedFiles([]);
     setResults([]);
     setError(null);
-    setProgress(0);
-  }, []);
-
+  }, [selectedFiles]);
+  
   return {
+    addFiles,
+    removeFile,
+    setMainImage,
+    reorderImages,
+    uploadAllFiles,
+    uploadFile,
+    clearFiles,
+    selectedFiles,
     isUploading,
     progress,
     error,
-    selectedFiles,
     results,
-    selectFiles,
-    uploadFiles,
-    clearFiles,
-    validateFiles
+    images: selectedFiles.map(f => f.file),
+    previews: selectedFiles.map(f => f.preview),
+    mainImage: selectedFiles.find(f => f.isMain)?.file || null,
+    mainPreview: selectedFiles.find(f => f.isMain)?.preview || '',
   };
-}
+};

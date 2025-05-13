@@ -1,22 +1,18 @@
 /**
- * Basic Product Information Step
+ * Basic Info Step Component for Product Wizard
  * 
- * This component implements Step 1 of the product wizard,
- * collecting basic information like title, description, category, and pricing.
- * Includes contextual help tooltips for user guidance.
+ * This component handles the first step of the product creation process,
+ * focusing on the essential product information.
  */
 
-import React, { useEffect } from 'react';
-import { useProductWizard } from '../context';
-import { WizardActionType } from '../types';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Loader2 } from 'lucide-react';
-import slugify from 'slugify';
-import { ContextualHelp, ExtendedHelpCard } from '../contextual-help';
-
-// Form components no longer needed since we're using basic HTML
+import { useProductWizardContext } from '../context';
+import { ContextualHelp } from '../contextual-help';
+import { ArrowRightCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -24,416 +20,381 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Textarea } from '@/components/ui/textarea';
+import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
 
-interface BasicInfoStepProps {
-  className?: string;
-}
-
-export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ className }) => {
-  const { state, dispatch } = useProductWizard();
-  const { productData, catalogId } = state;
+export const BasicInfoStep = () => {
+  const { 
+    state, 
+    updateState, 
+    goToNextStep,
+    validateStep,
+    errors,
+    catalogContext,
+    isCatalogContextLoading
+  } = useProductWizardContext();
   
-  // Fetch categories
-  const { data: categoriesResponse, isLoading: isCategoriesLoading } = useQuery({
-    queryKey: ['/api/categories'],
+  // Fetch categories for dropdown
+  const { data: categories } = useQuery({
+    queryKey: ['categories'],
     queryFn: async () => {
-      const res = await fetch('/api/categories');
-      if (!res.ok) throw new Error('Failed to fetch categories');
-      return res.json();
-    }
+      const response = await fetch('/api/categories');
+      if (!response.ok) {
+        throw new Error('Failed to fetch categories');
+      }
+      const data = await response.json();
+      return data.data;
+    },
   });
-  
-  const categories = categoriesResponse?.data || [];
-  
-  // Always auto-generate slug when name changes
-  useEffect(() => {
-    if (productData.name) {
-      // Generate a base slug from the product name
-      let generatedSlug = slugify(productData.name, {
-        lower: true,
-        strict: true
-      });
-      
-      // Ensure minimum length and add timestamp for uniqueness if needed
-      if (generatedSlug.length < 3) {
-        generatedSlug = `product-${Date.now()}`;
-      } else {
-        // Add random suffix for uniqueness
-        const timestamp = Date.now().toString(36).slice(-4);
-        generatedSlug = `${generatedSlug}-${timestamp}`;
-      }
-      
-      // Limit length to avoid excessively long slugs
-      if (generatedSlug.length > 50) {
-        generatedSlug = generatedSlug.substring(0, 50);
-      }
-      
-      handleFieldChange('slug', generatedSlug);
-    } else {
-      // If no name, generate a random slug
-      const timestamp = Date.now();
-      handleFieldChange('slug', `product-${timestamp}`);
-    }
-  }, [productData.name]);
 
-  // Enhanced field change handler with auto-calculation and data filling
-  const handleFieldChange = (field: string, value: any) => {
-    // For numeric fields, convert the value
-    if (['price', 'costPrice', 'salePrice', 'discount', 'minimumPrice'].includes(field)) {
-      value = value === '' ? 0 : Number(value);
+  // Calculate regular price based on cost price and markup
+  const calculateRegularPrice = (costPrice: number, markup: number) => {
+    if (costPrice > 0 && markup > 0) {
+      // Calculate price with markup and round to 2 decimal places
+      return Math.round((costPrice * (1 + markup / 100)) * 100) / 100;
     }
-    
-    // Create payload with the changed field
-    const payload: Record<string, any> = { [field]: value };
-    
-    // Auto-calculate related fields
-    if (field === 'price') {
-      // If regular price changes:
-      
-      // 1. If minimum price is not set, suggest minimum price at 90% of regular price
-      if (!productData.minimumPrice) {
-        payload.minimumPrice = Math.round((value * 0.9) * 100) / 100; // 90% of price
-      }
-      
-      // 2. Update discount percentage if sale price exists
-      if (productData.salePrice && productData.salePrice > 0 && value > 0) {
-        const discountPercent = Math.round(((value - productData.salePrice) / value) * 100);
-        if (discountPercent > 0) {
-          payload.discount = discountPercent;
-        }
-      }
-    } 
-    else if (field === 'salePrice') {
-      // If sale price changes and regular price exists, calculate discount
-      if (productData.price && productData.price > 0 && value > 0) {
-        const discountPercent = Math.round(((productData.price - value) / productData.price) * 100);
-        if (discountPercent > 0) {
-          payload.discount = discountPercent;
-        }
-      }
-    }
-    else if (field === 'discount') {
-      // If discount changes and regular price exists, calculate sale price
-      if (productData.price && productData.price > 0 && value > 0) {
-        const calculatedSalePrice = Math.round((productData.price * (100 - value) / 100) * 100) / 100;
-        payload.salePrice = calculatedSalePrice;
-      }
-    }
-    
-    dispatch({
-      type: WizardActionType.UPDATE_PRODUCT_DATA,
-      payload: payload
-    });
+    return 0;
   };
-  
-  if (isCategoriesLoading) {
-    return (
-      <div className="flex items-center justify-center h-60">
-        <Loader2 className="w-6 h-6 animate-spin text-primary" />
-        <span className="ml-2">Loading categories...</span>
-      </div>
-    );
-  }
-  
-  return (
-    <div className={className}>
-      <div className="mb-4">
-        <h2 className="text-xl font-semibold mb-2">Basic Product Information</h2>
-        <p className="text-muted-foreground">
-          Enter the essential details about your product to get started.
-        </p>
-      </div>
+
+  // Common markup percentages for quick selection
+  const markupOptions = [20, 30, 40, 50, 60, 70, 80, 100];
+
+  // Handle form submission to go to next step
+  const handleContinue = () => {
+    if (validateStep('basic-info')) {
+      goToNextStep();
+    }
+  };
+
+  // Handle custom markup input
+  const handleMarkupChange = (value: string) => {
+    const markup = parseFloat(value);
+    if (!isNaN(markup)) {
+      updateState({ markupPercentage: markup });
       
+      // Update regular price if cost price exists
+      if (state.costPrice > 0) {
+        const calculatedPrice = calculateRegularPrice(state.costPrice, markup);
+        updateState({ regularPrice: calculatedPrice });
+      }
+    }
+  };
+
+  // Handle cost price change
+  const handleCostPriceChange = (value: string) => {
+    const costPrice = parseFloat(value);
+    if (!isNaN(costPrice)) {
+      updateState({ costPrice });
+      
+      // Update regular price based on markup
+      if (state.markupPercentage > 0) {
+        const calculatedPrice = calculateRegularPrice(costPrice, state.markupPercentage);
+        updateState({ regularPrice: calculatedPrice });
+      }
+    }
+  };
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <h2 className="text-2xl font-bold mb-2">Basic Product Information</h2>
+        <p className="text-muted-foreground">
+          Enter the core details about your product. Fields marked with an asterisk (*) are required.
+        </p>
+        {catalogContext && (
+          <div className="mt-2">
+            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+              From Catalog: {state.catalogName || 'Loading...'}
+            </Badge>
+            {state.supplierName && (
+              <Badge variant="outline" className="ml-2 bg-blue-50 text-blue-700 border-blue-200">
+                Supplier: {state.supplierName}
+              </Badge>
+            )}
+          </div>
+        )}
+      </div>
+
       <div className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Core Information</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Product Name */}
+        {/* Product name and slug */}
+        <div className="grid gap-6 sm:grid-cols-2">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Label htmlFor="product-name" className="required">Product Name</Label>
+              <ContextualHelp fieldId="product-name" />
+            </div>
+            <Input
+              id="product-name"
+              value={state.name}
+              onChange={(e) => updateState({ name: e.target.value })}
+              placeholder="Enter product name"
+              className={errors.name ? 'border-red-500' : ''}
+            />
+            {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
+          </div>
+          
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Label htmlFor="product-slug" className="required">Product Slug</Label>
+              <ContextualHelp fieldId="product-slug" />
+            </div>
+            <Input
+              id="product-slug"
+              value={state.slug}
+              onChange={(e) => updateState({ slug: e.target.value })}
+              placeholder="product-url-slug"
+              className={errors.slug ? 'border-red-500' : ''}
+            />
+            {errors.slug && <p className="text-sm text-red-500">{errors.slug}</p>}
+            <p className="text-xs text-muted-foreground">
+              Auto-generated from product name, but can be edited
+            </p>
+          </div>
+        </div>
+        
+        {/* Product description */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Label htmlFor="product-description">Product Description</Label>
+            <ContextualHelp fieldId="product-description" />
+          </div>
+          <Textarea
+            id="product-description"
+            value={state.description}
+            onChange={(e) => updateState({ description: e.target.value })}
+            placeholder="Describe your product with details that help customers make purchasing decisions"
+            className="min-h-[120px]"
+          />
+        </div>
+        
+        {/* Pricing section */}
+        <div>
+          <h3 className="text-lg font-medium mb-4">Pricing</h3>
+          
+          <div className="grid gap-6 sm:grid-cols-2">
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <label className="text-sm font-medium">Product Name</label>
-                <ContextualHelp fieldId="product-name" />
+                <Label htmlFor="cost-price" className="required">Cost Price</Label>
+                <ContextualHelp fieldId="cost-price" />
               </div>
-              <Input
-                placeholder="Enter product name"
-                value={productData.name}
-                onChange={(e) => handleFieldChange('name', e.target.value)}
-              />
-              <p className="text-sm text-muted-foreground">
-                A clear, descriptive name for your product
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2">R</span>
+                <Input
+                  id="cost-price"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={state.costPrice || ''}
+                  onChange={(e) => handleCostPriceChange(e.target.value)}
+                  placeholder="0.00"
+                  className={`pl-8 ${errors.costPrice ? 'border-red-500' : ''}`}
+                />
+              </div>
+              {errors.costPrice && <p className="text-sm text-red-500">{errors.costPrice}</p>}
+            </div>
+            
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="markup-percentage" className="required">Markup Percentage</Label>
+                <ContextualHelp fieldId="markup-percentage" />
+              </div>
+              <div className="relative">
+                <Input
+                  id="markup-percentage"
+                  type="number"
+                  step="1"
+                  min="0"
+                  value={state.markupPercentage || ''}
+                  onChange={(e) => handleMarkupChange(e.target.value)}
+                  placeholder="40"
+                  className="pr-8"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2">%</span>
+              </div>
+              
+              <div className="flex flex-wrap gap-2 mt-2">
+                {markupOptions.map((markup) => (
+                  <Button
+                    key={markup}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className={state.markupPercentage === markup ? 'bg-primary/10' : ''}
+                    onClick={() => handleMarkupChange(markup.toString())}
+                  >
+                    {markup}%
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </div>
+          
+          <div className="grid gap-6 sm:grid-cols-2 mt-6">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="regular-price" className="required">Regular Price</Label>
+                <ContextualHelp fieldId="price-info" />
+              </div>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2">R</span>
+                <Input
+                  id="regular-price"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={state.regularPrice || ''}
+                  onChange={(e) => updateState({ regularPrice: parseFloat(e.target.value) })}
+                  placeholder="0.00"
+                  className={`pl-8 ${errors.regularPrice ? 'border-red-500' : ''}`}
+                />
+              </div>
+              {errors.regularPrice && <p className="text-sm text-red-500">{errors.regularPrice}</p>}
+              <p className="text-xs text-muted-foreground">
+                Auto-calculated from cost price and markup
               </p>
             </div>
             
-            {/* Product Slug - Read-only field */}
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <label className="text-sm font-medium">Product Slug</label>
-                <ContextualHelp fieldId="product-slug" />
+                <Label htmlFor="sale-price">Sale Price (Optional)</Label>
+                <ContextualHelp fieldId="sale-price" />
+              </div>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2">R</span>
+                <Input
+                  id="sale-price"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={state.salePrice || ''}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    updateState({ salePrice: value ? parseFloat(value) : undefined });
+                  }}
+                  placeholder="0.00"
+                  className={`pl-8 ${errors.salePrice ? 'border-red-500' : ''}`}
+                />
+              </div>
+              {errors.salePrice && <p className="text-sm text-red-500">{errors.salePrice}</p>}
+            </div>
+          </div>
+        </div>
+        
+        {/* Inventory section */}
+        <div>
+          <h3 className="text-lg font-medium mb-4">Inventory</h3>
+          
+          <div className="grid gap-6 sm:grid-cols-3">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="sku">SKU (Stock Keeping Unit)</Label>
+                <ContextualHelp fieldId="sku" />
               </div>
               <Input
-                placeholder="product-url-slug"
-                value={productData.slug}
-                readOnly
-                disabled
-                className="bg-gray-50 text-gray-500 cursor-not-allowed"
+                id="sku"
+                value={state.sku}
+                onChange={(e) => updateState({ sku: e.target.value })}
+                placeholder="SKU123"
               />
-              <p className="text-sm text-muted-foreground">
-                Used for the product URL (automatically generated from name for uniqueness)
-              </p>
-              <ExtendedHelpCard title="About Product Slugs" className="mt-2">
-                <p className="mb-2">Product slugs are automatically generated from the product name for uniqueness and SEO best practices.</p>
-                <ul className="list-disc pl-4 space-y-1">
-                  <li>Includes a unique identifier to prevent conflicts</li>
-                  <li>Special characters are automatically removed</li>
-                  <li>No manual editing needed - changes when product name changes</li>
-                </ul>
-              </ExtendedHelpCard>
             </div>
             
-            {/* Category Selection */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">Category</label>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="stock-level">Stock Level</Label>
+                <ContextualHelp fieldId="stock-level" />
+              </div>
+              <Input
+                id="stock-level"
+                type="number"
+                min="0"
+                step="1"
+                value={state.stockLevel || ''}
+                onChange={(e) => updateState({ stockLevel: parseInt(e.target.value) || 0 })}
+                placeholder="0"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="min-order-qty">Minimum Order Quantity</Label>
+                <ContextualHelp fieldId="minimum-order" />
+              </div>
+              <Input
+                id="min-order-qty"
+                type="number"
+                min="1"
+                step="1"
+                value={state.minOrderQty || ''}
+                onChange={(e) => updateState({ minOrderQty: parseInt(e.target.value) || 1 })}
+                placeholder="1"
+              />
+            </div>
+          </div>
+        </div>
+        
+        {/* Categorization section */}
+        <div>
+          <h3 className="text-lg font-medium mb-4">Categorization</h3>
+          
+          <div className="grid gap-6 sm:grid-cols-2">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="category">Product Category</Label>
+                <ContextualHelp fieldId="category" />
+              </div>
               <Select
-                value={productData.categoryId?.toString() || ''}
-                onValueChange={(value) => handleFieldChange('categoryId', parseInt(value))}
+                value={state.categoryId?.toString() || ''}
+                onValueChange={(value) => {
+                  const categoryId = parseInt(value);
+                  const category = categories?.find(c => c.id === categoryId);
+                  updateState({ 
+                    categoryId,
+                    categoryName: category?.name || ''
+                  });
+                }}
               >
-                <SelectTrigger>
+                <SelectTrigger id="category">
                   <SelectValue placeholder="Select a category" />
                 </SelectTrigger>
                 <SelectContent>
-                  {categories.map((category: any) => (
+                  {categories?.map((category) => (
                     <SelectItem key={category.id} value={category.id.toString()}>
                       {category.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-sm text-muted-foreground">
-                Choose the most relevant category for your product
-              </p>
             </div>
             
-            {/* Product Description */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">Description</label>
-              <Textarea
-                placeholder="Describe your product in detail..."
-                rows={6}
-                value={productData.description}
-                onChange={(e) => handleFieldChange('description', e.target.value)}
-              />
-              <p className="text-sm text-muted-foreground">
-                A complete description of the product, features, and benefits
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>Pricing Information</CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Cost Price */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Cost Price (R)</label>
-              <Input
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="0.00"
-                value={productData.costPrice || ''}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  handleFieldChange('costPrice', value);
-                  
-                  // If markup percentage exists, recalculate prices
-                  if (productData.markupPercentage && value) {
-                    const costPrice = parseFloat(value);
-                    const markup = parseFloat(productData.markupPercentage);
-                    const calculatedPrice = Math.round((costPrice * (1 + markup / 100)) * 100) / 100;
-                    handleFieldChange('price', calculatedPrice);
-                    
-                    // Also update sale price if discount exists
-                    if (productData.discount) {
-                      const discount = parseFloat(productData.discount);
-                      const calculatedSalePrice = Math.round((calculatedPrice * (100 - discount) / 100) * 100) / 100;
-                      handleFieldChange('salePrice', calculatedSalePrice);
-                    }
-                  }
-                }}
-              />
-              <p className="text-sm text-muted-foreground">
-                Your cost to acquire this product (required)
-              </p>
-            </div>
-            
-            {/* Markup Percentage */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Markup Percentage (%)</label>
-              <div className="flex gap-2">
-                <Select
-                  value={productData.markupPercentage || ''}
-                  onValueChange={(value) => {
-                    handleFieldChange('markupPercentage', value);
-                    
-                    // If cost price exists, recalculate prices
-                    if (productData.costPrice && value) {
-                      const costPrice = parseFloat(productData.costPrice);
-                      const markup = parseFloat(value);
-                      const calculatedPrice = Math.round((costPrice * (1 + markup / 100)) * 100) / 100;
-                      handleFieldChange('price', calculatedPrice);
-                      
-                      // Also update sale price if discount exists
-                      if (productData.discount) {
-                        const discount = parseFloat(productData.discount);
-                        const calculatedSalePrice = Math.round((calculatedPrice * (100 - discount) / 100) * 100) / 100;
-                        handleFieldChange('salePrice', calculatedSalePrice);
-                      }
-                    }
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select markup" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="15">15%</SelectItem>
-                    <SelectItem value="20">20%</SelectItem>
-                    <SelectItem value="25">25%</SelectItem>
-                    <SelectItem value="30">30%</SelectItem>
-                    <SelectItem value="35">35%</SelectItem>
-                    <SelectItem value="40">40%</SelectItem>
-                    <SelectItem value="45">45%</SelectItem>
-                    <SelectItem value="50">50%</SelectItem>
-                    <SelectItem value="60">60%</SelectItem>
-                    <SelectItem value="70">70%</SelectItem>
-                    <SelectItem value="80">80%</SelectItem>
-                    <SelectItem value="90">90%</SelectItem>
-                    <SelectItem value="100">100%</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Input
-                  type="number"
-                  min="0"
-                  placeholder="Custom %"
-                  value={productData.markupPercentage || ''}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    handleFieldChange('markupPercentage', value);
-                    
-                    // If cost price exists, recalculate prices
-                    if (productData.costPrice && value) {
-                      const costPrice = parseFloat(productData.costPrice);
-                      const markup = parseFloat(value);
-                      const calculatedPrice = Math.round((costPrice * (1 + markup / 100)) * 100) / 100;
-                      handleFieldChange('price', calculatedPrice);
-                      
-                      // Also update sale price if discount exists
-                      if (productData.discount) {
-                        const discount = parseFloat(productData.discount);
-                        const calculatedSalePrice = Math.round((calculatedPrice * (100 - discount) / 100) * 100) / 100;
-                        handleFieldChange('salePrice', calculatedSalePrice);
-                      }
-                    }
-                  }}
-                />
+              <div className="flex items-center gap-2">
+                <Label htmlFor="brand">Brand (Optional)</Label>
+                <ContextualHelp fieldId="brand" />
               </div>
-              <p className="text-sm text-muted-foreground">
-                Choose or enter a markup percentage to calculate selling price
-              </p>
-            </div>
-            
-            {/* Regular Price */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Regular Price (R)</label>
               <Input
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="0.00"
-                value={productData.price || ''}
-                onChange={(e) => handleFieldChange('price', e.target.value)}
+                id="brand"
+                value={state.brand || ''}
+                onChange={(e) => updateState({ brand: e.target.value })}
+                placeholder="Enter brand name"
               />
-              <p className="text-sm text-muted-foreground">
-                Regular selling price
-                {productData.costPrice && productData.markupPercentage && 
-                  productData.price === Math.round((parseFloat(productData.costPrice) * (1 + parseFloat(productData.markupPercentage) / 100)) * 100) / 100 && 
-                  <span className="ml-1 text-blue-600">(Auto-calculated from cost and markup)</span>
-                }
-              </p>
             </div>
-            
-            {/* Sale Price */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Sale Price (R)</label>
-              <Input
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="0.00"
-                value={productData.salePrice || ''}
-                onChange={(e) => handleFieldChange('salePrice', e.target.value)}
-              />
-              <p className="text-sm text-muted-foreground">
-                Optional discounted price (leave empty if not on sale)
-                {productData.price && productData.discount && productData.salePrice === Math.round((productData.price * (100 - productData.discount) / 100) * 100) / 100 && 
-                  <span className="ml-1 text-blue-600">(Auto-calculated from discount)</span>
-                }
-              </p>
-            </div>
-            
-            {/* Minimum Price */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Minimum Price (R)</label>
-              <Input
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="0.00"
-                value={productData.minimumPrice || ''}
-                onChange={(e) => handleFieldChange('minimumPrice', e.target.value)}
-              />
-              <p className="text-sm text-muted-foreground">
-                Minimum allowed selling price
-                {productData.price && productData.minimumPrice === Math.round((productData.price * 0.9) * 100) / 100 && 
-                  <span className="ml-1 text-blue-600">(Auto-suggested based on price)</span>
-                }
-              </p>
-            </div>
-            
-            {/* Discount Percentage */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Discount Percentage (%)</label>
-              <Input
-                type="number"
-                min="0"
-                max="100"
-                placeholder="0"
-                value={productData.discount || ''}
-                onChange={(e) => handleFieldChange('discount', e.target.value)}
-              />
-              <p className="text-sm text-muted-foreground">
-                Percentage discount to display (0-100)
-              </p>
-            </div>
-            
-            {/* Discount Label */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Discount Label</label>
-              <Input
-                placeholder="e.g., Summer Sale, Black Friday"
-                value={productData.discountLabel || ''}
-                onChange={(e) => handleFieldChange('discountLabel', e.target.value)}
-              />
-              <p className="text-sm text-muted-foreground">
-                Label to show for this discount (e.g. "Black Friday Deal")
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
+      </div>
+      
+      <Separator />
+      
+      {/* Navigation buttons */}
+      <div className="flex justify-end">
+        <Button
+          type="button"
+          onClick={handleContinue}
+          className="flex items-center gap-2"
+        >
+          <span>Continue to Images</span>
+          <ArrowRightCircle className="h-4 w-4" />
+        </Button>
       </div>
     </div>
   );
