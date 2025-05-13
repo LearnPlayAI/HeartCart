@@ -56,8 +56,18 @@ const validateProduct = (state: any) => {
   return errors;
 };
 
-export function ReviewAndSaveStep() {
-  const { state, markStepComplete, setCurrentStep } = useProductWizardContext();
+interface ReviewAndSaveStepProps {
+  onComplete?: (product: any) => void;
+}
+
+export function ReviewAndSaveStep({ onComplete }: ReviewAndSaveStepProps = {}) {
+  const { 
+    state, 
+    markStepComplete, 
+    setCurrentStep, 
+    resetWizard,
+    clearProductDraft
+  } = useProductWizardContext();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -207,12 +217,23 @@ export function ReviewAndSaveStep() {
       // Mark step complete
       markStepComplete('review');
       
+      // Clear any saved draft since the product was created successfully
+      clearProductDraft();
+      
+      // Reset wizard state for a new product
+      resetWizard();
+      
       // Show success toast
       toast({
         title: 'Product created',
         description: `${state.name} has been created successfully`,
         variant: 'default',
       });
+      
+      // Call the onComplete callback if provided (for wizard navigation)
+      if (onComplete) {
+        onComplete(data);
+      }
     },
     onError: (error) => {
       // Show error toast
