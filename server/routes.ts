@@ -5043,8 +5043,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Check allowed object directories
-      const allowedPrefixes = ['products/', 'categories/', 'temp/', 'suppliers/', 'catalog/'];
-      const isAllowedPrefix = allowedPrefixes.some(prefix => objectKey.startsWith(prefix));
+      const allowedPrefixes = [
+        // Standard system folders
+        'products/', 'categories/', 'temp/', 'suppliers/', 'catalog/', 'catalogs/',
+        // New folder structure for supplier/catalog-based paths
+        // Any path that starts with a supplier name is allowed
+      ];
+      
+      // Check if the path starts with any of the explicit allowed prefixes
+      let isAllowedPrefix = allowedPrefixes.some(prefix => objectKey.startsWith(prefix));
+      
+      // If not allowed by explicit prefix, check if it follows the supplier/catalog pattern
+      // Format: {supplierName}/{catalogName}/{category}/{productName}_{productId}/filename
+      if (!isAllowedPrefix) {
+        // The pattern will be a path that starts with a name, then has catalog, then other parts
+        // We don't check for specific supplier names to allow any supplier directory
+        const supplierCatalogPattern = /^[a-z0-9-_]+\/[a-z0-9-_]+\//i;
+        isAllowedPrefix = supplierCatalogPattern.test(objectKey);
+      }
       
       if (!isAllowedPrefix) {
         logger.warn(`Attempted access to unauthorized path: ${objectKey}`);
