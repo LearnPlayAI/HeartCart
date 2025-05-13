@@ -29,6 +29,38 @@ function createTestResult(status: TestStatus, message: string, details?: any) {
 }
 
 /**
+ * Helper function to run a test endpoint
+ */
+async function runTestEndpoint(app: Express, endpoint: string, user: any): Promise<any> {
+  try {
+    // Extract test name from endpoint
+    const pathParts = endpoint.split('/');
+    const testName = pathParts[pathParts.length - 1] || 'unknown';
+    
+    // Call the endpoint
+    const result: any = await new Promise((resolve) => {
+      app._router.handle(
+        { method: 'GET', url: endpoint, path: endpoint, query: {}, user: user } as any,
+        { json: resolve } as any,
+        () => {}
+      );
+    });
+    
+    return {
+      endpoint,
+      status: result && result.success ? 'passed' : 'failed',
+      data: result && result.data ? result.data : null
+    };
+  } catch (error) {
+    return {
+      endpoint,
+      status: 'failed',
+      error: String(error)
+    };
+  }
+}
+
+/**
  * Register all file manager testing routes
  * @param app - Express application instance
  */

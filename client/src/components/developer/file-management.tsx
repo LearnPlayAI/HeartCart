@@ -266,16 +266,7 @@ const FileManagement: React.FC = () => {
           </TabsContent>
           
           <TabsContent value="url-tests">
-            <div className="p-6 text-center">
-              <FileText className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-lg font-medium">URL Handling Tests</h3>
-              <p className="mt-2 text-gray-500">
-                Test URL encoding and path handling for files with spaces and special characters.
-              </p>
-              <p className="mt-4 text-sm text-gray-500">
-                Feature in development. Please use the File Browser tab meanwhile.
-              </p>
-            </div>
+            <FileUrlTests />
           </TabsContent>
         </Tabs>
       </CardContent>
