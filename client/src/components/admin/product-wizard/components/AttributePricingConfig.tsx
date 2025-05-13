@@ -1,9 +1,11 @@
 /**
- * AttributePricingConfig Component
+ * AttributeConfigurationComponent
  * 
- * This component handles attribute-based pricing and metadata for product variations.
- * It allows setting different prices based on attribute values (like size, color, etc.)
- * and configuring which attributes are mandatory for customers to select.
+ * This component handles attribute metadata for product variations.
+ * It allows configuring which attributes are mandatory for checkout 
+ * and setting metadata like weight and dimensions for size attributes.
+ * 
+ * IMPORTANT: Product attributes do NOT affect pricing anywhere in the application.
  */
 
 import React, { useState, useEffect } from 'react';
@@ -43,7 +45,6 @@ export type AttributeValue = {
   attributeName: string;
   value: string;
   displayValue: string;
-  priceAdjustment: number;
   isRequired: boolean;
   sortOrder: number;
   metadata?: {
@@ -67,25 +68,17 @@ export type ProductAttribute = {
   options: AttributeOption[];
 };
 
-interface AttributePricingConfigProps {
-  basePrice: number;
+interface AttributeConfigProps {
   attributes: ProductAttribute[];
   attributeValues: AttributeValue[];
   onChange: (values: AttributeValue[]) => void;
-  regularPrice: number;
-  salePrice?: number | null;
-  onSale: boolean;
 }
 
-export function AttributePricingConfig({
-  basePrice,
+export function AttributeConfig({
   attributes,
   attributeValues,
-  onChange,
-  regularPrice,
-  salePrice,
-  onSale
-}: AttributePricingConfigProps) {
+  onChange
+}: AttributeConfigProps) {
   const { toast } = useToast();
   const [values, setValues] = useState<AttributeValue[]>(attributeValues);
   const [sizeAttribute, setSizeAttribute] = useState<ProductAttribute | null>(null);
@@ -106,16 +99,7 @@ export function AttributePricingConfig({
     onChange(values);
   }, [values, onChange]);
   
-  // Handle price adjustment change
-  const handlePriceChange = (attrValueId: string | number, newPrice: number) => {
-    setValues(prevValues => 
-      prevValues.map(val => 
-        val.id === attrValueId 
-          ? { ...val, priceAdjustment: newPrice } 
-          : val
-      )
-    );
-  };
+  // No price adjustment changes as attributes should not affect pricing
   
   // Handle required change
   const handleRequiredChange = (attrId: number, isRequired: boolean) => {
