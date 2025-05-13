@@ -122,8 +122,12 @@ export function BasicInfoStep() {
   
   // Update regular price when cost price or markup changes
   const calculateRegularPrice = () => {
-    const costPrice = form.getValues('costPrice');
-    const markupPercentage = form.getValues('markupPercentage');
+    const costPriceValue = form.getValues('costPrice');
+    const costPrice = typeof costPriceValue === 'string' ? parseFloat(costPriceValue) : costPriceValue;
+    
+    const markupPercentageValue = form.getValues('markupPercentage');
+    const markupPercentage = typeof markupPercentageValue === 'string' ? 
+      parseFloat(markupPercentageValue) : markupPercentageValue;
     
     if (costPrice > 0) {
       const regularPrice = Math.ceil(costPrice * (1 + markupPercentage / 100));
@@ -132,25 +136,54 @@ export function BasicInfoStep() {
       // If on sale, adjust sale price to maintain same discount percentage
       const onSale = form.getValues('onSale');
       if (onSale) {
-        const currentRegularPrice = form.getValues('regularPrice');
-        const currentSalePrice = form.getValues('salePrice') || 0;
+        const currentRegularPriceValue = form.getValues('regularPrice');
+        const currentRegularPrice = typeof currentRegularPriceValue === 'string' ? 
+          parseFloat(currentRegularPriceValue) : currentRegularPriceValue;
+        
+        const currentSalePriceValue = form.getValues('salePrice') || 0;
+        const currentSalePrice = typeof currentSalePriceValue === 'string' ? 
+          parseFloat(currentSalePriceValue) : currentSalePriceValue;
+        
         const currentDiscount = currentRegularPrice > 0 ? 1 - (currentSalePrice / currentRegularPrice) : 0;
         
         const newSalePrice = Math.ceil(regularPrice * (1 - currentDiscount));
         form.setValue('salePrice', newSalePrice);
       }
     }
+    
+    console.log('Price calculation:', {
+      costPriceInput: costPriceValue,
+      costPriceCalculation: costPrice,
+      markupPercentage,
+      regularPrice: form.getValues('regularPrice')
+    });
   };
   
   // Handle cost price change
   const handleCostPriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    form.setValue('costPrice', parseFloat(e.target.value) || 0);
+    // Keep the original string value to preserve user input exactly as entered
+    const inputValue = e.target.value;
+    
+    // Call the original field.onChange to update the React Hook Form state
+    form.setValue('costPrice', inputValue === '' ? 0 : inputValue);
+    
+    // For calculations, we use the parsed float value
+    const parsedValue = parseFloat(inputValue) || 0;
+    
+    // Use the parsed value for price calculations only
     calculateRegularPrice();
+    
+    console.log('Cost price input:', { 
+      original: inputValue,
+      asNumber: parsedValue
+    });
   };
   
   // Handle markup percentage change
   const handleMarkupChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    form.setValue('markupPercentage', parseFloat(e.target.value) || 0);
+    // Similar to cost price, preserve the input value for display
+    const inputValue = e.target.value;
+    form.setValue('markupPercentage', inputValue === '' ? 0 : inputValue);
     calculateRegularPrice();
   };
   
