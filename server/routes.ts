@@ -1294,17 +1294,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
         
-        // Return success response with validation results and processed files
-        return res.status(200).json({
-          success: true,
-          files: processedFiles,
-          validation: {
-            totalFiles: req.files.length,
-            validFiles: validFiles.length,
-            invalidFiles: req.files.length - validFiles.length,
-            results: validationResults
-          }
-        });
+        // For a single file upload, provide the file data directly in the response
+        // to be compatible with our frontend components
+        if (processedFiles.length === 1) {
+          const file = processedFiles[0];
+          const absoluteUrl = `${req.protocol}://${req.get('host')}${file.path}`;
+          
+          return res.status(200).json({
+            success: true,
+            url: file.path,
+            objectKey: file.objectKey,
+            absoluteUrl: absoluteUrl,
+            filename: file.filename,
+            originalname: file.originalname,
+            mimetype: file.mimetype,
+            size: file.size,
+            // Also include the files array for backwards compatibility
+            files: processedFiles,
+            validation: {
+              totalFiles: req.files.length,
+              validFiles: validFiles.length,
+              invalidFiles: req.files.length - validFiles.length,
+              results: validationResults
+            }
+          });
+        } 
+        // For multiple files, return the array
+        else {
+          return res.status(200).json({
+            success: true,
+            files: processedFiles.map(file => ({
+              ...file,
+              absoluteUrl: `${req.protocol}://${req.get('host')}${file.path}`
+            })),
+            validation: {
+              totalFiles: req.files.length,
+              validFiles: validFiles.length,
+              invalidFiles: req.files.length - validFiles.length,
+              results: validationResults
+            }
+          });
+        }
       } catch (error: any) {
         console.error('Error processing uploaded files:', error);
         return res.status(500).json({

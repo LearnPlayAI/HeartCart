@@ -150,15 +150,27 @@ export function ImageStep() {
         throw new Error('Invalid response format from server');
       }
       
-      // Add image to state - handle both response formats for backwards compatibility
+      // Add image to state - handle API response formats for backwards compatibility
+      console.log('Upload response:', result);
+      
+      // Use different fields depending on what the server returns
       if (result.data && result.data.url) {
-        // New standardized format
+        // Format from some API endpoints
         addImage(result.data.url, result.data.objectKey);
+      } else if (result.absoluteUrl) {
+        // New format with absolute URL directly provided
+        addImage(result.absoluteUrl, result.objectKey);
       } else if (result.url) {
-        // Legacy format - ensure we use the full URL
+        // Ensure we use a full URL by adding origin if needed
         const imageUrl = result.url.startsWith('http') ? result.url : (window.location.origin + result.url);
         console.log('Adding image with URL:', imageUrl);
         addImage(imageUrl, result.objectKey);
+      } else if (result.files && result.files.length > 0) {
+        // If the API returns a files array, use the first file
+        const file = result.files[0];
+        const imageUrl = file.absoluteUrl || (file.path.startsWith('http') ? file.path : window.location.origin + file.path);
+        console.log('Adding image from files array:', imageUrl);
+        addImage(imageUrl, file.objectKey);
       } else {
         console.error('Unexpected response format:', result);
         throw new Error('Invalid response format from server');
