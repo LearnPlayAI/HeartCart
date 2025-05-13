@@ -38,7 +38,7 @@ const FeaturedProductsSection = () => {
     <section id="featuredProducts" className="mb-8">
       <h2 className="text-xl font-bold mb-4">Featured Products</h2>
       
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
         {isLoading ? (
           // Show skeleton loaders while loading
           Array.from({ length: 10 }).map((_, index) => (
