@@ -72,7 +72,7 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
     isLoading: isLoadingProductFromId,
     error: productIdError
   } = useQuery<StandardApiResponse<Product>>({
-    queryKey: ['/api/products/id', productId],
+    queryKey: [`/api/products/${productId}`],
     enabled: !!productId && open,
   });
   
@@ -112,7 +112,7 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
     isLoading: isLoadingProductAttributes,
     error: productAttributesError
   } = useQuery<StandardApiResponse<ProductAttribute[]>>({
-    queryKey: ['/api/products', product?.id, 'attributes'],
+    queryKey: [`/api/products/${product?.id}/attributes`],
     enabled: !!product?.id && open,
   });
   const productAttributesData = productAttributesDataResponse?.success ? productAttributesDataResponse.data : [];
@@ -123,7 +123,7 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
     isLoading: isLoadingCombinations,
     error: combinationsError
   } = useQuery<StandardApiResponse<ProductAttributeCombination[]>>({
-    queryKey: ['/api/products', product?.id, 'combinations'],
+    queryKey: [`/api/products/${product?.id}/combinations`],
     enabled: !!product?.id && open,
   });
   const combinations = combinationsResponse?.success ? combinationsResponse.data : [];

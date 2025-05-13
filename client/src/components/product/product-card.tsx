@@ -83,7 +83,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   
   if (isFlashDeal) {
     return (
-      <div className="product-card bg-white rounded-lg border border-gray-200 overflow-hidden">
+      <div className="product-card bg-white rounded-lg border border-gray-200 overflow-hidden min-w-[180px]">
         <Link href={`/product/id/${product.id}`} className="block">
           {imageError ? (
             <div className="w-full h-36 bg-gray-100 flex items-center justify-center">
@@ -159,7 +159,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   }
   
   return (
-    <div className="product-card bg-white rounded-lg shadow-md overflow-hidden">
+    <div className="product-card bg-white rounded-lg shadow-md overflow-hidden min-w-[200px]">
       <Link href={`/product/id/${product.id}`} className="block">
         {imageError ? (
           <div className="w-full h-48 bg-gray-100 flex items-center justify-center">
