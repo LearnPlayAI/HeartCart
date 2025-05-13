@@ -238,9 +238,15 @@ const FileBrowser: React.FC = () => {
     refetchOnWindowFocus: false
   });
   
-  // Extract data
-  const buckets = bucketsData?.success ? bucketsData.data.buckets : [];
-  const currentBucket = bucketsData?.success ? bucketsData.data.currentBucket : '';
+  // Extract data with safeguards
+  const buckets = bucketsData?.success && bucketsData.data?.buckets ? bucketsData.data.buckets : [];
+  const currentBucket = bucketsData?.success && bucketsData.data?.currentBucket ? bucketsData.data.currentBucket : '';
+  
+  // Add default bucket if none available
+  if (buckets.length === 0) {
+    console.warn('No buckets available, adding default bucket');
+    buckets.push('TeeMeYouStorage');
+  }
   
   // Root folders
   const rootFolders = foldersData?.success ? foldersData.data.folders : [];

@@ -292,17 +292,37 @@ export class EnhancedObjectStorageService {
         prefix
       });
       
-      if (!result.ok || !Array.isArray(result.ok)) {
-        console.error('Failed to list objects:', result.error);
-        return [];
-      }
+      // Safely handle various result formats
+      let storageObjects: any[] = [];
       
-      const storageObjects = result.ok as any[];
+      if (result.ok) {
+        if (Array.isArray(result.ok)) {
+          storageObjects = result.ok;
+        } else if (typeof result.ok === 'object' && result.ok !== null) {
+          // Handle case where result.ok is an object with entries/items property
+          if (Array.isArray(result.ok.entries)) {
+            storageObjects = result.ok.entries;
+          } else if (Array.isArray(result.ok.items)) {
+            storageObjects = result.ok.items;
+          } else {
+            console.warn('Unexpected result.ok format:', result.ok);
+          }
+        } else {
+          console.error('Unexpected result format:', result);
+        }
+      } else if (result.error) {
+        console.error('Failed to list objects:', result.error);
+      } else {
+        console.error('Unknown result format:', result);
+      }
       
       // Process the results to simulate delimiter behavior
       const filteredObjects: string[] = [];
       
       for (const obj of storageObjects) {
+        // Skip null or undefined objects
+        if (!obj || !obj.name) continue;
+        
         // Skip metadata files
         if (obj.name.endsWith('.metadata')) {
           continue;
