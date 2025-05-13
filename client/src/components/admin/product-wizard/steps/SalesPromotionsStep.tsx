@@ -223,11 +223,11 @@ export function SalesPromotionsStep() {
                             variant="outline"
                             className={cn(
                               "w-full pl-3 text-left font-normal",
-                              !state.specialSaleEnd && "text-muted-foreground"
+                              !specialSaleEnd && "text-muted-foreground"
                             )}
                           >
-                            {state.specialSaleEnd ? (
-                              format(new Date(state.specialSaleEnd), 'PPP')
+                            {specialSaleEnd ? (
+                              format(new Date(specialSaleEnd), 'PPP')
                             ) : (
                               <span>Pick a date</span>
                             )}
@@ -268,7 +268,7 @@ export function SalesPromotionsStep() {
               <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
                 <FormControl>
                   <Checkbox
-                    checked={state.isFlashDeal}
+                    checked={isFlashDeal}
                     onCheckedChange={(checked) => setField('isFlashDeal', checked)}
                   />
                 </FormControl>
@@ -282,7 +282,7 @@ export function SalesPromotionsStep() {
             )}
           />
 
-          {state.isFlashDeal && (
+          {isFlashDeal && (
             <FormField
               name="flashDealEnd"
               render={() => (
@@ -295,11 +295,11 @@ export function SalesPromotionsStep() {
                           variant="outline"
                           className={cn(
                             "w-full pl-3 text-left font-normal",
-                            !state.flashDealEnd && "text-muted-foreground"
+                            !flashDealEnd && "text-muted-foreground"
                           )}
                         >
-                          {state.flashDealEnd ? (
-                            format(new Date(state.flashDealEnd), 'PPP')
+                          {flashDealEnd ? (
+                            format(new Date(flashDealEnd), 'PPP')
                           ) : (
                             <span>Pick a date</span>
                           )}
