@@ -283,7 +283,8 @@ router.post('/', asyncHandler(async (req: Request, res: Response) => {
       options: validatedData.options?.map((opt, index) => ({
         id: index + 1,
         value: opt.value,
-        displayValue: opt.displayValue || opt.value
+        displayValue: opt.displayValue || opt.value,
+        sortOrder: index + 1
       })) || []
     };
     
@@ -296,6 +297,64 @@ router.post('/', asyncHandler(async (req: Request, res: Response) => {
       return sendError(res, 'Validation error', 400, error.format());
     }
     sendError(res, 'Failed to create attribute', 500);
+  }
+}));
+
+// Update an attribute
+router.put('/:id', asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const attributeId = parseInt(req.params.id);
+    
+    if (isNaN(attributeId)) {
+      return sendError(res, 'Invalid attribute ID', 400);
+    }
+    
+    const attributeIndex = attributeDefinitions.findIndex(attr => attr.id === attributeId);
+    
+    if (attributeIndex === -1) {
+      return sendError(res, 'Attribute not found', 404);
+    }
+    
+    const validatedData = attributeSchema.parse(req.body);
+    
+    // Update the attribute
+    attributeDefinitions[attributeIndex] = {
+      ...attributeDefinitions[attributeIndex],
+      name: validatedData.name,
+      type: validatedData.type || attributeDefinitions[attributeIndex].type,
+      isRequired: validatedData.isRequired !== undefined ? validatedData.isRequired : attributeDefinitions[attributeIndex].isRequired
+    };
+    
+    sendSuccess(res, attributeDefinitions[attributeIndex]);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return sendError(res, 'Validation error', 400, error.format());
+    }
+    sendError(res, 'Failed to update attribute', 500);
+  }
+}));
+
+// Delete an attribute
+router.delete('/:id', asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const attributeId = parseInt(req.params.id);
+    
+    if (isNaN(attributeId)) {
+      return sendError(res, 'Invalid attribute ID', 400);
+    }
+    
+    const attributeIndex = attributeDefinitions.findIndex(attr => attr.id === attributeId);
+    
+    if (attributeIndex === -1) {
+      return sendError(res, 'Attribute not found', 404);
+    }
+    
+    // Remove the attribute
+    attributeDefinitions.splice(attributeIndex, 1);
+    
+    sendSuccess(res, { success: true });
+  } catch (error) {
+    sendError(res, 'Failed to delete attribute', 500);
   }
 }));
 
