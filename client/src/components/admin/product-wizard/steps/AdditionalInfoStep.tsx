@@ -37,7 +37,8 @@ import {
 import { 
   AttributePricingConfig, 
   type AttributeValue, 
-  type ProductAttribute 
+  type ProductAttribute,
+  type AttributeOption
 } from '../components/AttributePricingConfig';
 
 // Form validation schema
@@ -378,11 +379,39 @@ export function AdditionalInfoStep() {
                 
                 {/* Attributes Tab */}
                 <TabsContent value="attributes" className="space-y-6">
+                  {/* Attribute-Based Pricing Configuration */}
+                  <div className="space-y-6">
+                    <h3 className="text-lg font-medium">Attribute Pricing & Configuration</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Configure size-based pricing, weight, dimensions, and mark attributes as required for checkout.
+                    </p>
+                    
+                    {formattedAttributes.length > 0 ? (
+                      <AttributePricingConfig
+                        basePrice={state.costPrice}
+                        attributes={formattedAttributes}
+                        attributeValues={attributeValues}
+                        onChange={handleAttributeValuesChange}
+                        regularPrice={state.regularPrice}
+                        salePrice={state.salePrice}
+                        onSale={state.onSale}
+                      />
+                    ) : (
+                      <div className="text-center py-8 border rounded-md bg-muted/20">
+                        <InfoIcon className="h-12 w-12 mx-auto text-muted-foreground" />
+                        <p className="mt-2 text-muted-foreground">No product attributes detected</p>
+                        <p className="text-sm text-muted-foreground">
+                          Add attributes below or wait for the system to detect available attributes
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  
                   {/* Custom Attributes */}
-                  <div className="space-y-4">
+                  <div className="space-y-4 pt-4 border-t mt-6">
                     <h3 className="text-lg font-medium">Product Attributes</h3>
                     <p className="text-sm text-muted-foreground">
-                      Add custom attributes to provide additional product details like size, color, material, etc.
+                      Add custom attributes to provide additional product details like material, color, etc.
                     </p>
                     
                     {/* Current Attributes */}
@@ -420,13 +449,7 @@ export function AdditionalInfoStep() {
                         ))}
                       </div>
                     ) : (
-                      <div className="text-center py-8 border rounded-md bg-muted/20">
-                        <TagIcon className="h-12 w-12 mx-auto text-muted-foreground" />
-                        <p className="mt-2 text-muted-foreground">No attributes added yet</p>
-                        <p className="text-sm text-muted-foreground">
-                          Attributes help customers find and understand your product
-                        </p>
-                      </div>
+                      <p className="text-sm text-muted-foreground italic">No custom attributes added yet</p>
                     )}
                     
                     {/* Add Attribute Form */}
@@ -442,7 +465,7 @@ export function AdditionalInfoStep() {
                             type="text"
                             value={attributeNameInput}
                             onChange={(e) => setAttributeNameInput(e.target.value)}
-                            placeholder="e.g. Material, Color, Size"
+                            placeholder="e.g. Material, Color, Style"
                             className="mt-1 flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                           />
                         </div>
