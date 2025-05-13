@@ -62,7 +62,10 @@ router.post('/products/images/temp', upload.array('images', 10), async (req: Req
     const files = req.files as Express.Multer.File[];
     
     if (!files || files.length === 0) {
-      return res.status(400).json({ message: 'No files uploaded' });
+      return res.status(400).json({ 
+        success: false,
+        message: 'No files uploaded'
+      });
     }
     
     const results = await Promise.all(files.map(async (file) => {
@@ -100,6 +103,8 @@ router.post('/products/images/temp', upload.array('images', 10), async (req: Req
     res.json({ success: true, files: results });
   } catch (error) {
     console.error('Error uploading temp images:', error);
+    
+    // Ensure we always return JSON, not HTML error pages
     res.status(500).json({ 
       success: false, 
       message: 'Error uploading images',
@@ -117,11 +122,17 @@ router.post('/products/:productId/images', upload.array('images', 10), async (re
     const productId = parseInt(req.params.productId);
     
     if (!files || files.length === 0) {
-      return res.status(400).json({ message: 'No files uploaded' });
+      return res.status(400).json({ 
+        success: false, 
+        message: 'No files uploaded' 
+      });
     }
     
     if (isNaN(productId)) {
-      return res.status(400).json({ message: 'Invalid product ID' });
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid product ID' 
+      });
     }
     
     // Import storage for database operations
@@ -186,6 +197,8 @@ router.post('/products/:productId/images', upload.array('images', 10), async (re
     res.json({ success: true, files: results });
   } catch (error) {
     console.error('Error uploading product images:', error);
+    
+    // Ensure we always return JSON, not HTML error pages
     res.status(500).json({ 
       success: false, 
       message: 'Error uploading images',
@@ -244,6 +257,8 @@ router.post('/products/images/move', async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Error moving file:', error);
+    
+    // Ensure we always return JSON, not HTML error pages
     res.status(500).json({ 
       success: false, 
       message: 'Error moving file',
@@ -281,6 +296,8 @@ router.delete('/:objectKey(*)', async (req: Request, res: Response) => {
     res.json({ success: true });
   } catch (error) {
     console.error('Error deleting file:', error);
+    
+    // Ensure we always return JSON, not HTML error pages
     res.status(500).json({ 
       success: false, 
       message: 'Error deleting file',

@@ -129,11 +129,26 @@ export function ImageStep() {
       });
       
       if (!response.ok) {
-        throw new Error('Failed to upload image');
+        // Try to get error message from response if it's JSON
+        try {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to upload image');
+        } catch (jsonError) {
+          // If response is not JSON, use status text or a generic message
+          throw new Error(`Upload failed: ${response.statusText || 'Server error'}`);
+        }
       }
       
-      // Get upload result
-      const result = await response.json();
+      // Safely try to parse JSON response
+      let result;
+      try {
+        result = await response.json();
+      } catch (jsonError) {
+        console.error('Error parsing response:', jsonError);
+        const responseText = await response.text();
+        console.error('Response text:', responseText.substring(0, 200) + '...');
+        throw new Error('Invalid response format from server');
+      }
       
       // Add image to state
       addImage(result.url, result.objectKey);
