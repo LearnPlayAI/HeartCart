@@ -318,7 +318,7 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className 
       }
       
       // Append each file to the form data
-      acceptedFiles.forEach(file => {
+      acceptedFiles.forEach((file: File) => {
         formData.append('images', file);
       });
       
@@ -345,31 +345,36 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className 
       
       if (result.success && result.files && Array.isArray(result.files)) {
         // Map the API response to our UploadedImage format
-        const uploadedImages = result.files.map((file, index) => {
+        const newUploadedImages: UploadedImage[] = result.files.map((file: any, index: number) => {
           const newImage: UploadedImage = {
-            id: file.id, // Use ID from server if available
+            id: typeof file.id === 'number' ? file.id : index, // Use numeric ID
             url: file.url, // URL for accessing the file via API
             objectKey: file.objectKey, // Storage path to the file
             isMain: isFirstUpload && index === 0, // First image is main if no existing main image
             order: startingOrder + index,
             metadata: {
               size: file.size,
-              originalname: file.originalname || file.filename,
+              width: file.width || 0,
+              height: file.height || 0,
+              backgroundRemoved: file.backgroundRemoved || false,
+              alt: file.originalname || file.filename || `Image ${index + 1}`,
+              processedAt: file.processedAt || new Date().toISOString()
             }
           };
           console.log('Processing image from API:', file, 'into:', newImage);
           return newImage;
         });
         
-        // Add each uploaded image to state
-        uploadedImages.forEach(image => {
-          dispatch({
-            type: WizardActionType.ADD_UPLOADED_IMAGE,
-            payload: image
-          });
-        });
+        // Update local state
+        const updatedImages = [...uploadedImages, ...newUploadedImages];
+        setUploadedImages(updatedImages);
         
-        console.log('Successfully uploaded images:', uploadedImages);
+        // Update context state by adding each image
+        for (const image of newUploadedImages) {
+          addImage(image.url, image.objectKey || '');
+        }
+        
+        console.log('Successfully uploaded images:', newUploadedImages);
       } else {
         throw new Error('Invalid server response format');
       }
@@ -467,8 +472,8 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className 
       
       setUploadedImages(updatedImages);
       
-      // Also update the context state
-      dispatch({ type: 'SET_FIELD', field: 'mainImageIndex', value: imageIndex });
+      // Also update the context state using the context method
+      setMainImage(imageIndex);
       
       toast({
         title: "Main image updated",
