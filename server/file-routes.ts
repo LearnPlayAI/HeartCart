@@ -1,217 +1,385 @@
-import express, { Request, Response, NextFunction } from 'express';
-import path from 'path';
-import { isAuthenticated, isAdmin } from './auth-middleware';
-import { objectStore, STORAGE_FOLDERS } from './object-store';
-import { sendSuccess, sendError } from './api-response';
-import { withStandardResponse } from './response-wrapper';
+/**
+ * File Routes
+ * 
+ * Handles all file upload endpoints for product images, including:
+ * - Temporary uploads for pending products
+ * - Moving files from temp to permanent locations
+ * - Image optimization and processing
+ */
 
+import express, { Request, Response, NextFunction } from 'express';
+import multer from 'multer';
+import { objectStore, STORAGE_FOLDERS } from './object-store';
+import { isAuthenticated } from './auth-middleware';
+import { storage } from './storage';
+import { productImages } from '@shared/schema';
+
+// Create a router
 const router = express.Router();
 
-/**
- * Serve files from object storage
- * This handles both public and private files
- */
-router.get('/:path(*)', async (req: Request, res: Response) => {
-  try {
-    // Decode the path parameter to handle URL-encoded characters
-    const filePath = decodeURIComponent(req.params.path);
-    
-    console.log(`Serving file: ${filePath}`);
-    
-    // If path includes spaces, create a properly encoded URL and redirect
-    if (filePath.includes(' ')) {
-      console.log('File path contains spaces, redirecting to properly encoded URL');
-      // Split path into segments and properly encode each segment
-      const segments = filePath.split('/');
-      const encodedSegments = segments.map(segment => {
-        // Only encode if not already encoded
-        return segment.includes('%') ? segment : encodeURIComponent(segment);
-      });
-      const encodedPath = encodedSegments.join('/');
-      return res.redirect(`/api/files/${encodedPath}`);
-    }
-    
-    // Check if file exists
-    const exists = await objectStore.exists(filePath);
-    if (!exists) {
-      console.error(`File not found: ${filePath}`);
-      return sendError(res, 'File not found', 404);
-    }
-    
-    // Get file data
-    const { data: fileData, contentType } = await objectStore.getFileAsBuffer(filePath);
-    
-    // Set appropriate content type based on file extension or metadata
-    const detectedContentType = contentType || determineContentType(filePath);
-    res.setHeader('Content-Type', detectedContentType);
-    
-    // Set caching headers
-    res.setHeader('Cache-Control', 'public, max-age=31536000'); // 1 year
-    
-    // Add CORS headers for image requests
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET');
-    res.setHeader('Vary', 'Origin');
-    
-    // Send file
-    res.send(fileData);
-  } catch (error) {
-    console.error('Error serving file:', error);
-    sendError(res, 'Error serving file', 500);
+// Configure multer to store files in memory
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB max file size
   }
 });
 
-/**
- * Legacy compatibility route for old image paths
- */
-router.get('/object-storage/:folder/:subfolder/:filename', async (req: Request, res: Response) => {
-  try {
-    // Decode the path parameters to handle URL-encoded characters
-    const folder = decodeURIComponent(req.params.folder);
-    const subfolder = decodeURIComponent(req.params.subfolder);
-    const filename = decodeURIComponent(req.params.filename);
-    const filePath = `${folder}/${subfolder}/${filename}`;
-    
-    console.log(`Redirecting legacy file path: ${filePath}`);
-    
-    // Redirect to the new file path format with proper encoding
-    const encodedPath = `${encodeURIComponent(folder)}/${encodeURIComponent(subfolder)}/${encodeURIComponent(filename)}`;
-    res.redirect(`/api/files/${encodedPath}`);
-  } catch (error) {
-    console.error('Error in legacy file redirect:', error);
-    sendError(res, 'Error serving file', 500);
-  }
-});
+// Helper function to send standard responses
+const sendResponse = (res: Response, data: any, status = 200, message = '') => {
+  res.status(status).json({
+    success: true,
+    data,
+    message,
+  });
+};
 
-/**
- * Access temporary files during product creation
- */
-router.get('/temp/:productId/:filename', async (req: Request, res: Response) => {
-  try {
-    // Decode the path parameters to handle URL-encoded characters
-    const productId = decodeURIComponent(req.params.productId);
-    const filename = decodeURIComponent(req.params.filename);
-    const filePath = `${STORAGE_FOLDERS.TEMP}/${productId}/${filename}`;
-    
-    console.log(`Serving temp file: ${filePath}`);
+// Helper function to send error responses
+const sendError = (res: Response, message: string, status = 400) => {
+  res.status(status).json({
+    success: false,
+    error: message,
+  });
+};
 
-    // If filename contains spaces, create a properly encoded URL and redirect
-    if (filename.includes(' ')) {
-      console.log('Temp file name contains spaces, redirecting to properly encoded URL');
-      const encodedFilename = encodeURIComponent(filename);
-      return res.redirect(`/api/files/temp/${productId}/${encodedFilename}`);
+// Middleware to catch async errors
+const catchErrors = (fn: Function) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      await fn(req, res, next);
+    } catch (error) {
+      console.error('Error in route handler:', error);
+      
+      // Get error message
+      const message = error instanceof Error ? error.message : 'An unexpected error occurred';
+      
+      // Send error response
+      sendError(res, message, 500);
     }
-    
-    // Check if file exists
-    const exists = await objectStore.exists(filePath);
-    if (!exists) {
-      console.error(`Temp file not found: ${filePath}`);
-      return sendError(res, 'File not found', 404);
-    }
-    
-    // Get file data
-    const { data: fileData, contentType } = await objectStore.getFileAsBuffer(filePath);
-    
-    // Set appropriate content type
-    const detectedContentType = contentType || determineContentType(filename);
-    res.setHeader('Content-Type', detectedContentType);
-    
-    // Add CORS headers for image requests
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET');
-    res.setHeader('Vary', 'Origin');
-    
-    // Send file
-    res.send(fileData);
-  } catch (error) {
-    console.error('Error serving temp file:', error);
-    sendError(res, 'Error serving file', 500);
-  }
-});
+  };
+};
 
 /**
- * Access files from the temp/pending folder (for batch uploads)
- * This is a dedicated handler for the specific 'pending' folder which is used
- * before products are created in the database
+ * General file upload endpoint
+ * 
+ * Used as a universal file upload handler with folder specification
  */
-router.get('/temp/pending/:filename', async (req: Request, res: Response) => {
-  try {
-    // Decode the path parameters to handle URL-encoded characters
-    const filename = decodeURIComponent(req.params.filename);
-    const filePath = `${STORAGE_FOLDERS.TEMP}/pending/${filename}`;
-    
-    console.log(`Serving pending file: ${filePath}`);
-
-    // If filename contains spaces, create a properly encoded URL and redirect
-    if (filename.includes(' ')) {
-      console.log('Pending file name contains spaces, redirecting to properly encoded URL');
-      const encodedFilename = encodeURIComponent(filename);
-      return res.redirect(`/api/files/temp/pending/${encodedFilename}`);
+router.post(
+  '/upload',
+  isAuthenticated,
+  upload.single('file'),
+  catchErrors(async (req: Request, res: Response) => {
+    if (!req.file) {
+      return sendError(res, 'No file uploaded', 400);
     }
     
-    // Check if file exists
-    const exists = await objectStore.exists(filePath);
-    if (!exists) {
-      console.error(`Pending file not found: ${filePath}`);
-      return sendError(res, 'File not found', 404);
-    }
+    // Default to 'temp/pending' folder if none specified
+    const folder = req.body.folder || `${STORAGE_FOLDERS.TEMP}/pending`;
     
-    // Get file data
-    const { data: fileData, contentType } = await objectStore.getFileAsBuffer(filePath);
+    // Process the image for optimization
+    const processedBuffer = await objectStore.processImage(req.file.buffer, {
+      width: 1200,
+      height: 1200,
+      fit: 'inside',
+      withoutEnlargement: true,
+      quality: 85,
+      autoRotate: true
+    });
     
-    // Set appropriate content type
-    const detectedContentType = contentType || determineContentType(filename);
-    res.setHeader('Content-Type', detectedContentType);
+    // Generate a unique filename
+    const timestamp = Date.now();
+    const randomString = Math.random().toString(36).substring(2, 15);
+    const originalName = req.file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
+    const filename = `${timestamp}_${randomString}_${originalName}`;
     
-    // Set caching headers
-    res.setHeader('Cache-Control', 'public, max-age=31536000'); // 1 year
+    // Upload the file
+    const result = await objectStore.uploadFromBuffer(
+      processedBuffer,
+      `${folder}/${filename}`,
+      {
+        contentType: req.file.mimetype,
+        metadata: {
+          originalname: req.file.originalname,
+          size: String(req.file.size),
+          processed: 'true'
+        }
+      }
+    );
     
-    // Add CORS headers for image requests
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET');
-    res.setHeader('Vary', 'Origin');
+    // Get the public URL
+    const url = result.url;
+    const objectKey = result.objectKey;
     
-    // Send file
-    res.send(fileData);
-  } catch (error) {
-    console.error('Error serving pending file:', error);
-    sendError(res, 'Error serving file', 500);
-  }
-});
+    // Create absolute URL for client
+    const absoluteUrl = req.protocol + '://' + req.get('host') + url;
+    
+    // Send response with both relative and absolute URLs
+    sendResponse(res, {
+      url, // Relative URL
+      absoluteUrl, // Absolute URL
+      objectKey,
+      originalname: req.file.originalname,
+      size: req.file.size,
+    });
+  })
+);
 
 /**
- * Determine content type based on file extension
+ * Product Image Upload Route - Temporary Storage
+ * 
+ * Handles multiple file uploads for product images during the product creation process.
+ * Stores images in temporary location until the product is created.
  */
-function determineContentType(filename: string): string {
-  const ext = path.extname(filename).toLowerCase();
+router.post(
+  '/products/images/temp',
+  isAuthenticated,
+  upload.array('images', 10),
+  catchErrors(async (req: Request, res: Response) => {
+    const files = req.files as Express.Multer.File[];
+    
+    if (!files || files.length === 0) {
+      return sendError(res, 'No files uploaded', 400);
+    }
+    
+    // Use 'pending' as identifier for temp storage, or user-provided ID if available
+    const identifier = req.body.identifier || 'pending';
+    
+    // Process each file
+    const uploadResults = await Promise.all(files.map(async (file, index) => {
+      try {
+        // Process the image to optimize it
+        const processedBuffer = await objectStore.processImage(file.buffer, {
+          width: 1200,
+          height: 1200,
+          fit: 'inside',
+          withoutEnlargement: true,
+          quality: 85,
+          autoRotate: true
+        });
+        
+        // Upload to temporary storage
+        const result = await objectStore.uploadTempFile(
+          processedBuffer,
+          file.originalname,
+          identifier,
+          {
+            contentType: file.mimetype,
+            metadata: {
+              originalname: file.originalname,
+              size: String(file.size),
+              order: String(index),
+              processed: 'true'
+            }
+          }
+        );
+        
+        // Create absolute URL for client
+        const absoluteUrl = req.protocol + '://' + req.get('host') + result.url;
+        
+        return {
+          id: index, // Temp ID for client reference
+          url: result.url, // Relative URL
+          absoluteUrl, // Absolute URL
+          objectKey: result.objectKey,
+          filename: file.originalname,
+          size: file.size,
+        };
+      } catch (error) {
+        console.error(`Error processing image ${index}:`, error);
+        return {
+          id: index,
+          error: error instanceof Error ? error.message : 'Unknown error',
+          filename: file.originalname,
+        };
+      }
+    }));
+    
+    // Check if any files failed to upload
+    const failedUploads = uploadResults.filter(result => 'error' in result);
+    
+    if (failedUploads.length > 0 && failedUploads.length === files.length) {
+      // All uploads failed
+      return sendError(res, 'All image uploads failed', 500);
+    }
+    
+    // Send response with success=true even if some uploads failed
+    sendResponse(
+      res,
+      {
+        files: uploadResults,
+        totalUploaded: uploadResults.length - failedUploads.length,
+        totalFailed: failedUploads.length,
+      },
+      200,
+      failedUploads.length > 0
+        ? `${failedUploads.length} of ${files.length} images failed to upload`
+        : 'All images uploaded successfully'
+    );
+  })
+);
+
+/**
+ * Move images from temporary to permanent storage
+ * 
+ * Used after a product is created to move images from temp to the product folder
+ */
+router.post(
+  '/products/images/move',
+  isAuthenticated,
+  catchErrors(async (req: Request, res: Response) => {
+    const { sourceKeys, productId, productName, categoryId, catalogId } = req.body;
+    
+    if (!sourceKeys || !Array.isArray(sourceKeys) || sourceKeys.length === 0) {
+      return sendError(res, 'No source keys provided', 400);
+    }
+    
+    if (!productId) {
+      return sendError(res, 'Product ID is required', 400);
+    }
+    
+    // Get catalog and category info for proper path structure
+    const catalog = catalogId ? await storage.getCatalogById(catalogId) : null;
+    const category = categoryId ? await storage.getCategoryById(categoryId) : null;
+    
+    // Get supplier from catalog
+    const supplier = catalog?.supplierId 
+      ? await storage.getSupplierById(catalog.supplierId)
+      : null;
+    
+    // Sanitized names for path
+    const supplierName = supplier?.name || 'unknown-supplier';
+    const catalogName = catalog?.name || 'unknown-catalog';
+    const categoryName = category?.name || 'uncategorized';
+    const sanitizedProductName = productName?.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase() || 'product';
+    
+    // Move each file
+    const moveResults = await Promise.all(sourceKeys.map(async (sourceKey: string, index: number) => {
+      try {
+        // Move file to final location
+        const result = await objectStore.moveToFinalLocation(
+          sourceKey,
+          supplierName,
+          catalogName,
+          categoryName,
+          sanitizedProductName,
+          productId.toString()
+        );
+        
+        // Create product image record
+        const imageRecord = await storage.createProductImage({
+          productId,
+          url: result.url,
+          objectKey: result.objectKey,
+          isMain: index === 0, // First image is main by default
+          sortOrder: index,
+        });
+        
+        // Create absolute URL for client
+        const absoluteUrl = req.protocol + '://' + req.get('host') + result.url;
+        
+        return {
+          id: imageRecord.id,
+          url: result.url,
+          absoluteUrl,
+          objectKey: result.objectKey,
+          isMain: imageRecord.isMain,
+        };
+      } catch (error) {
+        console.error(`Error moving image ${sourceKey}:`, error);
+        return {
+          sourceKey,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        };
+      }
+    }));
+    
+    // Check if any files failed to move
+    const failedMoves = moveResults.filter(result => 'error' in result);
+    
+    if (failedMoves.length > 0 && failedMoves.length === sourceKeys.length) {
+      // All moves failed
+      return sendError(res, 'All image moves failed', 500);
+    }
+    
+    // Send response
+    sendResponse(
+      res,
+      {
+        images: moveResults.filter(result => !('error' in result)),
+        failedMoves,
+        totalMoved: moveResults.length - failedMoves.length,
+        totalFailed: failedMoves.length,
+      },
+      200,
+      failedMoves.length > 0
+        ? `${failedMoves.length} of ${sourceKeys.length} images failed to move`
+        : 'All images moved successfully'
+    );
+  })
+);
+
+/**
+ * Validate image before upload
+ * 
+ * Used to check if an image meets requirements before upload
+ */
+router.post(
+  '/images/validate',
+  isAuthenticated,
+  upload.single('image'),
+  catchErrors(async (req: Request, res: Response) => {
+    if (!req.file) {
+      return sendError(res, 'No image file provided', 400);
+    }
+    
+    // Validate the image
+    const validationResult = await objectStore.validateImage(
+      req.file.buffer,
+      req.file.originalname
+    );
+    
+    // Return validation result
+    sendResponse(res, {
+      valid: validationResult.valid,
+      validation: validationResult,
+      recommendations: validationResult.valid 
+        ? [] 
+        : [
+            "Ensure image dimensions are at least 200x200 pixels",
+            "Use JPG, PNG or WebP format only",
+            "Keep file size under 5MB",
+            "Recommended dimensions are 1200x1200 pixels"
+          ]
+    });
+  })
+);
+
+// Universal file serving endpoint
+router.get('/files/:path(*)', catchErrors(async (req: Request, res: Response) => {
+  const filePath = req.params.path;
   
-  switch (ext) {
-    case '.jpg':
-    case '.jpeg':
-      return 'image/jpeg';
-    case '.png':
-      return 'image/png';
-    case '.gif':
-      return 'image/gif';
-    case '.webp':
-      return 'image/webp';
-    case '.svg':
-      return 'image/svg+xml';
-    case '.pdf':
-      return 'application/pdf';
-    case '.json':
-      return 'application/json';
-    case '.txt':
-      return 'text/plain';
-    case '.html':
-      return 'text/html';
-    case '.css':
-      return 'text/css';
-    case '.js':
-      return 'application/javascript';
-    default:
-      return 'application/octet-stream';
+  if (!filePath) {
+    return sendError(res, 'No file path provided', 400);
   }
-}
+  
+  try {
+    // Get file from storage
+    const { data, contentType } = await objectStore.getFileAsBuffer(filePath);
+    
+    // Set content type header
+    if (contentType) {
+      res.setHeader('Content-Type', contentType);
+    }
+    
+    // Set cache control headers
+    res.setHeader('Cache-Control', 'public, max-age=31536000'); // 1 year
+    
+    // Send file
+    res.send(data);
+  } catch (error) {
+    console.error(`Error serving file ${filePath}:`, error);
+    return sendError(res, 'File not found', 404);
+  }
+}));
 
 export default router;

@@ -3,6 +3,7 @@ import { Readable } from 'stream';
 import path from 'path';
 import mime from 'mime-types';
 import retry from 'async-retry';
+import sharp from 'sharp'; // For image processing
 
 // Standard folders for organizing files
 export const STORAGE_FOLDERS = {
@@ -530,10 +531,31 @@ class ObjectStoreService {
    * and does not include the host/origin as that's handled by the client
    */
   getPublicUrl(objectKey: string): string {
+    if (!objectKey) {
+      console.warn('Attempted to get public URL for empty object key');
+      return '';
+    }
+    
     // Remove any leading slashes from objectKey for consistency
     const sanitizedKey = objectKey.replace(/^\/+/, '');
     
-    // Ensure proper format: /api/files/path/to/object
+    // Handle special case for temp files
+    if (sanitizedKey.startsWith(`${STORAGE_FOLDERS.TEMP}/`)) {
+      // Extract the filename for temp files
+      const parts = sanitizedKey.split('/');
+      const filename = parts[parts.length - 1];
+      
+      // If this is a temp file with a product ID segment
+      if (parts.length > 2 && parts[1] !== 'pending') {
+        // Format: /temp/{productId}/{filename}
+        return `/temp/${parts[1]}/${filename}`;
+      }
+      
+      // Format: /temp/{filename} for pending files
+      return `/temp/${filename}`;
+    }
+    
+    // Default format: /api/files/path/to/object
     return `${BASE_URL}/${sanitizedKey}`;
   }
   
@@ -543,6 +565,136 @@ class ObjectStoreService {
   detectContentType(filename: string): string {
     const contentType = mime.lookup(filename);
     return contentType || 'application/octet-stream';
+  }
+  
+  /**
+   * Process an image for optimization and resizing
+   * @param buffer The image buffer to process
+   * @param options Processing options
+   * @returns A processed image buffer
+   */
+  async processImage(
+    buffer: Buffer,
+    options: {
+      width?: number;
+      height?: number;
+      quality?: number;
+      fit?: 'cover' | 'contain' | 'fill' | 'inside' | 'outside';
+      position?: string | number;
+      background?: string;
+      withoutEnlargement?: boolean;
+      autoOrient?: boolean;
+      autoRotate?: boolean;
+    } = {}
+  ): Promise<Buffer> {
+    // Default options for image processing
+    const {
+      width = 1200,
+      height = 1200,
+      quality = 85,
+      fit = 'inside',
+      withoutEnlargement = true,
+      autoRotate = true,
+    } = options;
+    
+    try {
+      // Initialize the sharp instance with the buffer
+      let image = sharp(buffer);
+      
+      // Get the image metadata to determine if processing is needed
+      const metadata = await image.metadata();
+      
+      // Auto-rotate based on EXIF orientation if specified
+      if (autoRotate) {
+        image = image.rotate(); // Auto-rotate based on EXIF data
+      }
+      
+      // Resize the image if dimensions are provided
+      image = image.resize({
+        width,
+        height,
+        fit,
+        withoutEnlargement,
+      });
+      
+      // Determine the output format based on the input
+      let outputFormat = metadata.format;
+      if (!outputFormat || outputFormat === 'jpeg' || outputFormat === 'jpg') {
+        // Convert to JPEG with specified quality
+        return await image.jpeg({ quality }).toBuffer();
+      } else if (outputFormat === 'png') {
+        // Optimize PNGs
+        return await image.png({ compressionLevel: 9, adaptiveFiltering: true }).toBuffer();
+      } else if (outputFormat === 'webp') {
+        // Convert to WebP with specified quality
+        return await image.webp({ quality }).toBuffer();
+      } else {
+        // For other formats, just use the input format
+        return await image.toBuffer();
+      }
+    } catch (error) {
+      console.error('Error processing image:', error);
+      // If processing fails, return the original buffer
+      return buffer;
+    }
+  }
+  
+  /**
+   * Check if an image is valid (correct format, minimum dimensions)
+   */
+  async validateImage(
+    buffer: Buffer,
+    filename: string
+  ): Promise<{
+    valid: boolean;
+    width?: number;
+    height?: number;
+    format?: string;
+    size: number;
+    issues: string[];
+  }> {
+    const issues: string[] = [];
+    const result = {
+      valid: true,
+      size: buffer.length,
+      issues,
+    };
+    
+    // Check file size (5MB max)
+    const maxSizeInBytes = 5 * 1024 * 1024;
+    if (buffer.length > maxSizeInBytes) {
+      issues.push(`File size exceeds 5MB limit: ${Math.round(buffer.length / 1024 / 1024)}MB`);
+      result.valid = false;
+    }
+    
+    // Check file type by extension
+    const contentType = this.detectContentType(filename);
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(contentType)) {
+      issues.push(`Invalid file type: ${contentType}. Allowed types: JPG, PNG, WebP`);
+      result.valid = false;
+    }
+    
+    try {
+      // Use sharp to get image metadata
+      const metadata = await sharp(buffer).metadata();
+      result.width = metadata.width;
+      result.height = metadata.height;
+      result.format = metadata.format;
+      
+      // Check minimum dimensions (200x200)
+      const minDimension = 200;
+      if ((metadata.width && metadata.width < minDimension) || 
+          (metadata.height && metadata.height < minDimension)) {
+        issues.push(`Image dimensions too small: ${metadata.width}x${metadata.height}. Minimum: ${minDimension}x${minDimension}`);
+        result.valid = false;
+      }
+    } catch (error) {
+      issues.push('Failed to process image metadata. File may be corrupted.');
+      result.valid = false;
+    }
+    
+    return result;
   }
 }
 
