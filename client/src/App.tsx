@@ -40,6 +40,7 @@ import CategoryAttributes from "@/pages/admin/category-attributes";
 import ProductAttributes from "@/pages/admin/product-attributes";
 import GlobalAttributes from "@/pages/admin/global-attributes";
 import AttributeEditor from "@/pages/admin/attribute-editor";
+import AttributeOptionEditor from "@/pages/admin/attribute-option-editor";
 import ProductImages from "@/pages/admin/product-images";
 import BatchUpload from "@/pages/admin/batch-upload";
 import AuthTestDashboard from "@/pages/admin/auth-test-dashboard";
@@ -138,6 +139,7 @@ function App() {
               <AdminProtectedRoute path="/admin/global-attributes" component={GlobalAttributes} />
               <AdminProtectedRoute path="/admin/attributes/new" component={AttributeEditor} />
               <AdminProtectedRoute path="/admin/attributes/:id/edit" component={AttributeEditor} />
+              <AdminProtectedRoute path="/admin/attributes/:id/options" component={AttributeOptionEditor} />
               <AdminProtectedRoute path="/admin/pricing" component={AdminPricing} />
               <AdminProtectedRoute path="/admin/orders" component={AdminOrders} />
               <AdminProtectedRoute path="/admin/ai-settings" component={AdminAISettings} />

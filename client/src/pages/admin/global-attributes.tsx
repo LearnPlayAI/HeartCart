@@ -605,6 +605,13 @@ function GlobalAttributesPage() {
                           <div className="flex items-center justify-end space-x-2">
                             <Button 
                               variant="outline" 
+                              size="sm"
+                              onClick={() => navigate(`/admin/attributes/${attribute.id}/options`)}
+                            >
+                              Options
+                            </Button>
+                            <Button 
+                              variant="outline" 
                               size="icon"
                               onClick={() => handleEditAttribute(attribute)}
                             >

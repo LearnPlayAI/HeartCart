@@ -1,23 +1,21 @@
-import { useState, useEffect } from "react";
-import { useLocation, useParams } from "wouter";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { z } from "zod";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { AdminLayout } from "@/components/admin/layout";
+import { useParams, useLocation } from "wouter";
+import { Helmet } from "react-helmet";
+import { Loader2, Save, ArrowLeft } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
-
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage
-} from "@/components/ui/form";
-import {
+import { ApiError } from "@/lib/exceptions";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { AdminLayout } from "@/components/admin/layout";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
+import { 
   Card,
   CardContent,
   CardDescription,
@@ -25,116 +23,47 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Save, Trash, Loader2 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+import { Attribute, ATTRIBUTE_TYPES } from "@/types/attribute-types";
 
-// Define types for attribute data
-type Attribute = {
-  id: number;
-  name: string;
-  displayName: string;
-  description: string | null;
-  attributeType: "number" | "boolean" | "select" | "image" | "text" | "color" | "size" | "multiselect" | "date" | "file";
-  isFilterable: boolean;
-  isSwatch: boolean;
-  isRequired: boolean;
-  isVariant: boolean;
-  validationRules: string | null;
-  createdAt: string;
-  updatedAt: string;
-};
-
-// Create a schema for attribute form validation
-const attributeFormSchema = z.object({
-  name: z.string().min(1, "Name is required").max(50, "Name must be 50 characters or less"),
-  displayName: z.string().min(1, "Display name is required").max(100, "Display name must be 100 characters or less"),
-  description: z.string().nullable(),
-  attributeType: z.enum([
-    "number", "boolean", "select", "image", "text", "color", "size", "multiselect", "date", "file"
-  ], {
-    required_error: "Please select an attribute type",
-  }),
-  isFilterable: z.boolean().default(false),
-  isSwatch: z.boolean().default(false),
-  isRequired: z.boolean().default(false),
-  isVariant: z.boolean().default(false),
-  validationRules: z.string().nullable()
-});
-
-type AttributeFormValues = z.infer<typeof attributeFormSchema>;
-
-export default function AttributeEditor() {
-  const { id } = useParams<{ id: string }>();
-  const [, navigate] = useLocation();
+function AttributeEditorPage() {
   const { toast } = useToast();
-  const isEditMode = !!id;
-  const attributeId = isEditMode ? parseInt(id) : 0;
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-
-  // Set up form with schema validation
-  const form = useForm<AttributeFormValues>({
-    resolver: zodResolver(attributeFormSchema),
-    defaultValues: {
-      name: "",
-      displayName: "",
-      description: "",
-      attributeType: "text",
-      isFilterable: false,
-      isSwatch: false,
-      isRequired: false,
-      isVariant: false,
-      validationRules: null
-    }
+  const [, navigate] = useLocation();
+  const params = useParams();
+  const isNewAttribute = params.id === "new";
+  const attributeId = !isNewAttribute ? parseInt(params.id as string) : undefined;
+  const [formData, setFormData] = useState<Partial<Attribute>>({
+    name: "",
+    displayName: "",
+    description: "",
+    attributeType: ATTRIBUTE_TYPES[0],
+    isFilterable: false,
+    isSwatch: false,
+    isRequired: false,
+    isVariant: false,
+    validationRules: "",
   });
 
-  // Fetch attribute data for edit mode
-  const { data: attributeResponse, isLoading: attributeLoading } = useQuery({
+  // Fetch attribute if editing
+  const {
+    data: attributeResponse,
+    isLoading: attributeLoading,
+    error: attributeError,
+  } = useQuery({
     queryKey: ["/api/attributes", attributeId],
-    queryFn: async () => {
-      if (!isEditMode) return null;
-      const response = await fetch(`/api/attributes/${attributeId}`);
-      if (!response.ok) {
-        throw new Error("Failed to fetch attribute");
-      }
-      return response.json();
-    },
-    enabled: isEditMode
+    enabled: !isNewAttribute && !!attributeId,
+    retry: 1,
   });
 
-  // Extract attribute data from the standardized response
+  // Extract the attribute data from the standardized response
   const attribute = attributeResponse?.data;
-
-  // Populate form with attribute data when in edit mode
-  useEffect(() => {
-    if (attribute) {
-      form.reset({
-        name: attribute.name,
-        displayName: attribute.displayName,
-        description: attribute.description,
-        attributeType: attribute.attributeType,
-        isFilterable: attribute.isFilterable,
-        isSwatch: attribute.isSwatch,
-        isRequired: attribute.isRequired,
-        isVariant: attribute.isVariant,
-        validationRules: attribute.validationRules
-      });
-    }
-  }, [attribute, form]);
 
   // Create attribute mutation
   const createAttributeMutation = useMutation({
-    mutationFn: async (newAttribute: AttributeFormValues) => {
+    mutationFn: async (newAttribute: Omit<Attribute, "id">) => {
       const response = await fetch("/api/attributes", {
         method: "POST",
         headers: {
@@ -145,7 +74,10 @@ export default function AttributeEditor() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to create attribute");
+        throw new ApiError(
+          errorData.message || "Failed to create attribute",
+          response.status
+        );
       }
 
       return await response.json();
@@ -156,7 +88,7 @@ export default function AttributeEditor() {
         title: "Attribute created successfully",
         variant: "default",
       });
-      navigate("/admin/global-attributes");
+      navigate("/admin/attributes");
     },
     onError: (error: Error) => {
       toast({
@@ -169,18 +101,22 @@ export default function AttributeEditor() {
 
   // Update attribute mutation
   const updateAttributeMutation = useMutation({
-    mutationFn: async (updatedAttribute: AttributeFormValues) => {
-      const response = await fetch(`/api/attributes/${attributeId}`, {
+    mutationFn: async (updatedAttribute: Partial<Attribute> & { id: number }) => {
+      const { id, ...data } = updatedAttribute;
+      const response = await fetch(`/api/attributes/${id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(updatedAttribute),
+        body: JSON.stringify(data),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to update attribute");
+        throw new ApiError(
+          errorData.message || "Failed to update attribute",
+          response.status
+        );
       }
 
       return await response.json();
@@ -191,7 +127,7 @@ export default function AttributeEditor() {
         title: "Attribute updated successfully",
         variant: "default",
       });
-      navigate("/admin/global-attributes");
+      navigate("/admin/attributes");
     },
     onError: (error: Error) => {
       toast({
@@ -202,316 +138,267 @@ export default function AttributeEditor() {
     },
   });
 
-  // Delete attribute mutation
-  const deleteAttributeMutation = useMutation({
-    mutationFn: async () => {
-      const response = await fetch(`/api/attributes/${attributeId}`, {
-        method: "DELETE",
+  // Update form data when attribute is loaded
+  useEffect(() => {
+    if (attribute) {
+      setFormData({
+        name: attribute.name,
+        displayName: attribute.displayName,
+        description: attribute.description || "",
+        attributeType: attribute.attributeType,
+        isFilterable: attribute.isFilterable,
+        isSwatch: attribute.isSwatch,
+        isRequired: attribute.isRequired,
+        isVariant: attribute.isVariant,
+        validationRules: attribute.validationRules || "",
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to delete attribute");
-      }
-
-      return true;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/attributes"] });
-      toast({
-        title: "Attribute deleted successfully",
-        variant: "default",
-      });
-      navigate("/admin/global-attributes");
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Failed to delete attribute",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
+    }
+  }, [attribute]);
 
   // Handler for form submission
-  const onSubmit = (values: AttributeFormValues) => {
-    if (isEditMode) {
-      updateAttributeMutation.mutate(values);
-    } else {
-      createAttributeMutation.mutate(values);
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    
+    const attributeData = {
+      name: formData.name!,
+      displayName: formData.displayName!,
+      description: formData.description || null,
+      attributeType: formData.attributeType!,
+      isFilterable: !!formData.isFilterable,
+      isSwatch: !!formData.isSwatch,
+      isRequired: !!formData.isRequired,
+      isVariant: !!formData.isVariant,
+      validationRules: formData.validationRules || null,
+    };
+    
+    if (isNewAttribute) {
+      createAttributeMutation.mutate(attributeData);
+    } else if (attributeId) {
+      updateAttributeMutation.mutate({
+        id: attributeId,
+        ...attributeData,
+      });
     }
   };
 
-  const handleDelete = () => {
-    if (confirm("Are you sure you want to delete this attribute? This action cannot be undone.")) {
-      deleteAttributeMutation.mutate();
-    }
+  // Handler for input changes
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const isPending = createAttributeMutation.isPending || updateAttributeMutation.isPending;
+  // Handler for checkbox changes
+  const handleCheckboxChange = (name: string, checked: boolean) => {
+    setFormData(prev => ({ ...prev, [name]: checked }));
+  };
+
+  // Handler for select changes
+  const handleSelectChange = (name: string, value: string) => {
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  // Loading state
+  if (!isNewAttribute && attributeLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Error state
+  if (!isNewAttribute && attributeError) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 min-h-screen">
+        <h1 className="text-2xl font-bold text-destructive">Error Loading Attribute</h1>
+        <p>{(attributeError as Error).message}</p>
+        <Button onClick={() => navigate("/admin/attributes")}>
+          Back to Attributes
+        </Button>
+      </div>
+    );
+  }
 
   return (
-    <AdminLayout>
-      <div className="container mx-auto py-6">
-        <div className="mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => navigate("/admin/global-attributes")}
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Attributes
-            </Button>
-            <h1 className="text-2xl font-bold tracking-tight">
-              {isEditMode ? "Edit Attribute" : "Create Attribute"}
-            </h1>
-          </div>
-          {isEditMode && (
-            <Button 
-              variant="destructive" 
-              onClick={handleDelete}
-              disabled={deleteAttributeMutation.isPending}
-            >
-              {deleteAttributeMutation.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <Trash className="h-4 w-4 mr-2" />
-              )}
-              Delete Attribute
-            </Button>
-          )}
+    <AdminLayout 
+      title={isNewAttribute ? "Create New Attribute" : "Edit Attribute"} 
+      subtitle={isNewAttribute ? "Add a new global attribute to your store" : `Editing attribute: ${attribute?.displayName || ""}`}
+    >
+      <Helmet>
+        <title>{isNewAttribute ? "Create New Attribute" : "Edit Attribute"} | TeeMeYou Admin</title>
+      </Helmet>
+
+      <div className="max-w-4xl mx-auto">
+        <div className="mb-6">
+          <Button variant="outline" onClick={() => navigate("/admin/attributes")}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Attributes
+          </Button>
         </div>
 
-        {attributeLoading && isEditMode ? (
-          <div className="flex justify-center items-center h-48">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        ) : (
-          <Card>
-            <CardHeader>
-              <CardTitle>{isEditMode ? "Edit Attribute Details" : "Create New Attribute"}</CardTitle>
-              <CardDescription>
-                {isEditMode 
-                  ? "Update the attribute's properties below."
-                  : "Fill in the information below to create a new attribute."
-                }
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <FormField
-                      control={form.control}
-                      name="name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Attribute Name</FormLabel>
-                          <FormControl>
-                            <Input placeholder="color_attr" {...field} />
-                          </FormControl>
-                          <FormDescription>
-                            Internal name, lowercase with no spaces
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+        <Card>
+          <CardHeader>
+            <CardTitle>{isNewAttribute ? "Create New Attribute" : "Edit Attribute"}</CardTitle>
+            <CardDescription>
+              {isNewAttribute 
+                ? "Create a new global attribute that can be used across products." 
+                : "Update the attribute's properties below."}
+            </CardDescription>
+          </CardHeader>
+          <form onSubmit={handleSubmit}>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Name</Label>
+                  <Input
+                    id="name"
+                    name="name"
+                    placeholder="color"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Internal name, lowercase with no spaces
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="displayName">Display Name</Label>
+                  <Input
+                    id="displayName"
+                    name="displayName"
+                    placeholder="Color"
+                    value={formData.displayName}
+                    onChange={handleInputChange}
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Customer-facing name
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="description">Description (Optional)</Label>
+                <Textarea
+                  id="description"
+                  name="description"
+                  placeholder="Enter a description for this attribute"
+                  value={formData.description}
+                  onChange={handleInputChange}
+                  rows={2}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="attributeType">Attribute Type</Label>
+                <Select
+                  name="attributeType"
+                  value={formData.attributeType}
+                  onValueChange={(value) => handleSelectChange("attributeType", value)}
+                  disabled={!isNewAttribute}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select attribute type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ATTRIBUTE_TYPES.map(type => (
+                      <SelectItem key={type} value={type}>
+                        {type.charAt(0).toUpperCase() + type.slice(1)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {!isNewAttribute && (
+                  <p className="text-xs text-muted-foreground">
+                    Attribute type cannot be changed after creation
+                  </p>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="isFilterable" 
+                      name="isFilterable"
+                      checked={formData.isFilterable}
+                      onCheckedChange={(checked) => handleCheckboxChange("isFilterable", checked as boolean)}
                     />
-                    <FormField
-                      control={form.control}
-                      name="displayName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Display Name</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Color" {...field} />
-                          </FormControl>
-                          <FormDescription>
-                            Customer-facing name
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+                    <Label htmlFor="isFilterable">Filterable</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="isSwatch" 
+                      name="isSwatch"
+                      checked={formData.isSwatch}
+                      onCheckedChange={(checked) => handleCheckboxChange("isSwatch", checked as boolean)}
                     />
+                    <Label htmlFor="isSwatch">Display as Swatch</Label>
                   </div>
-
-                  <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Description (Optional)</FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            placeholder="Describe this attribute" 
-                            {...field} 
-                            value={field.value || ""}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="attributeType"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Attribute Type</FormLabel>
-                        <Select 
-                          onValueChange={field.onChange} 
-                          defaultValue={field.value}
-                          value={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select a type" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="text">Text</SelectItem>
-                            <SelectItem value="number">Number</SelectItem>
-                            <SelectItem value="boolean">Boolean</SelectItem>
-                            <SelectItem value="select">Select</SelectItem>
-                            <SelectItem value="multiselect">Multi-Select</SelectItem>
-                            <SelectItem value="color">Color</SelectItem>
-                            <SelectItem value="size">Size</SelectItem>
-                            <SelectItem value="image">Image</SelectItem>
-                            <SelectItem value="date">Date</SelectItem>
-                            <SelectItem value="file">File</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormDescription>
-                          The type of data this attribute will store
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-4">
-                      <FormField
-                        control={form.control}
-                        name="isFilterable"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                            <FormControl>
-                              <Checkbox
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                            </FormControl>
-                            <div className="space-y-1 leading-none">
-                              <FormLabel>Filterable</FormLabel>
-                              <FormDescription>
-                                Allow customers to filter products by this attribute
-                              </FormDescription>
-                            </div>
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="isSwatch"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                            <FormControl>
-                              <Checkbox
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                            </FormControl>
-                            <div className="space-y-1 leading-none">
-                              <FormLabel>Display as Swatch</FormLabel>
-                              <FormDescription>
-                                Show this attribute as a visual swatch (for colors, patterns, etc.)
-                              </FormDescription>
-                            </div>
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    <div className="space-y-4">
-                      <FormField
-                        control={form.control}
-                        name="isRequired"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                            <FormControl>
-                              <Checkbox
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                            </FormControl>
-                            <div className="space-y-1 leading-none">
-                              <FormLabel>Required</FormLabel>
-                              <FormDescription>
-                                Make this attribute required for products
-                              </FormDescription>
-                            </div>
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="isVariant"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                            <FormControl>
-                              <Checkbox
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                            </FormControl>
-                            <div className="space-y-1 leading-none">
-                              <FormLabel>Use for Variants</FormLabel>
-                              <FormDescription>
-                                Use this attribute to create product variants
-                              </FormDescription>
-                            </div>
-                          </FormItem>
-                        )}
-                      />
-                    </div>
+                </div>
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="isRequired" 
+                      name="isRequired"
+                      checked={formData.isRequired}
+                      onCheckedChange={(checked) => handleCheckboxChange("isRequired", checked as boolean)}
+                    />
+                    <Label htmlFor="isRequired">Required</Label>
                   </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="isVariant" 
+                      name="isVariant"
+                      checked={formData.isVariant}
+                      onCheckedChange={(checked) => handleCheckboxChange("isVariant", checked as boolean)}
+                    />
+                    <Label htmlFor="isVariant">Use for Variants</Label>
+                  </div>
+                </div>
+              </div>
 
-                  <FormField
-                    control={form.control}
-                    name="validationRules"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Validation Rules (JSON, Optional)</FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            placeholder='{"min": 1, "max": 100}' 
-                            {...field}
-                            value={field.value || ""}
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Enter validation rules as JSON if needed
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <CardFooter className="flex justify-end px-0 pb-0">
-                    <Button type="submit" disabled={isPending}>
-                      {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      <Save className="mr-2 h-4 w-4" />
-                      {isEditMode ? "Update Attribute" : "Create Attribute"}
-                    </Button>
-                  </CardFooter>
-                </form>
-              </Form>
+              <div className="space-y-2">
+                <Label htmlFor="validationRules">Validation Rules (JSON, Optional)</Label>
+                <Textarea
+                  id="validationRules"
+                  name="validationRules"
+                  placeholder='{"min": 1, "max": 100}'
+                  value={formData.validationRules}
+                  onChange={handleInputChange}
+                  rows={3}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Enter validation rules as JSON if needed
+                </p>
+              </div>
             </CardContent>
-          </Card>
-        )}
+            <CardFooter className="flex justify-between">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => navigate("/admin/attributes")}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={
+                  createAttributeMutation.isPending || updateAttributeMutation.isPending
+                }
+              >
+                {(createAttributeMutation.isPending || updateAttributeMutation.isPending) && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                {isNewAttribute ? "Create Attribute" : "Save Changes"}
+              </Button>
+            </CardFooter>
+          </form>
+        </Card>
       </div>
     </AdminLayout>
   );
 }
+
+export default AttributeEditorPage;
