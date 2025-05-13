@@ -1,5 +1,8 @@
 -- Migration script to convert all timestamp fields to text fields
 -- This ensures all date and time information is stored as strings
+-- 
+-- NOTE: For the session table specifically, we keep timestamps as they are
+-- because the PostgreSQL session store requires timestamp-based fields.
 
 -- Users table
 ALTER TABLE users 
@@ -126,3 +129,15 @@ ALTER TABLE attribute_discount_rules
 ALTER TABLE product_drafts
   ALTER COLUMN created_at TYPE TEXT,
   ALTER COLUMN updated_at TYPE TEXT;
+
+-- Session Table (Special Case)
+-- The session table must use timestamp with time zone for its expire column
+-- to work properly with the PostgreSQL session store.
+-- If the session table had text-based expire fields, execute this SQL:
+-- DROP TABLE IF EXISTS session CASCADE;
+-- CREATE TABLE session (
+--   sid VARCHAR NOT NULL PRIMARY KEY,
+--   sess JSON NOT NULL,
+--   expire TIMESTAMP WITH TIME ZONE NOT NULL
+-- );
+-- CREATE INDEX IDX_session_expire ON session (expire);
