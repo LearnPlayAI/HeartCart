@@ -180,7 +180,7 @@ export const ReviewAndSaveStep = () => {
       {/* Validation warnings */}
       {warnings.length > 0 && (
         <Alert className="bg-amber-50 border-amber-200">
-          <ExclamationTriangle className="h-4 w-4 text-amber-600" />
+          <AlertTriangle className="h-4 w-4 text-amber-600" />
           <AlertTitle className="text-amber-800">Product Warnings</AlertTitle>
           <AlertDescription className="text-amber-700">
             <ul className="list-disc list-inside mt-2 space-y-1">

@@ -7,7 +7,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useRoute } from 'wouter';
 import { AdminLayout } from '@/components/admin/layout';
-import ProductWizard from '@/components/admin/product-wizard/ProductWizard';
+import { ProductWizard } from '@/components/admin/product-wizard/ProductWizard';
 import { useQuery } from '@tanstack/react-query';
 import {
   Breadcrumb,
