@@ -324,22 +324,36 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className 
   
   // Handle setting an image as the main image
   const handleSetMainImage = (imageIdOrUrl: string | number) => {
-    dispatch({
-      type: WizardActionType.SET_MAIN_IMAGE,
-      payload: imageIdOrUrl
-    });
+    // Find the image index in our local state
+    const imageIndex = uploadedImages.findIndex(img => 
+      String(img.id) === String(imageIdOrUrl) || img.url === imageIdOrUrl
+    );
     
-    toast({
-      title: "Main image updated",
-      description: "The main product image has been updated"
-    });
+    if (imageIndex >= 0) {
+      // Update the local state to mark this image as main and others as not main
+      const updatedImages = uploadedImages.map((img, idx) => ({
+        ...img,
+        isMain: idx === imageIndex
+      }));
+      
+      setUploadedImages(updatedImages);
+      
+      // Also update the context state
+      dispatch({ type: 'SET_FIELD', field: 'mainImageIndex', value: imageIndex });
+      
+      toast({
+        title: "Main image updated",
+        description: "The main product image has been updated"
+      });
+    }
   };
   
   // Handle image reordering
   const handleDragEnd = (result: any) => {
     if (!result.destination) return;
     
-    const items = Array.from(productData.uploadedImages);
+    // Use our local state instead of productData
+    const items = Array.from(uploadedImages);
     const [reorderedItem] = items.splice(result.source.index, 1);
     items.splice(result.destination.index, 0, reorderedItem);
     
@@ -349,10 +363,21 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className 
       order: index
     }));
     
-    dispatch({
-      type: WizardActionType.REORDER_IMAGES,
-      payload: updatedItems
-    });
+    // Update local state
+    setUploadedImages(updatedItems);
+    
+    // Also update the context by re-ordering the imageUrls and imageObjectKeys
+    const newImageUrls = updatedItems.map(item => item.url);
+    const newImageObjectKeys = updatedItems.map(item => item.objectKey || '');
+    
+    dispatch({ type: 'SET_FIELD', field: 'imageUrls', value: newImageUrls });
+    dispatch({ type: 'SET_FIELD', field: 'imageObjectKeys', value: newImageObjectKeys });
+    
+    // Also determine the new main image index
+    const mainImageIndex = updatedItems.findIndex(img => img.isMain);
+    if (mainImageIndex >= 0) {
+      dispatch({ type: 'SET_FIELD', field: 'mainImageIndex', value: mainImageIndex });
+    }
   };
   
   // AI background removal handler
@@ -496,7 +521,7 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className 
             <CardTitle>Manage Product Images</CardTitle>
           </CardHeader>
           <CardContent>
-            {productData.uploadedImages.length === 0 ? (
+            {uploadedImages.length === 0 ? (
               <div className="text-center py-12 border border-dashed rounded-md">
                 <ImageIcon className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                 <p className="text-muted-foreground">No images uploaded yet</p>
@@ -513,7 +538,7 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className 
                       ref={provided.innerRef}
                       className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
                     >
-                      {productData.uploadedImages
+                      {uploadedImages
                         .sort((a, b) => (a.order || 0) - (b.order || 0))
                         .map((image, index) => (
                           <Draggable 
