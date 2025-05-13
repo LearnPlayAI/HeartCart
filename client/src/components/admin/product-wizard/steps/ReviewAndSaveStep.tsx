@@ -29,6 +29,7 @@ import {
   AlertTriangleIcon, 
   Loader2
 } from 'lucide-react';
+import ProductImageGallery from '../ProductImageGallery';
 
 /**
  * Simple schema validator that checks for required fields
@@ -142,47 +143,40 @@ export function ReviewAndSaveStep({ onComplete }: ReviewAndSaveStepProps = {}) {
             const supplierName = (provider?.supplierName || 'default');
             const catalogName = (state.catalogName || provider?.name || 'default');
             
-            await Promise.all(state.imageObjectKeys.map(async (objectKey, index) => {
-              // Determine if this is the main image
-              const isMain = index === state.mainImageIndex;
+            // Send a single request with all image keys
+            try {
+              // Move all images from temp storage to final product location
+              const moveResponse = await fetch('/api/files/products/images/move', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  sourceKeys: state.imageObjectKeys, // Send as array to match server expectation
+                  productId: productResult.data.id,
+                  productName: state.name,
+                  categoryId: state.categoryId,
+                  catalogId: state.catalogId
+                }),
+              });
               
-              try {
-                // Move image from temp storage to final product location
-                const moveResponse = await fetch('/api/files/products/images/move', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify({
-                    sourceKey: objectKey,
-                    productId: productResult.data.id,
-                    isMain,
-                    supplierName,
-                    catalogName,
-                    categoryName,
-                    productName: state.name
-                  }),
-                });
-                
-                if (!moveResponse.ok) {
-                  const errorData = await moveResponse.json();
-                  console.error('Failed to move image:', errorData);
-                  // We don't throw here to continue with other images
-                  // But we add a note to the UI about partial success
-                  setSavingError(prev => 
-                    prev ? `${prev}. Some images may not have been properly saved.` : 
-                    'Some images may not have been properly saved. Product data was saved successfully.'
-                  );
-                }
-              } catch (moveError) {
-                console.error('Error moving image:', moveError);
-                // Add error feedback but continue with other images
+              if (!moveResponse.ok) {
+                const errorData = await moveResponse.json();
+                console.error('Failed to move images:', errorData);
                 setSavingError(prev => 
-                  prev ? `${prev}. Error moving some images.` : 
-                  'Error moving some images. Product data was saved successfully.'
+                  prev ? `${prev}. Images may not have been properly saved.` : 
+                  'Product images may not have been properly saved. Product data was saved successfully.'
                 );
+              } else {
+                console.log('Successfully moved all product images');
               }
-            }));
+            } catch (moveError) {
+              console.error('Error moving images:', moveError);
+              setSavingError(prev => 
+                prev ? `${prev}. Error moving images.` : 
+                'Error moving images. Product data was saved successfully.'
+              );
+            }
           } catch (imageError) {
             console.error('Error processing images:', imageError);
             setSavingError(prev => 
@@ -481,49 +475,31 @@ export function ReviewAndSaveStep({ onComplete }: ReviewAndSaveStepProps = {}) {
             
             <Separator />
             
-            {state.imageUrls.length === 0 ? (
-              <div className="text-center py-8 border rounded-md bg-muted/20">
-                <ImageIcon className="h-12 w-12 mx-auto text-muted-foreground" />
-                <p className="mt-2 text-muted-foreground">No images uploaded</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                  {state.imageUrls.map((url: string, index: number) => (
-                    <div 
-                      key={url}
-                      className={`relative rounded-md overflow-hidden border ${
-                        index === state.mainImageIndex ? 'ring-2 ring-primary' : ''
-                      }`}
-                    >
-                      <div className="aspect-square bg-muted/20">
-                        <img 
-                          src={url.startsWith('http') ? url : window.location.origin + url} 
-                          alt={`Product image ${index + 1}`}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            // If image still fails to load with full URL, show placeholder
-                            console.error('Review step: Image failed to load:', (e.target as HTMLImageElement).src);
-                            const target = e.target as HTMLImageElement;
-                            target.onerror = null; // Prevent infinite loop
-                            target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjIwMCIgaGVpZ2h0PSIyMDAiIGZpbGw9IiNFNUU3RUIiLz48cGF0aCBkPSJNMTAwIDc0QzkxLjcxNTcgNzQgODUgODAuNzE1NyA4NSA4OUM4NSA5Ny4yODQzIDkxLjcxNTcgMTA0IDEwMCAxMDRDMTA4LjI4NCAxMDQgMTE1IDk3LjI4NDMgMTE1IDg5QzExNSA4MC43MTU3IDEwOC4yODQgNzQgMTAwIDc0WiIgZmlsbD0iIzk0YTNiOCIvPjxwYXRoIGQ9Ik0xNTUgMTI2LjVDMTU1IDEzMy40MDQgMTQ3LjYyOCAxMzkgMTM4LjUgMTM5QzEyOS4zNzIgMTM5IDEyMiAxMzMuNDA0IDEyMiAxMjYuNUMxMjIgMTE5LjU5NiAxMjkuMzcyIDExNCAxMzguNSAxMTRDMTQ3LjYyOCAxMTQgMTU1IDExOS41OTYgMTU1IDEyNi41WiIgZmlsbD0iIzk0YTNiOCIvPjxwYXRoIGQ9Ik0xNjggMTQ0LjVDMTU1LjUyMSAxMzguODg4IDEzNy42MjggMTM1IDEyNyAxMzVDMTExLjUzNiAxMzUgOTguODkzNiAxMzcuMDUzIDkwIDE0MC41IiBzdHJva2U9IiM5NGEzYjgiIHN0cm9rZS13aWR0aD0iMTAiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg==';
-                          }}
-                        />
-                      </div>
-                      {index === state.mainImageIndex && (
-                        <div className="absolute top-1 left-1">
-                          <Badge variant="secondary" className="bg-primary text-primary-foreground text-xs">
-                            Main
-                          </Badge>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+            {/* Use our standardized ProductImageGallery component */}
+            <ProductImageGallery 
+              images={state.imageUrls.map((url, index) => ({
+                url,
+                index,
+                isMain: index === state.mainImageIndex
+              }))}
+              mainImageIndex={state.mainImageIndex}
+              columns={4}
+              showBadges={true}
+              layout="grid"
+              aspectRatio="square"
+              emptyState={
+                <div className="text-center py-8 border rounded-md bg-muted/20">
+                  <ImageIcon className="h-12 w-12 mx-auto text-muted-foreground" />
+                  <p className="mt-2 text-muted-foreground">No images uploaded</p>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  {state.imageUrls.length} image{state.imageUrls.length !== 1 ? 's' : ''} uploaded
-                </p>
-              </div>
+              }
+              className="mb-4"
+            />
+            
+            {state.imageUrls.length > 0 && (
+              <p className="text-sm text-muted-foreground">
+                {state.imageUrls.length} image{state.imageUrls.length !== 1 ? 's' : ''} uploaded
+              </p>
             )}
           </div>
           
