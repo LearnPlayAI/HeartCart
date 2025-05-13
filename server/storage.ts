@@ -4316,43 +4316,9 @@ export class DatabaseStorage implements IStorage {
     }
   }
   
-  // Catalog attribute operations
-  async getCatalogAttributes(catalogId: number): Promise<(CatalogAttribute & { attribute: Attribute })[]> {
-    const result = await db
-      .select({
-        catalogAttribute: catalogAttributes,
-        attribute: attributes
-      })
-      .from(catalogAttributes)
-      .innerJoin(attributes, eq(catalogAttributes.attributeId, attributes.id))
-      .where(eq(catalogAttributes.catalogId, catalogId))
-      .orderBy(asc(catalogAttributes.sortOrder));
-    
-    return result.map(row => ({
-      ...row.catalogAttribute,
-      attribute: row.attribute
-    }));
-  }
+  // Removed catalog attribute operations as part of centralized attribute system
   
-  async getCatalogAttributeById(id: number): Promise<(CatalogAttribute & { attribute: Attribute }) | undefined> {
-    const result = await db
-      .select({
-        catalogAttribute: catalogAttributes,
-        attribute: attributes
-      })
-      .from(catalogAttributes)
-      .innerJoin(attributes, eq(catalogAttributes.attributeId, attributes.id))
-      .where(eq(catalogAttributes.id, id));
-    
-    if (result.length === 0) {
-      return undefined;
-    }
-    
-    return {
-      ...result[0].catalogAttribute,
-      attribute: result[0].attribute
-    };
-  }
+  // Removed getCatalogAttributeById as part of centralized attribute system
   
   async createCatalogAttribute(catalogAttribute: InsertCatalogAttribute): Promise<CatalogAttribute> {
     const [newCatalogAttribute] = await db
