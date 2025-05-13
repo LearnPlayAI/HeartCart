@@ -442,10 +442,7 @@ export default function AdminCategories() {
     return parent ? parent.name : "Unknown";
   };
 
-  // Handle opening the attributes management page
-  const handleManageAttributes = (categoryId: number) => {
-    navigate(`/admin/category-attributes/${categoryId}`);
-  };
+  // Attribute management has been removed as part of centralized attribute system implementation
   
   // State for cascade visibility confirmation dialog
   const [isCascadeDialogOpen, setIsCascadeDialogOpen] = useState(false);
@@ -709,14 +706,7 @@ export default function AdminCategories() {
                                 </div>
                               </div>
                               <div className="flex space-x-2">
-                                <Button 
-                                  variant="outline" 
-                                  size="sm"
-                                  onClick={() => handleManageAttributes(item.category.id)}
-                                >
-                                  <Tag className="h-4 w-4 mr-2" />
-                                  Attributes
-                                </Button>
+                                {/* Attribute buttons removed as part of centralized attribute system */}
                                 
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
@@ -806,14 +796,7 @@ export default function AdminCategories() {
                                               </div>
                                             </div>
                                             <div className="flex space-x-2">
-                                              <Button 
-                                                variant="outline" 
-                                                size="sm"
-                                                onClick={() => handleManageAttributes(child.id)}
-                                              >
-                                                <Tag className="h-4 w-4 mr-2" />
-                                                Attributes
-                                              </Button>
+                                              {/* Attribute buttons removed as part of centralized attribute system */}
                                               
                                               <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
@@ -907,15 +890,7 @@ export default function AdminCategories() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem 
-                            onSelect={(e) => {
-                              e.preventDefault();
-                              handleManageAttributes(category.id);
-                            }}
-                          >
-                            <Tag className="h-4 w-4 mr-2" />
-                            Manage Attributes
-                          </DropdownMenuItem>
+                          {/* Attribute menu item removed as part of centralized attribute system */}
                           
                           <DropdownMenuSeparator />
                           
@@ -947,15 +922,7 @@ export default function AdminCategories() {
                       <p className="text-sm line-clamp-3">{category.description}</p>
                     )}
                     
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="w-full mt-3"
-                      onClick={() => handleManageAttributes(category.id)}
-                    >
-                      <Tag className="h-4 w-4 mr-2" />
-                      Manage Attributes
-                    </Button>
+                    {/* Attribute button removed as part of centralized attribute system */}
                   </div>
                 </CardContent>
               </Card>
