@@ -189,19 +189,42 @@ const productWizardReducer = (
       };
     
     case 'ADD_IMAGE': {
-      // Normalize URL to ensure consistent handling
-      const normalizedUrl = action.url.startsWith('http') 
-        ? action.url 
-        : action.url.startsWith('/') 
-          ? action.url 
-          : `/${action.url}`;
+      // Enhanced URL normalization with thorough checks
+      let normalizedUrl = action.url || '';
+      
+      // Step 1: Strip origin if it's already included to avoid double origins
+      if (typeof window !== 'undefined') {
+        const originPattern = new RegExp(`^${window.location.origin}`);
+        normalizedUrl = normalizedUrl.replace(originPattern, '');
+      }
+      
+      // Step 2: Make absolute path if it's relative
+      if (!normalizedUrl.startsWith('http') && !normalizedUrl.startsWith('data:')) {
+        // Ensure it has a leading slash
+        normalizedUrl = normalizedUrl.startsWith('/') ? normalizedUrl : `/${normalizedUrl}`;
+        
+        // Add origin if in browser context
+        if (typeof window !== 'undefined') {
+          normalizedUrl = `${window.location.origin}${normalizedUrl}`;
+        }
+      }
+      
+      // Handle special cases of API URL paths
+      if (normalizedUrl.includes('/api/files/temp/')) {
+        // Standardize temp file URL format
+        const fileName = normalizedUrl.split('/').pop();
+        if (fileName && typeof window !== 'undefined') {
+          normalizedUrl = `${window.location.origin}/temp/${fileName}`;
+        }
+      }
       
       console.log('Adding image to context with normalized URL:', normalizedUrl);
+      console.log('Object key:', action.objectKey);
       
       return {
         ...state,
         imageUrls: [...state.imageUrls, normalizedUrl],
-        imageObjectKeys: [...state.imageObjectKeys, action.objectKey],
+        imageObjectKeys: [...state.imageObjectKeys, action.objectKey || ''],
         // If this is the first image, automatically mark it as the main image
         ...(state.imageUrls.length === 0 ? { mainImageIndex: 0 } : {})
       };
