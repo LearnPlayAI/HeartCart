@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { useNavigate } from 'wouter';
+import { useLocation } from 'wouter';
 import { ProductWizardProvider, useProductWizardContext, WIZARD_STEPS } from './context';
 import WizardNavigation from './WizardNavigation';
 import BasicInfoStep from './steps/BasicInfoStep';
@@ -31,7 +31,7 @@ const ProductWizardInner: React.FC<ProductWizardProps> = ({
   onComplete,
   showBackToProducts = true,
 }) => {
-  const navigate = useNavigate();
+  const [, setLocation] = useLocation();
   const { 
     currentStep, 
     createProduct, 
@@ -60,7 +60,7 @@ const ProductWizardInner: React.FC<ProductWizardProps> = ({
     if (onCancel) {
       onCancel();
     } else {
-      navigate('/admin/products');
+      setLocation('/admin/products');
     }
   };
   

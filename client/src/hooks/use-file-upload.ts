@@ -1,240 +1,260 @@
 /**
- * File Upload Hook
- * 
- * Provides a reusable hook for handling file uploads with
- * drag and drop functionality, progress tracking, and validation.
+ * Custom hook for handling file uploads with drag-and-drop functionality
  */
 
-import { useState, useCallback } from 'react';
-import { 
-  uploadFile, 
-  uploadMultipleFiles, 
-  validateFileType, 
-  validateFileSize, 
-  isImageFile, 
-  FileUploadOptions 
-} from '@/utils/file-manager';
+import { useState, useRef, useCallback } from 'react';
+import { StorageBucket, uploadFile } from '@/utils/file-manager';
 
 interface UseFileUploadOptions {
-  maxSize?: number; // Maximum file size in bytes
-  allowedTypes?: string[]; // Array of allowed file extensions (without dot)
-  maxFiles?: number; // Maximum number of files to upload at once
-  folder?: string; // Folder to upload to
-  bucket?: string; // Bucket to upload to
-  generateUniqueName?: boolean; // Whether to generate a unique name for the file
-  onSuccess?: (urls: string[], objectKeys: string[]) => void; // Callback on successful upload
-  onError?: (error: string) => void; // Callback on error
+  bucket: StorageBucket;
+  maxFiles?: number;
+  acceptedFileTypes?: string[];
+  additionalMetadata?: Record<string, any>;
+  onUploadSuccess?: (objectKey: string, url: string) => void;
+  onUploadError?: (error: string) => void;
 }
 
-interface UseFileUploadReturn {
-  files: File[]; // Current selected files
-  fileUrls: string[]; // URLs of uploaded files
-  objectKeys: string[]; // Object keys of uploaded files
-  isDragging: boolean; // Whether user is currently dragging files
-  isUploading: boolean; // Whether files are currently being uploaded
-  progress: number; // Upload progress (0-100)
-  error: string | null; // Error message if upload failed
-  
-  handleDragEnter: (e: React.DragEvent<HTMLElement>) => void;
-  handleDragLeave: (e: React.DragEvent<HTMLElement>) => void;
-  handleDragOver: (e: React.DragEvent<HTMLElement>) => void;
-  handleDrop: (e: React.DragEvent<HTMLElement>) => void;
-  handleFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  uploadFiles: (files?: File[]) => Promise<boolean>;
-  reset: () => void;
+interface FileUploadState {
+  isDragging: boolean;
+  isUploading: boolean;
+  uploadProgress: number;
+  files: File[];
+  previews: string[];
+  uploadedObjectKeys: string[];
+  uploadedUrls: string[];
+  errors: string[];
 }
 
-export function useFileUpload(options: UseFileUploadOptions = {}): UseFileUploadReturn {
-  const {
-    maxSize = 5 * 1024 * 1024, // Default: 5MB
-    allowedTypes,
-    maxFiles = 10,
-    folder,
-    bucket,
-    generateUniqueName = true,
-    onSuccess,
-    onError
-  } = options;
+/**
+ * Custom hook for handling file uploads with drag-and-drop functionality
+ */
+export function useFileUpload({
+  bucket,
+  maxFiles = 5,
+  acceptedFileTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+  additionalMetadata = {},
+  onUploadSuccess,
+  onUploadError
+}: UseFileUploadOptions) {
+  // State for drag and drop interactions
+  const [state, setState] = useState<FileUploadState>({
+    isDragging: false,
+    isUploading: false,
+    uploadProgress: 0,
+    files: [],
+    previews: [],
+    uploadedObjectKeys: [],
+    uploadedUrls: [],
+    errors: []
+  });
   
-  const [files, setFiles] = useState<File[]>([]);
-  const [fileUrls, setFileUrls] = useState<string[]>([]);
-  const [objectKeys, setObjectKeys] = useState<string[]>([]);
-  const [isDragging, setIsDragging] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [error, setError] = useState<string | null>(null);
+  // Ref for file input element
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // Handle drag events
-  const handleDragEnter = useCallback((e: React.DragEvent<HTMLElement>) => {
+  // Event handlers for drag and drop
+  const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsDragging(true);
-  }, []);
-  
-  const handleDragLeave = useCallback((e: React.DragEvent<HTMLElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-  }, []);
-  
-  const handleDragOver = useCallback((e: React.DragEvent<HTMLElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(true);
-  }, []);
-  
-  // Handle file drop
-  const handleDrop = useCallback((e: React.DragEvent<HTMLElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-    
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      handleFiles(Array.from(e.dataTransfer.files));
+    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+      setState(prev => ({ ...prev, isDragging: true }));
     }
   }, []);
   
-  // Handle file selection from input
-  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      handleFiles(Array.from(e.target.files));
-    }
+  const handleDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setState(prev => ({ ...prev, isDragging: false }));
   }, []);
   
-  // Validate and process files
-  const handleFiles = useCallback((newFiles: File[]) => {
-    // Clear any previous errors
-    setError(null);
+  // Process the files
+  const processFiles = useCallback(async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
     
-    // Check file count
-    if (maxFiles && newFiles.length > maxFiles) {
-      setError(`You can upload a maximum of ${maxFiles} files at once.`);
-      if (onError) onError(`You can upload a maximum of ${maxFiles} files at once.`);
+    // Reset upload progress
+    setState(prev => ({
+      ...prev,
+      isUploading: true,
+      uploadProgress: 0
+    }));
+    
+    // Convert FileList to array
+    const fileArray = Array.from(files);
+    const validFiles: File[] = [];
+    const newErrors: string[] = [];
+    
+    // Validate files
+    for (const file of fileArray) {
+      // Check file type
+      if (acceptedFileTypes.length > 0 && !acceptedFileTypes.includes(file.type)) {
+        newErrors.push(`File "${file.name}" has an unsupported type. Accepted types: ${acceptedFileTypes.join(', ')}`);
+        continue;
+      }
+      
+      validFiles.push(file);
+      
+      // Check maximum files
+      if (validFiles.length > maxFiles) {
+        newErrors.push(`Maximum of ${maxFiles} files allowed. Additional files will be ignored.`);
+        break;
+      }
+    }
+    
+    // If there are validation errors, show them and stop the process
+    if (newErrors.length > 0) {
+      setState(prev => ({
+        ...prev,
+        errors: [...prev.errors, ...newErrors],
+        isUploading: false
+      }));
+      
+      // Call the error callback with the first error
+      if (onUploadError && newErrors.length > 0) {
+        onUploadError(newErrors[0]);
+      }
+      
       return;
     }
     
-    // Validate file size and type
-    const invalidFiles = newFiles.filter(file => {
-      if (!validateFileSize(file, maxSize)) {
-        setError(`File "${file.name}" exceeds the maximum size of ${maxSize / (1024 * 1024)}MB.`);
-        return true;
-      }
+    // Process valid files
+    const filesToProcess = validFiles.slice(0, maxFiles);
+    
+    // Set the files in state
+    setState(prev => ({
+      ...prev,
+      files: [...prev.files, ...filesToProcess]
+    }));
+    
+    // Upload files one by one
+    for (let i = 0; i < filesToProcess.length; i++) {
+      const file = filesToProcess[i];
       
-      if (allowedTypes && !validateFileType(file, allowedTypes)) {
-        setError(`File "${file.name}" has an invalid type. Allowed types: ${allowedTypes.join(', ')}`);
-        return true;
-      }
+      // Update progress
+      setState(prev => ({
+        ...prev,
+        uploadProgress: Math.round((i / filesToProcess.length) * 100)
+      }));
       
-      return false;
-    });
-    
-    if (invalidFiles.length > 0) {
-      if (onError) onError(error || 'Some files are invalid');
-      return;
-    }
-    
-    // Store valid files
-    setFiles(newFiles);
-  }, [maxFiles, maxSize, allowedTypes, onError, error]);
-  
-  // Upload files
-  const uploadFiles = useCallback(async (manualFiles?: File[]): Promise<boolean> => {
-    const filesToUpload = manualFiles || files;
-    
-    if (filesToUpload.length === 0) {
-      setError('No files selected for upload.');
-      if (onError) onError('No files selected for upload.');
-      return false;
-    }
-    
-    setIsUploading(true);
-    setProgress(0);
-    setError(null);
-    
-    try {
-      const uploadOptions: FileUploadOptions = {
-        bucket,
-        folder,
-        generateUniqueName,
-      };
-      
-      if (filesToUpload.length === 1) {
-        // Single file upload
-        const result = await uploadFile(filesToUpload[0], uploadOptions);
+      try {
+        // Upload file
+        const result = await uploadFile(file, bucket, additionalMetadata);
         
-        if (result.success) {
-          setFileUrls([result.url]);
-          setObjectKeys([result.objectKey]);
+        if (result.success && result.objectKey && result.url) {
+          // Add to uploaded list
+          setState(prev => ({
+            ...prev,
+            uploadedObjectKeys: [...prev.uploadedObjectKeys, result.objectKey!],
+            uploadedUrls: [...prev.uploadedUrls, result.url!]
+          }));
           
-          if (onSuccess) onSuccess([result.url], [result.objectKey]);
-          return true;
-        } else {
-          throw new Error(result.error || 'Upload failed');
-        }
-      } else {
-        // Multiple files upload
-        const results = await uploadMultipleFiles(
-          filesToUpload,
-          uploadOptions,
-          (progress) => setProgress(progress)
-        );
-        
-        const successfulUploads = results.filter(result => result.success);
-        
-        if (successfulUploads.length > 0) {
-          const urls = successfulUploads.map(result => result.url);
-          const keys = successfulUploads.map(result => result.objectKey);
-          
-          setFileUrls(urls);
-          setObjectKeys(keys);
-          
-          if (onSuccess) onSuccess(urls, keys);
-          
-          if (successfulUploads.length < filesToUpload.length) {
-            setError(`${filesToUpload.length - successfulUploads.length} files failed to upload.`);
-            if (onError) onError(`${filesToUpload.length - successfulUploads.length} files failed to upload.`);
+          // Call success callback
+          if (onUploadSuccess) {
+            onUploadSuccess(result.objectKey, result.url);
           }
-          
-          return true;
         } else {
-          throw new Error('All uploads failed');
+          // Add error
+          const errorMessage = result.error || `Failed to upload file "${file.name}"`;
+          setState(prev => ({
+            ...prev,
+            errors: [...prev.errors, errorMessage]
+          }));
+          
+          // Call error callback
+          if (onUploadError) {
+            onUploadError(errorMessage);
+          }
+        }
+      } catch (error: any) {
+        // Handle unexpected errors
+        const errorMessage = error.message || `Unexpected error uploading "${file.name}"`;
+        setState(prev => ({
+          ...prev,
+          errors: [...prev.errors, errorMessage]
+        }));
+        
+        // Call error callback
+        if (onUploadError) {
+          onUploadError(errorMessage);
         }
       }
-    } catch (error: any) {
-      const errorMessage = error.message || 'An error occurred during upload';
-      setError(errorMessage);
-      if (onError) onError(errorMessage);
-      return false;
-    } finally {
-      setIsUploading(false);
     }
-  }, [files, bucket, folder, generateUniqueName, onSuccess, onError]);
+    
+    // Complete the upload process
+    setState(prev => ({
+      ...prev,
+      isUploading: false,
+      uploadProgress: 100
+    }));
+  }, [acceptedFileTypes, additionalMetadata, bucket, maxFiles, onUploadError, onUploadSuccess]);
   
-  // Reset all state
+  // Handle drop event
+  const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    setState(prev => ({ ...prev, isDragging: false }));
+    
+    if (e.dataTransfer.files) {
+      processFiles(e.dataTransfer.files);
+    }
+  }, [processFiles]);
+  
+  // Handle file input change
+  const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    processFiles(e.target.files);
+    
+    // Reset the input value to allow selecting the same file again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  }, [processFiles]);
+  
+  // Handle click to open file dialog
+  const openFileDialog = useCallback(() => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  }, [fileInputRef]);
+  
+  // Clear all errors
+  const clearErrors = useCallback(() => {
+    setState(prev => ({ ...prev, errors: [] }));
+  }, []);
+  
+  // Reset the upload state
   const reset = useCallback(() => {
-    setFiles([]);
-    setFileUrls([]);
-    setObjectKeys([]);
-    setIsDragging(false);
-    setIsUploading(false);
-    setProgress(0);
-    setError(null);
+    setState({
+      isDragging: false,
+      isUploading: false,
+      uploadProgress: 0,
+      files: [],
+      previews: [],
+      uploadedObjectKeys: [],
+      uploadedUrls: [],
+      errors: []
+    });
   }, []);
   
   return {
-    files,
-    fileUrls,
-    objectKeys,
-    isDragging,
-    isUploading,
-    progress,
-    error,
-    handleDragEnter,
-    handleDragLeave,
+    // State
+    isDragging: state.isDragging,
+    isUploading: state.isUploading,
+    uploadProgress: state.uploadProgress,
+    files: state.files,
+    previews: state.previews,
+    uploadedObjectKeys: state.uploadedObjectKeys,
+    uploadedUrls: state.uploadedUrls,
+    errors: state.errors,
+    
+    // Refs
+    fileInputRef,
+    
+    // Event handlers
     handleDragOver,
+    handleDragLeave,
     handleDrop,
-    handleFileSelect,
-    uploadFiles,
-    reset,
+    handleFileInputChange,
+    openFileDialog,
+    clearErrors,
+    reset
   };
 }

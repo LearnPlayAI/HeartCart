@@ -1,574 +1,603 @@
 /**
- * Basic Info Step Component
+ * BasicInfoStep Component
  * 
- * Handles the first step of the product creation wizard, collecting
- * basic product information, pricing, and inventory details.
+ * This component handles the first step of the product wizard,
+ * collecting basic product information such as name, description, category, etc.
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useProductWizardContext } from '../context';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import * as z from 'zod';
+import axios from 'axios';
+import { generateProductSku } from '@/utils/string-utils';
+
+// UI Components
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Checkbox } from '@/components/ui/checkbox';
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue 
-} from '@/components/ui/select';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { 
-  InfoIcon, 
-  DollarSign, 
-  Package2, 
-  Tag, 
-  BarChart,
-  Loader2,
-  CalendarIcon
-} from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
-import { slugify } from '@/utils/string-utils';
-import { Separator } from '@/components/ui/separator';
-import { 
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { format } from 'date-fns';
-import { Calendar } from '@/components/ui/calendar';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+import { Loader2 } from 'lucide-react';
 
+// Define the form schema with validation
+const basicInfoSchema = z.object({
+  name: z.string().min(2, { message: 'Product name must be at least 2 characters.' }),
+  slug: z.string().min(2, { message: 'Product slug must be at least 2 characters.' }),
+  sku: z.string().min(2, { message: 'SKU must be at least 2 characters.' }),
+  brand: z.string().optional(),
+  description: z.string().optional(),
+  categoryId: z.string().optional(),
+  costPrice: z.number().min(0, { message: 'Cost price must be a positive number.' }),
+  markupPercentage: z.number().min(0, { message: 'Markup percentage must be a positive number.' }),
+  regularPrice: z.number().min(0, { message: 'Regular price must be a positive number.' }),
+  salePrice: z.number().min(0, { message: 'Sale price must be a positive number.' }).optional().nullable(),
+  stockLevel: z.number().min(0, { message: 'Stock level must be a positive number.' }).default(0),
+  lowStockThreshold: z.number().min(0, { message: 'Low stock threshold must be a positive number.' }).default(5),
+  backorderEnabled: z.boolean().default(false),
+  isActive: z.boolean().default(true),
+  isDraft: z.boolean().default(true),
+  isFeatured: z.boolean().default(false),
+  isNew: z.boolean().default(true),
+});
+
+// BasicInfoStep component
 const BasicInfoStep: React.FC = () => {
+  const { toast } = useToast();
+  const [categories, setCategories] = useState<{id: number, name: string}[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  
   const { 
     state, 
     updateField, 
-    markStepComplete, 
-    validateStep,
-    catalogContext,
-    isCatalogContextLoading
+    validateStep, 
+    markStepComplete,
+    currentStep,
+    goToStep,
   } = useProductWizardContext();
-  const { toast } = useToast();
   
-  // Query for loading categories
-  const { data: categories, isLoading: isLoadingCategories } = useQuery({
-    queryKey: ['/api/categories'],
-    queryFn: async () => {
-      const response = await fetch('/api/categories');
-      if (!response.ok) throw new Error('Failed to fetch categories');
-      return response.json().then(res => res.data);
-    }
+  // Initialize the form with values from context
+  const form = useForm<z.infer<typeof basicInfoSchema>>({
+    resolver: zodResolver(basicInfoSchema),
+    defaultValues: {
+      name: state.name || '',
+      slug: state.slug || '',
+      sku: state.sku || '',
+      brand: state.brand || '',
+      description: state.description || '',
+      categoryId: state.categoryId ? String(state.categoryId) : undefined,
+      costPrice: state.costPrice || 0,
+      markupPercentage: state.markupPercentage || 30,
+      regularPrice: state.regularPrice || 0,
+      salePrice: state.salePrice || undefined,
+      stockLevel: state.stockLevel || 0,
+      lowStockThreshold: state.lowStockThreshold || 5,
+      backorderEnabled: state.backorderEnabled || false,
+      isActive: state.isActive,
+      isDraft: state.isDraft,
+      isFeatured: state.isFeatured,
+      isNew: state.isNew,
+    },
   });
   
-  // Auto-generate slug when name changes
+  // Fetch categories when component mounts
   useEffect(() => {
-    if (state.name && !state.slug) {
-      const generatedSlug = slugify(state.name);
-      updateField('slug', generatedSlug);
-    }
-  }, [state.name, state.slug, updateField]);
+    const fetchCategories = async () => {
+      setIsLoading(true);
+      try {
+        const response = await axios.get('/api/categories');
+        if (response.data && response.data.success) {
+          setCategories(response.data.data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch categories:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load categories. Please try again.',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchCategories();
+  }, [toast]);
   
-  // Calculate regular price when cost price or markup changes
+  // Generate SKU based on product name and category if SKU is empty
   useEffect(() => {
-    if (state.costPrice > 0 && state.markupPercentage > 0) {
-      const calculatedPrice = state.costPrice * (1 + state.markupPercentage / 100);
-      
-      // Round to two decimal places
-      const roundedPrice = Math.round(calculatedPrice * 100) / 100;
-      
-      updateField('regularPrice', roundedPrice);
-    }
-  }, [state.costPrice, state.markupPercentage, updateField]);
-  
-  // Auto-validate on mount to set completedSteps correctly
-  useEffect(() => {
-    const isValid = validateStep('basic-info');
+    const name = form.watch('name');
+    const sku = form.watch('sku');
+    const categoryId = form.watch('categoryId');
     
-    if (isValid) {
-      markStepComplete('basic-info');
+    if (name && !sku && categoryId) {
+      const category = categories.find(cat => cat.id === parseInt(categoryId));
+      const categoryPrefix = category ? category.name.substring(0, 3).toUpperCase() : undefined;
+      const generatedSku = generateProductSku(name, categoryPrefix);
+      form.setValue('sku', generatedSku);
     }
-  }, [validateStep, markStepComplete]);
+  }, [form.watch('name'), form.watch('categoryId'), categories, form]);
   
-  // Handle text/number input changes
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value, type } = e.target;
+  // Callback when form is submitted
+  const onSubmit = (data: z.infer<typeof basicInfoSchema>) => {
+    // Update all fields in the context
+    updateField('name', data.name);
+    updateField('slug', data.slug);
+    updateField('sku', data.sku);
+    updateField('brand', data.brand || null);
+    updateField('description', data.description || null);
+    updateField('categoryId', data.categoryId ? parseInt(data.categoryId) : null);
     
-    if (type === 'number') {
-      updateField(name as keyof typeof state, parseFloat(value) || 0);
-    } else {
-      updateField(name as keyof typeof state, value);
+    if (data.categoryId) {
+      const category = categories.find(cat => cat.id === parseInt(data.categoryId));
+      updateField('categoryName', category?.name || null);
     }
-  };
-  
-  // Handle checkbox changes
-  const handleCheckboxChange = (name: keyof typeof state, checked: boolean) => {
-    updateField(name, checked);
-  };
-  
-  // Handle select changes
-  const handleSelectChange = (name: keyof typeof state, value: string) => {
-    updateField(name, value);
-  };
-  
-  // Handle category selection
-  const handleCategoryChange = (categoryId: string) => {
-    const id = parseInt(categoryId);
-    const category = categories?.find(cat => cat.id === id);
     
-    updateField('categoryId', id);
-    updateField('categoryName', category?.name || '');
-  };
-  
-  // Format date for display
-  const formatDate = (date: string | null) => {
-    if (!date) return '';
-    return format(new Date(date), 'PPP');
+    updateField('costPrice', data.costPrice);
+    updateField('markupPercentage', data.markupPercentage);
+    updateField('regularPrice', data.regularPrice);
+    updateField('salePrice', data.salePrice || null);
+    updateField('stockLevel', data.stockLevel);
+    updateField('lowStockThreshold', data.lowStockThreshold);
+    updateField('backorderEnabled', data.backorderEnabled);
+    updateField('isActive', data.isActive);
+    updateField('isDraft', data.isDraft);
+    updateField('isFeatured', data.isFeatured);
+    updateField('isNew', data.isNew);
+    
+    // Mark this step as completed
+    if (validateStep(currentStep)) {
+      markStepComplete(currentStep);
+      goToStep('images');
+    }
   };
   
   return (
-    <div className="product-wizard-basic-info space-y-6">
-      <h2 className="text-2xl font-bold">Basic Information</h2>
-      <p className="text-muted-foreground">
-        Enter the basic details for your product.
-      </p>
+    <div className="basic-info-step">
+      <h2 className="text-2xl font-semibold mb-6">Basic Product Information</h2>
       
-      {/* Product Details Section */}
-      <div className="product-details">
-        <h3 className="text-lg font-semibold mb-4 flex items-center">
-          <InfoIcon className="mr-2 h-5 w-5" />
-          Product Details
-        </h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Product Name */}
-          <div className="space-y-2">
-            <Label htmlFor="name">Product Name *</Label>
-            <Input
-              id="name"
-              name="name"
-              value={state.name}
-              onChange={handleInputChange}
-              placeholder="Enter product name"
-              required
-            />
-          </div>
-          
-          {/* Product SKU */}
-          <div className="space-y-2">
-            <Label htmlFor="sku">SKU (Stock Keeping Unit)</Label>
-            <Input
-              id="sku"
-              name="sku"
-              value={state.sku}
-              onChange={handleInputChange}
-              placeholder="e.g. T-SHIRT-L-BLUE"
-            />
-          </div>
-          
-          {/* Product Slug */}
-          <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <Label htmlFor="slug">URL Slug *</Label>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger className="cursor-help">
-                    <InfoIcon className="h-4 w-4 text-muted-foreground" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="max-w-xs">
-                      The slug is used in the product URL. It should be unique, lowercase, and contain only letters, numbers, and hyphens.
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-            <Input
-              id="slug"
-              name="slug"
-              value={state.slug}
-              onChange={handleInputChange}
-              placeholder="product-url-slug"
-              required
-            />
-          </div>
-          
-          {/* Brand */}
-          <div className="space-y-2">
-            <Label htmlFor="brand">Brand</Label>
-            <Input
-              id="brand"
-              name="brand"
-              value={state.brand}
-              onChange={handleInputChange}
-              placeholder="Enter brand name"
-            />
-            {catalogContext?.defaultBrand && (
-              <p className="text-xs text-muted-foreground mt-1">
-                Default brand from catalog: {catalogContext.defaultBrand}
-              </p>
-            )}
-          </div>
-          
-          {/* Category */}
-          <div className="space-y-2 col-span-1 md:col-span-2">
-            <Label htmlFor="categoryId">Category</Label>
-            <Select
-              value={state.categoryId?.toString() || ''}
-              onValueChange={handleCategoryChange}
-            >
-              <SelectTrigger id="categoryId">
-                <SelectValue placeholder="Select a category" />
-              </SelectTrigger>
-              <SelectContent>
-                {isLoadingCategories ? (
-                  <div className="flex items-center justify-center p-2">
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    <span>Loading categories...</span>
-                  </div>
-                ) : (
-                  categories?.map(category => (
-                    <SelectItem key={category.id} value={category.id.toString()}>
-                      {category.name}
-                    </SelectItem>
-                  ))
+      {isLoading ? (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      ) : (
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Product Name */}
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Product Name <span className="text-destructive">*</span></FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter product name" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      The name of your product as it will appear to customers.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
                 )}
-              </SelectContent>
-            </Select>
-            {catalogContext?.defaultCategory && (
-              <p className="text-xs text-muted-foreground mt-1">
-                Default category from catalog: {catalogContext.defaultCategory.name}
-              </p>
-            )}
-          </div>
-          
-          {/* Description */}
-          <div className="space-y-2 col-span-1 md:col-span-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              name="description"
-              value={state.description}
-              onChange={handleInputChange}
-              placeholder="Enter product description"
-              rows={5}
-            />
-          </div>
-        </div>
-      </div>
-      
-      <Separator />
-      
-      {/* Pricing Section */}
-      <div className="pricing">
-        <h3 className="text-lg font-semibold mb-4 flex items-center">
-          <DollarSign className="mr-2 h-5 w-5" />
-          Pricing
-        </h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Cost Price */}
-          <div className="space-y-2">
-            <Label htmlFor="costPrice">Cost Price *</Label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                $
-              </span>
-              <Input
-                id="costPrice"
-                name="costPrice"
-                type="number"
-                value={state.costPrice || ''}
-                onChange={handleInputChange}
-                placeholder="0.00"
-                className="pl-7"
-                min={0}
-                step={0.01}
-                required
+              />
+              
+              {/* SKU */}
+              <FormField
+                control={form.control}
+                name="sku"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>SKU <span className="text-destructive">*</span></FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter product SKU" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      Unique identifier for inventory management. Auto-generated if left empty.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              {/* Slug */}
+              <FormField
+                control={form.control}
+                name="slug"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>URL Slug <span className="text-destructive">*</span></FormLabel>
+                    <FormControl>
+                      <Input placeholder="url-friendly-product-name" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      URL-friendly version of the product name. Auto-generated from product name.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              {/* Brand */}
+              <FormField
+                control={form.control}
+                name="brand"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Brand</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter brand name" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      The brand or manufacturer of the product.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              {/* Category */}
+              <FormField
+                control={form.control}
+                name="categoryId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Category</FormLabel>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a category" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {categories && categories.map((category) => (
+                          <SelectItem 
+                            key={category.id} 
+                            value={String(category.id)}
+                          >
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      Select the category this product belongs to.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              {/* Description */}
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem className="md:col-span-2">
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Enter product description" 
+                        className="min-h-[120px]" 
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Detailed description of the product.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
             </div>
-          </div>
-          
-          {/* Markup Percentage */}
-          <div className="space-y-2">
-            <Label htmlFor="markupPercentage">Markup Percentage *</Label>
-            <div className="relative">
-              <Input
-                id="markupPercentage"
-                name="markupPercentage"
-                type="number"
-                value={state.markupPercentage || ''}
-                onChange={handleInputChange}
-                placeholder="30"
-                className="pr-7"
-                min={0}
-                step={1}
-                required
-              />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                %
-              </span>
-            </div>
-            {catalogContext?.defaultPricing?.recommendedMarkup && (
-              <p className="text-xs text-muted-foreground mt-1">
-                Recommended markup: {catalogContext.defaultPricing.recommendedMarkup}%
-              </p>
-            )}
-          </div>
-          
-          {/* Regular Price */}
-          <div className="space-y-2">
-            <Label htmlFor="regularPrice">Regular Price *</Label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                $
-              </span>
-              <Input
-                id="regularPrice"
-                name="regularPrice"
-                type="number"
-                value={state.regularPrice || ''}
-                onChange={handleInputChange}
-                placeholder="0.00"
-                className="pl-7"
-                min={0}
-                step={0.01}
-                required
-              />
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Auto-calculated from cost price and markup
-            </p>
-          </div>
-          
-          {/* Sale Price */}
-          <div className="space-y-2">
-            <Label htmlFor="salePrice">Sale Price (Optional)</Label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                $
-              </span>
-              <Input
-                id="salePrice"
-                name="salePrice"
-                type="number"
-                value={state.salePrice || ''}
-                onChange={(e) => updateField('salePrice', e.target.value ? parseFloat(e.target.value) : null)}
-                placeholder="0.00"
-                className="pl-7"
-                min={0}
-                step={0.01}
-              />
-            </div>
-          </div>
-          
-          {/* Sale Start Date */}
-          <div className="space-y-2">
-            <Label htmlFor="saleStartDate">Sale Start Date</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <button
-                  id="saleStartDate"
-                  className={cn(
-                    "w-full flex items-center justify-start rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background",
-                    "placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
-                    "disabled:cursor-not-allowed disabled:opacity-50"
+            
+            <div className="border-t pt-6 mt-6">
+              <h3 className="text-xl font-semibold mb-4">Pricing & Inventory</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Cost Price */}
+                <FormField
+                  control={form.control}
+                  name="costPrice"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Cost Price <span className="text-destructive">*</span></FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          min="0" 
+                          step="0.01" 
+                          placeholder="0.00" 
+                          {...field}
+                          onChange={(e) => {
+                            const value = parseFloat(e.target.value);
+                            field.onChange(isNaN(value) ? 0 : value);
+                          }}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Your cost to acquire or manufacture the product.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
                   )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {state.saleStartDate ? (
-                    formatDate(state.saleStartDate)
-                  ) : (
-                    <span className="text-muted-foreground">Pick a date</span>
-                  )}
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={state.saleStartDate ? new Date(state.saleStartDate) : undefined}
-                  onSelect={(date) => 
-                    updateField('saleStartDate', date ? date.toISOString() : null)
-                  }
-                  initialFocus
                 />
-              </PopoverContent>
-            </Popover>
-          </div>
-          
-          {/* Sale End Date */}
-          <div className="space-y-2">
-            <Label htmlFor="saleEndDate">Sale End Date</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <button
-                  id="saleEndDate"
-                  className={cn(
-                    "w-full flex items-center justify-start rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background",
-                    "placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
-                    "disabled:cursor-not-allowed disabled:opacity-50"
+                
+                {/* Markup Percentage */}
+                <FormField
+                  control={form.control}
+                  name="markupPercentage"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Markup % <span className="text-destructive">*</span></FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          min="0" 
+                          step="1" 
+                          placeholder="30" 
+                          {...field}
+                          onChange={(e) => {
+                            const value = parseFloat(e.target.value);
+                            field.onChange(isNaN(value) ? 0 : value);
+                          }}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Percentage markup over cost price.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
                   )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {state.saleEndDate ? (
-                    formatDate(state.saleEndDate)
-                  ) : (
-                    <span className="text-muted-foreground">Pick a date</span>
-                  )}
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={state.saleEndDate ? new Date(state.saleEndDate) : undefined}
-                  onSelect={(date) => 
-                    updateField('saleEndDate', date ? date.toISOString() : null)
-                  }
-                  initialFocus
                 />
-              </PopoverContent>
-            </Popover>
-          </div>
-        </div>
-      </div>
-      
-      <Separator />
-      
-      {/* Inventory Section */}
-      <div className="inventory">
-        <h3 className="text-lg font-semibold mb-4 flex items-center">
-          <Package2 className="mr-2 h-5 w-5" />
-          Inventory
-        </h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Stock Level */}
-          <div className="space-y-2">
-            <Label htmlFor="stockLevel">Stock Level *</Label>
-            <Input
-              id="stockLevel"
-              name="stockLevel"
-              type="number"
-              value={state.stockLevel}
-              onChange={handleInputChange}
-              placeholder="10"
-              min={0}
-              step={1}
-              required
-            />
-          </div>
-          
-          {/* Low Stock Threshold */}
-          <div className="space-y-2">
-            <Label htmlFor="lowStockThreshold">Low Stock Threshold</Label>
-            <Input
-              id="lowStockThreshold"
-              name="lowStockThreshold"
-              type="number"
-              value={state.lowStockThreshold}
-              onChange={handleInputChange}
-              placeholder="5"
-              min={0}
-              step={1}
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              You'll be notified when stock drops below this level
-            </p>
-          </div>
-          
-          {/* Backorder Option */}
-          <div className="space-y-2 flex items-center pt-8">
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="backorderEnabled"
-                checked={state.backorderEnabled}
-                onCheckedChange={(checked) => 
-                  handleCheckboxChange('backorderEnabled', checked === true)
-                }
-              />
-              <Label htmlFor="backorderEnabled" className="cursor-pointer">
-                Allow Backorders
-              </Label>
+                
+                {/* Regular Price */}
+                <FormField
+                  control={form.control}
+                  name="regularPrice"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Regular Price <span className="text-destructive">*</span></FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          min="0" 
+                          step="0.01" 
+                          placeholder="0.00" 
+                          {...field}
+                          onChange={(e) => {
+                            const value = parseFloat(e.target.value);
+                            field.onChange(isNaN(value) ? 0 : value);
+                          }}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Regular selling price (calculated from cost and markup).
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                {/* Sale Price */}
+                <FormField
+                  control={form.control}
+                  name="salePrice"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Sale Price</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          min="0" 
+                          step="0.01" 
+                          placeholder="0.00" 
+                          value={field.value || ''}
+                          onChange={(e) => {
+                            const value = e.target.value === '' ? undefined : parseFloat(e.target.value);
+                            field.onChange(typeof value === 'number' && isNaN(value) ? 0 : value);
+                          }}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Optional discounted price (leave empty if not on sale).
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                {/* Stock Level */}
+                <FormField
+                  control={form.control}
+                  name="stockLevel"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Stock Level</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          min="0" 
+                          step="1" 
+                          placeholder="0" 
+                          {...field}
+                          onChange={(e) => {
+                            const value = parseInt(e.target.value);
+                            field.onChange(isNaN(value) ? 0 : value);
+                          }}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Current inventory quantity.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                {/* Low Stock Threshold */}
+                <FormField
+                  control={form.control}
+                  name="lowStockThreshold"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Low Stock Threshold</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          min="0" 
+                          step="1" 
+                          placeholder="5" 
+                          {...field}
+                          onChange={(e) => {
+                            const value = parseInt(e.target.value);
+                            field.onChange(isNaN(value) ? 0 : value);
+                          }}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Quantity at which to show "low stock" warning.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <div className="mt-4 space-y-2">
+                {/* Backorder Enabled */}
+                <FormField
+                  control={form.control}
+                  name="backorderEnabled"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>Allow Backorders</FormLabel>
+                        <FormDescription>
+                          Allow customers to order even when out of stock.
+                        </FormDescription>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+              </div>
             </div>
-          </div>
-        </div>
-      </div>
-      
-      <Separator />
-      
-      {/* Visibility Section */}
-      <div className="visibility">
-        <h3 className="text-lg font-semibold mb-4 flex items-center">
-          <BarChart className="mr-2 h-5 w-5" />
-          Product Status
-        </h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-          {/* Active Status */}
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="isActive"
-              checked={state.isActive}
-              onCheckedChange={(checked) => 
-                handleCheckboxChange('isActive', checked === true)
-              }
-            />
-            <Label htmlFor="isActive" className="cursor-pointer">
-              Active (Visible to customers)
-            </Label>
-          </div>
-          
-          {/* Draft Status */}
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="isDraft"
-              checked={state.isDraft}
-              onCheckedChange={(checked) => 
-                handleCheckboxChange('isDraft', checked === true)
-              }
-            />
-            <Label htmlFor="isDraft" className="cursor-pointer">
-              Save as Draft
-            </Label>
-          </div>
-          
-          {/* Featured */}
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="isFeatured"
-              checked={state.isFeatured}
-              onCheckedChange={(checked) => 
-                handleCheckboxChange('isFeatured', checked === true)
-              }
-            />
-            <Label htmlFor="isFeatured" className="cursor-pointer">
-              Featured Product
-            </Label>
-          </div>
-          
-          {/* New Tag */}
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="isNew"
-              checked={state.isNew}
-              onCheckedChange={(checked) => 
-                handleCheckboxChange('isNew', checked === true)
-              }
-            />
-            <Label htmlFor="isNew" className="cursor-pointer">
-              Mark as New
-            </Label>
-          </div>
-        </div>
-      </div>
+            
+            <div className="border-t pt-6 mt-6">
+              <h3 className="text-xl font-semibold mb-4">Product Status</h3>
+              
+              <div className="space-y-4">
+                {/* Is Active */}
+                <FormField
+                  control={form.control}
+                  name="isActive"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>Active</FormLabel>
+                        <FormDescription>
+                          Product is visible to customers.
+                        </FormDescription>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+                
+                {/* Is Draft */}
+                <FormField
+                  control={form.control}
+                  name="isDraft"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>Draft</FormLabel>
+                        <FormDescription>
+                          Save as draft (not published yet).
+                        </FormDescription>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+                
+                {/* Is Featured */}
+                <FormField
+                  control={form.control}
+                  name="isFeatured"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>Featured</FormLabel>
+                        <FormDescription>
+                          Show in featured product sections.
+                        </FormDescription>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+                
+                {/* Is New */}
+                <FormField
+                  control={form.control}
+                  name="isNew"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>New</FormLabel>
+                        <FormDescription>
+                          Mark as a new product.
+                        </FormDescription>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+            
+            <div className="border-t pt-6 mt-6">
+              <Button type="submit" className="w-full md:w-auto">
+                Continue to Images
+              </Button>
+            </div>
+          </form>
+        </Form>
+      )}
     </div>
   );
 };
