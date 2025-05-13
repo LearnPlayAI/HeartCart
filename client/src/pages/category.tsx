@@ -40,36 +40,58 @@ const CategoryPage = () => {
   // State for attribute filters
   const [attributeFilters, setAttributeFilters] = useState<Record<string, string[]>>({});
   
-  const { data: category, isLoading: isLoadingCategory } = useQuery<Category>({
+  const { data: categoryResponse, isLoading: isLoadingCategory } = useQuery({
     queryKey: [`/api/categories/${slug}`],
     enabled: !!slug,
   });
   
-  const { data: productsResponse, isLoading: isLoadingProducts } = useQuery<StandardApiResponse<Product[]>>({
+  // Extract the category from the standardized response
+  const category = categoryResponse?.success ? categoryResponse.data : null;
+  
+  // Log for debugging
+  useEffect(() => {
+    if (categoryResponse) {
+      console.log("Category response:", categoryResponse);
+    }
+  }, [categoryResponse]);
+  
+  const { data: productsResponse, isLoading: isLoadingProducts } = useQuery({
     queryKey: [`/api/products/category/${category?.id}`],
     enabled: !!category?.id,
   });
   
   // Extract the products from the standardized response
-  const products = productsResponse?.data || [];
+  const products = productsResponse?.success ? productsResponse.data || [] : [];
+  
+  // Log for debugging
+  useEffect(() => {
+    if (productsResponse) {
+      console.log("Category products response:", productsResponse);
+      console.log("Products extracted:", products);
+    }
+  }, [productsResponse, products]);
   
   // Fetch all categories for the sidebar
-  const { data: categories } = useQuery<Category[]>({
+  const { data: categoriesResponse } = useQuery({
     queryKey: ['/api/categories'],
   });
   
+  const categories = categoriesResponse?.success ? categoriesResponse.data : [];
+  
   // Fetch category attributes for filtering
-  const { data: categoryAttributes } = useQuery<CategoryAttribute[]>({
+  const { data: categoryAttributesResponse } = useQuery({
     queryKey: [`/api/categories/${category?.id}/attributes`],
     enabled: !!category?.id,
   });
+  
+  const categoryAttributes = categoryAttributesResponse?.success ? categoryAttributesResponse.data : [];
   
   // State to store attribute options
   const [attributeOptions, setAttributeOptions] = useState<Record<number, CategoryAttributeOption[]>>({});
   
   // Fetch options for each attribute
   useEffect(() => {
-    if (!categoryAttributes) return;
+    if (!categoryAttributes || !categoryAttributes.length) return;
     
     const fetchOptions = async () => {
       const options: Record<number, CategoryAttributeOption[]> = {};
@@ -77,8 +99,19 @@ const CategoryPage = () => {
       for (const attribute of categoryAttributes) {
         try {
           const response = await fetch(`/api/category-attributes/${attribute.id}/options`);
-          const data = await response.json();
-          options[attribute.id] = data;
+          const responseData = await response.json();
+          
+          // Check if response follows the standard API format with success and data properties
+          if (responseData && responseData.success) {
+            options[attribute.id] = responseData.data || [];
+          } else if (Array.isArray(responseData)) {
+            // Fallback for older API format
+            options[attribute.id] = responseData;
+          } else {
+            options[attribute.id] = [];
+          }
+          
+          console.log(`Attribute ${attribute.id} options:`, options[attribute.id]);
         } catch (error) {
           console.error(`Error fetching options for attribute ${attribute.id}:`, error);
           options[attribute.id] = [];
