@@ -80,9 +80,11 @@ function ProductWizardContent({
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-semibold">
-          {state.catalogName 
-            ? `Add Product to ${state.catalogName}` 
-            : 'Add New Product'
+          {state.productId
+            ? 'Edit Product'
+            : state.catalogName 
+              ? `Add Product to ${state.catalogName}` 
+              : 'Add New Product'
           }
         </h2>
         <Button
@@ -111,13 +113,15 @@ function ProductWizardContent({
 export function ProductWizard({ 
   catalogId,
   catalogName,
+  productId,
   onComplete,
   onCancel
-}: ProductWizardProps) {
+}: ProductWizardProps & { productId?: number }) {
   // Initial state overrides
   const initialState = {
     catalogId,
     catalogName,
+    productId
   };
   
   return (
