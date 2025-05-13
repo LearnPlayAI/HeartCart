@@ -705,7 +705,7 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className 
                                   alt={image.metadata?.alt || "Product"} 
                                   className="w-full h-40 object-cover"
                                   onLoad={() => console.log(`Image loaded successfully: ${image.metadata?.originalname || 'Unknown image'}`)}
-                                  onError={(e) => {
+                                  onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
                                     console.error('Failed to load image:', image.url);
                                     console.log('Image details:', image);
                                     
@@ -765,11 +765,11 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className 
                                       }
                                       
                                       // Add error handler for this second attempt
-                                      e.currentTarget.onerror = (secondErr) => {
+                                      const imgEl = e.currentTarget as HTMLImageElement;
+                                      imgEl.onerror = () => {
                                         console.error('All URL formats failed for image:', image.objectKey);
-                                        const img = secondErr.currentTarget as HTMLImageElement;
-                                        img.classList.add('hidden');
-                                        const fallbackElement = img.parentElement?.querySelector('.fallback-display');
+                                        imgEl.classList.add('hidden');
+                                        const fallbackElement = imgEl.parentElement?.querySelector('.fallback-display');
                                         if (fallbackElement) {
                                           fallbackElement.classList.remove('hidden');
                                         }
@@ -779,8 +779,9 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className 
                                     }
                                     
                                     // Add fallback display if all retries fail or no objectKey
-                                    e.currentTarget.classList.add('hidden');
-                                    const fallbackElement = e.currentTarget.parentElement?.querySelector('.fallback-display');
+                                    const imgElement = e.currentTarget as HTMLImageElement;
+                                    imgElement.classList.add('hidden');
+                                    const fallbackElement = imgElement.parentElement?.querySelector('.fallback-display');
                                     if (fallbackElement) {
                                       fallbackElement.classList.remove('hidden');
                                     }

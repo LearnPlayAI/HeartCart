@@ -41,6 +41,8 @@ export interface UploadedImage {
     backgroundRemoved?: boolean;
     alt?: string;
     processedAt?: string;
+    originalname?: string;  // Original filename from upload
+    filename?: string;      // Processed filename in storage
   };
 }
 
