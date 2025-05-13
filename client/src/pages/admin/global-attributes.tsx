@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Helmet } from "react-helmet";
 import { Loader2, Plus, Edit, Trash2, Save, X, ArrowUpDown, Info } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
@@ -430,18 +431,14 @@ function GlobalAttributesPage() {
     }
   };
 
-  // Handle opening the attribute dialog for creating a new attribute
+  // Navigate to attribute creation page
   const handleNewAttribute = () => {
-    setSelectedAttribute(null);
-    setAttributeFormMode("create");
-    setAttributeDialogOpen(true);
+    navigate("/admin/attributes/new");
   };
 
-  // Handle opening the attribute dialog for editing an existing attribute
+  // Navigate to attribute edit page
   const handleEditAttribute = (attribute: Attribute) => {
-    setSelectedAttribute(attribute);
-    setAttributeFormMode("edit");
-    setAttributeDialogOpen(true);
+    navigate(`/admin/attributes/${attribute.id}/edit`);
   };
 
   // Handle opening the option dialog for creating a new option
