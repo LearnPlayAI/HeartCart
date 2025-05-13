@@ -11,6 +11,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useLocation } from 'wouter';
 
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
@@ -82,11 +83,20 @@ export function AdditionalInfoStep() {
   const [activeTab, setActiveTab] = useState('inventory');
   const [attributeNameInput, setAttributeNameInput] = useState('');
   const [attributeValueInput, setAttributeValueInput] = useState('');
+  const [, navigate] = useLocation();
   
-  // Fetch attribute definitions
-  const { data: attributeDefinitions = [] } = useQuery({
-    queryKey: ['/api/attributes/definitions'],
+  // Fetch global attributes
+  const { data: globalAttributesData } = useQuery({
+    queryKey: ['/api/attributes'],
   });
+  
+  // Format global attributes for our component
+  const attributeDefinitions = React.useMemo(() => {
+    if (globalAttributesData?.data) {
+      return globalAttributesData.data;
+    }
+    return [];
+  }, [globalAttributesData]);
   
   // Fetch suppliers list
   const { data: suppliers = [] } = useQuery({
@@ -99,10 +109,13 @@ export function AdditionalInfoStep() {
     enabled: !!state.catalogId, // Only run query if catalogId exists
   });
   
-  // Fetch available attributes
-  const { data: productAttributes = [] } = useQuery({
-    queryKey: ['/api/attributes/available'],
-  });
+  // Format product attributes from global attributes
+  const productAttributes = React.useMemo(() => {
+    if (globalAttributesData?.data) {
+      return globalAttributesData.data;
+    }
+    return [];
+  }, [globalAttributesData]);
   
   // Format attributes for our pricing component
   const [formattedAttributes, setFormattedAttributes] = useState<ProductAttribute[]>([]);
@@ -131,12 +144,12 @@ export function AdditionalInfoStep() {
 
   // Format available product attributes for our pricing component
   useEffect(() => {
-    if (productAttributes && productAttributes.length > 0) {
-      // Convert API attributes to the format expected by AttributePricingConfig
-      const formatted = productAttributes.map(attr => ({
+    if (globalAttributesData?.data && globalAttributesData.data.length > 0) {
+      // Convert global attributes to the format expected by AttributePricingConfig
+      const formatted = globalAttributesData.data.map(attr => ({
         id: attr.id,
         name: attr.name,
-        type: attr.type || 'select',
+        type: attr.attributeType || 'select',
         isRequired: attr.isRequired || false,
         options: attr.options?.map(opt => ({
           id: opt.id,
@@ -171,7 +184,7 @@ export function AdditionalInfoStep() {
         setAttributeValues(values);
       }
     }
-  }, [productAttributes, attributeValues.length]);
+  }, [globalAttributesData, attributeValues.length]);
   
   // Handle attribute values changes from pricing component
   const handleAttributeValuesChange = (newValues: AttributeValue[]) => {
@@ -479,94 +492,172 @@ export function AdditionalInfoStep() {
                     )}
                   </div>
                   
-                  {/* Custom Attributes */}
+                  {/* Product Attributes */}
                   <div className="space-y-4 pt-4 border-t mt-6">
-                    <h3 className="text-lg font-medium">Product Attributes</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Add custom attributes to provide additional product details like material, color, etc.
-                    </p>
-                    
-                    {/* Current Attributes */}
-                    {state.attributes.length > 0 ? (
-                      <div className="space-y-3">
-                        {state.attributes.map((attr, index) => (
-                          <div 
-                            key={attr.id || index} 
-                            className="flex items-center gap-2 border rounded-md p-3"
-                          >
-                            <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                              <div>
-                                <span className="text-sm font-semibold">{attr.name}</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <input
-                                  type="text"
-                                  value={attr.value || ''}
-                                  onChange={(e) => handleAttributeValueChange(index, e.target.value)}
-                                  placeholder="Enter value"
-                                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                                />
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-muted-foreground"
-                                  onClick={() => handleRemoveAttribute(index)}
-                                >
-                                  <XIcon className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground italic">No custom attributes added yet</p>
-                    )}
-                    
-                    {/* Add Attribute Form */}
-                    <div className="border rounded-md p-4 space-y-4">
-                      <h4 className="font-medium">Add Custom Attribute</h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                          <label htmlFor="attrName" className="text-sm font-medium">
-                            Attribute Name
-                          </label>
-                          <input
-                            id="attrName"
-                            type="text"
-                            value={attributeNameInput}
-                            onChange={(e) => setAttributeNameInput(e.target.value)}
-                            placeholder="e.g. Material, Color, Style"
-                            className="mt-1 flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                          />
-                        </div>
-                        <div>
-                          <label htmlFor="attrValue" className="text-sm font-medium">
-                            Attribute Value
-                          </label>
-                          <input
-                            id="attrValue"
-                            type="text"
-                            value={attributeValueInput}
-                            onChange={(e) => setAttributeValueInput(e.target.value)}
-                            placeholder="e.g. Cotton, Red, XL"
-                            className="mt-1 flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                          />
-                        </div>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <h3 className="text-lg font-medium">Product Attributes</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Configure product attributes like size, color, material, etc.
+                        </p>
                       </div>
                       <Button
-                        type="button"
-                        onClick={handleAddAttribute}
-                        disabled={!attributeNameInput.trim()}
-                        size="sm"
-                        className="mt-2"
+                        variant="outline"
+                        onClick={() => navigate('/admin/attributes')}
                       >
-                        <PlusIcon className="h-4 w-4 mr-1" />
-                        <span>Add Attribute</span>
+                        Manage Attributes
                       </Button>
                     </div>
                     
+                    {formattedAttributes.length > 0 ? (
+                      <div className="space-y-4">
+                        <p className="text-sm font-medium">
+                          Selected attributes determine what options customers need to select when purchasing this product.
+                        </p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {formattedAttributes.map((attr) => (
+                            <div 
+                              key={attr.id} 
+                              className="border rounded-md p-4 shadow-sm"
+                            >
+                              <div className="flex justify-between items-center mb-2">
+                                <span className="font-medium">{attr.name}</span>
+                                <Switch 
+                                  checked={state.attributes.some(a => a.id === attr.id)}
+                                  onCheckedChange={(checked) => {
+                                    if (checked) {
+                                      addAttribute({
+                                        id: attr.id,
+                                        name: attr.name,
+                                        value: "", // Will be set by customer
+                                        isCustom: false,
+                                      });
+                                    } else {
+                                      const index = state.attributes.findIndex(a => a.id === attr.id);
+                                      if (index !== -1) {
+                                        handleRemoveAttribute(index);
+                                      }
+                                    }
+                                  }}
+                                />
+                              </div>
+                              <p className="text-sm text-muted-foreground mb-2">
+                                {attr.options.length} options available
+                              </p>
+                              <div className="flex flex-wrap gap-1">
+                                {attr.options.slice(0, 4).map(option => (
+                                  <Badge key={option.id} variant="outline">
+                                    {option.displayValue}
+                                  </Badge>
+                                ))}
+                                {attr.options.length > 4 && (
+                                  <Badge variant="outline">+{attr.options.length - 4} more</Badge>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 border rounded-md bg-muted/20">
+                        <p className="text-muted-foreground">No attributes available</p>
+                        <p className="text-sm text-muted-foreground mt-2">
+                          Add global attributes first by clicking the "Manage Attributes" button
+                        </p>
+                      </div>
+                    )}
+                    
+                    {/* Custom Attributes Section */}
+                    <div className="mt-6 pt-6 border-t">
+                      <h4 className="font-medium">Custom Attributes</h4>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Add one-time custom attributes for this product only
+                      </p>
+                      
+                      {/* Current Custom Attributes */}
+                      {state.attributes.filter(attr => attr.isCustom).length > 0 ? (
+                        <div className="space-y-3 mb-4">
+                          {state.attributes.filter(attr => attr.isCustom).map((attr) => {
+                            const index = state.attributes.findIndex(a => a.id === attr.id);
+                            return (
+                              <div 
+                                key={attr.id || index} 
+                                className="flex items-center gap-2 border rounded-md p-3"
+                              >
+                                <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                  <div>
+                                    <span className="text-sm font-semibold">{attr.name}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <input
+                                      type="text"
+                                      value={attr.value || ''}
+                                      onChange={(e) => handleAttributeValueChange(index, e.target.value)}
+                                      placeholder="Enter value"
+                                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                    />
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 text-muted-foreground"
+                                      onClick={() => handleRemoveAttribute(index)}
+                                    >
+                                      <XIcon className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground italic">No custom attributes added yet</p>
+                      )}
+                      
+                      {/* Add Custom Attribute Form */}
+                      <div className="border rounded-md p-4 space-y-4">
+                        <h4 className="font-medium">Add Custom Attribute</h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label htmlFor="attrName" className="text-sm font-medium">
+                              Attribute Name
+                            </label>
+                            <input
+                              id="attrName"
+                              type="text"
+                              value={attributeNameInput}
+                              onChange={(e) => setAttributeNameInput(e.target.value)}
+                              placeholder="e.g. Material, Color, Style"
+                              className="mt-1 flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                            />
+                          </div>
+                          <div>
+                            <label htmlFor="attrValue" className="text-sm font-medium">
+                              Attribute Value
+                            </label>
+                            <input
+                              id="attrValue"
+                              type="text"
+                              value={attributeValueInput}
+                              onChange={(e) => setAttributeValueInput(e.target.value)}
+                              placeholder="e.g. Cotton, Red, XL"
+                              className="mt-1 flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                            />
+                          </div>
+                        </div>
+                        <Button
+                          type="button"
+                          onClick={handleAddAttribute}
+                          disabled={!attributeNameInput.trim()}
+                          size="sm"
+                          className="mt-2"
+                        >
+                          <PlusIcon className="h-4 w-4 mr-1" />
+                          <span>Add Attribute</span>
+                        </Button>
+                      </div>
+                    </div>
                   </div>
                 </TabsContent>
                 
