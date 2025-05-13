@@ -599,6 +599,14 @@ export const ProductWizardProvider: React.FC<ProductWizardProviderProps> = ({
                 dispatch({ type: 'MARK_STEP_COMPLETE', step: 'images' });
               }
               
+              // Mark additional-info step as valid and complete
+              dispatch({ type: 'MARK_STEP_VALID', step: 'additional-info', isValid: true });
+              dispatch({ type: 'MARK_STEP_COMPLETE', step: 'additional-info' });
+              
+              // Mark sales-promotions step as valid and complete
+              dispatch({ type: 'MARK_STEP_VALID', step: 'sales-promotions', isValid: true });
+              dispatch({ type: 'MARK_STEP_COMPLETE', step: 'sales-promotions' });
+              
               console.log('Loaded product data for editing:', product);
             }
           } else {
@@ -664,17 +672,19 @@ export const ProductWizardProvider: React.FC<ProductWizardProviderProps> = ({
   
   // Wizard step navigation
   const nextStep = useCallback(() => {
-    const currentIndex = ['basic-info', 'images', 'additional-info', 'review'].indexOf(state.currentStep);
-    if (currentIndex < 3) {
-      const nextStep = ['basic-info', 'images', 'additional-info', 'review'][currentIndex + 1] as WizardStep;
+    const steps: WizardStep[] = ['basic-info', 'images', 'additional-info', 'sales-promotions', 'review'];
+    const currentIndex = steps.indexOf(state.currentStep);
+    if (currentIndex < steps.length - 1) {
+      const nextStep = steps[currentIndex + 1];
       dispatch({ type: 'SET_CURRENT_STEP', step: nextStep });
     }
   }, [state.currentStep]);
   
   const previousStep = useCallback(() => {
-    const currentIndex = ['basic-info', 'images', 'additional-info', 'review'].indexOf(state.currentStep);
+    const steps: WizardStep[] = ['basic-info', 'images', 'additional-info', 'sales-promotions', 'review'];
+    const currentIndex = steps.indexOf(state.currentStep);
     if (currentIndex > 0) {
-      const prevStep = ['basic-info', 'images', 'additional-info', 'review'][currentIndex - 1] as WizardStep;
+      const prevStep = steps[currentIndex - 1];
       dispatch({ type: 'SET_CURRENT_STEP', step: prevStep });
     }
   }, [state.currentStep]);
