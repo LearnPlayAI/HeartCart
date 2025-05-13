@@ -300,8 +300,12 @@ function GlobalAttributesPage() {
       return await response.json();
     },
     onSuccess: () => {
+      // Invalidate both the specific attribute options and the attributes list
       queryClient.invalidateQueries({ 
         queryKey: ["/api/attributes", selectedAttribute?.id, "options"] 
+      });
+      queryClient.invalidateQueries({ 
+        queryKey: ["/api/attributes"] 
       });
       setOptionDialogOpen(false);
       setOptionMetadataDialogOpen(false);
@@ -453,6 +457,7 @@ function GlobalAttributesPage() {
       displayValue: formData.get("displayValue") as string,
       sortOrder: parseInt(formData.get("sortOrder") as string) || 0,
       metadata: selectedOption?.metadata || null,
+      attributeId: selectedAttribute?.id, // Ensure we include the attributeId
     };
 
     // Validate the value field to ensure it's not empty
