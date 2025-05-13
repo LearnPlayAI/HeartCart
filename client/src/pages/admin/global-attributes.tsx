@@ -6,7 +6,7 @@ import { queryClient } from "@/lib/queryClient";
 import { ApiError } from "@/lib/exceptions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import AdminLayout from "@/components/admin/admin-layout";
+import { AdminLayout } from "@/components/admin/layout";
 import { 
   Select,
   SelectContent,
