@@ -4353,73 +4353,14 @@ export class DatabaseStorage implements IStorage {
   
   // Removed deleteCategoryAttributeOption as part of centralized attribute system
   
-  async updateCategoryAttributeOptionsOrder(categoryAttributeId: number, optionIds: number[]): Promise<boolean> {
-    try {
-      // Start a transaction
-      await db.transaction(async (tx) => {
-        // Update the sort order for each option
-        for (let i = 0; i < optionIds.length; i++) {
-          await tx
-            .update(categoryAttributeOptions)
-            .set({ sortOrder: i })
-            .where(and(
-              eq(categoryAttributeOptions.id, optionIds[i]),
-              eq(categoryAttributeOptions.categoryAttributeId, categoryAttributeId)
-            ));
-        }
-      });
-      return true;
-    } catch (error) {
-      console.error(`Error updating category attribute options order for categoryAttributeId ${categoryAttributeId}:`, error);
-      throw error; // Rethrow so the route handler can catch it and send a proper error response
-    }
-  }
+  // Removed updateCategoryAttributeOptionsOrder as part of centralized attribute system
   
   // Product attribute operations
-  async getProductAttributes(productId: number): Promise<(ProductAttribute & { attribute: Attribute })[]> {
-    const result = await db
-      .select({
-        productAttribute: productAttributes,
-        attribute: attributes
-      })
-      .from(productAttributes)
-      .innerJoin(attributes, eq(productAttributes.attributeId, attributes.id))
-      .where(eq(productAttributes.productId, productId))
-      .orderBy(asc(productAttributes.sortOrder));
-    
-    return result.map(row => ({
-      ...row.productAttribute,
-      attribute: row.attribute
-    }));
-  }
+  // Removed getProductAttributes as part of centralized attribute system
   
-  async getProductAttributeById(id: number): Promise<(ProductAttribute & { attribute: Attribute }) | undefined> {
-    const result = await db
-      .select({
-        productAttribute: productAttributes,
-        attribute: attributes
-      })
-      .from(productAttributes)
-      .innerJoin(attributes, eq(productAttributes.attributeId, attributes.id))
-      .where(eq(productAttributes.id, id));
-    
-    if (result.length === 0) {
-      return undefined;
-    }
-    
-    return {
-      ...result[0].productAttribute,
-      attribute: result[0].attribute
-    };
-  }
+  // Removed getProductAttributeById as part of centralized attribute system
   
-  async createProductAttribute(productAttribute: InsertProductAttribute): Promise<ProductAttribute> {
-    const [newProductAttribute] = await db
-      .insert(productAttributes)
-      .values(productAttribute)
-      .returning();
-    return newProductAttribute;
-  }
+  // Removed createProductAttribute as part of centralized attribute system
   
   async updateProductAttribute(id: number, productAttributeData: Partial<InsertProductAttribute>): Promise<ProductAttribute | undefined> {
     const [updatedProductAttribute] = await db
