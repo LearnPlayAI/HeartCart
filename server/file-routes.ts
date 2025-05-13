@@ -229,6 +229,14 @@ router.post(
   catchErrors(async (req: Request, res: Response) => {
     const { sourceKeys, productId, productName, categoryId, catalogId } = req.body;
     
+    console.log('Moving product images with data:', {
+      productId,
+      productName,
+      categoryId,
+      catalogId,
+      sourceKeyCount: sourceKeys?.length || 0
+    });
+    
     if (!sourceKeys || !Array.isArray(sourceKeys) || sourceKeys.length === 0) {
       return sendError(res, 'No source keys provided', 400);
     }
@@ -237,20 +245,44 @@ router.post(
       return sendError(res, 'Product ID is required', 400);
     }
     
+    // Before making database calls, ensure we have proper IDs
+    if (!catalogId) {
+      console.log('No catalogId provided, retrieving from product data');
+      // Try to get catalog ID from the product
+      const product = await storage.getProductById(productId);
+      if (product?.catalogId) {
+        console.log(`Retrieved catalogId ${product.catalogId} from product data`);
+      }
+    }
+    
     // Get catalog and category info for proper path structure
-    const catalog = catalogId ? await storage.getCatalogById(catalogId) : null;
+    const catalogIdToUse = catalogId || (await storage.getProductById(productId))?.catalogId || null;
+    console.log('Using catalogId:', catalogIdToUse);
+    
+    const catalog = catalogIdToUse ? await storage.getCatalogById(catalogIdToUse) : null;
+    console.log('Retrieved catalog:', catalog ? `ID: ${catalog.id}, Name: ${catalog.name}` : 'null');
+    
     const category = categoryId ? await storage.getCategoryById(categoryId) : null;
+    console.log('Retrieved category:', category ? `ID: ${category.id}, Name: ${category.name}` : 'null');
     
     // Get supplier from catalog
     const supplier = catalog?.supplierId 
       ? await storage.getSupplierById(catalog.supplierId)
       : null;
+    console.log('Retrieved supplier:', supplier ? `ID: ${supplier.id}, Name: ${supplier.name}` : 'null');
     
     // Sanitized names for path
     const supplierName = supplier?.name || 'unknown-supplier';
     const catalogName = catalog?.name || 'unknown-catalog';
     const categoryName = category?.name || 'uncategorized';
     const sanitizedProductName = productName?.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase() || 'product';
+    
+    console.log('Path components for image storage:', {
+      supplierName,
+      catalogName, 
+      categoryName,
+      sanitizedProductName
+    });
     
     // Move each file
     const moveResults = await Promise.all(sourceKeys.map(async (sourceKey: string, index: number) => {
