@@ -220,12 +220,12 @@ export function ImageStep() {
   
   return (
     <div className="wizard-step">
-      <h3 className="text-2xl font-semibold mb-4 text-primary">Product Images</h3>
-      <Card className="bg-white border-gray-200 shadow-sm">
+      <h3 className="text-2xl font-semibold mb-4 text-[#FF69B4]">Product Images</h3>
+      <Card className="bg-white border-[#E5E7EB] shadow-sm">
         <CardContent className="pt-6 space-y-4">
           {/* Drag and drop area */}
           <div
-            className="image-dropzone border-2 border-dashed border-gray-300 rounded-md p-8 text-center cursor-pointer hover:bg-primary/5 hover:border-primary/50 transition-colors"
+            className="image-dropzone border-2 border-dashed border-[#E5E7EB] rounded-md p-8 text-center cursor-pointer hover:bg-[#FFE6F0]/50 hover:border-[#FF69B4]/70 transition-colors"
             onDragEnter={handleDragEnter}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
@@ -233,12 +233,12 @@ export function ImageStep() {
             onClick={handleSelectFiles}
           >
             <div className="flex flex-col items-center justify-center gap-2">
-              <UploadIcon className="h-10 w-10 text-primary" />
-              <h3 className="font-medium text-primary">Drag and drop images here</h3>
-              <p className="text-sm text-secondary">
+              <UploadIcon className="h-10 w-10 text-[#FF69B4]" />
+              <h3 className="font-medium text-[#FF69B4]">Drag and drop images here</h3>
+              <p className="text-sm text-[#A8E6CF]">
                 Or click to browse your files
               </p>
-              <p className="text-xs text-gray-400 mt-2">
+              <p className="text-xs text-[#777777] mt-2">
                 Supported formats: JPEG, PNG, WebP, GIF. Max size: {formatFileSize(MAX_FILE_SIZE)}
               </p>
             </div>
@@ -255,13 +255,13 @@ export function ImageStep() {
           {/* Upload progress */}
           {isUploading && (
             <div className="space-y-2">
-              <div className="flex items-center text-secondary">
+              <div className="flex items-center text-[#A8E6CF]">
                 <Loader2Icon className="h-4 w-4 mr-2 animate-spin" />
                 <span>Uploading...</span>
               </div>
-              <div className="bg-background h-2 rounded-full overflow-hidden">
+              <div className="bg-[#F8F9FA] h-2 rounded-full overflow-hidden">
                 <div
-                  className="bg-primary h-full transition-all duration-300"
+                  className="bg-[#FF69B4] h-full transition-all duration-300"
                   style={{ width: `${uploadProgress}%` }}
                 ></div>
               </div>
@@ -272,8 +272,8 @@ export function ImageStep() {
           {state.imageUrls.length > 0 ? (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="font-medium text-secondary text-lg">Uploaded Images <span className="text-primary font-bold">({state.imageUrls.length})</span></h3>
-                <p className="text-xs text-gray-500">Drag images to reorder • Click star icon to set as main image</p>
+                <h3 className="font-medium text-[#A8E6CF] text-lg">Uploaded Images <span className="text-[#FF69B4] font-bold">({state.imageUrls.length})</span></h3>
+                <p className="text-xs text-[#777777]">Drag images to reorder • Click star icon to set as main image</p>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                 {state.imageUrls.map((url, index) => (
@@ -286,8 +286,8 @@ export function ImageStep() {
                     className={`
                       relative rounded-md overflow-hidden border shadow-sm group
                       ${index === draggingIndex ? 'opacity-50' : ''}
-                      ${index === dragOverIndex ? 'border-secondary border-2' : ''}
-                      ${index === state.mainImageIndex ? 'ring-2 ring-primary ring-offset-1' : ''}
+                      ${index === dragOverIndex ? 'border-[#A8E6CF] border-2' : ''}
+                      ${index === state.mainImageIndex ? 'ring-2 ring-[#FF69B4] ring-offset-1' : ''}
                       transition-all duration-200 hover:shadow-md
                     `}
                   >
@@ -300,12 +300,12 @@ export function ImageStep() {
                     </div>
                     
                     {/* Image overlay with actions */}
-                    <div className="absolute inset-0 bg-primary/85 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity duration-200">
+                    <div className="absolute inset-0 bg-[#FF69B4]/85 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity duration-200">
                       <div className="flex gap-2 mb-2">
                         <Button
                           variant="secondary"
                           size="icon"
-                          className="w-8 h-8 rounded-full bg-white hover:bg-secondary hover:text-white transition-colors duration-200"
+                          className="w-8 h-8 rounded-full bg-white hover:bg-[#A8E6CF] hover:text-white transition-colors duration-200"
                           onClick={() => handleSetMainImage(index)}
                           disabled={index === state.mainImageIndex}
                         >
@@ -314,7 +314,7 @@ export function ImageStep() {
                         <Button
                           variant="destructive"
                           size="icon"
-                          className="w-8 h-8 rounded-full bg-white text-red-500 hover:bg-red-500 hover:text-white transition-colors duration-200"
+                          className="w-8 h-8 rounded-full bg-white text-[#FF6B6B] hover:bg-[#FF6B6B] hover:text-white transition-colors duration-200"
                           onClick={() => handleRemoveImage(index)}
                         >
                           <Trash2Icon className="h-3.5 w-3.5" />
@@ -338,7 +338,7 @@ export function ImageStep() {
                     {/* Main image indicator */}
                     {index === state.mainImageIndex && (
                       <div className="absolute top-2 left-2">
-                        <Badge className="bg-secondary text-white text-xs shadow-sm flex items-center gap-1">
+                        <Badge className="bg-[#A8E6CF] text-white text-xs shadow-sm flex items-center gap-1">
                           <StarIcon className="h-3 w-3" /> Main
                         </Badge>
                       </div>
@@ -347,9 +347,9 @@ export function ImageStep() {
                 ))}
               </div>
               
-              <Alert variant="default" className="bg-gray-50 border border-gray-200">
-                <AlertTriangleIcon className="h-4 w-4 text-secondary" />
-                <AlertDescription>
+              <Alert variant="default" className="bg-[#F8F9FA] border border-[#E5E7EB]">
+                <AlertTriangleIcon className="h-4 w-4 text-[#A8E6CF]" />
+                <AlertDescription className="text-[#333333]">
                   The image marked as "Main" will be used as the primary product image in listings, 
                   search results, and the product details page.
                 </AlertDescription>
@@ -357,13 +357,13 @@ export function ImageStep() {
             </div>
           ) : (
             <div className="text-center py-8">
-              <ImageIcon className="h-12 w-12 mx-auto text-gray-300" />
-              <p className="mt-2 text-gray-500">No images uploaded yet</p>
+              <ImageIcon className="h-12 w-12 mx-auto text-[#E5E7EB]" />
+              <p className="mt-2 text-[#777777]">No images uploaded yet</p>
             </div>
           )}
         </CardContent>
-        <CardFooter className="flex justify-between flex-wrap border-t border-gray-100 bg-gray-50">
-          <p className="text-sm text-gray-500">
+        <CardFooter className="flex justify-between flex-wrap border-t border-[#E5E7EB] bg-[#F8F9FA]">
+          <p className="text-sm text-[#777777]">
             {state.imageUrls.length === 0 ? (
               'Images are optional but recommended for better product presentation.'
             ) : (
@@ -374,7 +374,7 @@ export function ImageStep() {
             variant="outline"
             onClick={handleSelectFiles}
             disabled={isUploading}
-            className="gap-1 bg-white hover:bg-primary hover:text-white"
+            className="gap-1 bg-white hover:bg-[#FF69B4] hover:text-white border-[#E5E7EB]"
           >
             <UploadIcon className="h-4 w-4" />
             <span>Upload More</span>
