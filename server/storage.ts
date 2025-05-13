@@ -3547,13 +3547,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Category Attribute Option operations
-  async getCategoryAttributeOptions(attributeId: number): Promise<CategoryAttributeOption[]> {
-    return await db
-      .select()
-      .from(categoryAttributeOptions)
-      .where(eq(categoryAttributeOptions.attributeId, attributeId))
-      .orderBy(asc(categoryAttributeOptions.sortOrder));
-  }
+  // Removed first implementation of getCategoryAttributeOptions as part of centralized attribute system
 
   async createCategoryAttributeOption(option: InsertCategoryAttributeOption): Promise<CategoryAttributeOption> {
     const [newOption] = await db
@@ -4349,36 +4343,9 @@ export class DatabaseStorage implements IStorage {
   // Removed deleteCategoryAttribute as part of centralized attribute system
   
   // Category attribute options operations
-  async getCategoryAttributeOptions(categoryAttributeId: number): Promise<(CategoryAttributeOption & { 
-    baseOption?: AttributeOption, 
-    catalogOption?: CatalogAttributeOption 
-  })[]> {
-    const result = await db
-      .select({
-        categoryOption: categoryAttributeOptions,
-        baseOption: attributeOptions,
-        catalogOption: catalogAttributeOptions
-      })
-      .from(categoryAttributeOptions)
-      .leftJoin(attributeOptions, eq(categoryAttributeOptions.baseOptionId, attributeOptions.id))
-      .leftJoin(catalogAttributeOptions, eq(categoryAttributeOptions.catalogOptionId, catalogAttributeOptions.id))
-      .where(eq(categoryAttributeOptions.categoryAttributeId, categoryAttributeId))
-      .orderBy(asc(categoryAttributeOptions.sortOrder));
-    
-    return result.map(row => ({
-      ...row.categoryOption,
-      baseOption: row.baseOption || undefined,
-      catalogOption: row.catalogOption || undefined
-    }));
-  }
+  // Removed getCategoryAttributeOptions as part of centralized attribute system
   
-  async getCategoryAttributeOptionById(id: number): Promise<CategoryAttributeOption | undefined> {
-    const [option] = await db
-      .select()
-      .from(categoryAttributeOptions)
-      .where(eq(categoryAttributeOptions.id, id));
-    return option;
-  }
+  // Removed getCategoryAttributeOptionById as part of centralized attribute system
   
   async createCategoryAttributeOption(option: InsertCategoryAttributeOption): Promise<CategoryAttributeOption> {
     const [newOption] = await db
