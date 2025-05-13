@@ -203,7 +203,19 @@ function GlobalAttributesPage() {
       return true;
     },
     onSuccess: () => {
+      // Invalidate all attribute-related queries with a more aggressive approach
       queryClient.invalidateQueries({ queryKey: ["/api/attributes"] });
+      
+      // Also invalidate any product wizard queries that might cache attribute data
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          // This will invalidate any query with a key path containing 'attributes'
+          return query.queryKey.some(key => 
+            typeof key === 'string' && key.includes('attributes')
+          );
+        }
+      });
+      
       setSelectedAttribute(null);
       setConfirmDeleteDialogOpen(false);
       setItemToDelete(null);
@@ -327,9 +339,26 @@ function GlobalAttributesPage() {
       return true;
     },
     onSuccess: () => {
+      // Invalidate specific options query
       queryClient.invalidateQueries({ 
         queryKey: ["/api/attributes", selectedAttribute?.id, "options"] 
       });
+      
+      // Also invalidate the main attributes query to ensure any dependent options are updated
+      queryClient.invalidateQueries({ 
+        queryKey: ["/api/attributes"] 
+      });
+      
+      // Invalidate any product wizard queries that might cache attribute data
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          // This will invalidate any query with a key path containing 'attributes'
+          return query.queryKey.some(key => 
+            typeof key === 'string' && key.includes('attributes')
+          );
+        }
+      });
+      
       setConfirmDeleteDialogOpen(false);
       setItemToDelete(null);
       toast({

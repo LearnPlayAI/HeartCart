@@ -89,6 +89,11 @@ router.get('/:id', asyncHandler(async (req: Request, res: Response) => {
       return sendError(res, 'Invalid attribute ID', 400);
     }
     
+    // Add cache control headers to ensure clients always get fresh attribute data
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    
     const attribute = await storage.getAttributeById(attributeId);
     
     if (!attribute) {
