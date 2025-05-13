@@ -237,6 +237,49 @@ export function AdditionalInfoStep() {
     },
   });
   
+  // Update form when editing product data is loaded
+  useEffect(() => {
+    if (state.productId) {
+      console.log('AdditionalInfoStep: Updating form with state values for editing:', state);
+      
+      // Inventory
+      form.setValue('stockLevel', state.stockLevel || 0);
+      form.setValue('lowStockThreshold', state.lowStockThreshold || 5);
+      form.setValue('backorderEnabled', state.backorderEnabled || false);
+      
+      // Shipping
+      form.setValue('taxable', state.taxable || true);
+      form.setValue('taxClass', state.taxClass || '');
+      form.setValue('shippingRequired', state.shippingRequired || true);
+      form.setValue('shippingWeight', state.shippingWeight || null);
+      form.setValue('shippingLength', state.shippingDimensions?.length || null);
+      form.setValue('shippingWidth', state.shippingDimensions?.width || null);
+      form.setValue('shippingHeight', state.shippingDimensions?.height || null);
+      
+      // Product details
+      form.setValue('supplier', state.supplier || '');
+      form.setValue('weight', state.weight || null);
+      form.setValue('dimensions', state.dimensions || '');
+      
+      // Sales & Promotions
+      form.setValue('discountLabel', state.discountLabel || '');
+      form.setValue('specialSaleText', state.specialSaleText || '');
+      
+      if (state.specialSaleStart) {
+        form.setValue('specialSaleStart', new Date(state.specialSaleStart));
+      }
+      
+      if (state.specialSaleEnd) {
+        form.setValue('specialSaleEnd', new Date(state.specialSaleEnd));
+      }
+      
+      // SEO
+      form.setValue('metaTitle', state.metaTitle || state.name || '');
+      form.setValue('metaDescription', state.metaDescription || state.description || '');
+      form.setValue('metaKeywords', state.metaKeywords || '');
+    }
+  }, [state.productId, form, state]);
+  
   // Handle form submission
   const onSubmit = (values: AdditionalInfoFormValues) => {
     // Update state with form values
