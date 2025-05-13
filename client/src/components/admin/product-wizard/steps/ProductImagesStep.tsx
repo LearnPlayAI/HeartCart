@@ -422,19 +422,17 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className 
         setUploadedImages(updatedImages);
         
         // Also update the context's imageUrls and imageObjectKeys arrays
-        const newImageUrls = updatedImages.map(item => item.url);
-        const newImageObjectKeys = updatedImages.map(item => item.objectKey || '');
+        const newImageUrls = updatedImages.map((item: UploadedImage) => item.url);
+        const newImageObjectKeys = updatedImages.map((item: UploadedImage) => item.objectKey || '');
         
-        dispatch({ type: 'SET_FIELD', field: 'imageUrls', value: newImageUrls });
-        dispatch({ type: 'SET_FIELD', field: 'imageObjectKeys', value: newImageObjectKeys });
+        // Update image URLs and object keys in the context
+        setField('imageUrls', newImageUrls);
+        setField('imageObjectKeys', newImageObjectKeys);
         
         // If we deleted the main image, update the main image index to the first image
         if (imageIndex === state.mainImageIndex) {
-          dispatch({ 
-            type: 'SET_FIELD', 
-            field: 'mainImageIndex', 
-            value: updatedImages.length > 0 ? 0 : 0 
-          });
+          // Update the main image index
+          setField('mainImageIndex', updatedImages.length > 0 ? 0 : 0);
           
           // If there are still images, mark the first one as main
           if (updatedImages.length > 0) {
@@ -501,16 +499,25 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className 
     setUploadedImages(updatedItems);
     
     // Also update the context by re-ordering the imageUrls and imageObjectKeys
-    const newImageUrls = updatedItems.map(item => item.url);
-    const newImageObjectKeys = updatedItems.map(item => item.objectKey || '');
+    const newImageUrls = updatedItems.map((item: UploadedImage) => item.url);
+    const newImageObjectKeys = updatedItems.map((item: UploadedImage) => item.objectKey || '');
     
-    dispatch({ type: 'SET_FIELD', field: 'imageUrls', value: newImageUrls });
-    dispatch({ type: 'SET_FIELD', field: 'imageObjectKeys', value: newImageObjectKeys });
+    // Create a mapping of old positions to new positions for reordering
+    const newOrder = Array(items.length).fill(0).map((_, newIndex) => {
+      // Find where in the original array this image was
+      const originalImage = updatedItems[newIndex];
+      return uploadedImages.findIndex(img => 
+        img.id === originalImage.id || img.url === originalImage.url
+      );
+    });
+    
+    // Use the context's reorderImages method to update image order
+    reorderImages(newOrder);
     
     // Also determine the new main image index
-    const mainImageIndex = updatedItems.findIndex(img => img.isMain);
+    const mainImageIndex = updatedItems.findIndex((img: UploadedImage) => img.isMain);
     if (mainImageIndex >= 0) {
-      dispatch({ type: 'SET_FIELD', field: 'mainImageIndex', value: mainImageIndex });
+      setField('mainImageIndex', mainImageIndex);
     }
   };
   
@@ -580,11 +587,12 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className 
       setUploadedImages(updatedImages);
       
       // Also update the context state with the processed images
-      const newImageUrls = updatedImages.map(item => item.url);
-      const newImageObjectKeys = updatedImages.map(item => item.objectKey || '');
+      const newImageUrls = updatedImages.map((item: UploadedImage) => item.url);
+      const newImageObjectKeys = updatedImages.map((item: UploadedImage) => item.objectKey || '');
       
-      dispatch({ type: 'SET_FIELD', field: 'imageUrls', value: newImageUrls });
-      dispatch({ type: 'SET_FIELD', field: 'imageObjectKeys', value: newImageObjectKeys });
+      // Update image URLs and object keys in the context
+      setField('imageUrls', newImageUrls);
+      setField('imageObjectKeys', newImageObjectKeys);
       
       toast({
         title: "Background removed",
