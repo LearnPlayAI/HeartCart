@@ -530,9 +530,30 @@ const ProductDetailView = ({
               />
             </div>
             
-            {product.additionalImages && product.additionalImages.length > 0 && (
+            {/* Thumbnail gallery showing both main image and additional images */}
+            {(product.imageUrl || (product.additionalImages && product.additionalImages.length > 0)) && (
               <div className="grid grid-cols-5 gap-2">
-                {product.additionalImages.map((image, index) => (
+                {/* Include main product image in the gallery */}
+                {product.imageUrl && (
+                  <div 
+                    className={`border rounded-md overflow-hidden cursor-pointer transition-all ${
+                      currentImage === ensureValidImageUrl(product.imageUrl) || 
+                      (!currentImage && product.imageUrl) 
+                        ? 'border-[#FF69B4] shadow-md scale-105' 
+                        : 'border-gray-200 hover:border-gray-400'
+                    }`}
+                    onClick={() => handleThumbnailClick(product.imageUrl)}
+                  >
+                    <img 
+                      src={ensureValidImageUrl(product.imageUrl)} 
+                      alt={`${product.name} - main image`} 
+                      className="w-full h-auto object-cover aspect-square"
+                    />
+                  </div>
+                )}
+                
+                {/* Show additional images */}
+                {product.additionalImages && product.additionalImages.map((image, index) => (
                   <div 
                     key={index} 
                     className={`border rounded-md overflow-hidden cursor-pointer transition-all ${
@@ -565,13 +586,28 @@ const ProductDetailView = ({
                     <X className="h-5 w-5" />
                   </Button>
                   
-                  {product.additionalImages && (
+                  {(product.imageUrl || (product.additionalImages && product.additionalImages.length > 0)) && (
                     <div className="relative w-full h-full flex items-center justify-center">
-                      <img 
-                        src={ensureValidImageUrl(product.additionalImages[carouselIndex])} 
-                        alt={`${product.name} - large view`} 
-                        className="max-h-full max-w-full object-contain"
-                      />
+                      {/* Create a combined array of images for the carousel */}
+                      {(() => {
+                        // Create an array with all images (main + additional)
+                        const allImages = [];
+                        if (product.imageUrl) {
+                          allImages.push(product.imageUrl);
+                        }
+                        if (product.additionalImages) {
+                          allImages.push(...product.additionalImages);
+                        }
+                        
+                        // Use the current index to display the correct image
+                        return (
+                          <img 
+                            src={ensureValidImageUrl(allImages[carouselIndex])} 
+                            alt={`${product.name} - large view`} 
+                            className="max-h-full max-w-full object-contain"
+                          />
+                        );
+                      })()}
                       
                       <Button 
                         variant="ghost" 
@@ -592,15 +628,40 @@ const ProductDetailView = ({
                       </Button>
                       
                       <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2">
-                        {product.additionalImages.map((_, idx) => (
-                          <div 
-                            key={idx}
-                            className={`w-2 h-2 rounded-full ${
-                              idx === carouselIndex ? 'bg-white' : 'bg-white/40'
-                            }`}
-                            onClick={() => setCarouselIndex(idx)}
-                          />
-                        ))}
+                        {(() => {
+                          // Create dots for all images (main + additional)
+                          const dots = [];
+                          let totalImages = 0;
+                          
+                          if (product.imageUrl) {
+                            dots.push(
+                              <div 
+                                key="main"
+                                className={`w-2 h-2 rounded-full ${
+                                  0 === carouselIndex ? 'bg-white' : 'bg-white/40'
+                                }`}
+                                onClick={() => setCarouselIndex(0)}
+                              />
+                            );
+                            totalImages++;
+                          }
+                          
+                          if (product.additionalImages) {
+                            product.additionalImages.forEach((_, idx) => {
+                              dots.push(
+                                <div 
+                                  key={idx}
+                                  className={`w-2 h-2 rounded-full ${
+                                    (idx + totalImages) === carouselIndex ? 'bg-white' : 'bg-white/40'
+                                  }`}
+                                  onClick={() => setCarouselIndex(idx + totalImages)}
+                                />
+                              );
+                            });
+                          }
+                          
+                          return dots;
+                        })()}
                       </div>
                     </div>
                   )}
