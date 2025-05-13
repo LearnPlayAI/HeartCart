@@ -62,10 +62,10 @@ interface ProductWizardState {
   // Sales & Promotions
   discountLabel: string | null;
   specialSaleText: string | null;
-  specialSaleStart: Date | null;
-  specialSaleEnd: Date | null;
+  specialSaleStart: string | null;
+  specialSaleEnd: string | null;
   isFlashDeal: boolean;
-  flashDealEnd: Date | string | null;
+  flashDealEnd: string | null;
   
   // Shipping
   taxable: boolean;
