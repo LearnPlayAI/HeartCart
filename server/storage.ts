@@ -26,7 +26,7 @@ import {
   attributeDiscountRules, type AttributeDiscountRule, type InsertAttributeDiscountRule
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, like, and, desc, asc, sql, inArray, isNull, not, or, SQL } from "drizzle-orm";
+import { eq, like, and, desc, asc, sql, inArray, isNull, not, or, SQL, count } from "drizzle-orm";
 import { objectStore, STORAGE_FOLDERS } from "./object-store";
 import { logger } from "./logger";
 
@@ -3419,53 +3419,72 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getProductsByCatalogId(catalogId: number, activeOnly = true, limit = 20, offset = 0): Promise<(Product & { categoryName?: string })[]> {
-    const query = db
-      .select({
-        ...products,
-        categoryName: categories.name
-      })
-      .from(products)
-      .leftJoin(categories, eq(products.categoryId, categories.id));
+    try {
+      console.log(`Getting products for catalog ID ${catalogId}, activeOnly: ${activeOnly}, limit: ${limit}, offset: ${offset}`);
+      
+      const query = db
+        .select({
+          ...products,
+          categoryName: categories.name
+        })
+        .from(products)
+        .leftJoin(categories, eq(products.categoryId, categories.id));
 
-    if (activeOnly) {
-      return await query
-        .where(
-          and(
-            eq(products.catalogId, catalogId),
-            eq(products.isActive, true)
+      let result;
+      if (activeOnly) {
+        result = await query
+          .where(
+            and(
+              eq(products.catalogId, catalogId),
+              eq(products.isActive, true)
+            )
           )
-        )
-        .limit(limit)
-        .offset(offset);
-    } else {
-      return await query
-        .where(eq(products.catalogId, catalogId))
-        .limit(limit)
-        .offset(offset);
+          .limit(limit)
+          .offset(offset);
+      } else {
+        result = await query
+          .where(eq(products.catalogId, catalogId))
+          .limit(limit)
+          .offset(offset);
+      }
+      
+      console.log(`Found ${result.length} products for catalog ID ${catalogId}`);
+      return result;
+    } catch (error) {
+      console.error(`Error getting products for catalog ID ${catalogId}:`, error);
+      throw error;
     }
   }
   
   async getProductCountByCatalogId(catalogId: number, includeInactive = false): Promise<number> {
     // Count query to get total number of products in a catalog
-    const query = db
-      .select({ count: count() })
-      .from(products);
-    
-    if (includeInactive) {
-      // Include all products regardless of active status
-      query.where(eq(products.catalogId, catalogId));
-    } else {
-      // Only include active products
-      query.where(
-        and(
-          eq(products.catalogId, catalogId),
-          eq(products.isActive, true)
-        )
-      );
+    try {
+      console.log(`Getting product count for catalog ID ${catalogId}, includeInactive: ${includeInactive}`);
+      
+      const query = db
+        .select({ count: count() })
+        .from(products);
+      
+      if (includeInactive) {
+        // Include all products regardless of active status
+        query.where(eq(products.catalogId, catalogId));
+      } else {
+        // Only include active products
+        query.where(
+          and(
+            eq(products.catalogId, catalogId),
+            eq(products.isActive, true)
+          )
+        );
+      }
+      
+      const result = await query;
+      console.log(`Query result:`, result);
+      return result[0]?.count || 0;
+    } catch (error) {
+      console.error(`Error getting product count:`, error);
+      throw error;
     }
-    
-    const result = await query;
-    return result[0]?.count || 0;
   }
 
   async bulkUpdateCatalogProducts(catalogId: number, updateData: Partial<InsertProduct>): Promise<number> {

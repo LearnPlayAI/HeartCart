@@ -4525,6 +4525,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const catalogId = parseInt(req.params.catalogId);
     
     try {
+      console.log(`API: Getting products for catalog ID ${catalogId}, query:`, req.query);
+      
       // First check if the catalog exists
       const catalog = await storage.getCatalogById(catalogId);
       if (!catalog) {
@@ -4537,6 +4539,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const isAdmin = user && user.role === 'admin';
       const activeOnly = isAdmin ? false : req.query.activeOnly !== 'false';
       
+      console.log(`User is admin: ${isAdmin}, activeOnly: ${activeOnly}`);
+      
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
       const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
       
@@ -4544,10 +4548,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw new ValidationError("Invalid pagination parameters");
       }
       
+      console.log(`Calling getProductsByCatalogId with: catalogId=${catalogId}, activeOnly=${!activeOnly}, limit=${limit}, offset=${offset}`);
       const products = await storage.getProductsByCatalogId(catalogId, !activeOnly, limit, offset);
       
       // Get total count for pagination
+      console.log(`Calling getProductCountByCatalogId with: catalogId=${catalogId}, includeInactive=${!activeOnly}`);
       const totalCount = await storage.getProductCountByCatalogId(catalogId, !activeOnly);
+      
+      console.log(`Successfully retrieved ${products.length} products with total count ${totalCount}`);
       
       return res.json({
         success: true,
@@ -4567,6 +4575,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       // Log detailed error information with context
+      console.error(`API Error: Failed to retrieve products for catalog ID ${catalogId}:`, error);
       logger.error('Error retrieving catalog products', { 
         error,
         catalogId,
