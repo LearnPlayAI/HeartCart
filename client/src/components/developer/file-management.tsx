@@ -42,6 +42,7 @@ import FileBrowser from './file-browser';
 const FileUrlTests: React.FC = () => {
   const [selectedFolder, setSelectedFolder] = useState<string>('');
   const [checkedFiles, setCheckedFiles] = useState<Record<string, boolean>>({});
+  const [testResults, setTestResults] = useState<Record<string, {passed: boolean, message: string}>>({});
   const { toast } = useToast();
   
   // Get list of root folders
@@ -69,6 +70,7 @@ const FileUrlTests: React.FC = () => {
   const folders = foldersData?.success ? foldersData.data.folders : [];
   const files = filesData?.success ? filesData.data.files : [];
   
+  // Test a single file URL
   const testFileUrl = (file: any) => {
     if (!file || !file.url) {
       return;
@@ -81,6 +83,15 @@ const FileUrlTests: React.FC = () => {
         ...prev,
         [file.path]: true
       }));
+      
+      setTestResults(prev => ({
+        ...prev,
+        [file.path]: {
+          passed: true,
+          message: `Successfully loaded image: ${file.name}`
+        }
+      }));
+      
       toast({
         title: 'URL Test Passed',
         description: `Successfully loaded image: ${file.name}`,
@@ -92,6 +103,15 @@ const FileUrlTests: React.FC = () => {
         ...prev,
         [file.path]: false
       }));
+      
+      setTestResults(prev => ({
+        ...prev,
+        [file.path]: {
+          passed: false,
+          message: `Failed to load image: ${file.name}`
+        }
+      }));
+      
       toast({
         title: 'URL Test Failed',
         description: `Failed to load image: ${file.name}`,
@@ -99,6 +119,89 @@ const FileUrlTests: React.FC = () => {
       });
     };
     img.src = file.url;
+  };
+  
+  // Test all files in the current folder
+  const testAllFiles = () => {
+    if (!files || files.length === 0) {
+      toast({
+        title: 'No Files to Test',
+        description: 'There are no files available to test in this folder.',
+        variant: 'default'
+      });
+      return;
+    }
+    
+    // Clear previous results
+    setCheckedFiles({});
+    setTestResults({});
+    
+    // Test each file
+    files.forEach(file => {
+      setTimeout(() => testFileUrl(file), 200);
+    });
+  };
+  
+  // Run a special test for filenames with spaces
+  const testSpacesHandling = () => {
+    if (!files || files.length === 0) {
+      toast({
+        title: 'No Files to Test',
+        description: 'There are no files available to test in this folder.',
+        variant: 'default'
+      });
+      return;
+    }
+    
+    // Filter files with spaces in the name
+    const filesWithSpaces = files.filter(file => file.name.includes(' '));
+    
+    if (filesWithSpaces.length === 0) {
+      toast({
+        title: 'No Files with Spaces',
+        description: 'There are no files with spaces in their names in this folder.',
+        variant: 'default'
+      });
+      return;
+    }
+    
+    // Test each file with spaces
+    filesWithSpaces.forEach(file => {
+      setTimeout(() => testFileUrl(file), 200);
+    });
+  };
+  
+  // Test URL encoding for special characters
+  const testSpecialChars = () => {
+    if (!files || files.length === 0) {
+      toast({
+        title: 'No Files to Test',
+        description: 'There are no files available to test in this folder.',
+        variant: 'default'
+      });
+      return;
+    }
+    
+    // Filter files with special characters in the name
+    const hasSpecialChars = (name: string) => {
+      return /[!@#$%^&*()+={}\[\];:'",<>?~]/.test(name);
+    };
+    
+    const filesWithSpecialChars = files.filter(file => hasSpecialChars(file.name));
+    
+    if (filesWithSpecialChars.length === 0) {
+      toast({
+        title: 'No Files with Special Characters',
+        description: 'There are no files with special characters in their names in this folder.',
+        variant: 'default'
+      });
+      return;
+    }
+    
+    // Test each file with special characters
+    filesWithSpecialChars.forEach(file => {
+      setTimeout(() => testFileUrl(file), 200);
+    });
   };
   
   const getStatusIcon = (status: boolean | undefined) => {
@@ -141,16 +244,43 @@ const FileUrlTests: React.FC = () => {
         
         {selectedFolder && (
           <div className="mt-6">
-            <div className="flex justify-between items-center mb-3">
+            <div className="flex flex-wrap justify-between items-center mb-3 gap-2">
               <h4 className="font-medium">Files in {selectedFolder}</h4>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => refetchFiles()}
-                disabled={isFilesLoading}
-              >
-                Refresh
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={testAllFiles}
+                  disabled={isFilesLoading || files.length === 0}
+                >
+                  <Link2 className="h-4 w-4 mr-1" />
+                  Test All URLs
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={testSpacesHandling}
+                  disabled={isFilesLoading || files.length === 0}
+                >
+                  Test Spaces
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={testSpecialChars}
+                  disabled={isFilesLoading || files.length === 0}
+                >
+                  Test Special Chars
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => refetchFiles()}
+                  disabled={isFilesLoading}
+                >
+                  Refresh
+                </Button>
+              </div>
             </div>
             
             {isFilesLoading ? (
@@ -170,7 +300,11 @@ const FileUrlTests: React.FC = () => {
                   </TableHeader>
                   <TableBody>
                     {files.map((file) => (
-                      <TableRow key={file.path}>
+                      <TableRow key={file.path} className={
+                        checkedFiles[file.path] !== undefined 
+                          ? (checkedFiles[file.path] ? 'bg-green-50' : 'bg-red-50') 
+                          : ''
+                      }>
                         <TableCell className="font-mono text-sm">
                           {file.name}
                           {file.name.includes(' ') && (
@@ -178,9 +312,19 @@ const FileUrlTests: React.FC = () => {
                               Contains Spaces
                             </Badge>
                           )}
+                          {/[!@#$%^&*()+={}\[\];:'",<>?~]/.test(file.name) && (
+                            <Badge variant="outline" className="ml-2 bg-blue-50">
+                              Special Chars
+                            </Badge>
+                          )}
                         </TableCell>
                         <TableCell>
                           {getStatusIcon(checkedFiles[file.path])}
+                          {testResults[file.path] && (
+                            <span className="ml-2 text-xs text-gray-500">
+                              {testResults[file.path].passed ? 'Passed' : 'Failed'}
+                            </span>
+                          )}
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-2">

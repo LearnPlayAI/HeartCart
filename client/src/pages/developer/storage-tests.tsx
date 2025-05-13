@@ -26,7 +26,9 @@ import {
   Gauge,
   Link, 
   RefreshCcw, 
-  HardDrive 
+  HardDrive,
+  FileIcon, 
+  File as FileIcon2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -458,6 +460,124 @@ function StorageTestsPage() {
                   isLoading={isObjectStorageLoading} 
                 />
               )}
+              
+              <Separator className="my-6" />
+              
+              <div className="mt-6">
+                <h3 className="text-lg font-medium mb-4">File Manager Tests</h3>
+                <p className="text-gray-600 mb-6">
+                  The following tests verify enhanced file management capabilities including file browsing, URL encoding, 
+                  and path handling with spaces and special characters.
+                </p>
+                
+                {/* File Manager Test buttons */}
+                <div className="flex flex-wrap gap-3 mb-6">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      apiRequest('/api/file-test/api-methods', 'GET')
+                        .then(res => res.json())
+                        .then(data => {
+                          if (data.success) {
+                            toast({
+                              title: 'API Methods Test',
+                              description: 'API Methods test completed',
+                              variant: 'default'
+                            });
+                          }
+                        });
+                    }}
+                  >
+                    <Database className="mr-2 h-4 w-4" />
+                    Test API Methods
+                  </Button>
+                  
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      apiRequest('/api/file-test/buckets', 'GET')
+                        .then(res => res.json())
+                        .then(data => {
+                          if (data.success) {
+                            toast({
+                              title: 'Buckets Test',
+                              description: 'Buckets test completed',
+                              variant: 'default'
+                            });
+                          }
+                        });
+                    }}
+                  >
+                    <HardDrive className="mr-2 h-4 w-4" />
+                    Test Buckets
+                  </Button>
+                  
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      apiRequest('/api/file-test/operations', 'GET')
+                        .then(res => res.json())
+                        .then(data => {
+                          if (data.success) {
+                            toast({
+                              title: 'File Operations Test',
+                              description: 'File operations test completed',
+                              variant: 'default'
+                            });
+                          }
+                        });
+                    }}
+                  >
+                    <FileIcon className="mr-2 h-4 w-4" />
+                    Test File Operations
+                  </Button>
+                  
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      apiRequest('/api/file-test/filename-utils', 'GET')
+                        .then(res => res.json())
+                        .then(data => {
+                          if (data.success) {
+                            toast({
+                              title: 'Filename Utils Test',
+                              description: 'Filename utilities test completed',
+                              variant: 'default'
+                            });
+                          }
+                        });
+                    }}
+                  >
+                    <File className="mr-2 h-4 w-4" />
+                    Test Filename Utils
+                  </Button>
+                  
+                  <Button 
+                    variant="default" 
+                    size="sm"
+                    onClick={() => {
+                      apiRequest('/api/file-test/run-all', 'GET')
+                        .then(res => res.json())
+                        .then(data => {
+                          if (data.success) {
+                            toast({
+                              title: 'All Tests',
+                              description: 'All file system tests completed',
+                              variant: 'default'
+                            });
+                          }
+                        });
+                    }}
+                  >
+                    <RefreshCcw className="mr-2 h-4 w-4" />
+                    Run All Tests
+                  </Button>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
