@@ -280,11 +280,12 @@ export function ReviewAndSaveStep() {
   };
   
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Review Product Information</CardTitle>
-          <p className="text-sm text-muted-foreground">
+    <div className="wizard-step">
+      <h3 className="wizard-step-header">Review and Save Product</h3>
+      <Card className="bg-white border-gray-200">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg text-secondary">Review Product Information</CardTitle>
+          <p className="text-sm text-gray-500">
             Review all product details before saving. You can go back to any step to make changes.
           </p>
         </CardHeader>
@@ -307,11 +308,11 @@ export function ReviewAndSaveStep() {
           {/* Basic Info Section */}
           <div className="space-y-6">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium">Basic Information</h3>
+              <h3 className="text-lg font-medium text-primary">Basic Information</h3>
               <Button 
                 variant="outline" 
                 size="sm" 
-                className="flex items-center gap-1"
+                className="flex items-center gap-1 bg-white hover:bg-primary hover:text-white"
                 onClick={() => handleNavigateToStep('basic-info')}
               >
                 <Edit className="h-3 w-3" />
@@ -425,7 +426,7 @@ export function ReviewAndSaveStep() {
           {/* Images Section */}
           <div className="mt-8 space-y-6">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium">Images</h3>
+              <h3 className="text-lg font-medium text-primary">Images</h3>
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -481,11 +482,11 @@ export function ReviewAndSaveStep() {
           {/* Inventory Section */}
           <div className="mt-8 space-y-6">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium">Inventory</h3>
+              <h3 className="text-lg font-medium text-secondary">Inventory</h3>
               <Button 
                 variant="outline" 
                 size="sm" 
-                className="flex items-center gap-1"
+                className="flex items-center gap-1 bg-white hover:bg-secondary hover:text-white"
                 onClick={() => handleNavigateToStep('additional-info')}
               >
                 <Edit className="h-3 w-3" />
