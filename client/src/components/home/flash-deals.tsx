@@ -62,11 +62,9 @@ const FlashDealsSection = () => {
           ) : flashDeals.length > 0 ? (
             // Show flash deals
             flashDeals.map((product) => {
-              // Using product ID for deterministic soldPercentage to avoid re-renders 
-              const soldPercentage = React.useMemo(() => {
-                // Using product.id to generate a consistent sold percentage for a product
-                return Math.floor((product.id * 17) % 100);
-              }, [product.id]);
+              // Using product ID for deterministic soldPercentage to avoid re-renders
+              // Calculate sold percentage directly without useMemo (to avoid hooks order issues)
+              const soldPercentage = Math.floor((product.id * 17) % 100);
               
               return (
                 <ProductCard

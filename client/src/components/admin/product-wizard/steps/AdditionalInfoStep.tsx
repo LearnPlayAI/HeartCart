@@ -223,6 +223,16 @@ export function AdditionalInfoStep() {
     }
   }, [globalAttributesData, attributeValues.length]);
   
+  // Initialize attributesUsed from product's attributes when component loads
+  useEffect(() => {
+    if (state.attributes && state.attributes.length > 0) {
+      // Extract attribute IDs from state attributes and update attributesUsed
+      const usedAttributeIds = state.attributes.map(attr => attr.id);
+      setAttributesUsed(usedAttributeIds);
+      console.log('Initializing attributesUsed from state:', usedAttributeIds);
+    }
+  }, [state.attributes]);
+
   // Handle attribute values changes from pricing component
   const handleAttributeValuesChange = (newValues: AttributeValue[]) => {
     console.log('AdditionalInfoStep: Attribute values changed:', newValues);
@@ -543,21 +553,34 @@ export function AdditionalInfoStep() {
                                 <Switch 
                                   checked={attributesUsed.includes(attr.id)}
                                   onCheckedChange={(checked) => {
+                                    console.log(`Toggle attribute ${attr.name} (ID: ${attr.id}) to: ${checked}`);
+                                    
                                     if (checked) {
-                                      setAttributesUsed([...attributesUsed, attr.id]);
-                                      // Also add to product's attributes in state
+                                      // Update local state
+                                      setAttributesUsed(prev => [...prev, attr.id]);
+                                      
+                                      // Add to product's attributes in context
                                       addAttribute({
                                         id: attr.id,
                                         name: attr.name,
-                                        value: "", // Will be set by customer
+                                        value: "", // Will be set by customer during checkout
                                         isCustom: false,
+                                        isRequired: attr.isRequired || false,
+                                        displayInProductSummary: true // Make this visible by default
                                       });
+                                      
+                                      console.log(`Added attribute ${attr.name} to product attributes`);
                                     } else {
-                                      setAttributesUsed(attributesUsed.filter(id => id !== attr.id));
-                                      // Also remove from product's attributes in state
+                                      // Update local state
+                                      setAttributesUsed(prev => prev.filter(id => id !== attr.id));
+                                      
+                                      // Find and remove from product's attributes in context
                                       const index = state.attributes.findIndex(a => a.id === attr.id);
                                       if (index !== -1) {
-                                        handleRemoveAttribute(index);
+                                        removeAttribute(index);
+                                        console.log(`Removed attribute ${attr.name} from product attributes at index ${index}`);
+                                      } else {
+                                        console.warn(`Could not find attribute ${attr.name} in product attributes to remove`);
                                       }
                                     }
                                   }}
