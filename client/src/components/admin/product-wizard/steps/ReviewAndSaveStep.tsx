@@ -226,52 +226,66 @@ export function ReviewAndSaveStep() {
   
   // Handle save product
   const handleSaveProduct = async () => {
-    // Prepare product data for API
+    // Prepare product data for API - ensure numeric values for price fields
     const productData = {
       name: state.name,
       slug: state.slug,
       sku: state.sku,
       brand: state.brand || null,
       description: state.description || null,
-      categoryId: state.categoryId,
-      costPrice: state.costPrice,
-      regularPrice: state.regularPrice,
-      salePrice: state.onSale ? state.salePrice : null,
-      markupPercentage: state.markupPercentage,
+      categoryId: Number(state.categoryId),
+      price: Number(state.regularPrice), // Required field in schema
+      costPrice: Number(state.costPrice),
+      regularPrice: Number(state.regularPrice),
+      salePrice: state.onSale ? Number(state.salePrice) : null,
+      markupPercentage: Number(state.markupPercentage),
       isActive: state.isActive,
       isFeatured: state.isFeatured,
       
       // Inventory
-      stockLevel: state.stockLevel,
-      lowStockThreshold: state.lowStockThreshold,
-      backorderEnabled: state.backorderEnabled,
+      stockLevel: Number(state.stockLevel || 0),
+      lowStockThreshold: Number(state.lowStockThreshold || 0),
+      backorderEnabled: Boolean(state.backorderEnabled),
       
       // Images
       imageUrls: state.imageUrls,
       imageObjectKeys: state.imageObjectKeys,
-      mainImageIndex: state.mainImageIndex,
+      mainImageIndex: Number(state.mainImageIndex),
       
       // SEO
-      metaTitle: state.metaTitle,
-      metaDescription: state.metaDescription,
-      metaKeywords: state.metaKeywords,
+      metaTitle: state.metaTitle || state.name, // Use product name as fallback
+      metaDescription: state.metaDescription || state.description || null,
+      metaKeywords: state.metaKeywords || '',
       
       // Shipping
-      taxable: state.taxable,
-      taxClass: state.taxClass,
-      shippingRequired: state.shippingRequired,
-      shippingWeight: state.shippingWeight,
+      taxable: Boolean(state.taxable),
+      taxClass: state.taxClass || '',
+      shippingRequired: Boolean(state.shippingRequired),
+      shippingWeight: state.shippingWeight ? Number(state.shippingWeight) : null,
       shippingDimensions: state.shippingDimensions,
       
       // Attributes
-      attributes: state.attributes,
+      attributes: state.attributes || [],
       
       // Catalog context
-      catalogId: state.catalogId || null,
+      catalogId: state.catalogId ? Number(state.catalogId) : null,
     };
     
-    // Submit data
-    await createProductMutation.mutateAsync(productData);
+    // Log the product data for debugging
+    console.log('Submitting product data:', productData);
+    
+    try {
+      // Submit data
+      await createProductMutation.mutateAsync(productData);
+    } catch (error) {
+      console.error('Product creation error:', error);
+      if (error instanceof Error) {
+        setSavingError(`Failed to create product: ${error.message}`);
+      } else {
+        setSavingError('Failed to create product due to an unknown error');
+      }
+      throw error;
+    }
   };
   
   // Handle navigate to step
