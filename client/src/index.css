@@ -3,9 +3,9 @@
 @tailwind utilities;
 
 :root {
-  --background: 0 0% 100%;
+  --background: 0 0% 88%; /* Soft Gray #E0E0E0 */
   --foreground: 20 14.3% 4.1%;
-  --muted: 60 4.8% 95.9%;
+  --muted: 0 0% 88%; /* Soft Gray background */
   --muted-foreground: 25 5.3% 44.7%;
   --popover: 0 0% 100%;
   --popover-foreground: 20 14.3% 4.1%;
@@ -13,25 +13,28 @@
   --card-foreground: 20 14.3% 4.1%;
   --border: 20 5.9% 90%;
   --input: 20 5.9% 90%;
-  --primary: 331 100% 71%;
+  --primary: 330 100% 71%; /* Hot Pink #FF1493 */
   --primary-foreground: 211 100% 99%;
-  --secondary: 60 4.8% 95.9%;
-  --secondary-foreground: 24 9.8% 10%;
-  --accent: 60 4.8% 95.9%;
-  --accent-foreground: 24 9.8% 10%;
+  --secondary: 181 100% 41%; /* Teal #00CED1 */
+  --secondary-foreground: 0 0% 100%;
+  --accent: 180 100% 25%; /* Darker Teal #008080 */
+  --accent-foreground: 0 0% 100%;
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 60 9.1% 97.8%;
   --ring: 20 14.3% 4.1%;
   --radius: 0.5rem;
   
   /* Custom colors for TEE ME YOU */
-  --hotpink: 331, 100%, 71%;
-  --lightpink: 350, 100%, 88%;
-  --darkpink: 328, 100%, 54%;
+  --hotpink: 330, 100%, 71%; /* Hot Pink #FF1493 */
+  --lightpink: 330, 100%, 81%; /* Lighter Hot Pink */
+  --darkpink: 330, 100%, 61%; /* Darker Hot Pink */
+  --teal: 180, 100%, 25%; /* Teal #008080 */
+  --aqua: 181, 100%, 41%; /* Aqua #00CED1 */
+  --softgray: 0, 0%, 88%; /* Soft Gray #E0E0E0 */
   
   /* Chart colors */
   --chart-1: var(--hotpink);
-  --chart-2: 266, 100%, 64%;
+  --chart-2: var(--teal);
   --chart-3: 199, 89%, 54%;
   --chart-4: 41, 100%, 59%;
   --chart-5: 120, 100%, 33%;
@@ -48,11 +51,11 @@
   --card-foreground: 0 0% 98%;
   --border: 240 3.7% 15.9%;
   --input: 240 3.7% 15.9%;
-  --primary: 331 100% 71%;
+  --primary: 330 100% 71%; /* Hot Pink #FF1493 */
   --primary-foreground: 211 100% 99%;
-  --secondary: 240 3.7% 15.9%;
+  --secondary: 181 100% 41%; /* Teal #00CED1 */
   --secondary-foreground: 0 0% 98%;
-  --accent: 240 3.7% 15.9%;
+  --accent: 180 100% 25%; /* Darker Teal #008080 */
   --accent-foreground: 0 0% 98%;
   --destructive: 0 62.8% 30.6%;
   --destructive-foreground: 0 0% 98%;
@@ -66,7 +69,7 @@
   }
 
   body {
-    @apply font-sans antialiased bg-gray-50 text-foreground;
+    @apply font-sans antialiased bg-background text-foreground;
   }
   
   h1, h2, h3, h4, h5, h6 {
@@ -135,5 +138,98 @@
   .scrollbar-none {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+  
+  /* Product Wizard Styles */
+  .wizard-step {
+    @apply border border-gray-200 rounded-lg p-6 bg-white shadow-sm;
+  }
+  
+  .wizard-step-header {
+    @apply text-xl font-bold mb-4 text-primary;
+  }
+  
+  .wizard-buttons {
+    @apply flex justify-between mt-6;
+  }
+  
+  .wizard-button-back {
+    @apply bg-white text-gray-600 border border-gray-300 hover:bg-gray-50;
+  }
+  
+  .wizard-button-next {
+    @apply bg-primary text-white hover:bg-[#FF1493];
+  }
+  
+  .wizard-button-submit {
+    @apply bg-accent text-white hover:bg-[#008080];
+  }
+  
+  .wizard-stepnav {
+    @apply flex justify-between mb-8 px-2;
+  }
+  
+  .wizard-stepnav-item {
+    @apply flex flex-col items-center;
+  }
+  
+  .wizard-stepnav-number {
+    @apply w-8 h-8 rounded-full flex items-center justify-center text-sm;
+  }
+  
+  .wizard-stepnav-number.active {
+    @apply bg-primary text-white;
+  }
+  
+  .wizard-stepnav-number.completed {
+    @apply bg-secondary text-white;
+  }
+  
+  .wizard-stepnav-number.incomplete {
+    @apply bg-gray-200 text-gray-600;
+  }
+  
+  .wizard-stepnav-label {
+    @apply text-xs mt-1 font-medium;
+  }
+  
+  .wizard-stepnav-line {
+    @apply flex-1 h-0.5 self-center mx-2;
+  }
+  
+  .wizard-stepnav-line.active {
+    @apply bg-primary;
+  }
+  
+  .wizard-stepnav-line.completed {
+    @apply bg-secondary;
+  }
+  
+  .wizard-stepnav-line.incomplete {
+    @apply bg-gray-200;
+  }
+  
+  .image-dropzone {
+    @apply border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors;
+  }
+  
+  .image-dropzone.active {
+    @apply border-primary bg-primary/10;
+  }
+  
+  .image-dropzone:hover {
+    @apply border-primary/70 bg-primary/5;
+  }
+  
+  .image-preview-container {
+    @apply grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 mt-4;
+  }
+  
+  .image-preview-item {
+    @apply relative rounded-lg overflow-hidden border border-gray-200 group;
+  }
+  
+  .image-preview-overlay {
+    @apply absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2;
   }
 }

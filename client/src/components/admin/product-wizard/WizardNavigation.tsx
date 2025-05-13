@@ -102,18 +102,22 @@ export function WizardNavigation({ onComplete }: WizardNavigationProps) {
   return (
     <div className="space-y-6">
       {/* Step Indicator */}
-      <div className="flex justify-between items-center">
+      <div className="wizard-stepnav">
         <TooltipProvider>
           {steps.map((step, index) => {
             const status = getStepStatus(step.id);
             const isClickable = status !== 'upcoming';
             
             return (
-              <div key={step.id} className="flex items-center">
+              <div key={step.id} className="flex items-center flex-1">
                 {index > 0 && (
                   <div 
-                    className={`flex-1 h-1 mx-2 rounded ${
-                      status === 'upcoming' ? 'bg-muted' : 'bg-primary/60'
+                    className={`wizard-stepnav-line ${
+                      status === 'upcoming' 
+                        ? 'incomplete' 
+                        : status === 'current'
+                        ? 'active'
+                        : 'completed'
                     }`}
                   />
                 )}
@@ -124,29 +128,29 @@ export function WizardNavigation({ onComplete }: WizardNavigationProps) {
                       type="button"
                       disabled={!isClickable}
                       onClick={() => isClickable && handleStepClick(step.id)}
-                      className={`relative flex flex-col items-center group ${
+                      className={`wizard-stepnav-item ${
                         !isClickable ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
                       }`}
                     >
                       <div 
-                        className={`w-10 h-10 rounded-full flex items-center justify-center border ${
+                        className={`wizard-stepnav-number ${
                           status === 'current' 
-                            ? 'bg-primary text-primary-foreground border-primary' 
+                            ? 'active' 
                             : status === 'complete' 
-                            ? 'bg-primary/10 text-primary border-primary' 
+                            ? 'completed' 
                             : status === 'error'
-                            ? 'bg-destructive/10 text-destructive border-destructive'
-                            : 'bg-muted text-muted-foreground border-muted-foreground/30'
+                            ? 'bg-destructive/10 text-destructive border border-destructive'
+                            : 'incomplete'
                         }`}
                       >
                         {getStatusIcon(status) || (index + 1)}
                       </div>
                       <span 
-                        className={`mt-2 text-sm ${
+                        className={`wizard-stepnav-label ${
                           status === 'current' 
-                            ? 'font-medium text-primary'
+                            ? 'text-primary'
                             : status === 'error'
-                            ? 'font-medium text-destructive'
+                            ? 'text-destructive'
                             : 'text-muted-foreground'
                         }`}
                       >
@@ -172,12 +176,12 @@ export function WizardNavigation({ onComplete }: WizardNavigationProps) {
       </div>
       
       {/* Navigation Buttons */}
-      <div className="flex justify-between mt-6">
+      <div className="wizard-buttons">
         <Button
           variant="outline"
           onClick={handlePrevious}
           disabled={steps[0].id === state.currentStep}
-          className="gap-1"
+          className="wizard-button-back gap-1"
         >
           <ChevronLeftIcon className="h-4 w-4" />
           <span>Previous</span>
@@ -186,7 +190,7 @@ export function WizardNavigation({ onComplete }: WizardNavigationProps) {
         {state.currentStep !== 'review' ? (
           <Button
             onClick={handleNext}
-            className="gap-1"
+            className="wizard-button-next gap-1"
           >
             <span>Next</span>
             <ChevronRightIcon className="h-4 w-4" />
@@ -195,7 +199,7 @@ export function WizardNavigation({ onComplete }: WizardNavigationProps) {
           <Button
             onClick={onComplete}
             variant="default"
-            className="gap-1"
+            className="wizard-button-submit gap-1"
           >
             <span>Complete</span>
             <CheckIcon className="h-4 w-4" />
