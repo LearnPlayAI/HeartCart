@@ -2,10 +2,14 @@ import React from 'react';
 import { useProductWizardContext } from '../context';
 import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
+  Form,
   FormField,
   FormItem,
   FormLabel,
@@ -18,6 +22,21 @@ import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+
+// Define validation schema
+const salesPromotionsSchema = z.object({
+  regularPrice: z.coerce.number().min(0, "Price must be 0 or greater"),
+  onSale: z.boolean().default(false),
+  salePrice: z.coerce.number().min(0, "Sale price must be 0 or greater").nullable().optional(),
+  discountLabel: z.string().optional(),
+  specialSaleText: z.string().optional(),
+  specialSaleStart: z.date().nullable().optional(),
+  specialSaleEnd: z.date().nullable().optional(),
+  isFlashDeal: z.boolean().default(false),
+  flashDealEnd: z.date().nullable().optional(),
+});
+
+type SalesPromotionsFormValues = z.infer<typeof salesPromotionsSchema>;
 
 export function SalesPromotionsStep() {
   const { state, setField } = useProductWizardContext();
@@ -42,13 +61,43 @@ export function SalesPromotionsStep() {
     isFlashDeal = false,
     flashDealEnd = null,
   } = state || {};
+  
+  // Initialize form
+  const form = useForm<SalesPromotionsFormValues>({
+    resolver: zodResolver(salesPromotionsSchema),
+    defaultValues: {
+      regularPrice,
+      onSale,
+      salePrice,
+      discountLabel,
+      specialSaleText,
+      specialSaleStart: specialSaleStart ? new Date(specialSaleStart) : null,
+      specialSaleEnd: specialSaleEnd ? new Date(specialSaleEnd) : null,
+      isFlashDeal,
+      flashDealEnd: flashDealEnd ? new Date(flashDealEnd) : null,
+    }
+  });
+
+  // Handle form submission
+  const onSubmit = (values: SalesPromotionsFormValues) => {
+    // Update all fields in context
+    Object.entries(values).forEach(([key, value]) => {
+      // Convert dates to ISO strings for storage
+      if (value instanceof Date) {
+        setField(key as any, value.toISOString());
+      } else {
+        setField(key as any, value);
+      }
+    });
+  };
 
   return (
-    <div className="space-y-6">
-      <h3 className="text-lg font-medium">Sales & Promotions</h3>
-      <p className="text-sm text-muted-foreground">
-        Configure special sales, discounts, and promotional deals for this product.
-      </p>
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <h3 className="text-lg font-medium">Sales & Promotions</h3>
+        <p className="text-sm text-muted-foreground">
+          Configure special sales, discounts, and promotional deals for this product.
+        </p>
 
       <Card>
         <CardHeader>
@@ -58,16 +107,20 @@ export function SalesPromotionsStep() {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormField
+              control={form.control}
               name="regularPrice"
-              render={() => (
+              render={({ field }) => (
                 <FormItem>
                   <FormLabel>Regular Price (R)</FormLabel>
                   <FormControl>
                     <Input
                       type="number"
                       placeholder="0.00"
-                      value={regularPrice}
-                      onChange={(e) => setField('regularPrice', parseFloat(e.target.value))}
+                      {...field}
+                      onChange={(e) => {
+                        field.onChange(parseFloat(e.target.value));
+                        setField('regularPrice', parseFloat(e.target.value));
+                      }}
                       min={0}
                       step={0.01}
                     />
@@ -326,6 +379,7 @@ export function SalesPromotionsStep() {
           )}
         </CardContent>
       </Card>
-    </div>
+      </form>
+    </Form>
   );
 }
