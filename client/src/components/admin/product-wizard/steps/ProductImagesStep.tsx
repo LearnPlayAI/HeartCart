@@ -393,7 +393,7 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className 
     } finally {
       setIsUploading(false);
     }
-  }, [dispatch, productData.uploadedImages, productData.id, toast]);
+  }, [uploadedImages, state.productId, toast, addImage]);
   
   // Set up dropzone
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
