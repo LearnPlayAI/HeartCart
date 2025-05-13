@@ -716,6 +716,28 @@ export const ProductWizardProvider: React.FC<ProductWizardProviderProps> = ({
         dispatch({ type: 'MARK_STEP_COMPLETE', step: 'additional-info' });
         return isValid;
       },
+      'sales-promotions': () => {
+        // Validate sales and promotions data
+        // Special sale dates validation if special sale is enabled
+        let isValid = true;
+        
+        // Validate special sale dates if special sale text is provided
+        if (state.specialSaleText) {
+          const hasValidDates = Boolean(state.specialSaleStart && state.specialSaleEnd);
+          if (!hasValidDates) {
+            isValid = false;
+          }
+        }
+        
+        // Validate flash deal end date if flash deal is enabled
+        if (state.isFlashDeal && !state.flashDealEnd) {
+          isValid = false;
+        }
+        
+        dispatch({ type: 'MARK_STEP_VALID', step: 'sales-promotions', isValid });
+        dispatch({ type: 'MARK_STEP_COMPLETE', step: 'sales-promotions' });
+        return isValid;
+      },
       'review': () => {
         // Convert string values to numbers properly to fix validation with numeric fields
         const costPrice = typeof state.costPrice === 'string' ? parseFloat(state.costPrice) : state.costPrice;

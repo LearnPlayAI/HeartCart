@@ -12,6 +12,7 @@ import { WizardNavigation } from './WizardNavigation';
 import { BasicInfoStep } from './steps/BasicInfoStep';
 import { ImageStep } from './steps/ImageStep';
 import { AdditionalInfoStep } from './steps/AdditionalInfoStep';
+import { SalesPromotionsStep } from './steps/SalesPromotionsStep';
 import { ReviewAndSaveStep } from './steps/ReviewAndSaveStep';
 import { Button } from '@/components/ui/button';
 import { XIcon } from 'lucide-react';
@@ -69,6 +70,8 @@ function ProductWizardContent({
         return <ImageStep />;
       case 'additional-info':
         return <AdditionalInfoStep />;
+      case 'sales-promotions':
+        return <SalesPromotionsStep />;
       case 'review':
         return <ReviewAndSaveStep />;
       default:
