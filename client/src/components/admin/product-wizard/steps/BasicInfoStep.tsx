@@ -193,7 +193,7 @@ export function BasicInfoStep() {
   return (
     <div className="wizard-step">
       <h3 className="text-2xl font-semibold mb-4 text-[#FF69B4]">Basic Product Information</h3>
-      <Card className="bg-white border-[#E5E7EB]">
+      <Card className="bg-white border border-[#E5E7EB] shadow-sm">
         <CardContent className="pt-6">
           <Tabs defaultValue="general" className="w-full">
             <TabsList className="mb-4">
@@ -229,14 +229,15 @@ export function BasicInfoStep() {
                     name="slug"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="flex">URL Slug <span className="text-red-500 ml-1">*</span></FormLabel>
+                        <FormLabel className="flex">URL Slug <span className="text-[#FF6B6B] ml-1">*</span></FormLabel>
                         <FormControl>
                           <Input
                             placeholder="product-url-slug"
+                            className="border-[#E5E7EB] focus-visible:ring-[#FF69B4]"
                             {...field}
                           />
                         </FormControl>
-                        <FormDescription>
+                        <FormDescription className="text-[#777777]">
                           The URL-friendly identifier for this product
                         </FormDescription>
                         <FormMessage />
@@ -250,14 +251,15 @@ export function BasicInfoStep() {
                     name="sku"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="flex">SKU <span className="text-red-500 ml-1">*</span></FormLabel>
+                        <FormLabel className="flex">SKU <span className="text-[#FF6B6B] ml-1">*</span></FormLabel>
                         <FormControl>
                           <Input
                             placeholder="PROD123"
+                            className="border-[#E5E7EB] focus-visible:ring-[#FF69B4]"
                             {...field}
                           />
                         </FormControl>
-                        <FormDescription>
+                        <FormDescription className="text-[#777777]">
                           Stock Keeping Unit - unique identifier for inventory
                         </FormDescription>
                         <FormMessage />
@@ -557,30 +559,30 @@ export function BasicInfoStep() {
                   
                   {/* Price Summary */}
                   {watchCostPrice > 0 && (
-                    <div className="mt-4 p-4 border rounded-md bg-background shadow-sm">
-                      <h4 className="font-medium mb-2 text-primary">Pricing Summary</h4>
+                    <div className="mt-4 p-4 border border-[#E5E7EB] rounded-md bg-[#F8F9FA] shadow-sm">
+                      <h4 className="font-medium mb-2 text-[#FF69B4]">Pricing Summary</h4>
                       <div className="space-y-1 text-sm">
                         <div className="flex justify-between">
-                          <span>Cost Price:</span>
-                          <span>R{(parseFloat(watchCostPrice) || 0).toFixed(2)}</span>
+                          <span className="text-[#555555]">Cost Price:</span>
+                          <span className="text-[#555555]">R{(parseFloat(watchCostPrice) || 0).toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span>Markup ({watchMarkupPercentage || 0}%):</span>
-                          <span>R{((parseFloat(watchCostPrice) || 0) * ((parseFloat(watchMarkupPercentage) || 0) / 100)).toFixed(2)}</span>
+                          <span className="text-[#555555]">Markup ({watchMarkupPercentage || 0}%):</span>
+                          <span className="text-[#555555]">R{((parseFloat(watchCostPrice) || 0) * ((parseFloat(watchMarkupPercentage) || 0) / 100)).toFixed(2)}</span>
                         </div>
-                        <div className="flex justify-between font-medium text-accent">
+                        <div className="flex justify-between font-medium text-[#D94C97]">
                           <span>Regular Price:</span>
                           <span>R{parseFloat(form.getValues('regularPrice') || 0).toFixed(2)}</span>
                         </div>
                         {watchOnSale && (
                           <>
-                            <div className="flex justify-between text-secondary">
+                            <div className="flex justify-between text-[#FF6B6B]">
                               <span>Discount:</span>
                               <span>-{Math.round((1 - (parseFloat(form.getValues('salePrice') || 0) / parseFloat(form.getValues('regularPrice') || 1))) * 100)}%</span>
                             </div>
                             <div className="flex justify-between font-medium">
-                              <span>Sale Price:</span>
-                              <span className="text-primary">R{parseFloat(form.getValues('salePrice') || 0).toFixed(2)}</span>
+                              <span className="text-[#555555]">Sale Price:</span>
+                              <span className="text-[#4CAF50]">R{parseFloat(form.getValues('salePrice') || 0).toFixed(2)}</span>
                             </div>
                           </>
                         )}
