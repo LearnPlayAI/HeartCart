@@ -711,33 +711,22 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className 
                                   src={image.url}
                                   alt={image.metadata?.alt || "Product"} 
                                   className="w-full h-40 object-cover"
-                                  onLoad={() => console.log(`Image loaded successfully: ${image.metadata?.originalname || 'Unknown image'}`)}
-                                  onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
+                                  onLoad={() => console.log(`Image loaded successfully: ${image.metadata?.alt || 'Unknown image'}`)}
+                                  onError={(e) => {
                                     console.error('Failed to load image:', image.url);
-                                    console.log('Image details:', image);
                                     
+                                    // Cast to HTMLImageElement
                                     const imgElement = e.currentTarget as HTMLImageElement;
                                     
-                                    // Try using the direct objectKey URL path if available
+                                    // Try using direct objectKey URL if available
                                     if (image.objectKey) {
                                       const directObjectUrl = `/api/files/${image.objectKey}`;
                                       console.log('Trying direct object URL:', directObjectUrl);
                                       imgElement.src = directObjectUrl;
-                                      
-                                      // Add error handler for this second attempt
-                                      imgElement.onerror = () => {
-                                        console.error('Direct object URL also failed for image:', image.objectKey);
-                                        imgElement.classList.add('hidden');
-                                        const fallbackElement = imgElement.parentElement?.querySelector('.fallback-display');
-                                        if (fallbackElement) {
-                                          fallbackElement.classList.remove('hidden');
-                                        }
-                                      };
-                                      
                                       return;
                                     }
                                     
-                                    // Fallback to icon if no objectKey or all attempts fail
+                                    // Show fallback icon if image still fails
                                     imgElement.classList.add('hidden');
                                     const fallbackElement = imgElement.parentElement?.querySelector('.fallback-display');
                                     if (fallbackElement) {
