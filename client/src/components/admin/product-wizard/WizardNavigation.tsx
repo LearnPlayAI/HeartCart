@@ -109,7 +109,7 @@ export function WizardNavigation({ onComplete }: WizardNavigationProps) {
             const isClickable = status !== 'upcoming';
             
             return (
-              <React.Fragment key={step.id}>
+              <div key={step.id} className="flex items-center">
                 {index > 0 && (
                   <div 
                     className={`flex-1 h-1 mx-2 rounded ${
@@ -165,7 +165,7 @@ export function WizardNavigation({ onComplete }: WizardNavigationProps) {
                     }
                   </TooltipContent>
                 </Tooltip>
-              </React.Fragment>
+              </div>
             );
           })}
         </TooltipProvider>

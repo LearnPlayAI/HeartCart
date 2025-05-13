@@ -299,7 +299,7 @@ export function BasicInfoStep() {
                             </FormControl>
                             <SelectContent>
                               <SelectItem value="">None</SelectItem>
-                              {categories.map((category: any) => (
+                              {categoriesList.map((category: any) => (
                                 <SelectItem
                                   key={category.id}
                                   value={category.id.toString()}
