@@ -715,75 +715,20 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className 
                                   onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
                                     console.error('Failed to load image:', image.url);
                                     console.log('Image details:', image);
-                                    console.log('Trying direct object URL...');
                                     
-                                    // Try using the direct objectKey URL path
+                                    const imgElement = e.currentTarget as HTMLImageElement;
+                                    
+                                    // Try using the direct objectKey URL path if available
                                     if (image.objectKey) {
                                       const directObjectUrl = `/api/files/${image.objectKey}`;
                                       console.log('Trying direct object URL:', directObjectUrl);
-                                      e.currentTarget.src = directObjectUrl;
-                                    
-                                    // Try with direct API access as second attempt
-                                    if (image.objectKey) {
-                                      // For temp/pending uploads with timestamp and random prefix
-                                      if (image.objectKey.includes('temp/pending/')) {
-                                        // Extract the full filename with timestamp and random prefix
-                                        const parts = image.objectKey.split('/');
-                                        if (parts.length >= 3) {
-                                          // Get only the third part - the filename portion
-                                          const filenameWithPrefix = parts[2];
-                                          
-                                          // Construct the fully encoded URL for API access
-                                          const directUrl = `/api/files/temp/pending/${encodeURIComponent(filenameWithPrefix)}`;
-                                          console.log('Retrying with properly encoded temp URL format:', directUrl);
-                                          e.currentTarget.src = directUrl;
-                                          return;
-                                        }
-                                      }
-                                      
-                                      // For product-specific images
-                                      if (image.objectKey.startsWith('products/')) {
-                                        const parts = image.objectKey.split('/');
-                                        if (parts.length >= 3) {
-                                          const productId = parts[1];
-                                          const filename = parts[2]; // Take just the filename portion
-                                          const directUrl = `/api/files/products/${encodeURIComponent(productId)}/${encodeURIComponent(filename)}`;
-                                          console.log('Retrying with properly encoded product URL format:', directUrl);
-                                          e.currentTarget.src = directUrl;
-                                          return;
-                                        }
-                                      }
-                                      
-                                      // Fallback: try with a simpler path structure
-                                      // Just take the first path component and the last component (filename)
-                                      const parts = image.objectKey.split('/');
-                                      
-                                      // If we have at least a folder and a filename
-                                      if (parts.length >= 2) {
-                                        const folder = parts[0]; // First segment (folder)
-                                        const filename = parts[parts.length - 1]; // Last segment (filename)
-                                        
-                                        const directUrl = `/api/files/${encodeURIComponent(folder)}/${encodeURIComponent(filename)}`;
-                                        console.log('Retrying with simple folder/filename URL format:', directUrl);
-                                        e.currentTarget.src = directUrl;
-                                      } else {
-                                        // Fallback to fully encoded path if the structure is unexpected
-                                        const encodedKey = image.objectKey
-                                          .split('/')
-                                          .map(part => encodeURIComponent(part))
-                                          .join('/');
-                                          
-                                        const directUrl = `/api/files/${encodedKey}`;
-                                        console.log('Retrying with fully encoded URL:', directUrl);
-                                        e.currentTarget.src = directUrl;
-                                      }
+                                      imgElement.src = directObjectUrl;
                                       
                                       // Add error handler for this second attempt
-                                      const imgEl = e.currentTarget as HTMLImageElement;
-                                      imgEl.onerror = () => {
-                                        console.error('All URL formats failed for image:', image.objectKey);
-                                        imgEl.classList.add('hidden');
-                                        const fallbackElement = imgEl.parentElement?.querySelector('.fallback-display');
+                                      imgElement.onerror = () => {
+                                        console.error('Direct object URL also failed for image:', image.objectKey);
+                                        imgElement.classList.add('hidden');
+                                        const fallbackElement = imgElement.parentElement?.querySelector('.fallback-display');
                                         if (fallbackElement) {
                                           fallbackElement.classList.remove('hidden');
                                         }
@@ -792,8 +737,7 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className 
                                       return;
                                     }
                                     
-                                    // Add fallback display if all retries fail or no objectKey
-                                    const imgElement = e.currentTarget as HTMLImageElement;
+                                    // Fallback to icon if no objectKey or all attempts fail
                                     imgElement.classList.add('hidden');
                                     const fallbackElement = imgElement.parentElement?.querySelector('.fallback-display');
                                     if (fallbackElement) {
