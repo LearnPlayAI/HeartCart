@@ -445,4 +445,140 @@ export default function registerProductDraftRoutes(router: Router) {
       sendSuccess(res, { success: true });
     })
   );
+
+  /**
+   * Validate a product draft
+   * POST /api/product-drafts/:id/validate
+   */
+  router.post(
+    "/api/product-drafts/:id/validate",
+    isAuthenticated,
+    validateRequest({ params: productDraftIdParamSchema }),
+    asyncHandler(async (req, res) => {
+      const draftId = parseInt(req.params.id);
+      const { step } = req.body;
+      
+      const draft = await storage.getProductDraft(draftId);
+      
+      if (!draft) {
+        throw new NotFoundError("Product draft not found");
+      }
+      
+      // Check if user has permission to validate this draft
+      if (draft.createdBy !== req.user?.id && req.user?.role !== 'admin') {
+        throw new BadRequestError("You don't have permission to validate this draft");
+      }
+      
+      // Validate based on step
+      const errors: Record<string, string[]> = {};
+      let isValid = true;
+      
+      if (!step || step === 'basic-info') {
+        // Basic info validation
+        if (!draft.name || draft.name.trim() === '') {
+          errors['name'] = ["Product name is required"];
+          isValid = false;
+        }
+        
+        if (!draft.slug || draft.slug.trim() === '') {
+          errors['slug'] = ["Product URL slug is required"];
+          isValid = false;
+        }
+        
+        if (!draft.categoryId) {
+          errors['categoryId'] = ["Product category is required"];
+          isValid = false;
+        }
+      }
+      
+      if (!step || step === 'pricing') {
+        // Pricing validation
+        if (!draft.regularPrice || draft.regularPrice <= 0) {
+          errors['regularPrice'] = ["Regular price must be greater than 0"];
+          isValid = false;
+        }
+        
+        if (draft.salePrice !== null && draft.salePrice !== undefined) {
+          if (draft.salePrice <= 0) {
+            errors['salePrice'] = ["Sale price must be greater than 0"];
+            isValid = false;
+          }
+          
+          if (draft.salePrice >= draft.regularPrice) {
+            errors['salePrice'] = ["Sale price must be less than regular price"];
+            isValid = false;
+          }
+        }
+      }
+      
+      if (!step || step === 'images') {
+        // Images validation
+        if (!draft.imageUrls || draft.imageUrls.length === 0) {
+          errors['images'] = ["At least one product image is required"];
+          isValid = false;
+        }
+      }
+      
+      // Update completedSteps if validation passed for this step
+      if (step && isValid && !errors[step]) {
+        const completedSteps = draft.completedSteps || [];
+        if (!completedSteps.includes(step)) {
+          await storage.updateProductDraft(draftId, {
+            completedSteps: [...completedSteps, step]
+          });
+        }
+      }
+      
+      sendSuccess(res, {
+        isValid,
+        errors,
+        completedSteps: draft.completedSteps || []
+      });
+    })
+  );
+
+  /**
+   * Check if a draft is ready to publish
+   * GET /api/product-drafts/:id/publish-check
+   */
+  router.get(
+    "/api/product-drafts/:id/publish-check",
+    isAuthenticated,
+    validateRequest({ params: productDraftIdParamSchema }),
+    asyncHandler(async (req, res) => {
+      const draftId = parseInt(req.params.id);
+      
+      const draft = await storage.getProductDraft(draftId);
+      
+      if (!draft) {
+        throw new NotFoundError("Product draft not found");
+      }
+      
+      // Check if user has permission to access this draft
+      if (draft.createdBy !== req.user?.id && req.user?.role !== 'admin') {
+        throw new BadRequestError("You don't have permission to access this draft");
+      }
+      
+      // Check essential requirements
+      const missingFields: string[] = [];
+      
+      if (!draft.name) missingFields.push("name");
+      if (!draft.categoryId) missingFields.push("category");
+      if (!draft.regularPrice) missingFields.push("regularPrice");
+      if (!draft.imageUrls || draft.imageUrls.length === 0) missingFields.push("images");
+      
+      const isReadyToPublish = missingFields.length === 0;
+      
+      sendSuccess(res, {
+        isReadyToPublish,
+        missingFields,
+        requiredSteps: isReadyToPublish ? [] : ['basic-info', 'images', 'pricing'].filter(step => {
+          if (step === 'basic-info' && (!draft.name || !draft.categoryId)) return true;
+          if (step === 'images' && (!draft.imageUrls || draft.imageUrls.length === 0)) return true;
+          if (step === 'pricing' && !draft.regularPrice) return true;
+          return false;
+        })
+      });
+    })
+  );
 }

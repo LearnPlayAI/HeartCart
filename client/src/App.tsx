@@ -143,33 +143,61 @@ function App() {
               <AdminProtectedRoute path="/admin/products/:id/images" component={ProductImages} />
               <AdminProtectedRoute path="/admin/products/:productId/attributes" component={ProductAttributes} />
               
-              {/* New Product Manager Routes */}
-              <AdminProtectedRoute path="/admin/products/new" component={React.lazy(() => import("@/pages/admin/product-create-new"))} />
-              <AdminProtectedRoute path="/admin/products/:id/edit" component={React.lazy(() => import("@/pages/admin/product-edit-new"))} />
+              {/* New Product Management System */}
+              <AdminProtectedRoute path="/admin/products/manage/:id?" component={React.lazy(() => import("@/pages/admin/product-management"))} />
+              <AdminProtectedRoute path="/admin/catalogs/:catalogId/products/manage/:id?" component={React.lazy(() => import("@/pages/admin/product-management"))} />
               
-              {/* Original Wizard Routes - Redirected to new implementation */}
+              {/* Redirect current routes to new product management */}
+              <Route path="/admin/products/new">
+                {() => {
+                  const [_, navigate] = useLocation();
+                  React.useEffect(() => {
+                    navigate('/admin/products/manage', { replace: true });
+                  }, [navigate]);
+                  return <div className="p-8 text-center">Redirecting to new product management system...</div>;
+                }}
+              </Route>
+              <Route path="/admin/products/:id/edit">
+                {(params) => {
+                  const [_, navigate] = useLocation();
+                  React.useEffect(() => {
+                    navigate(`/admin/products/manage/${params.id}`, { replace: true });
+                  }, [params.id, navigate]);
+                  return <div className="p-8 text-center">Redirecting to new product management system...</div>;
+                }}
+              </Route>
+              <Route path="/admin/catalogs/:catalogId/products/new">
+                {(params) => {
+                  const [_, navigate] = useLocation();
+                  React.useEffect(() => {
+                    navigate(`/admin/catalogs/${params.catalogId}/products/manage`, { replace: true });
+                  }, [params.catalogId, navigate]);
+                  return <div className="p-8 text-center">Redirecting to new product management system...</div>;
+                }}
+              </Route>
+              
+              {/* Redirect original wizard routes to new implementation */}
               <Route path="/admin/products/wizard/:id?">
                 {(params) => {
                   const [_, navigate] = useLocation();
                   React.useEffect(() => {
                     const targetPath = params.id 
-                      ? `/admin/products/${params.id}/edit` 
-                      : `/admin/products/new`;
+                      ? `/admin/products/manage/${params.id}` 
+                      : `/admin/products/manage`;
                     navigate(targetPath, { replace: true });
                   }, [params.id, navigate]);
-                  return <div className="p-8 text-center">Redirecting to new product manager...</div>;
+                  return <div className="p-8 text-center">Redirecting to new product management system...</div>;
                 }}
               </Route>
               <Route path="/admin/catalogs/:catalogId/products/wizard">
                 {(params) => {
                   const [_, navigate] = useLocation();
                   React.useEffect(() => {
-                    navigate(`/admin/catalogs/${params.catalogId}/products/new`, { replace: true });
+                    navigate(`/admin/catalogs/${params.catalogId}/products/manage`, { replace: true });
                   }, [params.catalogId, navigate]);
-                  return <div className="p-8 text-center">Redirecting to new product manager...</div>;
+                  return <div className="p-8 text-center">Redirecting to new product management system...</div>;
                 }}
               </Route>
-              <AdminProtectedRoute path="/admin/catalogs/:catalogId/products/new" component={React.lazy(() => import("@/pages/admin/product-create-new"))} />
               <AdminProtectedRoute path="/admin/categories" component={AdminCategories} />
               <AdminProtectedRoute path="/admin/categories/:categoryId/attributes" component={CategoryAttributes} />
               <AdminProtectedRoute path="/admin/category-attributes/:categoryId" component={CategoryAttributes} />
