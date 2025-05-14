@@ -83,7 +83,8 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ editMode = false, 
   // Create a new product draft or load an existing one for editing
   const createDraftMutation = useMutation({
     mutationFn: async (draftData: any) => {
-      // Send the draft data directly as the API expects
+      console.log('Submitting draft data:', draftData);
+      // Send the draft data directly - matches createProductDraftSchema
       const response = await apiRequest('POST', '/api/product-drafts', draftData);
       return response.json();
     },
