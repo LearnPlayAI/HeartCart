@@ -4777,6 +4777,19 @@ export class DatabaseStorage implements IStorage {
         lastModified: new Date()
       };
       
+      // Debug log the data we're about to insert
+      logger.debug('Creating product draft with data', { 
+        draftData: {
+          originalProductId: draftWithTimestamp.originalProductId,
+          name: draftWithTimestamp.name,
+          slug: draftWithTimestamp.slug,
+          description: draftWithTimestamp.description,
+          categoryId: draftWithTimestamp.categoryId,
+          regularPrice: draftWithTimestamp.regularPrice,
+          salePrice: draftWithTimestamp.salePrice 
+        }
+      });
+      
       const [newDraft] = await db
         .insert(productDrafts)
         .values(draftWithTimestamp)
