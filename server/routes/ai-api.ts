@@ -44,10 +44,7 @@ router.post('/ai/suggest-description', asyncHandler(async (req: Request, res: Re
     const { productName, category, attributes } = schema.parse(req.body);
     
     if (!apiKey || !genAI) {
-      return apiResponse(res, {
-        message: 'AI services are not configured',
-        error: 'AI_NOT_AVAILABLE',
-      }, 503);
+      return sendError(res, 'AI services are not configured', 503, 'AI_NOT_AVAILABLE');
     }
     
     // Build prompt based on provided information
@@ -84,23 +81,17 @@ router.post('/ai/suggest-description', asyncHandler(async (req: Request, res: Re
       .filter(Boolean)
       .map(desc => desc.trim());
     
-    return apiResponse(res, {
+    return sendSuccess(res, {
       descriptions: descriptions.slice(0, 3), // Ensure we only return 3 descriptions
     });
   } catch (error: any) {
     console.error('Error generating descriptions:', error);
     
     if (error.name === 'ZodError') {
-      return apiResponse(res, {
-        message: 'Invalid request data',
-        errors: error.errors,
-      }, 400);
+      return sendError(res, 'Invalid request data', 400, 'VALIDATION_ERROR', error.errors);
     }
     
-    return apiResponse(res, {
-      message: 'Failed to generate descriptions',
-      error: error.message,
-    }, 500);
+    return sendError(res, 'Failed to generate descriptions', 500, 'AI_GENERATION_ERROR', error.message);
   }
 }));
 
@@ -116,10 +107,7 @@ router.post('/ai/optimize-seo', asyncHandler(async (req: Request, res: Response)
     const { productName, description, category } = schema.parse(req.body);
     
     if (!apiKey || !genAI) {
-      return apiResponse(res, {
-        message: 'AI services are not configured',
-        error: 'AI_NOT_AVAILABLE',
-      }, 503);
+      return sendError(res, 'AI services are not configured', 503, 'AI_NOT_AVAILABLE');
     }
     
     // Build prompt based on provided information
@@ -159,7 +147,7 @@ router.post('/ai/optimize-seo', asyncHandler(async (req: Request, res: Response)
       ? suggestionsMatch[2].split(/\n-|\n\*|\n\d\./).map(s => s.trim()).filter(Boolean)
       : [];
     
-    return apiResponse(res, {
+    return sendSuccess(res, {
       keywords,
       metaTitle,
       metaDescription,
@@ -170,16 +158,10 @@ router.post('/ai/optimize-seo', asyncHandler(async (req: Request, res: Response)
     console.error('Error generating SEO suggestions:', error);
     
     if (error.name === 'ZodError') {
-      return apiResponse(res, {
-        message: 'Invalid request data',
-        errors: error.errors,
-      }, 400);
+      return sendError(res, 'Invalid request data', 400, 'VALIDATION_ERROR', error.errors);
     }
     
-    return apiResponse(res, {
-      message: 'Failed to generate SEO suggestions',
-      error: error.message,
-    }, 500);
+    return sendError(res, 'Failed to generate SEO suggestions', 500, 'AI_GENERATION_ERROR', error.message);
   }
 }));
 
