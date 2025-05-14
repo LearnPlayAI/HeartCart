@@ -443,23 +443,32 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ editMode = false, 
       </h2>
 
       <Tabs value={currentStep} onValueChange={handleStepChange} className="w-full">
-        <TabsList className="grid grid-cols-4 mb-6">
-          {WIZARD_STEPS.map((step) => (
-            <TabsTrigger 
-              key={step.id} 
-              value={step.id}
-              className="relative"
-            >
-              <span className="flex items-center">
-                {isStepCompleted(step.id) && (
-                  <CheckCircle2 className="w-4 h-4 text-green-500 mr-1" />
-                )}
-                {step.label}
-              </span>
-            </TabsTrigger>
-          ))}
-        </TabsList>
+        {/* Mobile-optimized TabsList - scrollable on small screens */}
+        <div className="overflow-x-auto pb-2 -mx-6 px-6">
+          <TabsList className="grid grid-cols-4 mb-6 min-w-[500px] md:min-w-0">
+            {WIZARD_STEPS.map((step) => (
+              <TabsTrigger 
+                key={step.id} 
+                value={step.id}
+                className="relative"
+              >
+                <span className="flex items-center">
+                  {isStepCompleted(step.id) && (
+                    <CheckCircle2 className="w-4 h-4 text-green-500 mr-1" />
+                  )}
+                  {/* Hide label text on smallest screens, show icon only */}
+                  <span className="hidden xs:inline">{step.label}</span>
+                  {/* Show step number on smallest screens */}
+                  <span className="inline xs:hidden">
+                    {WIZARD_STEPS.findIndex(s => s.id === step.id) + 1}
+                  </span>
+                </span>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </div>
 
+        {/* Mobile-friendly content area */}
         {WIZARD_STEPS.map((step) => (
           <TabsContent key={step.id} value={step.id} className="pt-4">
             <CurrentStepComponent
