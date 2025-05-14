@@ -81,16 +81,103 @@ export function AdditionalInfoStep() {
     addAttribute, 
     updateAttribute, 
     removeAttribute,
-    nextStep,
-    prevStep,
-    toggleAttribute,
-    updateAttributeOptions,
-    updateAttributeTextValue
+    setCurrentStep
   } = useProductWizardContext();
+  
+  // Navigation helpers since they might not be directly available in context
+  const nextStep = () => {
+    const steps = ['basic-info', 'images', 'additional-info', 'sales-promotions', 'review'];
+    const currentIndex = steps.indexOf(state.currentStep);
+    if (currentIndex < steps.length - 1) {
+      setCurrentStep(steps[currentIndex + 1] as any);
+    }
+  };
+  
+  const prevStep = () => {
+    const steps = ['basic-info', 'images', 'additional-info', 'sales-promotions', 'review'];
+    const currentIndex = steps.indexOf(state.currentStep);
+    if (currentIndex > 0) {
+      setCurrentStep(steps[currentIndex - 1] as any);
+    }
+  };
+  
+  // Create local versions of missing attribute toggle/update functions
+  const toggleAttribute = (id: number, enabled: boolean) => {
+    console.log(`Toggle attribute ${id}: ${enabled}`);
+    // Find the attribute in the state
+    const attrIndex = state.attributes.findIndex(attr => attr.id === id);
+    if (attrIndex === -1) {
+      // If attribute isn't in state, add it
+      if (enabled) {
+        addAttribute({
+          id,
+          attributeType: 'select',
+          isRequired: false,
+          textValue: '',
+          selectedOptions: [],
+          sortOrder: state.attributes.length
+        });
+      }
+    } else {
+      // If it exists, remove it when disabled
+      if (!enabled) {
+        removeAttribute(attrIndex);
+      }
+    }
+  };
+  
+  // Function to update attribute options
+  const updateAttributeOptions = (id: number, optionIds: number[]) => {
+    console.log(`Update attribute ${id} options:`, optionIds);
+    // Find the attribute in the state
+    const attrIndex = state.attributes.findIndex(attr => attr.id === id);
+    if (attrIndex !== -1) {
+      const updatedAttr = {
+        ...state.attributes[attrIndex],
+        selectedOptions: optionIds
+      };
+      updateAttribute(attrIndex, updatedAttr);
+    }
+  };
+  
+  // Function to update attribute text value
+  const updateAttributeTextValue = (id: number, value: string) => {
+    console.log(`Update attribute ${id} text value: ${value}`);
+    // Find the attribute in the state
+    const attrIndex = state.attributes.findIndex(attr => attr.id === id);
+    if (attrIndex !== -1) {
+      const updatedAttr = {
+        ...state.attributes[attrIndex],
+        textValue: value
+      };
+      updateAttribute(attrIndex, updatedAttr);
+    }
+  };
   
   // Loading states
   const [isLoading, setIsLoading] = useState(false);
   const [isFetchingOptions, setIsFetchingOptions] = useState(false);
+  
+  // Function to fetch attribute options directly
+  const fetchAttributeOptions = async (attributeId: number) => {
+    if (!attributeId) return [];
+    setIsFetchingOptions(true);
+    try {
+      console.log(`Fetching options for attribute ID: ${attributeId}`);
+      const response = await fetch(`/api/attributes/${attributeId}/options`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch options: ${response.statusText}`);
+      }
+      const data = await response.json();
+      console.log('Options direct fetch response:', data);
+      setIsFetchingOptions(false);
+      return data.data || [];
+    } catch (err) {
+      console.error('Error fetching attribute options:', err);
+      setIsFetchingOptions(false);
+      return [];
+    }
+  };
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('inventory');
   const [attributeNameInput, setAttributeNameInput] = useState('');
