@@ -5310,47 +5310,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }));
   
-  // Save a product draft (create or update)
-  app.post("/api/product-drafts", isAuthenticated, 
-    validateRequest({
-      body: z.object({
-        draftData: z.any().refine(val => typeof val === 'object', {
-          message: "Draft data must be an object"
-        }),
-        step: z.number().int().min(0).max(3),
-        draftId: z.string().optional(),
-        catalogId: z.number().int().positive().optional()
-      })
-    }),
-    asyncHandler(async (req: Request, res: Response) => {
-      const user = req.user as any;
-      const { draftData, step, draftId, catalogId } = req.body;
-      
-      try {
-        // Ensure user has permission to create drafts for specified catalog
-        if (catalogId) {
-          const catalog = await storage.getCatalogById(catalogId);
-          if (!catalog) {
-            throw new NotFoundError("Catalog not found", "catalog");
-          }
-          
-          // If not admin, check if user has specific permission for this catalog
-          if (user.role !== 'admin') {
-            throw new ForbiddenError("You don't have permission to create product drafts for this catalog");
-          }
-        }
-        
-        const draft = await storage.saveProductDraft(user.id, draftData, step, draftId, catalogId);
-        
-        res.json({
-          success: true,
-          data: draft
-        });
-      } catch (error) {
-        handleApiError(error, res);
-      }
-    })
-  );
+  // POST /api/product-drafts endpoint is now handled by product-draft-routes.ts
+  // The conflict between implementations has been resolved by removing this duplicate endpoint
   
   // Delete a product draft
   app.delete("/api/product-drafts/:draftId", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
