@@ -81,14 +81,28 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ editMode = false, 
 
   // Create a new product draft or load an existing one for editing
   const createDraftMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const response = await apiRequest('POST', '/api/product-drafts', data);
+    mutationFn: async (draftData: any) => {
+      // Send the draft data directly as the API expects
+      const response = await apiRequest('POST', '/api/product-drafts', draftData);
       return response.json();
     },
     onSuccess: (data) => {
-      setDraftId(data.data.id);
-      // Initial fetch of draft data
-      queryClient.invalidateQueries({ queryKey: ['/api/product-drafts', data.data.id] });
+      if (data.data && data.data.id) {
+        setDraftId(data.data.id);
+        // Initial fetch of draft data
+        queryClient.invalidateQueries({ queryKey: ['/api/product-drafts', data.data.id] });
+        toast({
+          title: 'Success',
+          description: 'Product draft created successfully',
+        });
+      } else {
+        toast({
+          title: 'Warning',
+          description: 'Response received but draft ID is missing',
+          variant: 'destructive',
+        });
+        console.error('Failed to extract draft ID from response:', data);
+      }
     },
     onError: (error) => {
       toast({
@@ -96,6 +110,7 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ editMode = false, 
         description: `Failed to create product draft: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: 'destructive',
       });
+      console.error('Draft creation error:', error);
     },
   });
 
@@ -115,12 +130,11 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ editMode = false, 
     mutationFn: async ({ step, data }: { step: ProductDraftStep; data: any }) => {
       if (!draftId) throw new Error('No draft ID available');
       
-      // Convert step to a numeric index
-      const stepIndex = WIZARD_STEPS.findIndex(s => s.id === step);
-      if (stepIndex === -1) throw new Error('Invalid step');
+      // Send step as a string, which is what the API expects per updateProductDraftWizardStepSchema
+      console.log(`Updating product draft step: ${step} with data:`, data);
       
       const response = await apiRequest('PATCH', `/api/product-drafts/${draftId}/wizard-step`, {
-        step: stepIndex,
+        step,
         data,
       });
       return response.json();
@@ -133,6 +147,7 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ editMode = false, 
       });
     },
     onError: (error) => {
+      console.error('Update step error:', error);
       toast({
         title: 'Error',
         description: `Failed to update product draft: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -191,9 +206,11 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ editMode = false, 
   useEffect(() => {
     // Create a new draft or load one for editing
     if (!draftId) {
-      const draftData: any = {
+      // Create payload matching the API's expected format
+      // This is what createProductDraftSchema from shared/validation-schemas.ts expects
+      const initialData: any = {
         name: '',
-        description: '',
+        description: null,
         slug: '',
         categoryId: null,
         regularPrice: null,
@@ -209,22 +226,30 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ editMode = false, 
         mainImageIndex: 0,
         discountLabel: null,
         specialSaleText: null,
+        specialSaleStart: null,
+        specialSaleEnd: null,
         isFlashDeal: false,
-        completedSteps: [],
+        flashDealEnd: null,
+        dimensions: null,
+        weight: null,
+        wizardProgress: {
+          "basic-info": false, 
+          "images": false, 
+          "additional-info": false, 
+          "review": false
+        },
+        completedSteps: []
       };
       
       // If in edit mode, use the existing product ID
       if (editMode && productId) {
-        draftData.originalProductId = productId;
+        initialData.originalProductId = productId;
       }
       
-      // Create payload matching the API's expected format
-      const payload = {
-        draftData,
-        step: 0 // Starting at the first step
-      };
+      console.log('Creating product draft with data:', initialData);
       
-      createDraftMutation.mutate(payload);
+      // Send the draft data directly - no need for step or draftData wrappers
+      createDraftMutation.mutate(initialData);
     }
   }, [draftId, editMode, productId]);
 
