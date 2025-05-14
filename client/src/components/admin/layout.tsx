@@ -42,18 +42,18 @@ function Navigation({ className }: { className?: string }) {
       {navItems.map((item) => {
         const isActive = location === item.path;
         return (
-          <Link key={item.path} href={item.path}>
-            <a
-              className={cn(
-                "flex items-center px-3 py-2 text-sm font-medium rounded-md",
-                isActive
-                  ? "bg-pink-100 text-pink-800"
-                  : "text-gray-600 hover:bg-pink-50 hover:text-pink-700"
-              )}
-            >
-              <item.icon className={cn("mr-3 h-5 w-5")} />
-              {item.label}
-            </a>
+          <Link 
+            key={item.path} 
+            href={item.path}
+            className={cn(
+              "flex items-center px-3 py-2 text-sm font-medium rounded-md",
+              isActive
+                ? "bg-pink-100 text-pink-800"
+                : "text-gray-600 hover:bg-pink-50 hover:text-pink-700"
+            )}
+          >
+            <item.icon className={cn("mr-3 h-5 w-5")} />
+            {item.label}
           </Link>
         );
       })}
@@ -85,10 +85,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         <div className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0">
           <div className="flex-1 flex flex-col min-h-0 bg-white border-r border-gray-200">
             <div className="flex items-center h-16 flex-shrink-0 px-4 bg-pink-600">
-              <Link href="/">
-                <a className="text-xl font-bold text-white">
-                  TEE ME YOU
-                </a>
+              <Link href="/" className="text-xl font-bold text-white">
+                TEE ME YOU
               </Link>
             </div>
             <div className="flex-1 flex flex-col overflow-y-auto pt-5 pb-4">
@@ -134,12 +132,10 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                   </svg>
                 </Button>
               </SheetTrigger>
-              <Link href="/">
-                <a className="flex-shrink-0 flex items-center px-4">
-                  <span className="text-xl font-bold text-pink-600">
-                    TEE ME YOU
-                  </span>
-                </a>
+              <Link href="/" className="flex-shrink-0 flex items-center px-4">
+                <span className="text-xl font-bold text-pink-600">
+                  TEE ME YOU
+                </span>
               </Link>
             </div>
             <div className="flex items-center">

@@ -148,10 +148,10 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, isL
 
   return (
     <Card>
-      <CardContent className="p-6">
+      <CardContent className="p-4 sm:p-6">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
               {/* Product Name */}
               <FormField
                 control={form.control}
@@ -164,6 +164,7 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, isL
                         {...field} 
                         placeholder="Enter product name" 
                         onChange={handleNameChange}
+                        className="h-9 sm:h-10"
                       />
                     </FormControl>
                     <FormMessage />
@@ -179,7 +180,11 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, isL
                   <FormItem>
                     <FormLabel>Product Slug*</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="Enter product slug" />
+                      <Input 
+                        {...field} 
+                        placeholder="Enter product slug" 
+                        className="h-9 sm:h-10"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -198,7 +203,7 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, isL
                     <Textarea
                       {...field}
                       placeholder="Enter product description"
-                      className="min-h-[100px]"
+                      className="min-h-[80px] sm:min-h-[100px]"
                       value={field.value || ''}
                     />
                   </FormControl>
@@ -220,7 +225,7 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, isL
                     value={field.value?.toString() || undefined}
                   >
                     <FormControl>
-                      <SelectTrigger>
+                      <SelectTrigger className="h-9 sm:h-10">
                         <SelectValue placeholder="Select a category" />
                       </SelectTrigger>
                     </FormControl>
@@ -244,173 +249,192 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, isL
               )}
             />
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Regular Price */}
-              <FormField
-                control={form.control}
-                name="regularPrice"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Regular Price*</FormLabel>
-                    <FormControl>
-                      <Input 
-                        {...field} 
-                        type="number" 
-                        step="0.01" 
-                        min="0" 
-                        placeholder="0.00" 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            {/* Pricing Section */}
+            <div>
+              <h3 className="text-sm font-medium mb-2 text-muted-foreground">Pricing</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6">
+                {/* Regular Price */}
+                <FormField
+                  control={form.control}
+                  name="regularPrice"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Regular Price*</FormLabel>
+                      <FormControl>
+                        <Input 
+                          {...field} 
+                          type="number" 
+                          step="0.01" 
+                          min="0" 
+                          placeholder="0.00" 
+                          className="h-9 sm:h-10"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              {/* Sale Price */}
-              <FormField
-                control={form.control}
-                name="salePrice"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Sale Price</FormLabel>
-                    <FormControl>
-                      <Input 
-                        {...field} 
-                        type="number" 
-                        step="0.01" 
-                        min="0" 
-                        placeholder="0.00" 
-                        value={field.value || ''} 
-                        onChange={(e) => {
-                          field.onChange(e.target.value === '' ? null : parseFloat(e.target.value));
-                          handleSalePriceChange(e);
-                        }}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                {/* Sale Price */}
+                <FormField
+                  control={form.control}
+                  name="salePrice"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Sale Price</FormLabel>
+                      <FormControl>
+                        <Input 
+                          {...field} 
+                          type="number" 
+                          step="0.01" 
+                          min="0" 
+                          placeholder="0.00" 
+                          value={field.value || ''} 
+                          className="h-9 sm:h-10"
+                          onChange={(e) => {
+                            field.onChange(e.target.value === '' ? null : parseFloat(e.target.value));
+                            handleSalePriceChange(e);
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              {/* Cost Price */}
-              <FormField
-                control={form.control}
-                name="costPrice"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Cost Price</FormLabel>
-                    <FormControl>
-                      <Input 
-                        {...field} 
-                        type="number" 
-                        step="0.01" 
-                        min="0" 
-                        placeholder="0.00" 
-                        value={field.value || ''} 
-                        onChange={(e) => {
-                          field.onChange(e.target.value === '' ? null : parseFloat(e.target.value));
-                        }}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                {/* Cost Price */}
+                <FormField
+                  control={form.control}
+                  name="costPrice"
+                  render={({ field }) => (
+                    <FormItem className="col-span-2 sm:col-span-1">
+                      <FormLabel>Cost Price</FormLabel>
+                      <FormControl>
+                        <Input 
+                          {...field} 
+                          type="number" 
+                          step="0.01" 
+                          min="0" 
+                          placeholder="0.00" 
+                          value={field.value || ''} 
+                          className="h-9 sm:h-10"
+                          onChange={(e) => {
+                            field.onChange(e.target.value === '' ? null : parseFloat(e.target.value));
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Stock Level */}
-              <FormField
-                control={form.control}
-                name="stockLevel"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Stock Level</FormLabel>
-                    <FormControl>
-                      <Input 
-                        {...field} 
-                        type="number" 
-                        min="0" 
-                        step="1" 
-                        placeholder="0" 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            {/* Stock & Status */}
+            <div>
+              <h3 className="text-sm font-medium mb-2 text-muted-foreground">Stock & Status</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                {/* Stock Level */}
+                <FormField
+                  control={form.control}
+                  name="stockLevel"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Stock Level</FormLabel>
+                      <FormControl>
+                        <Input 
+                          {...field} 
+                          type="number" 
+                          min="0" 
+                          step="1" 
+                          placeholder="0" 
+                          className="h-9 sm:h-10"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              {/* On Sale Toggle */}
-              <FormField
-                control={form.control}
-                name="onSale"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-base">On Sale</FormLabel>
-                      <div className="text-sm text-muted-foreground">
-                        Mark this product as being on sale.
+                {/* On Sale Toggle */}
+                <FormField
+                  control={form.control}
+                  name="onSale"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 sm:p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-sm sm:text-base">On Sale</FormLabel>
+                        <div className="text-xs sm:text-sm text-muted-foreground">
+                          Mark this product as being on sale.
+                        </div>
                       </div>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Active Toggle */}
-              <FormField
-                control={form.control}
-                name="isActive"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-base">Active</FormLabel>
-                      <div className="text-sm text-muted-foreground">
-                        This product will be visible on the store.
+            {/* Product Status */}
+            <div className="grid grid-cols-1 gap-4 sm:gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                {/* Active Toggle */}
+                <FormField
+                  control={form.control}
+                  name="isActive"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 sm:p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-sm sm:text-base">Active</FormLabel>
+                        <div className="text-xs sm:text-sm text-muted-foreground">
+                          This product will be visible on the store.
+                        </div>
                       </div>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
 
-              {/* Featured Toggle */}
-              <FormField
-                control={form.control}
-                name="isFeatured"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-base">Featured</FormLabel>
-                      <div className="text-sm text-muted-foreground">
-                        This product will be featured on the homepage.
+                {/* Featured Toggle */}
+                <FormField
+                  control={form.control}
+                  name="isFeatured"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 sm:p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-sm sm:text-base">Featured</FormLabel>
+                        <div className="text-xs sm:text-sm text-muted-foreground">
+                          This product will be featured on the homepage.
+                        </div>
                       </div>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
             </div>
 
-            <div className="flex justify-end">
-              <Button type="submit" disabled={isLoading}>
+            <div className="flex justify-end pt-2">
+              <Button 
+                type="submit" 
+                disabled={isLoading}
+                className="h-9 px-3 sm:h-10 sm:px-4"
+              >
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Save & Continue
               </Button>

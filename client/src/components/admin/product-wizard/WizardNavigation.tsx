@@ -181,10 +181,9 @@ export function WizardNavigation({ onComplete }: WizardNavigationProps) {
           variant="outline"
           onClick={handlePrevious}
           disabled={steps[0].id === state.currentStep}
-          className="gap-1"
           size="sm"
           // Adjust button size for mobile/desktop
-          className="h-9 px-3 sm:h-10 sm:px-4"
+          className="h-9 px-3 sm:h-10 sm:px-4 gap-1"
         >
           <ChevronLeftIcon className="h-4 w-4" />
           <span className="hidden sm:inline">Previous</span>
@@ -193,9 +192,8 @@ export function WizardNavigation({ onComplete }: WizardNavigationProps) {
         {state.currentStep !== 'review' ? (
           <Button
             onClick={handleNext}
-            className="gap-1"
             // Adjust button size for mobile/desktop
-            className="h-9 px-3 sm:h-10 sm:px-4"
+            className="h-9 px-3 sm:h-10 sm:px-4 gap-1"
           >
             <span className="hidden sm:inline">Next</span>
             <span className="inline sm:hidden">Next</span>
@@ -212,9 +210,8 @@ export function WizardNavigation({ onComplete }: WizardNavigationProps) {
               }
             }}
             variant="default"
-            className="gap-1"
             // Adjust button size for mobile/desktop
-            className="h-9 px-3 sm:h-10 sm:px-4"
+            className="h-9 px-3 sm:h-10 sm:px-4 gap-1"
           >
             <span>Complete</span>
             <CheckIcon className="h-4 w-4" />
