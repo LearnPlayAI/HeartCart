@@ -19,6 +19,7 @@ import AuthPage from "@/pages/auth-page";
 import NotFound from "@/pages/not-found";
 import CartDrawer from "@/components/cart/cart-drawer";
 import { SessionExpiryWarning } from "@/components/session/session-expiry-warning";
+import React, { Suspense } from "react";
 
 // Admin Pages
 import AdminDashboard from "@/pages/admin/dashboard";
@@ -103,7 +104,17 @@ function AdminProtectedRoute({
     return null;
   }
 
-  return <Route path={path}><Component /></Route>;
+  return (
+    <Route path={path}>
+      <Suspense fallback={
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-pink-500" />
+        </div>
+      }>
+        <Component />
+      </Suspense>
+    </Route>
+  );
 }
 
 function App() {
@@ -133,8 +144,8 @@ function App() {
               <AdminProtectedRoute path="/admin/products/:productId/attributes" component={ProductAttributes} />
               
               {/* New Product Manager Routes */}
-              <AdminProtectedRoute path="/admin/products/new" component={() => import("@/pages/admin/product-create-new").then(module => module.default)} />
-              <AdminProtectedRoute path="/admin/products/:id/edit" component={() => import("@/pages/admin/product-edit-new").then(module => module.default)} />
+              <AdminProtectedRoute path="/admin/products/new" component={React.lazy(() => import("@/pages/admin/product-create-new"))} />
+              <AdminProtectedRoute path="/admin/products/:id/edit" component={React.lazy(() => import("@/pages/admin/product-edit-new"))} />
               
               {/* Original Wizard Routes (Commented out to use new implementation) */}
               {/* <AdminProtectedRoute path="/admin/products/wizard/:id?" component={ProductWizardPage} /> */}

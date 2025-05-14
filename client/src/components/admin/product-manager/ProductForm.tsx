@@ -25,10 +25,7 @@ import {
   ProductDraftData, WizardStepId, WIZARD_STEPS, 
   STEP_NUMBER_MAP, ProductFormSharedProps 
 } from './types';
-import { StepBasicInfo } from './steps/StepBasicInfo';
-import { StepImages } from './steps/StepImages';
-import { StepDetails } from './steps/StepDetails';
-import { StepReview } from './steps/StepReview';
+import { StepBasicInfo, StepImages, StepDetails, StepReview } from './steps';
 import { Progress } from '@/components/ui/progress';
 
 // Default empty draft structure
