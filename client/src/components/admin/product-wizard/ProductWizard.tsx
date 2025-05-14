@@ -368,4 +368,3 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ editMode = false, 
   );
 };
 
-export default ProductWizard;

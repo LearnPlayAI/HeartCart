@@ -53,7 +53,7 @@ interface BasicInfoStepProps {
   isLoading: boolean;
 }
 
-const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, isLoading }) => {
+export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, isLoading }) => {
   const { toast } = useToast();
   const [isNameTouched, setIsNameTouched] = useState(false);
 
