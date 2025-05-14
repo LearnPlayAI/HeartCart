@@ -4831,6 +4831,13 @@ export class DatabaseStorage implements IStorage {
       }
       
       // Convert draft to product
+      // Log draft data for debugging
+      logger.debug('Publishing product draft', { 
+        draftId: id, 
+        originalProductId: draft.originalProductId,
+        attributesCount: draft.attributes?.length || 0
+      });
+      
       const productData: Partial<InsertProduct> = {
         name: draft.name || '',
         slug: draft.slug || '',
@@ -4856,12 +4863,15 @@ export class DatabaseStorage implements IStorage {
         supplier: draft.supplierId ? (await this.getSupplier(draft.supplierId))?.name : null,
         weight: draft.weight ? parseFloat(draft.weight) : null,
         dimensions: draft.dimensions,
-        // Special sale fields
+        // Convert Date timestamps to text strings for storage in products table
         specialSaleText: draft.specialSaleText,
         specialSaleStart: draft.specialSaleStart ? draft.specialSaleStart.toISOString() : null,
         specialSaleEnd: draft.specialSaleEnd ? draft.specialSaleEnd.toISOString() : null,
         isFlashDeal: draft.isFlashDeal || false,
         flashDealEnd: draft.flashDealEnd ? draft.flashDealEnd.toISOString() : null,
+        // Additional fields
+        brand: draft.brand,
+        tags: draft.metaKeywords ? [draft.metaKeywords] : [],
       };
       
       // Handle existing product (update) vs. new product (insert)
@@ -4877,22 +4887,43 @@ export class DatabaseStorage implements IStorage {
         
         product = updatedProduct;
         
-        // Update product attributes
+        // Update product attributes using new centralized attribute system
         if (draft.attributes && Array.isArray(draft.attributes)) {
           // Delete existing attributes
           await db
             .delete(productAttributes)
             .where(eq(productAttributes.productId, product.id));
           
+          logger.debug('Updating product attributes', { 
+            productId: product.id, 
+            attributesCount: draft.attributes.length 
+          });
+          
           // Insert new attributes
           for (const attr of draft.attributes) {
-            await db
-              .insert(productAttributes)
-              .values({
+            try {
+              await db
+                .insert(productAttributes)
+                .values({
+                  productId: product.id,
+                  attributeId: attr.attributeId,
+                  // Handle different attribute value types
+                  textValue: typeof attr.value === 'string' ? attr.value : null,
+                  numberValue: typeof attr.value === 'number' ? attr.value : null,
+                  booleanValue: typeof attr.value === 'boolean' ? attr.value : null,
+                  // Handle arrays (like selected options) by serializing to JSON
+                  selectedOptions: Array.isArray(attr.value) ? attr.value : null,
+                  // Optional display name override
+                  overrideDisplayName: attr.attributeDisplayName || null,
+                });
+            } catch (attrError) {
+              logger.error('Error saving product attribute', { 
+                error: attrError, 
                 productId: product.id,
                 attributeId: attr.attributeId,
-                attributeValue: attr.value
+                valueType: typeof attr.value
               });
+            }
           }
         }
       } else {
@@ -4904,16 +4935,38 @@ export class DatabaseStorage implements IStorage {
         
         product = newProduct;
         
-        // Insert product attributes
+        // Insert product attributes using new centralized attribute system
         if (draft.attributes && Array.isArray(draft.attributes)) {
+          logger.debug('Adding product attributes for new product', { 
+            productId: product.id, 
+            attributesCount: draft.attributes.length 
+          });
+          
+          // Insert new attributes
           for (const attr of draft.attributes) {
-            await db
-              .insert(productAttributes)
-              .values({
+            try {
+              await db
+                .insert(productAttributes)
+                .values({
+                  productId: product.id,
+                  attributeId: attr.attributeId,
+                  // Handle different attribute value types
+                  textValue: typeof attr.value === 'string' ? attr.value : null,
+                  numberValue: typeof attr.value === 'number' ? attr.value : null,
+                  booleanValue: typeof attr.value === 'boolean' ? attr.value : null,
+                  // Handle arrays (like selected options) by serializing to JSON
+                  selectedOptions: Array.isArray(attr.value) ? attr.value : null,
+                  // Optional display name override
+                  overrideDisplayName: attr.attributeDisplayName || null,
+                });
+            } catch (attrError) {
+              logger.error('Error saving product attribute for new product', { 
+                error: attrError, 
                 productId: product.id,
                 attributeId: attr.attributeId,
-                attributeValue: attr.value
+                valueType: typeof attr.value
               });
+            }
           }
         }
       }

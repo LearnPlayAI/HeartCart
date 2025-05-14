@@ -100,13 +100,26 @@ export default function registerProductDraftRoutes(router: Router) {
           flashDealEnd: product.flashDealEnd ? new Date(product.flashDealEnd) : null,
         });
 
-        // Load and map product attributes
-        const productAttributes = await storage.getProductAttributes(product.id);
-        if (productAttributes?.length) {
-          draftData.attributes = productAttributes.map(pa => ({
-            attributeId: pa.attributeId,
-            value: pa.attributeValue
-          }));
+        // Load and map product attributes using the new attribute system
+        try {
+          const productAttributes = await storage.getProductAttributes(product.id);
+          if (productAttributes?.length) {
+            draftData.attributes = productAttributes.map(pa => ({
+              attributeId: pa.attributeId,
+              value: pa.textValue || pa.selectedOptions,
+              attributeName: pa.attribute?.name || "",
+              attributeDisplayName: pa.overrideDisplayName || pa.attribute?.displayName || ""
+            }));
+            logger.debug('Mapped product attributes to draft', { 
+              productId: product.id, 
+              attributesCount: productAttributes.length 
+            });
+          } else {
+            logger.debug('No product attributes found to map to draft', { productId: product.id });
+          }
+        } catch (attrError) {
+          logger.error('Error loading product attributes for draft', { error: attrError, productId: product.id });
+          // Don't block the draft creation if attribute loading fails
         }
       }
 
