@@ -56,7 +56,7 @@ export default function registerProductDraftRoutes(router: Router) {
 
       // If originalProductId is provided, load the product data
       if (draftData.originalProductId) {
-        const product = await storage.getProduct(draftData.originalProductId);
+        const product = await storage.getProductById(draftData.originalProductId);
         if (!product) {
           throw new NotFoundError("Original product not found");
         }
@@ -69,57 +69,99 @@ export default function registerProductDraftRoutes(router: Router) {
         }
 
         // Prefill the draft with product data
+        logger.debug('Prefilling draft with product data', { productId: product.id });
+        
         Object.assign(draftData, {
-          name: product.name,
-          slug: product.slug,
-          description: product.description,
-          categoryId: product.categoryId,
-          isActive: product.isActive,
-          isFeatured: product.isFeatured,
+          originalProductId: product.id, // Ensure this is set explicitly
+          name: product.name || "",
+          slug: product.slug || "",
+          description: product.description || "",
+          brand: product.brand || "",
+          sku: product.sku || "",
+          categoryId: product.categoryId || null,
+          isActive: !!product.isActive,
+          isFeatured: !!product.isFeatured,
           // Map from product price fields to draft price fields
-          costPrice: product.costPrice,
-          regularPrice: product.price,
-          salePrice: product.salePrice,
+          costPrice: product.costPrice || null,
+          regularPrice: product.price || null,
+          salePrice: product.salePrice || null,
           onSale: product.salePrice !== null && product.salePrice < product.price,
+          markupPercentage: product.markupPercentage || null,
           // Other fields
-          stockLevel: product.stock,
+          stockLevel: product.stock || 0,
+          lowStockThreshold: product.lowStockThreshold || 5,
+          backorderEnabled: !!product.backorderEnabled,
           attributes: [], // Will be populated from product attributes
+          supplierId: product.supplierId || null,
+          taxable: product.taxable !== false, // Default to true
+          taxClass: product.taxClass || "standard",
+          // Images
           imageUrls: product.imageUrl ? [product.imageUrl, ...(product.additionalImages || [])] : [],
           // Set blank placeholders for object keys, these will be populated later if needed
           imageObjectKeys: product.imageUrl ? Array(1 + (product.additionalImages?.length || 0)).fill('') : [],
           mainImageIndex: 0,
           // Additional fields
-          discountLabel: product.discountLabel,
-          specialSaleText: product.specialSaleText,
-          dimensions: product.dimensions,
-          weight: product.weight?.toString(),
-          isFlashDeal: product.isFlashDeal,
-          // Handle date fields
-          specialSaleStart: product.specialSaleStart ? new Date(product.specialSaleStart) : null,
-          specialSaleEnd: product.specialSaleEnd ? new Date(product.specialSaleEnd) : null,
-          flashDealEnd: product.flashDealEnd ? new Date(product.flashDealEnd) : null,
+          discountLabel: product.discountLabel || "",
+          specialSaleText: product.specialSaleText || "",
+          dimensions: product.dimensions || "",
+          weight: product.weight?.toString() || "",
+          isFlashDeal: !!product.isFlashDeal,
+          metaTitle: product.metaTitle || "",
+          metaDescription: product.metaDescription || "",
+          metaKeywords: product.metaKeywords || "",
+          // Handle date fields - store as string in ISO format for consistency
+          specialSaleStart: product.specialSaleStart ? new Date(product.specialSaleStart).toISOString() : null,
+          specialSaleEnd: product.specialSaleEnd ? new Date(product.specialSaleEnd).toISOString() : null,
+          flashDealEnd: product.flashDealEnd ? new Date(product.flashDealEnd).toISOString() : null,
+          // Initialize wizard progress - mark all steps as incomplete initially
+          // This ensures the UI will show the proper progress state
+          wizardProgress: {
+            "basic-info": false,
+            "images": false,
+            "additional-info": false,
+            "sales-promotions": false,
+            "review": false
+          },
+          // Initialize completedSteps as an empty array
+          completedSteps: [],
         });
 
         // Load and map product attributes using the new attribute system
         try {
           const productAttributes = await storage.getProductAttributes(product.id);
           if (productAttributes?.length) {
+            // Prepare attributes array with comprehensive mapping of all fields
             draftData.attributes = productAttributes.map(pa => ({
               attributeId: pa.attributeId,
-              value: pa.textValue || pa.selectedOptions,
+              // Use any available value (textValue or selectedOptions) with fallbacks
+              value: pa.textValue || (Array.isArray(pa.selectedOptions) && pa.selectedOptions.length > 0 
+                ? pa.selectedOptions 
+                : []),
+              // Include attribute metadata
               attributeName: pa.attribute?.name || "",
-              attributeDisplayName: pa.overrideDisplayName || pa.attribute?.displayName || ""
+              attributeDisplayName: pa.overrideDisplayName || pa.attribute?.displayName || "",
+              attributeType: pa.attribute?.attributeType || "text",
+              isRequired: !!pa.isRequired,
+              sortOrder: pa.sortOrder || 0,
+              // Include any override values from the product attribute
+              overrideDisplayName: pa.overrideDisplayName || null,
+              overrideDescription: pa.overrideDescription || null
             }));
+            
             logger.debug('Mapped product attributes to draft', { 
               productId: product.id, 
-              attributesCount: productAttributes.length 
+              attributesCount: productAttributes.length,
+              attributeIds: productAttributes.map(pa => pa.attributeId)
             });
           } else {
             logger.debug('No product attributes found to map to draft', { productId: product.id });
+            // Initialize with empty array to ensure it's not null
+            draftData.attributes = [];
           }
         } catch (attrError) {
           logger.error('Error loading product attributes for draft', { error: attrError, productId: product.id });
           // Don't block the draft creation if attribute loading fails
+          draftData.attributes = [];
         }
       }
 
