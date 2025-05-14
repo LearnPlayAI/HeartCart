@@ -565,7 +565,7 @@ function GlobalAttributesPage() {
     attr.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (attr.description && attr.description.toLowerCase().includes(searchTerm.toLowerCase()))
   ).filter(attr => 
-    !attributeFilter || attr.attributeType === attributeFilter
+    !attributeFilter || attributeFilter === "all" || attr.attributeType === attributeFilter
   );
 
   return (
@@ -594,7 +594,7 @@ function GlobalAttributesPage() {
                 <SelectValue placeholder="Filter by type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Types</SelectItem>
+                <SelectItem value="all">All Types</SelectItem>
                 {ATTRIBUTE_TYPES.map((type) => (
                   <SelectItem key={type} value={type}>{type}</SelectItem>
                 ))}
