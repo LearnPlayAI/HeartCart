@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Loader2, Wand2 } from 'lucide-react';
 import { 
   Form, 
   FormControl, 
@@ -19,14 +20,31 @@ import {
   FormMessage 
 } from '@/components/ui/form';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  Card,
+  CardContent,
+} from '@/components/ui/card';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Card, CardContent } from '@/components/ui/card';
-import { Loader2 } from 'lucide-react';
 import { ProductDraft } from '../ProductWizard';
 import slugify from 'slugify';
 
@@ -56,6 +74,10 @@ interface BasicInfoStepProps {
 export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, isLoading }) => {
   const { toast } = useToast();
   const [isNameTouched, setIsNameTouched] = useState(false);
+  const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
+  const [aiDescriptionSuggestions, setAiDescriptionSuggestions] = useState<string[]>([]);
+  const [showAiDialog, setShowAiDialog] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   // Fetch categories for the dropdown
   const { data: categoriesData, isLoading: isCategoriesLoading } = useQuery({
@@ -141,7 +163,72 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, isL
     
     if (!isNaN(salePrice) && salePrice > 0 && salePrice < regularPrice) {
       form.setValue('onSale', true);
-    } else {
+    }
+  };
+  
+  // Function to generate AI-powered description suggestions
+  const generateDescriptionSuggestions = async () => {
+    try {
+      setIsGeneratingDescription(true);
+      setAiError(null);
+      
+      // Get current form values
+      const formValues = form.getValues();
+      const productName = formValues.name;
+      const currentDescription = formValues.description || '';
+      const brandName = formValues.brand || '';
+      
+      // Get category name from the selected categoryId
+      let categoryName = '';
+      if (formValues.categoryId && categoriesData?.data) {
+        const category = categoriesData.data.find(cat => cat.id === formValues.categoryId);
+        categoryName = category?.name || '';
+      }
+      
+      // API request to generate descriptions
+      const response = await apiRequest('/api/ai/suggest-description', {
+        method: 'POST',
+        data: {
+          productName,
+          currentDescription,
+          categoryName,
+          brandName,
+          keyFeatures: [] // You could add key features here in the future
+        }
+      });
+      
+      if (response.success && response.data.suggestions) {
+        setAiDescriptionSuggestions(response.data.suggestions);
+        setShowAiDialog(true);
+      } else {
+        throw new Error(response.error?.message || 'Failed to generate descriptions');
+      }
+    } catch (error) {
+      console.error('Error generating AI descriptions:', error);
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : 'Something went wrong. Please try again.';
+      
+      setAiError(errorMessage);
+      toast({
+        title: 'AI Generation Failed',
+        description: errorMessage,
+        variant: 'destructive'
+      });
+    } finally {
+      setIsGeneratingDescription(false);
+    }
+  };
+  
+  // Function to apply a selected AI description
+  const applyDescription = (description: string) => {
+    form.setValue('description', description);
+    setShowAiDialog(false);
+    
+    toast({
+      title: 'Description Applied',
+      description: 'The AI-generated description has been applied.'
+    }); else {
       form.setValue('onSale', false);
     }
   };
