@@ -68,16 +68,17 @@ const DEFAULT_DRAFT: ProductDraftData = {
 export const ProductForm: React.FC<ProductFormSharedProps> = ({ 
   editMode = false, 
   productId,
-  catalogId
+  catalogId,
+  initialDraftId
 }) => {
   const { toast } = useToast();
   const [_, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const { user } = useAuth();
   
-  // Component state
+  // Component state - initialDraftId will be used if provided (for edit mode)
   const [currentStep, setCurrentStep] = useState<WizardStepId>(WizardStepId.BasicInfo);
-  const [draftId, setDraftId] = useState<number | null>(null);
+  const [draftId, setDraftId] = useState<number | null>(initialDraftId || null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [progress, setProgress] = useState(0);
   
@@ -272,6 +273,7 @@ export const ProductForm: React.FC<ProductFormSharedProps> = ({
     if (!user || !catalogsData?.data || !suppliersData?.data) return;
     
     // If we don't have a draft yet, create one
+    // Skip this if we already have a draftId (either from initialDraftId or from previous creation)
     if (!draftId) {
       // Use the passed in catalogId or default to the first one in the list
       const defaultCatalogId = catalogId || catalogsData.data[0]?.id || 1;

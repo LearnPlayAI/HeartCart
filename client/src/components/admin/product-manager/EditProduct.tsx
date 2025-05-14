@@ -12,7 +12,8 @@ export const EditProduct: React.FC = () => {
   const params = useParams();
   const productId = params.id ? parseInt(params.id) : undefined;
   
-  // Fetch product data
+  // Fetch product data - we only need the basic product info for the title
+  // The actual form data will be loaded from existing product draft or created as new draft
   const { data: productData, isLoading, isError } = useQuery({
     queryKey: ['/api/products', productId],
     queryFn: async () => {
@@ -22,9 +23,73 @@ export const EditProduct: React.FC = () => {
     },
     enabled: !!productId,
   });
+
+  // Check if a draft exists or create one based on the original product
+  const { data: draftData, isLoading: isDraftLoading } = useQuery({
+    queryKey: ['/api/product-drafts/for-product', productId],
+    queryFn: async () => {
+      if (!productId) return null;
+      
+      // First check if a draft already exists for this product
+      try {
+        // We use the POST endpoint which will either:
+        // 1. Return an existing draft if one exists, or
+        // 2. Create a new draft prefilled with the product data and return that
+        const initialDraft = {
+          originalProductId: productId,
+          name: '', // These will be filled from the product data on the server
+          description: '',
+          slug: '',
+          categoryId: null,
+          regularPrice: null,
+          salePrice: null,
+          costPrice: null,
+          onSale: false,
+          stockLevel: 0,
+          isActive: true,
+          isFeatured: false,
+          attributes: [],
+          imageUrls: [],
+          imageObjectKeys: [],
+          mainImageIndex: 0,
+          discountLabel: '',
+          specialSaleText: '',
+          specialSaleStart: null,
+          specialSaleEnd: null,
+          isFlashDeal: false,
+          flashDealEnd: null,
+          dimensions: '',
+          weight: '',
+          catalogId: null,
+          supplierId: null,
+          completedSteps: [],
+          draftStatus: 'draft',
+          wizardProgress: {
+            'basic-info': false,
+            'images': false,
+            'details': false,
+            'review': false
+          }
+        };
+
+        // This will either return existing draft or create new one
+        // The server handles prefilling with product data
+        const response = await apiRequest('POST', '/api/product-drafts', {
+          draftData: initialDraft,
+          step: 0
+        });
+        
+        return response.json();
+      } catch (error) {
+        console.error('Error getting/creating product draft:', error);
+        return null;
+      }
+    },
+    enabled: !!productId,
+  });
   
   // Loading state
-  if (isLoading) {
+  if (isLoading || isDraftLoading) {
     return (
       <div className="container mx-auto py-8">
         <Card>
@@ -63,10 +128,17 @@ export const EditProduct: React.FC = () => {
   // Get product name for the title
   const productName = productData?.data?.name || 'Product';
   
+  // If we have a valid draft, pass its ID to the ProductForm
+  const draftId = draftData?.success ? draftData.data?.id : null;
+  
   return (
     <div className="container mx-auto py-8">
       <h1 className="text-3xl font-bold mb-8">Edit Product: {productName}</h1>
-      <ProductForm editMode={true} productId={productId} />
+      <ProductForm 
+        editMode={true} 
+        productId={productId}
+        initialDraftId={draftId}
+      />
     </div>
   );
 };

@@ -126,4 +126,5 @@ export interface ProductFormSharedProps {
   editMode: boolean;
   productId?: number;
   catalogId?: number;
+  initialDraftId?: number | null;
 }
