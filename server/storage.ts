@@ -4361,16 +4361,119 @@ export class DatabaseStorage implements IStorage {
   
   // Removed updateCategoryAttributeOptionsOrder as part of centralized attribute system
   
-  // Product attribute operations
-  // Removed getProductAttributes as part of centralized attribute system
+  // Product attribute operations using the new centralized attribute system
+  /**
+   * Get all attributes for a product
+   * @param productId ID of the product
+   * @returns Array of product attributes with their base attribute information
+   */
+  async getProductAttributes(productId: number): Promise<(ProductAttribute & { attribute: Attribute })[]> {
+    try {
+      const result = await db
+        .select({
+          productAttr: productAttributes,
+          attribute: attributes
+        })
+        .from(productAttributes)
+        .innerJoin(attributes, eq(productAttributes.attributeId, attributes.id))
+        .where(eq(productAttributes.productId, productId))
+        .orderBy(asc(productAttributes.sortOrder));
+      
+      return result.map(row => ({
+        ...row.productAttr,
+        attribute: row.attribute
+      }));
+    } catch (error) {
+      logger.error('Error getting product attributes', { error, productId });
+      throw error;
+    }
+  }
   
-  // Removed getProductAttributeById as part of centralized attribute system
+  /**
+   * Get a specific product attribute by ID
+   * @param id ID of the product attribute
+   * @returns The product attribute with its base attribute information
+   */
+  async getProductAttributeById(id: number): Promise<(ProductAttribute & { attribute: Attribute }) | undefined> {
+    try {
+      const [result] = await db
+        .select({
+          productAttr: productAttributes,
+          attribute: attributes
+        })
+        .from(productAttributes)
+        .innerJoin(attributes, eq(productAttributes.attributeId, attributes.id))
+        .where(eq(productAttributes.id, id));
+      
+      if (!result) return undefined;
+      
+      return {
+        ...result.productAttr,
+        attribute: result.attribute
+      };
+    } catch (error) {
+      logger.error('Error getting product attribute by ID', { error, id });
+      throw error;
+    }
+  }
   
-  // Removed createProductAttribute as part of centralized attribute system
+  /**
+   * Create a new product attribute
+   * @param productAttribute The product attribute to create
+   * @returns The created product attribute
+   */
+  async createProductAttribute(productAttribute: InsertProductAttribute): Promise<ProductAttribute> {
+    try {
+      const [newAttribute] = await db
+        .insert(productAttributes)
+        .values(productAttribute)
+        .returning();
+      
+      return newAttribute;
+    } catch (error) {
+      logger.error('Error creating product attribute', { error, productAttribute });
+      throw error;
+    }
+  }
   
-  // Removed updateProductAttribute as part of centralized attribute system
+  /**
+   * Update a product attribute
+   * @param id ID of the product attribute to update
+   * @param productAttributeData The updated product attribute data
+   * @returns The updated product attribute
+   */
+  async updateProductAttribute(id: number, productAttributeData: Partial<InsertProductAttribute>): Promise<ProductAttribute | undefined> {
+    try {
+      const [updatedAttribute] = await db
+        .update(productAttributes)
+        .set(productAttributeData)
+        .where(eq(productAttributes.id, id))
+        .returning();
+      
+      return updatedAttribute;
+    } catch (error) {
+      logger.error('Error updating product attribute', { error, id });
+      throw error;
+    }
+  }
   
-  // Removed deleteProductAttribute as part of centralized attribute system
+  /**
+   * Delete a product attribute
+   * @param id ID of the product attribute to delete
+   * @returns True if the deletion was successful
+   */
+  async deleteProductAttribute(id: number): Promise<boolean> {
+    try {
+      await db
+        .delete(productAttributes)
+        .where(eq(productAttributes.id, id));
+      
+      return true;
+    } catch (error) {
+      logger.error('Error deleting product attribute', { error, id });
+      throw error;
+    }
+  }
   
   // Product attribute options operations
   // Removed getProductAttributeOptions as part of centralized attribute system
@@ -4385,16 +4488,102 @@ export class DatabaseStorage implements IStorage {
   
   // Removed updateProductAttributeOptionsOrder as part of centralized attribute system
   
-  // Product attribute values operations
-  // Removed getProductAttributeValues as part of centralized attribute system
+  // Product attribute values operations using the new centralized attribute system
+  /**
+   * Get all attribute values for a product
+   * @param productId ID of the product to get attribute values for
+   * @returns Array of attribute values
+   */
+  async getProductAttributeValues(productId: number): Promise<ProductAttributeValue[]> {
+    try {
+      const values = await db
+        .select()
+        .from(productAttributeValues)
+        .where(eq(productAttributeValues.productId, productId));
+      
+      return values;
+    } catch (error) {
+      logger.error('Error getting product attribute values', { error, productId });
+      throw error;
+    }
+  }
   
-  // Removed getProductAttributeValueById as part of centralized attribute system
+  /**
+   * Get a specific attribute value by ID
+   * @param id ID of the attribute value
+   * @returns The attribute value
+   */
+  async getProductAttributeValueById(id: number): Promise<ProductAttributeValue | undefined> {
+    try {
+      const [value] = await db
+        .select()
+        .from(productAttributeValues)
+        .where(eq(productAttributeValues.id, id));
+      
+      return value;
+    } catch (error) {
+      logger.error('Error getting product attribute value by ID', { error, id });
+      throw error;
+    }
+  }
   
-  // Removed createProductAttributeValue as part of centralized attribute system
+  /**
+   * Create a new product attribute value
+   * @param value The attribute value to create
+   * @returns The created attribute value
+   */
+  async createProductAttributeValue(value: InsertProductAttributeValue): Promise<ProductAttributeValue> {
+    try {
+      const [newValue] = await db
+        .insert(productAttributeValues)
+        .values(value)
+        .returning();
+      
+      return newValue;
+    } catch (error) {
+      logger.error('Error creating product attribute value', { error, value });
+      throw error;
+    }
+  }
   
-  // Removed updateProductAttributeValue as part of centralized attribute system
+  /**
+   * Update a product attribute value
+   * @param id ID of the attribute value to update
+   * @param data The updated attribute value data
+   * @returns The updated attribute value
+   */
+  async updateProductAttributeValue(id: number, data: Partial<InsertProductAttributeValue>): Promise<ProductAttributeValue | undefined> {
+    try {
+      const [updatedValue] = await db
+        .update(productAttributeValues)
+        .set(data)
+        .where(eq(productAttributeValues.id, id))
+        .returning();
+      
+      return updatedValue;
+    } catch (error) {
+      logger.error('Error updating product attribute value', { error, id });
+      throw error;
+    }
+  }
   
-  // Removed deleteProductAttributeValue as part of centralized attribute system
+  /**
+   * Delete a product attribute value
+   * @param id ID of the attribute value to delete
+   * @returns True if the deletion was successful
+   */
+  async deleteProductAttributeValue(id: number): Promise<boolean> {
+    try {
+      await db
+        .delete(productAttributeValues)
+        .where(eq(productAttributeValues.id, id));
+      
+      return true;
+    } catch (error) {
+      logger.error('Error deleting product attribute value', { error, id });
+      throw error;
+    }
+  }
 
   // Attribute discount rules operations
   // Removed getAllAttributeDiscountRules as part of centralized attribute system
