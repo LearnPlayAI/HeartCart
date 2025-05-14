@@ -35,10 +35,11 @@ export interface IStorage {
   getAllUsers(): Promise<User[]>;
   
   // Product Wizard Draft operations
-  saveProductDraft(userId: number, draftData: any, step: number, draftId?: string, catalogId?: number): Promise<any>;
-  getProductDraft(userId: number, draftId: string): Promise<any | undefined>;
+  saveProductDraft(userId: number, draftData: any, step: number, draftId?: string | number, catalogId?: number): Promise<any>;
+  getProductDraft(userId: number, draftId: string | number): Promise<any | undefined>;
   getUserProductDrafts(userId: number, catalogId?: number): Promise<any[]>;
-  deleteProductDraft(userId: number, draftId: string): Promise<boolean>;
+  deleteProductDraft(userId: number, draftId: string | number): Promise<boolean>;
+  publishProductDraft(userId: number, draftId: string | number): Promise<any>;
   
   // API Testing support methods
   getProductWithSlug(): Promise<Product | undefined>;
