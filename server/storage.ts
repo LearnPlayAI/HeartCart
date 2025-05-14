@@ -5014,6 +5014,56 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  /**
+   * Reorder product draft images
+   * @param id The draft ID
+   * @param imageIndexes Array of current indexes in the new order
+   * @returns The updated draft
+   */
+  async reorderProductDraftImages(id: number, imageIndexes: number[]): Promise<ProductDraft | undefined> {
+    try {
+      // Get the current draft
+      const draft = await this.getProductDraft(id);
+      if (!draft || !draft.imageUrls || !draft.imageObjectKeys) {
+        return undefined;
+      }
+      
+      // Validate input
+      if (!Array.isArray(imageIndexes) || imageIndexes.length !== draft.imageUrls.length) {
+        throw new Error(`Invalid image indexes: expected array of length ${draft.imageUrls.length}`);
+      }
+      
+      // Create new arrays in the specified order
+      const newImageUrls: string[] = [];
+      const newImageObjectKeys: string[] = [];
+      
+      for (const index of imageIndexes) {
+        if (index < 0 || index >= draft.imageUrls.length) {
+          throw new Error(`Invalid image index: ${index}`);
+        }
+        
+        newImageUrls.push(draft.imageUrls[index]);
+        newImageObjectKeys.push(draft.imageObjectKeys[index]);
+      }
+      
+      // Update the draft with the new order
+      const updatedDraft = await this.updateProductDraftImages(
+        id, 
+        newImageUrls, 
+        newImageObjectKeys, 
+        // Maintain the main image index by finding its new position
+        draft.mainImageIndex !== undefined && draft.mainImageIndex !== null
+          ? imageIndexes.indexOf(draft.mainImageIndex)
+          : 0
+      );
+      
+      return updatedDraft;
+    } catch (error) {
+      logger.error('Error reordering product draft images', { error, id, imageIndexes });
+      throw error;
+    }
+  }
+
   async publishProductDraft(id: number): Promise<Product | undefined> {
     try {
       // Get the draft

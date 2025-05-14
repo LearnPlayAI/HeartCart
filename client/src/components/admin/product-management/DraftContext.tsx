@@ -181,6 +181,7 @@ export function DraftProvider({ children, initialDraftId }: DraftProviderProps) 
           name: `New Product ${timestamp}-${randomNum}`,
           slug: `new-product-${timestamp.replace(/-/g, '')}-${randomNum}`,
           draftStatus: 'draft',
+          // Use camelCase property names to match the server-side model
           regularPrice: 0,
           costPrice: 0,
           stockLevel: 0,
@@ -192,7 +193,14 @@ export function DraftProvider({ children, initialDraftId }: DraftProviderProps) 
             "attributes": false,
             "additional-info": false,
             "seo": false
-          }
+          },
+          // Set default values for required fields to avoid null issues
+          imageUrls: [],
+          imageObjectKeys: [],
+          attributes: [],
+          mainImageIndex: 0,
+          isActive: true,
+          completedSteps: []
         }),
       });
       

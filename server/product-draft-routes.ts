@@ -377,6 +377,38 @@ export default function registerProductDraftRoutes(router: Router) {
       sendSuccess(res, updatedDraft);
     })
   );
+  
+  /**
+   * Reorder images for a product draft
+   * POST /api/product-drafts/:id/images/reorder
+   */
+  router.post(
+    "/api/product-drafts/:id/images/reorder",
+    isAuthenticated,
+    validateRequest({ params: productDraftIdParamSchema }),
+    asyncHandler(async (req, res) => {
+      const draftId = parseInt(req.params.id);
+      const { imageIndexes } = req.body;
+      
+      if (!Array.isArray(imageIndexes)) {
+        throw new BadRequestError("Invalid image indexes: expected array");
+      }
+      
+      const draft = await storage.getProductDraft(draftId);
+      
+      if (!draft) {
+        throw new NotFoundError("Product draft not found");
+      }
+      
+      // Check if user has permission to update this draft
+      if (draft.createdBy !== req.user?.id && req.user?.role !== 'admin') {
+        throw new BadRequestError("You don't have permission to update this draft");
+      }
+      
+      const updatedDraft = await storage.reorderProductDraftImages(draftId, imageIndexes);
+      sendSuccess(res, updatedDraft);
+    })
+  );
 
   /**
    * Publish a product draft
