@@ -44,6 +44,7 @@ export const SEOAssistant: React.FC<SEOAssistantProps> = ({
   const [suggestions, setSuggestions] = useState<SEOSuggestion[]>([]);
   const [selectedSuggestion, setSelectedSuggestion] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<{ [key: number]: 'positive' | 'negative' | null }>({});
+  const [apiError, setApiError] = useState<string | null>(null);
 
   // Generate SEO suggestions using AI
   const generateSuggestions = async () => {
@@ -60,6 +61,7 @@ export const SEOAssistant: React.FC<SEOAssistantProps> = ({
     setSuggestions([]);
     setSelectedSuggestion(null);
     setFeedback({});
+    setApiError(null);
 
     try {
       const response = await apiRequest('POST', '/api/ai/optimize-seo', {
@@ -80,19 +82,34 @@ export const SEOAssistant: React.FC<SEOAssistantProps> = ({
           description: `Generated ${data.data.suggestions.length} SEO optimization suggestions.`,
         });
       } else {
-        toast({
-          title: 'Error generating SEO suggestions',
-          description: data.error?.message || 'Could not generate SEO suggestions.',
-          variant: 'destructive',
-        });
+        // Check for missing API key
+        if (data.error?.code === 'MISSING_API_KEY') {
+          setApiError('Google Gemini API key is missing. Please contact your administrator to configure it.');
+        } else if (data.error?.code === 'INVALID_API_KEY') {
+          setApiError('Google Gemini API key is invalid. Please contact your administrator to update it.');
+        } else {
+          toast({
+            title: 'Error generating SEO suggestions',
+            description: data.error?.message || 'Could not generate SEO suggestions.',
+            variant: 'destructive',
+          });
+        }
       }
     } catch (error) {
       console.error('Error generating SEO suggestions:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to generate SEO suggestions. Please try again.',
-        variant: 'destructive',
-      });
+      
+      // Handle API errors
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      if (errorMessage.includes('API key')) {
+        setApiError('Google Gemini API key issue. Please contact your administrator.');
+      } else {
+        toast({
+          title: 'Error',
+          description: 'Failed to generate SEO suggestions. Please try again.',
+          variant: 'destructive',
+        });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -145,7 +162,26 @@ export const SEOAssistant: React.FC<SEOAssistantProps> = ({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {suggestions.length > 0 ? (
+        {apiError ? (
+          <div className="py-4">
+            <Alert variant="destructive" className="mb-4">
+              <HelpCircle className="h-4 w-4" />
+              <AlertTitle>API Configuration Required</AlertTitle>
+              <AlertDescription>
+                {apiError}
+              </AlertDescription>
+            </Alert>
+            <div className="flex justify-center mt-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setApiError(null)}
+              >
+                Try Again
+              </Button>
+            </div>
+          </div>
+        ) : suggestions.length > 0 ? (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <p className="text-sm font-medium">
@@ -262,7 +298,7 @@ export const SEOAssistant: React.FC<SEOAssistantProps> = ({
                 variant="outline"
                 className="gap-2"
               >
-                <Search className="h-4 w-4" />
+                <Bot className="h-4 w-4" />
                 Generate SEO Suggestions
               </Button>
             )}

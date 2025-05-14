@@ -47,6 +47,7 @@ export const AIDescriptionAssistant: React.FC<AIDescriptionAssistantProps> = ({
     setIsLoading(true);
     setSuggestions([]);
     setSelectedSuggestion(null);
+    setApiError(null);
 
     try {
       const response = await apiRequest('POST', '/api/ai/suggest-description', {
@@ -66,19 +67,34 @@ export const AIDescriptionAssistant: React.FC<AIDescriptionAssistantProps> = ({
           description: `Generated ${data.data.suggestions.length} description suggestions.`,
         });
       } else {
-        toast({
-          title: 'Error generating suggestions',
-          description: data.error?.message || 'Could not generate description suggestions.',
-          variant: 'destructive',
-        });
+        // Check for missing API key
+        if (data.error?.code === 'MISSING_API_KEY') {
+          setApiError('Google Gemini API key is missing. Please contact your administrator to configure it.');
+        } else if (data.error?.code === 'INVALID_API_KEY') {
+          setApiError('Google Gemini API key is invalid. Please contact your administrator to update it.');
+        } else {
+          toast({
+            title: 'Error generating suggestions',
+            description: data.error?.message || 'Could not generate description suggestions.',
+            variant: 'destructive',
+          });
+        }
       }
     } catch (error) {
       console.error('Error generating AI descriptions:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to generate description suggestions. Please try again.',
-        variant: 'destructive',
-      });
+      
+      // Handle API errors
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      if (errorMessage.includes('API key')) {
+        setApiError('Google Gemini API key issue. Please contact your administrator.');
+      } else {
+        toast({
+          title: 'Error',
+          description: 'Failed to generate description suggestions. Please try again.',
+          variant: 'destructive',
+        });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -107,7 +123,26 @@ export const AIDescriptionAssistant: React.FC<AIDescriptionAssistantProps> = ({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {suggestions.length > 0 ? (
+        {apiError ? (
+          <div className="py-4">
+            <Alert variant="destructive" className="mb-4">
+              <HelpCircle className="h-4 w-4" />
+              <AlertTitle>API Configuration Required</AlertTitle>
+              <AlertDescription>
+                {apiError}
+              </AlertDescription>
+            </Alert>
+            <div className="flex justify-center mt-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setApiError(null)}
+              >
+                Try Again
+              </Button>
+            </div>
+          </div>
+        ) : suggestions.length > 0 ? (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <p className="text-sm font-medium">
@@ -161,7 +196,7 @@ export const AIDescriptionAssistant: React.FC<AIDescriptionAssistantProps> = ({
                 variant="outline"
                 className="gap-2"
               >
-                <Sparkles className="h-4 w-4" />
+                <Bot className="h-4 w-4" />
                 Generate Descriptions
               </Button>
             )}

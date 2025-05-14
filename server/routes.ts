@@ -34,6 +34,7 @@ import registerProductDraftRoutes from "./product-draft-routes";
 import pricingRoutes from "./pricing-routes";
 import batchUploadRoutes from "./batch-upload-routes";
 import aiApiRoutes from "./routes/ai-api";
+import aiRouter from "./ai-routes";
 import { registerAuthTestRoutes } from "./auth-test-routes";
 import { registerDatabaseTestRoutes } from "./database-test-routes";
 import { registerApiTestRoutes } from "./api-test-routes";
