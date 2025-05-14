@@ -1,7 +1,7 @@
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, ShoppingBag, Package, CreditCard, Users, Settings, BarChart3, LogOut, DollarSign, BrainCircuit, Factory, BookOpen, Tags, FileText, Upload } from "lucide-react";
+import { LayoutDashboard, ShoppingBag, Package, CreditCard, Users, Settings, BarChart3, LogOut, DollarSign, BrainCircuit, Factory, BookOpen, Tags, FileText, Upload, PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -24,6 +24,7 @@ function Navigation({ className }: { className?: string }) {
     { path: "/admin", label: "Dashboard", icon: LayoutDashboard },
     { path: "/admin/suppliers", label: "Suppliers", icon: Factory },
     { path: "/admin/catalogs", label: "Catalogs", icon: BookOpen },
+    { path: "/admin/product-management", label: "Product Management", icon: PlusCircle },
     { path: "/admin/products", label: "Products", icon: ShoppingBag },
     { path: "/admin/batch-upload", label: "Mass Upload", icon: Upload },
     { path: "/admin/orders", label: "Orders", icon: Package },

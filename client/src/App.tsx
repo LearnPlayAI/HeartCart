@@ -144,6 +144,7 @@ function App() {
               <AdminProtectedRoute path="/admin/products/:productId/attributes" component={ProductAttributes} />
               
               {/* New Product Management System */}
+              <AdminProtectedRoute path="/admin/product-management/:id?" component={React.lazy(() => import("@/pages/admin/product-management"))} />
               <AdminProtectedRoute path="/admin/products/manage/:id?" component={React.lazy(() => import("@/pages/admin/product-management"))} />
               <AdminProtectedRoute path="/admin/catalogs/:catalogId/products/manage/:id?" component={React.lazy(() => import("@/pages/admin/product-management"))} />
               
