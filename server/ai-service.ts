@@ -96,6 +96,15 @@ export async function generateProductDescription(
   brandName: string = '',
   keyFeatures: string[] = []
 ): Promise<string[]> {
+  // Check if API is available first
+  if (!isGeminiAvailable || !genAI) {
+    logger.warn('Gemini AI service unavailable for product description generation', {
+      error: geminiApiKeyError || 'Unknown error',
+      productName
+    });
+    throw new Error(`AI service unavailable: ${geminiApiKeyError || 'Unknown error'}`);
+  }
+  
   try {
     logger.debug('Generating product description with Gemini', {
       productName,
@@ -169,6 +178,15 @@ export async function generateSEOData(
   currentMetaDescription: string = '',
   currentKeywords: string[] = []
 ): Promise<any[]> {
+  // Check if API is available first
+  if (!isGeminiAvailable || !genAI) {
+    logger.warn('Gemini AI service unavailable for SEO optimization', {
+      error: geminiApiKeyError || 'Unknown error',
+      productName
+    });
+    throw new Error(`AI service unavailable: ${geminiApiKeyError || 'Unknown error'}`);
+  }
+  
   try {
     logger.debug('Generating SEO data with Gemini', {
       productName,
