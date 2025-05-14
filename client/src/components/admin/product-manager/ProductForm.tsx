@@ -273,7 +273,8 @@ export const ProductForm: React.FC<ProductFormSharedProps> = ({
     
     // If we don't have a draft yet, create one
     if (!draftId) {
-      const defaultCatalogId = catalogsData.data[0]?.id || 1;
+      // Use the passed in catalogId or default to the first one in the list
+      const defaultCatalogId = catalogId || catalogsData.data[0]?.id || 1;
       const defaultSupplierId = suppliersData.data[0]?.id || null;
       
       const initialDraft: ProductDraftData = {
@@ -289,7 +290,7 @@ export const ProductForm: React.FC<ProductFormSharedProps> = ({
       
       createDraftMutation.mutate(initialDraft);
     }
-  }, [user, catalogsData, suppliersData, draftId, editMode, productId]);
+  }, [user, catalogsData, suppliersData, draftId, editMode, productId, catalogId]);
   
   // Calculate progress whenever draft data changes
   useEffect(() => {

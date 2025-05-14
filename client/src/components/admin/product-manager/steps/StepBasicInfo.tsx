@@ -114,7 +114,7 @@ export const StepBasicInfo: React.FC<StepComponentProps> = ({
       costPrice: parseFloat(data.costPrice),
       salePrice: data.salePrice ? parseFloat(data.salePrice) : null,
       catalogId: parseInt(data.catalogId),
-      supplierId: data.supplierId ? parseInt(data.supplierId) : null,
+      supplierId: data.supplierId && data.supplierId !== "0" ? parseInt(data.supplierId) : null,
     };
     
     // Save and move to next step
@@ -135,7 +135,7 @@ export const StepBasicInfo: React.FC<StepComponentProps> = ({
       costPrice: values.costPrice ? parseFloat(values.costPrice) : null,
       salePrice: values.salePrice ? parseFloat(values.salePrice) : null,
       catalogId: values.catalogId ? parseInt(values.catalogId) : null,
-      supplierId: values.supplierId ? parseInt(values.supplierId) : null,
+      supplierId: values.supplierId && values.supplierId !== "0" ? parseInt(values.supplierId) : null,
     };
     
     // Save without advancing
@@ -269,7 +269,7 @@ export const StepBasicInfo: React.FC<StepComponentProps> = ({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="null">None</SelectItem>
+                      <SelectItem value="0">None</SelectItem>
                       {suppliersData?.data?.map((supplier: any) => (
                         <SelectItem 
                           key={supplier.id} 
