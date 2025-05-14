@@ -177,3 +177,32 @@ export function formatTimeRemaining(time: TimeFormat): string {
   
   return `${padZero(time.hours)}:${padZero(time.minutes)}:${padZero(time.seconds)}`;
 }
+
+/**
+ * Determines the display mode of the PWA
+ * 
+ * @returns The display mode as a string (e.g., 'browser', 'standalone', 'fullscreen', etc.)
+ */
+export function getPWADisplayMode(): string {
+  if (typeof window === 'undefined') return 'browser';
+  
+  const isStandalone = 
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.matchMedia('(display-mode: fullscreen)').matches ||
+    window.matchMedia('(display-mode: minimal-ui)').matches ||
+    // @ts-ignore - navigator.standalone is non-standard
+    (window.navigator.standalone === true);
+  
+  if (document.referrer.startsWith('android-app://')) {
+    return 'twa'; // Trusted Web Activity
+  } else if (
+    navigator.userAgent.includes('wv') || 
+    navigator.userAgent.includes('Android') && navigator.userAgent.includes('Version/')
+  ) {
+    return 'webview';
+  } else if (isStandalone) {
+    return 'standalone';
+  }
+  
+  return 'browser';
+}
