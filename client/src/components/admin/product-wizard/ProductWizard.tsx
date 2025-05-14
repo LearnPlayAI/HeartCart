@@ -85,13 +85,16 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ editMode = false, 
     mutationFn: async (draftData: any) => {
       console.log('Submitting draft data:', draftData);
       
-      // Format as required by server validation - we need to match createProductDraftSchema
-      // The server is validating against insertProductDraftSchema
+      // The server validation schema expects { step, draftData } where draftData contains the product draft data
+      // Looking at server logs, this is what's required by the validation schema
       const formattedData = {
-        ...draftData,
-        catalogId: draftData.catalogId || null,
-        supplierId: draftData.supplierId || null,
-        attributes: draftData.attributes || [],
+        step: 'basic-info', // Initial step
+        draftData: {
+          ...draftData,
+          catalogId: draftData.catalogId || 1, // Default catalog ID if not provided
+          supplierId: draftData.supplierId || null,
+          attributes: draftData.attributes || [],
+        }
       };
       
       console.log('Formatted data for API:', formattedData);
