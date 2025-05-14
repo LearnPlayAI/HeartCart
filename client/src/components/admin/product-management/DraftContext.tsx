@@ -1,221 +1,294 @@
 /**
  * Draft Context
  * 
- * Provides context for managing product draft state and operations
- * across the product management system.
+ * This component provides a context for managing product drafts,
+ * including creating, loading, and updating drafts.
  */
 
-import React, { createContext, ReactNode, useContext, useState, useEffect } from 'react';
-import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
-import { apiRequest } from '@/lib/queryClient';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { useLocation } from 'wouter';
+import { apiRequest } from '@/lib/queryClient';
+import { useParams, useLocation, useNavigate } from 'wouter';
 
-// Define the product draft interface
+// Define the draft type
 export interface ProductDraft {
-  id: number;
+  id?: number;
   name: string;
   slug: string;
-  description?: string;
+  description?: string | null;
+  shortDescription?: string | null;
   price?: number;
-  costPrice?: number;
-  status: 'draft' | 'published';
+  compareAtPrice?: number | null;
+  costPrice?: number | null;
+  sku?: string | null;
+  brand?: string | null;
   categoryId?: number | null;
+  category?: {
+    id: number;
+    name: string;
+    slug: string;
+  } | null;
+  onSale?: boolean;
+  salePrice?: number | null;
+  weight?: number | null;
+  dimensions?: string | null;
+  taxRatePercentage?: number | null;
   imageUrls?: string[];
-  mainImageUrl?: string;
-  metaTitle?: string;
-  metaDescription?: string;
-  keywords?: string;
-  createdAt: string;
-  updatedAt: string;
-  isActive?: boolean;
-  attributes?: any[];
+  mainImageIndex?: number | null;
+  metaTitle?: string | null;
+  metaDescription?: string | null;
+  metaKeywords?: string | null;
+  canonicalUrl?: string | null;
+  published?: boolean;
+  publishedProductId?: number | null;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
-// Define the context interface
+// Context interface
 interface DraftContextType {
-  drafts: ProductDraft[];
-  isLoading: boolean;
-  isCreating: boolean;
-  selectedDraftId: number | null;
-  currentDraft: ProductDraft | null;
-  createDraft: () => Promise<number>;
-  loadDraft: (id: number) => void;
-  publishDraft: (id: number) => Promise<boolean>;
-  discardDraft: (id: number) => Promise<boolean>;
-  refreshDrafts: () => void;
+  draft: ProductDraft | null;
+  loading: boolean;
+  error: string | null;
+  createDraft: () => Promise<ProductDraft | null>;
+  loadDraft: (draftId: number) => Promise<void>;
+  updateDraft: (updates: Partial<ProductDraft>) => Promise<void>;
+  saveDraft: () => Promise<void>;
+  publishDraft: () => Promise<void>;
+  deleteDraft: () => Promise<void>;
 }
 
-// Create the context
-const DraftContext = createContext<DraftContextType | null>(null);
+// Create context with default values
+const DraftContext = createContext<DraftContextType>({
+  draft: null,
+  loading: false,
+  error: null,
+  createDraft: async () => null,
+  loadDraft: async () => {},
+  updateDraft: async () => {},
+  saveDraft: async () => {},
+  publishDraft: async () => {},
+  deleteDraft: async () => {},
+});
 
-// Provider props interface
+// Context provider props
 interface DraftProviderProps {
   children: ReactNode;
+  initialDraftId?: number;
 }
 
 // Provider component
-export function DraftProvider({ children }: DraftProviderProps) {
+export function DraftProvider({ children, initialDraftId }: DraftProviderProps) {
+  const [draft, setDraft] = useState<ProductDraft | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [selectedDraftId, setSelectedDraftId] = useState<number | null>(null);
-  const [, navigate] = useLocation();
-
-  // Fetch all drafts
-  const { 
-    data: drafts = [], 
-    isLoading: isDraftsLoading,
-    refetch: refreshDrafts
-  } = useQuery({
-    queryKey: ['/api/product-drafts'],
-    queryFn: async () => {
-      const response = await apiRequest('/api/product-drafts');
-      return response;
+  const [, setLocation] = useLocation();
+  
+  // Load initial draft if ID is provided
+  useEffect(() => {
+    if (initialDraftId) {
+      loadDraft(initialDraftId).catch(err => {
+        console.error('Error loading initial draft:', err);
+        toast({
+          title: 'Error Loading Draft',
+          description: 'Could not load the product draft. Please try again.',
+          variant: 'destructive',
+        });
+      });
     }
-  });
-
-  // Fetch selected draft details
-  const { 
-    data: currentDraft, 
-    isLoading: isDraftLoading 
-  } = useQuery({
-    queryKey: [`/api/product-drafts/${selectedDraftId}`],
-    queryFn: async () => {
-      if (!selectedDraftId) return null;
-      const response = await apiRequest(`/api/product-drafts/${selectedDraftId}`);
-      return response;
-    },
-    enabled: !!selectedDraftId
-  });
-
+  }, [initialDraftId]);
+  
   // Create a new draft
-  const createDraftMutation = useMutation({
-    mutationFn: async () => {
+  const createDraft = async (): Promise<ProductDraft | null> => {
+    try {
+      setLoading(true);
+      setError(null);
+      
       const response = await apiRequest('/api/product-drafts', {
         method: 'POST',
-        data: {
+        body: JSON.stringify({
           name: 'New Product',
           slug: 'new-product',
-          status: 'draft'
-        }
+          description: '',
+          shortDescription: '',
+          price: 0,
+        }),
       });
-      return response;
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/product-drafts'] });
-      toast({
-        title: 'Draft Created',
-        description: 'New product draft has been created successfully.'
-      });
-      return data.id;
-    },
-    onError: (error: any) => {
-      toast({
-        title: 'Draft Creation Failed',
-        description: error.message || 'Failed to create a new draft.',
-        variant: 'destructive'
-      });
+      
+      if (response.success && response.data) {
+        setDraft(response.data);
+        return response.data;
+      } else {
+        throw new Error(response.message || 'Failed to create draft');
+      }
+    } catch (err) {
+      console.error('Create draft error:', err);
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return null;
+    } finally {
+      setLoading(false);
     }
-  });
-
-  // Publish a draft
-  const publishDraftMutation = useMutation({
-    mutationFn: async (draftId: number) => {
-      const response = await apiRequest(`/api/product-drafts/${draftId}/publish`, {
-        method: 'POST'
+  };
+  
+  // Load a draft by ID
+  const loadDraft = async (draftId: number): Promise<void> => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await apiRequest(`/api/product-drafts/${draftId}`);
+      
+      if (response.success && response.data) {
+        setDraft(response.data);
+      } else {
+        throw new Error(response.message || 'Failed to load draft');
+      }
+    } catch (err) {
+      console.error('Load draft error:', err);
+      setError(err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Update draft with partial data
+  const updateDraft = async (updates: Partial<ProductDraft>): Promise<void> => {
+    setDraft(prev => {
+      if (!prev) return null;
+      return { ...prev, ...updates };
+    });
+  };
+  
+  // Save the current draft to the server
+  const saveDraft = async (): Promise<void> => {
+    if (!draft || !draft.id) {
+      setError('No draft to save');
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      
+      const response = await apiRequest(`/api/product-drafts/${draft.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(draft),
       });
-      return response;
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/product-drafts'] });
-      if (data.productId) {
+      
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to save draft');
+      }
+      
+      // Update with any server-side changes
+      if (response.data) {
+        setDraft(response.data);
+      }
+    } catch (err) {
+      console.error('Save draft error:', err);
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Publish the draft as a live product
+  const publishDraft = async (): Promise<void> => {
+    if (!draft || !draft.id) {
+      setError('No draft to publish');
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      
+      const response = await apiRequest(`/api/product-drafts/${draft.id}/publish`, {
+        method: 'POST',
+      });
+      
+      if (response.success && response.data) {
+        setDraft(response.data);
+        
         toast({
-          title: 'Draft Published',
-          description: 'Product has been published successfully.'
+          title: 'Product Published',
+          description: 'The product has been published successfully.',
         });
-        // Navigate to the product edit page
-        navigate(`/admin/products/${data.productId}/edit`);
+        
+        // If there's a published product ID, redirect to the product
+        if (response.data.publishedProductId) {
+          setLocation(`/admin/products/${response.data.publishedProductId}`);
+        }
+      } else {
+        throw new Error(response.message || 'Failed to publish product');
       }
-      return true;
-    },
-    onError: (error: any) => {
+    } catch (err) {
+      console.error('Publish draft error:', err);
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      
       toast({
-        title: 'Publishing Failed',
-        description: error.message || 'Failed to publish the draft.',
-        variant: 'destructive'
+        title: 'Publish Error',
+        description: err instanceof Error ? err.message : 'Could not publish the product.',
+        variant: 'destructive',
       });
-      return false;
+    } finally {
+      setLoading(false);
     }
-  });
-
-  // Discard a draft
-  const discardDraftMutation = useMutation({
-    mutationFn: async (draftId: number) => {
-      const response = await apiRequest(`/api/product-drafts/${draftId}`, {
-        method: 'DELETE'
+  };
+  
+  // Delete the current draft
+  const deleteDraft = async (): Promise<void> => {
+    if (!draft || !draft.id) {
+      setError('No draft to delete');
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      
+      const response = await apiRequest(`/api/product-drafts/${draft.id}`, {
+        method: 'DELETE',
       });
-      return response;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/product-drafts'] });
-      if (selectedDraftId) {
-        setSelectedDraftId(null);
+      
+      if (response.success) {
+        setDraft(null);
+        
+        toast({
+          title: 'Draft Deleted',
+          description: 'The product draft has been deleted.',
+        });
+        
+        // Redirect to the products list
+        setLocation('/admin/product-management');
+      } else {
+        throw new Error(response.message || 'Failed to delete draft');
       }
+    } catch (err) {
+      console.error('Delete draft error:', err);
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      
       toast({
-        title: 'Draft Discarded',
-        description: 'Product draft has been discarded.'
+        title: 'Delete Error',
+        description: err instanceof Error ? err.message : 'Could not delete the draft.',
+        variant: 'destructive',
       });
-      return true;
-    },
-    onError: (error: any) => {
-      toast({
-        title: 'Discard Failed',
-        description: error.message || 'Failed to discard the draft.',
-        variant: 'destructive'
-      });
-      return false;
+    } finally {
+      setLoading(false);
     }
-  });
-
-  // Load a draft
-  const loadDraft = (id: number) => {
-    setSelectedDraftId(id);
   };
-
-  // Create a new draft and return its ID
-  const createDraft = async (): Promise<number> => {
-    const result = await createDraftMutation.mutateAsync();
-    if (result && result.id) {
-      setSelectedDraftId(result.id);
-      return result.id;
-    }
-    return -1;
-  };
-
-  // Publish a draft
-  const publishDraft = async (id: number): Promise<boolean> => {
-    return await publishDraftMutation.mutateAsync(id);
-  };
-
-  // Discard a draft
-  const discardDraft = async (id: number): Promise<boolean> => {
-    return await discardDraftMutation.mutateAsync(id);
-  };
-
+  
   // Context value
   const contextValue: DraftContextType = {
-    drafts,
-    isLoading: isDraftsLoading || isDraftLoading,
-    isCreating: createDraftMutation.isPending,
-    selectedDraftId,
-    currentDraft,
+    draft,
+    loading,
+    error,
     createDraft,
     loadDraft,
+    updateDraft,
+    saveDraft,
     publishDraft,
-    discardDraft,
-    refreshDrafts
+    deleteDraft,
   };
-
+  
   return (
     <DraftContext.Provider value={contextValue}>
       {children}
@@ -223,11 +296,13 @@ export function DraftProvider({ children }: DraftProviderProps) {
   );
 }
 
-// Hook to use the draft context
-export const useDraft = () => {
+// Custom hook to use the draft context
+export function useDraftContext() {
   const context = useContext(DraftContext);
+  
   if (!context) {
-    throw new Error('useDraft must be used within a DraftProvider');
+    throw new Error('useDraftContext must be used within a DraftProvider');
   }
+  
   return context;
-};
+}

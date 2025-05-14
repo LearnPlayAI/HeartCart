@@ -1,331 +1,482 @@
 /**
- * Images Step Component
+ * Images Step
  * 
- * This component manages the product image uploads, reordering, and selection.
- * It integrates directly with the Replit Object Store via the draft context.
+ * This component handles the product image management,
+ * including uploading, reordering, and selecting a main image.
  */
 
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@hello-pangea/dnd';
-import { SortableContext, horizontalListSortingStrategy, useSortable, arrayMove } from '@hello-pangea/dnd';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useDraft } from '../DraftContext';
+import { Card, CardContent } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 import { 
-  Loader2, 
-  Image as ImageIcon, 
-  Upload, 
-  X, 
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { 
+  Image,
+  Upload,
+  X,
+  ArrowUp,
   Star,
-  AlertCircle,
-  MoveHorizontal,
-  Trash2
+  Loader2,
+  Info
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
+import { useDraftContext } from '../DraftContext';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
 
-// Define maximum allowed file size (5MB)
-const MAX_FILE_SIZE = 5 * 1024 * 1024;
-
-// Sortable image item component
-interface SortableImageProps {
-  id: string;
-  url: string;
-  index: number;
-  isMain: boolean;
-  onDelete: () => void;
-  onSetAsMain: () => void;
+// Component props
+interface ImagesStepProps {
+  onNext: () => void;
 }
 
-const SortableImage: React.FC<SortableImageProps> = ({ 
-  id, 
-  url, 
-  index, 
-  isMain, 
-  onDelete, 
-  onSetAsMain 
-}) => {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-  } = useSortable({ id });
+export function ImagesStep({ onNext }: ImagesStepProps) {
+  const { toast } = useToast();
+  const { draft, updateDraft, saveDraft, loading } = useDraftContext();
+  const queryClient = useQueryClient();
+  const [images, setImages] = useState<string[]>([]);
+  const [mainImageIndex, setMainImageIndex] = useState<number | null>(null);
+  const [uploadingFiles, setUploadingFiles] = useState<File[]>([]);
+  const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
+  const [isProcessing, setIsProcessing] = useState(false);
   
-  const style = {
-    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
-    transition,
-  };
-  
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={cn(
-        "relative group rounded-md overflow-hidden border border-border",
-        "w-[150px] h-[150px] flex items-center justify-center bg-muted",
-        isMain && "ring-2 ring-primary"
-      )}
-      {...attributes}
-      {...listeners}
-    >
-      <img 
-        src={url} 
-        alt={`Product image ${index + 1}`} 
-        className="w-full h-full object-cover" 
-      />
-      
-      {/* Overlay with actions */}
-      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center">
-        <div className="flex gap-1">
-          <Button 
-            variant="ghost" 
-            size="icon"
-            className="h-8 w-8 text-white hover:bg-white/20"
-            onClick={onDelete}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-          
-          {!isMain && (
-            <Button 
-              variant="ghost" 
-              size="icon"
-              className="h-8 w-8 text-white hover:bg-white/20"
-              onClick={onSetAsMain}
-            >
-              <Star className="h-4 w-4" />
-            </Button>
-          )}
-          
-          <Button 
-            variant="ghost" 
-            size="icon"
-            className="h-8 w-8 text-white hover:bg-white/20 cursor-move"
-          >
-            <MoveHorizontal className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-      
-      {/* Main indicator */}
-      {isMain && (
-        <div className="absolute top-2 right-2 bg-primary text-primary-foreground rounded-full p-1">
-          <Star className="h-3 w-3" />
-        </div>
-      )}
-    </div>
-  );
-};
+  // Initialize component state from draft
+  useEffect(() => {
+    if (draft) {
+      setImages(draft.imageUrls || []);
+      setMainImageIndex(draft.mainImageIndex !== undefined ? draft.mainImageIndex : null);
+    }
+  }, [draft]);
 
-const ImagesStep: React.FC = () => {
-  const { draft, draftLoading, uploadImages, removeImage, reorderImages, setMainImage } = useDraft();
-  const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  
-  // Setup DnD sensors
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor)
-  );
-  
-  // Setup dropzone for file uploads
-  const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    setError(null);
-    
-    // Check if files are valid
-    const invalidFile = acceptedFiles.find(file => !file.type.startsWith('image/'));
-    if (invalidFile) {
-      setError('Only image files are allowed.');
-      return;
-    }
-    
-    // Check file sizes
-    const oversizedFile = acceptedFiles.find(file => file.size > MAX_FILE_SIZE);
-    if (oversizedFile) {
-      setError(`File size exceeds 5MB limit: ${oversizedFile.name}`);
-      return;
-    }
-    
-    try {
-      setUploading(true);
-      await uploadImages(acceptedFiles);
-    } catch (err) {
-      console.error('Error uploading images:', err);
-      setError('Failed to upload images. Please try again.');
-    } finally {
-      setUploading(false);
-    }
-  }, [uploadImages]);
-  
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({ 
-    onDrop,
-    accept: {
-      'image/*': ['.jpeg', '.jpg', '.png', '.gif', '.webp']
+  // Upload mutation
+  const uploadMutation = useMutation({
+    mutationFn: async (files: File[]) => {
+      const formData = new FormData();
+      if (!draft?.id) throw new Error('No draft ID found');
+      
+      formData.append('draftId', draft.id.toString());
+      files.forEach(file => {
+        formData.append('images', file);
+      });
+      
+      return apiRequest('/api/product-drafts/images/upload', {
+        method: 'POST',
+        body: formData,
+      });
     },
-    maxSize: MAX_FILE_SIZE
+    onSuccess: (data) => {
+      if (data.success) {
+        const newImageUrls = [...images, ...data.data.imageUrls];
+        setImages(newImageUrls);
+        
+        updateDraft({
+          imageUrls: newImageUrls,
+          mainImageIndex: mainImageIndex === null && newImageUrls.length > 0 ? 0 : mainImageIndex,
+        });
+        
+        saveDraft();
+        
+        // Update main image if this is the first upload
+        if (mainImageIndex === null && newImageUrls.length > 0) {
+          setMainImageIndex(0);
+        }
+        
+        setUploadingFiles([]);
+        setUploadProgress({});
+        
+        toast({
+          title: 'Upload Complete',
+          description: `Successfully uploaded ${data.data.imageUrls.length} image(s)`,
+        });
+      }
+    },
+    onError: (error) => {
+      console.error('Upload error:', error);
+      toast({
+        title: 'Upload Failed',
+        description: 'There was a problem uploading your images. Please try again.',
+        variant: 'destructive',
+      });
+      setUploadingFiles([]);
+      setUploadProgress({});
+    },
   });
   
-  // Handle reordering
-  const handleDragEnd = async (event: any) => {
-    const { active, over } = event;
-    
-    if (active.id !== over.id) {
-      const oldIndex = draft?.imageUrls?.findIndex((_, i) => `image-${i}` === active.id) ?? -1;
-      const newIndex = draft?.imageUrls?.findIndex((_, i) => `image-${i}` === over.id) ?? -1;
+  // Delete image mutation
+  const deleteImageMutation = useMutation({
+    mutationFn: async (index: number) => {
+      if (!draft?.id) throw new Error('No draft ID found');
       
-      if (oldIndex >= 0 && newIndex >= 0) {
-        const newOrder = Array.from({ length: draft?.imageUrls?.length || 0 }, (_, i) => i);
-        const reordered = arrayMove(newOrder, oldIndex, newIndex);
-        await reorderImages(reordered);
+      return apiRequest(`/api/product-drafts/${draft.id}/images/${index}`, {
+        method: 'DELETE',
+      });
+    },
+    onSuccess: (_, index) => {
+      const newImages = [...images];
+      newImages.splice(index, 1);
+      setImages(newImages);
+      
+      // Update main image if needed
+      if (mainImageIndex === index) {
+        // If deleted main image, set the first image as main or null if no images
+        const newMainIndex = newImages.length > 0 ? 0 : null;
+        setMainImageIndex(newMainIndex);
+        updateDraft({
+          imageUrls: newImages,
+          mainImageIndex: newMainIndex,
+        });
+      } else if (mainImageIndex !== null && mainImageIndex > index) {
+        // Adjust main image index if it comes after the deleted image
+        const newMainIndex = mainImageIndex - 1;
+        setMainImageIndex(newMainIndex);
+        updateDraft({
+          imageUrls: newImages,
+          mainImageIndex: newMainIndex,
+        });
+      } else {
+        // No change to main image index needed
+        updateDraft({
+          imageUrls: newImages,
+        });
       }
+      
+      saveDraft();
+      
+      toast({
+        title: 'Image Removed',
+        description: 'The image has been removed from the product.',
+      });
+    },
+    onError: (error) => {
+      console.error('Delete error:', error);
+      toast({
+        title: 'Removal Failed',
+        description: 'There was a problem removing the image. Please try again.',
+        variant: 'destructive',
+      });
+    },
+  });
+  
+  // Reorder images mutation
+  const reorderImageMutation = useMutation({
+    mutationFn: async ({ index, direction }: { index: number; direction: 'up' | 'down' }) => {
+      if (!draft?.id) throw new Error('No draft ID found');
+      
+      return apiRequest(`/api/product-drafts/${draft.id}/images/reorder`, {
+        method: 'POST',
+        body: JSON.stringify({
+          fromIndex: index,
+          toIndex: direction === 'up' ? index - 1 : index + 1,
+        }),
+      });
+    },
+    onSuccess: (_, { index, direction }) => {
+      const newImages = [...images];
+      const newIndex = direction === 'up' ? index - 1 : index + 1;
+      
+      // Swap images
+      [newImages[index], newImages[newIndex]] = [newImages[newIndex], newImages[index]];
+      setImages(newImages);
+      
+      // Update main image index if needed
+      let newMainIndex = mainImageIndex;
+      if (mainImageIndex === index) {
+        newMainIndex = newIndex;
+      } else if (mainImageIndex === newIndex) {
+        newMainIndex = index;
+      }
+      
+      setMainImageIndex(newMainIndex);
+      updateDraft({
+        imageUrls: newImages,
+        mainImageIndex: newMainIndex,
+      });
+      
+      saveDraft();
+    },
+    onError: (error) => {
+      console.error('Reorder error:', error);
+      toast({
+        title: 'Reorder Failed',
+        description: 'There was a problem reordering the images. Please try again.',
+        variant: 'destructive',
+      });
+    },
+  });
+  
+  // Set main image mutation
+  const setMainImageMutation = useMutation({
+    mutationFn: async (index: number) => {
+      if (!draft?.id) throw new Error('No draft ID found');
+      
+      return apiRequest(`/api/product-drafts/${draft.id}/images/main`, {
+        method: 'POST',
+        body: JSON.stringify({
+          mainImageIndex: index,
+        }),
+      });
+    },
+    onSuccess: (_, index) => {
+      setMainImageIndex(index);
+      updateDraft({
+        mainImageIndex: index,
+      });
+      
+      saveDraft();
+      
+      toast({
+        title: 'Main Image Set',
+        description: 'The main product image has been updated.',
+      });
+    },
+    onError: (error) => {
+      console.error('Set main image error:', error);
+      toast({
+        title: 'Update Failed',
+        description: 'There was a problem setting the main image. Please try again.',
+        variant: 'destructive',
+      });
+    },
+  });
+  
+  // Handle file drop
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    // Filter for only image files
+    const imageFiles = acceptedFiles.filter(file => file.type.startsWith('image/'));
+    
+    if (imageFiles.length === 0) {
+      toast({
+        title: 'Invalid Files',
+        description: 'Please upload only image files (JPEG, PNG, etc.).',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    setUploadingFiles(imageFiles);
+    setIsProcessing(true);
+    
+    // Initialize progress for each file
+    const initialProgress: { [key: string]: number } = {};
+    imageFiles.forEach(file => {
+      initialProgress[file.name] = 0;
+    });
+    setUploadProgress(initialProgress);
+    
+    // Start upload
+    uploadMutation.mutate(imageFiles);
+  }, [uploadMutation, toast, images]);
+  
+  // Configure dropzone
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      'image/*': ['.jpeg', '.jpg', '.png', '.webp'],
+    },
+    disabled: loading || uploadMutation.isPending,
+  });
+  
+  // Handle delete image
+  const handleDeleteImage = (index: number) => {
+    if (window.confirm('Are you sure you want to remove this image?')) {
+      deleteImageMutation.mutate(index);
     }
   };
   
-  // Handle image deletion
-  const handleDeleteImage = async (index: number) => {
-    try {
-      await removeImage(index);
-    } catch (err) {
-      console.error('Error removing image:', err);
-      setError('Failed to remove image. Please try again.');
+  // Handle reorder image
+  const handleReorderImage = (index: number, direction: 'up' | 'down') => {
+    if (
+      (direction === 'up' && index > 0) || 
+      (direction === 'down' && index < images.length - 1)
+    ) {
+      reorderImageMutation.mutate({ index, direction });
     }
   };
   
-  // Handle setting main image
-  const handleSetMainImage = async (index: number) => {
-    try {
-      await setMainImage(index);
-    } catch (err) {
-      console.error('Error setting main image:', err);
-      setError('Failed to set main image. Please try again.');
+  // Handle set main image
+  const handleSetMainImage = (index: number) => {
+    if (mainImageIndex !== index) {
+      setMainImageMutation.mutate(index);
     }
   };
   
-  if (draftLoading) {
-    return (
-      <div className="flex items-center justify-center h-40">
-        <Loader2 className="h-6 w-6 animate-spin" />
-      </div>
-    );
-  }
-  
-  const imageUrls = draft?.imageUrls || [];
-  const mainImageIndex = draft?.mainImageIndex || 0;
+  // Handle continue to next step
+  const handleContinue = async () => {
+    if (images.length === 0) {
+      if (window.confirm('Are you sure you want to continue without adding any product images?')) {
+        onNext();
+      }
+    } else {
+      onNext();
+    }
+  };
   
   return (
     <div className="space-y-6">
-      {/* Image drop zone */}
-      <Card className="border border-dashed">
-        <CardContent className="p-6">
+      <div>
+        <h2 className="text-2xl font-bold tracking-tight">Product Images</h2>
+        <p className="text-muted-foreground">
+          Upload and manage product images. The first image or starred image will be the main product image.
+        </p>
+      </div>
+      
+      <Separator className="my-6" />
+      
+      <Card>
+        <CardContent className="pt-6">
           <div
             {...getRootProps()}
-            className={cn(
-              "border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors",
-              isDragActive 
-                ? "border-primary bg-primary/10" 
-                : "border-input hover:border-primary/50 hover:bg-accent"
-            )}
+            className={`border-2 border-dashed rounded-md p-10 text-center cursor-pointer transition-colors ${
+              isDragActive ? 'border-primary bg-primary/5' : 'border-muted-foreground/25 hover:border-primary/50'
+            }`}
           >
             <input {...getInputProps()} />
-            
-            <div className="flex flex-col items-center justify-center space-y-2 py-4">
-              <Upload className="h-10 w-10 text-muted-foreground mb-2" />
-              
-              <h3 className="text-lg font-medium">
-                {isDragActive ? 'Drop images here' : 'Drag and drop product images'}
-              </h3>
-              
-              <p className="text-sm text-muted-foreground max-w-md">
-                Upload up to 10 images in JPG, PNG, or WebP format. 
-                Maximum file size: 5MB. The first image will be the main product image.
-              </p>
-              
-              <Button 
-                type="button" 
-                variant="secondary" 
-                className="mt-4"
-                disabled={uploading}
-              >
-                {uploading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Uploading...
-                  </>
-                ) : (
-                  <>
-                    <ImageIcon className="mr-2 h-4 w-4" />
-                    Select Images
-                  </>
-                )}
-              </Button>
+            <div className="flex flex-col items-center gap-3">
+              <Upload className="h-10 w-10 text-muted-foreground" />
+              <div className="flex flex-col">
+                <span className="font-medium">Drag & drop images here, or click to browse</span>
+                <span className="text-sm text-muted-foreground">
+                  Supports: JPEG, PNG, WebP (max 5MB each)
+                </span>
+              </div>
             </div>
           </div>
+          
+          {/* Upload progress */}
+          {uploadingFiles.length > 0 && (
+            <div className="mt-4 space-y-2">
+              <h3 className="font-medium">Uploading {uploadingFiles.length} file(s)...</h3>
+              {uploadingFiles.map((file, index) => (
+                <div key={`${file.name}-${index}`} className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="text-sm truncate flex-1">{file.name}</span>
+                  <span className="text-sm">{uploadProgress[file.name] || 0}%</span>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          {/* Image gallery */}
+          {images.length > 0 && (
+            <div className="mt-6">
+              <h3 className="font-medium mb-3">Product Images</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                {images.map((imageUrl, index) => (
+                  <div 
+                    key={index} 
+                    className={`relative group border rounded-md overflow-hidden ${
+                      mainImageIndex === index ? 'ring-2 ring-primary' : ''
+                    }`}
+                  >
+                    <div className="relative aspect-square">
+                      <img 
+                        src={imageUrl} 
+                        alt={`Product ${index + 1}`} 
+                        className="object-cover w-full h-full"
+                      />
+                      
+                      {/* Image is main indicator */}
+                      {mainImageIndex === index && (
+                        <div className="absolute top-2 left-2 bg-primary text-primary-foreground rounded-full p-1">
+                          <Star className="h-4 w-4" />
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Image actions */}
+                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex gap-2">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="secondary"
+                                size="icon"
+                                onClick={() => handleSetMainImage(index)}
+                                disabled={mainImageIndex === index}
+                              >
+                                <Star className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Set as main image</p>
+                            </TooltipContent>
+                          </Tooltip>
+                          
+                          {index > 0 && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="secondary"
+                                  size="icon"
+                                  onClick={() => handleReorderImage(index, 'up')}
+                                >
+                                  <ArrowUp className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Move up</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
+                          
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="destructive"
+                                size="icon"
+                                onClick={() => handleDeleteImage(index)}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Remove image</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {images.length === 0 && !uploadingFiles.length && (
+            <div className="mt-6 flex flex-col items-center text-center p-6 border border-dashed rounded-md">
+              <Image className="h-10 w-10 text-muted-foreground mb-2" />
+              <h3 className="font-medium">No images yet</h3>
+              <p className="text-sm text-muted-foreground">
+                Upload images to showcase your product to customers
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
       
-      {/* Error message */}
-      {error && (
-        <div className="bg-destructive/10 text-destructive rounded-md p-3 flex items-start">
-          <AlertCircle className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5" />
-          <span>{error}</span>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center text-sm text-muted-foreground">
+          <Info className="h-4 w-4 mr-1" />
+          {images.length === 0 ? (
+            <span>Your product will be created without images</span>
+          ) : (
+            <span>{images.length} image(s) added</span>
+          )}
         </div>
-      )}
-      
-      {/* Image preview and sorting */}
-      {imageUrls.length > 0 && (
-        <div className="space-y-4">
-          <h3 className="text-lg font-medium">Product Images</h3>
-          <p className="text-sm text-muted-foreground">
-            Drag to reorder images. The first image will be the main product image shown in listings.
-          </p>
-          
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
-          >
-            <SortableContext
-              items={imageUrls.map((_, i) => `image-${i}`)}
-              strategy={horizontalListSortingStrategy}
-            >
-              <div className="flex flex-wrap gap-4 mt-4">
-                {imageUrls.map((url, index) => (
-                  <SortableImage
-                    key={`image-${index}`}
-                    id={`image-${index}`}
-                    url={url}
-                    index={index}
-                    isMain={index === mainImageIndex}
-                    onDelete={() => handleDeleteImage(index)}
-                    onSetAsMain={() => handleSetMainImage(index)}
-                  />
-                ))}
-              </div>
-            </SortableContext>
-          </DndContext>
-          
-          <div className="mt-4 text-sm text-muted-foreground">
-            <p>
-              <Star className="h-3 w-3 inline-block mr-1" />
-              The image with the star is the main product image.
-            </p>
-          </div>
-        </div>
-      )}
-      
-      {imageUrls.length === 0 && !uploading && (
-        <div className="text-center p-6 bg-muted rounded-md">
-          <ImageIcon className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
-          <h3 className="text-lg font-medium">No Images Yet</h3>
-          <p className="text-sm text-muted-foreground">
-            Add product images to enhance your listing. Products with clear images sell better.
-          </p>
-        </div>
-      )}
+        
+        <Button
+          onClick={handleContinue}
+          disabled={loading || uploadMutation.isPending || deleteImageMutation.isPending}
+        >
+          Continue
+        </Button>
+      </div>
     </div>
   );
-};
-
-export default ImagesStep;
+}

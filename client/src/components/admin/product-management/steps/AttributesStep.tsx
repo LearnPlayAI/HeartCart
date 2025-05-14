@@ -1,35 +1,16 @@
 /**
- * Attributes Step Component
+ * Attributes Step
  * 
- * This component manages product attributes, integrates with the central attribute system,
- * and allows creating custom attribute options/values during product creation/editing.
+ * This component handles the product attributes and variations,
+ * allowing users to select attributes from the centralized attribute system
+ * and create product-specific attribute values.
  */
 
-import React, { useEffect, useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { 
-  PlusCircle, 
-  Loader2, 
-  X, 
-  ChevronDown, 
-  Check,
-  Filter,
-  PlusSquare,
-  Tag
-} from 'lucide-react';
-import { 
-  Card, 
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardFooter
-} from '@/components/ui/card';
+import { useState, useEffect } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Card, CardContent } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 import {
   Select,
   SelectContent,
@@ -37,6 +18,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
+import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import {
   Dialog,
   DialogContent,
@@ -46,442 +45,526 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { Checkbox } from '@/components/ui/checkbox';
-import { useDraft } from '../DraftContext';
-import { debounce, cn } from '@/lib/utils';
+import { 
+  Plus, 
+  Trash2, 
+  Info, 
+  RefreshCw, 
+  Loader2,
+  AlertTriangle
+} from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { useDraftContext } from '../DraftContext';
+import { apiRequest } from '@/lib/queryClient';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
-// Types for attributes
-interface AttributeOption {
+// Type definitions for attributes
+type Attribute = {
+  id: number;
+  name: string;
+  displayName: string;
+  description: string | null;
+  attributeType: string;
+  isFilterable: boolean;
+  isComparable: boolean;
+  isSwatch: boolean;
+  isRequired: boolean;
+  displayInProductSummary: boolean;
+  sortOrder: number;
+  options?: AttributeOption[];
+};
+
+type AttributeOption = {
   id: number;
   attributeId: number;
   value: string;
-  displayOrder?: number;
-}
+  displayValue: string;
+  sortOrder: number;
+  hexColor?: string | null;
+};
 
-interface Attribute {
-  id: number;
-  name: string;
-  description?: string;
-  options: AttributeOption[];
-}
-
-interface ProductAttribute {
+type ProductAttribute = {
   attributeId: number;
-  optionIds: number[];
-  isCustomValue?: boolean;
-  customValue?: string;
-  isRequired?: boolean;
+  attribute: {
+    id: number;
+    name: string;
+    displayName: string;
+    attributeType: string;
+  };
+  values: ProductAttributeValue[];
+};
+
+type ProductAttributeValue = {
+  id?: number;
+  value: string;
+  displayValue: string;
+  attributeOptionId?: number | null;
+  hexColor?: string | null;
+  sortOrder: number;
+};
+
+// Component props
+interface AttributesStepProps {
+  onNext: () => void;
 }
 
-const AttributesStep: React.FC = () => {
-  const { draft, draftLoading, updateDraftStep } = useDraft();
-  const queryClient = useQueryClient();
-  
-  // State for selected attributes
+export function AttributesStep({ onNext }: AttributesStepProps) {
+  const { toast } = useToast();
+  const { draft, updateDraft, saveDraft, loading } = useDraftContext();
+  const [saving, setSaving] = useState(false);
+  const [selectedAttributes, setSelectedAttributes] = useState<number[]>([]);
   const [productAttributes, setProductAttributes] = useState<ProductAttribute[]>([]);
-  const [newCustomOptionValue, setNewCustomOptionValue] = useState('');
-  const [newCustomOptionAttributeId, setNewCustomOptionAttributeId] = useState<number | null>(null);
-  const [isAddingCustomOption, setIsAddingCustomOption] = useState(false);
+  const [newAttributeId, setNewAttributeId] = useState<number | null>(null);
+  const [newCustomValue, setNewCustomValue] = useState<string>('');
+  const [newCustomDisplayValue, setNewCustomDisplayValue] = useState<string>('');
+  const [activeAttributeId, setActiveAttributeId] = useState<number | null>(null);
   
-  // Fetch all available attributes
+  // Fetch all available attributes from the system
   const { data: attributes, isLoading: attributesLoading } = useQuery({
     queryKey: ['/api/attributes'],
-    queryFn: async () => {
-      const response = await fetch('/api/attributes');
-      if (!response.ok) {
-        throw new Error('Failed to fetch attributes');
-      }
-      const data = await response.json();
-      return data.success ? data.data : [];
-    },
+    enabled: true,
   });
   
-  // Mutation for creating a custom attribute option
-  const { mutateAsync: createCustomOption, isPending: isCreatingCustomOption } = useMutation({
-    mutationFn: async ({ attributeId, value }: { attributeId: number, value: string }) => {
-      const response = await fetch(`/api/attributes/${attributeId}/options`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ value }),
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to create custom option');
-      }
-      
-      const data = await response.json();
-      return data.success ? data.data : null;
-    },
-    onSuccess: (newOption) => {
-      if (newOption) {
-        // Invalidate the attributes query to refetch with the new option
-        queryClient.invalidateQueries({ queryKey: ['/api/attributes'] });
-        
-        // Add the new option to the selected attribute's options
-        const updatedAttributes = productAttributes.map(attr => {
-          if (attr.attributeId === newOption.attributeId) {
-            return {
-              ...attr,
-              optionIds: [...attr.optionIds, newOption.id],
-            };
-          }
-          return attr;
-        });
-        
-        setProductAttributes(updatedAttributes);
-        setNewCustomOptionValue('');
-        setNewCustomOptionAttributeId(null);
-        setIsAddingCustomOption(false);
-      }
-    },
+  // Fetch product attributes if draft exists
+  const { data: draftAttributes, isLoading: draftAttributesLoading, refetch: refetchDraftAttributes } = useQuery({
+    queryKey: ['/api/product-drafts/attributes', draft?.id],
+    enabled: !!draft?.id,
   });
   
-  // Initialize product attributes from draft data
+  // Load product attributes from draft when available
   useEffect(() => {
-    if (draft?.attributes && !draftLoading) {
-      setProductAttributes(draft.attributes as ProductAttribute[]);
+    if (draftAttributes?.success && draftAttributes.data) {
+      setProductAttributes(draftAttributes.data);
+      
+      // Extract selected attribute IDs
+      const attributeIds = draftAttributes.data.map((attr: ProductAttribute) => attr.attributeId);
+      setSelectedAttributes(attributeIds);
     }
-  }, [draft, draftLoading]);
+  }, [draftAttributes]);
   
-  // Save product attributes to draft
-  const saveAttributes = debounce(async (attributes: ProductAttribute[]) => {
-    await updateDraftStep('attributes', { attributes });
-  }, 500);
-  
-  // Handle adding a new attribute
-  const handleAddAttribute = (attributeId: number) => {
-    // Check if attribute is already added
-    if (productAttributes.some(attr => attr.attributeId === attributeId)) {
-      return;
-    }
-    
-    // Add attribute with empty option IDs
-    const newAttributes = [
-      ...productAttributes,
-      { attributeId, optionIds: [], isRequired: false }
-    ];
-    
-    setProductAttributes(newAttributes);
-    saveAttributes(newAttributes);
-  };
-  
-  // Handle removing an attribute
-  const handleRemoveAttribute = (attributeId: number) => {
-    const newAttributes = productAttributes.filter(
-      attr => attr.attributeId !== attributeId
-    );
-    
-    setProductAttributes(newAttributes);
-    saveAttributes(newAttributes);
-  };
-  
-  // Handle toggling an option for an attribute
-  const handleToggleOption = (attributeId: number, optionId: number) => {
-    const newAttributes = productAttributes.map(attr => {
-      if (attr.attributeId === attributeId) {
-        // If option is already selected, remove it
-        if (attr.optionIds.includes(optionId)) {
-          return {
-            ...attr,
-            optionIds: attr.optionIds.filter(id => id !== optionId),
-          };
-        }
-        // Otherwise add it
-        return {
-          ...attr,
-          optionIds: [...attr.optionIds, optionId],
-        };
-      }
-      return attr;
-    });
-    
-    setProductAttributes(newAttributes);
-    saveAttributes(newAttributes);
-  };
-  
-  // Handle toggling whether an attribute is required
-  const handleToggleRequired = (attributeId: number) => {
-    const newAttributes = productAttributes.map(attr => {
-      if (attr.attributeId === attributeId) {
-        return {
-          ...attr,
-          isRequired: !attr.isRequired,
-        };
-      }
-      return attr;
-    });
-    
-    setProductAttributes(newAttributes);
-    saveAttributes(newAttributes);
-  };
-  
-  // Handle creating a custom option
-  const handleCreateCustomOption = async () => {
-    if (!newCustomOptionAttributeId || !newCustomOptionValue.trim()) {
-      return;
-    }
-    
-    try {
-      await createCustomOption({ 
-        attributeId: newCustomOptionAttributeId, 
-        value: newCustomOptionValue.trim() 
+  // Add attribute mutation
+  const addAttributeMutation = useMutation({
+    mutationFn: async (attributeId: number) => {
+      if (!draft?.id) throw new Error('No draft ID found');
+      
+      return apiRequest(`/api/product-drafts/${draft.id}/attributes`, {
+        method: 'POST',
+        body: JSON.stringify({
+          attributeId,
+        }),
       });
-    } catch (error) {
-      console.error('Failed to create custom option:', error);
+    },
+    onSuccess: () => {
+      refetchDraftAttributes();
+      setNewAttributeId(null);
+      toast({
+        title: 'Attribute Added',
+        description: 'The attribute has been added to the product.',
+      });
+    },
+    onError: (error) => {
+      console.error('Add attribute error:', error);
+      toast({
+        title: 'Error Adding Attribute',
+        description: 'There was a problem adding the attribute. Please try again.',
+        variant: 'destructive',
+      });
+    },
+  });
+  
+  // Remove attribute mutation
+  const removeAttributeMutation = useMutation({
+    mutationFn: async (attributeId: number) => {
+      if (!draft?.id) throw new Error('No draft ID found');
+      
+      return apiRequest(`/api/product-drafts/${draft.id}/attributes/${attributeId}`, {
+        method: 'DELETE',
+      });
+    },
+    onSuccess: (_, attributeId) => {
+      // Update local state
+      setSelectedAttributes(prev => prev.filter(id => id !== attributeId));
+      setProductAttributes(prev => prev.filter(attr => attr.attributeId !== attributeId));
+      
+      toast({
+        title: 'Attribute Removed',
+        description: 'The attribute has been removed from the product.',
+      });
+    },
+    onError: (error) => {
+      console.error('Remove attribute error:', error);
+      toast({
+        title: 'Error Removing Attribute',
+        description: 'There was a problem removing the attribute. Please try again.',
+        variant: 'destructive',
+      });
+    },
+  });
+  
+  // Add attribute value mutation
+  const addAttributeValueMutation = useMutation({
+    mutationFn: async ({ 
+      attributeId, 
+      value, 
+      displayValue, 
+      attributeOptionId = null 
+    }: { 
+      attributeId: number;
+      value: string;
+      displayValue: string;
+      attributeOptionId?: number | null;
+    }) => {
+      if (!draft?.id) throw new Error('No draft ID found');
+      
+      return apiRequest(`/api/product-drafts/${draft.id}/attributes/${attributeId}/values`, {
+        method: 'POST',
+        body: JSON.stringify({
+          value,
+          displayValue,
+          attributeOptionId,
+        }),
+      });
+    },
+    onSuccess: () => {
+      refetchDraftAttributes();
+      setNewCustomValue('');
+      setNewCustomDisplayValue('');
+      
+      toast({
+        title: 'Value Added',
+        description: 'The attribute value has been added to the product.',
+      });
+    },
+    onError: (error) => {
+      console.error('Add attribute value error:', error);
+      toast({
+        title: 'Error Adding Value',
+        description: 'There was a problem adding the attribute value. Please try again.',
+        variant: 'destructive',
+      });
+    },
+  });
+  
+  // Remove attribute value mutation
+  const removeAttributeValueMutation = useMutation({
+    mutationFn: async ({ 
+      attributeId, 
+      valueId 
+    }: { 
+      attributeId: number;
+      valueId: number;
+    }) => {
+      if (!draft?.id) throw new Error('No draft ID found');
+      
+      return apiRequest(`/api/product-drafts/${draft.id}/attributes/${attributeId}/values/${valueId}`, {
+        method: 'DELETE',
+      });
+    },
+    onSuccess: () => {
+      refetchDraftAttributes();
+      
+      toast({
+        title: 'Value Removed',
+        description: 'The attribute value has been removed from the product.',
+      });
+    },
+    onError: (error) => {
+      console.error('Remove attribute value error:', error);
+      toast({
+        title: 'Error Removing Value',
+        description: 'There was a problem removing the attribute value. Please try again.',
+        variant: 'destructive',
+      });
+    },
+  });
+  
+  // Handle attribute selection
+  const handleAddAttribute = () => {
+    if (newAttributeId) {
+      addAttributeMutation.mutate(newAttributeId);
     }
   };
   
-  // Get attribute by ID
-  const getAttributeById = (id: number): Attribute | undefined => {
-    return attributes?.find((attr: Attribute) => attr.id === id);
+  // Handle attribute removal
+  const handleRemoveAttribute = (attributeId: number) => {
+    if (window.confirm('Are you sure you want to remove this attribute? All associated values will be removed.')) {
+      removeAttributeMutation.mutate(attributeId);
+    }
   };
   
-  // Check if an attribute has any selected options
-  const hasSelectedOptions = (attributeId: number): boolean => {
-    const attr = productAttributes.find(a => a.attributeId === attributeId);
-    return attr ? attr.optionIds.length > 0 : false;
+  // Handle attribute value addition from existing options
+  const handleAddAttributeValueFromOption = (attributeId: number, option: AttributeOption) => {
+    addAttributeValueMutation.mutate({
+      attributeId,
+      value: option.value,
+      displayValue: option.displayValue,
+      attributeOptionId: option.id,
+    });
   };
   
-  // Get selected options for an attribute
-  const getSelectedOptions = (attributeId: number): number[] => {
-    const attr = productAttributes.find(a => a.attributeId === attributeId);
-    return attr ? attr.optionIds : [];
+  // Handle custom attribute value addition
+  const handleAddCustomAttributeValue = (attributeId: number) => {
+    if (!newCustomValue || !newCustomDisplayValue) {
+      toast({
+        title: 'Missing Values',
+        description: 'Please provide both value and display value.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    addAttributeValueMutation.mutate({
+      attributeId,
+      value: newCustomValue,
+      displayValue: newCustomDisplayValue,
+    });
   };
   
-  // Check if an attribute is required
-  const isAttributeRequired = (attributeId: number): boolean => {
-    const attr = productAttributes.find(a => a.attributeId === attributeId);
-    return attr ? !!attr.isRequired : false;
+  // Handle attribute value removal
+  const handleRemoveAttributeValue = (attributeId: number, valueId?: number) => {
+    if (!valueId) return;
+    
+    if (window.confirm('Are you sure you want to remove this attribute value?')) {
+      removeAttributeValueMutation.mutate({
+        attributeId,
+        valueId,
+      });
+    }
   };
   
-  if (draftLoading || attributesLoading) {
-    return (
-      <div className="flex items-center justify-center h-40">
-        <Loader2 className="h-6 w-6 animate-spin" />
-      </div>
+  // Find attribute by ID
+  const findAttribute = (attributeId: number) => {
+    return attributes?.data?.find((attr: Attribute) => attr.id === attributeId);
+  };
+  
+  // Get attribute values for a specific attribute
+  const getAttributeValues = (attributeId: number) => {
+    const productAttribute = productAttributes.find(attr => attr.attributeId === attributeId);
+    return productAttribute?.values || [];
+  };
+  
+  // Get unused attribute options
+  const getUnusedAttributeOptions = (attributeId: number) => {
+    const attribute = findAttribute(attributeId);
+    if (!attribute || !attribute.options) return [];
+    
+    const productAttribute = productAttributes.find(attr => attr.attributeId === attributeId);
+    if (!productAttribute) return attribute.options;
+    
+    // Filter out options that are already used in the product
+    return attribute.options.filter(option => 
+      !productAttribute.values.some(value => value.attributeOptionId === option.id)
     );
-  }
+  };
+  
+  // Continue to next step
+  const handleContinue = async () => {
+    onNext();
+  };
+  
+  const isLoading = attributesLoading || draftAttributesLoading || loading;
   
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-medium flex items-center">
-          <Tag className="h-5 w-5 mr-2" />
-          Product Attributes
-        </h3>
-        
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" size="sm">
-              <PlusCircle className="h-4 w-4 mr-2" />
-              Add Attribute
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-80" align="end">
-            <ScrollArea className="h-80">
-              <div className="space-y-2 p-2">
-                <h4 className="font-medium mb-2">Available Attributes</h4>
-                {attributes?.map((attribute: Attribute) => {
-                  const isAdded = productAttributes.some(
-                    attr => attr.attributeId === attribute.id
-                  );
-                  
-                  return (
-                    <div 
-                      key={attribute.id}
-                      className="flex items-center justify-between py-2 border-b"
-                    >
-                      <div>
-                        <p className="font-medium">{attribute.name}</p>
-                        {attribute.description && (
-                          <p className="text-xs text-muted-foreground">
-                            {attribute.description}
-                          </p>
-                        )}
-                      </div>
-                      <Button
-                        variant={isAdded ? "ghost" : "secondary"}
-                        size="sm"
-                        onClick={() => handleAddAttribute(attribute.id)}
-                        disabled={isAdded}
-                      >
-                        {isAdded ? 'Added' : 'Add'}
-                      </Button>
-                    </div>
-                  );
-                })}
-              </div>
-            </ScrollArea>
-          </PopoverContent>
-        </Popover>
+      <div>
+        <h2 className="text-2xl font-bold tracking-tight">Product Attributes</h2>
+        <p className="text-muted-foreground">
+          Add and manage attributes for your product, such as color, size, material, etc.
+        </p>
       </div>
       
-      {productAttributes.length === 0 ? (
-        <div className="text-center p-6 border border-dashed rounded-lg">
-          <Filter className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
-          <h3 className="text-lg font-medium">No Attributes Selected</h3>
-          <p className="text-sm text-muted-foreground max-w-md mx-auto mb-4">
-            Attributes help describe product specifications and allow customers to filter products.
-            Click "Add Attribute" to select attributes for this product.
-          </p>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => document.querySelector<HTMLButtonElement>('[aria-label="Add Attribute"]')?.click()}
-          >
-            <PlusCircle className="h-4 w-4 mr-2" />
-            Add First Attribute
-          </Button>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {productAttributes.map(productAttr => {
-            const attribute = getAttributeById(productAttr.attributeId);
-            if (!attribute) return null;
+      <Separator className="my-6" />
+      
+      <Card>
+        <CardContent className="pt-6">
+          <div className="grid gap-6">
+            <div className="flex items-center gap-4">
+              <div className="flex-1">
+                <Select
+                  disabled={isLoading}
+                  value={newAttributeId?.toString() || ''}
+                  onValueChange={(value) => setNewAttributeId(parseInt(value))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select an attribute to add" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {attributes?.data?.filter((attr: Attribute) => 
+                      !selectedAttributes.includes(attr.id)
+                    ).map((attr: Attribute) => (
+                      <SelectItem key={attr.id} value={attr.id.toString()}>
+                        {attr.displayName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button 
+                onClick={handleAddAttribute} 
+                disabled={!newAttributeId || addAttributeMutation.isPending || isLoading}
+              >
+                {addAttributeMutation.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Plus className="mr-2 h-4 w-4" />
+                )}
+                Add Attribute
+              </Button>
+            </div>
             
-            return (
-              <Card key={productAttr.attributeId}>
-                <CardHeader className="pb-2">
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                      <CardTitle className="text-base">
-                        {attribute.name}
-                      </CardTitle>
-                      {isAttributeRequired(attribute.id) && (
-                        <Badge variant="default" className="text-xs">Required</Badge>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        id={`required-${attribute.id}`}
-                        checked={isAttributeRequired(attribute.id)}
-                        onCheckedChange={() => handleToggleRequired(attribute.id)}
-                      />
-                      <Label htmlFor={`required-${attribute.id}`} className="text-xs">
-                        Required
-                      </Label>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => handleRemoveAttribute(attribute.id)}
+            {productAttributes.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <Info className="h-12 w-12 text-muted-foreground mb-2" />
+                <h3 className="text-lg font-semibold">No Attributes Yet</h3>
+                <p className="text-muted-foreground">
+                  Select attributes from the dropdown above to add them to your product.
+                </p>
+              </div>
+            ) : (
+              <Accordion type="single" collapsible className="w-full">
+                {productAttributes.map((productAttr) => {
+                  const attribute = findAttribute(productAttr.attributeId);
+                  const unusedOptions = getUnusedAttributeOptions(productAttr.attributeId);
+                  
+                  return (
+                    <AccordionItem key={productAttr.attributeId} value={productAttr.attributeId.toString()}>
+                      <AccordionTrigger 
+                        onClick={() => setActiveAttributeId(productAttr.attributeId)}
+                        className="hover:bg-muted/50 rounded-md px-4 -mx-4"
                       >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                  {attribute.description && (
-                    <CardDescription>{attribute.description}</CardDescription>
-                  )}
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <Label htmlFor={`options-${attribute.id}`}>Select options:</Label>
-                    <div className="flex flex-wrap gap-2">
-                      {attribute.options.map(option => (
-                        <Badge
-                          key={option.id}
-                          variant={getSelectedOptions(attribute.id).includes(option.id) ? "default" : "outline"}
-                          className="cursor-pointer"
-                          onClick={() => handleToggleOption(attribute.id, option.id)}
-                        >
-                          {getSelectedOptions(attribute.id).includes(option.id) && (
-                            <Check className="h-3 w-3 mr-1" />
-                          )}
-                          {option.value}
-                        </Badge>
-                      ))}
-                      
-                      <Dialog open={isAddingCustomOption && newCustomOptionAttributeId === attribute.id} 
-                             onOpenChange={(open) => {
-                               if (!open) {
-                                 setIsAddingCustomOption(false);
-                                 setNewCustomOptionAttributeId(null);
-                               }
-                             }}>
-                        <DialogTrigger asChild>
-                          <Badge
-                            variant="outline"
-                            className="cursor-pointer bg-muted hover:bg-muted/80"
-                            onClick={() => {
-                              setIsAddingCustomOption(true);
-                              setNewCustomOptionAttributeId(attribute.id);
+                        <div className="flex items-center justify-between w-full pr-4">
+                          <div className="flex items-center">
+                            <span>{attribute?.displayName}</span>
+                            <Badge className="ml-2" variant="outline">
+                              {productAttr.values.length} value{productAttr.values.length !== 1 ? 's' : ''}
+                            </Badge>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation(); // Prevent accordion from toggling
+                              handleRemoveAttribute(productAttr.attributeId);
                             }}
                           >
-                            <PlusSquare className="h-3 w-3 mr-1" />
-                            Custom Option
-                          </Badge>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Add Custom Option</DialogTitle>
-                            <DialogDescription>
-                              Create a new option for the "{attribute.name}" attribute.
-                            </DialogDescription>
-                          </DialogHeader>
-                          <div className="space-y-4 py-4">
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <div className="space-y-4 pt-2">
+                          {/* Attribute description */}
+                          {attribute?.description && (
+                            <Alert>
+                              <Info className="h-4 w-4" />
+                              <AlertDescription>
+                                {attribute.description}
+                              </AlertDescription>
+                            </Alert>
+                          )}
+                          
+                          {/* Values table */}
+                          {productAttr.values.length > 0 && (
+                            <div className="border rounded-md">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead>Value</TableHead>
+                                    <TableHead>Display Value</TableHead>
+                                    <TableHead className="w-[100px]">Actions</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {productAttr.values.map((value) => (
+                                    <TableRow key={value.id || value.value}>
+                                      <TableCell>{value.value}</TableCell>
+                                      <TableCell>{value.displayValue}</TableCell>
+                                      <TableCell>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          onClick={() => handleRemoveAttributeValue(
+                                            productAttr.attributeId, 
+                                            value.id
+                                          )}
+                                        >
+                                          <Trash2 className="h-4 w-4 text-destructive" />
+                                        </Button>
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </div>
+                          )}
+                          
+                          {/* Add existing option */}
+                          {unusedOptions.length > 0 && (
                             <div className="space-y-2">
-                              <Label htmlFor="custom-option">Option Value</Label>
+                              <Label>Add From Existing Options</Label>
+                              <div className="flex flex-wrap gap-2">
+                                {unusedOptions.map((option) => (
+                                  <Badge 
+                                    key={option.id}
+                                    variant="outline"
+                                    className="cursor-pointer hover:bg-primary/10"
+                                    onClick={() => handleAddAttributeValueFromOption(
+                                      productAttr.attributeId, 
+                                      option
+                                    )}
+                                  >
+                                    <Plus className="h-3 w-3 mr-1" />
+                                    {option.displayValue}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Add custom value */}
+                          <div className="space-y-2">
+                            <Label>Add Custom Value</Label>
+                            <div className="flex items-center gap-2">
                               <Input
-                                id="custom-option"
-                                placeholder="Enter new option value"
-                                value={newCustomOptionValue}
-                                onChange={(e) => setNewCustomOptionValue(e.target.value)}
+                                placeholder="Value (internal)"
+                                value={newCustomValue}
+                                onChange={(e) => setNewCustomValue(e.target.value)}
+                                className="flex-1"
                               />
+                              <Input
+                                placeholder="Display Value (visible)"
+                                value={newCustomDisplayValue}
+                                onChange={(e) => setNewCustomDisplayValue(e.target.value)}
+                                className="flex-1"
+                              />
+                              <Button
+                                onClick={() => handleAddCustomAttributeValue(productAttr.attributeId)}
+                                disabled={!newCustomValue || !newCustomDisplayValue}
+                              >
+                                Add
+                              </Button>
                             </div>
                           </div>
-                          <DialogFooter>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              onClick={() => {
-                                setIsAddingCustomOption(false);
-                                setNewCustomOptionAttributeId(null);
-                              }}
-                            >
-                              Cancel
-                            </Button>
-                            <Button
-                              type="button"
-                              disabled={!newCustomOptionValue.trim() || isCreatingCustomOption}
-                              onClick={handleCreateCustomOption}
-                            >
-                              {isCreatingCustomOption ? (
-                                <>
-                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                  Creating...
-                                </>
-                              ) : (
-                                'Create Option'
-                              )}
-                            </Button>
-                          </DialogFooter>
-                        </DialogContent>
-                      </Dialog>
-                    </div>
-                  </div>
-                </CardContent>
-                <CardFooter className="pt-0">
-                  {!hasSelectedOptions(attribute.id) && (
-                    <p className="text-sm text-amber-600">
-                      Please select at least one option for this attribute.
-                    </p>
-                  )}
-                </CardFooter>
-              </Card>
-            );
-          })}
-        </div>
-      )}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  );
+                })}
+              </Accordion>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+      
+      <div className="flex justify-end gap-4">
+        <Button 
+          onClick={handleContinue} 
+          disabled={loading || saving}
+        >
+          Continue
+        </Button>
+      </div>
     </div>
   );
-};
-
-export default AttributesStep;
+}

@@ -1,375 +1,507 @@
 /**
- * Pricing Step Component
+ * Pricing Step
  * 
- * This component manages pricing information for the product,
- * including regular price, sale price, and markup calculations.
+ * This component handles the pricing and inventory information
+ * for the product, including regular price, sale price, cost, etc.
  */
 
-import React, { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { 
-  Form, 
-  FormControl, 
-  FormDescription, 
-  FormField, 
-  FormItem, 
-  FormLabel, 
-  FormMessage 
-} from '@/components/ui/form';
+import * as z from 'zod';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  FormDescription,
+} from '@/components/ui/form';
 import { Card, CardContent } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
-import { Slider } from '@/components/ui/slider';
-import { useDraft } from '../DraftContext';
-import { Loader2, Calculator, TrendingUp } from 'lucide-react';
-import { cn, debounce } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
+import { useDraftContext } from '../DraftContext';
+import { debounce } from '@/lib/utils';
 
-// Form schema for pricing information
-const pricingSchema = z.object({
-  costPrice: z.coerce.number().min(0, 'Cost price must be a positive number').optional(),
-  regularPrice: z.coerce.number().min(0.01, 'Regular price is required'),
-  salePrice: z.coerce.number().min(0, 'Sale price must be a positive number').optional(),
+// Validation schema for pricing information
+const formSchema = z.object({
+  price: z.coerce.number().min(0, {
+    message: "Price must be a positive number.",
+  }),
+  compareAtPrice: z.coerce.number().min(0, {
+    message: "Compare-at price must be a positive number.",
+  }).optional().nullable(),
+  costPrice: z.coerce.number().min(0, {
+    message: "Cost price must be a positive number.",
+  }).optional().nullable(),
   onSale: z.boolean().default(false),
-  markupPercentage: z.coerce.number().min(0, 'Markup must be a positive number').optional(),
+  salePrice: z.coerce.number().min(0, {
+    message: "Sale price must be a positive number.",
+  }).optional().nullable(),
+  taxRatePercentage: z.coerce.number().min(0, {
+    message: "Tax rate must be a positive percentage.",
+  }).max(100, {
+    message: "Tax rate cannot exceed 100%.",
+  }).optional().nullable(),
+  weight: z.coerce.number().min(0, {
+    message: "Weight must be a positive number.",
+  }).optional().nullable(),
+  dimensions: z.string().optional().nullable(),
 });
 
-type PricingFormValues = z.infer<typeof pricingSchema>;
+// Component props
+interface PricingStepProps {
+  onNext: () => void;
+}
 
-const PricingStep: React.FC = () => {
-  const { draft, draftLoading, updateDraft, updateDraftStep } = useDraft();
-  const [calculatedPrice, setCalculatedPrice] = useState<number | null>(null);
+export function PricingStep({ onNext }: PricingStepProps) {
+  const { toast } = useToast();
+  const { draft, updateDraft, saveDraft, loading } = useDraftContext();
+  const [saving, setSaving] = useState(false);
+  const [profit, setProfit] = useState<number | null>(null);
+  const [profitMargin, setProfitMargin] = useState<number | null>(null);
   
-  // Create form with draft data as default values
-  const form = useForm<PricingFormValues>({
-    resolver: zodResolver(pricingSchema),
+  // Initialize form with draft values or defaults
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
-      costPrice: draft?.costPrice || 0,
-      regularPrice: draft?.regularPrice || 0,
-      salePrice: draft?.salePrice || 0,
+      price: draft?.price || 0,
+      compareAtPrice: draft?.compareAtPrice || null,
+      costPrice: draft?.costPrice || null,
       onSale: draft?.onSale || false,
-      markupPercentage: draft?.markupPercentage || 30,
+      salePrice: draft?.salePrice || null,
+      taxRatePercentage: draft?.taxRatePercentage || null,
+      weight: draft?.weight || null,
+      dimensions: draft?.dimensions || '',
     },
+    mode: 'onChange',
   });
   
-  // Watch form values for calculations
-  const costPrice = form.watch('costPrice') || 0;
-  const markupPercentage = form.watch('markupPercentage') || 30;
-  const onSale = form.watch('onSale');
-  
-  // Calculate regular price based on cost and markup
+  // Update form values when draft changes
   useEffect(() => {
-    if (costPrice && markupPercentage) {
-      const calculatedRegularPrice = costPrice * (1 + markupPercentage / 100);
-      setCalculatedPrice(Number(calculatedRegularPrice.toFixed(2)));
-    } else {
-      setCalculatedPrice(null);
-    }
-  }, [costPrice, markupPercentage]);
-  
-  // Update form when draft data changes
-  useEffect(() => {
-    if (draft && !draftLoading) {
+    if (draft) {
       form.reset({
-        costPrice: draft.costPrice || 0,
-        regularPrice: draft.regularPrice || 0,
-        salePrice: draft.salePrice || 0,
+        price: draft.price || 0,
+        compareAtPrice: draft.compareAtPrice || null,
+        costPrice: draft.costPrice || null,
         onSale: draft.onSale || false,
-        markupPercentage: draft.markupPercentage || 30,
+        salePrice: draft.salePrice || null,
+        taxRatePercentage: draft.taxRatePercentage || null,
+        weight: draft.weight || null,
+        dimensions: draft.dimensions || '',
       });
     }
-  }, [draft, draftLoading, form]);
+  }, [draft, form]);
   
-  // Apply calculated price to regular price
-  const applyCalculatedPrice = () => {
-    if (calculatedPrice) {
-      form.setValue('regularPrice', calculatedPrice);
-      updateDraft('regularPrice', calculatedPrice);
-    }
-  };
-  
-  // Handle field changes with debounce for auto-save
-  const handleFieldChange = debounce((field: string, value: any) => {
-    updateDraft(field as any, value);
-  }, 500);
-  
-  // Submit handler to update the step
-  const onSubmit = async (data: PricingFormValues) => {
-    await updateDraftStep('pricing', data);
-  };
-  
-  if (draftLoading) {
-    return (
-      <div className="flex items-center justify-center h-40">
-        <Loader2 className="h-6 w-6 animate-spin" />
-      </div>
-    );
-  }
-  
-  // Calculate discount percentage if on sale
-  const calculateDiscountPercentage = () => {
-    const regularPrice = form.getValues('regularPrice');
+  // Calculate profit and profit margin
+  useEffect(() => {
+    const costPrice = form.getValues('costPrice');
+    const price = form.getValues('price');
+    const onSale = form.getValues('onSale');
     const salePrice = form.getValues('salePrice');
     
-    if (!regularPrice || !salePrice || regularPrice <= 0 || salePrice >= regularPrice) {
-      return 0;
+    if (costPrice && (price || (onSale && salePrice))) {
+      const effectivePrice = onSale && salePrice ? salePrice : price;
+      const calculatedProfit = effectivePrice - costPrice;
+      setProfit(calculatedProfit);
+      
+      if (effectivePrice > 0) {
+        const calculatedMargin = (calculatedProfit / effectivePrice) * 100;
+        setProfitMargin(calculatedMargin);
+      } else {
+        setProfitMargin(null);
+      }
+    } else {
+      setProfit(null);
+      setProfitMargin(null);
     }
-    
-    return Math.round(((regularPrice - salePrice) / regularPrice) * 100);
+  }, [form.watch('price'), form.watch('costPrice'), form.watch('onSale'), form.watch('salePrice')]);
+  
+  // Debounced save function
+  const debouncedSave = debounce(async (data: z.infer<typeof formSchema>) => {
+    try {
+      setSaving(true);
+      await updateDraft({
+        price: data.price,
+        compareAtPrice: data.compareAtPrice,
+        costPrice: data.costPrice,
+        onSale: data.onSale,
+        salePrice: data.salePrice,
+        taxRatePercentage: data.taxRatePercentage,
+        weight: data.weight,
+        dimensions: data.dimensions,
+      });
+      await saveDraft();
+    } catch (error) {
+      console.error('Error saving draft:', error);
+      toast({
+        title: 'Error Saving',
+        description: 'Could not save pricing information. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSaving(false);
+    }
+  }, 800);
+  
+  // Handle form submission
+  const onSubmit = async (data: z.infer<typeof formSchema>) => {
+    try {
+      setSaving(true);
+      
+      // Validate sale price if product is on sale
+      if (data.onSale && (!data.salePrice || data.salePrice >= data.price)) {
+        toast({
+          title: 'Invalid Sale Price',
+          description: 'Sale price must be less than the regular price.',
+          variant: 'destructive',
+        });
+        setSaving(false);
+        return;
+      }
+      
+      await updateDraft({
+        price: data.price,
+        compareAtPrice: data.compareAtPrice,
+        costPrice: data.costPrice,
+        onSale: data.onSale,
+        salePrice: data.salePrice,
+        taxRatePercentage: data.taxRatePercentage,
+        weight: data.weight,
+        dimensions: data.dimensions,
+      });
+      await saveDraft();
+      
+      toast({
+        title: 'Pricing Saved',
+        description: 'Product pricing and inventory information has been saved.',
+      });
+      
+      onNext();
+    } catch (error) {
+      console.error('Error saving pricing information:', error);
+      toast({
+        title: 'Error Saving',
+        description: 'Could not save pricing information. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSaving(false);
+    }
   };
   
-  const discountPercentage = calculateDiscountPercentage();
-  
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        {/* Cost & Markup Calculator */}
-        <Card>
-          <CardContent className="pt-6 space-y-4">
-            <h3 className="text-lg font-medium flex items-center">
-              <Calculator className="h-5 w-5 mr-2" />
-              Price Calculator
-            </h3>
-            
-            <div className="grid gap-6 md:grid-cols-2">
-              {/* Cost Price */}
-              <FormField
-                control={form.control}
-                name="costPrice"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Cost Price</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <span className="absolute left-3 top-2.5 text-muted-foreground">$</span>
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold tracking-tight">Pricing & Inventory</h2>
+        <p className="text-muted-foreground">
+          Set product pricing, sale status, and physical properties.
+        </p>
+      </div>
+      
+      <Separator className="my-6" />
+      
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="grid gap-6">
+                <h3 className="text-lg font-semibold">Pricing</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="price"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Regular Price (ZAR)*</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            placeholder="0.00" 
+                            {...field}
+                            onChange={(e) => {
+                              field.onChange(e);
+                              debouncedSave({
+                                ...form.getValues(),
+                                price: parseFloat(e.target.value) || 0,
+                              });
+                            }}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          The standard retail price of the product.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="compareAtPrice"
+                    render={({ field: { value, onChange, ...field } }) => (
+                      <FormItem>
+                        <FormLabel>Compare-At Price (ZAR)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            placeholder="0.00" 
+                            value={value === null ? '' : value}
+                            onChange={(e) => {
+                              const val = e.target.value ? parseFloat(e.target.value) : null;
+                              onChange(val);
+                              debouncedSave({
+                                ...form.getValues(),
+                                compareAtPrice: val,
+                              });
+                            }}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Original price for comparison (displayed as strikethrough).
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <FormField
+                  control={form.control}
+                  name="onSale"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">On Sale</FormLabel>
+                        <FormDescription>
+                          Enable sale pricing for this product.
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={(checked) => {
+                            field.onChange(checked);
+                            debouncedSave({
+                              ...form.getValues(),
+                              onSale: checked,
+                            });
+                          }}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                
+                {form.watch('onSale') && (
+                  <FormField
+                    control={form.control}
+                    name="salePrice"
+                    render={({ field: { value, onChange, ...field } }) => (
+                      <FormItem>
+                        <FormLabel>Sale Price (ZAR)*</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            placeholder="0.00" 
+                            value={value === null ? '' : value}
+                            onChange={(e) => {
+                              const val = e.target.value ? parseFloat(e.target.value) : null;
+                              onChange(val);
+                              debouncedSave({
+                                ...form.getValues(),
+                                salePrice: val,
+                              });
+                            }}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Discounted price that will be used when product is on sale.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+                
+                <FormField
+                  control={form.control}
+                  name="costPrice"
+                  render={({ field: { value, onChange, ...field } }) => (
+                    <FormItem>
+                      <FormLabel>Cost Price (ZAR)</FormLabel>
+                      <FormControl>
                         <Input 
                           type="number"
-                          min="0"
                           step="0.01"
-                          className="pl-7"
+                          min="0"
                           placeholder="0.00" 
-                          {...field} 
+                          value={value === null ? '' : value}
                           onChange={(e) => {
-                            const value = parseFloat(e.target.value);
-                            field.onChange(e);
-                            handleFieldChange('costPrice', isNaN(value) ? 0 : value);
+                            const val = e.target.value ? parseFloat(e.target.value) : null;
+                            onChange(val);
+                            debouncedSave({
+                              ...form.getValues(),
+                              costPrice: val,
+                            });
                           }}
+                          {...field}
                         />
+                      </FormControl>
+                      <FormDescription>
+                        Your purchase cost (not shown to customers).
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                {profit !== null && profitMargin !== null && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="rounded-lg border p-4">
+                      <div className="text-sm font-medium">Profit</div>
+                      <div className="mt-1 text-2xl font-bold">
+                        R {profit.toFixed(2)}
                       </div>
-                    </FormControl>
-                    <FormDescription>
-                      Your cost to acquire this product.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              {/* Markup Percentage */}
-              <FormField
-                control={form.control}
-                name="markupPercentage"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Markup Percentage ({field.value}%)</FormLabel>
-                    <FormControl>
-                      <div className="pt-2">
-                        <Slider
-                          min={0}
-                          max={200}
-                          step={1}
-                          defaultValue={[field.value || 30]}
-                          onValueChange={(values) => {
-                            const value = values[0];
-                            field.onChange(value);
-                            handleFieldChange('markupPercentage', value);
-                          }}
-                        />
-                      </div>
-                    </FormControl>
-                    <FormDescription>
-                      Percentage markup over cost price.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            
-            {/* Calculated Price Preview */}
-            {calculatedPrice !== null && costPrice > 0 && (
-              <div className="mt-4 p-3 bg-muted rounded-md flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">Calculated Retail Price:</p>
-                  <p className="text-lg font-bold">${calculatedPrice.toFixed(2)}</p>
-                  <p className="text-xs text-muted-foreground">
-                    Based on ${costPrice.toFixed(2)} + {markupPercentage}% markup
-                  </p>
-                </div>
-                <button 
-                  type="button"
-                  onClick={applyCalculatedPrice}
-                  className="text-sm text-primary hover:underline"
-                >
-                  Apply This Price
-                </button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-        
-        {/* Pricing Fields */}
-        <div className="grid gap-6 md:grid-cols-2">
-          {/* Regular Price */}
-          <FormField
-            control={form.control}
-            name="regularPrice"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Regular Price</FormLabel>
-                <FormControl>
-                  <div className="relative">
-                    <span className="absolute left-3 top-2.5 text-muted-foreground">$</span>
-                    <Input 
-                      type="number"
-                      min="0.01"
-                      step="0.01"
-                      className="pl-7"
-                      placeholder="0.00" 
-                      {...field} 
-                      onChange={(e) => {
-                        const value = parseFloat(e.target.value);
-                        field.onChange(e);
-                        handleFieldChange('regularPrice', isNaN(value) ? 0 : value);
-                      }}
-                    />
-                  </div>
-                </FormControl>
-                <FormDescription>
-                  Standard retail price of the product.
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          {/* On Sale Switch */}
-          <FormField
-            control={form.control}
-            name="onSale"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-center justify-between rounded-md border p-4">
-                <div className="space-y-0.5">
-                  <FormLabel className="text-base">On Sale</FormLabel>
-                  <FormDescription>
-                    Enable special sale pricing for this product.
-                  </FormDescription>
-                </div>
-                <FormControl>
-                  <Switch
-                    checked={field.value}
-                    onCheckedChange={(checked) => {
-                      field.onChange(checked);
-                      handleFieldChange('onSale', checked);
-                    }}
-                  />
-                </FormControl>
-              </FormItem>
-            )}
-          />
-          
-          {/* Sale Price - Only shown if onSale is true */}
-          {onSale && (
-            <FormField
-              control={form.control}
-              name="salePrice"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Sale Price</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <span className="absolute left-3 top-2.5 text-muted-foreground">$</span>
-                      <Input 
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        className="pl-7"
-                        placeholder="0.00" 
-                        {...field} 
-                        onChange={(e) => {
-                          const value = parseFloat(e.target.value);
-                          field.onChange(e);
-                          handleFieldChange('salePrice', isNaN(value) ? 0 : value);
-                        }}
-                      />
                     </div>
-                  </FormControl>
-                  <FormDescription className="flex justify-between">
-                    <span>Discounted price for the product.</span>
-                    {discountPercentage > 0 && (
-                      <span className="text-green-600 font-medium flex items-center">
-                        <TrendingUp className="h-3 w-3 mr-1" />
-                        {discountPercentage}% Discount
-                      </span>
+                    <div className="rounded-lg border p-4">
+                      <div className="text-sm font-medium">Profit Margin</div>
+                      <div className="mt-1 text-2xl font-bold">
+                        {profitMargin.toFixed(2)}%
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                <Separator />
+                
+                <h3 className="text-lg font-semibold">Tax</h3>
+                
+                <FormField
+                  control={form.control}
+                  name="taxRatePercentage"
+                  render={({ field: { value, onChange, ...field } }) => (
+                    <FormItem>
+                      <FormLabel>Tax Rate (%)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          max="100"
+                          placeholder="15.00" 
+                          value={value === null ? '' : value}
+                          onChange={(e) => {
+                            const val = e.target.value ? parseFloat(e.target.value) : null;
+                            onChange(val);
+                            debouncedSave({
+                              ...form.getValues(),
+                              taxRatePercentage: val,
+                            });
+                          }}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Default is VAT at 15%. Leave empty to use system default.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <Separator />
+                
+                <h3 className="text-lg font-semibold">Shipping Information</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="weight"
+                    render={({ field: { value, onChange, ...field } }) => (
+                      <FormItem>
+                        <FormLabel>Weight (kg)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            placeholder="0.00" 
+                            value={value === null ? '' : value}
+                            onChange={(e) => {
+                              const val = e.target.value ? parseFloat(e.target.value) : null;
+                              onChange(val);
+                              debouncedSave({
+                                ...form.getValues(),
+                                weight: val,
+                              });
+                            }}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Used for shipping calculations.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
                     )}
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          )}
-        </div>
-        
-        {/* Price Comparison */}
-        {onSale && form.getValues('salePrice') > 0 && (
-          <Card className={cn(
-            "border",
-            discountPercentage > 0 ? "border-green-200 bg-green-50" : "border-amber-200 bg-amber-50"
-          )}>
-            <CardContent className="pt-6">
-              <h3 className="text-lg font-medium mb-2">Price Comparison</h3>
-              <div className="flex space-x-8">
-                <div>
-                  <p className="text-sm text-muted-foreground">Regular Price:</p>
-                  <p className={cn(
-                    "text-lg font-bold",
-                    onSale && discountPercentage > 0 && "line-through text-muted-foreground"
-                  )}>
-                    ${parseFloat(form.getValues('regularPrice').toString()).toFixed(2)}
-                  </p>
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="dimensions"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Dimensions</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="L x W x H (e.g., 10cm x 5cm x 2cm)" 
+                            {...field}
+                            value={field.value || ''}
+                            onChange={(e) => {
+                              field.onChange(e);
+                              debouncedSave({
+                                ...form.getValues(),
+                                dimensions: e.target.value,
+                              });
+                            }}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Product dimensions in format: Length x Width x Height.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
-                
-                {onSale && discountPercentage > 0 && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">Sale Price:</p>
-                    <p className="text-lg font-bold text-green-600">
-                      ${parseFloat(form.getValues('salePrice').toString()).toFixed(2)}
-                    </p>
-                  </div>
-                )}
-                
-                {onSale && discountPercentage > 0 && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">Savings:</p>
-                    <p className="text-lg font-bold text-green-600">
-                      {discountPercentage}% OFF
-                    </p>
-                  </div>
-                )}
               </div>
-              
-              {onSale && discountPercentage <= 0 && (
-                <p className="text-sm text-amber-600 mt-2">
-                  Note: Sale price should be lower than the regular price.
-                </p>
-              )}
             </CardContent>
           </Card>
-        )}
-      </form>
-    </Form>
+          
+          <div className="flex justify-end gap-4">
+            <Button 
+              type="submit" 
+              disabled={loading || saving || !form.formState.isValid}
+            >
+              {saving ? 'Saving...' : 'Save & Continue'}
+            </Button>
+          </div>
+        </form>
+      </Form>
+    </div>
   );
-};
-
-export default PricingStep;
+}
