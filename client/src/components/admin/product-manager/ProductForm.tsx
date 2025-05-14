@@ -67,7 +67,8 @@ const DEFAULT_DRAFT: ProductDraftData = {
 
 export const ProductForm: React.FC<ProductFormSharedProps> = ({ 
   editMode = false, 
-  productId 
+  productId,
+  catalogId
 }) => {
   const { toast } = useToast();
   const [_, setLocation] = useLocation();

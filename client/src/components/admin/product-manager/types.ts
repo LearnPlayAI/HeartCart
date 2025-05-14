@@ -125,4 +125,5 @@ export interface StepComponentProps {
 export interface ProductFormSharedProps {
   editMode: boolean;
   productId?: number;
+  catalogId?: number;
 }

@@ -269,7 +269,7 @@ export const StepBasicInfo: React.FC<StepComponentProps> = ({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">None</SelectItem>
+                      <SelectItem value="null">None</SelectItem>
                       {suppliersData?.data?.map((supplier: any) => (
                         <SelectItem 
                           key={supplier.id} 

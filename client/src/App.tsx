@@ -150,6 +150,7 @@ function App() {
               {/* Original Wizard Routes (Commented out to use new implementation) */}
               {/* <AdminProtectedRoute path="/admin/products/wizard/:id?" component={ProductWizardPage} /> */}
               {/* <AdminProtectedRoute path="/admin/catalogs/:catalogId/products/wizard" component={ProductWizardPage} /> */}
+              <AdminProtectedRoute path="/admin/catalogs/:catalogId/products/new" component={React.lazy(() => import("@/pages/admin/product-create-new"))} />
               <AdminProtectedRoute path="/admin/categories" component={AdminCategories} />
               <AdminProtectedRoute path="/admin/categories/:categoryId/attributes" component={CategoryAttributes} />
               <AdminProtectedRoute path="/admin/category-attributes/:categoryId" component={CategoryAttributes} />
