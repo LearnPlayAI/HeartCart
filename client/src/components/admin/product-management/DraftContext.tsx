@@ -10,17 +10,20 @@ import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { useParams, useLocation, useNavigate } from 'wouter';
 
-// Define the draft type
+// Define the draft type based on the database schema
 export interface ProductDraft {
   id?: number;
+  originalProductId?: number | null;
+  draftStatus: string;
+  createdBy?: number;
+  createdAt?: string;
+  lastModified?: string;
+  
+  // Basic product information
   name: string;
   slug: string;
-  description?: string | null;
-  shortDescription?: string | null;
-  price?: number;
-  compareAtPrice?: number | null;
-  costPrice?: number | null;
   sku?: string | null;
+  description?: string | null;
   brand?: string | null;
   categoryId?: number | null;
   category?: {
@@ -28,21 +31,54 @@ export interface ProductDraft {
     name: string;
     slug: string;
   } | null;
-  onSale?: boolean;
+  isActive?: boolean;
+  isFeatured?: boolean;
+  
+  // Pricing information
+  costPrice?: number | null;
+  regularPrice?: number | null;
   salePrice?: number | null;
-  weight?: number | null;
-  dimensions?: string | null;
-  taxRatePercentage?: number | null;
+  onSale?: boolean;
+  markupPercentage?: number | null;
+  
+  // Images
   imageUrls?: string[];
+  imageObjectKeys?: string[];
   mainImageIndex?: number | null;
+  
+  // Inventory
+  stockLevel?: number | null;
+  lowStockThreshold?: number | null;
+  backorderEnabled?: boolean;
+  
+  // Attributes (stored as JSON)
+  attributes?: any[];
+  
+  // Supplier information
+  supplierId?: number | null;
+  
+  // Physical properties
+  weight?: string | null;
+  dimensions?: string | null;
+  
+  // Promotions
+  discountLabel?: string | null;
+  specialSaleText?: string | null;
+  specialSaleStart?: string | null;
+  specialSaleEnd?: string | null;
+  isFlashDeal?: boolean;
+  
+  // SEO
   metaTitle?: string | null;
   metaDescription?: string | null;
   metaKeywords?: string | null;
   canonicalUrl?: string | null;
-  published?: boolean;
+  
+  // Wizard progress
+  wizardProgress?: Record<string, boolean>;
+  
+  // Published info
   publishedProductId?: number | null;
-  createdAt?: string;
-  updatedAt?: string;
 }
 
 // Context interface
@@ -133,26 +169,42 @@ export function DraftProvider({ children, initialDraftId }: DraftProviderProps) 
       setLoading(true);
       setError(null);
       
+      // The minimum required data for creating a draft 
+      // following the database schema requirements
       const response = await apiRequest('/api/product-drafts', {
         method: 'POST',
         body: JSON.stringify({
           name: 'New Product',
           slug: 'new-product',
-          description: '',
-          shortDescription: '',
-          price: 0,
+          draftStatus: 'draft',
+          regularPrice: 0,
+          costPrice: 0,
+          stock: 0,
+          sku: `SKU-${Date.now().toString().slice(-6)}`,
         }),
       });
       
       if (response.success && response.data) {
-        setDraft(response.data);
-        return response.data;
+        const newDraft = response.data;
+        setDraft(newDraft);
+        
+        // Update drafts list with the new draft
+        setDrafts(prev => [newDraft, ...prev]);
+        
+        return newDraft;
       } else {
         throw new Error(response.message || 'Failed to create draft');
       }
     } catch (err) {
       console.error('Create draft error:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
+      
+      toast({
+        title: 'Error Creating Draft',
+        description: 'Could not create a new product draft. Please try again.',
+        variant: 'destructive',
+      });
+      
       return null;
     } finally {
       setLoading(false);
@@ -220,22 +272,26 @@ export function DraftProvider({ children, initialDraftId }: DraftProviderProps) 
     }
   };
   
-  // Publish the draft as a live product
-  const publishDraft = async (): Promise<void> => {
-    if (!draft || !draft.id) {
-      setError('No draft to publish');
-      return;
+  // Publish a draft as a live product - for internal use
+  const publishDraftInternal = async (draftId: number): Promise<boolean> => {
+    if (!draftId) {
+      setError('No draft ID to publish');
+      return false;
     }
     
     try {
       setLoading(true);
       
-      const response = await apiRequest(`/api/product-drafts/${draft.id}/publish`, {
+      const response = await apiRequest(`/api/product-drafts/${draftId}/publish`, {
         method: 'POST',
       });
       
       if (response.success && response.data) {
+        // Update the draft with published status
         setDraft(response.data);
+        
+        // Update in drafts list
+        setDrafts(prev => prev.map(d => d.id === draftId ? response.data : d));
         
         toast({
           title: 'Product Published',
@@ -246,6 +302,8 @@ export function DraftProvider({ children, initialDraftId }: DraftProviderProps) 
         if (response.data.publishedProductId) {
           setLocation(`/admin/products/${response.data.publishedProductId}`);
         }
+        
+        return true;
       } else {
         throw new Error(response.message || 'Failed to publish product');
       }
@@ -258,6 +316,8 @@ export function DraftProvider({ children, initialDraftId }: DraftProviderProps) 
         description: err instanceof Error ? err.message : 'Could not publish the product.',
         variant: 'destructive',
       });
+      
+      return false;
     } finally {
       setLoading(false);
     }
@@ -331,41 +391,45 @@ export function DraftProvider({ children, initialDraftId }: DraftProviderProps) 
     }
   };
   
-  // Discard changes to a draft
+  // Delete a draft (used for discarding)
   const discardDraft = async (draftId: number): Promise<boolean> => {
     try {
       setLoading(true);
       setError(null);
       
-      const response = await apiRequest(`/api/product-drafts/${draftId}/discard`, {
-        method: 'POST',
+      // Use the delete endpoint since we're discarding the entire draft
+      const response = await apiRequest(`/api/product-drafts/${draftId}`, {
+        method: 'DELETE',
       });
       
-      if (response.success && response.data) {
-        // If this is the current draft, update it
+      if (response.success) {
+        // If this is the current draft, clear it
         if (draft?.id === draftId) {
-          setDraft(response.data);
+          setDraft(null);
         }
         
-        // Update in the drafts list
-        setDrafts(prev => prev.map(d => d.id === draftId ? response.data : d));
+        // Remove from the drafts list
+        setDrafts(prev => prev.filter(d => d.id !== draftId));
+        
+        // Refresh the drafts list
+        await refreshDrafts();
         
         toast({
-          title: 'Changes Discarded',
-          description: 'Draft changes have been discarded.',
+          title: 'Draft Deleted',
+          description: 'The draft has been deleted successfully.',
         });
         
         return true;
       } else {
-        throw new Error(response.message || 'Failed to discard changes');
+        throw new Error(response.message || 'Failed to delete draft');
       }
     } catch (err) {
-      console.error('Error discarding draft changes:', err);
+      console.error('Error deleting draft:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
       
       toast({
-        title: 'Error Discarding Changes',
-        description: err instanceof Error ? err.message : 'Could not discard draft changes.',
+        title: 'Error Deleting Draft',
+        description: err instanceof Error ? err.message : 'Could not delete the draft.',
         variant: 'destructive',
       });
       
@@ -392,7 +456,7 @@ export function DraftProvider({ children, initialDraftId }: DraftProviderProps) 
     }
   };
   
-  // Override publishDraft to match the interface
+  // Publish a draft from the DraftList
   const publishDraftWithReturn = async (draftId: number): Promise<boolean> => {
     try {
       if (!draftId) {
@@ -400,16 +464,7 @@ export function DraftProvider({ children, initialDraftId }: DraftProviderProps) 
         return false;
       }
       
-      // If the current draft is selected, use that
-      if (draft?.id === draftId) {
-        await publishDraft();
-        return true;
-      }
-      
-      // Otherwise, load and publish
-      await loadDraft(draftId);
-      await publishDraft();
-      return true;
+      return await publishDraftInternal(draftId);
     } catch (err) {
       console.error('Error in publishDraftWithReturn:', err);
       return false;
