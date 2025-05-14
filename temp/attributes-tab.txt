@@ -1,0 +1,380 @@
+                <TabsContent value="attributes" className="space-y-6">
+                  {/* Product Attribute Configuration */}
+                  <div className="space-y-6">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <h3 className="text-lg font-medium">Product Attributes</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Select which attributes customers will see when viewing or purchasing this product
+                        </p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        onClick={() => navigate('/admin/global-attributes')}
+                      >
+                        Manage Global Attributes
+                      </Button>
+                    </div>
+                    
+                    {formattedAttributes.length > 0 ? (
+                      <div className="space-y-6">
+                        {/* Section to select which attributes apply to this product */}
+                        <div className="space-y-4">
+                          <p className="text-sm font-medium">
+                            Select which attributes are available for this product. These determine the options customers need to select.
+                          </p>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {formattedAttributes.map((attr) => (
+                              <div 
+                                key={attr.id} 
+                                className={`border rounded-md p-4 shadow-sm ${attributesUsed.includes(attr.id) ? 'border-primary/30 bg-primary/5' : ''}`}
+                              >
+                                <div className="flex justify-between items-center mb-2">
+                                  <span className="font-medium">{attr.name}</span>
+                                  <Switch 
+                                    checked={attributesUsed.includes(attr.id)}
+                                    onCheckedChange={(checked) => {
+                                      console.log(`Toggle attribute ${attr.name} (ID: ${attr.id}) to: ${checked}`);
+                                      
+                                      if (checked) {
+                                        // Update local state
+                                        setAttributesUsed(prev => [...prev, attr.id]);
+                                        
+                                        // Add to product's attributes in context
+                                        // Using the centralized attribute system format
+                                        addAttribute({
+                                          id: attr.id,
+                                          name: attr.name,
+                                          isCustom: false,
+                                          isRequired: attr.isRequired || false,
+                                          attributeType: attr.type || 'select',
+                                          displayInProductSummary: attr.displayInProductSummary || false,
+                                          selectedOptions: [], // Will be populated during checkout
+                                          // Empty textValue since this will be populated by customer
+                                          textValue: "",
+                                          sortOrder: 0
+                                        });
+                                        
+                                        console.log(`Added attribute ${attr.name} to product attributes`);
+                                      } else {
+                                        // Update local state
+                                        setAttributesUsed(prev => prev.filter(id => id !== attr.id));
+                                        
+                                        // Find and remove from product's attributes in context
+                                        const index = state.attributes.findIndex(a => a.id === attr.id);
+                                        if (index !== -1) {
+                                          removeAttribute(index);
+                                          console.log(`Removed attribute ${attr.name} from product attributes at index ${index}`);
+                                        } else {
+                                          console.warn(`Could not find attribute ${attr.name} in product attributes to remove`);
+                                        }
+                                      }
+                                    }}
+                                  />
+                                </div>
+                                
+                                {/* Attribute type and options count */}
+                                <div className="flex flex-wrap gap-2 text-sm text-muted-foreground mb-2">
+                                  <Badge variant="secondary" className="text-xs">
+                                    Type: {attr.type || 'select'}
+                                  </Badge>
+                                  <Badge variant="outline" className="text-xs">
+                                    {attr.options.length} options
+                                  </Badge>
+                                </div>
+                                
+                                {/* Display checkbox for requiring the attribute */}
+                                {attributesUsed.includes(attr.id) && (
+                                  <div className="mt-3 border-t pt-3">
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex items-center">
+                                        <Checkbox 
+                                          id={`required-${attr.id}`}
+                                          checked={(() => {
+                                            const existingAttr = state.attributes.find(a => a.id === attr.id);
+                                            return existingAttr?.isRequired || false;
+                                          })()}
+                                          onCheckedChange={(checked) => {
+                                            // Find the attribute in the state
+                                            const attrIndex = state.attributes.findIndex(a => a.id === attr.id);
+                                            if (attrIndex !== -1) {
+                                              // Update the attribute
+                                              const updatedAttr = {
+                                                ...state.attributes[attrIndex],
+                                                isRequired: !!checked
+                                              };
+                                              updateAttribute(attrIndex, updatedAttr);
+                                            }
+                                          }}
+                                        />
+                                        <label htmlFor={`required-${attr.id}`} className="ml-2 text-sm">
+                                          Required for checkout
+                                        </label>
+                                      </div>
+                                      
+                                      <div className="flex items-center">
+                                        <Checkbox 
+                                          id={`display-${attr.id}`}
+                                          checked={(() => {
+                                            const existingAttr = state.attributes.find(a => a.id === attr.id);
+                                            return existingAttr?.displayInProductSummary || false;
+                                          })()}
+                                          onCheckedChange={(checked) => {
+                                            // Find the attribute in the state
+                                            const attrIndex = state.attributes.findIndex(a => a.id === attr.id);
+                                            if (attrIndex !== -1) {
+                                              // Update the attribute
+                                              const updatedAttr = {
+                                                ...state.attributes[attrIndex],
+                                                displayInProductSummary: !!checked
+                                              };
+                                              updateAttribute(attrIndex, updatedAttr);
+                                            }
+                                          }}
+                                        />
+                                        <label htmlFor={`display-${attr.id}`} className="ml-2 text-sm">
+                                          Show in product summary
+                                        </label>
+                                      </div>
+                                    </div>
+                                    
+                                    {/* Display available options */}
+                                    <div className="mt-3">
+                                      <span className="text-sm font-medium mb-1 block">Available options:</span>
+                                      <div className="flex flex-wrap gap-2 mt-2">
+                                        {attr.options.map(option => (
+                                          <Badge 
+                                            key={option.id} 
+                                            variant="outline"
+                                            className="px-3 py-1 text-xs"
+                                          >
+                                            {option.displayValue}
+                                          </Badge>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        
+                        {/* Attribute configuration for dimensions and weight */}
+                        {attributesUsed.length > 0 && (
+                          <div className="mt-6 pt-6 border-t">
+                            <h4 className="font-medium">Attribute Configuration</h4>
+                            <p className="text-sm text-muted-foreground mb-4">
+                              Configure additional information for attributes when applicable
+                            </p>
+                            
+                            <AttributeConfig
+                              attributes={formattedAttributes.filter(attr => attributesUsed.includes(attr.id))}
+                              attributeValues={attributeValues}
+                              onChange={handleAttributeValuesChange}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 border rounded-md bg-muted/20">
+                        <InfoIcon className="h-12 w-12 mx-auto text-muted-foreground" />
+                        <p className="mt-2 text-muted-foreground">No product attributes available</p>
+                        <p className="text-sm text-muted-foreground">
+                          Click "Manage Global Attributes" to add attributes to the system
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Custom Attributes Section */}
+                  <div className="space-y-4 pt-6 border-t mt-8">
+                    <div>
+                      <h3 className="text-lg font-medium">Custom Product Attributes</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Add one-time custom attributes for this product only
+                      </p>
+                    </div>
+                    
+                    {customAttributes.length === 0 ? (
+                      <p className="text-sm text-muted-foreground italic mb-2">No custom attributes added yet</p>
+                    ) : (
+                      <div className="space-y-3 mb-4">
+                        {customAttributes.map((attr, index) => (
+                          <div 
+                            key={index} 
+                            className="flex items-center gap-2 border rounded-md p-3"
+                          >
+                            <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              <div>
+                                <span className="text-sm font-semibold">{attr.name}</span>
+                                <div className="flex items-center mt-1">
+                                  <Badge variant="outline" className="text-xs">
+                                    {attr.type || 'text'}
+                                  </Badge>
+                                  {attr.required && (
+                                    <Badge variant="secondary" className="ml-2 text-xs">
+                                      Required
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  type={attr.type === 'number' ? 'number' : 'text'}
+                                  value={attr.value}
+                                  onChange={(e) => {
+                                    const updatedAttrs = [...customAttributes];
+                                    updatedAttrs[index] = { ...attr, value: e.target.value };
+                                    setCustomAttributes(updatedAttrs);
+                                    
+                                    // Also update in context
+                                    const attrIndex = state.attributes.findIndex(a => 
+                                      a.isCustom && a.name === attr.name
+                                    );
+                                    
+                                    if (attrIndex !== -1) {
+                                      const updatedAttr = {
+                                        ...state.attributes[attrIndex],
+                                        textValue: e.target.value
+                                      };
+                                      updateAttribute(attrIndex, updatedAttr);
+                                    }
+                                  }}
+                                  placeholder="Enter value"
+                                />
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    // Remove custom attribute from array
+                                    const updatedAttrs = [...customAttributes];
+                                    updatedAttrs.splice(index, 1);
+                                    setCustomAttributes(updatedAttrs);
+                                    
+                                    // Also find and remove from product attributes in context if it exists
+                                    const attrIndex = state.attributes.findIndex(a => 
+                                      a.isCustom && a.name === attr.name
+                                    );
+                                    
+                                    if (attrIndex !== -1) {
+                                      removeAttribute(attrIndex);
+                                    }
+                                  }}
+                                >
+                                  <XIcon className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    <div className="border rounded-md p-4">
+                      <h5 className="font-medium mb-3">Add New Custom Attribute</h5>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                          <label className="text-sm font-medium mb-1 block">Attribute Name</label>
+                          <Input
+                            type="text"
+                            value={newCustomAttrName}
+                            onChange={(e) => setNewCustomAttrName(e.target.value)}
+                            placeholder="e.g. Material, Pattern, etc."
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium mb-1 block">Attribute Value</label>
+                          <Input
+                            type="text"
+                            value={newCustomAttrValue}
+                            onChange={(e) => setNewCustomAttrValue(e.target.value)}
+                            placeholder="e.g. Cotton, Striped, etc."
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center mb-3">
+                        <div className="flex items-center mr-4">
+                          <input
+                            id="attr-type-text"
+                            type="radio"
+                            checked={newCustomAttrType === 'text'}
+                            onChange={() => setNewCustomAttrType('text')}
+                            className="h-4 w-4 text-primary border-gray-300 focus:ring-primary"
+                          />
+                          <label htmlFor="attr-type-text" className="ml-2 text-sm">Text</label>
+                        </div>
+                        <div className="flex items-center mr-4">
+                          <input
+                            id="attr-type-number"
+                            type="radio"
+                            checked={newCustomAttrType === 'number'}
+                            onChange={() => setNewCustomAttrType('number')}
+                            className="h-4 w-4 text-primary border-gray-300 focus:ring-primary"
+                          />
+                          <label htmlFor="attr-type-number" className="ml-2 text-sm">Number</label>
+                        </div>
+                        <div className="flex items-center">
+                          <input
+                            id="attr-required"
+                            type="checkbox"
+                            checked={newCustomAttrRequired}
+                            onChange={(e) => setNewCustomAttrRequired(e.target.checked)}
+                            className="h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary"
+                          />
+                          <label htmlFor="attr-required" className="ml-2 text-sm">Required</label>
+                        </div>
+                      </div>
+                      
+                      <Button
+                        type="button"
+                        onClick={() => {
+                          if (!newCustomAttrName.trim()) {
+                            toast({
+                              title: "Attribute name is required",
+                              description: "Please enter a name for the custom attribute",
+                              variant: "destructive"
+                            });
+                            return;
+                          }
+                          
+                          // Add to local state
+                          const newAttr = {
+                            name: newCustomAttrName.trim(),
+                            value: newCustomAttrValue.trim(),
+                            type: newCustomAttrType,
+                            required: newCustomAttrRequired
+                          };
+                          
+                          setCustomAttributes(prev => [...prev, newAttr]);
+                          
+                          // Add to product attributes in context
+                          // Using centralized attribute system structure
+                          addAttribute({
+                            id: -Date.now(), // Use negative timestamp as temporary ID for custom attrs
+                            name: newCustomAttrName.trim(),
+                            isCustom: true,
+                            attributeType: newCustomAttrType,
+                            isRequired: newCustomAttrRequired,
+                            displayInProductSummary: true,
+                            // Store the value directly in textValue
+                            textValue: newCustomAttrValue.trim(),
+                            selectedOptions: [],
+                            sortOrder: 0
+                          });
+                          
+                          // Reset inputs
+                          setNewCustomAttrName('');
+                          setNewCustomAttrValue('');
+                          setNewCustomAttrType('text');
+                          setNewCustomAttrRequired(false);
+                        }}
+                      >
+                        Add Custom Attribute
+                      </Button>
+                    </div>
+                  </div>
+                </TabsContent>
