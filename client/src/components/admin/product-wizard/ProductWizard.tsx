@@ -114,8 +114,13 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ editMode = false, 
   const updateStepMutation = useMutation({
     mutationFn: async ({ step, data }: { step: ProductDraftStep; data: any }) => {
       if (!draftId) throw new Error('No draft ID available');
+      
+      // Convert step to a numeric index
+      const stepIndex = WIZARD_STEPS.findIndex(s => s.id === step);
+      if (stepIndex === -1) throw new Error('Invalid step');
+      
       const response = await apiRequest('PATCH', `/api/product-drafts/${draftId}/wizard-step`, {
-        step,
+        step: stepIndex,
         data,
       });
       return response.json();
@@ -186,7 +191,7 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ editMode = false, 
   useEffect(() => {
     // Create a new draft or load one for editing
     if (!draftId) {
-      const initialData: any = {
+      const draftData: any = {
         name: '',
         description: '',
         slug: '',
@@ -210,10 +215,16 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ editMode = false, 
       
       // If in edit mode, use the existing product ID
       if (editMode && productId) {
-        initialData.originalProductId = productId;
+        draftData.originalProductId = productId;
       }
       
-      createDraftMutation.mutate(initialData);
+      // Create payload matching the API's expected format
+      const payload = {
+        draftData,
+        step: 0 // Starting at the first step
+      };
+      
+      createDraftMutation.mutate(payload);
     }
   }, [draftId, editMode, productId]);
 
