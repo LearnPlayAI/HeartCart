@@ -226,21 +226,23 @@ function GlobalAttributesPage() {
 
   // Create option mutation
   const createOptionMutation = useMutation({
-    mutationFn: async (newOption: { value: string, displayValue: string, sortOrder: number }) => {
-      if (!selectedAttribute) return null;
+    mutationFn: async (newOption: { value: string, displayValue: string, sortOrder: number, attributeId?: number }) => {
+      const attributeId = newOption.attributeId || selectedAttribute?.id;
+      if (!attributeId) return null;
 
       try {
         const payload = {
           value: newOption.value,
           displayValue: newOption.displayValue || newOption.value,
-          sortOrder: newOption.sortOrder || 0
+          sortOrder: newOption.sortOrder || 0,
+          attributeId: attributeId
         };
         
         console.log("Creating option with payload:", payload);
         
         const response = await apiRequest(
           "POST", 
-          `/api/attributes/${selectedAttribute.id}/options`, 
+          `/api/attributes/${attributeId}/options`, 
           payload
         );
         return response;
@@ -472,10 +474,20 @@ function GlobalAttributesPage() {
     
     // Create simple option data with only the required fields
     if (optionFormMode === "create") {
+      if (!selectedAttribute?.id) {
+        toast({
+          title: "Error",
+          description: "No attribute selected. Please select an attribute first.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       createOptionMutation.mutate({
         value, 
         displayValue: displayValue || value,
-        sortOrder
+        sortOrder,
+        attributeId: selectedAttribute.id
       });
     } else if (optionFormMode === "edit" && selectedOption) {
       updateOptionMutation.mutate({
