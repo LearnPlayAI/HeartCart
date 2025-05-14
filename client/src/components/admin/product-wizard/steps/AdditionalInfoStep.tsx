@@ -125,8 +125,6 @@ export function AdditionalInfoStep() {
   const [formattedAttributes, setFormattedAttributes] = useState<ProductAttribute[]>([]);
   const [attributeValues, setAttributeValues] = useState<AttributeValue[]>([]);
   
-  // Removed automatic refetching on tab change to prevent UI updates while editing
-  
   // Auto-populate supplier information from catalog when available
   useEffect(() => {
     if (catalogData?.data && state.catalogId) {
@@ -175,18 +173,24 @@ export function AdditionalInfoStep() {
   }, [state.attributes]);
 
   // Format available product attributes for our attribute configuration component
+  // Using the centralized attribute system
   useEffect(() => {
     if (globalAttributesData?.data && globalAttributesData.data.length > 0) {
-      // Convert global attributes to the format expected by AttributePricingConfig
+      // Convert global attributes to the format expected by AttributeConfig
+      // This takes Attribute objects from our centralized system and formats them
       const formatted = globalAttributesData.data.map(attr => ({
         id: attr.id,
         name: attr.name,
         type: attr.attributeType || 'select',
         isRequired: attr.isRequired || false,
+        displayInProductSummary: attr.displayInProductSummary || false,
+        isFilterable: attr.isFilterable || false,
+        isSwatch: attr.isSwatch || false,
         options: attr.options?.map(opt => ({
           id: opt.id,
           value: opt.value,
-          displayValue: opt.displayValue || opt.value
+          displayValue: opt.displayValue || opt.value,
+          metadata: opt.metadata || {}
         })) || []
       }));
       
@@ -207,7 +211,7 @@ export function AdditionalInfoStep() {
               displayValue: opt.displayValue,
               isRequired: attr.isRequired,
               sortOrder: 0,
-              metadata: {}
+              metadata: opt.metadata || {}
             });
           });
         });
