@@ -77,50 +77,83 @@ export default function registerProductDraftRoutes(router: Router) {
         // Prefill the draft with product data
         logger.debug('Prefilling draft with product data', { productId: product.id });
         
-        Object.assign(draftData, {
-          originalProductId: product.id, // Ensure this is set explicitly
+        // Log the product data we're working with
+        logger.debug('Product data retrieved for draft creation', { 
+          product: {
+            id: product.id,
+            name: product.name,
+            slug: product.slug,
+            categoryId: product.categoryId,
+            price: product.price,
+            salePrice: product.salePrice
+          }
+        });
+
+        // Create a new draft object with all fields explicitly set
+        const draftWithProductData = {
+          // Core draft fields
+          originalProductId: product.id,
+          draftStatus: "draft",
+          createdBy: userId,
+          
+          // Basic information
           name: product.name || "",
           slug: product.slug || "",
+          sku: product.sku || "",
           description: product.description || "",
           brand: product.brand || "",
-          sku: product.sku || "",
           categoryId: product.categoryId || null,
-          isActive: !!product.isActive,
-          isFeatured: !!product.isFeatured,
-          // Map from product price fields to draft price fields
+          catalogId: product.catalogId || null,
+          isActive: product.isActive === true,
+          isFeatured: product.isFeatured === true,
+          
+          // Pricing fields
           costPrice: product.costPrice || null,
           regularPrice: product.price || null,
           salePrice: product.salePrice || null,
           onSale: product.salePrice !== null && product.salePrice < product.price,
           markupPercentage: product.markupPercentage || null,
-          // Other fields
+          
+          // Inventory
           stockLevel: product.stock || 0,
           lowStockThreshold: product.lowStockThreshold || 5,
-          backorderEnabled: !!product.backorderEnabled,
-          attributes: [], // Will be populated from product attributes
+          backorderEnabled: product.backorderEnabled === true,
+          
+          // Attributes
+          attributes: [], // Will be populated later
+          
+          // Supplier info
           supplierId: product.supplierId || null,
+          
+          // Tax info
           taxable: product.taxable !== false, // Default to true
           taxClass: product.taxClass || "standard",
+          
           // Images
           imageUrls: product.imageUrl ? [product.imageUrl, ...(product.additionalImages || [])] : [],
-          // Set blank placeholders for object keys, these will be populated later if needed
           imageObjectKeys: product.imageUrl ? Array(1 + (product.additionalImages?.length || 0)).fill('') : [],
           mainImageIndex: 0,
-          // Additional fields
+          
+          // Physical properties
+          weight: product.weight?.toString() || "",
+          dimensions: product.dimensions || "",
+          
+          // Promotional fields
           discountLabel: product.discountLabel || "",
           specialSaleText: product.specialSaleText || "",
-          dimensions: product.dimensions || "",
-          weight: product.weight?.toString() || "",
-          isFlashDeal: !!product.isFlashDeal,
-          metaTitle: product.metaTitle || "",
-          metaDescription: product.metaDescription || "",
-          metaKeywords: product.metaKeywords || "",
-          // Handle date fields - store as string in ISO format for consistency
+          isFlashDeal: product.isFlashDeal === true,
+          
+          // Date fields - using ISO strings for consistency
           specialSaleStart: product.specialSaleStart ? new Date(product.specialSaleStart).toISOString() : null,
           specialSaleEnd: product.specialSaleEnd ? new Date(product.specialSaleEnd).toISOString() : null,
           flashDealEnd: product.flashDealEnd ? new Date(product.flashDealEnd).toISOString() : null,
-          // Initialize wizard progress - mark all steps as incomplete initially
-          // This ensures the UI will show the proper progress state
+          
+          // SEO fields
+          metaTitle: product.metaTitle || "",
+          metaDescription: product.metaDescription || "",
+          metaKeywords: product.metaKeywords || "",
+          
+          // Wizard state tracking
           wizardProgress: {
             "basic-info": false,
             "images": false,
@@ -128,9 +161,12 @@ export default function registerProductDraftRoutes(router: Router) {
             "sales-promotions": false,
             "review": false
           },
-          // Initialize completedSteps as an empty array
           completedSteps: [],
-        });
+        };
+        
+        // Replace the draft data entirely rather than using Object.assign 
+        // which can lead to unexpected merging behavior
+        draftData = draftWithProductData;
 
         // Load and map product attributes using the new attribute system
         try {
