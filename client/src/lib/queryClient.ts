@@ -16,7 +16,16 @@ async function throwIfResNotOk(res: Response) {
         // Try to parse as JSON first
         try {
           const errorData = JSON.parse(text);
-          errorMessage = errorData.message || errorData.error || text;
+          // Handle our standardized API error format
+          if (errorData.error && typeof errorData.error === 'object') {
+            errorMessage = errorData.error.message || JSON.stringify(errorData.error);
+          } else if (errorData.message) {
+            errorMessage = errorData.message;
+          } else if (errorData.error && typeof errorData.error === 'string') {
+            errorMessage = errorData.error;
+          } else {
+            errorMessage = JSON.stringify(errorData);
+          }
         } catch (parseError) {
           // If not JSON, use the raw text
           errorMessage = text;

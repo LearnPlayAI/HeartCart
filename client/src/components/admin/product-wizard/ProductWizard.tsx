@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { useLocation } from 'wouter';
+import { useAuth } from '@/hooks/use-auth';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Loader2, Save, Trash2, AlertTriangle } from 'lucide-react';
@@ -202,15 +203,32 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ editMode = false, 
     },
   });
 
+  // Get user information to ensure we're authenticated
+  const { user, isLoading: isLoadingUser } = useAuth();
+  
   // Initialize the wizard
   useEffect(() => {
+    // Wait until we know the user's authenticated state
+    if (isLoadingUser) return;
+    
+    // Make sure user is authenticated before creating a draft
+    if (!user) {
+      toast({
+        title: 'Authentication Required',
+        description: 'You must be logged in to create or edit products.',
+        variant: 'destructive',
+      });
+      setLocation('/login?return=/admin/products');
+      return;
+    }
+    
     // Create a new draft or load one for editing
     if (!draftId) {
       // Create payload matching the API's expected format
       // This is what createProductDraftSchema from shared/validation-schemas.ts expects
       const initialData: any = {
         name: '',
-        description: null,
+        description: '',
         slug: '',
         categoryId: null,
         regularPrice: null,
@@ -224,21 +242,20 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ editMode = false, 
         imageUrls: [],
         imageObjectKeys: [],
         mainImageIndex: 0,
-        discountLabel: null,
-        specialSaleText: null,
+        discountLabel: '',
+        specialSaleText: '',
         specialSaleStart: null,
         specialSaleEnd: null,
         isFlashDeal: false,
         flashDealEnd: null,
-        dimensions: null,
-        weight: null,
+        dimensions: '',
+        weight: '',
         wizardProgress: {
           "basic-info": false, 
           "images": false, 
           "additional-info": false, 
           "review": false
-        },
-        completedSteps: []
+        }
       };
       
       // If in edit mode, use the existing product ID
@@ -246,12 +263,11 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ editMode = false, 
         initialData.originalProductId = productId;
       }
       
-      console.log('Creating product draft with data:', initialData);
-      
       // Send the draft data directly - no need for step or draftData wrappers
+      console.log('Creating product draft with data:', initialData);
       createDraftMutation.mutate(initialData);
     }
-  }, [draftId, editMode, productId]);
+  }, [draftId, editMode, productId, user, isLoadingUser, setLocation, toast]);
 
   // Handle step changes
   const handleStepChange = (step: string) => {
