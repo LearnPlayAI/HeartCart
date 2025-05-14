@@ -39,8 +39,8 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 
-import { AdminLayout } from "@/components/admin/AdminLayout";
-import { ProductWizard } from "@/components/admin/product-management/ProductWizard";
+import { AdminLayout } from "@/components/admin/layout";
+import { ProductWizard } from "@/components/admin/product-wizard/ProductWizard";
 import { DraftProvider, useDraft } from "@/components/admin/product-management/DraftContext";
 
 function EmptyState({ onCreateDraft }: { onCreateDraft: () => void }) {
