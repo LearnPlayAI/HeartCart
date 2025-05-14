@@ -5344,7 +5344,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerProductDraftRoutes(app);
   
   // Register AI API routes for product generation features
-  app.use('/api', aiApiRoutes);
+  // Mount AI API routes for AI-powered features
+  app.use('/api/ai', aiApiRoutes);
   
   // Register attribute discount rules routes
   // Removed attribute discount routes as part of centralized attribute system

@@ -1,98 +1,146 @@
 /**
- * AI Utilities
+ * AI Utility Functions
  * 
- * Provides helper functions and hooks for AI-related functionality
- * in the product management system.
+ * These functions interact with the AI API endpoints to generate content
+ * for product descriptions and SEO suggestions.
  */
 
-import { useMutation, useQuery } from '@tanstack/react-query';
-import { apiRequest } from '@/lib/queryClient';
-import { useState } from 'react';
+import axios from 'axios';
+
+// Interface for description generation input
+interface DescriptionGenerationInput {
+  productName: string;
+  category: string;
+  keywords: string[];
+  tone: string;
+  attributes: {
+    name: string;
+    value: string;
+  }[];
+}
+
+// Interface for SEO optimization input
+interface SeoOptimizationInput {
+  productName: string;
+  description: string;
+  category: string;
+  targetKeywords: string[];
+}
+
+// Interface for the SEO suggestion structure returned by the API
+interface SeoSuggestion {
+  metaTitle: string;
+  metaDescription: string;
+  keywords: string[];
+}
 
 /**
  * Check if AI services are available
+ * @returns {Promise<boolean>} True if AI services are available
  */
-export function useAiStatus() {
-  return useQuery({
-    queryKey: ['/api/ai/status'],
-    queryFn: async () => {
-      const response = await apiRequest('/api/ai/status');
-      return response;
-    },
-    staleTime: 60 * 1000, // 1 minute
-    retry: 1,
-  });
+export async function checkAiAvailability(): Promise<boolean> {
+  try {
+    const response = await axios.get('/api/ai/status');
+    return response.data?.success && response.data?.data?.available;
+  } catch (error) {
+    console.error('Error checking AI availability:', error);
+    return false;
+  }
 }
 
 /**
- * Generate product description suggestions
+ * Generate product descriptions using AI
+ * @param {DescriptionGenerationInput} input - The input data for description generation
+ * @returns {Promise<string[]>} Array of generated descriptions
  */
-export function useGenerateDescriptions() {
-  const [isGenerating, setIsGenerating] = useState(false);
-  
-  const mutation = useMutation({
-    mutationFn: async (data: { 
-      productName: string;
-      category?: string;
-      attributes?: any[];
-    }) => {
-      setIsGenerating(true);
-      try {
-        const response = await apiRequest('/api/ai/suggest-description', {
-          method: 'POST',
-          data,
-        });
-        return response;
-      } finally {
-        setIsGenerating(false);
-      }
-    },
-  });
-  
-  return {
-    generateDescriptions: mutation.mutate,
-    isGenerating: isGenerating,
-    descriptions: mutation.data?.descriptions || [],
-    error: mutation.error,
-    reset: mutation.reset,
-  };
+export async function generateDescriptions(input: DescriptionGenerationInput): Promise<string[]> {
+  try {
+    // Create a timeout promise to cancel the request if it takes too long
+    const timeoutPromise = new Promise<string[]>((_, reject) => {
+      setTimeout(() => reject(new Error('Request timed out')), 30000); // 30 second timeout
+    });
+    
+    // The actual API request
+    const requestPromise = axios.post('/api/ai/descriptions', input)
+      .then(response => {
+        if (response.data?.success) {
+          return response.data.descriptions || [];
+        }
+        throw new Error(response.data?.error || 'Failed to generate descriptions');
+      });
+      
+    // Race between timeout and the actual request
+    return Promise.race([requestPromise, timeoutPromise]);
+  } catch (error) {
+    console.error('Error generating descriptions:', error);
+    throw error;
+  }
 }
 
 /**
- * Generate SEO optimization suggestions
+ * Optimize SEO content using AI
+ * @param {SeoOptimizationInput} input - The input data for SEO optimization
+ * @returns {Promise<SeoSuggestion[]>} Array of SEO suggestions
  */
-export function useGenerateSeoSuggestions() {
-  const [isGenerating, setIsGenerating] = useState(false);
-  
-  const mutation = useMutation({
-    mutationFn: async (data: { 
-      productName: string;
-      description: string;
-      category?: string;
-    }) => {
-      setIsGenerating(true);
-      try {
-        const response = await apiRequest('/api/ai/optimize-seo', {
-          method: 'POST',
-          data,
-        });
-        return response;
-      } finally {
-        setIsGenerating(false);
-      }
-    },
-  });
-  
-  return {
-    generateSuggestions: mutation.mutate,
-    isGenerating: isGenerating,
-    results: mutation.data ? {
-      keywords: mutation.data.keywords || [],
-      metaTitle: mutation.data.metaTitle || '',
-      metaDescription: mutation.data.metaDescription || '',
-      contentSuggestions: mutation.data.contentSuggestions || [],
-    } : null,
-    error: mutation.error,
-    reset: mutation.reset,
-  };
+export async function optimizeSeo(input: SeoOptimizationInput): Promise<SeoSuggestion[]> {
+  try {
+    // Create a timeout promise to cancel the request if it takes too long
+    const timeoutPromise = new Promise<SeoSuggestion[]>((_, reject) => {
+      setTimeout(() => reject(new Error('Request timed out')), 30000); // 30 second timeout
+    });
+    
+    // The actual API request
+    const requestPromise = axios.post('/api/ai/seo', input)
+      .then(response => {
+        if (response.data?.success) {
+          return response.data.suggestions || [];
+        }
+        throw new Error(response.data?.error || 'Failed to generate SEO suggestions');
+      });
+      
+    // Race between timeout and the actual request
+    return Promise.race([requestPromise, timeoutPromise]);
+  } catch (error) {
+    console.error('Error optimizing SEO:', error);
+    throw error;
+  }
+}
+
+/**
+ * Generate product tags using AI
+ * @param {string} productName - The name of the product
+ * @param {string} description - The product description
+ * @param {string} category - The product category
+ * @returns {Promise<string[]>} Array of suggested tags
+ */
+export async function generateTags(
+  productName: string,
+  description: string = '',
+  category: string = ''
+): Promise<string[]> {
+  try {
+    // Create a timeout promise to cancel the request if it takes too long
+    const timeoutPromise = new Promise<string[]>((_, reject) => {
+      setTimeout(() => reject(new Error('Request timed out')), 30000); // 30 second timeout
+    });
+    
+    // The actual API request
+    const requestPromise = axios.post('/api/ai/tags', {
+      productName,
+      description,
+      category
+    })
+      .then(response => {
+        if (response.data?.success) {
+          return response.data.tags || [];
+        }
+        throw new Error(response.data?.error || 'Failed to generate tags');
+      });
+      
+    // Race between timeout and the actual request
+    return Promise.race([requestPromise, timeoutPromise]);
+  } catch (error) {
+    console.error('Error generating tags:', error);
+    throw error;
+  }
 }

@@ -1,21 +1,36 @@
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Sparkles, Lightbulb, Check } from 'lucide-react';
-import { useGenerateSeoSuggestions, useAiStatus } from '../utils/ai-utils';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { useToast } from '@/hooks/use-toast';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+/**
+ * SEO Optimizer Component
+ * 
+ * This component provides AI-powered SEO optimization suggestions
+ * for product pages, including meta title, meta description, and keywords.
+ */
 
+import { useState, useCallback } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Check, RefreshCw, AlertCircle, Sparkles } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { optimizeSeo, checkAiAvailability } from '../utils/ai-utils';
+
+// Component props
 interface SeoOptimizerProps {
   productName: string;
   description: string;
-  category?: string;
+  category: string;
   onApplySeoTitle: (title: string) => void;
   onApplySeoDescription: (description: string) => void;
   onApplyKeywords: (keywords: string[]) => void;
+}
+
+// SEO Suggestion format
+interface SeoSuggestion {
+  metaTitle: string;
+  metaDescription: string;
+  keywords: string[];
 }
 
 export function SeoOptimizer({
@@ -27,197 +42,193 @@ export function SeoOptimizer({
   onApplyKeywords
 }: SeoOptimizerProps) {
   const { toast } = useToast();
-  const [expanded, setExpanded] = useState(false);
-  const { available, isLoading: isCheckingStatus } = useAiStatus();
-  const { 
-    generateSuggestions, 
-    results, 
-    isGenerating, 
-    error, 
-    reset 
-  } = useGenerateSeoSuggestions();
+  const [loading, setLoading] = useState(false);
+  const [isAiAvailable, setIsAiAvailable] = useState<boolean | null>(null);
+  const [targetKeywords, setTargetKeywords] = useState<string>('');
+  const [suggestions, setSuggestions] = useState<SeoSuggestion[]>([]);
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
-  const handleGenerateSuggestions = () => {
-    if (!productName || !description) {
+  // Check AI availability on component mount
+  const checkAvailability = useCallback(async () => {
+    try {
+      const available = await checkAiAvailability();
+      setIsAiAvailable(available);
+    } catch (error) {
+      console.error('Error checking AI availability:', error);
+      setIsAiAvailable(false);
+    }
+  }, []);
+
+  // Generate SEO suggestions using the AI API
+  const generateSeoSuggestions = async () => {
+    if (!productName.trim() || !description.trim()) {
       toast({
-        title: "Information required",
-        description: "Please enter a product name and description before generating SEO suggestions.",
+        title: "Product information required",
+        description: "Please provide both product name and description to generate SEO suggestions.",
         variant: "destructive"
       });
       return;
     }
-    
-    generateSuggestions({ productName, description, category });
-    setExpanded(true);
+
+    // Validate that AI is available
+    if (isAiAvailable === null) {
+      await checkAvailability();
+      
+      if (!isAiAvailable) {
+        toast({
+          title: "AI Services Unavailable",
+          description: "AI services are currently unavailable. Your administrator can enable them in the system settings.",
+          variant: "destructive"
+        });
+        return;
+      }
+    } else if (isAiAvailable === false) {
+      toast({
+        title: "AI Services Unavailable",
+        description: "AI services are currently unavailable. Your administrator can enable them in the system settings.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Reset state
+    setLoading(true);
+    setSuggestions([]);
+    setSelectedIndex(null);
+
+    try {
+      // Parse the target keywords string into an array
+      const keywordArray = targetKeywords
+        .split(',')
+        .map(keyword => keyword.trim())
+        .filter(keyword => keyword.length > 0);
+
+      // Call the API
+      const seoSuggestions = await optimizeSeo({
+        productName,
+        description,
+        category,
+        targetKeywords: keywordArray
+      });
+
+      if (seoSuggestions && seoSuggestions.length > 0) {
+        setSuggestions(seoSuggestions);
+        toast({
+          title: "SEO Suggestions Generated",
+          description: `${seoSuggestions.length} SEO suggestions have been generated.`,
+          variant: "default"
+        });
+      } else {
+        toast({
+          title: "No SEO Suggestions Generated",
+          description: "The AI couldn't generate any SEO suggestions. Try different inputs or try again later.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error generating SEO suggestions:', error);
+      toast({
+        title: "Generation Failed",
+        description: "An error occurred while generating SEO suggestions. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  if (isCheckingStatus) {
-    return (
-      <Card className="w-full mb-4">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg font-medium flex items-center gap-2">
-            <Sparkles className="h-4 w-4" />
-            <Skeleton className="h-4 w-52" />
-          </CardTitle>
-          <CardDescription>
-            <Skeleton className="h-4 w-full" />
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Skeleton className="h-8 w-40" />
-        </CardContent>
-      </Card>
-    );
-  }
+  // Apply all the SEO suggestions at once
+  const handleApplySuggestion = (index: number) => {
+    setSelectedIndex(index);
+    
+    const suggestion = suggestions[index];
+    onApplySeoTitle(suggestion.metaTitle);
+    onApplySeoDescription(suggestion.metaDescription);
+    onApplyKeywords(suggestion.keywords);
+    
+    toast({
+      title: "SEO Suggestion Applied",
+      description: "The SEO suggestion has been applied to your product.",
+      variant: "default"
+    });
+  };
 
-  if (!available) {
-    return (
-      <Alert variant="warning" className="mb-4">
-        <Sparkles className="h-4 w-4" />
-        <AlertTitle>AI Features Unavailable</AlertTitle>
-        <AlertDescription>
-          AI-powered SEO optimization is not available. Contact your administrator to configure the AI service.
-        </AlertDescription>
-      </Alert>
-    );
+  // Apply just the meta title
+  const handleApplyTitle = (index: number) => {
+    onApplySeoTitle(suggestions[index].metaTitle);
+    toast({
+      title: "Meta Title Applied",
+      description: "The meta title has been applied to your product.",
+      variant: "default"
+    });
+  };
+
+  // Apply just the meta description
+  const handleApplyDescription = (index: number) => {
+    onApplySeoDescription(suggestions[index].metaDescription);
+    toast({
+      title: "Meta Description Applied",
+      description: "The meta description has been applied to your product.",
+      variant: "default"
+    });
+  };
+
+  // Apply just the keywords
+  const handleApplyKeywords = (index: number) => {
+    onApplyKeywords(suggestions[index].keywords);
+    toast({
+      title: "Keywords Applied",
+      description: "The keywords have been applied to your product.",
+      variant: "default"
+    });
+  };
+
+  if (isAiAvailable === null) {
+    // Initial load, check AI availability
+    checkAvailability();
   }
 
   return (
-    <Card className="w-full mb-4">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-lg font-medium flex items-center gap-2">
-          <Sparkles className="h-4 w-4" />
+    <Card className="w-full">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Sparkles size={18} className="text-primary" />
           AI SEO Optimizer
         </CardTitle>
         <CardDescription>
-          Generate SEO suggestions to improve your product's visibility
+          Generate SEO-optimized content for your product listing
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {error && (
-          <Alert variant="destructive" className="mb-4">
-            <AlertTitle>Generation Failed</AlertTitle>
-            <AlertDescription>
-              {error.message || "Failed to generate SEO suggestions. Please try again."}
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {results && (
-          <div className="space-y-4 mb-6">
-            <Accordion type="single" collapsible className="w-full">
-              <AccordionItem value="seo-title">
-                <AccordionTrigger className="text-sm font-medium">
-                  Meta Title
-                  <span className="ml-2">
-                    <Badge variant="outline" className="ml-2">
-                      {results.metaTitle.length} / 60
-                    </Badge>
-                  </span>
-                </AccordionTrigger>
-                <AccordionContent>
-                  <div className="p-3 bg-muted/50 rounded-md">
-                    <p className="text-sm mb-2">{results.metaTitle}</p>
-                    <Button 
-                      size="sm" 
-                      variant="secondary"
-                      className="mt-1"
-                      onClick={() => onApplySeoTitle(results.metaTitle)}
-                    >
-                      <Check className="mr-1 h-3 w-3" />
-                      Apply This Title
-                    </Button>
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-              
-              <AccordionItem value="seo-description">
-                <AccordionTrigger className="text-sm font-medium">
-                  Meta Description
-                  <span className="ml-2">
-                    <Badge variant="outline" className="ml-2">
-                      {results.metaDescription.length} / 160
-                    </Badge>
-                  </span>
-                </AccordionTrigger>
-                <AccordionContent>
-                  <div className="p-3 bg-muted/50 rounded-md">
-                    <p className="text-sm mb-2">{results.metaDescription}</p>
-                    <Button 
-                      size="sm" 
-                      variant="secondary"
-                      className="mt-1"
-                      onClick={() => onApplySeoDescription(results.metaDescription)}
-                    >
-                      <Check className="mr-1 h-3 w-3" />
-                      Apply This Description
-                    </Button>
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-              
-              <AccordionItem value="keywords">
-                <AccordionTrigger className="text-sm font-medium">
-                  Suggested Keywords
-                  <span className="ml-2">
-                    <Badge variant="outline" className="ml-2">
-                      {results.keywords.length} keywords
-                    </Badge>
-                  </span>
-                </AccordionTrigger>
-                <AccordionContent>
-                  <div className="p-3 bg-muted/50 rounded-md">
-                    <div className="flex flex-wrap gap-2 mb-3">
-                      {results.keywords.map((keyword, i) => (
-                        <Badge key={i} variant="secondary">
-                          {keyword}
-                        </Badge>
-                      ))}
-                    </div>
-                    <Button 
-                      size="sm" 
-                      variant="secondary"
-                      onClick={() => onApplyKeywords(results.keywords)}
-                    >
-                      <Check className="mr-1 h-3 w-3" />
-                      Apply All Keywords
-                    </Button>
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-              
-              <AccordionItem value="content-suggestions">
-                <AccordionTrigger className="text-sm font-medium">
-                  Content Improvement Suggestions
-                </AccordionTrigger>
-                <AccordionContent>
-                  <div className="p-3 bg-muted/50 rounded-md">
-                    <ul className="space-y-2 list-disc pl-5">
-                      {results.contentSuggestions.map((suggestion, i) => (
-                        <li key={i} className="text-sm">
-                          <div className="flex items-start gap-2">
-                            <Lightbulb className="h-4 w-4 text-yellow-500 mt-0.5 flex-shrink-0" />
-                            <span>{suggestion}</span>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
+        {isAiAvailable === false && (
+          <div className="mb-4 p-3 bg-destructive/10 text-destructive rounded-md flex items-center gap-2">
+            <AlertCircle size={16} />
+            <span>AI services are currently unavailable. Please try again later or contact your administrator.</span>
           </div>
         )}
-
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={handleGenerateSuggestions}
-            disabled={isGenerating || !productName || !description}
+        
+        <div className="space-y-4">
+          <div>
+            <label className="text-sm font-medium mb-1 block">Target Keywords (comma separated)</label>
+            <Input 
+              placeholder="premium, south africa, online shop" 
+              value={targetKeywords}
+              onChange={(e) => setTargetKeywords(e.target.value)}
+              disabled={loading}
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Add specific keywords you want to target. Leave empty to let the AI suggest keywords.
+            </p>
+          </div>
+          
+          <Button 
+            onClick={generateSeoSuggestions} 
+            disabled={loading || isAiAvailable === false || !productName.trim() || !description.trim()}
+            className="w-full"
           >
-            {isGenerating ? (
+            {loading ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
                 Generating...
               </>
             ) : (
@@ -227,21 +238,106 @@ export function SeoOptimizer({
               </>
             )}
           </Button>
-          
-          {results && (
-            <Button 
-              variant="ghost" 
-              size="sm"
-              onClick={() => reset()}
-            >
-              Reset
-            </Button>
-          )}
         </div>
+
+        {suggestions.length > 0 && (
+          <div className="mt-6">
+            <Tabs defaultValue="0">
+              <TabsList className="w-full">
+                {suggestions.map((_, index) => (
+                  <TabsTrigger key={index} value={index.toString()} className="flex-1">
+                    Option {index + 1}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              
+              {suggestions.map((suggestion, index) => (
+                <TabsContent key={index} value={index.toString()} className="pt-4 space-y-6">
+                  <div className="relative space-y-4">
+                    {selectedIndex === index && (
+                      <Badge 
+                        variant="default" 
+                        className="absolute top-0 right-0 bg-green-600"
+                      >
+                        <Check size={12} className="mr-1" /> Selected
+                      </Badge>
+                    )}
+                    
+                    <div>
+                      <h4 className="text-sm font-medium mb-1">Meta Title</h4>
+                      <div className="flex gap-2">
+                        <div className="flex-1 p-3 border rounded-md bg-muted/20">
+                          {suggestion.metaTitle}
+                        </div>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={() => handleApplyTitle(index)}
+                        >
+                          Apply
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {suggestion.metaTitle.length}/60 characters
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <h4 className="text-sm font-medium mb-1">Meta Description</h4>
+                      <div className="flex gap-2">
+                        <div className="flex-1 p-3 border rounded-md bg-muted/20">
+                          {suggestion.metaDescription}
+                        </div>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={() => handleApplyDescription(index)}
+                        >
+                          Apply
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {suggestion.metaDescription.length}/160 characters
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <h4 className="text-sm font-medium mb-1">Keywords</h4>
+                      <div className="flex gap-2">
+                        <div className="flex-1 p-3 border rounded-md bg-muted/20">
+                          <div className="flex flex-wrap gap-2">
+                            {suggestion.keywords.map((keyword, kIndex) => (
+                              <Badge key={kIndex} variant="secondary">
+                                {keyword}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={() => handleApplyKeywords(index)}
+                        >
+                          Apply
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <Button
+                      variant={selectedIndex === index ? "outline" : "default"}
+                      className="w-full mt-4"
+                      onClick={() => handleApplySuggestion(index)}
+                      disabled={selectedIndex === index}
+                    >
+                      {selectedIndex === index ? 'Selected' : 'Apply All'}
+                    </Button>
+                  </div>
+                </TabsContent>
+              ))}
+            </Tabs>
+          </div>
+        )}
       </CardContent>
-      <CardFooter className="text-xs text-muted-foreground pt-0">
-        This feature generates SEO recommendations based on AI. Review and edit as needed.
-      </CardFooter>
     </Card>
   );
 }
