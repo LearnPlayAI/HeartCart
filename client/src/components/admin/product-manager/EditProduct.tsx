@@ -35,49 +35,15 @@ export const EditProduct: React.FC = () => {
         // We use the POST endpoint which will either:
         // 1. Return an existing draft if one exists, or
         // 2. Create a new draft prefilled with the product data and return that
-        const initialDraft = {
-          originalProductId: productId,
-          name: '', // These will be filled from the product data on the server
-          description: '',
-          slug: '',
-          categoryId: null,
-          regularPrice: null,
-          salePrice: null,
-          costPrice: null,
-          onSale: false,
-          stockLevel: 0,
-          isActive: true,
-          isFeatured: false,
-          attributes: [],
-          imageUrls: [],
-          imageObjectKeys: [],
-          mainImageIndex: 0,
-          discountLabel: '',
-          specialSaleText: '',
-          specialSaleStart: null,
-          specialSaleEnd: null,
-          isFlashDeal: false,
-          flashDealEnd: null,
-          dimensions: '',
-          weight: '',
-          catalogId: null,
-          supplierId: null,
-          completedSteps: [],
-          draftStatus: 'draft',
-          wizardProgress: {
-            'basic-info': false,
-            'images': false,
-            'details': false,
-            'review': false
-          }
-        };
-
-        // This will either return existing draft or create new one
-        // The server handles prefilling with product data
+        
+        // We need to determine which endpoint format to use based on our routes
+        // For /api/product-drafts in product-draft-routes.ts, we send only the originalProductId
         const response = await apiRequest('POST', '/api/product-drafts', {
-          draftData: initialDraft,
-          step: 0
+          originalProductId: productId
         });
+        
+        // If the response doesn't have the expected data structure, it might be because
+        // we're hitting the wrong endpoint or route implementation
         
         return response.json();
       } catch (error) {
