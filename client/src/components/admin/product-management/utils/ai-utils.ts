@@ -5,8 +5,9 @@
  * in the product management system.
  */
 
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
+import { useState } from 'react';
 
 /**
  * Check if AI services are available
@@ -15,15 +16,10 @@ export function useAiStatus() {
   return useQuery({
     queryKey: ['/api/ai/status'],
     queryFn: async () => {
-      try {
-        const response = await apiRequest('GET', '/api/ai/status');
-        return response.data;
-      } catch (error) {
-        console.error("Error checking AI status:", error);
-        return { available: false };
-      }
+      const response = await apiRequest('/api/ai/status');
+      return response;
     },
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    staleTime: 60 * 1000, // 1 minute
     retry: 1,
   });
 }
@@ -32,46 +28,71 @@ export function useAiStatus() {
  * Generate product description suggestions
  */
 export function useGenerateDescriptions() {
-  return useMutation({
-    mutationFn: async ({ 
-      productName, 
-      category, 
-      attributes 
-    }: { 
-      productName: string; 
+  const [isGenerating, setIsGenerating] = useState(false);
+  
+  const mutation = useMutation({
+    mutationFn: async (data: { 
+      productName: string;
       category?: string;
       attributes?: any[];
     }) => {
-      const response = await apiRequest('POST', '/api/ai/suggest-description', {
-        productName,
-        category,
-        attributes
-      });
-      return response.data;
-    }
+      setIsGenerating(true);
+      try {
+        const response = await apiRequest('/api/ai/suggest-description', {
+          method: 'POST',
+          data,
+        });
+        return response;
+      } finally {
+        setIsGenerating(false);
+      }
+    },
   });
+  
+  return {
+    generateDescriptions: mutation.mutate,
+    isGenerating: isGenerating,
+    descriptions: mutation.data?.descriptions || [],
+    error: mutation.error,
+    reset: mutation.reset,
+  };
 }
 
 /**
  * Generate SEO optimization suggestions
  */
 export function useGenerateSeoSuggestions() {
-  return useMutation({
-    mutationFn: async ({ 
-      productName, 
-      description, 
-      category 
-    }: { 
-      productName: string; 
+  const [isGenerating, setIsGenerating] = useState(false);
+  
+  const mutation = useMutation({
+    mutationFn: async (data: { 
+      productName: string;
       description: string;
       category?: string;
     }) => {
-      const response = await apiRequest('POST', '/api/ai/optimize-seo', {
-        productName,
-        description,
-        category
-      });
-      return response.data;
-    }
+      setIsGenerating(true);
+      try {
+        const response = await apiRequest('/api/ai/optimize-seo', {
+          method: 'POST',
+          data,
+        });
+        return response;
+      } finally {
+        setIsGenerating(false);
+      }
+    },
   });
+  
+  return {
+    generateSuggestions: mutation.mutate,
+    isGenerating: isGenerating,
+    results: mutation.data ? {
+      keywords: mutation.data.keywords || [],
+      metaTitle: mutation.data.metaTitle || '',
+      metaDescription: mutation.data.metaDescription || '',
+      contentSuggestions: mutation.data.contentSuggestions || [],
+    } : null,
+    error: mutation.error,
+    reset: mutation.reset,
+  };
 }

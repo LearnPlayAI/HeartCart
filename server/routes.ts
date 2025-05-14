@@ -33,6 +33,7 @@ import registerProductDraftRoutes from "./product-draft-routes";
 // Removed attributeDiscountRoutes import as part of centralized attribute system
 import pricingRoutes from "./pricing-routes";
 import batchUploadRoutes from "./batch-upload-routes";
+import aiApiRoutes from "./routes/ai-api";
 import { registerAuthTestRoutes } from "./auth-test-routes";
 import { registerDatabaseTestRoutes } from "./database-test-routes";
 import { registerApiTestRoutes } from "./api-test-routes";
@@ -5341,6 +5342,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerAttributeRoutes(app);
   registerProductAttributeRoutes(app);
   registerProductDraftRoutes(app);
+  
+  // Register AI API routes for product generation features
+  app.use('/api', aiApiRoutes);
   
   // Register attribute discount rules routes
   // Removed attribute discount routes as part of centralized attribute system
