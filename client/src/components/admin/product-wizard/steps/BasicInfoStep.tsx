@@ -1,650 +1,422 @@
-/**
- * BasicInfoStep Component
- * 
- * This component handles the first step of the product creation wizard,
- * collecting basic product information like name, description, pricing, etc.
- */
-
-import React, { useEffect } from 'react';
-import { useProductWizardContext } from '../context';
-import { useQuery } from '@tanstack/react-query';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { generateSlug, generateSku } from '../../../../utils/string-utils';
-
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { useQuery } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Separator } from '@/components/ui/separator';
-import { PlusCircleIcon, MinusCircleIcon } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Label } from '@/components/ui/label';
+import { 
+  Form, 
+  FormControl, 
+  FormField, 
+  FormItem, 
+  FormLabel, 
+  FormMessage 
+} from '@/components/ui/form';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Card, CardContent } from '@/components/ui/card';
+import { Loader2 } from 'lucide-react';
+import { ProductDraft } from '../ProductWizard';
+import slugify from 'slugify';
 
-// Form validation schema
+// Validation schema for the basic information step
 const basicInfoSchema = z.object({
-  name: z.string().min(3, 'Product name must be at least 3 characters'),
-  slug: z.string().min(3, 'Slug must be at least 3 characters'),
-  sku: z.string().min(3, 'SKU must be at least 3 characters'),
-  description: z.string().optional(),
-  brand: z.string().optional(),
-  categoryId: z.string().optional(),
+  name: z.string().min(3, { message: 'Product name must be at least 3 characters' }),
+  slug: z.string().min(3, { message: 'Product slug must be at least 3 characters' }),
+  description: z.string().nullable().optional(),
+  categoryId: z.coerce.number().int().positive({ message: 'Please select a category' }),
+  regularPrice: z.coerce.number().min(0, { message: 'Regular price must be at least 0' }),
+  salePrice: z.coerce.number().nullable().optional(),
+  costPrice: z.coerce.number().nullable().optional(),
+  onSale: z.boolean().default(false),
+  stockLevel: z.coerce.number().int().min(0, { message: 'Stock level must be at least 0' }),
   isActive: z.boolean().default(true),
   isFeatured: z.boolean().default(false),
-  costPrice: z.coerce.number().min(0.01, 'Cost price must be greater than 0'),
-  markupPercentage: z.coerce.number().min(0, 'Markup must be at least 0%'),
-  regularPrice: z.coerce.number().min(0.01, 'Regular price must be greater than 0'),
-  onSale: z.boolean().default(false),
-  salePrice: z.coerce.number().min(0).optional(),
 });
 
 type BasicInfoFormValues = z.infer<typeof basicInfoSchema>;
 
-export function BasicInfoStep() {
-  const { state, setField, markStepComplete, markStepValid, generateDefaults, updatePrices } = useProductWizardContext();
-  
-  // Fetch categories
-  const { data: categoriesResponse, isLoading: categoriesLoading, isError: categoriesError } = useQuery({
+interface BasicInfoStepProps {
+  draft: ProductDraft;
+  onSave: (data: any) => void;
+  isLoading: boolean;
+}
+
+const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, isLoading }) => {
+  const { toast } = useToast();
+  const [isNameTouched, setIsNameTouched] = useState(false);
+
+  // Fetch categories for the dropdown
+  const { data: categoriesData, isLoading: isCategoriesLoading } = useQuery({
     queryKey: ['/api/categories'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/categories');
+      return response.json();
+    },
   });
-  
-  // Extract categories from the API response (handles the success response format {data: [...categories]})
-  // Filter to only show ACTIVE categories
-  const categoriesList = categoriesResponse && categoriesResponse.data && Array.isArray(categoriesResponse.data) 
-    ? categoriesResponse.data.filter((category: any) => category.isActive === true)
-    : [];
-  
-  // Initialize form with values from context
+
+  // Initialize form with draft values
   const form = useForm<BasicInfoFormValues>({
     resolver: zodResolver(basicInfoSchema),
     defaultValues: {
-      name: state.name,
-      slug: state.slug,
-      sku: state.sku,
-      description: state.description,
-      brand: state.brand,
-      categoryId: state.categoryId ? String(state.categoryId) : undefined,
-      isActive: state.isActive,
-      isFeatured: state.isFeatured,
-      costPrice: state.costPrice || 0,
-      markupPercentage: state.markupPercentage,
-      regularPrice: state.regularPrice || 0,
-      onSale: state.onSale,
-      salePrice: state.salePrice || 0,
+      name: draft.name || '',
+      slug: draft.slug || '',
+      description: draft.description || '',
+      categoryId: draft.categoryId || 0,
+      regularPrice: draft.regularPrice || 0,
+      salePrice: draft.salePrice || null,
+      costPrice: draft.costPrice || null,
+      onSale: draft.onSale || false,
+      stockLevel: draft.stockLevel || 0,
+      isActive: draft.isActive !== undefined ? draft.isActive : true,
+      isFeatured: draft.isFeatured || false,
     },
   });
-  
-  // Handle form submission
-  const onSubmit = (values: BasicInfoFormValues) => {
-    // Update state with form values
-    setField('name', values.name);
-    setField('slug', values.slug);
-    setField('sku', values.sku);
-    setField('description', values.description);
-    setField('brand', values.brand);
-    setField('categoryId', values.categoryId && values.categoryId !== 'none' ? parseInt(values.categoryId) : null);
-    setField('isActive', values.isActive);
-    setField('isFeatured', values.isFeatured);
-    setField('costPrice', values.costPrice);
-    setField('markupPercentage', values.markupPercentage);
-    setField('regularPrice', values.regularPrice);
-    setField('onSale', values.onSale);
-    setField('salePrice', values.onSale ? values.salePrice : null);
-    
-    // Also update metaTitle if not already set
-    if (!state.metaTitle) {
-      setField('metaTitle', values.name);
+
+  // Update form values when draft changes
+  useEffect(() => {
+    if (draft) {
+      form.reset({
+        name: draft.name || '',
+        slug: draft.slug || '',
+        description: draft.description || '',
+        categoryId: draft.categoryId || 0,
+        regularPrice: draft.regularPrice || 0,
+        salePrice: draft.salePrice || null,
+        costPrice: draft.costPrice || null,
+        onSale: draft.onSale || false,
+        stockLevel: draft.stockLevel || 0,
+        isActive: draft.isActive !== undefined ? draft.isActive : true,
+        isFeatured: draft.isFeatured || false,
+      });
     }
-    
-    // Mark step as complete and valid
-    markStepComplete('basic-info');
-    markStepValid('basic-info', true);
-  };
-  
+  }, [draft, form]);
+
   // Auto-generate slug when name changes
-  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const name = e.target.value;
-    form.setValue('name', name);
-    
-    if (name && (!form.getValues('slug') || form.getValues('slug') === generateSlug(form.getValues('name')))) {
-      const slug = generateSlug(name);
-      form.setValue('slug', slug);
-    }
-    
-    if (name && (!form.getValues('sku') || form.getValues('sku') === generateSku(form.getValues('name')))) {
-      const sku = generateSku(name);
-      form.setValue('sku', sku);
-    }
-  };
-  
-  // Update regular price when cost price or markup changes
-  const calculateRegularPrice = () => {
-    const costPriceValue = form.getValues('costPrice');
-    const costPrice = typeof costPriceValue === 'string' ? parseFloat(costPriceValue) : costPriceValue;
-    
-    const markupPercentageValue = form.getValues('markupPercentage');
-    const markupPercentage = typeof markupPercentageValue === 'string' ? 
-      parseFloat(markupPercentageValue) : markupPercentageValue;
-    
-    if (costPrice > 0) {
-      const regularPrice = Math.ceil(costPrice * (1 + markupPercentage / 100));
-      form.setValue('regularPrice', regularPrice);
-      
-      // If on sale, adjust sale price to maintain same discount percentage
-      const onSale = form.getValues('onSale');
-      if (onSale) {
-        const currentRegularPriceValue = form.getValues('regularPrice');
-        const currentRegularPrice = typeof currentRegularPriceValue === 'string' ? 
-          parseFloat(currentRegularPriceValue) : currentRegularPriceValue;
-        
-        const currentSalePriceValue = form.getValues('salePrice') || 0;
-        const currentSalePrice = typeof currentSalePriceValue === 'string' ? 
-          parseFloat(currentSalePriceValue) : currentSalePriceValue;
-        
-        const currentDiscount = currentRegularPrice > 0 ? 1 - (currentSalePrice / currentRegularPrice) : 0;
-        
-        const newSalePrice = Math.ceil(regularPrice * (1 - currentDiscount));
-        form.setValue('salePrice', newSalePrice);
-      }
-    }
-    
-    console.log('Price calculation:', {
-      costPriceInput: costPriceValue,
-      costPriceCalculation: costPrice,
-      markupPercentage,
-      regularPrice: form.getValues('regularPrice')
-    });
-  };
-  
-  // Handle cost price change
-  const handleCostPriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Keep the original string value to preserve user input exactly as entered
-    const inputValue = e.target.value;
-    
-    // Call the original field.onChange to update the React Hook Form state
-    form.setValue('costPrice', inputValue === '' ? 0 : inputValue);
-    
-    // For calculations, we use the parsed float value
-    const parsedValue = parseFloat(inputValue) || 0;
-    
-    // Use the parsed value for price calculations only
-    calculateRegularPrice();
-    
-    console.log('Cost price input:', { 
-      original: inputValue,
-      asNumber: parsedValue
-    });
-  };
-  
-  // Handle markup percentage change
-  const handleMarkupChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Similar to cost price, preserve the input value for display
-    const inputValue = e.target.value;
-    form.setValue('markupPercentage', inputValue === '' ? 0 : inputValue);
-    calculateRegularPrice();
-  };
-  
-  // Adjust markup percentage
-  const adjustMarkup = (amount: number) => {
-    const currentMarkup = form.getValues('markupPercentage');
-    const newMarkup = Math.max(0, currentMarkup + amount);
-    form.setValue('markupPercentage', newMarkup);
-    calculateRegularPrice();
-  };
-  
-  // Toggle sale status
-  const handleSaleToggle = (checked: boolean) => {
-    form.setValue('onSale', checked);
-    
-    if (checked && !form.getValues('salePrice')) {
-      // Default sale price to 90% of regular price if not set
-      const regularPrice = form.getValues('regularPrice');
-      const salePrice = Math.ceil(regularPrice * 0.9);
-      form.setValue('salePrice', salePrice);
-    }
-  };
-  
-  // Watch for changes to update form state
   const watchName = form.watch('name');
-  const watchCostPrice = form.watch('costPrice');
-  const watchMarkupPercentage = form.watch('markupPercentage');
-  const watchOnSale = form.watch('onSale');
-  
-  // Update form values from state when product data is loaded
   useEffect(() => {
-    if (state.productId) {
-      console.log('Updating form with state values:', state);
-      
-      form.setValue('name', state.name || '');
-      form.setValue('slug', state.slug || '');
-      form.setValue('sku', state.sku || generateSku(state.name || ''));
-      form.setValue('description', state.description || '');
-      form.setValue('brand', state.brand || '');
-      form.setValue('categoryId', state.categoryId ? String(state.categoryId) : undefined);
-      form.setValue('isActive', state.isActive);
-      form.setValue('isFeatured', state.isFeatured);
-      form.setValue('costPrice', state.costPrice || 0);
-      form.setValue('markupPercentage', state.markupPercentage || 40);
-      form.setValue('regularPrice', state.regularPrice || 0);
-      form.setValue('onSale', state.onSale || false);
-      form.setValue('salePrice', state.salePrice || 0);
+    if (watchName && isNameTouched && !form.getValues('slug')) {
+      const generatedSlug = slugify(watchName, { lower: true, strict: true });
+      form.setValue('slug', generatedSlug);
     }
-  }, [state, form, state.productId]);
-  
-  // Auto-save form values to context when they change
-  useEffect(() => {
-    const subscription = form.watch((value, { name, type }) => {
-      if (type === 'change') {
-        onSubmit(form.getValues());
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [form, onSubmit]);
-  
+  }, [watchName, form, isNameTouched]);
+
+  // Handle form submission
+  const onSubmit = (data: BasicInfoFormValues) => {
+    // If sale price is set, ensure onSale is true
+    if (data.salePrice && data.salePrice < data.regularPrice) {
+      data.onSale = true;
+    } else if (!data.salePrice || data.salePrice >= data.regularPrice) {
+      data.onSale = false;
+      data.salePrice = null;
+    }
+
+    onSave(data);
+  };
+
+  // Handle name input changes
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setIsNameTouched(true);
+    form.setValue('name', e.target.value);
+  };
+
+  // Handle sale price changes
+  const handleSalePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const salePrice = parseFloat(e.target.value);
+    const regularPrice = form.getValues('regularPrice');
+    
+    if (!isNaN(salePrice) && salePrice > 0 && salePrice < regularPrice) {
+      form.setValue('onSale', true);
+    } else {
+      form.setValue('onSale', false);
+    }
+  };
+
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardContent className="pt-6">
-          <Tabs defaultValue="general" className="w-full">
-            <TabsList className="mb-4">
-              <TabsTrigger value="general">General Info</TabsTrigger>
-              <TabsTrigger value="pricing">Pricing</TabsTrigger>
-            </TabsList>
-            
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <TabsContent value="general" className="space-y-6">
-                  {/* Product Name */}
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex">Product Name <span className="text-red-500 ml-1">*</span></FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Enter product name"
-                            {...field}
-                            onChange={handleNameChange}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  {/* URL Slug */}
-                  <FormField
-                    control={form.control}
-                    name="slug"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex">URL Slug <span className="text-red-500 ml-1">*</span></FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="product-url-slug"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          The URL-friendly identifier for this product
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  {/* SKU */}
-                  <FormField
-                    control={form.control}
-                    name="sku"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex">SKU <span className="text-red-500 ml-1">*</span></FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="PROD123"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Stock Keeping Unit - unique identifier for inventory
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Brand */}
-                    <FormField
-                      control={form.control}
-                      name="brand"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Brand</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="Brand name (optional)"
-                              {...field}
-                              value={field.value || ''}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+    <Card>
+      <CardContent className="p-6">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Product Name */}
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Product Name*</FormLabel>
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        placeholder="Enter product name" 
+                        onChange={handleNameChange}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Product Slug */}
+              <FormField
+                control={form.control}
+                name="slug"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Product Slug*</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="Enter product slug" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Description */}
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      {...field}
+                      placeholder="Enter product description"
+                      className="min-h-[100px]"
+                      value={field.value || ''}
                     />
-                    
-                    {/* Category */}
-                    <FormField
-                      control={form.control}
-                      name="categoryId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Category</FormLabel>
-                          <Select
-                            value={field.value?.toString() || "none"}
-                            onValueChange={(value) => {
-                              // Convert "none" to null, otherwise convert string ID to number
-                              const categoryId = value === "none" ? null : parseInt(value, 10);
-                              field.onChange(categoryId);
-                            }}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select a category" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="none">None</SelectItem>
-                              {categoriesList && categoriesList.length > 0 
-                                ? categoriesList.map((category: any) => (
-                                    <SelectItem
-                                      key={category.id}
-                                      value={category.id.toString()}
-                                    >
-                                      {category.name}
-                                    </SelectItem>
-                                  ))
-                                : <SelectItem value="no-categories">No categories available</SelectItem>
-                              }
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  {/* Description */}
-                  <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Description</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="Enter product description (optional)"
-                            className="min-h-32"
-                            {...field}
-                            value={field.value || ''}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <Separator className="my-4" />
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Active Status */}
-                    <FormField
-                      control={form.control}
-                      name="isActive"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                          <div className="space-y-0.5">
-                            <FormLabel>Active</FormLabel>
-                            <FormDescription>
-                              Product will be visible in store
-                            </FormDescription>
-                          </div>
-                          <FormControl>
-                            <Switch
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    
-                    {/* Featured Status */}
-                    <FormField
-                      control={form.control}
-                      name="isFeatured"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                          <div className="space-y-0.5">
-                            <FormLabel>Featured</FormLabel>
-                            <FormDescription>
-                              Show product in featured sections
-                            </FormDescription>
-                          </div>
-                          <FormControl>
-                            <Switch
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="pricing" className="space-y-6">
-                  {/* Cost Price */}
-                  <FormField
-                    control={form.control}
-                    name="costPrice"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex">Cost Price <span className="text-red-500 ml-1">*</span></FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <span className="absolute left-3 top-2.5">R</span>
-                            <Input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              className="pl-7"
-                              placeholder="0.00"
-                              {...field}
-                              onChange={handleCostPriceChange}
-                            />
-                          </div>
-                        </FormControl>
-                        <FormDescription>
-                          The price you pay for the product
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  {/* Markup Percentage */}
-                  <FormField
-                    control={form.control}
-                    name="markupPercentage"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Markup Percentage</FormLabel>
-                        <FormControl>
-                          <div className="flex items-center space-x-2">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => adjustMarkup(-5)}
-                            >
-                              <MinusCircleIcon className="h-4 w-4" />
-                            </Button>
-                            <div className="relative flex-1">
-                              <Input
-                                type="number"
-                                min="0"
-                                step="1"
-                                className="pr-7"
-                                placeholder="0"
-                                {...field}
-                                onChange={handleMarkupChange}
-                              />
-                              <span className="absolute right-3 top-2.5">%</span>
-                            </div>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => adjustMarkup(5)}
-                            >
-                              <PlusCircleIcon className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </FormControl>
-                        <FormDescription>
-                          Percentage added to cost price
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  {/* Regular Price */}
-                  <FormField
-                    control={form.control}
-                    name="regularPrice"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex">Regular Price <span className="text-red-500 ml-1">*</span></FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <span className="absolute left-3 top-2.5">R</span>
-                            <Input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              className="pl-7"
-                              placeholder="0.00"
-                              {...field}
-                            />
-                          </div>
-                        </FormControl>
-                        <FormDescription>
-                          The standard selling price
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  {/* On Sale Toggle */}
-                  <FormField
-                    control={form.control}
-                    name="onSale"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                        <div className="space-y-0.5">
-                          <FormLabel>On Sale</FormLabel>
-                          <FormDescription>
-                            Apply a discounted price
-                          </FormDescription>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Category Selection */}
+            <FormField
+              control={form.control}
+              name="categoryId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Category*</FormLabel>
+                  <Select
+                    onValueChange={(value) => field.onChange(Number(value))}
+                    defaultValue={field.value?.toString() || undefined}
+                    value={field.value?.toString() || undefined}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a category" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {isCategoriesLoading ? (
+                        <div className="flex items-center justify-center p-2">
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          <span>Loading categories...</span>
                         </div>
-                        <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={handleSaleToggle}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                  
-                  {/* Sale Price (only show if on sale) */}
-                  {watchOnSale && (
-                    <FormField
-                      control={form.control}
-                      name="salePrice"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex">Sale Price <span className="text-red-500 ml-1">*</span></FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <span className="absolute left-3 top-2.5">R</span>
-                              <Input
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                className="pl-7"
-                                placeholder="0.00"
-                                {...field}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormDescription>
-                            The discounted selling price
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
+                      ) : (
+                        categoriesData?.data?.map((category: any) => (
+                          <SelectItem key={category.id} value={category.id.toString()}>
+                            {category.name}
+                          </SelectItem>
+                        ))
                       )}
-                    />
-                  )}
-                  
-                  {/* Price Summary */}
-                  {watchCostPrice > 0 && (
-                    <div className="mt-4 p-4 border rounded-md bg-muted/30">
-                      <h4 className="font-medium mb-2">Pricing Summary</h4>
-                      <div className="space-y-1 text-sm">
-                        <div className="flex justify-between">
-                          <span>Cost Price:</span>
-                          <span>R{(parseFloat(watchCostPrice) || 0).toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Markup ({watchMarkupPercentage || 0}%):</span>
-                          <span>R{((parseFloat(watchCostPrice) || 0) * ((parseFloat(watchMarkupPercentage) || 0) / 100)).toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between font-medium">
-                          <span>Regular Price:</span>
-                          <span>R{parseFloat(form.getValues('regularPrice') || 0).toFixed(2)}</span>
-                        </div>
-                        {watchOnSale && (
-                          <>
-                            <div className="flex justify-between text-destructive">
-                              <span>Discount:</span>
-                              <span>-{Math.round((1 - (parseFloat(form.getValues('salePrice') || 0) / parseFloat(form.getValues('regularPrice') || 1))) * 100)}%</span>
-                            </div>
-                            <div className="flex justify-between font-medium">
-                              <span>Sale Price:</span>
-                              <span>R{parseFloat(form.getValues('salePrice') || 0).toFixed(2)}</span>
-                            </div>
-                          </>
-                        )}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Regular Price */}
+              <FormField
+                control={form.control}
+                name="regularPrice"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Regular Price*</FormLabel>
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        type="number" 
+                        step="0.01" 
+                        min="0" 
+                        placeholder="0.00" 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Sale Price */}
+              <FormField
+                control={form.control}
+                name="salePrice"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Sale Price</FormLabel>
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        type="number" 
+                        step="0.01" 
+                        min="0" 
+                        placeholder="0.00" 
+                        value={field.value || ''} 
+                        onChange={(e) => {
+                          field.onChange(e.target.value === '' ? null : parseFloat(e.target.value));
+                          handleSalePriceChange(e);
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Cost Price */}
+              <FormField
+                control={form.control}
+                name="costPrice"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Cost Price</FormLabel>
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        type="number" 
+                        step="0.01" 
+                        min="0" 
+                        placeholder="0.00" 
+                        value={field.value || ''} 
+                        onChange={(e) => {
+                          field.onChange(e.target.value === '' ? null : parseFloat(e.target.value));
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Stock Level */}
+              <FormField
+                control={form.control}
+                name="stockLevel"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Stock Level</FormLabel>
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        type="number" 
+                        min="0" 
+                        step="1" 
+                        placeholder="0" 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* On Sale Toggle */}
+              <FormField
+                control={form.control}
+                name="onSale"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">On Sale</FormLabel>
+                      <div className="text-sm text-muted-foreground">
+                        Mark this product as being on sale.
                       </div>
                     </div>
-                  )}
-                </TabsContent>
-              </form>
-            </Form>
-          </Tabs>
-        </CardContent>
-      </Card>
-    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Active Toggle */}
+              <FormField
+                control={form.control}
+                name="isActive"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">Active</FormLabel>
+                      <div className="text-sm text-muted-foreground">
+                        This product will be visible on the store.
+                      </div>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              {/* Featured Toggle */}
+              <FormField
+                control={form.control}
+                name="isFeatured"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">Featured</FormLabel>
+                      <div className="text-sm text-muted-foreground">
+                        This product will be featured on the homepage.
+                      </div>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="flex justify-end">
+              <Button type="submit" disabled={isLoading}>
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Save & Continue
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </CardContent>
+    </Card>
   );
-}
+};
+
+export default BasicInfoStep;

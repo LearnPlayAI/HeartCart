@@ -1,830 +1,327 @@
-/**
- * Product Images Step
- * 
- * This component implements Step 2 of the product wizard,
- * allowing the user to upload, manage, and organize product images.
- */
-
-import React, { useState, useCallback, useEffect } from 'react';
-import { useProductWizardContext } from '../context';
-import { WizardActionType, UploadedImage } from '../types';
-import { useDropzone } from 'react-dropzone';
-import { Loader2, Plus, XCircle, StarIcon, Upload, ImageIcon, Trash2 } from 'lucide-react';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import React, { useState, useCallback } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
-import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import { Card, CardContent } from '@/components/ui/card';
+import { Form } from '@/components/ui/form';
+import { useDropzone } from 'react-dropzone';
+import { Loader2, X, Upload, ImagePlus, Star, StarOff } from 'lucide-react';
+import { ProductDraft } from '../ProductWizard';
+
+// Validation schema for the image step
+const imageSchema = z.object({
+  imageUrls: z.array(z.string()),
+  imageObjectKeys: z.array(z.string()),
+  mainImageIndex: z.number().int().min(0),
+});
+
+type ImageFormValues = z.infer<typeof imageSchema>;
 
 interface ProductImagesStepProps {
-  className?: string;
+  draft: ProductDraft;
+  onSave: (data: any) => void;
+  isLoading: boolean;
 }
 
-/**
- * Helper function to ensure image URLs are correctly formatted
- * Handles both object store URLs and API-returned URLs
- */
-const ensureValidImageUrl = (image: UploadedImage): string => {
-  if (!image.url && !image.objectKey) {
-    console.warn('Image missing URL and objectKey:', image);
-    return '';
-  }
-  
-  // When we have a file object (client-side), create an object URL
-  if (image.file) {
-    // Return existing URL if already created
-    if (image.url && image.url.startsWith('blob:')) {
-      return image.url;
-    }
-    return URL.createObjectURL(image.file);
-  }
-  
-  // If URL is already absolute (starts with http), return as is
-  if (image.url && image.url.startsWith('http')) {
-    return image.url;
-  }
-  
-  // Direct access to Object Store URLs using objectKey (preferred method)
-  if (image.objectKey) {
-    // For temp/pending uploads, construct URL with proper encoding
-    if (image.objectKey.includes('temp/pending/')) {
-      // The objectKey should follow the pattern: temp/pending/timestamp_randomprefix_filename.jpg
-      const parts = image.objectKey.split('/');
-      if (parts.length >= 3) {
-        // Get all parts after 'temp/pending/'
-        const filenameWithTimestamp = parts.slice(2).join('/');
-        
-        // Log the attempt for debugging
-        console.log("Image details:", image);
-        console.log("Retrying with properly encoded temp URL format:", `/api/files/temp/pending/${encodeURIComponent(filenameWithTimestamp)}`);
-        
-        // Construct proper URL for API access with proper encoding
-        return `/api/files/temp/pending/${encodeURIComponent(filenameWithTimestamp)}`;
-      }
-    }
-    
-    // For product-specific images (products/${productId}/${filename})
-    if (image.objectKey.startsWith('products/')) {
-      const parts = image.objectKey.split('/');
-      if (parts.length >= 3) {
-        const productId = parts[1];
-        // Join all remaining parts to handle filenames with spaces
-        const filename = parts.slice(2).join('/');
-        
-        console.log("Using product URL format:", `/api/files/products/${productId}/${encodeURIComponent(filename)}`);
-        
-        return `/api/files/products/${productId}/${encodeURIComponent(filename)}`;
-      }
-    }
-    
-    // Fallback: encode each path segment separately
-    const pathSegments = image.objectKey.split('/');
-    const encodedPath = pathSegments.map(segment => encodeURIComponent(segment)).join('/');
-    
-    console.log("Using fallback encoded path:", `/api/files/${encodedPath}`);
-    
-    return `/api/files/${encodedPath}`;
-  }
-  
-  // Handle relative API URLs (/api/files/...)
-  if (image.url && image.url.startsWith('/api/files/')) {
-    try {
-      // Parse the URL and encode each path segment
-      const urlParts = image.url.split('/').filter(part => part.length > 0);
-      
-      // Reconstruct with proper encoding for segments after /api/files/
-      if (urlParts.length >= 2 && urlParts[0] === 'api' && urlParts[1] === 'files') {
-        const apiBase = `/${urlParts[0]}/${urlParts[1]}`;
-        const remainingParts = urlParts.slice(2);
-        const encodedParts = remainingParts.map(part => encodeURIComponent(part));
-        
-        const encodedUrl = `${apiBase}/${encodedParts.join('/')}`;
-        console.log("Encoded API URL:", encodedUrl);
-        
-        return encodedUrl;
-      }
-    } catch (error) {
-      console.error("Error encoding URL parts:", error);
-    }
-  }
-  
-  // Special case for temp images
-  if (image.url && image.url.includes('/temp/pending/')) {
-    try {
-      const urlObj = new URL(image.url, window.location.origin);
-      const pathParts = urlObj.pathname.split('/');
-      
-      // Extract the filename with timestamp prefix (last part)
-      if (pathParts.length > 0) {
-        const filename = pathParts[pathParts.length - 1];
-        console.log("Extracted filename from URL:", filename);
-        return `/api/files/temp/pending/${encodeURIComponent(filename)}`;
-      }
-    } catch (error) {
-      console.error("Error handling temp URL:", error);
-    }
-  }
-  
-  // If URL starts with /, it's a relative path
-  if (image.url && image.url.startsWith('/')) {
-    // For other relative paths, encode the segments
-    try {
-      const segments = image.url.split('/').filter(s => s.length > 0);
-      const encodedSegments = segments.map(segment => encodeURIComponent(segment));
-      return `/${encodedSegments.join('/')}`;
-    } catch (error) {
-      console.error("Error encoding relative URL:", error);
-      return image.url;
-    }
-  }
-  
-  // If we get here and image has a URL, try to load it
-  if (image.url) {
-    console.log("Using original URL as fallback:", image.url);
-    return image.url;
-  }
-  
-  // Last resort fallback
-  console.error("Failed to generate valid image URL:", image);
-  return '';
-}
-
-export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ className }) => {
-  const { 
-    state, 
-    addImage, 
-    removeImage, 
-    setMainImage, 
-    reorderImages, 
-    setField 
-  } = useProductWizardContext();
+const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ draft, onSave, isLoading }) => {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
   
-  // Create a local state for the uploaded images
-  const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([]);
-  const [isUploading, setIsUploading] = useState(false);
-  const [deleteImageId, setDeleteImageId] = useState<string | number | null>(null);
-  const [isRemovingBackground, setIsRemovingBackground] = useState(false);
-  const [isLoadingExistingImages, setIsLoadingExistingImages] = useState(false);
-  
-  // Function to fetch images for an existing product
-  const fetchExistingProductImages = useCallback(async (productId: number) => {
-    if (!productId) {
-      console.log('Cannot fetch images - no product ID provided');
-      return;
-    }
-    
-    console.log(`Fetching existing images for product ID: ${productId}`);
-    setIsLoadingExistingImages(true);
-    
-    try {
-      const endpoint = `/api/products/${productId}/images`;
-      console.log(`Calling API endpoint: ${endpoint}`);
-      const response = await fetch(endpoint);
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch product images: ${response.status}`);
+  // Initialize form with draft values
+  const form = useForm<ImageFormValues>({
+    resolver: zodResolver(imageSchema),
+    defaultValues: {
+      imageUrls: draft.imageUrls || [],
+      imageObjectKeys: draft.imageObjectKeys || [],
+      mainImageIndex: draft.mainImageIndex || 0,
+    },
+  });
+
+  // Mutation to upload images
+  const uploadImagesMutation = useMutation({
+    mutationFn: async (files: File[]) => {
+      if (!draft.id) {
+        throw new Error('No draft ID available');
       }
       
-      const result = await response.json();
-      console.log('API response for product images:', result);
-      
-      if (result.success && Array.isArray(result.data)) {
-        console.log('Successfully fetched existing product images:', result.data);
-        
-        // Convert the API response to our UploadedImage format
-        const existingImages: UploadedImage[] = result.data.map((image: any, index: number) => {
-          const newImage: UploadedImage = {
-            id: typeof image.id === 'number' ? image.id : index,
-            url: image.imageUrl || image.url || '',
-            objectKey: image.objectKey || '',
-            isMain: image.isMain || index === 0,
-            order: image.displayOrder || index,
-            metadata: {
-              size: image.size || 0,
-              width: image.width,
-              height: image.height,
-              backgroundRemoved: image.backgroundRemoved || false,
-              alt: image.altText || '',
-              processedAt: image.processedAt
-            }
-          };
-          return newImage;
-        });
-        
-        // Sort images by order/displayOrder
-        existingImages.sort((a: UploadedImage, b: UploadedImage) => a.order - b.order);
-        
-        // Find the main image index
-        const mainImageIndex = existingImages.findIndex((img: UploadedImage) => img.isMain);
-        
-        // If no main image is marked, use the first one
-        if (mainImageIndex === -1 && existingImages.length > 0) {
-          existingImages[0].isMain = true;
-        }
-        
-        // Update both local state and context
-        setUploadedImages(existingImages);
-        
-        // Extract URLs and objectKeys for the context
-        const imageUrls = existingImages.map((img: UploadedImage) => img.url);
-        const imageObjectKeys = existingImages.map((img: UploadedImage) => img.objectKey || '');
-        
-        // Update the context state with these images
-        setField('imageUrls', imageUrls);
-        setField('imageObjectKeys', imageObjectKeys);
-        setField('mainImageIndex', Math.max(0, mainImageIndex));
-        
-        console.log('Updated context with fetched images:', {
-          imageUrls,
-          imageObjectKeys,
-          mainImageIndex: Math.max(0, mainImageIndex)
-        });
-      } else {
-        throw new Error('Invalid server response format');
-      }
-    } catch (error) {
-      console.error('Error fetching product images:', error);
-      toast({
-        title: "Failed to load product images",
-        description: error instanceof Error ? error.message : "There was an unexpected error loading images",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoadingExistingImages(false);
-    }
-  }, [setField, toast]);
-  
-  // Initialize images - either from state or by fetching for existing products
-  useEffect(() => {
-    // If product ID exists, fetch images from the API directly
-    if (state.productId) {
-      console.log('Product is in edit mode, fetching images for product ID:', state.productId);
-      fetchExistingProductImages(state.productId);
-    } 
-    // Otherwise, initialize from context state if available
-    else if (state.imageUrls && state.imageUrls.length > 0) {
-      const imageUrls = state.imageUrls || [];
-      const imageObjectKeys = state.imageObjectKeys || [];
-      const mainImageIndex = state.mainImageIndex || 0;
-      
-      console.log('Initializing uploaded images from state for new product:', {
-        imageUrls,
-        imageObjectKeys,
-        mainImageIndex
-      });
-      
-      // Convert the imageUrls and imageObjectKeys to uploadedImages format
-      const newUploadedImages: UploadedImage[] = imageUrls.map((url: string, index: number) => ({
-        id: index, // use a number instead of string
-        url: url,
-        objectKey: imageObjectKeys[index] || '',
-        isMain: index === mainImageIndex,
-        order: index,
-        metadata: {
-          size: 0,
-          width: 0,
-          height: 0,
-          backgroundRemoved: false,
-          alt: url.split('/').pop() || 'image'
-        }
-      }));
-      
-      setUploadedImages(newUploadedImages);
-    }
-  }, [state.productId, state.imageUrls, state.imageObjectKeys, state.mainImageIndex, fetchExistingProductImages]);
-  
-  // Image upload handler
-  const handleImageUpload = useCallback(async (acceptedFiles: File[]) => {
-    if (acceptedFiles.length === 0) return;
-    
-    setIsUploading(true);
-    
-    try {
-      // Check if this is the first upload (no existing images)
-      const isFirstUpload = uploadedImages.length === 0;
-      let startingOrder = uploadedImages.length;
-      
-      // Create form data for batch upload
+      setUploadingImages(true);
       const formData = new FormData();
-      
-      // Append productId if we already have one (editing mode)
-      if (state.productId) {
-        formData.append('productId', state.productId.toString());
-      }
-      
-      // Append each file to the form data
-      acceptedFiles.forEach((file: File) => {
+      files.forEach((file) => {
         formData.append('images', file);
       });
       
-      // Determine the correct endpoint
-      // For new products, use the temp upload endpoint
-      // For existing products, use the product-specific endpoint
-      const endpoint = state.productId 
-        ? `/api/upload/products/${state.productId}/images` 
-        : '/api/upload/products/images/temp';
+      const response = await apiRequest(
+        'POST',
+        `/api/product-drafts/${draft.id}/images`,
+        formData,
+        { isFormData: true }
+      );
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setUploadingImages(false);
+      // Update the form values with the new images
+      form.setValue('imageUrls', data.data.imageUrls);
+      form.setValue('imageObjectKeys', data.data.imageObjectKeys);
       
-      console.log('Uploading images to endpoint:', endpoint);
-      
-      // Upload the files
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        body: formData
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Upload failed with status: ${response.status}`);
+      // If this is the first image, set it as the main image
+      if (data.data.imageUrls.length === 1) {
+        form.setValue('mainImageIndex', 0);
       }
       
-      const result = await response.json();
+      // Invalidate the draft query to refresh the draft data
+      queryClient.invalidateQueries({ queryKey: ['/api/product-drafts', draft.id] });
       
-      if (result.success && result.files && Array.isArray(result.files)) {
-        // Map the API response to our UploadedImage format
-        const newUploadedImages: UploadedImage[] = result.files.map((file: any, index: number) => {
-          const newImage: UploadedImage = {
-            id: typeof file.id === 'number' ? file.id : index, // Use numeric ID
-            url: file.url, // URL for accessing the file via API
-            objectKey: file.objectKey, // Storage path to the file
-            isMain: isFirstUpload && index === 0, // First image is main if no existing main image
-            order: startingOrder + index,
-            metadata: {
-              size: file.size,
-              width: file.width || 0,
-              height: file.height || 0,
-              backgroundRemoved: file.backgroundRemoved || false,
-              alt: file.originalname || file.filename || `Image ${index + 1}`,
-              processedAt: file.processedAt || new Date().toISOString()
-            }
-          };
-          console.log('Processing image from API:', file, 'into:', newImage);
-          return newImage;
-        });
-        
-        // Update local state
-        const updatedImages = [...uploadedImages, ...newUploadedImages];
-        setUploadedImages(updatedImages);
-        
-        // Update context state by adding each image
-        for (const image of newUploadedImages) {
-          addImage(image.url, image.objectKey || '');
+      toast({
+        title: 'Images Uploaded',
+        description: `Successfully uploaded ${data.data.imageUrls.length - (draft.imageUrls?.length || 0)} image(s)`,
+      });
+    },
+    onError: (error) => {
+      setUploadingImages(false);
+      toast({
+        title: 'Upload Failed',
+        description: `Failed to upload images: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Mutation to delete an image
+  const deleteImageMutation = useMutation({
+    mutationFn: async (imageIndex: number) => {
+      if (!draft.id) {
+        throw new Error('No draft ID available');
+      }
+      
+      const response = await apiRequest(
+        'DELETE',
+        `/api/product-drafts/${draft.id}/images/${imageIndex}`
+      );
+      return response.json();
+    },
+    onSuccess: (data) => {
+      // Update the form values with the remaining images
+      form.setValue('imageUrls', data.data.imageUrls);
+      form.setValue('imageObjectKeys', data.data.imageObjectKeys);
+      
+      // If we deleted the main image or any image before it, adjust the main image index
+      if (data.data.mainImageIndex !== form.getValues('mainImageIndex')) {
+        form.setValue('mainImageIndex', data.data.mainImageIndex);
+      }
+      
+      // Invalidate the draft query to refresh the draft data
+      queryClient.invalidateQueries({ queryKey: ['/api/product-drafts', draft.id] });
+      
+      toast({
+        title: 'Image Deleted',
+        description: 'Successfully deleted image',
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Deletion Failed',
+        description: `Failed to delete image: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Dropzone setup
+  const onDrop = useCallback(
+    (acceptedFiles: File[]) => {
+      if (acceptedFiles.length === 0) return;
+      
+      // Validate file types and sizes
+      const validFiles = acceptedFiles.filter(file => {
+        if (!file.type.startsWith('image/')) {
+          toast({
+            title: 'Invalid File Type',
+            description: `${file.name} is not an image file`,
+            variant: 'destructive',
+          });
+          return false;
         }
         
-        console.log('Successfully uploaded images:', newUploadedImages);
-      } else {
-        throw new Error('Invalid server response format');
-      }
+        if (file.size > 5 * 1024 * 1024) { // 5MB limit
+          toast({
+            title: 'File Too Large',
+            description: `${file.name} exceeds the 5MB size limit`,
+            variant: 'destructive',
+          });
+          return false;
+        }
+        
+        return true;
+      });
       
-      toast({
-        title: "Images uploaded",
-        description: `${acceptedFiles.length} image${acceptedFiles.length !== 1 ? 's' : ''} added to product`,
-      });
-    } catch (error) {
-      console.error('Error uploading images:', error);
-      toast({
-        title: "Upload failed",
-        description: error instanceof Error ? error.message : "There was a problem uploading your images",
-        variant: "destructive"
-      });
-    } finally {
-      setIsUploading(false);
-    }
-  }, [uploadedImages, state.productId, toast, addImage]);
+      if (validFiles.length > 0) {
+        uploadImagesMutation.mutate(validFiles);
+      }
+    },
+    [uploadImagesMutation, toast]
+  );
   
-  // Set up dropzone
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({ 
+    onDrop,
     accept: {
       'image/*': ['.jpeg', '.jpg', '.png', '.gif', '.webp']
     },
-    onDrop: handleImageUpload,
-    disabled: isUploading
+    maxSize: 5 * 1024 * 1024, // 5MB
+    onDragEnter: () => setIsDraggingOver(true),
+    onDragLeave: () => setIsDraggingOver(false),
+    onDropAccepted: () => setIsDraggingOver(false),
+    onDropRejected: () => setIsDraggingOver(false),
   });
-  
-  // Handle image deletion
-  const handleDeleteImage = (imageIdOrUrl: string | number) => {
-    setDeleteImageId(imageIdOrUrl);
+
+  // Handle form submission
+  const onSubmit = (data: ImageFormValues) => {
+    onSave(data);
   };
-  
-  const confirmDeleteImage = () => {
-    if (deleteImageId !== null) {
-      // Find the image index in our local state
-      const imageIndex = uploadedImages.findIndex(img => 
-        String(img.id) === String(deleteImageId) || img.url === deleteImageId
-      );
-      
-      if (imageIndex >= 0) {
-        // Remove from local state
-        const updatedImages = uploadedImages.filter((_, idx) => idx !== imageIndex);
-        setUploadedImages(updatedImages);
-        
-        // Also update the context's imageUrls and imageObjectKeys arrays
-        const newImageUrls = updatedImages.map((item: UploadedImage) => item.url);
-        const newImageObjectKeys = updatedImages.map((item: UploadedImage) => item.objectKey || '');
-        
-        // Update image URLs and object keys in the context
-        setField('imageUrls', newImageUrls);
-        setField('imageObjectKeys', newImageObjectKeys);
-        
-        // If we deleted the main image, update the main image index to the first image
-        if (imageIndex === state.mainImageIndex) {
-          // Update the main image index
-          setField('mainImageIndex', updatedImages.length > 0 ? 0 : 0);
-          
-          // If there are still images, mark the first one as main
-          if (updatedImages.length > 0) {
-            const newImagesWithMain = updatedImages.map((img, idx) => ({
-              ...img,
-              isMain: idx === 0
-            }));
-            setUploadedImages(newImagesWithMain);
-          }
-        }
-        
-        toast({
-          title: "Image removed",
-          description: "The image has been removed from the product"
-        });
-      }
-      
-      setDeleteImageId(null);
-    }
+
+  // Set an image as the main image
+  const setMainImage = (index: number) => {
+    form.setValue('mainImageIndex', index);
+    // Trigger form save automatically when main image is changed
+    form.handleSubmit(onSubmit)();
   };
-  
-  // Handle setting an image as the main image
-  const handleSetMainImage = (imageIdOrUrl: string | number) => {
-    // Find the image index in our local state
-    const imageIndex = uploadedImages.findIndex(img => 
-      String(img.id) === String(imageIdOrUrl) || img.url === imageIdOrUrl
-    );
-    
-    if (imageIndex >= 0) {
-      // Update the local state to mark this image as main and others as not main
-      const updatedImages = uploadedImages.map((img, idx) => ({
-        ...img,
-        isMain: idx === imageIndex
-      }));
-      
-      setUploadedImages(updatedImages);
-      
-      // Also update the context state using the context method
-      setMainImage(imageIndex);
-      
-      toast({
-        title: "Main image updated",
-        description: "The main product image has been updated"
-      });
-    }
+
+  // Delete an image
+  const handleDeleteImage = (index: number) => {
+    deleteImageMutation.mutate(index);
   };
-  
-  // Handle image reordering
-  const handleDragEnd = (result: any) => {
-    if (!result.destination) return;
-    
-    // Use our local state instead of productData
-    const items = Array.from(uploadedImages);
-    const [reorderedItem] = items.splice(result.source.index, 1);
-    items.splice(result.destination.index, 0, reorderedItem);
-    
-    // Update order property for each item
-    const updatedItems = items.map((item, index) => ({
-      ...item,
-      order: index
-    }));
-    
-    // Update local state
-    setUploadedImages(updatedItems);
-    
-    // Also update the context by re-ordering the imageUrls and imageObjectKeys
-    const newImageUrls = updatedItems.map((item: UploadedImage) => item.url);
-    const newImageObjectKeys = updatedItems.map((item: UploadedImage) => item.objectKey || '');
-    
-    // Create a mapping of old positions to new positions for reordering
-    const newOrder = Array(items.length).fill(0).map((_, newIndex) => {
-      // Find where in the original array this image was
-      const originalImage = updatedItems[newIndex];
-      return uploadedImages.findIndex(img => 
-        img.id === originalImage.id || img.url === originalImage.url
-      );
-    });
-    
-    // Use the context's reorderImages method to update image order
-    reorderImages(newOrder);
-    
-    // Also determine the new main image index
-    const mainImageIndex = updatedItems.findIndex((img: UploadedImage) => img.isMain);
-    if (mainImageIndex >= 0) {
-      setField('mainImageIndex', mainImageIndex);
-    }
-  };
-  
-  // AI background removal handler
-  const handleRemoveBackground = async (imageIdOrUrl: string | number) => {
-    // Find the image in our local state
-    const image = uploadedImages.find(img => 
-      String(img.id) === String(imageIdOrUrl) || img.url === imageIdOrUrl
-    );
-    
-    if (!image) return;
-    
-    setIsRemovingBackground(true);
-    
-    try {
-      // Extract image URL from the image object
-      const imageUrl = image.url;
-      
-      // Only proceed if we have a valid image URL
-      if (!imageUrl) {
-        throw new Error('Image URL is missing');
-      }
-      
-      console.log('Processing background removal for image:', imageUrl);
-      
-      // Call the background removal API
-      const response = await fetch('/api/ai/remove-background', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          imageUrl: imageUrl,
-          imageId: image.id,
-          objectKey: image.objectKey
-        }),
-      });
-      
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status} ${response.statusText}`);
-      }
-      
-      const result = await response.json();
-      
-      if (!result.success) {
-        throw new Error(result.message || 'Background removal failed');
-      }
-      
-      // Update the image in our local state with the new processed image URL
-      const updatedImages = uploadedImages.map(img => {
-        if (String(img.id) === String(imageIdOrUrl) || img.url === imageIdOrUrl) {
-          return {
-            ...img,
-            url: result.processedImageUrl || img.url, // Use new URL if available
-            objectKey: result.processedObjectKey || img.objectKey, // Use new object key if available
-            metadata: { 
-              ...img.metadata, 
-              backgroundRemoved: true,
-              processedAt: new Date().toISOString()
-            }
-          };
-        }
-        return img;
-      });
-      
-      // Update the local state
-      setUploadedImages(updatedImages);
-      
-      // Also update the context state with the processed images
-      const newImageUrls = updatedImages.map((item: UploadedImage) => item.url);
-      const newImageObjectKeys = updatedImages.map((item: UploadedImage) => item.objectKey || '');
-      
-      // Update image URLs and object keys in the context
-      setField('imageUrls', newImageUrls);
-      setField('imageObjectKeys', newImageObjectKeys);
-      
-      toast({
-        title: "Background removed",
-        description: "AI has processed the image and removed the background"
-      });
-    } catch (error) {
-      console.error('Error removing background:', error);
-      toast({
-        title: "Process failed",
-        description: error instanceof Error ? error.message : "There was a problem removing the background",
-        variant: "destructive"
-      });
-    } finally {
-      setIsRemovingBackground(false);
-    }
-  };
-  
+
+  const imageUrls = form.watch('imageUrls');
+  const mainImageIndex = form.watch('mainImageIndex');
+
   return (
-    <div className={className}>
-      <div className="mb-4">
-        <h2 className="text-xl font-semibold mb-2">Product Images</h2>
-        <p className="text-muted-foreground">
-          Upload high-quality images of your product. The first image will be used as the main display image.
-        </p>
-      </div>
-      
-      <div className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Upload Images</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div 
-              {...getRootProps()} 
-              className={`border-2 border-dashed rounded-md p-8 text-center cursor-pointer transition-colors ${
-                isDragActive 
-                  ? 'border-primary bg-primary/5' 
-                  : 'border-gray-300 hover:border-primary'
-              }`}
-            >
-              <input {...getInputProps()} />
-              
-              <div className="flex flex-col items-center justify-center space-y-3">
-                <Upload className="h-10 w-10 text-gray-400" />
+    <Card>
+      <CardContent className="p-6">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <div className="space-y-4">
+              <div 
+                {...getRootProps()} 
+                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                  isDraggingOver || isDragActive 
+                    ? 'border-primary bg-primary/10' 
+                    : 'border-gray-300 hover:border-primary hover:bg-gray-50'
+                }`}
+              >
+                <input {...getInputProps()} />
                 
-                {isUploading ? (
-                  <>
-                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                    <p>Uploading images...</p>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-lg font-medium">
-                      {isDragActive ? 'Drop images here' : 'Drag & drop images here'}
-                    </p>
+                <div className="flex flex-col items-center justify-center space-y-4">
+                  <Upload className="h-12 w-12 text-gray-400" />
+                  <div className="space-y-2">
+                    <p className="text-lg font-medium">Drag and drop images here</p>
                     <p className="text-sm text-gray-500">
-                      or click to browse from your device
+                      or click to select files from your computer
                     </p>
                     <p className="text-xs text-gray-400">
-                      Supports JPG, PNG, GIF, WebP up to 5MB each
+                      Accepted file types: JPG, PNG, GIF, WEBP (max 5MB)
                     </p>
-                  </>
-                )}
+                  </div>
+                  
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={e => e.stopPropagation()}
+                  >
+                    <ImagePlus className="mr-2 h-4 w-4" />
+                    Select Images
+                  </Button>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>Manage Product Images</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {uploadedImages.length === 0 ? (
-              <div className="text-center py-12 border border-dashed rounded-md">
-                <ImageIcon className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-muted-foreground">No images uploaded yet</p>
-                <p className="text-sm text-gray-400">
-                  Upload at least one image for your product
-                </p>
-              </div>
-            ) : (
-              <DragDropContext onDragEnd={handleDragEnd}>
-                <Droppable droppableId="product-images" direction="horizontal">
-                  {(provided) => (
+
+              {/* Image Preview Grid */}
+              {imageUrls && imageUrls.length > 0 ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mt-6">
+                  {imageUrls.map((url, index) => (
                     <div 
-                      {...provided.droppableProps}
-                      ref={provided.innerRef}
-                      className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
+                      key={index} 
+                      className={`relative group rounded-lg overflow-hidden border ${
+                        index === mainImageIndex ? 'border-primary ring-2 ring-primary' : 'border-gray-200'
+                      }`}
                     >
-                      {uploadedImages
-                        .sort((a, b) => (a.order || 0) - (b.order || 0))
-                        .map((image, index) => (
-                          <Draggable 
-                            key={image.id || image.url} 
-                            draggableId={String(image.id || image.url)} 
-                            index={index}
+                      <img 
+                        src={url} 
+                        alt={`Product image ${index + 1}`} 
+                        className="w-full h-32 object-cover"
+                      />
+                      
+                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <div className="flex flex-col items-center space-y-2">
+                          {index === mainImageIndex ? (
+                            <Button 
+                              type="button" 
+                              variant="ghost" 
+                              size="sm" 
+                              className="text-yellow-400 hover:text-yellow-300"
+                              disabled
+                            >
+                              <Star className="h-5 w-5 fill-yellow-400" />
+                            </Button>
+                          ) : (
+                            <Button 
+                              type="button" 
+                              variant="ghost" 
+                              size="sm" 
+                              className="text-white hover:text-yellow-400"
+                              onClick={() => setMainImage(index)}
+                            >
+                              <StarOff className="h-5 w-5" />
+                            </Button>
+                          )}
+                          
+                          <Button 
+                            type="button" 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-white hover:text-red-400"
+                            onClick={() => handleDeleteImage(index)}
+                            disabled={deleteImageMutation.isPending}
                           >
-                            {(provided) => (
-                              <div
-                                ref={provided.innerRef}
-                                {...provided.draggableProps}
-                                {...provided.dragHandleProps}
-                                className={`relative border rounded-md overflow-hidden group ${
-                                  image.isMain ? 'ring-2 ring-pink-500' : ''
-                                }`}
-                              >
-                                <img 
-                                  src={image.url}
-                                  alt={image.metadata?.alt || "Product"} 
-                                  className="w-full h-40 object-cover"
-                                  onLoad={() => console.log(`Image loaded successfully: ${image.metadata?.alt || 'Unknown image'}`)}
-                                  onError={(e) => {
-                                    console.error('Failed to load image:', image.url);
-                                    
-                                    // Cast to HTMLImageElement
-                                    const imgElement = e.currentTarget as HTMLImageElement;
-                                    
-                                    // Try using direct objectKey URL if available
-                                    if (image.objectKey) {
-                                      const directObjectUrl = `/api/files/${image.objectKey}`;
-                                      console.log('Trying direct object URL:', directObjectUrl);
-                                      imgElement.src = directObjectUrl;
-                                      return;
-                                    }
-                                    
-                                    // Show fallback icon if image still fails
-                                    imgElement.classList.add('hidden');
-                                    const fallbackElement = imgElement.parentElement?.querySelector('.fallback-display');
-                                    if (fallbackElement) {
-                                      fallbackElement.classList.remove('hidden');
-                                    }
-                                  }}
-                                />
-                                
-                                {/* Fallback icon when image fails to load */}
-                                <div className="absolute inset-0 flex items-center justify-center bg-gray-100 hidden fallback-display">
-                                  <ImageIcon className="h-12 w-12 text-gray-400" />
-                                </div>
-                                
-                                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-opacity flex items-center justify-center opacity-0 group-hover:opacity-100">
-                                  <div className="flex space-x-2">
-                                    {!image.isMain && (
-                                      <Button
-                                        size="sm"
-                                        variant="secondary"
-                                        onClick={() => handleSetMainImage(image.id || image.url)}
-                                        title="Set as main image"
-                                      >
-                                        <StarIcon className="h-4 w-4" />
-                                      </Button>
-                                    )}
-                                    
-                                    <Button
-                                      size="sm"
-                                      variant="secondary"
-                                      onClick={() => handleRemoveBackground(image.id || image.url)}
-                                      disabled={isRemovingBackground}
-                                      title="Remove background (AI)"
-                                    >
-                                      {isRemovingBackground ? (
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                      ) : (
-                                        <ImageIcon className="h-4 w-4" />
-                                      )}
-                                    </Button>
-                                    
-                                    <Button
-                                      size="sm"
-                                      variant="destructive"
-                                      onClick={() => handleDeleteImage(image.id || image.url)}
-                                      title="Delete image"
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                  </div>
-                                </div>
-                                
-                                {image.isMain && (
-                                  <div className="absolute top-2 left-2 bg-pink-500 text-white text-xs py-1 px-2 rounded-md">
-                                    Main Image
-                                  </div>
-                                )}
-                                
-                                {image.metadata?.backgroundRemoved && (
-                                  <div className="absolute bottom-2 left-2 bg-blue-500 text-white text-xs py-1 px-2 rounded-md">
-                                    AI Enhanced
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </Draggable>
-                        ))}
-                      {provided.placeholder}
+                            <X className="h-5 w-5" />
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      {index === mainImageIndex && (
+                        <div className="absolute top-2 left-2 bg-primary text-white px-2 py-1 rounded-md text-xs">
+                          Main
+                        </div>
+                      )}
                     </div>
-                  )}
-                </Droppable>
-              </DragDropContext>
-            )}
-            
-            <div className="mt-4 text-sm text-gray-500">
-              <p>Drag and drop images to reorder them.</p>
-              <p>Click the <StarIcon className="h-3 w-3 inline" /> button on any image to set it as the main product image.</p>
-              <p>The first image uploaded is automatically set as the main image if no main image exists.</p>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-10 text-gray-500 bg-gray-50 rounded-lg">
+                  <p>No images uploaded yet</p>
+                </div>
+              )}
             </div>
-          </CardContent>
-        </Card>
-      </div>
-      
-      {/* Delete confirmation dialog */}
-      <AlertDialog open={deleteImageId !== null} onOpenChange={() => setDeleteImageId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Image</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this image? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeleteImage}>Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+
+            <div className="flex justify-end">
+              <Button 
+                type="submit" 
+                disabled={isLoading || uploadingImages || deleteImageMutation.isPending}
+              >
+                {(isLoading || uploadingImages || deleteImageMutation.isPending) && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Save & Continue
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </CardContent>
+    </Card>
   );
 };
 
