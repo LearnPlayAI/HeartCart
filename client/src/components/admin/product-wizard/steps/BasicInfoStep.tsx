@@ -228,16 +228,75 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, isL
     toast({
       title: 'Description Applied',
       description: 'The AI-generated description has been applied.'
-    }); else {
+    });
+  };
+  
+  // Complete the handleSalePriceChange function
+  const handleSalePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const salePrice = parseFloat(e.target.value);
+    const regularPrice = form.getValues('regularPrice');
+    
+    if (!isNaN(salePrice) && salePrice > 0 && salePrice < regularPrice) {
+      form.setValue('onSale', true);
+    } else {
       form.setValue('onSale', false);
     }
   };
 
+  // Need to add state variables for AI descriptions
+  const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
+  const [aiDescriptionSuggestions, setAiDescriptionSuggestions] = useState<string[]>([]);
+  const [showAiDialog, setShowAiDialog] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+
   return (
-    <Card>
-      <CardContent className="p-4 sm:p-6">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6">
+    <>
+      {/* AI Description Suggestions Dialog */}
+      <Dialog open={showAiDialog} onOpenChange={setShowAiDialog}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>AI-Generated Description Suggestions</DialogTitle>
+            <DialogDescription>
+              Choose one of the suggestions below or close to keep your current description.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="mt-4 max-h-[300px] overflow-y-auto space-y-4">
+            {aiDescriptionSuggestions.map((suggestion, index) => (
+              <Card key={index} className="shadow-sm hover:shadow transition-shadow">
+                <CardContent className="p-4">
+                  <div className="flex flex-col gap-3">
+                    <div className="text-sm text-muted-foreground">Option {index + 1}</div>
+                    <p className="text-sm">{suggestion}</p>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="self-end"
+                      onClick={() => applyDescription(suggestion)}
+                    >
+                      Use This Description
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          
+          <DialogFooter className="flex items-center justify-between mt-4">
+            <div>
+              {aiError && (
+                <p className="text-sm text-destructive">{aiError}</p>
+              )}
+            </div>
+            <Button variant="secondary" onClick={() => setShowAiDialog(false)}>Cancel</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    
+      <Card>
+        <CardContent className="p-4 sm:p-6">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
               {/* Product Name */}
               <FormField
@@ -285,7 +344,29 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, isL
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                  <div className="flex justify-between items-center">
+                    <FormLabel>Description</FormLabel>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 gap-1 text-xs"
+                      onClick={generateDescriptionSuggestions}
+                      disabled={isGeneratingDescription || !form.getValues('name')}
+                    >
+                      {isGeneratingDescription ? (
+                        <>
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          <span>Generating...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Wand2 className="h-3 w-3" />
+                          <span>AI Generate</span>
+                        </>
+                      )}
+                    </Button>
+                  </div>
                   <FormControl>
                     <Textarea
                       {...field}
