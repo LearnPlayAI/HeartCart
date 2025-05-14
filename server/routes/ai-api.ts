@@ -1,364 +1,291 @@
 /**
  * AI API Routes
  * 
- * This file contains the API routes for AI-powered features
- * using the Google Gemini API.
+ * This file contains routes for AI-powered features,
+ * utilizing the Google Gemini API for content generation.
  */
 
-import { Router } from 'express';
+import express from 'express';
+import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
 import asyncHandler from 'express-async-handler';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { logger } from '../logger';
+import { z } from 'zod';
 
-// Create router
-const router = Router();
+const router = express.Router();
 
-// Initialize the Google Generative AI client
-let genAI: GoogleGenerativeAI | null = null;
-let genAIModel: string = '';
-let isGenAIInitialized = false;
+// Initialize Google Generative AI
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
-// Initialize Gemini AI
-function initializeGeminiAI() {
+// Safety settings for the AI model
+const safetySettings = [
+  {
+    category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+    threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+  },
+  {
+    category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+    threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+  },
+  {
+    category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+    threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+  },
+  {
+    category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+    threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+  },
+];
+
+// Schema for product description generation request
+const generateDescriptionSchema = z.object({
+  productName: z.string().min(1, 'Product name is required'),
+  productCategory: z.string().optional(),
+  existingDescription: z.string().optional(),
+  shortDescription: z.string().optional(),
+  brand: z.string().optional(),
+  tone: z.enum(['professional', 'casual', 'enthusiastic', 'technical', 'persuasive']),
+  length: z.enum(['short', 'medium', 'long']),
+  style: z.enum(['informative', 'storytelling', 'benefit-focused', 'comparison', 'problem-solution']),
+  additionalInfo: z.string().optional(),
+});
+
+/**
+ * Generate Product Description using AI
+ * 
+ * POST /api/ai/generate-description
+ */
+router.post('/generate-description', asyncHandler(async (req, res) => {
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
+    // Validate the request body
+    const validatedData = generateDescriptionSchema.parse(req.body);
     
-    if (!apiKey) {
-      logger.warn('Gemini API key not found. AI features will be disabled.');
-      return false;
-    }
-    
-    genAI = new GoogleGenerativeAI(apiKey);
-    genAIModel = 'gemini-1.5-flash';
-    
-    // Log successful initialization
-    logger.info('Initialized Gemini AI with model', { 
-      model: genAIModel,
-      isDefault: true
+    // Get the Gemini Pro model
+    const model = genAI.getGenerativeModel({
+      model: "gemini-pro",
+      safetySettings,
     });
     
-    isGenAIInitialized = true;
-    return true;
+    // Create the prompt
+    const prompt = createDescriptionPrompt(validatedData);
+    
+    // Generate content
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+    
+    // Parse the descriptions from the response
+    let descriptions = parseDescriptions(text);
+    
+    // If parsing failed, use the whole text as a single description
+    if (descriptions.length === 0) {
+      descriptions = [text.trim()];
+    }
+    
+    res.json({
+      success: true,
+      data: {
+        descriptions,
+      },
+    });
   } catch (error) {
-    logger.error('Failed to initialize Gemini AI', { error });
-    return false;
+    console.error('Error generating descriptions:', error);
+    
+    res.status(400).json({
+      success: false,
+      message: error instanceof Error ? error.message : 'Failed to generate descriptions',
+    });
   }
-}
+}));
 
-// Initialize on module load
-initializeGeminiAI();
+// Schema for SEO optimization request
+const seoOptimizationSchema = z.object({
+  productName: z.string().min(1, 'Product name is required'),
+  productCategory: z.string().optional(),
+  description: z.string().optional(),
+  shortDescription: z.string().optional(),
+  brand: z.string().optional(),
+  keywords: z.array(z.string()).optional(),
+  additionalInfo: z.string().optional(),
+});
 
-// Check AI availability endpoint
-router.get('/status', asyncHandler(async (req, res) => {
-  if (!isGenAIInitialized) {
-    // Try to initialize again in case the API key was added after server start
-    const initialized = initializeGeminiAI();
-    if (!initialized) {
-      return res.json({
+/**
+ * Generate SEO-optimized content using AI
+ * 
+ * POST /api/ai/optimize-seo
+ */
+router.post('/optimize-seo', asyncHandler(async (req, res) => {
+  try {
+    // Validate the request body
+    const validatedData = seoOptimizationSchema.parse(req.body);
+    
+    // Get the Gemini Pro model
+    const model = genAI.getGenerativeModel({
+      model: "gemini-pro",
+      safetySettings,
+    });
+    
+    // Create the prompt
+    const prompt = createSeoOptimizationPrompt(validatedData);
+    
+    // Generate content
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+    
+    // Try to parse JSON from the response
+    try {
+      // Extract JSON part from the response if it's not a pure JSON
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      const jsonString = jsonMatch ? jsonMatch[0] : text;
+      const seoData = JSON.parse(jsonString);
+      
+      res.json({
+        success: true,
+        data: seoData,
+      });
+    } catch (jsonError) {
+      console.error('Error parsing JSON from AI response:', jsonError);
+      res.json({
         success: true,
         data: {
-          available: false,
-          provider: 'None',
-          message: 'AI services are not available. API key is missing.'
-        }
-      });
-    }
-  }
-  
-  return res.json({
-    success: true,
-    data: {
-      available: true,
-      provider: 'Google Gemini',
-      message: 'AI services are available'
-    }
-  });
-}));
-
-// Generate product descriptions
-router.post('/descriptions', asyncHandler(async (req, res) => {
-  if (!isGenAIInitialized || !genAI) {
-    return res.status(503).json({
-      success: false,
-      error: 'AI services are not available'
-    });
-  }
-  
-  try {
-    const { productName, category, keywords, tone, attributes } = req.body;
-    
-    // Validate required fields
-    if (!productName) {
-      return res.status(400).json({
-        success: false,
-        error: 'Product name is required'
-      });
-    }
-    
-    // Build prompt for the AI
-    const keywordsStr = keywords && keywords.length > 0 
-      ? `Incorporate these keywords: ${keywords.join(', ')}. ` 
-      : '';
-      
-    const attributesStr = attributes && attributes.length > 0
-      ? `Consider these product attributes: ${attributes.map(a => `${a.name}: ${a.value}`).join(', ')}. `
-      : '';
-      
-    const categoryStr = category ? `This product belongs to the ${category} category. ` : '';
-    
-    const toneStr = tone ? `Use a ${tone} tone. ` : 'Use a professional tone. ';
-    
-    const prompt = `
-      Generate 3 different engaging product descriptions for an e-commerce website.
-      
-      Product: ${productName}
-      ${categoryStr}
-      ${attributesStr}
-      ${keywordsStr}
-      ${toneStr}
-      
-      Each description should be detailed, accurate, and optimized for conversion.
-      Include key benefits and features. 
-      Make each description around 100-150 words and format them well with paragraphs.
-      Target South African customers and use language that would appeal to them.
-      
-      Return exactly 3 different descriptions, each unique in approach.
-    `;
-    
-    // Generate content with Gemini
-    const model = genAI.getGenerativeModel({ model: genAIModel });
-    const result = await model.generateContent(prompt);
-    const response = result.response;
-    const text = response.text();
-    
-    // Parse the output into separate descriptions
-    const descriptions = text
-      .split(/Description \d+:|^\d+[.:]|^\d+\)\s/m)
-      .filter(desc => desc && desc.trim().length > 0)
-      .map(desc => desc.trim())
-      .slice(0, 3); // Ensure we get exactly 3 descriptions
-    
-    return res.json({
-      success: true,
-      descriptions
-    });
-  } catch (error: any) {
-    logger.error('Error generating product descriptions', { error });
-    return res.status(500).json({
-      success: false,
-      error: error.message || 'An error occurred while generating descriptions'
-    });
-  }
-}));
-
-// Generate SEO suggestions
-router.post('/seo', asyncHandler(async (req, res) => {
-  if (!isGenAIInitialized || !genAI) {
-    return res.status(503).json({
-      success: false,
-      error: 'AI services are not available'
-    });
-  }
-  
-  try {
-    const { productName, description, category, targetKeywords } = req.body;
-    
-    // Validate required fields
-    if (!productName || !description) {
-      return res.status(400).json({
-        success: false,
-        error: 'Product name and description are required'
-      });
-    }
-    
-    const targetKeywordsStr = targetKeywords && targetKeywords.length > 0
-      ? `Target these specific keywords: ${targetKeywords.join(', ')}. `
-      : '';
-      
-    const categoryStr = category ? `This product belongs to the ${category} category. ` : '';
-    
-    const prompt = `
-      Generate 2 different SEO optimization suggestions for this e-commerce product:
-      
-      Product: ${productName}
-      ${categoryStr}
-      
-      Product Description: 
-      ${description}
-      
-      ${targetKeywordsStr}
-      
-      For each suggestion, provide:
-      1. A meta title (maximum 60 characters)
-      2. A meta description (maximum 160 characters)
-      3. 5-7 relevant keywords (comma-separated)
-      
-      Optimize for South African e-commerce and local search patterns.
-      Format your response as JSON with this structure:
-      [
-        {
-          "metaTitle": "Title 1...",
-          "metaDescription": "Description 1...",
-          "keywords": ["keyword1", "keyword2", "keyword3", "keyword4", "keyword5"]
+          metaTitle: validatedData.productName,
+          metaDescription: text.slice(0, 160).trim(),
+          suggestions: [],
+          rawResponse: text,
         },
-        {
-          "metaTitle": "Title 2...",
-          "metaDescription": "Description 2...",
-          "keywords": ["keyword1", "keyword2", "keyword3", "keyword4", "keyword5"]
-        }
-      ]
-    `;
-    
-    // Generate content with Gemini
-    const model = genAI.getGenerativeModel({ model: genAIModel });
-    const result = await model.generateContent(prompt);
-    const response = result.response;
-    const text = response.text();
-    
-    // Try to parse the response as JSON
-    try {
-      // Extract JSON from the response (in case there's additional text)
-      const jsonMatch = text.match(/\[\s*\{[\s\S]*\}\s*\]/);
-      if (!jsonMatch) {
-        throw new Error('Could not extract JSON from response');
-      }
-      
-      const jsonStr = jsonMatch[0];
-      const suggestions = JSON.parse(jsonStr);
-      
-      // Validate the structure of the suggestions
-      if (!Array.isArray(suggestions) || suggestions.length === 0) {
-        throw new Error('Invalid response format');
-      }
-      
-      // Ensure each suggestion has the required fields
-      const validatedSuggestions = suggestions.map(suggestion => ({
-        metaTitle: suggestion.metaTitle || '',
-        metaDescription: suggestion.metaDescription || '',
-        keywords: Array.isArray(suggestion.keywords) ? suggestion.keywords : []
-      }));
-      
-      return res.json({
-        success: true,
-        suggestions: validatedSuggestions
-      });
-    } catch (parseError) {
-      logger.error('Error parsing SEO suggestions', { error: parseError, text });
-      
-      // Fallback: Manually extract information from text
-      const fallbackSuggestions = [
-        {
-          metaTitle: `${productName} | Premium Quality ${category || 'Product'}`,
-          metaDescription: `Shop ${productName}. Premium quality ${category || 'product'} for South African customers. Fast shipping, best prices & excellent quality.`,
-          keywords: [...(targetKeywords || []), productName.toLowerCase(), 'south africa', 'quality', 'online shopping']
-        }
-      ];
-      
-      return res.json({
-        success: true,
-        suggestions: fallbackSuggestions
       });
     }
-  } catch (error: any) {
-    logger.error('Error generating SEO suggestions', { error });
-    return res.status(500).json({
+  } catch (error) {
+    console.error('Error optimizing SEO:', error);
+    
+    res.status(400).json({
       success: false,
-      error: error.message || 'An error occurred while generating SEO suggestions'
+      message: error instanceof Error ? error.message : 'Failed to optimize SEO',
     });
   }
 }));
 
-// Generate product tags
-router.post('/tags', asyncHandler(async (req, res) => {
-  if (!isGenAIInitialized || !genAI) {
-    return res.status(503).json({
-      success: false,
-      error: 'AI services are not available'
-    });
+/**
+ * Create a prompt for product description generation
+ */
+function createDescriptionPrompt(data: z.infer<typeof generateDescriptionSchema>): string {
+  // Define length in words
+  const lengthMap = {
+    short: '50-100',
+    medium: '100-200',
+    long: '200-300',
+  };
+  
+  let prompt = `
+You are a professional e-commerce content writer specializing in compelling product descriptions.
+
+TASK:
+Generate THREE unique and engaging product descriptions for the following product, formatted as "DESCRIPTION 1:", "DESCRIPTION 2:", and "DESCRIPTION 3:".
+
+PRODUCT DETAILS:
+- Name: ${data.productName}
+${data.brand ? `- Brand: ${data.brand}` : ''}
+${data.productCategory ? `- Category: ${data.productCategory}` : ''}
+${data.shortDescription ? `- Short Description: ${data.shortDescription}` : ''}
+${data.existingDescription ? `- Current Description: ${data.existingDescription}` : ''}
+${data.additionalInfo ? `- Additional Information: ${data.additionalInfo}` : ''}
+
+REQUIREMENTS:
+- Tone: ${data.tone.charAt(0).toUpperCase() + data.tone.slice(1)}
+- Length: ${lengthMap[data.length]} words
+- Style: ${data.style.charAt(0).toUpperCase() + data.style.slice(1)}
+- Focus on highlighting key benefits and features
+- Include persuasive language that encourages purchases
+- Avoid overused phrases and clichés
+- Write for readability and scanability
+- Ensure accuracy and authenticity
+- Target South African e-commerce customers
+
+FORMAT YOUR RESPONSE WITH THREE DESCRIPTIONS LIKE THIS:
+DESCRIPTION 1:
+[First product description]
+
+DESCRIPTION 2:
+[Second product description]
+
+DESCRIPTION 3:
+[Third product description]
+`.trim();
+
+  return prompt;
+}
+
+/**
+ * Create a prompt for SEO optimization
+ */
+function createSeoOptimizationPrompt(data: z.infer<typeof seoOptimizationSchema>): string {
+  let prompt = `
+You are an SEO expert specializing in e-commerce websites. Your task is to generate SEO-optimized content and recommendations for the following product.
+
+PRODUCT DETAILS:
+- Name: ${data.productName}
+${data.brand ? `- Brand: ${data.brand}` : ''}
+${data.productCategory ? `- Category: ${data.productCategory}` : ''}
+${data.description ? `- Full Description: ${data.description}` : ''}
+${data.shortDescription ? `- Short Description: ${data.shortDescription}` : ''}
+${data.keywords && data.keywords.length > 0 ? `- Current Keywords: ${data.keywords.join(', ')}` : ''}
+${data.additionalInfo ? `- Additional Information: ${data.additionalInfo}` : ''}
+
+TASK:
+Create an SEO optimization package for this product including:
+1. A meta title (under 60 characters)
+2. A meta description (under 160 characters)
+3. 5-7 recommended keywords or phrases
+4. 3-5 SEO improvement suggestions
+
+FORMAT YOUR RESPONSE AS A JSON OBJECT:
+{
+  "metaTitle": "SEO-optimized title under 60 characters",
+  "metaDescription": "Compelling meta description under 160 characters that includes main keywords and encourages clicks",
+  "keywords": [
+    "primary keyword phrase",
+    "secondary keyword phrase",
+    "long-tail keyword 1",
+    "long-tail keyword 2",
+    "brand + product keyword",
+    "location-based keyword"
+  ],
+  "suggestions": [
+    "Specific suggestion for improving product page SEO",
+    "Suggestion about keyword usage in headlines",
+    "Recommendation about image alt text",
+    "Suggestion about internal linking"
+  ]
+}
+
+Remember to:
+- Include keywords naturally in the meta title and description
+- Make the meta description compelling to encourage clicks
+- Use relevant keywords specific to the South African market
+- Ensure the keywords are actually relevant to the product
+- Consider search intent with your suggestions
+`.trim();
+
+  return prompt;
+}
+
+/**
+ * Parse descriptions from AI response
+ */
+function parseDescriptions(text: string): string[] {
+  const descriptions: string[] = [];
+  
+  // Try to extract descriptions with numbered format
+  const regex = /DESCRIPTION\s*(\d+)\s*:\s*([\s\S]*?)(?=DESCRIPTION\s*\d+\s*:|$)/gi;
+  let match;
+  
+  while ((match = regex.exec(text)) !== null) {
+    const description = match[2].trim();
+    if (description) {
+      descriptions.push(description);
+    }
   }
   
-  try {
-    const { productName, description, category } = req.body;
-    
-    // Validate required fields
-    if (!productName) {
-      return res.status(400).json({
-        success: false,
-        error: 'Product name is required'
-      });
-    }
-    
-    const categoryStr = category ? `Category: ${category}` : '';
-    const descriptionStr = description ? `Description: ${description}` : '';
-    
-    const prompt = `
-      Generate 10 relevant tags for this product that would be useful for an e-commerce website:
-      
-      Product: ${productName}
-      ${categoryStr}
-      ${descriptionStr}
-      
-      Rules:
-      - Each tag should be 1-3 words maximum
-      - Tags should be relevant for South African e-commerce
-      - Include a mix of feature tags, benefit tags, and category tags
-      - No hashtag symbols, just the words
-      - Format as a JSON array of strings
-      
-      Example format:
-      ["tag1", "tag2", "tag3", "tag4", "tag5", "tag6", "tag7", "tag8", "tag9", "tag10"]
-    `;
-    
-    // Generate content with Gemini
-    const model = genAI.getGenerativeModel({ model: genAIModel });
-    const result = await model.generateContent(prompt);
-    const response = result.response;
-    const text = response.text();
-    
-    // Try to parse the response as JSON
-    try {
-      // Extract JSON from the response (in case there's additional text)
-      const jsonMatch = text.match(/\[\s*"[\s\S]*"\s*\]/);
-      if (!jsonMatch) {
-        throw new Error('Could not extract JSON from response');
-      }
-      
-      const jsonStr = jsonMatch[0];
-      const tags = JSON.parse(jsonStr);
-      
-      // Validate the structure of the tags
-      if (!Array.isArray(tags) || tags.length === 0) {
-        throw new Error('Invalid response format');
-      }
-      
-      return res.json({
-        success: true,
-        tags: tags.slice(0, 10) // Ensure we return no more than 10 tags
-      });
-    } catch (parseError) {
-      logger.error('Error parsing tags', { error: parseError, text });
-      
-      // Fallback: Extract words that might be tags
-      const fallbackTags = [
-        productName.toLowerCase(),
-        category ? category.toLowerCase() : 'product',
-        'quality',
-        'south africa',
-        'online'
-      ];
-      
-      return res.json({
-        success: true,
-        tags: fallbackTags
-      });
-    }
-  } catch (error: any) {
-    logger.error('Error generating tags', { error });
-    return res.status(500).json({
-      success: false,
-      error: error.message || 'An error occurred while generating tags'
-    });
-  }
-}));
+  return descriptions;
+}
 
 export default router;

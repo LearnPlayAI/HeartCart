@@ -57,6 +57,9 @@ export function formatPrice(price: number | null | undefined, currency: string =
   }).format(price);
 }
 
+// Add formatCurrency as an alias for formatPrice for backward compatibility
+export const formatCurrency = formatPrice;
+
 /**
  * Truncates a string to a specified length and adds an ellipsis
  * 

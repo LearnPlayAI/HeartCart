@@ -7,430 +7,358 @@
  */
 
 import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import { useDraftContext } from '../DraftContext';
+import { useToast } from '@/hooks/use-toast';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-  FormDescription,
-} from '@/components/ui/form';
-import { Card, CardContent } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import { 
-  Info,
-  Sparkles,
-  Check,
-  X,
-  AlertTriangle,
-  Loader2
-} from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { useDraftContext } from '../DraftContext';
+import { Textarea } from '@/components/ui/textarea';
+import { AlertCircle, Search, ArrowRight } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { SeoOptimizer } from '../ai-features/SeoOptimizer';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { debounce } from '@/lib/utils';
 
-// Validation schema for SEO information
-const formSchema = z.object({
-  metaTitle: z.string().max(70, {
-    message: "Meta title should be 70 characters or less for optimal SEO.",
-  }).optional().nullable(),
-  metaDescription: z.string().max(160, {
-    message: "Meta description should be 160 characters or less for optimal SEO.",
-  }).optional().nullable(),
-  metaKeywords: z.string().max(200, {
-    message: "Meta keywords should be 200 characters or less.",
-  }).optional().nullable(),
-  canonicalUrl: z.string().url({
-    message: "Please enter a valid URL or leave it blank.",
-  }).optional().nullable().or(z.literal('')),
-});
-
-// Component props
 interface SeoStepProps {
   onNext: () => void;
 }
 
 export function SeoStep({ onNext }: SeoStepProps) {
+  const { draft, updateDraft, saveDraft } = useDraftContext();
   const { toast } = useToast();
-  const { draft, updateDraft, saveDraft, loading } = useDraftContext();
-  const [saving, setSaving] = useState(false);
-  const [showAiHelper, setShowAiHelper] = useState(false);
-  const [metaTitleLength, setMetaTitleLength] = useState(0);
-  const [metaDescriptionLength, setMetaDescriptionLength] = useState(0);
+  const [metaTitle, setMetaTitle] = useState('');
+  const [metaDescription, setMetaDescription] = useState('');
+  const [keywords, setKeywords] = useState('');
+  const [slug, setSlug] = useState('');
+  const [canonicalUrl, setCanonicalUrl] = useState('');
+  const [pageTitle, setPageTitle] = useState('');
+  const [hasChanges, setHasChanges] = useState(false);
   
-  // Initialize form with draft values or defaults
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      metaTitle: draft?.metaTitle || '',
-      metaDescription: draft?.metaDescription || '',
-      metaKeywords: draft?.metaKeywords || '',
-      canonicalUrl: draft?.canonicalUrl || '',
-    },
-    mode: 'onChange',
-  });
-  
-  // Update form values when draft changes
+  // Initialize form with draft data when available
   useEffect(() => {
     if (draft) {
-      form.reset({
-        metaTitle: draft.metaTitle || '',
-        metaDescription: draft.metaDescription || '',
-        metaKeywords: draft.metaKeywords || '',
-        canonicalUrl: draft.canonicalUrl || '',
-      });
+      setMetaTitle(draft.metaTitle || '');
+      setMetaDescription(draft.metaDescription || '');
+      setKeywords(draft.keywords || '');
+      setSlug(draft.slug || '');
+      setCanonicalUrl(draft.canonicalUrl || '');
+      setPageTitle(draft.pageTitle || '');
     }
-  }, [draft, form]);
+  }, [draft]);
   
-  // Update character counts
-  useEffect(() => {
-    setMetaTitleLength(form.watch('metaTitle')?.length || 0);
-    setMetaDescriptionLength(form.watch('metaDescription')?.length || 0);
-  }, [form.watch('metaTitle'), form.watch('metaDescription')]);
-  
-  // Debounced save function
-  const debouncedSave = debounce(async (data: z.infer<typeof formSchema>) => {
+  // Auto-save with debounce
+  const debouncedSave = debounce(async () => {
     try {
-      setSaving(true);
-      await updateDraft({
-        metaTitle: data.metaTitle || null,
-        metaDescription: data.metaDescription || null,
-        metaKeywords: data.metaKeywords || null,
-        canonicalUrl: data.canonicalUrl || null,
-      });
       await saveDraft();
-    } catch (error) {
-      console.error('Error saving draft:', error);
+      setHasChanges(false);
+    } catch (err) {
+      console.error('Failed to auto-save draft:', err);
+    }
+  }, 1500);
+  
+  // Handle field changes
+  const handleFieldChange = (field: string, value: string) => {
+    const updates: Record<string, string> = {
+      [field]: value
+    };
+    
+    // Update local state
+    switch (field) {
+      case 'metaTitle': setMetaTitle(value); break;
+      case 'metaDescription': setMetaDescription(value); break;
+      case 'keywords': setKeywords(value); break;
+      case 'slug': setSlug(value); break;
+      case 'canonicalUrl': setCanonicalUrl(value); break;
+      case 'pageTitle': setPageTitle(value); break;
+    }
+    
+    // Update draft and mark as changed
+    updateDraft(updates);
+    setHasChanges(true);
+    
+    // Trigger auto-save
+    debouncedSave();
+  };
+  
+  // Generate slug from product name
+  const generateSlug = () => {
+    if (!draft?.name) {
       toast({
-        title: 'Error Saving',
-        description: 'Could not save SEO information. Please try again.',
+        title: 'Error',
+        description: 'Product name is required to generate slug',
         variant: 'destructive',
       });
-    } finally {
-      setSaving(false);
+      return;
     }
-  }, 800);
+    
+    // Slugify the name
+    let slugifiedName = draft.name
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+      .replace(/\s+/g, '-')          // Replace spaces with hyphens
+      .replace(/-+/g, '-')           // Replace multiple hyphens with single hyphen
+      .trim();
+      
+    // Update slug
+    handleFieldChange('slug', slugifiedName);
+    
+    toast({
+      title: 'Slug Generated',
+      description: 'A URL-friendly slug has been generated from the product name',
+    });
+  };
   
-  // Handle form submission
-  const onSubmit = async (data: z.infer<typeof formSchema>) => {
-    try {
-      setSaving(true);
-      await updateDraft({
-        metaTitle: data.metaTitle || null,
-        metaDescription: data.metaDescription || null,
-        metaKeywords: data.metaKeywords || null,
-        canonicalUrl: data.canonicalUrl || null,
-      });
-      await saveDraft();
-      
+  // Generate meta fields from product details
+  const generateMetaFields = () => {
+    if (!draft?.name) {
       toast({
-        title: 'SEO Information Saved',
-        description: 'SEO information has been saved successfully.',
-      });
-      
-      onNext();
-    } catch (error) {
-      console.error('Error saving SEO information:', error);
-      toast({
-        title: 'Error Saving',
-        description: 'Could not save SEO information. Please try again.',
+        title: 'Error',
+        description: 'Product name is required to generate meta fields',
         variant: 'destructive',
       });
-    } finally {
-      setSaving(false);
+      return;
+    }
+    
+    // Generate meta title
+    const brand = draft.brand ? `${draft.brand} ` : '';
+    const category = draft.category?.name ? ` | ${draft.category.name}` : '';
+    const metaTitle = `${brand}${draft.name}${category}`.slice(0, 60);
+    
+    // Generate meta description
+    let metaDescription = '';
+    if (draft.shortDescription) {
+      metaDescription = draft.shortDescription.slice(0, 160);
+    } else if (draft.description) {
+      metaDescription = draft.description.slice(0, 160);
+      if (metaDescription.length === 160) {
+        metaDescription = metaDescription.slice(0, 157) + '...';
+      }
+    } else {
+      metaDescription = `Shop for ${draft.name} at our store. ${brand ? `Quality products from ${brand}. ` : ''}Fast shipping, easy returns.`;
+    }
+    
+    // Generate page title
+    const pageTitle = draft.name;
+    
+    // Update meta fields
+    handleFieldChange('metaTitle', metaTitle);
+    handleFieldChange('metaDescription', metaDescription);
+    handleFieldChange('pageTitle', pageTitle);
+    
+    toast({
+      title: 'Meta Fields Generated',
+      description: 'Meta title, description, and page title have been generated',
+    });
+  };
+  
+  // Explicitly save changes
+  const saveChanges = async () => {
+    try {
+      await saveDraft();
+      setHasChanges(false);
+      
+      toast({
+        title: 'Changes Saved',
+        description: 'SEO information has been saved successfully',
+      });
+    } catch (err) {
+      toast({
+        title: 'Error',
+        description: 'Failed to save changes. Please try again.',
+        variant: 'destructive',
+      });
     }
   };
   
-  // Apply AI suggestions
-  const handleApplySuggestion = (suggestion: { 
-    metaTitle?: string;
-    metaDescription?: string;
-    keywords?: string[];
-  }) => {
-    const newValues = {
-      metaTitle: suggestion.metaTitle || form.getValues('metaTitle'),
-      metaDescription: suggestion.metaDescription || form.getValues('metaDescription'),
-      metaKeywords: suggestion.keywords?.join(', ') || form.getValues('metaKeywords'),
-    };
-    
-    form.setValue('metaTitle', newValues.metaTitle, { shouldValidate: true });
-    form.setValue('metaDescription', newValues.metaDescription, { shouldValidate: true });
-    form.setValue('metaKeywords', newValues.metaKeywords, { shouldValidate: true });
-    
-    setShowAiHelper(false);
-    
-    debouncedSave({
-      ...form.getValues(),
-      ...newValues,
-    });
-    
-    toast({
-      title: 'AI Suggestions Applied',
-      description: 'The AI-generated SEO suggestions have been applied.',
-    });
+  // Continue to next step
+  const handleNext = () => {
+    if (hasChanges) {
+      saveChanges().then(() => {
+        onNext();
+      });
+    } else {
+      onNext();
+    }
   };
   
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">SEO Information</h2>
-        <p className="text-muted-foreground">
-          Optimize your product for search engines with titles, descriptions, and keywords.
-        </p>
-      </div>
+      <h2 className="text-2xl font-bold">Search Engine Optimization</h2>
+      <p className="text-muted-foreground">
+        Optimize your product for search engines to increase visibility and reach more potential customers.
+      </p>
       
-      <Separator className="my-6" />
-      
-      <div className="flex justify-end">
-        <Dialog open={showAiHelper} onOpenChange={setShowAiHelper}>
-          <DialogTrigger asChild>
-            <Button variant="outline" className="gap-2">
-              <Sparkles className="h-4 w-4" />
-              AI SEO Suggestions
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>AI SEO Optimization</DialogTitle>
-              <DialogDescription>
-                Generate optimized SEO content for your product using AI.
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="py-4">
-              <SeoOptimizer
-                productName={draft?.name || ''}
-                description={draft?.description || ''}
-                category={draft?.category?.name || ''}
-                targetKeywords={draft?.metaKeywords?.split(',').map(k => k.trim()) || []}
-                onSelectSuggestion={handleApplySuggestion}
-              />
-            </div>
-            
-            <DialogFooter>
-              <Button 
-                variant="outline" 
-                onClick={() => setShowAiHelper(false)}
-              >
-                Close
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
-      
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <Tabs defaultValue="basic">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="basic">Basic SEO</TabsTrigger>
+          <TabsTrigger value="ai">AI SEO Optimization</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="basic" className="space-y-4">
           <Card>
             <CardContent className="pt-6">
-              <div className="grid gap-6">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <FormLabel>Generated Preview</FormLabel>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="pageTitle">Page Title</Label>
+                      <span className="text-xs text-muted-foreground">{pageTitle.length}/100</span>
+                    </div>
+                    <Input
+                      id="pageTitle"
+                      placeholder="Main product page heading"
+                      value={pageTitle}
+                      onChange={(e) => handleFieldChange('pageTitle', e.target.value)}
+                      maxLength={100}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      The main heading displayed on the product page.
+                    </p>
                   </div>
-                  <div className="border rounded-md p-4 space-y-2">
-                    <div className="text-blue-600 text-lg font-medium line-clamp-1">
-                      {form.watch('metaTitle') || `${draft?.name || 'Product Name'} | TeeMeYou`}
+                  
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="slug">URL Slug</Label>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={generateSlug}
+                      >
+                        Generate
+                      </Button>
                     </div>
-                    <div className="text-sm text-green-700">
-                      {window.location.origin}/{draft?.category?.slug || 'category'}/{draft?.slug || 'product-slug'}
-                    </div>
-                    <div className="text-sm text-gray-600 line-clamp-2">
-                      {form.watch('metaDescription') || draft?.shortDescription || 'No description provided.'}
-                    </div>
-                  </div>
-                </div>
-                
-                <FormField
-                  control={form.control}
-                  name="metaTitle"
-                  render={({ field }) => (
-                    <FormItem>
-                      <div className="flex items-center justify-between">
-                        <FormLabel>
-                          Meta Title
-                        </FormLabel>
-                        <div className={`text-xs ${metaTitleLength > 60 ? 'text-yellow-600' : ''} ${metaTitleLength > 70 ? 'text-red-600' : ''}`}>
-                          {metaTitleLength}/70
-                        </div>
-                      </div>
-                      <FormControl>
-                        <Input 
-                          placeholder={`${draft?.name || 'Product Name'} | TeeMeYou`}
-                          {...field}
-                          value={field.value || ''}
-                          onChange={(e) => {
-                            field.onChange(e);
-                            debouncedSave({
-                              ...form.getValues(),
-                              metaTitle: e.target.value,
-                            });
-                          }}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        The title that appears in search engine results. Recommended length: 50-60 characters.
-                      </FormDescription>
-                      <FormMessage />
-                      
-                      {metaTitleLength > 70 && (
-                        <div className="flex items-center mt-1 text-red-600 text-xs">
-                          <AlertTriangle className="h-3 w-3 mr-1" />
-                          Title is too long, it may be truncated in search results.
-                        </div>
-                      )}
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="metaDescription"
-                  render={({ field }) => (
-                    <FormItem>
-                      <div className="flex items-center justify-between">
-                        <FormLabel>
-                          Meta Description
-                        </FormLabel>
-                        <div className={`text-xs ${metaDescriptionLength > 145 ? 'text-yellow-600' : ''} ${metaDescriptionLength > 160 ? 'text-red-600' : ''}`}>
-                          {metaDescriptionLength}/160
-                        </div>
-                      </div>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Brief description of the product for search engines."
-                          className="min-h-[100px]"
-                          {...field}
-                          value={field.value || ''}
-                          onChange={(e) => {
-                            field.onChange(e);
-                            debouncedSave({
-                              ...form.getValues(),
-                              metaDescription: e.target.value,
-                            });
-                          }}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        The description that appears in search engine results. Recommended length: 120-155 characters.
-                      </FormDescription>
-                      <FormMessage />
-                      
-                      {metaDescriptionLength > 160 && (
-                        <div className="flex items-center mt-1 text-red-600 text-xs">
-                          <AlertTriangle className="h-3 w-3 mr-1" />
-                          Description is too long, it may be truncated in search results.
-                        </div>
-                      )}
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="metaKeywords"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Meta Keywords</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="keyword1, keyword2, keyword3"
-                          className="min-h-[80px]"
-                          {...field}
-                          value={field.value || ''}
-                          onChange={(e) => {
-                            field.onChange(e);
-                            debouncedSave({
-                              ...form.getValues(),
-                              metaKeywords: e.target.value,
-                            });
-                          }}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Enter keywords separated by commas. These help with internal search but have limited impact on external SEO.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="canonicalUrl"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Canonical URL</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="https://example.com/canonical-product-page"
-                          {...field}
-                          value={field.value || ''}
-                          onChange={(e) => {
-                            field.onChange(e);
-                            debouncedSave({
-                              ...form.getValues(),
-                              canonicalUrl: e.target.value,
-                            });
-                          }}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Optional. Use this if this product exists on another site to prevent duplicate content issues.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <div className="flex items-start p-3 border rounded-md bg-muted/50">
-                  <Info className="h-5 w-5 mr-2 text-muted-foreground shrink-0 mt-0.5" />
-                  <div className="text-sm text-muted-foreground">
-                    <p>
-                      Page URLs are generated automatically based on the product slug ({draft?.slug || 'product-slug'})
-                      and category ({draft?.category?.name || 'category'}). To change the URL, adjust the slug in the Basic Info step.
+                    <Input
+                      id="slug"
+                      placeholder="product-url-slug"
+                      value={slug}
+                      onChange={(e) => handleFieldChange('slug', e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      The URL-friendly version of the product name.
                     </p>
                   </div>
                 </div>
+                
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="metaTitle">Meta Title</Label>
+                    <span className={`text-xs ${metaTitle.length > 60 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                      {metaTitle.length}/60
+                    </span>
+                  </div>
+                  <Input
+                    id="metaTitle"
+                    placeholder="SEO-friendly title tag"
+                    value={metaTitle}
+                    onChange={(e) => handleFieldChange('metaTitle', e.target.value)}
+                    className={metaTitle.length > 60 ? 'border-destructive' : ''}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Appears in search engine results and browser tabs. Keep it under 60 characters.
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="metaDescription">Meta Description</Label>
+                    <span className={`text-xs ${metaDescription.length > 160 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                      {metaDescription.length}/160
+                    </span>
+                  </div>
+                  <Textarea
+                    id="metaDescription"
+                    placeholder="Brief description of the product for search engines"
+                    value={metaDescription}
+                    onChange={(e) => handleFieldChange('metaDescription', e.target.value)}
+                    className={metaDescription.length > 160 ? 'border-destructive' : ''}
+                    rows={3}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    A concise summary that appears in search results. Aim for 150-160 characters.
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="keywords">Keywords</Label>
+                  <Textarea
+                    id="keywords"
+                    placeholder="Comma-separated keywords"
+                    value={keywords}
+                    onChange={(e) => handleFieldChange('keywords', e.target.value)}
+                    rows={2}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Keywords help search engines understand your product (comma-separated).
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="canonicalUrl">Canonical URL (Optional)</Label>
+                  <Input
+                    id="canonicalUrl"
+                    placeholder="https://example.com/products/original-product"
+                    value={canonicalUrl}
+                    onChange={(e) => handleFieldChange('canonicalUrl', e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Use this if this product is a duplicate of another product to avoid SEO penalties.
+                  </p>
+                </div>
+                
+                <div className="flex justify-between pt-4">
+                  <Button 
+                    variant="outline" 
+                    onClick={generateMetaFields}
+                  >
+                    <Search className="mr-2 h-4 w-4" />
+                    Generate Meta Fields
+                  </Button>
+                  
+                  <Button 
+                    onClick={handleNext}
+                  >
+                    Continue
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </div>
+                
+                {hasChanges && (
+                  <Alert className="mt-4">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Unsaved Changes</AlertTitle>
+                    <AlertDescription>
+                      You have unsaved changes. They will be automatically saved when you continue.
+                    </AlertDescription>
+                  </Alert>
+                )}
               </div>
             </CardContent>
           </Card>
           
-          <div className="flex justify-end gap-4">
-            <Button 
-              type="submit" 
-              disabled={loading || saving}
-            >
-              {saving ? 'Saving...' : 'Save & Finish'}
-            </Button>
+          <div className="bg-muted rounded-lg p-4">
+            <h3 className="text-sm font-medium mb-2">SEO Preview</h3>
+            
+            <div className="space-y-2">
+              <div>
+                <p className="text-blue-600 text-sm font-medium truncate">
+                  {metaTitle || 'Product Title - Your Store'}
+                </p>
+                <p className="text-green-700 text-xs">
+                  www.yourdomain.com/products/{slug || 'product-url'}
+                </p>
+                <p className="text-sm text-gray-600">
+                  {metaDescription || 'This is how your product will appear in search engine results. Add a meta description to improve click-through rates.'}
+                </p>
+              </div>
+            </div>
           </div>
-        </form>
-      </Form>
+        </TabsContent>
+        
+        <TabsContent value="ai" className="space-y-4">
+          <SeoOptimizer />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

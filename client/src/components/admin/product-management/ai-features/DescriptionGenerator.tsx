@@ -1,275 +1,309 @@
 /**
- * Description Generator Component
+ * Description Generator
  * 
- * This component provides AI-powered description generation for products.
- * It uses the AI API to generate multiple description options that the user can choose from.
+ * This component provides AI-powered product description generation
+ * using the Google Gemini API.
  */
 
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
+import { useDraftContext } from '../DraftContext';
+import { useToast } from '@/hooks/use-toast';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Check, RefreshCw, AlertCircle, Sparkles } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { generateDescriptions, checkAiAvailability } from '../utils/ai-utils';
+import { Label } from '@/components/ui/label';
+import { Loader2, SparklesIcon, RefreshCw, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { apiRequest } from '@/lib/queryClient';
 
-// Component props
 interface DescriptionGeneratorProps {
-  productName: string;
-  category: string;
-  attributes: any[];
-  onSelectDescription: (description: string) => void;
+  className?: string;
 }
 
-// Tone options for description generation
-const toneOptions = [
-  { value: 'professional', label: 'Professional' },
-  { value: 'casual', label: 'Casual' },
-  { value: 'enthusiastic', label: 'Enthusiastic' },
-  { value: 'informative', label: 'Informative' },
-  { value: 'persuasive', label: 'Persuasive' }
-];
-
-export function DescriptionGenerator({
-  productName,
-  category,
-  attributes,
-  onSelectDescription
-}: DescriptionGeneratorProps) {
+export function DescriptionGenerator({ className }: DescriptionGeneratorProps) {
+  const { draft, updateDraft, saveDraft } = useDraftContext();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [isAiAvailable, setIsAiAvailable] = useState<boolean | null>(null);
-  const [keywords, setKeywords] = useState<string>('');
-  const [tone, setTone] = useState<string>('professional');
-  const [descriptions, setDescriptions] = useState<string[]>([]);
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-
-  // Check AI availability on component mount
-  const checkAvailability = useCallback(async () => {
+  const [tone, setTone] = useState('professional');
+  const [length, setLength] = useState('medium');
+  const [style, setStyle] = useState('informative');
+  const [additionalInfo, setAdditionalInfo] = useState('');
+  const [generatedDescriptions, setGeneratedDescriptions] = useState<string[]>([]);
+  const [selectedDescription, setSelectedDescription] = useState<string | null>(null);
+  
+  const toneOptions = [
+    { value: 'professional', label: 'Professional' },
+    { value: 'casual', label: 'Casual' },
+    { value: 'enthusiastic', label: 'Enthusiastic' },
+    { value: 'technical', label: 'Technical' },
+    { value: 'persuasive', label: 'Persuasive' },
+  ];
+  
+  const lengthOptions = [
+    { value: 'short', label: 'Short (50-100 words)' },
+    { value: 'medium', label: 'Medium (100-200 words)' },
+    { value: 'long', label: 'Long (200-300 words)' },
+  ];
+  
+  const styleOptions = [
+    { value: 'informative', label: 'Informative' },
+    { value: 'storytelling', label: 'Storytelling' },
+    { value: 'benefit-focused', label: 'Benefit-focused' },
+    { value: 'comparison', label: 'Comparison' },
+    { value: 'problem-solution', label: 'Problem-Solution' },
+  ];
+  
+  // Generate description using AI
+  const generateDescription = async () => {
+    if (!draft) return;
+    
     try {
-      const available = await checkAiAvailability();
-      setIsAiAvailable(available);
-    } catch (error) {
-      console.error('Error checking AI availability:', error);
-      setIsAiAvailable(false);
-    }
-  }, []);
-
-  // Generate descriptions with the AI API
-  const generateProductDescriptions = async () => {
-    if (!productName.trim()) {
-      toast({
-        title: "Product name required",
-        description: "Please enter a product name to generate descriptions.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // Validate that AI is available
-    if (isAiAvailable === null) {
-      await checkAvailability();
+      setLoading(true);
+      setGeneratedDescriptions([]);
+      setSelectedDescription(null);
       
-      if (!isAiAvailable) {
-        toast({
-          title: "AI Services Unavailable",
-          description: "AI services are currently unavailable. Your administrator can enable them in the system settings.",
-          variant: "destructive"
-        });
-        return;
-      }
-    } else if (isAiAvailable === false) {
-      toast({
-        title: "AI Services Unavailable",
-        description: "AI services are currently unavailable. Your administrator can enable them in the system settings.",
-        variant: "destructive"
+      const response = await apiRequest('/api/ai/generate-description', {
+        method: 'POST',
+        body: JSON.stringify({
+          productName: draft.name,
+          productCategory: draft.category?.name || '',
+          existingDescription: draft.description || '',
+          shortDescription: draft.shortDescription || '',
+          brand: draft.brand || '',
+          tone,
+          length,
+          style,
+          additionalInfo: additionalInfo.trim() || '',
+        }),
       });
-      return;
-    }
-
-    // Reset state
-    setLoading(true);
-    setDescriptions([]);
-    setSelectedIndex(null);
-
-    try {
-      // Parse the keywords string into an array
-      const keywordArray = keywords
-        .split(',')
-        .map(keyword => keyword.trim())
-        .filter(keyword => keyword.length > 0);
-
-      // Format attributes for the AI
-      const formattedAttributes = attributes
-        .filter(attr => attr.name && attr.value)
-        .map(attr => ({
-          name: attr.name,
-          value: attr.value
-        }));
-
-      // Call the API
-      const generatedDescriptions = await generateDescriptions({
-        productName,
-        category,
-        keywords: keywordArray,
-        tone,
-        attributes: formattedAttributes
-      });
-
-      if (generatedDescriptions && generatedDescriptions.length > 0) {
-        setDescriptions(generatedDescriptions);
-        toast({
-          title: "Descriptions Generated",
-          description: `${generatedDescriptions.length} product descriptions have been generated.`,
-          variant: "default"
-        });
+      
+      if (response.success && response.data?.descriptions) {
+        setGeneratedDescriptions(response.data.descriptions);
       } else {
-        toast({
-          title: "No Descriptions Generated",
-          description: "The AI couldn't generate any descriptions. Try different inputs or try again later.",
-          variant: "destructive"
-        });
+        throw new Error(response.message || 'Failed to generate descriptions');
       }
     } catch (error) {
       console.error('Error generating descriptions:', error);
       toast({
-        title: "Generation Failed",
-        description: "An error occurred while generating descriptions. Please try again.",
-        variant: "destructive"
+        title: 'Generation Failed',
+        description: error instanceof Error ? error.message : 'Failed to generate descriptions. Please try again.',
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
     }
   };
-
-  // Handle selecting a description
-  const handleSelectDescription = (index: number) => {
-    setSelectedIndex(index);
-    onSelectDescription(descriptions[index]);
+  
+  // Use the selected description
+  const useDescription = async (description: string) => {
+    if (!draft) return;
+    
+    try {
+      updateDraft({ description });
+      await saveDraft();
+      
+      toast({
+        title: 'Description Updated',
+        description: 'The product description has been updated.',
+      });
+      
+      // Close the generator
+      setGeneratedDescriptions([]);
+      setSelectedDescription(null);
+    } catch (error) {
+      console.error('Error updating description:', error);
+      toast({
+        title: 'Update Failed',
+        description: error instanceof Error ? error.message : 'Failed to update description. Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
-
-  if (isAiAvailable === null) {
-    // Initial load, check AI availability
-    checkAvailability();
-  }
-
+  
+  // Preview a description
+  const previewDescription = (description: string) => {
+    setSelectedDescription(description);
+  };
+  
+  // Regenerate descriptions
+  const handleRegenerate = () => {
+    generateDescription();
+  };
+  
+  // Handle use of selected description
+  const handleUseSelected = async () => {
+    if (selectedDescription) {
+      await useDescription(selectedDescription);
+    }
+  };
+  
   return (
-    <Card className="w-full">
+    <Card className={className}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Sparkles size={18} className="text-primary" />
+          <SparklesIcon className="h-5 w-5 text-primary" />
           AI Description Generator
         </CardTitle>
         <CardDescription>
-          Generate professional product descriptions with AI assistance
+          Generate compelling product descriptions with AI to save time and improve quality.
         </CardDescription>
       </CardHeader>
+      
       <CardContent>
-        {isAiAvailable === false && (
-          <div className="mb-4 p-3 bg-destructive/10 text-destructive rounded-md flex items-center gap-2">
-            <AlertCircle size={16} />
-            <span>AI services are currently unavailable. Please try again later or contact your administrator.</span>
-          </div>
-        )}
-        
-        <div className="space-y-4">
-          <div>
-            <label className="text-sm font-medium mb-1 block">Keywords (comma separated)</label>
-            <Input 
-              placeholder="premium, durable, lightweight, sustainable" 
-              value={keywords}
-              onChange={(e) => setKeywords(e.target.value)}
-              disabled={loading}
-            />
-          </div>
-          
-          <div>
-            <label className="text-sm font-medium mb-1 block">Tone</label>
-            <Select 
-              value={tone} 
-              onValueChange={setTone}
-              disabled={loading}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select a tone" />
-              </SelectTrigger>
-              <SelectContent>
-                {toneOptions.map(option => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <Button 
-            onClick={generateProductDescriptions} 
-            disabled={loading || isAiAvailable === false || !productName.trim()}
-            className="w-full"
-          >
-            {loading ? (
-              <>
-                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <Sparkles className="mr-2 h-4 w-4" />
-                Generate Descriptions
-              </>
-            )}
-          </Button>
-        </div>
-
-        {descriptions.length > 0 && (
-          <div className="mt-6">
-            <Tabs defaultValue="0">
-              <TabsList className="w-full">
-                {descriptions.map((_, index) => (
-                  <TabsTrigger key={index} value={index.toString()} className="flex-1">
-                    Option {index + 1}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
+        {generatedDescriptions.length === 0 ? (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="tone">Tone</Label>
+                <Select value={tone} onValueChange={setTone}>
+                  <SelectTrigger id="tone">
+                    <SelectValue placeholder="Select tone" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {toneOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               
-              {descriptions.map((description, index) => (
-                <TabsContent key={index} value={index.toString()} className="pt-4">
-                  <div className="relative">
-                    <Textarea 
-                      value={description}
-                      readOnly
-                      className="min-h-[200px] p-4"
-                    />
-                    
-                    {selectedIndex === index && (
-                      <Badge 
-                        variant="default" 
-                        className="absolute top-2 right-2 bg-green-600"
+              <div className="space-y-2">
+                <Label htmlFor="length">Length</Label>
+                <Select value={length} onValueChange={setLength}>
+                  <SelectTrigger id="length">
+                    <SelectValue placeholder="Select length" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {lengthOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="style">Writing Style</Label>
+                <Select value={style} onValueChange={setStyle}>
+                  <SelectTrigger id="style">
+                    <SelectValue placeholder="Select style" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {styleOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="additionalInfo">Additional Information (Optional)</Label>
+              <Textarea
+                id="additionalInfo"
+                placeholder="Enter any additional details about the product you'd like to include in the description..."
+                value={additionalInfo}
+                onChange={(e) => setAdditionalInfo(e.target.value)}
+                rows={3}
+              />
+            </div>
+            
+            <Button 
+              onClick={generateDescription}
+              disabled={loading || !draft?.name}
+              className="w-full"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Generating descriptions...
+                </>
+              ) : (
+                <>
+                  <SparklesIcon className="mr-2 h-4 w-4" />
+                  Generate Descriptions
+                </>
+              )}
+            </Button>
+            
+            {!draft?.name && (
+              <p className="text-sm text-destructive">
+                Please enter a product name before generating descriptions.
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-medium">Generated Descriptions</h3>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRegenerate}
+                disabled={loading}
+              >
+                <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                Regenerate
+              </Button>
+            </div>
+            
+            <div className="grid grid-cols-1 gap-3">
+              {generatedDescriptions.map((description, index) => (
+                <Card
+                  key={index}
+                  className={`cursor-pointer border ${selectedDescription === description ? 'border-primary' : 'border-border'}`}
+                  onClick={() => previewDescription(description)}
+                >
+                  <CardContent className="p-4">
+                    <div className="text-sm line-clamp-3 mb-2">{description}</div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-muted-foreground">
+                        {description.length} characters • {description.split(/\s+/).length} words
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          useDescription(description);
+                        }}
                       >
-                        <Check size={12} className="mr-1" /> Selected
-                      </Badge>
-                    )}
-                    
-                    <Button
-                      variant={selectedIndex === index ? "outline" : "default"}
-                      className="mt-2 w-full"
-                      onClick={() => handleSelectDescription(index)}
-                      disabled={selectedIndex === index}
-                    >
-                      {selectedIndex === index ? 'Selected' : 'Use This Description'}
-                    </Button>
-                  </div>
-                </TabsContent>
+                        <ThumbsUp className="h-4 w-4 mr-1" />
+                        Use This
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
               ))}
-            </Tabs>
+            </div>
+            
+            {selectedDescription && (
+              <div className="border rounded-md p-4 mt-4 space-y-3">
+                <h4 className="font-medium">Preview</h4>
+                <div className="whitespace-pre-wrap text-sm">{selectedDescription}</div>
+                <div className="flex justify-end">
+                  <Button onClick={handleUseSelected}>
+                    <ThumbsUp className="mr-2 h-4 w-4" />
+                    Use This Description
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </CardContent>
+      
+      <CardFooter className="flex justify-between border-t px-6 py-4">
+        <div className="text-xs text-muted-foreground">
+          Powered by Google Gemini AI
+        </div>
+      </CardFooter>
     </Card>
   );
 }
