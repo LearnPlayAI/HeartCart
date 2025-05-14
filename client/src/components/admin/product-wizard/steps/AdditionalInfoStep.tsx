@@ -101,43 +101,55 @@ export function AdditionalInfoStep() {
     }
   };
   
-  // Create local versions of missing attribute toggle/update functions
+  // Create local versions of attribute toggle/update functions that maintain changes in local state only
+  // Changes will only be persisted to context when the user clicks Save
+  const [localAttributes, setLocalAttributes] = useState<any[]>([]);
+  
+  // Initialize local attributes from global state on component mount
+  useEffect(() => {
+    setLocalAttributes(state.attributes || []);
+  }, []);
+  
+  // Toggle attribute (only in local state)
   const toggleAttribute = (id: number, enabled: boolean) => {
-    console.log(`Toggle attribute ${id}: ${enabled}`);
-    // Find the attribute in the state
-    const attrIndex = state.attributes.findIndex(attr => attr.id === id);
-    if (attrIndex === -1) {
-      // If attribute isn't in state, add it
-      if (enabled) {
-        addAttribute({
-          id,
-          attributeType: 'select',
-          isRequired: false,
-          textValue: '',
-          selectedOptions: [],
-          sortOrder: state.attributes.length
-        });
+    console.log(`Toggle attribute ${id}: ${enabled} (local state only)`);
+    
+    if (enabled) {
+      // If enabled, add to local state if not already present
+      const existingAttrIndex = localAttributes.findIndex(attr => attr.id === id);
+      if (existingAttrIndex === -1) {
+        const attr = attributeDefinitions.find(a => a.id === id);
+        if (attr) {
+          setLocalAttributes(prev => [
+            ...prev, 
+            {
+              id,
+              attributeType: attr.attributeType || 'select',
+              isRequired: false,
+              textValue: '',
+              selectedOptions: [],
+              sortOrder: localAttributes.length
+            }
+          ]);
+        }
       }
     } else {
-      // If it exists, remove it when disabled
-      if (!enabled) {
-        removeAttribute(attrIndex);
-      }
+      // If disabled, remove from local state
+      setLocalAttributes(prev => prev.filter(attr => attr.id !== id));
     }
   };
   
-  // Function to update attribute options
+  // Function to update attribute options (only in local state)
   const updateAttributeOptions = (id: number, optionIds: number[]) => {
-    console.log(`Update attribute ${id} options:`, optionIds);
-    // Find the attribute in the state
-    const attrIndex = state.attributes.findIndex(attr => attr.id === id);
-    if (attrIndex !== -1) {
-      const updatedAttr = {
-        ...state.attributes[attrIndex],
-        selectedOptions: optionIds
-      };
-      updateAttribute(attrIndex, updatedAttr);
-    }
+    console.log(`Update attribute ${id} options in local state:`, optionIds);
+    
+    setLocalAttributes(prev => 
+      prev.map(attr => 
+        attr.id === id 
+          ? { ...attr, selectedOptions: optionIds } 
+          : attr
+      )
+    );
   };
   
   // Function to update attribute text value
@@ -653,14 +665,8 @@ export function AdditionalInfoStep() {
     }
   };
   
-  // Only save when the component unmounts or the user clicks next
-  useEffect(() => {
-    return () => {
-      // Save all form values to context when the component unmounts
-      const values = form.getValues();
-      onSubmit(values);
-    };
-  }, [form, onSubmit]);
+  // We no longer auto-save when unmounting - only when the user clicks save
+  // This prevents unwanted auto-saving
   
   // Handle updating an attribute value
   const handleAttributeValueChange = (index: number, value: string) => {
