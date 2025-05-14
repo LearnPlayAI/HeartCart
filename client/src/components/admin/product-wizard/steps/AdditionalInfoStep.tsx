@@ -94,7 +94,24 @@ export function AdditionalInfoStep() {
   // Fetch global attributes only once when the component mounts
   const { data: globalAttributesData } = useQuery({
     queryKey: ['/api/attributes'],
+    queryFn: async () => {
+      try {
+        // Direct API call with fetch to avoid any potential issues with wrapper
+        console.log('Fetching global attributes directly');
+        const response = await fetch('/api/attributes');
+        if (!response.ok) {
+          throw new Error(`Failed to fetch attributes: ${response.statusText}`);
+        }
+        const data = await response.json();
+        console.log('Global attributes direct fetch response:', data);
+        return data;
+      } catch (err) {
+        console.error('Error fetching global attributes:', err);
+        throw err;
+      }
+    },
     refetchOnMount: false,
+    refetchOnWindowFocus: false,
     staleTime: Infinity // Keep the data cached and never consider it stale
   });
   
@@ -1145,6 +1162,42 @@ export function AdditionalInfoStep() {
                     </CollapsibleContent>
                   </Collapsible>
                 </TabsContent>
+                
+                {/* Navigation and Save buttons */}
+                <div className="flex justify-between mt-8 px-2 pb-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => prevStep()}
+                    disabled={isLoading || isSaving}
+                  >
+                    Back
+                  </Button>
+                  
+                  <div className="flex space-x-3">
+                    <Button 
+                      type="button" 
+                      variant="secondary"
+                      onClick={form.handleSubmit(onSubmit)}
+                      disabled={isLoading || isFetchingOptions || isSaving}
+                    >
+                      {isSaving ? 'Saving...' : 'Save'}
+                    </Button>
+                    
+                    <Button 
+                      type="button" 
+                      variant="default" 
+                      onClick={() => {
+                        form.handleSubmit(onSubmit)();
+                        if (!form.formState.isValid) return;
+                        nextStep();
+                      }}
+                      disabled={isLoading || isFetchingOptions || isSaving}
+                    >
+                      {isLoading ? 'Loading...' : 'Next'}
+                    </Button>
+                  </div>
+                </div>
               </form>
             </Form>
           </Tabs>
