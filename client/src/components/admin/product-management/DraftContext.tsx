@@ -169,18 +169,30 @@ export function DraftProvider({ children, initialDraftId }: DraftProviderProps) 
       setLoading(true);
       setError(null);
       
+      // Generate a unique timestamp and random number for SKU and name
+      const timestamp = new Date().toISOString().slice(0, 10);
+      const randomNum = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+      
       // The minimum required data for creating a draft 
       // following the database schema requirements
       const response = await apiRequest('/api/product-drafts', {
         method: 'POST',
         body: JSON.stringify({
-          name: 'New Product',
-          slug: 'new-product',
+          name: `New Product ${timestamp}-${randomNum}`,
+          slug: `new-product-${timestamp.replace(/-/g, '')}-${randomNum}`,
           draftStatus: 'draft',
           regularPrice: 0,
           costPrice: 0,
-          stock: 0,
-          sku: `SKU-${Date.now().toString().slice(-6)}`,
+          stockLevel: 0,
+          sku: `SKU-${timestamp.replace(/-/g, '')}-${randomNum}`,
+          wizardProgress: {
+            "basic-info": false,
+            "images": false,
+            "pricing": false,
+            "attributes": false,
+            "additional-info": false,
+            "seo": false
+          }
         }),
       });
       
@@ -190,6 +202,11 @@ export function DraftProvider({ children, initialDraftId }: DraftProviderProps) 
         
         // Update drafts list with the new draft
         setDrafts(prev => [newDraft, ...prev]);
+        
+        toast({
+          title: 'Draft Created',
+          description: 'New product draft has been created. You can now edit it.',
+        });
         
         return newDraft;
       } else {
@@ -370,10 +387,24 @@ export function DraftProvider({ children, initialDraftId }: DraftProviderProps) 
       setIsLoading(true);
       setError(null);
       
+      // Get current user first to ensure we're logged in
+      const userResponse = await apiRequest('/api/user');
+      
+      if (!userResponse.success || !userResponse.data) {
+        throw new Error('User not authenticated. Please log in first.');
+      }
+      
       const response = await apiRequest('/api/product-drafts');
       
       if (response.success && response.data) {
-        setDrafts(response.data);
+        // Sort drafts by lastModified date, newest first
+        const sortedDrafts = [...response.data].sort((a, b) => {
+          const dateA = new Date(a.lastModified || a.createdAt || 0);
+          const dateB = new Date(b.lastModified || b.createdAt || 0);
+          return dateB.getTime() - dateA.getTime();
+        });
+        
+        setDrafts(sortedDrafts);
       } else {
         throw new Error(response.message || 'Failed to fetch drafts');
       }
@@ -381,11 +412,14 @@ export function DraftProvider({ children, initialDraftId }: DraftProviderProps) 
       console.error('Error loading drafts:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
       
-      toast({
-        title: 'Error Loading Drafts',
-        description: 'Could not load product drafts. Please try again.',
-        variant: 'destructive',
-      });
+      // Only show toast if not a 401 error (handled by auth system)
+      if (!(err instanceof Error && err.message.includes('User not authenticated'))) {
+        toast({
+          title: 'Error Loading Drafts',
+          description: 'Could not load product drafts. Please try again.',
+          variant: 'destructive',
+        });
+      }
     } finally {
       setIsLoading(false);
     }

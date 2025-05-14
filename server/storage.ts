@@ -1212,24 +1212,13 @@ export class DatabaseStorage implements IStorage {
   /**
    * Gets all product drafts for a specific user, optionally filtered by catalog
    */
-  async getUserProductDrafts(userId: number, catalogId?: number): Promise<any[]> {
+  /* Deprecated - use the implementation at line ~4834 instead */
+  async getUserProductDraftsOld(userId: number, catalogId?: number): Promise<any[]> {
+    logger.warn('Deprecated getUserProductDrafts function called - use newer implementation');
     try {
-      if (catalogId) {
-        return await db.query.productDrafts.findMany({
-          where: and(
-            eq(productDrafts.userId, userId),
-            eq(productDrafts.catalogId, catalogId)
-          ),
-          orderBy: [desc(productDrafts.updatedAt)]
-        });
-      } else {
-        return await db.query.productDrafts.findMany({
-          where: eq(productDrafts.userId, userId),
-          orderBy: [desc(productDrafts.updatedAt)]
-        });
-      }
+      return await storage.getUserProductDrafts(userId);
     } catch (error) {
-      logger.error('Error retrieving user product drafts', { userId, catalogId, error });
+      logger.error('Error retrieving user product drafts (old method)', { userId, catalogId, error });
       throw new Error(`Failed to retrieve user product drafts: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
