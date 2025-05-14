@@ -134,9 +134,9 @@ function ProductDraftList() {
       </div>
 
       <Tabs defaultValue="drafts">
-        <TabsList>
-          <TabsTrigger value="drafts">Drafts</TabsTrigger>
-          <TabsTrigger value="published">Published Products</TabsTrigger>
+        <TabsList className="bg-background border-b border-b-muted">
+          <TabsTrigger value="drafts" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none">Drafts</TabsTrigger>
+          <TabsTrigger value="published" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none">Published Products</TabsTrigger>
         </TabsList>
         <TabsContent value="drafts" className="pt-4">
           {isLoading ? (
@@ -171,10 +171,10 @@ function ProductDraftList() {
                           {draft.name || "Untitled Product"}
                         </TableCell>
                         <TableCell>
-                          {draft.categoryName || "Uncategorized"}
+                          {draft.category?.name || "Uncategorized"}
                         </TableCell>
                         <TableCell>
-                          {new Date(draft.updatedAt).toLocaleDateString()}
+                          {draft.updatedAt ? new Date(draft.updatedAt).toLocaleDateString() : "Just created"}
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline">Draft</Badge>
@@ -206,23 +206,21 @@ function ProductDraftList() {
           )}
         </TabsContent>
         <TabsContent value="published" className="pt-4">
-          <Card>
+          <Card className="border-none shadow-none">
             <CardHeader>
               <CardTitle>Published Products</CardTitle>
               <CardDescription>
                 View and manage your published products
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="p-8 text-center">
-                <p className="text-muted-foreground">
-                  The published products list is being migrated to the new system.
-                  Please use the Products page in the meantime.
-                </p>
-                <Button variant="outline" className="mt-4" asChild>
-                  <Link href="/admin/products">Go to Products</Link>
-                </Button>
-              </div>
+            <CardContent className="flex flex-col items-center justify-center py-10">
+              <p className="text-muted-foreground text-center max-w-md mb-6">
+                The published products list is being migrated to the new system.
+                Please use the Products page in the meantime.
+              </p>
+              <Button variant="outline" asChild>
+                <Link href="/admin/products">Go to Products</Link>
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>
@@ -263,6 +261,7 @@ function ProductDraftEditor() {
   const [location, navigate] = useLocation();
   const [isPublishing, setIsPublishing] = useState(false);
   const [isDiscarding, setIsDiscarding] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   
   const {
     currentDraft,
@@ -274,14 +273,27 @@ function ProductDraftEditor() {
   
   // Load the draft if we have an ID from the route but no selectedDraftId
   useEffect(() => {
-    if (match && params.id && !selectedDraftId) {
-      loadDraft(parseInt(params.id));
+    async function loadDraftData() {
+      if (match && params.id && (!selectedDraftId || selectedDraftId !== parseInt(params.id))) {
+        setIsLoading(true);
+        try {
+          await loadDraft(parseInt(params.id));
+        } catch (error) {
+          console.error("Error loading draft:", error);
+        } finally {
+          setIsLoading(false);
+        }
+      } else {
+        setIsLoading(false);
+      }
     }
+    
+    loadDraftData();
   }, [match, params, selectedDraftId, loadDraft]);
   
   // Handler to publish a draft
   const handlePublish = async () => {
-    if (!currentDraft) return;
+    if (!currentDraft || !currentDraft.id) return;
     
     setIsPublishing(true);
     const success = await publishDraft(currentDraft.id);
@@ -294,7 +306,7 @@ function ProductDraftEditor() {
   
   // Handler to discard a draft
   const handleDiscard = async () => {
-    if (!currentDraft) return;
+    if (!currentDraft || !currentDraft.id) return;
     
     setIsDiscarding(true);
     const success = await discardDraft(currentDraft.id);
@@ -306,8 +318,45 @@ function ProductDraftEditor() {
   };
   
   // If we're not in editing mode or don't have a draft, return null
-  if (!match || !params.id || !currentDraft) {
+  if (!match || !params.id) {
     return null;
+  }
+  
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2 text-muted-foreground">Loading draft...</span>
+      </div>
+    );
+  }
+  
+  if (!currentDraft) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate("/admin/product-management")}
+            className="mr-4"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Drafts
+          </Button>
+        </div>
+        
+        <Card className="text-center p-8">
+          <CardTitle className="mb-2">Draft Not Found</CardTitle>
+          <CardDescription className="mb-6">
+            The requested draft could not be found. It may have been deleted or doesn't exist.
+          </CardDescription>
+          <Button onClick={() => navigate("/admin/product-management")}>
+            Return to Product Management
+          </Button>
+        </Card>
+      </div>
+    );
   }
   
   return (
@@ -324,6 +373,24 @@ function ProductDraftEditor() {
         </Button>
         <Separator orientation="vertical" className="h-8 mx-2" />
         <h2 className="text-2xl font-semibold">Product Editor</h2>
+        <div className="ml-auto flex items-center space-x-2">
+          <Button 
+            variant="outline" 
+            onClick={handleDiscard}
+            disabled={isDiscarding || isPublishing}
+          >
+            {isDiscarding ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            Cancel
+          </Button>
+          <Button 
+            variant="primary" 
+            onClick={handlePublish}
+            disabled={isPublishing || isDiscarding}
+          >
+            {isPublishing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            Publish Product
+          </Button>
+        </div>
       </div>
       
       <ProductWizard
