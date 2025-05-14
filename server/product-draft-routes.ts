@@ -47,27 +47,27 @@ export default function registerProductDraftRoutes(router: Router) {
         throw new BadRequestError("User ID is required");
       }
 
-      // Add user ID to the draft data
-      const draftData = {
+      // Add user ID to the draft data for new draft creation
+      let draftData = {
         ...req.body,
         createdBy: userId,
         draftStatus: "draft"
       };
 
       // If originalProductId is provided, load the product data
-      if (draftData.originalProductId) {
-        logger.debug('Creating draft from existing product', { originalProductId: draftData.originalProductId });
+      if (req.body.originalProductId) {
+        logger.debug('Creating draft from existing product', { originalProductId: req.body.originalProductId });
         
-        const product = await storage.getProductById(draftData.originalProductId);
+        const product = await storage.getProductById(req.body.originalProductId);
         if (!product) {
           throw new NotFoundError("Original product not found");
         }
         
         // Check if a draft already exists for this product
-        const existingDraft = await storage.getProductDraftByOriginalId(draftData.originalProductId);
+        const existingDraft = await storage.getProductDraftByOriginalId(req.body.originalProductId);
         if (existingDraft) {
           logger.debug('Found existing draft for product', { 
-            productId: draftData.originalProductId,
+            productId: req.body.originalProductId,
             draftId: existingDraft.id 
           });
           // Return the existing draft
@@ -89,8 +89,8 @@ export default function registerProductDraftRoutes(router: Router) {
           }
         });
 
-        // Create a new draft object with all fields explicitly set
-        const draftWithProductData = {
+        // Create a new draft object with all fields explicitly set from product
+        const draftData = {
           // Core draft fields
           originalProductId: product.id,
           draftStatus: "draft",
@@ -163,10 +163,6 @@ export default function registerProductDraftRoutes(router: Router) {
           },
           completedSteps: [],
         };
-        
-        // Replace the draft data entirely rather than using Object.assign 
-        // which can lead to unexpected merging behavior
-        draftData = draftWithProductData;
 
         // Load and map product attributes using the new attribute system
         try {
