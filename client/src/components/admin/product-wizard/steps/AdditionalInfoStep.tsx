@@ -74,9 +74,9 @@ export const AdditionalInfoStep: React.FC<AdditionalInfoStepProps> = ({ draft, o
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-              <TabsList>
-                <TabsTrigger value="specifications">Specifications</TabsTrigger>
-                <TabsTrigger value="discounts">Discounts & Special Offers</TabsTrigger>
+              <TabsList className="w-full overflow-x-auto sm:overflow-visible">
+                <TabsTrigger value="specifications" className="flex-shrink-0 text-xs sm:text-sm">Specifications</TabsTrigger>
+                <TabsTrigger value="discounts" className="flex-shrink-0 text-xs sm:text-sm">Discounts & Offers</TabsTrigger>
               </TabsList>
               
               {/* Specifications Tab */}
@@ -266,11 +266,11 @@ export const AdditionalInfoStep: React.FC<AdditionalInfoStepProps> = ({ draft, o
                     control={form.control}
                     name="isFlashDeal"
                     render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 sm:p-4">
                         <div className="space-y-0.5">
-                          <FormLabel className="text-base">Flash Deal</FormLabel>
-                          <FormDescription>
-                            Mark this product as a flash deal with limited time availability
+                          <FormLabel className="text-sm sm:text-base">Flash Deal</FormLabel>
+                          <FormDescription className="text-xs sm:text-sm">
+                            Mark as a flash deal with limited time
                           </FormDescription>
                         </div>
                         <FormControl>
@@ -331,13 +331,14 @@ export const AdditionalInfoStep: React.FC<AdditionalInfoStepProps> = ({ draft, o
               </TabsContent>
             </Tabs>
 
-            <div className="flex justify-end">
+            <div className="flex justify-end mt-4 sm:mt-6">
               <Button 
                 type="submit" 
                 disabled={isLoading}
+                className="h-9 w-full sm:w-auto sm:h-10 text-sm sm:text-base"
               >
                 {isLoading && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
                 )}
                 Save & Continue
               </Button>

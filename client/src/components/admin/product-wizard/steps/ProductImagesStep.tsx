@@ -208,7 +208,7 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ draft, onS
             <div className="space-y-4">
               <div 
                 {...getRootProps()} 
-                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                className={`border-2 border-dashed rounded-lg p-4 sm:p-8 text-center transition-colors ${
                   isDraggingOver || isDragActive 
                     ? 'border-primary bg-primary/10' 
                     : 'border-gray-300 hover:border-primary hover:bg-gray-50'
@@ -216,14 +216,14 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ draft, onS
               >
                 <input {...getInputProps()} />
                 
-                <div className="flex flex-col items-center justify-center space-y-4">
-                  <Upload className="h-12 w-12 text-gray-400" />
-                  <div className="space-y-2">
-                    <p className="text-lg font-medium">Drag and drop images here</p>
-                    <p className="text-sm text-gray-500">
-                      or click to select files from your computer
+                <div className="flex flex-col items-center justify-center space-y-3 sm:space-y-4">
+                  <Upload className="h-8 w-8 sm:h-12 sm:w-12 text-gray-400" />
+                  <div className="space-y-1 sm:space-y-2">
+                    <p className="text-base sm:text-lg font-medium">Drag and drop images here</p>
+                    <p className="text-xs sm:text-sm text-gray-500">
+                      or tap to select files
                     </p>
-                    <p className="text-xs text-gray-400">
+                    <p className="text-xs text-gray-400 hidden sm:block">
                       Accepted file types: JPG, PNG, GIF, WEBP (max 5MB)
                     </p>
                   </div>
@@ -232,16 +232,17 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ draft, onS
                     type="button" 
                     variant="outline" 
                     onClick={e => e.stopPropagation()}
+                    className="h-8 px-3 sm:h-10 sm:px-4 text-xs sm:text-sm"
                   >
-                    <ImagePlus className="mr-2 h-4 w-4" />
+                    <ImagePlus className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
                     Select Images
                   </Button>
                 </div>
               </div>
 
-              {/* Image Preview Grid */}
+              {/* Image Preview Grid - Mobile Optimized */}
               {imageUrls && imageUrls.length > 0 ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mt-6">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4 mt-4 sm:mt-6">
                   {imageUrls.map((url, index) => (
                     <div 
                       key={index} 
@@ -252,17 +253,18 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ draft, onS
                       <img 
                         src={url} 
                         alt={`Product image ${index + 1}`} 
-                        className="w-full h-32 object-cover"
+                        className="w-full h-24 sm:h-32 object-cover"
                       />
                       
-                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <div className="flex flex-col items-center space-y-2">
+                      {/* Overlay controls - visible on hover/touch */}
+                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center touch-none">
+                        <div className="flex flex-row sm:flex-col items-center space-x-2 sm:space-x-0 sm:space-y-2">
                           {index === mainImageIndex ? (
                             <Button 
                               type="button" 
                               variant="ghost" 
                               size="sm" 
-                              className="text-yellow-400 hover:text-yellow-300"
+                              className="text-yellow-400 hover:text-yellow-300 h-8 w-8 p-1 sm:h-9 sm:w-9 sm:p-2"
                               disabled
                             >
                               <Star className="h-5 w-5 fill-yellow-400" />
@@ -272,7 +274,7 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ draft, onS
                               type="button" 
                               variant="ghost" 
                               size="sm" 
-                              className="text-white hover:text-yellow-400"
+                              className="text-white hover:text-yellow-400 h-8 w-8 p-1 sm:h-9 sm:w-9 sm:p-2"
                               onClick={() => setMainImage(index)}
                             >
                               <StarOff className="h-5 w-5" />
@@ -283,7 +285,7 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ draft, onS
                             type="button" 
                             variant="ghost" 
                             size="sm" 
-                            className="text-white hover:text-red-400"
+                            className="text-white hover:text-red-400 h-8 w-8 p-1 sm:h-9 sm:w-9 sm:p-2"
                             onClick={() => handleDeleteImage(index)}
                             disabled={deleteImageMutation.isPending}
                           >
@@ -292,8 +294,9 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ draft, onS
                         </div>
                       </div>
                       
+                      {/* Always visible badge for main image */}
                       {index === mainImageIndex && (
-                        <div className="absolute top-2 left-2 bg-primary text-white px-2 py-1 rounded-md text-xs">
+                        <div className="absolute top-1 left-1 sm:top-2 sm:left-2 bg-primary text-white px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-md text-[10px] sm:text-xs">
                           Main
                         </div>
                       )}
@@ -301,19 +304,20 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ draft, onS
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-10 text-gray-500 bg-gray-50 rounded-lg">
+                <div className="text-center py-6 sm:py-10 text-gray-500 bg-gray-50 rounded-lg text-sm">
                   <p>No images uploaded yet</p>
                 </div>
               )}
             </div>
 
-            <div className="flex justify-end">
+            <div className="flex justify-end mt-4 sm:mt-6">
               <Button 
                 type="submit" 
                 disabled={isLoading || uploadingImages || deleteImageMutation.isPending}
+                className="h-9 w-full sm:w-auto sm:h-10 text-sm sm:text-base"
               >
                 {(isLoading || uploadingImages || deleteImageMutation.isPending) && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
                 )}
                 Save & Continue
               </Button>
