@@ -1,110 +1,77 @@
 /**
  * AI Utilities
  * 
- * This file contains utility functions for AI-assisted product content.
+ * Provides helper functions and hooks for AI-related functionality
+ * in the product management system.
  */
 
-/**
- * Generate product description suggestions using AI
- * @param productName Product name
- * @param category Product category
- * @param attributes Product attributes (optional)
- * @returns Promise with generated description suggestions
- */
-export async function generateProductDescription(
-  productName: string,
-  category?: string,
-  attributes?: any[]
-): Promise<string[]> {
-  try {
-    const response = await fetch('/api/ai/suggest-description', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        productName,
-        category,
-        attributes
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to generate product description');
-    }
-
-    const data = await response.json();
-    return data.success ? data.data.suggestions : [];
-  } catch (error) {
-    console.error('Error generating product description:', error);
-    return [];
-  }
-}
-
-/**
- * Generate SEO optimization suggestions using AI
- * @param productName Product name
- * @param description Product description
- * @param category Product category (optional)
- * @returns Promise with SEO suggestions
- */
-export async function generateSeoSuggestions(
-  productName: string,
-  description: string,
-  category?: string
-): Promise<{
-  metaTitle: string;
-  metaDescription: string;
-  metaKeywords: string;
-}> {
-  try {
-    const response = await fetch('/api/ai/optimize-seo', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        productName,
-        description,
-        category
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to generate SEO suggestions');
-    }
-
-    const data = await response.json();
-    return data.success ? data.data : {
-      metaTitle: '',
-      metaDescription: '',
-      metaKeywords: ''
-    };
-  } catch (error) {
-    console.error('Error generating SEO suggestions:', error);
-    return {
-      metaTitle: '',
-      metaDescription: '',
-      metaKeywords: ''
-    };
-  }
-}
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 
 /**
  * Check if AI services are available
- * @returns Promise with availability status
  */
-export async function checkAiServicesAvailability(): Promise<boolean> {
-  try {
-    const response = await fetch('/api/ai/status');
-    if (!response.ok) {
-      return false;
+export function useAiStatus() {
+  return useQuery({
+    queryKey: ['/api/ai/status'],
+    queryFn: async () => {
+      try {
+        const response = await apiRequest('GET', '/api/ai/status');
+        return response.data;
+      } catch (error) {
+        console.error("Error checking AI status:", error);
+        return { available: false };
+      }
+    },
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    retry: 1,
+  });
+}
+
+/**
+ * Generate product description suggestions
+ */
+export function useGenerateDescriptions() {
+  return useMutation({
+    mutationFn: async ({ 
+      productName, 
+      category, 
+      attributes 
+    }: { 
+      productName: string; 
+      category?: string;
+      attributes?: any[];
+    }) => {
+      const response = await apiRequest('POST', '/api/ai/suggest-description', {
+        productName,
+        category,
+        attributes
+      });
+      return response.data;
     }
-    
-    const data = await response.json();
-    return data.success && data.data.available;
-  } catch (error) {
-    console.error('Error checking AI services:', error);
-    return false;
-  }
+  });
+}
+
+/**
+ * Generate SEO optimization suggestions
+ */
+export function useGenerateSeoSuggestions() {
+  return useMutation({
+    mutationFn: async ({ 
+      productName, 
+      description, 
+      category 
+    }: { 
+      productName: string; 
+      description: string;
+      category?: string;
+    }) => {
+      const response = await apiRequest('POST', '/api/ai/optimize-seo', {
+        productName,
+        description,
+        category
+      });
+      return response.data;
+    }
+  });
 }

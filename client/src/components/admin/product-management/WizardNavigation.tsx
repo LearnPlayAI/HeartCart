@@ -1,137 +1,210 @@
 /**
- * Wizard Navigation Component
+ * Product Wizard Navigation Component
  * 
- * This component displays the multi-step navigation for the product wizard.
- * It shows the current step and allows navigation between steps.
+ * Provides the step-based navigation for the product wizard,
+ * showing progress and allowing users to switch between completed steps.
  */
 
-import React from 'react';
-import { Check, AlertCircle } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useDraft, WizardStep } from './DraftContext';
+import React from "react";
+import { AlertTriangle, CheckCircle, Circle } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-interface WizardStepIndicatorProps {
-  step: WizardStep;
-  label: string;
-  isActive: boolean;
-  isCompleted: boolean;
-  isValid: boolean;
-  onClick: () => void;
-  stepNumber: number;
-}
-
-const WizardStepIndicator: React.FC<WizardStepIndicatorProps> = ({
-  step,
-  label,
-  isActive,
-  isCompleted,
-  isValid,
-  onClick,
-  stepNumber
-}) => {
-  const stepStatus = isCompleted
-    ? isValid
-      ? 'complete'
-      : 'invalid'
-    : isActive
-      ? 'active'
-      : 'pending';
-
-  return (
-    <div className="flex flex-col items-center">
-      <button
-        type="button"
-        onClick={onClick}
-        className={cn(
-          "relative w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all mb-2 focus:outline-none focus:ring-2 focus:ring-offset-2",
-          {
-            'bg-primary text-primary-foreground border-primary': isActive,
-            'bg-muted text-muted-foreground border-input hover:border-primary/50': !isActive && !isCompleted,
-            'bg-green-500 text-white border-green-500': isCompleted && isValid,
-            'bg-destructive text-destructive-foreground border-destructive': isCompleted && !isValid,
-          }
-        )}
-        aria-current={isActive ? 'step' : undefined}
-      >
-        {isCompleted ? (
-          isValid ? (
-            <Check className="h-5 w-5" />
-          ) : (
-            <AlertCircle className="h-5 w-5" />
-          )
-        ) : (
-          <span>{stepNumber}</span>
-        )}
-      </button>
-      <span
-        className={cn("text-sm font-medium", {
-          'text-primary': isActive,
-          'text-muted-foreground': !isActive && !isCompleted,
-          'text-green-500': isCompleted && isValid,
-          'text-destructive': isCompleted && !isValid,
-        })}
-      >
-        {label}
-      </span>
-    </div>
-  );
-};
-
-const stepConfig: Array<{ step: WizardStep; label: string }> = [
-  { step: 'basic-info', label: 'Basic Info' },
-  { step: 'images', label: 'Images' },
-  { step: 'pricing', label: 'Pricing' },
-  { step: 'attributes', label: 'Attributes' },
-  { step: 'promotions', label: 'Promotions' },
-  { step: 'review', label: 'Review' },
+// Define the wizard steps
+export const WIZARD_STEPS = [
+  {
+    id: "basic-info",
+    label: "Basic Info",
+    description: "Name, Category, Description",
+  },
+  {
+    id: "images",
+    label: "Images",
+    description: "Upload & Manage Product Images",
+  },
+  {
+    id: "pricing",
+    label: "Pricing",
+    description: "Regular & Sale Pricing",
+  },
+  {
+    id: "attributes",
+    label: "Attributes",
+    description: "Size, Color, etc.",
+  },
+  {
+    id: "seo",
+    label: "SEO",
+    description: "Meta Title, Description, etc.",
+  },
+  {
+    id: "review",
+    label: "Review",
+    description: "Review & Publish",
+  },
 ];
 
 interface WizardNavigationProps {
-  className?: string;
+  currentStep: string;
+  completedSteps: string[];
+  onStepChange: (step: string) => void;
+  validationErrors?: Record<string, string[]>;
 }
 
-export const WizardNavigation: React.FC<WizardNavigationProps> = ({ className }) => {
-  const { currentStep, setCurrentStep, isStepValid, draft } = useDraft();
+export function WizardNavigation({ 
+  currentStep, 
+  completedSteps, 
+  onStepChange,
+  validationErrors = {},
+}: WizardNavigationProps) {
   
-  const handleStepClick = (step: WizardStep) => {
-    setCurrentStep(step);
+  // Function to check if a step is accessible
+  const isStepAccessible = (stepId: string) => {
+    // The current step is always accessible
+    if (stepId === currentStep) return true;
+    
+    // Completed steps are accessible
+    if (completedSteps.includes(stepId)) return true;
+    
+    // Find the index of the step in the WIZARD_STEPS array
+    const stepIndex = WIZARD_STEPS.findIndex(step => step.id === stepId);
+    const currentIndex = WIZARD_STEPS.findIndex(step => step.id === currentStep);
+    
+    // The previous step is always accessible from the current step
+    if (stepIndex === currentIndex - 1) return true;
+    
+    // The next step is accessible if the current step is completed
+    if (stepIndex === currentIndex + 1 && completedSteps.includes(currentStep)) return true;
+    
+    return false;
+  };
+  
+  // Function to get the status of a step
+  const getStepStatus = (stepId: string) => {
+    // If the step has validation errors
+    if (validationErrors[stepId] && validationErrors[stepId].length > 0) {
+      return "error";
+    }
+    
+    // If the step is completed
+    if (completedSteps.includes(stepId)) {
+      return "completed";
+    }
+    
+    // If the step is the current step
+    if (stepId === currentStep) {
+      return "current";
+    }
+    
+    // If the step is accessible but not current or completed
+    if (isStepAccessible(stepId)) {
+      return "accessible";
+    }
+    
+    // Otherwise, the step is locked
+    return "locked";
+  };
+  
+  // Handler for step navigation clicks
+  const handleStepClick = (stepId: string) => {
+    if (isStepAccessible(stepId)) {
+      onStepChange(stepId);
+    }
   };
   
   return (
-    <nav className={cn("pt-4", className)}>
-      <div className="flex justify-between items-center">
-        {stepConfig.map(({ step, label }, index) => {
-          // Check if this step is completed based on wizard progress
-          const isCompleted = draft?.wizardProgress?.[step] === true;
+    <div className="mb-8 relative">
+      {/* Top progress bar (visible on mobile) */}
+      <div className="md:hidden mb-4">
+        <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+          <div
+            className="h-full bg-primary transition-all"
+            style={{
+              width: `${
+                (completedSteps.length / (WIZARD_STEPS.length - 1)) * 100
+              }%`,
+            }}
+          />
+        </div>
+      </div>
+      
+      {/* Step navigation */}
+      <ol className="flex flex-col md:flex-row md:space-x-3 space-y-3 md:space-y-0">
+        {WIZARD_STEPS.map((step, i) => {
+          const status = getStepStatus(step.id);
           
           return (
-            <React.Fragment key={step}>
-              <WizardStepIndicator
-                step={step}
-                label={label}
-                isActive={currentStep === step}
-                isCompleted={isCompleted}
-                isValid={isStepValid(step)}
-                onClick={() => handleStepClick(step)}
-                stepNumber={index + 1}
-              />
-              
-              {/* Connector line between steps */}
-              {index < stepConfig.length - 1 && (
-                <div
-                  className={cn(
-                    "flex-1 h-0.5 mx-2",
-                    {
-                      'bg-primary': index < stepConfig.findIndex(s => s.step === currentStep),
-                      'bg-muted': index >= stepConfig.findIndex(s => s.step === currentStep),
-                    }
-                  )}
+            <li 
+              key={step.id} 
+              className="relative"
+              style={{ flex: `1 0 ${100 / WIZARD_STEPS.length}%` }}
+            >
+              {/* Connector line (for desktop) */}
+              {i > 0 && (
+                <div 
+                  className="hidden md:block absolute h-0.5 bg-muted -left-3 top-5 transform -translate-y-1/2" 
+                  style={{ width: "calc(100% + 12px)" }}
                 />
               )}
-            </React.Fragment>
+              
+              {/* Step button */}
+              <button
+                type="button"
+                onClick={() => handleStepClick(step.id)}
+                disabled={status === "locked"}
+                className={cn(
+                  "w-full flex items-center p-3 relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md",
+                  status === "locked" && "opacity-50 cursor-not-allowed",
+                  status === "current" && "bg-muted",
+                  status === "error" && "bg-destructive/10",
+                  (status === "completed" || status === "accessible") &&
+                    "hover:bg-muted/50 transition-colors"
+                )}
+              >
+                {/* Step indicator/icon */}
+                <div className="z-10 mr-3 flex-shrink-0">
+                  {status === "error" ? (
+                    <div className="rounded-full bg-destructive text-destructive-foreground p-1 w-8 h-8 flex items-center justify-center">
+                      <AlertTriangle className="h-5 w-5" />
+                    </div>
+                  ) : status === "completed" ? (
+                    <div className="rounded-full bg-primary text-primary-foreground p-1 w-8 h-8 flex items-center justify-center">
+                      <CheckCircle className="h-5 w-5" />
+                    </div>
+                  ) : status === "current" ? (
+                    <div className="rounded-full border-2 border-primary bg-background p-1 w-8 h-8 flex items-center justify-center">
+                      <Circle className="h-5 w-5 fill-primary text-primary" />
+                    </div>
+                  ) : (
+                    <div className="rounded-full border border-muted-foreground p-1 w-8 h-8 flex items-center justify-center">
+                      <span className="text-muted-foreground">{i + 1}</span>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Step label and description */}
+                <div className="text-left">
+                  <div className="font-medium">{step.label}</div>
+                  <div className="text-xs text-muted-foreground">{step.description}</div>
+                </div>
+              </button>
+              
+              {/* Error indicator */}
+              {validationErrors[step.id] && validationErrors[step.id].length > 0 && (
+                <div className="mt-1 rounded-sm bg-destructive/10 text-destructive p-2 text-xs">
+                  <ul className="list-disc list-inside">
+                    {validationErrors[step.id].slice(0, 2).map((error, i) => (
+                      <li key={i}>{error}</li>
+                    ))}
+                    {validationErrors[step.id].length > 2 && (
+                      <li>{validationErrors[step.id].length - 2} more issues...</li>
+                    )}
+                  </ul>
+                </div>
+              )}
+            </li>
           );
         })}
-      </div>
-    </nav>
+      </ol>
+    </div>
   );
-};
+}

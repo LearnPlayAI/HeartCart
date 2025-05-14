@@ -1,518 +1,200 @@
 /**
- * Product Draft Context
+ * Draft Context
  * 
- * This context provides draft state management for the product wizard.
- * It follows a database-first approach where all changes persist to the
- * database immediately for a single source of truth.
+ * Provides context for managing product draft state and operations
+ * across the product management system.
  */
 
-import React, { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
+import React, { createContext, useState, useContext, ReactNode, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { debounce } from '@/lib/utils';
-
-// Types
-export type WizardStep = 'basic-info' | 'images' | 'pricing' | 'attributes' | 'promotions' | 'review';
-
-export interface ProductDraft {
-  id: number;
-  originalProductId?: number;
-  name?: string;
-  slug?: string;
-  sku?: string;
-  description?: string;
-  brand?: string;
-  categoryId?: number;
-  isActive?: boolean;
-  isFeatured?: boolean;
-  costPrice?: number;
-  regularPrice?: number;
-  salePrice?: number;
-  onSale?: boolean;
-  markupPercentage?: number;
-  imageUrls?: string[];
-  imageObjectKeys?: string[];
-  mainImageIndex?: number;
-  attributes?: any[];
-  supplierId?: number;
-  weight?: string;
-  dimensions?: string;
-  discountLabel?: string;
-  specialSaleText?: string;
-  specialSaleStart?: Date | string | null;
-  specialSaleEnd?: Date | string | null;
-  isFlashDeal?: boolean;
-  flashDealEnd?: Date | string | null;
-  taxable?: boolean;
-  taxClass?: string;
-  metaTitle?: string;
-  metaDescription?: string;
-  metaKeywords?: string;
-  wizardProgress?: {
-    [key in WizardStep]?: boolean;
-  };
-  draftStatus?: 'draft' | 'review' | 'ready';
-  createdBy?: number;
-  createdAt?: Date | string;
-  lastModified?: Date | string;
-}
+import { apiRequest } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
+import { ProductDraft } from '@shared/schema';
 
 interface DraftContextType {
-  // Draft data
-  draft: ProductDraft | null;
-  draftId: number | null;
-  draftLoading: boolean;
-  draftError: Error | null;
-  
-  // Step management
-  currentStep: WizardStep;
-  setCurrentStep: (step: WizardStep) => void;
-  isStepValid: (step: WizardStep) => boolean;
-  validateStep: (step: WizardStep) => Promise<boolean>;
-  
-  // Draft operations
-  updateDraft: <K extends keyof ProductDraft>(field: K, value: ProductDraft[K]) => void;
-  updateDraftStep: (step: WizardStep, data: Partial<ProductDraft>) => Promise<void>;
-  publishDraft: () => Promise<any>;
-  discardDraft: () => Promise<boolean>;
-  
-  // Image operations
-  uploadImages: (files: File[]) => Promise<void>;
-  removeImage: (index: number) => Promise<void>;
-  reorderImages: (newOrder: number[]) => Promise<void>;
-  setMainImage: (index: number) => Promise<void>;
-  
-  // Helper functions
-  refreshDraft: () => void;
-  isDirty: boolean;
-  isSaving: boolean;
-  resetDirtyState: () => void;
+  drafts: ProductDraft[];
+  isLoading: boolean;
+  isCreating: boolean;
+  selectedDraftId: number | null;
+  currentDraft: ProductDraft | null;
+  createDraft: () => Promise<number>;
+  loadDraft: (id: number) => void;
+  publishDraft: (id: number) => Promise<boolean>;
+  discardDraft: (id: number) => Promise<boolean>;
+  refreshDrafts: () => void;
 }
 
-const DraftContext = createContext<DraftContextType | undefined>(undefined);
+const DraftContext = createContext<DraftContextType>({
+  drafts: [],
+  isLoading: false,
+  isCreating: false,
+  selectedDraftId: null,
+  currentDraft: null,
+  createDraft: async () => 0,
+  loadDraft: () => {},
+  publishDraft: async () => false,
+  discardDraft: async () => false,
+  refreshDrafts: () => {},
+});
 
 interface DraftProviderProps {
   children: ReactNode;
-  draftId?: number | null;
-  productId?: number | null;
 }
 
-export const DraftProvider: React.FC<DraftProviderProps> = ({ 
-  children, 
-  draftId: initialDraftId, 
-  productId 
-}) => {
-  // State
-  const [draftId, setDraftId] = useState<number | null>(initialDraftId || null);
-  const [currentStep, setCurrentStep] = useState<WizardStep>('basic-info');
-  const [isDirty, setIsDirty] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  
-  // Query client for cache invalidation
+export function DraftProvider({ children }: DraftProviderProps) {
+  const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [selectedDraftId, setSelectedDraftId] = useState<number | null>(null);
   
-  // Fetch draft data
-  const { 
-    data: draftData,
-    isLoading: draftLoading,
-    error: draftError,
-    refetch: refreshDraft
+  // Fetch drafts
+  const {
+    data: drafts = [],
+    isLoading,
+    refetch: refreshDrafts,
   } = useQuery({
-    queryKey: ['product-draft', draftId],
+    queryKey: ['/api/product-drafts'],
     queryFn: async () => {
-      if (!draftId) {
-        return null;
-      }
-      
-      const response = await fetch(`/api/product-drafts/${draftId}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch draft');
-      }
-      
-      const data = await response.json();
-      return data.success ? data.data : null;
+      const response = await apiRequest('GET', '/api/product-drafts');
+      return response.data || [];
     },
-    enabled: !!draftId
   });
   
-  // Create draft mutation
-  const { mutateAsync: createDraft } = useMutation({
+  // Fetch current draft if one is selected
+  const { 
+    data: currentDraft = null,
+  } = useQuery({
+    queryKey: [`/api/product-drafts/${selectedDraftId}`],
+    queryFn: async () => {
+      if (!selectedDraftId) return null;
+      const response = await apiRequest('GET', `/api/product-drafts/${selectedDraftId}`);
+      return response.data;
+    },
+    enabled: !!selectedDraftId,
+  });
+  
+  // Create a new draft
+  const createDraftMutation = useMutation({
     mutationFn: async () => {
-      const payload: any = { draftStatus: 'draft' };
-      
-      if (productId) {
-        payload.originalProductId = productId;
-      }
-      
-      const response = await fetch('/api/product-drafts', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to create draft');
-      }
-      
-      const data = await response.json();
-      return data.success ? data.data : null;
+      const response = await apiRequest('POST', '/api/product-drafts', {});
+      return response.data;
     },
-    onSuccess: (newDraft) => {
-      if (newDraft?.id) {
-        setDraftId(newDraft.id);
-      }
-    }
+    onSuccess: (data) => {
+      toast({
+        title: "Draft Created",
+        description: "A new product draft has been created.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/product-drafts'] });
+      return data.id;
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to Create Draft",
+        description: error.message || "An error occurred while creating a new draft",
+        variant: "destructive",
+      });
+    },
   });
   
-  // Update draft mutation
-  const { mutateAsync: updateDraftMutation } = useMutation({
-    mutationFn: async ({ 
-      id, 
-      data 
-    }: { 
-      id: number; 
-      data: Partial<ProductDraft> 
-    }) => {
-      setIsSaving(true);
-      
-      const response = await fetch(`/api/product-drafts/${id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data)
+  // Publish a draft
+  const publishDraftMutation = useMutation({
+    mutationFn: async (draftId: number) => {
+      const response = await apiRequest('POST', `/api/product-drafts/${draftId}/publish`);
+      return response.data;
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Product Published",
+        description: "The product has been successfully published to the store.",
       });
-      
-      if (!response.ok) {
-        throw new Error('Failed to update draft');
-      }
-      
-      const responseData = await response.json();
-      return responseData.success ? responseData.data : null;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['product-draft', draftId] });
-      setIsDirty(false);
-    },
-    onSettled: () => {
-      setIsSaving(false);
-    }
-  });
-  
-  // Update step data mutation
-  const { mutateAsync: updateStepMutation } = useMutation({
-    mutationFn: async ({ 
-      id, 
-      step, 
-      data 
-    }: { 
-      id: number; 
-      step: WizardStep; 
-      data: Partial<ProductDraft> 
-    }) => {
-      setIsSaving(true);
-      
-      const response = await fetch(`/api/product-drafts/${id}/step/${step}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data)
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to update step: ${step}`);
-      }
-      
-      const responseData = await response.json();
-      return responseData.success ? responseData.data : null;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['product-draft', draftId] });
-      setIsDirty(false);
-    },
-    onSettled: () => {
-      setIsSaving(false);
-    }
-  });
-  
-  // Publish draft mutation
-  const { mutateAsync: publishDraftMutation } = useMutation({
-    mutationFn: async (id: number) => {
-      const response = await fetch(`/api/product-drafts/${id}/publish`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to publish draft');
-      }
-      
-      const data = await response.json();
-      return data.success ? data.data : null;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['products'] });
-    }
-  });
-  
-  // Discard draft mutation
-  const { mutateAsync: discardDraftMutation } = useMutation({
-    mutationFn: async (id: number) => {
-      const response = await fetch(`/api/product-drafts/${id}`, {
-        method: 'DELETE'
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to discard draft');
-      }
-      
+      queryClient.invalidateQueries({ queryKey: ['/api/product-drafts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/products'] });
       return true;
-    }
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to Publish",
+        description: error.message || "The product could not be published. Please fix any validation errors and try again.",
+        variant: "destructive",
+      });
+      return false;
+    },
   });
   
-  // Initialize draft if needed
-  useEffect(() => {
-    const initializeDraft = async () => {
-      if (!draftId && !draftLoading) {
-        try {
-          await createDraft();
-        } catch (error) {
-          console.error('Failed to create draft:', error);
-        }
-      }
-    };
-    
-    initializeDraft();
-  }, [draftId, draftLoading, createDraft]);
-  
-  // Debounced update function
-  const debouncedUpdate = useCallback(
-    debounce(async (id: number, data: Partial<ProductDraft>) => {
-      try {
-        await updateDraftMutation({ id, data });
-      } catch (error) {
-        console.error('Failed to update draft:', error);
-      }
-    }, 500),
-    [updateDraftMutation]
-  );
-  
-  // Helper function to update draft data
-  const updateDraft = useCallback(<K extends keyof ProductDraft>(
-    field: K, 
-    value: ProductDraft[K]
-  ) => {
-    if (!draftId) return;
-    
-    setIsDirty(true);
-    
-    // Update local state immediately for responsive UI
-    const newDraft = { ...draftData, [field]: value };
-    queryClient.setQueryData(['product-draft', draftId], newDraft);
-    
-    // Send update to server with debounce
-    debouncedUpdate(draftId, { [field]: value });
-  }, [draftId, draftData, queryClient, debouncedUpdate]);
-  
-  // Function to update an entire step at once
-  const updateDraftStep = useCallback(async (
-    step: WizardStep, 
-    data: Partial<ProductDraft>
-  ) => {
-    if (!draftId) return;
-    
-    try {
-      setIsDirty(true);
-      
-      // Update wizard progress
-      const wizardProgress = {
-        ...(draftData?.wizardProgress || {}),
-        [step]: true
-      };
-      
-      // Combine step data with progress update
-      const updateData = {
-        ...data,
-        wizardProgress
-      };
-      
-      await updateStepMutation({ 
-        id: draftId, 
-        step, 
-        data: updateData 
+  // Discard a draft
+  const discardDraftMutation = useMutation({
+    mutationFn: async (draftId: number) => {
+      const response = await apiRequest('DELETE', `/api/product-drafts/${draftId}`);
+      return response.data;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Draft Discarded",
+        description: "The product draft has been discarded.",
       });
-      
-      // Mark step as complete and move to next step if needed
-    } catch (error) {
-      console.error(`Failed to update step ${step}:`, error);
-    }
-  }, [draftId, draftData, updateStepMutation]);
-  
-  // Function to validate a specific step
-  const validateStep = useCallback(async (step: WizardStep): Promise<boolean> => {
-    if (!draftId) return false;
-    
-    try {
-      const response = await fetch(`/api/product-drafts/${draftId}/validation/${step}`);
-      
-      if (!response.ok) {
-        return false;
+      if (selectedDraftId) {
+        setSelectedDraftId(null);
       }
-      
-      const data = await response.json();
-      return data.success ? data.data.valid : false;
-    } catch (error) {
-      console.error(`Failed to validate step ${step}:`, error);
+      queryClient.invalidateQueries({ queryKey: ['/api/product-drafts'] });
+      return true;
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to Discard Draft",
+        description: error.message || "An error occurred while discarding the draft",
+        variant: "destructive",
+      });
       return false;
-    }
-  }, [draftId]);
+    },
+  });
   
-  // Function to check if a step is valid
-  const isStepValid = useCallback((step: WizardStep): boolean => {
-    if (!draftData?.wizardProgress) return false;
-    return !!draftData.wizardProgress[step];
-  }, [draftData]);
-  
-  // Function to publish the draft
-  const publishDraft = useCallback(async () => {
-    if (!draftId) return null;
-    
+  // Create a new draft
+  const createDraft = useCallback(async () => {
     try {
-      return await publishDraftMutation(draftId);
+      const data = await createDraftMutation.mutateAsync();
+      setSelectedDraftId(data.id);
+      return data.id;
     } catch (error) {
-      console.error('Failed to publish draft:', error);
-      throw error;
+      console.error("Error creating draft:", error);
+      return 0;
     }
-  }, [draftId, publishDraftMutation]);
+  }, [createDraftMutation]);
   
-  // Function to discard the draft
-  const discardDraft = useCallback(async () => {
-    if (!draftId) return false;
-    
-    try {
-      return await discardDraftMutation(draftId);
-    } catch (error) {
-      console.error('Failed to discard draft:', error);
-      return false;
-    }
-  }, [draftId, discardDraftMutation]);
-  
-  // Image upload function
-  const uploadImages = useCallback(async (files: File[]) => {
-    if (!draftId || !files.length) return;
-    
-    try {
-      const formData = new FormData();
-      files.forEach(file => {
-        formData.append('images', file);
-      });
-      
-      const response = await fetch(`/api/product-drafts/${draftId}/images`, {
-        method: 'POST',
-        body: formData
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to upload images');
-      }
-      
-      await queryClient.invalidateQueries({ queryKey: ['product-draft', draftId] });
-    } catch (error) {
-      console.error('Failed to upload images:', error);
-    }
-  }, [draftId, queryClient]);
-  
-  // Remove image function
-  const removeImage = useCallback(async (index: number) => {
-    if (!draftId) return;
-    
-    try {
-      const response = await fetch(`/api/product-drafts/${draftId}/images/${index}`, {
-        method: 'DELETE'
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to remove image');
-      }
-      
-      await queryClient.invalidateQueries({ queryKey: ['product-draft', draftId] });
-    } catch (error) {
-      console.error('Failed to remove image:', error);
-    }
-  }, [draftId, queryClient]);
-  
-  // Reorder images function
-  const reorderImages = useCallback(async (newOrder: number[]) => {
-    if (!draftId) return;
-    
-    try {
-      const response = await fetch(`/api/product-drafts/${draftId}/images/reorder`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ order: newOrder })
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to reorder images');
-      }
-      
-      await queryClient.invalidateQueries({ queryKey: ['product-draft', draftId] });
-    } catch (error) {
-      console.error('Failed to reorder images:', error);
-    }
-  }, [draftId, queryClient]);
-  
-  // Set main image function
-  const setMainImage = useCallback(async (index: number) => {
-    if (!draftId) return;
-    
-    try {
-      await updateDraftMutation({ 
-        id: draftId, 
-        data: { mainImageIndex: index } 
-      });
-    } catch (error) {
-      console.error('Failed to set main image:', error);
-    }
-  }, [draftId, updateDraftMutation]);
-  
-  // Reset dirty state
-  const resetDirtyState = useCallback(() => {
-    setIsDirty(false);
+  // Load a draft
+  const loadDraft = useCallback((id: number) => {
+    setSelectedDraftId(id);
   }, []);
   
-  // Context value
-  const value: DraftContextType = {
-    draft: draftData,
-    draftId,
-    draftLoading,
-    draftError,
-    
-    currentStep,
-    setCurrentStep,
-    isStepValid,
-    validateStep,
-    
-    updateDraft,
-    updateDraftStep,
+  // Publish a draft
+  const publishDraft = useCallback(async (id: number) => {
+    try {
+      return await publishDraftMutation.mutateAsync(id);
+    } catch (error) {
+      console.error("Error publishing draft:", error);
+      return false;
+    }
+  }, [publishDraftMutation]);
+  
+  // Discard a draft
+  const discardDraft = useCallback(async (id: number) => {
+    try {
+      return await discardDraftMutation.mutateAsync(id);
+    } catch (error) {
+      console.error("Error discarding draft:", error);
+      return false;
+    }
+  }, [discardDraftMutation]);
+  
+  const value = {
+    drafts,
+    isLoading,
+    isCreating: createDraftMutation.isPending,
+    selectedDraftId,
+    currentDraft,
+    createDraft,
+    loadDraft,
     publishDraft,
     discardDraft,
-    
-    uploadImages,
-    removeImage,
-    reorderImages,
-    setMainImage,
-    
-    refreshDraft,
-    isDirty,
-    isSaving,
-    resetDirtyState
+    refreshDrafts,
   };
   
   return (
@@ -520,15 +202,6 @@ export const DraftProvider: React.FC<DraftProviderProps> = ({
       {children}
     </DraftContext.Provider>
   );
-};
+}
 
-// Custom hook for using the draft context
-export const useDraft = () => {
-  const context = useContext(DraftContext);
-  
-  if (context === undefined) {
-    throw new Error('useDraft must be used within a DraftProvider');
-  }
-  
-  return context;
-};
+export const useDraft = () => useContext(DraftContext);

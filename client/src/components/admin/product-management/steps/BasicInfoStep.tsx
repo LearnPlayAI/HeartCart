@@ -1,221 +1,297 @@
 /**
  * Basic Info Step Component
  * 
- * First step in the product wizard for entering basic product information.
+ * First step in the product creation wizard for entering essential product details.
  */
 
-import React, { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { useQuery } from '@tanstack/react-query';
-import { 
-  Form, 
-  FormControl, 
-  FormDescription, 
-  FormField, 
-  FormItem, 
-  FormLabel, 
-  FormMessage 
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
-import { 
+import React, { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import slugify from "slugify";
+import { Check, Loader2 } from "lucide-react";
+
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { useDraft } from '../DraftContext';
-import { Loader2 } from 'lucide-react';
-import { debounce } from '@/lib/utils';
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { ProductDraft } from "@shared/schema";
 
-// Form schema for basic product information
+// Form validation schema
 const basicInfoSchema = z.object({
-  name: z.string().min(1, 'Product name is required'),
-  slug: z.string().min(1, 'Product slug is required'),
+  name: z.string().min(1, { message: "Product name is required" }),
+  slug: z.string().min(1, { message: "URL slug is required" }),
   sku: z.string().optional(),
+  description: z.string().optional(),
+  categoryId: z.coerce.number({ 
+    required_error: "Category is required",
+    invalid_type_error: "Category must be a number" 
+  }).min(1, { message: "Category is required" }),
   brand: z.string().optional(),
-  categoryId: z.coerce.number().optional(),
   isActive: z.boolean().default(true),
   isFeatured: z.boolean().default(false),
-  metaTitle: z.string().optional(),
-  metaDescription: z.string().optional(),
-  metaKeywords: z.string().optional(),
 });
 
+// Define the form field types
 type BasicInfoFormValues = z.infer<typeof basicInfoSchema>;
 
-const BasicInfoStep: React.FC = () => {
-  const { draft, draftLoading, updateDraft, updateDraftStep } = useDraft();
+interface BasicInfoStepProps {
+  draft: ProductDraft;
+  onChange: (field: string, value: any) => void;
+  onSave: (data: any) => void;
+  errors?: string[];
+}
+
+export function BasicInfoStep({
+  draft,
+  onChange,
+  onSave,
+  errors = [],
+}: BasicInfoStepProps) {
+  const [nameChanged, setNameChanged] = useState(false);
+  const [autoSlug, setAutoSlug] = useState(!draft.slug);
   
-  // Create form with draft data as default values
+  // Fetch categories
+  const { data: categories, isLoading: isCategoriesLoading } = useQuery({
+    queryKey: ['/api/categories'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/categories');
+      return response.data || [];
+    },
+  });
+  
+  // Form setup
   const form = useForm<BasicInfoFormValues>({
     resolver: zodResolver(basicInfoSchema),
     defaultValues: {
-      name: draft?.name || '',
-      slug: draft?.slug || '',
-      sku: draft?.sku || '',
-      brand: draft?.brand || '',
-      categoryId: draft?.categoryId,
-      isActive: draft?.isActive ?? true,
-      isFeatured: draft?.isFeatured ?? false,
-      metaTitle: draft?.metaTitle || '',
-      metaDescription: draft?.metaDescription || '',
-      metaKeywords: draft?.metaKeywords || '',
+      name: draft.name || "",
+      slug: draft.slug || "",
+      sku: draft.sku || "",
+      description: draft.description || "",
+      categoryId: draft.categoryId || 0,
+      brand: draft.brand || "",
+      isActive: draft.isActive === false ? false : true,
+      isFeatured: draft.isFeatured || false,
     },
   });
-  
-  // Fetch categories for the dropdown
-  const { data: categoriesData, isLoading: categoriesLoading } = useQuery({
-    queryKey: ['/api/categories'],
-    queryFn: async () => {
-      const response = await fetch('/api/categories');
-      if (!response.ok) {
-        throw new Error('Failed to fetch categories');
-      }
-      const data = await response.json();
-      return data.success ? data.data : [];
-    },
-  });
-  
-  // Update form when draft data changes
-  useEffect(() => {
-    if (draft && !draftLoading) {
-      form.reset({
-        name: draft.name || '',
-        slug: draft.slug || '',
-        sku: draft.sku || '',
-        brand: draft.brand || '',
-        categoryId: draft.categoryId,
-        isActive: draft.isActive ?? true,
-        isFeatured: draft.isFeatured ?? false,
-        metaTitle: draft.metaTitle || '',
-        metaDescription: draft.metaDescription || '',
-        metaKeywords: draft.metaKeywords || '',
-      });
-    }
-  }, [draft, draftLoading, form]);
   
   // Generate slug from name
-  const generateSlug = (name: string) => {
-    return name
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '');
-  };
-  
-  // Handle field changes with debounce for auto-save
-  const handleFieldChange = debounce((field: string, value: any) => {
-    updateDraft(field as any, value);
-    
-    // If name changes, also update slug if slug is empty or was auto-generated
-    if (field === 'name') {
-      const currentSlug = form.getValues('slug');
-      const currentName = form.getValues('name');
-      
-      // Only auto-update slug if it looks like it was auto-generated
-      if (!currentSlug || currentSlug === generateSlug(currentName.replace(value, ''))) {
-        const newSlug = generateSlug(value);
-        form.setValue('slug', newSlug);
-        updateDraft('slug', newSlug);
-      }
+  useEffect(() => {
+    if (autoSlug && nameChanged && form.getValues("name")) {
+      const name = form.getValues("name");
+      const newSlug = slugify(name, {
+        lower: true,
+        strict: true,
+        trim: true,
+      });
+      form.setValue("slug", newSlug);
+      onChange("slug", newSlug);
     }
-  }, 500);
+  }, [form.watch("name"), autoSlug, nameChanged]);
   
-  // Submit handler to update the step
-  const onSubmit = async (data: BasicInfoFormValues) => {
-    await updateDraftStep('basic-info', data);
+  // Submit handler
+  const onSubmit = (data: BasicInfoFormValues) => {
+    // Update all values at once
+    onSave(data);
   };
   
-  if (draftLoading) {
-    return (
-      <div className="flex items-center justify-center h-40">
-        <Loader2 className="h-6 w-6 animate-spin" />
-      </div>
-    );
-  }
+  // Field change handler
+  const handleFieldChange = (field: string, value: any) => {
+    if (field === "name") {
+      setNameChanged(true);
+    } else if (field === "slug") {
+      // If user manually edits slug, turn off auto-slug
+      setAutoSlug(false);
+    }
+    
+    onChange(field, value);
+  };
   
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <div className="grid gap-6 md:grid-cols-2">
-          {/* Product Name */}
-          <FormField
-            control={form.control}
-            name="name"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Product Name</FormLabel>
-                <FormControl>
-                  <Input 
-                    placeholder="Enter product name" 
-                    {...field} 
-                    onChange={(e) => {
-                      field.onChange(e);
-                      handleFieldChange('name', e.target.value);
-                    }}
-                  />
-                </FormControl>
-                <FormDescription>
-                  The name of your product as it will appear to customers.
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-medium">Basic Information</h3>
+        <p className="text-sm text-muted-foreground">
+          Enter the essential details about your product.
+        </p>
+      </div>
+      
+      {/* Form error display */}
+      {errors && errors.length > 0 && (
+        <div className="bg-destructive/10 text-destructive rounded p-3 mb-6">
+          <p className="font-semibold">Please correct the following errors:</p>
+          <ul className="list-disc list-inside">
+            {errors.map((error, i) => (
+              <li key={i}>{error}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Product Name */}
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Product Name *</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Enter product name"
+                      {...field}
+                      onChange={(e) => {
+                        field.onChange(e);
+                        handleFieldChange("name", e.target.value);
+                      }}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            {/* Product SKU */}
+            <FormField
+              control={form.control}
+              name="sku"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>SKU (Stock Keeping Unit)</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Enter product SKU"
+                      {...field}
+                      onChange={(e) => {
+                        field.onChange(e);
+                        handleFieldChange("sku", e.target.value);
+                      }}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    A unique identifier for your product
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
           
           {/* Product Slug */}
-          <FormField
-            control={form.control}
-            name="slug"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Product Slug</FormLabel>
-                <FormControl>
-                  <Input 
-                    placeholder="product-url-slug" 
-                    {...field} 
-                    onChange={(e) => {
-                      field.onChange(e);
-                      handleFieldChange('slug', e.target.value);
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+              control={form.control}
+              name="slug"
+              render={({ field }) => (
+                <FormItem>
+                  <div className="flex justify-between">
+                    <FormLabel>URL Slug *</FormLabel>
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        id="auto-slug"
+                        checked={autoSlug}
+                        onCheckedChange={(checked) => {
+                          setAutoSlug(checked);
+                          if (checked && form.getValues("name")) {
+                            const newSlug = slugify(form.getValues("name"), {
+                              lower: true,
+                              strict: true,
+                              trim: true,
+                            });
+                            form.setValue("slug", newSlug);
+                            handleFieldChange("slug", newSlug);
+                          }
+                        }}
+                      />
+                      <label
+                        htmlFor="auto-slug"
+                        className="text-xs cursor-pointer text-muted-foreground"
+                      >
+                        Auto-generate
+                      </label>
+                    </div>
+                  </div>
+                  <FormControl>
+                    <Input
+                      placeholder="product-url-slug"
+                      {...field}
+                      onChange={(e) => {
+                        field.onChange(e);
+                        handleFieldChange("slug", e.target.value);
+                      }}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    This will be used in the product URL
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            {/* Category */}
+            <FormField
+              control={form.control}
+              name="categoryId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Category *</FormLabel>
+                  <Select
+                    value={field.value ? field.value.toString() : ""}
+                    onValueChange={(value) => {
+                      field.onChange(parseInt(value));
+                      handleFieldChange("categoryId", parseInt(value));
                     }}
-                  />
-                </FormControl>
-                <FormDescription>
-                  URL-friendly version of the product name.
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          {/* SKU */}
-          <FormField
-            control={form.control}
-            name="sku"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>SKU</FormLabel>
-                <FormControl>
-                  <Input 
-                    placeholder="SKU123" 
-                    {...field} 
-                    onChange={(e) => {
-                      field.onChange(e);
-                      handleFieldChange('sku', e.target.value);
-                    }}
-                  />
-                </FormControl>
-                <FormDescription>
-                  Stock Keeping Unit - unique identifier for the product.
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+                    disabled={isCategoriesLoading}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a category" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {isCategoriesLoading ? (
+                        <div className="flex items-center justify-center p-2">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span className="ml-2">Loading...</span>
+                        </div>
+                      ) : (
+                        categories?.map((category: any) => (
+                          <SelectItem
+                            key={category.id}
+                            value={category.id.toString()}
+                          >
+                            {category.name}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
           
           {/* Brand */}
           <FormField
@@ -225,88 +301,68 @@ const BasicInfoStep: React.FC = () => {
               <FormItem>
                 <FormLabel>Brand</FormLabel>
                 <FormControl>
-                  <Input 
-                    placeholder="Brand name" 
-                    {...field} 
+                  <Input
+                    placeholder="Enter brand name"
+                    {...field}
                     onChange={(e) => {
                       field.onChange(e);
-                      handleFieldChange('brand', e.target.value);
+                      handleFieldChange("brand", e.target.value);
+                    }}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          {/* Description */}
+          <FormField
+            control={form.control}
+            name="description"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Description</FormLabel>
+                <FormControl>
+                  <Textarea
+                    placeholder="Enter product description"
+                    className="min-h-32"
+                    {...field}
+                    onChange={(e) => {
+                      field.onChange(e);
+                      handleFieldChange("description", e.target.value);
                     }}
                   />
                 </FormControl>
                 <FormDescription>
-                  Manufacturer or brand name of the product.
+                  Describe your product in detail
                 </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
           />
           
-          {/* Category */}
-          <FormField
-            control={form.control}
-            name="categoryId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Category</FormLabel>
-                <Select
-                  disabled={categoriesLoading}
-                  onValueChange={(value) => {
-                    const numValue = parseInt(value);
-                    field.onChange(numValue);
-                    handleFieldChange('categoryId', numValue);
-                  }}
-                  value={field.value?.toString() || ''}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a category" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {categoriesLoading ? (
-                      <div className="flex items-center justify-center p-2">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      </div>
-                    ) : (
-                      categoriesData?.map((category: any) => (
-                        <SelectItem key={category.id} value={category.id.toString()}>
-                          {category.name}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-                <FormDescription>
-                  The product category helps with organization and browsing.
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          {/* Status Checkboxes */}
-          <div className="space-y-4">
+          {/* Status Controls */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField
               control={form.control}
               name="isActive"
               render={({ field }) => (
-                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-base">Active Status</FormLabel>
+                    <FormDescription>
+                      Determines if the product is visible in the store
+                    </FormDescription>
+                  </div>
                   <FormControl>
-                    <Checkbox
+                    <Switch
                       checked={field.value}
                       onCheckedChange={(checked) => {
                         field.onChange(checked);
-                        handleFieldChange('isActive', checked);
+                        handleFieldChange("isActive", checked);
                       }}
                     />
                   </FormControl>
-                  <div className="space-y-1 leading-none">
-                    <FormLabel>Active Product</FormLabel>
-                    <FormDescription>
-                      Make this product visible and available for purchase.
-                    </FormDescription>
-                  </div>
                 </FormItem>
               )}
             />
@@ -315,110 +371,36 @@ const BasicInfoStep: React.FC = () => {
               control={form.control}
               name="isFeatured"
               render={({ field }) => (
-                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-base">Feature Product</FormLabel>
+                    <FormDescription>
+                      Display this product in featured sections
+                    </FormDescription>
+                  </div>
                   <FormControl>
-                    <Checkbox
+                    <Switch
                       checked={field.value}
                       onCheckedChange={(checked) => {
                         field.onChange(checked);
-                        handleFieldChange('isFeatured', checked);
+                        handleFieldChange("isFeatured", checked);
                       }}
                     />
                   </FormControl>
-                  <div className="space-y-1 leading-none">
-                    <FormLabel>Featured Product</FormLabel>
-                    <FormDescription>
-                      Show this product in featured sections on the site.
-                    </FormDescription>
-                  </div>
                 </FormItem>
               )}
             />
           </div>
-        </div>
-        
-        {/* SEO Metadata */}
-        <Card>
-          <CardContent className="pt-6">
-            <h3 className="text-lg font-medium mb-4">SEO Metadata</h3>
-            <div className="space-y-4">
-              <FormField
-                control={form.control}
-                name="metaTitle"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Meta Title</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="SEO title for the product" 
-                        {...field} 
-                        onChange={(e) => {
-                          field.onChange(e);
-                          handleFieldChange('metaTitle', e.target.value);
-                        }}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      The title that appears in search engine results.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="metaDescription"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Meta Description</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="Brief description for search engines" 
-                        {...field} 
-                        onChange={(e) => {
-                          field.onChange(e);
-                          handleFieldChange('metaDescription', e.target.value);
-                        }}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      A short description that appears in search results.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="metaKeywords"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Meta Keywords</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="keyword1, keyword2, keyword3" 
-                        {...field} 
-                        onChange={(e) => {
-                          field.onChange(e);
-                          handleFieldChange('metaKeywords', e.target.value);
-                        }}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Comma-separated keywords for search engines.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-          </CardContent>
-        </Card>
-      </form>
-    </Form>
+          
+          {/* Save button - hidden in wizard mode */}
+          <div className="hidden">
+            <Button type="submit">
+              <Check className="mr-2 h-4 w-4" />
+              Save Basic Info
+            </Button>
+          </div>
+        </form>
+      </Form>
+    </div>
   );
-};
-
-export default BasicInfoStep;
+}
