@@ -1053,9 +1053,9 @@ export function AdditionalInfoStep() {
                                       <div className="flex flex-wrap gap-2 mt-2">
                                         {attr.options.length > 0 ? (
                                           attr.options.map(option => {
-                                            // Check if this option is selected for this attribute
-                                            const attrInState = state.attributes.find(a => a.id === attr.id);
-                                            const isSelected = attrInState?.selectedOptions?.includes(option.id);
+                                            // Check if this option is selected for this attribute in local state
+                                            const attrInLocalState = localAttributes.find(a => a.id === attr.id);
+                                            const isSelected = attrInLocalState?.selectedOptions?.includes(option.id);
                                             
                                             return (
                                               <Badge 
@@ -1065,9 +1065,9 @@ export function AdditionalInfoStep() {
                                                   isSelected ? 'bg-primary text-primary-foreground' : ''
                                                 }`}
                                                 onClick={() => {
-                                                  // Get current attribute from state
-                                                  const attrInState = state.attributes.find(a => a.id === attr.id);
-                                                  let currentSelected = attrInState?.selectedOptions || [];
+                                                  // Get current attribute from LOCAL state
+                                                  const attrInLocalState = localAttributes.find(a => a.id === attr.id);
+                                                  let currentSelected = attrInLocalState?.selectedOptions || [];
                                                   
                                                   if (isSelected) {
                                                     // Remove option if already selected
@@ -1077,8 +1077,10 @@ export function AdditionalInfoStep() {
                                                     currentSelected = [...currentSelected, option.id];
                                                   }
                                                   
-                                                  // Update options in state
-                                                  updateAttributeOptions(attr.id, currentSelected);
+                                                  // Update options in LOCAL state only
+                                                  setSelectedOptions(attr.id, currentSelected);
+                                                  
+                                                  console.log(`Updated attribute ${attr.id} options in local state:`, currentSelected);
                                                 }}
                                               >
                                                 {option.displayValue}
