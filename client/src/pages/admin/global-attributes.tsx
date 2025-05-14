@@ -800,11 +800,11 @@ function GlobalAttributesPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {options?.map((option: AttributeOption) => (
+                      {options?.filter(option => option.value && option.value.trim() !== '').map((option: AttributeOption) => (
                         <TableRow key={option.id}>
                           <TableCell>{option.sortOrder}</TableCell>
                           <TableCell className="font-medium">
-                            {option.value || <span className="text-muted-foreground italic">No value set</span>}
+                            {option.value}
                           </TableCell>
                           <TableCell>{option.displayValue}</TableCell>
                           <TableCell>
