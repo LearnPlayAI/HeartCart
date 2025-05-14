@@ -84,8 +84,20 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ editMode = false, 
   const createDraftMutation = useMutation({
     mutationFn: async (draftData: any) => {
       console.log('Submitting draft data:', draftData);
-      // Send the draft data directly - matches createProductDraftSchema
-      const response = await apiRequest('POST', '/api/product-drafts', draftData);
+      
+      // Format as required by server validation - we need to match createProductDraftSchema
+      // The server is validating against insertProductDraftSchema
+      const formattedData = {
+        ...draftData,
+        catalogId: draftData.catalogId || null,
+        supplierId: draftData.supplierId || null,
+        attributes: draftData.attributes || [],
+      };
+      
+      console.log('Formatted data for API:', formattedData);
+      
+      // Send the properly formatted data
+      const response = await apiRequest('POST', '/api/product-drafts', formattedData);
       return response.json();
     },
     onSuccess: (data) => {
@@ -207,6 +219,23 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ editMode = false, 
   // Get user information to ensure we're authenticated
   const { user, isLoading: isLoadingUser } = useAuth();
   
+  // Get catalog and supplier information 
+  const { data: catalogsData } = useQuery({
+    queryKey: ['/api/catalogs'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/catalogs');
+      return response.json();
+    },
+  });
+  
+  const { data: suppliersData } = useQuery({
+    queryKey: ['/api/suppliers'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/suppliers');
+      return response.json();
+    },
+  });
+
   // Initialize the wizard
   useEffect(() => {
     // Wait until we know the user's authenticated state
@@ -225,8 +254,12 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ editMode = false, 
     
     // Create a new draft or load one for editing
     if (!draftId) {
+      // Get default catalog and supplier if available
+      const defaultCatalogId = catalogsData?.data?.[0]?.id || null;
+      const defaultSupplierId = suppliersData?.data?.[0]?.id || null;
+      
       // Create payload matching the API's expected format
-      // This is what createProductDraftSchema from shared/validation-schemas.ts expects
+      // This must match createProductDraftSchema from shared/validation-schemas.ts
       const initialData: any = {
         name: '',
         description: '',
@@ -251,6 +284,11 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ editMode = false, 
         flashDealEnd: null,
         dimensions: '',
         weight: '',
+        // Include catalog and supplier IDs to match server requirements
+        catalogId: defaultCatalogId,
+        supplierId: defaultSupplierId,
+        completedSteps: [],
+        draftStatus: 'draft',
         wizardProgress: {
           "basic-info": false, 
           "images": false, 
@@ -264,11 +302,11 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ editMode = false, 
         initialData.originalProductId = productId;
       }
       
-      // Send the draft data directly - no need for step or draftData wrappers
+      // Send the draft data directly to the server
       console.log('Creating product draft with data:', initialData);
       createDraftMutation.mutate(initialData);
     }
-  }, [draftId, editMode, productId, user, isLoadingUser, setLocation, toast]);
+  }, [draftId, editMode, productId, user, isLoadingUser, setLocation, toast, catalogsData, suppliersData]);
 
   // Handle step changes
   const handleStepChange = (step: string) => {
