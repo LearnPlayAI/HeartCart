@@ -5,10 +5,23 @@
  * creating/editing products through the new wizard interface.
  */
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useLocation, useRoute, Link } from "wouter";
-import { useQueryClient } from "@tanstack/react-query";
-import { PlusCircle, FileEdit, Trash2, Eye, Loader2, ArrowLeft } from "lucide-react";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { formatDistanceToNow } from "date-fns";
+import { 
+  PlusCircle, 
+  FileEdit, 
+  Trash2, 
+  Eye, 
+  Loader2, 
+  ArrowLeft,
+  ChevronUp,
+  ChevronDown,
+  FilterX,
+  RefreshCw 
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -38,6 +51,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip } from "@/components/ui/tooltip";
 
 import { AdminLayout } from "@/components/admin/layout";
 import { ProductWizard } from "@/components/admin/product-wizard/ProductWizard";
@@ -67,6 +83,19 @@ function ProductDraftList() {
   const [location, navigate] = useLocation();
   const [match, params] = useRoute("/admin/product-management/:id");
   const [confirmDiscard, setConfirmDiscard] = useState<number | null>(null);
+  const [sortBy, setSortBy] = useState<string>("updatedAt");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [filterText, setFilterText] = useState<string>("");
+  const [filterCategory, setFilterCategory] = useState<number | null>(null);
+  
+  // Get categories for filter
+  const { data: categories } = useQuery({
+    queryKey: ['/api/categories'],
+    queryFn: async () => {
+      const response = await apiRequest('/api/categories');
+      return response.success ? response.data : [];
+    }
+  });
   
   const {
     drafts,
@@ -78,6 +107,82 @@ function ProductDraftList() {
     discardDraft,
     refreshDrafts,
   } = useDraft();
+  
+  // Filter and sort drafts
+  const filteredDrafts = useMemo(() => {
+    if (!drafts?.length) return [];
+    
+    // First apply text filter
+    let filtered = drafts;
+    if (filterText) {
+      const searchLower = filterText.toLowerCase();
+      filtered = drafts.filter(draft => 
+        (draft.name?.toLowerCase().includes(searchLower)) || 
+        (draft.sku?.toLowerCase().includes(searchLower)) ||
+        (draft.category?.name?.toLowerCase().includes(searchLower))
+      );
+    }
+    
+    // Then apply category filter
+    if (filterCategory) {
+      filtered = filtered.filter(draft => draft.categoryId === filterCategory);
+    }
+    
+    // Then sort
+    return [...filtered].sort((a, b) => {
+      // Handle undefined values
+      const aValue = a[sortBy as keyof typeof a];
+      const bValue = b[sortBy as keyof typeof b];
+      
+      // Handle nullish values
+      if (aValue == null && bValue == null) return 0;
+      if (aValue == null) return sortOrder === "asc" ? -1 : 1;
+      if (bValue == null) return sortOrder === "asc" ? 1 : -1;
+      
+      // Date comparison
+      if (sortBy === "updatedAt" || sortBy === "createdAt") {
+        const aDate = new Date(aValue as string);
+        const bDate = new Date(bValue as string);
+        return sortOrder === "asc" 
+          ? aDate.getTime() - bDate.getTime()
+          : bDate.getTime() - aDate.getTime();
+      }
+      
+      // String comparison
+      if (typeof aValue === "string" && typeof bValue === "string") {
+        return sortOrder === "asc"
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      }
+      
+      // Number comparison
+      if (typeof aValue === "number" && typeof bValue === "number") {
+        return sortOrder === "asc" ? aValue - bValue : bValue - aValue;
+      }
+      
+      return 0;
+    });
+  }, [drafts, filterText, filterCategory, sortBy, sortOrder]);
+  
+  // Handler to toggle sort
+  const handleSort = (column: string) => {
+    if (sortBy === column) {
+      // Toggle sort order
+      setSortOrder(prev => prev === "asc" ? "desc" : "asc");
+    } else {
+      // Set new sort column with default desc order
+      setSortBy(column);
+      setSortOrder("desc");
+    }
+  };
+  
+  // Handler to clear filters
+  const handleClearFilters = () => {
+    setFilterText("");
+    setFilterCategory(null);
+    setSortBy("updatedAt");
+    setSortOrder("desc");
+  };
   
   // Handler to create a new draft
   const handleCreateDraft = async () => {
@@ -152,55 +257,152 @@ function ProductDraftList() {
                 <CardDescription>
                   Continue working on your saved product drafts
                 </CardDescription>
+                
+                {/* Filter Controls */}
+                <div className="flex flex-col space-y-4 md:flex-row md:space-y-0 md:space-x-4 mt-4">
+                  <div className="flex-1">
+                    <Input
+                      placeholder="Search by name or SKU..."
+                      value={filterText}
+                      onChange={(e) => setFilterText(e.target.value)}
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="w-full md:w-64">
+                    <Select 
+                      value={filterCategory?.toString() || ""} 
+                      onValueChange={(value) => setFilterCategory(value ? parseInt(value) : null)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Filter by category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">All Categories</SelectItem>
+                        {categories?.map((category) => (
+                          <SelectItem key={category.id} value={category.id.toString()}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    onClick={handleClearFilters}
+                    size="icon"
+                    className="w-full md:w-auto"
+                  >
+                    <FilterX className="h-4 w-4" />
+                    <span className="ml-2 md:hidden">Clear Filters</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={refreshDrafts}
+                    size="icon"
+                    className="w-full md:w-auto"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    <span className="ml-2 md:hidden">Refresh</span>
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Product Name</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Last Updated</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="w-[120px]">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {drafts.map((draft) => (
-                      <TableRow key={draft.id}>
-                        <TableCell className="font-medium">
-                          {draft.name || "Untitled Product"}
-                        </TableCell>
-                        <TableCell>
-                          {draft.category?.name || "Uncategorized"}
-                        </TableCell>
-                        <TableCell>
-                          {draft.updatedAt ? new Date(draft.updatedAt).toLocaleDateString() : "Just created"}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">Draft</Badge>
-                        </TableCell>
-                        <TableCell className="space-x-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleLoadDraft(draft.id)}
-                            title="Edit Draft"
-                          >
-                            <FileEdit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setConfirmDiscard(draft.id)}
-                            title="Discard Draft"
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </TableCell>
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead 
+                          className="cursor-pointer hover:bg-muted/50 transition-colors"
+                          onClick={() => handleSort("name")}
+                        >
+                          <div className="flex items-center">
+                            Product Name
+                            {sortBy === "name" && (
+                              sortOrder === "asc" ? <ChevronUp className="h-4 w-4 ml-1" /> : <ChevronDown className="h-4 w-4 ml-1" />
+                            )}
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="cursor-pointer hover:bg-muted/50 transition-colors"
+                          onClick={() => handleSort("categoryId")}
+                        >
+                          <div className="flex items-center">
+                            Category
+                            {sortBy === "categoryId" && (
+                              sortOrder === "asc" ? <ChevronUp className="h-4 w-4 ml-1" /> : <ChevronDown className="h-4 w-4 ml-1" />
+                            )}
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="cursor-pointer hover:bg-muted/50 transition-colors"
+                          onClick={() => handleSort("updatedAt")}
+                        >
+                          <div className="flex items-center">
+                            Last Updated
+                            {sortBy === "updatedAt" && (
+                              sortOrder === "asc" ? <ChevronUp className="h-4 w-4 ml-1" /> : <ChevronDown className="h-4 w-4 ml-1" />
+                            )}
+                          </div>
+                        </TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="w-[120px]">Actions</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredDrafts.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">
+                            No drafts found matching your filters
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        filteredDrafts.map((draft) => (
+                          <TableRow key={draft.id} className="cursor-pointer hover:bg-muted/50" onClick={() => handleLoadDraft(draft.id)}>
+                            <TableCell className="font-medium">
+                              {draft.name || "Untitled Product"}
+                            </TableCell>
+                            <TableCell>
+                              {draft.category?.name || "Uncategorized"}
+                            </TableCell>
+                            <TableCell>
+                              {draft.updatedAt ? (
+                                <div title={new Date(draft.updatedAt).toLocaleString()}>
+                                  {formatDistanceToNow(new Date(draft.updatedAt), { addSuffix: true })}
+                                </div>
+                              ) : "Just created"}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className={draft.publishedProductId ? 'bg-green-100 text-green-800' : ''}>
+                                {draft.publishedProductId ? 'Published' : 'Draft'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="space-x-2" onClick={(e) => e.stopPropagation()}>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleLoadDraft(draft.id)}
+                                title="Edit Draft"
+                              >
+                                <FileEdit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setConfirmDiscard(draft.id)}
+                                title="Discard Draft"
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+                <div className="text-xs text-muted-foreground mt-2">
+                  {filteredDrafts.length} of {drafts.length} drafts
+                </div>
               </CardContent>
             </Card>
           )}
