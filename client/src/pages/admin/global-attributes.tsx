@@ -1,9 +1,20 @@
+/**
+ * Global Attributes Management Page
+ * 
+ * This page allows administrators to manage global attributes and their options
+ * using the centralized attribute system. Global attributes can be assigned to products
+ * during product creation or editing.
+ */
+
 import React, { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Helmet } from "react-helmet";
-import { Loader2, Plus, Edit, Trash2, Save, X, ArrowUpDown, Info } from "lucide-react";
-import { queryClient } from "@/lib/queryClient";
+import { 
+  Loader2, Plus, Edit, Trash2, Save, X, ArrowUpDown, 
+  Info, HelpCircle, Eye, Search, Check 
+} from "lucide-react";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import { ApiError } from "@/lib/exceptions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,7 +49,19 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogClose,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -76,8 +99,10 @@ function GlobalAttributesPage() {
   const [attributeFormMode, setAttributeFormMode] = useState<"create" | "edit">("create");
   const [optionFormMode, setOptionFormMode] = useState<"create" | "edit">("create");
   const [optionMetadata, setOptionMetadata] = useState<string>("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [attributeFilter, setAttributeFilter] = useState<string | null>(null);
 
-  // Fetch global attributes
+  // Fetch global attributes from the centralized attribute system
   const {
     data: attributesResponse,
     isLoading: attributesLoading,
@@ -118,23 +143,8 @@ function GlobalAttributesPage() {
   // Create attribute mutation
   const createAttributeMutation = useMutation({
     mutationFn: async (newAttribute: Omit<Attribute, "id">) => {
-      const response = await fetch("/api/attributes", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(newAttribute),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new ApiError(
-          errorData.message || "Failed to create attribute",
-          response.status
-        );
-      }
-
-      return await response.json();
+      const response = await apiRequest("POST", "/api/attributes", newAttribute);
+      return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/attributes"] });
@@ -157,23 +167,8 @@ function GlobalAttributesPage() {
   const updateAttributeMutation = useMutation({
     mutationFn: async (updatedAttribute: Partial<Attribute> & { id: number }) => {
       const { id, ...data } = updatedAttribute;
-      const response = await fetch(`/api/attributes/${id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new ApiError(
-          errorData.message || "Failed to update attribute",
-          response.status
-        );
-      }
-
-      return await response.json();
+      const response = await apiRequest("PUT", `/api/attributes/${id}`, data);
+      return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/attributes"] });
@@ -195,19 +190,8 @@ function GlobalAttributesPage() {
   // Delete attribute mutation
   const deleteAttributeMutation = useMutation({
     mutationFn: async (id: number) => {
-      const response = await fetch(`/api/attributes/${id}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new ApiError(
-          errorData.message || "Failed to delete attribute",
-          response.status
-        );
-      }
-
-      return true;
+      const response = await apiRequest("DELETE", `/api/attributes/${id}`);
+      return response;
     },
     onSuccess: () => {
       // Invalidate all attribute-related queries with a more aggressive approach
@@ -245,23 +229,12 @@ function GlobalAttributesPage() {
     mutationFn: async (newOption: Omit<AttributeOption, "id">) => {
       if (!selectedAttribute) return null;
 
-      const response = await fetch(`/api/attributes/${selectedAttribute.id}/options`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(newOption),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new ApiError(
-          errorData.message || "Failed to create option",
-          response.status
-        );
-      }
-
-      return await response.json();
+      const response = await apiRequest(
+        "POST", 
+        `/api/attributes/${selectedAttribute.id}/options`, 
+        newOption
+      );
+      return response;
     },
     onSuccess: () => {
       // Invalidate both options and attributes
@@ -298,28 +271,17 @@ function GlobalAttributesPage() {
       if (!selectedAttribute) return null;
       
       const { id, ...data } = updatedOption;
-      const response = await fetch(`/api/attributes/${selectedAttribute.id}/options/${id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
+      const response = await apiRequest(
+        "PUT", 
+        `/api/attributes/${selectedAttribute.id}/options/${id}`, 
+        {
           value: data.value,
           displayValue: data.displayValue || data.value,
           metadata: data.metadata || null,
           sortOrder: data.sortOrder || 0
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new ApiError(
-          errorData.message || "Failed to update option",
-          response.status
-        );
-      }
-
-      return await response.json();
+        }
+      );
+      return response;
     },
     onSuccess: () => {
       // Invalidate both the specific attribute options and the attributes list
@@ -350,19 +312,11 @@ function GlobalAttributesPage() {
     mutationFn: async (id: number) => {
       if (!selectedAttribute) return null;
 
-      const response = await fetch(`/api/attributes/${selectedAttribute.id}/options/${id}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new ApiError(
-          errorData.message || "Failed to delete option",
-          response.status
-        );
-      }
-
-      return true;
+      const response = await apiRequest(
+        "DELETE", 
+        `/api/attributes/${selectedAttribute.id}/options/${id}`
+      );
+      return response;
     },
     onSuccess: () => {
       // Invalidate specific options query
@@ -411,23 +365,12 @@ function GlobalAttributesPage() {
     mutationFn: async (optionIds: number[]) => {
       if (!selectedAttribute) return null;
 
-      const response = await fetch(`/api/attributes/${selectedAttribute.id}/options/reorder`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ optionIds }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new ApiError(
-          errorData.message || "Failed to reorder options",
-          response.status
-        );
-      }
-
-      return await response.json();
+      const response = await apiRequest(
+        "POST", 
+        `/api/attributes/${selectedAttribute.id}/options/reorder`, 
+        { optionIds }
+      );
+      return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ 
@@ -464,6 +407,22 @@ function GlobalAttributesPage() {
       sortOrder: parseInt(formData.get("sortOrder") as string) || 0,
     };
     
+    // Validate the form data - at minimum we need name, displayName, and attributeType
+    if (!attributeData.name.trim()) {
+      toast({ title: "Name is required", variant: "destructive" });
+      return;
+    }
+    
+    if (!attributeData.displayName.trim()) {
+      toast({ title: "Display Name is required", variant: "destructive" });
+      return;
+    }
+    
+    if (!attributeData.attributeType) {
+      toast({ title: "Attribute Type is required", variant: "destructive" });
+      return;
+    }
+    
     if (attributeFormMode === "create") {
       createAttributeMutation.mutate(attributeData);
     } else if (attributeFormMode === "edit" && selectedAttribute) {
@@ -497,12 +456,43 @@ function GlobalAttributesPage() {
       return;
     }
     
+    // If display value is empty, use the value
+    if (!optionData.displayValue || optionData.displayValue.trim() === '') {
+      optionData.displayValue = optionData.value;
+    }
+    
     if (optionFormMode === "create") {
       createOptionMutation.mutate(optionData);
     } else if (optionFormMode === "edit" && selectedOption) {
       updateOptionMutation.mutate({
         id: selectedOption.id,
         ...optionData,
+      });
+    }
+  };
+
+  // Handler for metadata submission
+  const handleMetadataSubmit = () => {
+    if (!selectedOption) return;
+    
+    try {
+      // Try to parse the metadata JSON
+      const parsedMetadata = optionMetadata ? JSON.parse(optionMetadata) : null;
+      
+      // Update the option with the new metadata
+      updateOptionMutation.mutate({
+        id: selectedOption.id,
+        metadata: parsedMetadata,
+        value: selectedOption.value,
+        displayValue: selectedOption.displayValue,
+        sortOrder: selectedOption.sortOrder,
+      });
+      
+    } catch (error) {
+      toast({
+        title: "Invalid JSON",
+        description: "Please enter valid JSON for the metadata",
+        variant: "destructive",
       });
     }
   };
@@ -535,89 +525,81 @@ function GlobalAttributesPage() {
     setOptionDialogOpen(true);
   };
 
-  // Handle opening the confirm delete dialog
+  // Handle editing the metadata for an option
+  const handleEditMetadata = (option: AttributeOption) => {
+    setSelectedOption(option);
+    setOptionMetadata(option.metadata ? JSON.stringify(option.metadata, null, 2) : "");
+    setOptionMetadataDialogOpen(true);
+  };
+
+  // Handle selecting an attribute to view its options
+  const handleSelectAttribute = (attribute: Attribute) => {
+    // If already selected, toggle off
+    if (selectedAttribute?.id === attribute.id) {
+      setSelectedAttribute(null);
+    } else {
+      setSelectedAttribute(attribute);
+    }
+  };
+
+  // Handle confirming deletion of an attribute or option
   const handleDeleteClick = (type: 'attribute' | 'option', id: number) => {
     setItemToDelete({ type, id });
     setConfirmDeleteDialogOpen(true);
   };
 
   // Handle confirming deletion
-  const handleConfirmDelete = () => {
+  const handleDeleteConfirm = () => {
     if (!itemToDelete) return;
     
     if (itemToDelete.type === 'attribute') {
       deleteAttributeMutation.mutate(itemToDelete.id);
-    } else if (itemToDelete.type === 'option') {
+    } else {
       deleteOptionMutation.mutate(itemToDelete.id);
     }
   };
 
-  // Handle opening the metadata dialog
-  const handleEditMetadata = (option: AttributeOption) => {
-    setSelectedOption(option);
-    setOptionMetadata(JSON.stringify(option.metadata || {}, null, 2));
-    setOptionMetadataDialogOpen(true);
-  };
-
-  // Handle saving metadata
-  const handleSaveMetadata = () => {
-    if (!selectedOption) return;
-    
-    try {
-      const parsedMetadata = optionMetadata ? JSON.parse(optionMetadata) : null;
-      
-      updateOptionMutation.mutate({
-        id: selectedOption.id,
-        metadata: parsedMetadata,
-      });
-    } catch (error) {
-      toast({
-        title: "Invalid JSON",
-        description: "Please enter valid JSON for metadata",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Handle selecting an attribute to view its options
-  const handleSelectAttribute = (attribute: Attribute) => {
-    setSelectedAttribute(
-      selectedAttribute?.id === attribute.id ? null : attribute
-    );
-  };
-
-  // Loading state for the attributes
-  if (attributesLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  // Error state for the attributes
-  if (attributesError) {
-    return (
-      <div className="flex flex-col items-center justify-center gap-4 min-h-screen">
-        <h1 className="text-2xl font-bold text-destructive">Error Loading Attributes</h1>
-        <p>{(attributesError as Error).message}</p>
-        <Button onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/attributes"] })}>
-          Retry
-        </Button>
-      </div>
-    );
-  }
+  // Filter attributes based on search term
+  const filteredAttributes = attributes.filter(attr => 
+    attr.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    attr.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (attr.description && attr.description.toLowerCase().includes(searchTerm.toLowerCase()))
+  ).filter(attr => 
+    !attributeFilter || attr.attributeType === attributeFilter
+  );
 
   return (
-    <AdminLayout title="Global Attributes" subtitle="Manage global attributes that can be assigned to products, categories, and catalogs">
+    <AdminLayout title="Global Attributes" subtitle="Manage global attributes in the centralized attribute system">
       <Helmet>
         <title>Global Attributes | TeeMeYou Admin</title>
       </Helmet>
 
       <div className="w-full">
         <div className="flex items-center justify-between mb-6">
-          <div>
-            {/* Title and subtitle are already in AdminLayout */}
+          <div className="flex items-center space-x-4 w-full">
+            <div className="relative w-full md:w-1/3">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search attributes..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-8"
+              />
+            </div>
+            <Select 
+              value={attributeFilter || ""}
+              onValueChange={(value) => setAttributeFilter(value || null)}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filter by type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All Types</SelectItem>
+                {ATTRIBUTE_TYPES.map((type) => (
+                  <SelectItem key={type} value={type}>{type}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <Button onClick={handleNewAttribute}>
             <Plus className="mr-2 h-4 w-4" />
@@ -628,35 +610,40 @@ function GlobalAttributesPage() {
         {/* Attributes List */}
         <Card>
           <CardHeader>
-            <CardTitle>Attributes</CardTitle>
+            <CardTitle>Global Attributes</CardTitle>
             <CardDescription>
-              Click on an attribute to view and manage its options
+              These attributes can be assigned to products during creation or editing
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[250px]">Name</TableHead>
-                    <TableHead>Display Name</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead className="text-center">Filterable</TableHead>
-                    <TableHead className="text-center">Swatch</TableHead>
-                    <TableHead className="text-center">Required</TableHead>
-                    <TableHead className="text-center">Show in Summary</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {attributes?.length === 0 ? (
+            {attributesLoading ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : attributes.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground border rounded-md">
+                No attributes found. Create your first attribute to get started.
+              </div>
+            ) : filteredAttributes.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground border rounded-md">
+                No attributes match your search criteria.
+              </div>
+            ) : (
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                        No attributes found. Create your first attribute to get started.
-                      </TableCell>
+                      <TableHead className="w-[200px]">Name</TableHead>
+                      <TableHead>Display Name</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead className="text-center">Filterable</TableHead>
+                      <TableHead className="text-center">Required</TableHead>
+                      <TableHead className="text-center">Show in Summary</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ) : (
-                    attributes?.map((attribute: Attribute) => (
+                  </TableHeader>
+                  <TableBody>
+                    {filteredAttributes.map((attribute: Attribute) => (
                       <TableRow 
                         key={attribute.id}
                         className={selectedAttribute?.id === attribute.id ? "bg-muted/50" : ""}
@@ -675,48 +662,84 @@ function GlobalAttributesPage() {
                           <Badge variant="outline">{attribute.attributeType}</Badge>
                         </TableCell>
                         <TableCell className="text-center">
-                          {attribute.isFilterable ? "Yes" : "No"}
+                          {attribute.isFilterable ? (
+                            <Check className="h-4 w-4 text-primary mx-auto" />
+                          ) : (
+                            <X className="h-4 w-4 text-muted-foreground mx-auto" />
+                          )}
                         </TableCell>
                         <TableCell className="text-center">
-                          {attribute.isSwatch ? "Yes" : "No"}
+                          {attribute.isRequired ? (
+                            <Check className="h-4 w-4 text-primary mx-auto" />
+                          ) : (
+                            <X className="h-4 w-4 text-muted-foreground mx-auto" />
+                          )}
                         </TableCell>
                         <TableCell className="text-center">
-                          {attribute.isRequired ? "Yes" : "No"}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {attribute.displayInProductSummary ? "Yes" : "No"}
+                          {attribute.displayInProductSummary ? (
+                            <Check className="h-4 w-4 text-primary mx-auto" />
+                          ) : (
+                            <X className="h-4 w-4 text-muted-foreground mx-auto" />
+                          )}
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end space-x-2">
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => navigate(`/admin/attributes/${attribute.id}/options`)}
-                            >
-                              Options
-                            </Button>
-                            <Button 
-                              variant="outline" 
-                              size="icon"
-                              onClick={() => handleEditAttribute(attribute)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              variant="destructive" 
-                              size="icon"
-                              onClick={() => handleDeleteClick('attribute', attribute.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    onClick={() => handleSelectAttribute(attribute)}
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>View Options</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    onClick={() => handleEditAttribute(attribute)}
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Edit Attribute</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button 
+                                    variant="destructive" 
+                                    size="sm"
+                                    onClick={() => handleDeleteClick('attribute', attribute.id)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Delete Attribute</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           </div>
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -728,7 +751,8 @@ function GlobalAttributesPage() {
                 <div>
                   <CardTitle>Options for {selectedAttribute.displayName}</CardTitle>
                   <CardDescription>
-                    Manage the available options for this attribute
+                    Manage the options for this attribute. These options will be available 
+                    when a product has this attribute assigned.
                   </CardDescription>
                 </div>
                 <Button onClick={handleNewOption}>
@@ -782,20 +806,38 @@ function GlobalAttributesPage() {
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end space-x-2">
-                              <Button 
-                                variant="outline" 
-                                size="icon"
-                                onClick={() => handleEditOption(option)}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button 
-                                variant="destructive" 
-                                size="icon"
-                                onClick={() => handleDeleteClick('option', option.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm"
+                                      onClick={() => handleEditOption(option)}
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Edit Option</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button 
+                                      variant="destructive" 
+                                      size="sm"
+                                      onClick={() => handleDeleteClick('option', option.id)}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Delete Option</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -807,284 +849,392 @@ function GlobalAttributesPage() {
             </CardContent>
           </Card>
         )}
+        
+        {/* Guide Card - Help for users */}
+        <Card className="mt-8">
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <HelpCircle className="h-5 w-5 mr-2" />
+              How to Use the Centralized Attribute System
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Accordion type="single" collapsible className="w-full">
+              <AccordionItem value="item-1">
+                <AccordionTrigger>What are global attributes?</AccordionTrigger>
+                <AccordionContent>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Global attributes define characteristics of products that customers can select during purchase, 
+                    such as Size, Color, or Material. They're centrally managed and can be reused across many products.
+                  </p>
+                </AccordionContent>
+              </AccordionItem>
+              <AccordionItem value="item-2">
+                <AccordionTrigger>How to create and manage attributes?</AccordionTrigger>
+                <AccordionContent>
+                  <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
+                    <li>Click "New Attribute" to create a global attribute (e.g., "Color")</li>
+                    <li>Add options to your attribute (e.g., "Red", "Blue", "Green")</li>
+                    <li>During product creation, select which attributes apply to each product</li>
+                    <li>Customers will see these options when viewing the product</li>
+                  </ol>
+                </AccordionContent>
+              </AccordionItem>
+              <AccordionItem value="item-3">
+                <AccordionTrigger>Using attributes during product creation</AccordionTrigger>
+                <AccordionContent>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    When creating or editing a product, you'll see these global attributes in the "Attributes" tab. 
+                    You can enable which ones apply to each product, and mark them as required if customers must select 
+                    an option before adding to cart.
+                  </p>
+                </AccordionContent>
+              </AccordionItem>
+              <AccordionItem value="item-4">
+                <AccordionTrigger>About custom product attributes</AccordionTrigger>
+                <AccordionContent>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    For one-time attributes that only apply to specific products, you can create custom attributes 
+                    during product creation. These won't appear here in the global attributes list.
+                  </p>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </CardContent>
+        </Card>
+      </div>
 
-        {/* Attribute Creation/Edit Dialog */}
-        <Dialog open={attributeDialogOpen} onOpenChange={setAttributeDialogOpen}>
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>
-                {attributeFormMode === "create" ? "Create New Attribute" : "Edit Attribute"}
-              </DialogTitle>
-              <DialogDescription>
-                Fill in the details for this attribute. Click save when you're done.
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleAttributeSubmit}>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="name" className="text-right">
-                    Name
-                  </Label>
-                  <Input
-                    id="name"
-                    name="name"
-                    placeholder="color"
-                    defaultValue={selectedAttribute?.name || ""}
-                    className="col-span-3"
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="displayName" className="text-right">
-                    Display Name
-                  </Label>
-                  <Input
-                    id="displayName"
-                    name="displayName"
-                    placeholder="Color"
-                    defaultValue={selectedAttribute?.displayName || ""}
-                    className="col-span-3"
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="description" className="text-right">
-                    Description
-                  </Label>
-                  <Textarea
-                    id="description"
-                    name="description"
-                    placeholder="Product color selection"
-                    defaultValue={selectedAttribute?.description || ""}
-                    className="col-span-3"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="sortOrder" className="text-right">
-                    Sort Order
-                  </Label>
-                  <Input
-                    id="sortOrder"
-                    name="sortOrder"
-                    type="number"
-                    placeholder="0"
-                    defaultValue={selectedAttribute?.sortOrder || 0}
-                    className="col-span-3"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="attributeType" className="text-right">
-                    Type
-                  </Label>
-                  <Select 
-                    name="attributeType" 
-                    defaultValue={selectedAttribute?.attributeType || "select"}
-                  >
-                    <SelectTrigger className="col-span-3">
-                      <SelectValue placeholder="Select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ATTRIBUTE_TYPES.map((type) => (
-                        <SelectItem key={type.value} value={type.value}>
-                          {type.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label className="text-right">Options</Label>
-                  <div className="col-span-3 space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox 
-                        id="isRequired" 
-                        name="isRequired"
-                        defaultChecked={selectedAttribute?.isRequired || false}
-                      />
-                      <Label htmlFor="isRequired">Required at checkout</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox 
-                        id="isFilterable" 
-                        name="isFilterable"
-                        defaultChecked={selectedAttribute?.isFilterable || false}
-                      />
-                      <Label htmlFor="isFilterable">Use for product filtering</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox 
-                        id="isSwatch" 
-                        name="isSwatch"
-                        defaultChecked={selectedAttribute?.isSwatch || false}
-                      />
-                      <Label htmlFor="isSwatch">Display as color swatch</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox 
-                        id="displayInProductSummary" 
-                        name="displayInProductSummary"
-                        defaultChecked={selectedAttribute?.displayInProductSummary || false}
-                      />
-                      <Label htmlFor="displayInProductSummary">Display in product summary</Label>
-                    </div>
+      {/* New/Edit Attribute Dialog */}
+      <Dialog open={attributeDialogOpen} onOpenChange={setAttributeDialogOpen}>
+        <DialogContent className="sm:max-w-[550px]">
+          <DialogHeader>
+            <DialogTitle>{attributeFormMode === "create" ? "Create New Attribute" : "Edit Attribute"}</DialogTitle>
+            <DialogDescription>
+              {attributeFormMode === "create" 
+                ? "Add a new global attribute that can be assigned to products" 
+                : "Modify the properties of this attribute"}
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleAttributeSubmit}>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="name" className="text-right">
+                  Name*
+                </Label>
+                <Input
+                  id="name"
+                  name="name"
+                  placeholder="e.g. color"
+                  className="col-span-3"
+                  defaultValue={selectedAttribute?.name || ""}
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="displayName" className="text-right">
+                  Display Name*
+                </Label>
+                <Input
+                  id="displayName"
+                  name="displayName"
+                  placeholder="e.g. Color"
+                  className="col-span-3"
+                  defaultValue={selectedAttribute?.displayName || ""}
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="description" className="text-right">
+                  Description
+                </Label>
+                <Textarea
+                  id="description"
+                  name="description"
+                  placeholder="A short description of this attribute"
+                  className="col-span-3"
+                  defaultValue={selectedAttribute?.description || ""}
+                  rows={2}
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="attributeType" className="text-right">
+                  Type*
+                </Label>
+                <Select
+                  name="attributeType"
+                  defaultValue={selectedAttribute?.attributeType || "select"}
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select attribute type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ATTRIBUTE_TYPES.map((type) => (
+                      <SelectItem key={type} value={type}>
+                        {type}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="sortOrder" className="text-right">
+                  Sort Order
+                </Label>
+                <Input
+                  id="sortOrder"
+                  name="sortOrder"
+                  type="number"
+                  placeholder="0"
+                  className="col-span-3"
+                  defaultValue={selectedAttribute?.sortOrder || 0}
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right">Options</Label>
+                <div className="col-span-3 space-y-3">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="isFilterable"
+                      name="isFilterable"
+                      defaultChecked={selectedAttribute?.isFilterable || false}
+                    />
+                    <Label htmlFor="isFilterable" className="text-sm font-normal">
+                      Show in product filters
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="isRequired"
+                      name="isRequired"
+                      defaultChecked={selectedAttribute?.isRequired || false}
+                    />
+                    <Label htmlFor="isRequired" className="text-sm font-normal">
+                      Required for checkout (default)
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="isSwatch"
+                      name="isSwatch"
+                      defaultChecked={selectedAttribute?.isSwatch || false}
+                    />
+                    <Label htmlFor="isSwatch" className="text-sm font-normal">
+                      Show as color/texture swatch
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="displayInProductSummary"
+                      name="displayInProductSummary"
+                      defaultChecked={selectedAttribute?.displayInProductSummary || false}
+                    />
+                    <Label htmlFor="displayInProductSummary" className="text-sm font-normal">
+                      Show in product summary (default)
+                    </Label>
                   </div>
                 </div>
               </div>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setAttributeDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={createAttributeMutation.isPending || updateAttributeMutation.isPending}>
-                  {(createAttributeMutation.isPending || updateAttributeMutation.isPending) && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  )}
-                  Save
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-
-        {/* Option Creation/Edit Dialog */}
-        <Dialog open={optionDialogOpen} onOpenChange={setOptionDialogOpen}>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>
-                {optionFormMode === "create" ? "Add Option" : "Edit Option"}
-              </DialogTitle>
-              <DialogDescription>
-                {optionFormMode === "create" 
-                  ? `Add a new option to ${selectedAttribute?.displayName}`
-                  : `Edit option for ${selectedAttribute?.displayName}`
-                }
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleOptionSubmit}>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="value" className="text-right">
-                    Value
-                  </Label>
-                  <Input
-                    id="value"
-                    name="value"
-                    placeholder="red"
-                    defaultValue={selectedOption?.value || ""}
-                    className="col-span-3"
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="displayValue" className="text-right">
-                    Display Value
-                  </Label>
-                  <Input
-                    id="displayValue"
-                    name="displayValue"
-                    placeholder="Red"
-                    defaultValue={selectedOption?.displayValue || ""}
-                    className="col-span-3"
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="sortOrder" className="text-right">
-                    Sort Order
-                  </Label>
-                  <Input
-                    id="sortOrder"
-                    name="sortOrder"
-                    type="number"
-                    min="0"
-                    defaultValue={selectedOption?.sortOrder || 0}
-                    className="col-span-3"
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setOptionDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={createOptionMutation.isPending || updateOptionMutation.isPending}>
-                  {(createOptionMutation.isPending || updateOptionMutation.isPending) && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  )}
-                  Save
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-
-        {/* Option Metadata Dialog */}
-        <Dialog open={optionMetadataDialogOpen} onOpenChange={setOptionMetadataDialogOpen}>
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>Edit Metadata</DialogTitle>
-              <DialogDescription>
-                Edit the metadata for {selectedOption?.displayValue}. Use valid JSON format.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-1 gap-2">
-                <Label htmlFor="metadata">Metadata (JSON)</Label>
-                <Textarea
-                  id="metadata"
-                  value={optionMetadata}
-                  onChange={(e) => setOptionMetadata(e.target.value)}
-                  className="font-mono"
-                  rows={10}
-                />
-              </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setOptionMetadataDialogOpen(false)}>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setAttributeDialogOpen(false)}
+              >
                 Cancel
               </Button>
-              <Button onClick={handleSaveMetadata} disabled={updateOptionMutation.isPending}>
-                {updateOptionMutation.isPending && (
+              <Button 
+                type="submit"
+                disabled={createAttributeMutation.isPending || updateAttributeMutation.isPending}
+              >
+                {(createAttributeMutation.isPending || updateAttributeMutation.isPending) && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
-                Save
+                {attributeFormMode === "create" ? "Create Attribute" : "Save Changes"}
               </Button>
             </DialogFooter>
-          </DialogContent>
-        </Dialog>
+          </form>
+        </DialogContent>
+      </Dialog>
 
-        {/* Confirm Delete Dialog */}
-        <Dialog open={confirmDeleteDialogOpen} onOpenChange={setConfirmDeleteDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Confirm Deletion</DialogTitle>
-              <DialogDescription>
-                {itemToDelete?.type === 'attribute'
-                  ? "Are you sure you want to delete this attribute? This action cannot be undone and will also delete all associated options."
-                  : "Are you sure you want to delete this option? This action cannot be undone."}
-              </DialogDescription>
-            </DialogHeader>
+      {/* New/Edit Option Dialog */}
+      <Dialog open={optionDialogOpen} onOpenChange={setOptionDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>
+              {optionFormMode === "create" ? "Add Option" : "Edit Option"}
+            </DialogTitle>
+            <DialogDescription>
+              {optionFormMode === "create"
+                ? `Add a new option for the ${selectedAttribute?.displayName} attribute`
+                : `Edit this option for the ${selectedAttribute?.displayName} attribute`}
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleOptionSubmit}>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="value" className="text-right">
+                  Value*
+                </Label>
+                <Input
+                  id="value"
+                  name="value"
+                  placeholder="e.g. red"
+                  className="col-span-3"
+                  defaultValue={selectedOption?.value || ""}
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="displayValue" className="text-right">
+                  Display Value
+                </Label>
+                <Input
+                  id="displayValue"
+                  name="displayValue"
+                  placeholder="e.g. Ruby Red"
+                  className="col-span-3"
+                  defaultValue={selectedOption?.displayValue || ""}
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="sortOrder" className="text-right">
+                  Sort Order
+                </Label>
+                <Input
+                  id="sortOrder"
+                  name="sortOrder"
+                  type="number"
+                  placeholder="0"
+                  className="col-span-3"
+                  defaultValue={selectedOption?.sortOrder || 0}
+                />
+              </div>
+              {/* For color attributes, show color picker */}
+              {selectedAttribute?.attributeType === 'color' && (
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="colorHex" className="text-right">
+                    Color Hex
+                  </Label>
+                  <div className="col-span-3 flex items-center gap-2">
+                    <Input
+                      id="colorHex"
+                      name="colorHex"
+                      type="text"
+                      placeholder="#RRGGBB"
+                      className="flex-1"
+                      defaultValue={selectedOption?.metadata?.hexColor || ""}
+                    />
+                    <div 
+                      className="w-8 h-8 border rounded"
+                      style={{ backgroundColor: selectedOption?.metadata?.hexColor || '#ffffff' }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
             <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setConfirmDeleteDialogOpen(false)}
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setOptionDialogOpen(false)}
               >
                 Cancel
               </Button>
-              <Button
-                variant="destructive"
-                onClick={handleConfirmDelete}
-                disabled={
-                  deleteAttributeMutation.isPending || deleteOptionMutation.isPending
-                }
+              <Button 
+                type="submit"
+                disabled={createOptionMutation.isPending || updateOptionMutation.isPending}
               >
-                {(deleteAttributeMutation.isPending || deleteOptionMutation.isPending) && (
+                {(createOptionMutation.isPending || updateOptionMutation.isPending) && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
-                Delete
+                {optionFormMode === "create" ? "Add Option" : "Save Changes"}
               </Button>
             </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Option Metadata Dialog */}
+      <Dialog open={optionMetadataDialogOpen} onOpenChange={setOptionMetadataDialogOpen}>
+        <DialogContent className="sm:max-w-[550px]">
+          <DialogHeader>
+            <DialogTitle>Edit Metadata for {selectedOption?.displayValue}</DialogTitle>
+            <DialogDescription>
+              Edit the JSON metadata for this option. For example, you can add a hex color code for color attributes.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-1 gap-4">
+              <Label htmlFor="metadata" className="font-medium">
+                Metadata (JSON)
+              </Label>
+              <Textarea
+                id="metadata"
+                name="metadata"
+                placeholder='{"hexColor": "#ff0000", "someProperty": "someValue"}'
+                className="font-mono"
+                rows={8}
+                value={optionMetadata}
+                onChange={(e) => setOptionMetadata(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Enter valid JSON. For color swatches, use the format: {`{"hexColor": "#ff0000"}`}
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => setOptionMetadataDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="button"
+              onClick={handleMetadataSubmit}
+              disabled={updateOptionMutation.isPending}
+            >
+              {updateOptionMutation.isPending && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Save Metadata
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmation Dialog for Deletion */}
+      <AlertDialog open={confirmDeleteDialogOpen} onOpenChange={setConfirmDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {itemToDelete?.type === 'attribute' 
+                ? 'Are you sure you want to delete this attribute?' 
+                : 'Are you sure you want to delete this option?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {itemToDelete?.type === 'attribute' 
+                ? 'This will permanently delete the attribute and all of its options. This action cannot be undone.' 
+                : 'This will permanently delete this option. This action cannot be undone.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleDeleteConfirm}
+            >
+              {itemToDelete?.type === 'attribute' 
+                ? (deleteAttributeMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />)
+                : (deleteOptionMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />)
+              }
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AdminLayout>
   );
 }
