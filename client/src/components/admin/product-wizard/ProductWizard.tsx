@@ -85,16 +85,13 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ editMode = false, 
     mutationFn: async (draftData: any) => {
       console.log('Submitting draft data:', draftData);
       
-      // The server validation schema expects { step, draftData } where draftData contains the product draft data
-      // Looking at server logs, this is what's required by the validation schema
+      // The server validation schema expects direct draft data, not wrapped with step and draftData fields
+      // This matches the server's createProductDraftSchema, which extends insertProductDraftSchema
       const formattedData = {
-        step: 'basic-info', // Initial step
-        draftData: {
-          ...draftData,
-          catalogId: draftData.catalogId || 1, // Default catalog ID if not provided
-          supplierId: draftData.supplierId || null,
-          attributes: draftData.attributes || [],
-        }
+        ...draftData,
+        catalogId: draftData.catalogId || 1, // Default catalog ID if not provided
+        supplierId: draftData.supplierId || null,
+        attributes: draftData.attributes || [],
       };
       
       console.log('Formatted data for API:', formattedData);
@@ -147,13 +144,16 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ editMode = false, 
     mutationFn: async ({ step, data }: { step: ProductDraftStep; data: any }) => {
       if (!draftId) throw new Error('No draft ID available');
       
-      // Send step as a string, which is what the API expects per updateProductDraftWizardStepSchema
-      console.log(`Updating product draft step: ${step} with data:`, data);
-      
-      const response = await apiRequest('PATCH', `/api/product-drafts/${draftId}/wizard-step`, {
+      // Format the data according to the updateProductDraftWizardStepSchema
+      // Looking at the validation schema, it expects { step: string, data: any }
+      const requestData = {
         step,
-        data,
-      });
+        data
+      };
+      
+      console.log(`Updating product draft step: ${step} with data:`, requestData);
+      
+      const response = await apiRequest('PATCH', `/api/product-drafts/${draftId}/wizard-step`, requestData);
       return response.json();
     },
     onSuccess: (data) => {
@@ -320,17 +320,25 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ editMode = false, 
   const handleSaveStep = (stepData: any) => {
     console.log('Saving step data:', stepData);
     
-    // Format data exactly as expected by the server's updateProductDraftWizardStepSchema
-    // This schema expects { step: string, data: any }
+    // Format and validate data per step requirements before sending
+    // The API route expects { step: string, data: any }
+    // The server will handle partial updates based on the step
+    const formattedData = {
+      ...stepData,
+      // Add the current step to completedSteps if not already there
+      completedSteps: draftData?.data.completedSteps 
+        ? Array.from(new Set([...draftData.data.completedSteps, currentStep]))
+        : [currentStep],
+      // Make sure catalog and supplier IDs are included
+      catalogId: stepData.catalogId || draftData?.data.catalogId || 1,
+      supplierId: stepData.supplierId || draftData?.data.supplierId || null,
+    };
+    
+    console.log('Formatted step data for API:', formattedData);
+    
     updateStepMutation.mutate({
       step: currentStep,
-      data: {
-        ...stepData,
-        // Add the current step to completedSteps if not already there
-        completedSteps: draftData?.data.completedSteps 
-          ? Array.from(new Set([...draftData.data.completedSteps, currentStep]))
-          : [currentStep],
-      },
+      data: formattedData,
     });
   };
 
@@ -356,8 +364,15 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ editMode = false, 
 
   // Determine if a step is completed
   const isStepCompleted = (step: string) => {
+    // Handle different formats of completedSteps (string array or possibly undefined)
     if (!draftData?.data.completedSteps) return false;
-    return draftData.data.completedSteps.includes(step);
+    
+    // Make sure we're working with an array
+    const completedSteps = Array.isArray(draftData.data.completedSteps) 
+      ? draftData.data.completedSteps 
+      : [];
+      
+    return completedSteps.includes(step);
   };
 
   // Loading state
