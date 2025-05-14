@@ -27,7 +27,7 @@ interface ProductImagesStepProps {
   isLoading: boolean;
 }
 
-const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ draft, onSave, isLoading }) => {
+export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ draft, onSave, isLoading }) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [uploadingImages, setUploadingImages] = useState(false);
