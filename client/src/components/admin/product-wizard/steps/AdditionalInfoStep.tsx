@@ -154,6 +154,87 @@ export function AdditionalInfoStep() {
     }
   };
   
+  // Handle selecting options for an attribute
+  const handleSelectAttributeOptions = async (attrId: number, optionIds: number[]) => {
+    console.log(`Setting options for attribute ${attrId}:`, optionIds);
+    
+    // Update in the context
+    updateAttributeOptions(attrId, optionIds);
+    
+    // Update in our local state for UI
+    setFormattedAttributes(prev => 
+      prev.map(attr => 
+        attr.id === attrId ? { ...attr, selectedOptions: optionIds } : attr
+      )
+    );
+    
+    // Provide feedback
+    toast({
+      title: "Options Updated",
+      description: `Updated attribute options.`,
+      variant: "default",
+    });
+  };
+  
+  // Handle toggling an attribute on/off
+  const handleToggleAttribute = async (attrId: number, enabled: boolean) => {
+    console.log(`Toggling attribute ${attrId}: ${enabled ? 'ON' : 'OFF'}`);
+    
+    if (enabled) {
+      // Add attribute to state with default values
+      const attr = attributeDefinitions.find(a => a.id === attrId);
+      if (attr) {
+        console.log('Adding attribute to product:', attr);
+        
+        // First, fetch options for this attribute if it's a select type
+        let options: any[] = [];
+        if (attr.attributeType === 'select') {
+          try {
+            options = await fetchAttributeOptions(attrId);
+            console.log(`Fetched ${options.length} options for attribute ${attrId}:`, options);
+          } catch (err) {
+            console.error(`Error fetching options for attribute ${attrId}:`, err);
+          }
+        }
+        
+        // Add the attribute to state
+        addAttribute({
+          id: attrId,
+          attributeType: attr.attributeType || 'select',
+          isRequired: false,
+          textValue: '',
+          selectedOptions: [],
+          sortOrder: state.attributes.length
+        });
+        
+        toast({
+          title: "Attribute Enabled",
+          description: `Added ${attr.displayName || attr.name} to product attributes.`,
+        });
+      }
+    } else {
+      // Find and remove the attribute from state
+      const index = state.attributes.findIndex(a => a.id === attrId);
+      if (index !== -1) {
+        const attr = state.attributes[index];
+        removeAttribute(index);
+        
+        // Provide user feedback
+        toast({
+          title: "Attribute Disabled",
+          description: `Removed attribute from product.`,
+        });
+      }
+    }
+    
+    // Toggle in our local state too for immediate UI feedback
+    setFormattedAttributes(prev => 
+      prev.map(attr => 
+        attr.id === attrId ? { ...attr, enabled } : attr
+      )
+    );
+  };
+  
   // Loading states
   const [isLoading, setIsLoading] = useState(false);
   const [isFetchingOptions, setIsFetchingOptions] = useState(false);
@@ -456,8 +537,10 @@ export function AdditionalInfoStep() {
   
   // Handle form submission
   const onSubmit = async (values: AdditionalInfoFormValues) => {
-    setIsSaving(true);
+    setIsLoading(true);
     try {
+      console.log('Saving form values:', values);
+      
       // Update state with form values
       setField('stockLevel', values.stockLevel);
       setField('lowStockThreshold', values.lowStockThreshold);
@@ -465,6 +548,7 @@ export function AdditionalInfoStep() {
       
       setField('taxable', values.taxable);
       setField('taxClass', values.taxClass);
+      setField('taxRate', values.taxRate);
       
       // Product details
       setField('supplier', values.supplier);
