@@ -123,6 +123,22 @@ export function calculateDiscountPercentage(
 }
 
 /**
+ * Calculates the discount percentage between original price and sale price
+ * 
+ * @param originalPrice The original price
+ * @param salePrice The sale/discounted price
+ * @returns The discount percentage (as an integer)
+ */
+export function calculateDiscount(originalPrice: number, salePrice: number): number {
+  if (!originalPrice || !salePrice || originalPrice <= 0 || salePrice >= originalPrice) {
+    return 0;
+  }
+  
+  const discount = ((originalPrice - salePrice) / originalPrice) * 100;
+  return Math.round(discount);
+}
+
+/**
  * Calculates time remaining until a target date
  * 
  * @param endDate The target date/time
