@@ -226,15 +226,28 @@ function GlobalAttributesPage() {
 
   // Create option mutation
   const createOptionMutation = useMutation({
-    mutationFn: async (newOption: Omit<AttributeOption, "id">) => {
+    mutationFn: async (newOption: { value: string, displayValue: string, sortOrder: number }) => {
       if (!selectedAttribute) return null;
 
-      const response = await apiRequest(
-        "POST", 
-        `/api/attributes/${selectedAttribute.id}/options`, 
-        newOption
-      );
-      return response;
+      try {
+        const payload = {
+          value: newOption.value,
+          displayValue: newOption.displayValue || newOption.value,
+          sortOrder: newOption.sortOrder || 0
+        };
+        
+        console.log("Creating option with payload:", payload);
+        
+        const response = await apiRequest(
+          "POST", 
+          `/api/attributes/${selectedAttribute.id}/options`, 
+          payload
+        );
+        return response;
+      } catch (error) {
+        console.error("Error creating option:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
       // Invalidate both options and attributes
@@ -312,11 +325,16 @@ function GlobalAttributesPage() {
     mutationFn: async (id: number) => {
       if (!selectedAttribute) return null;
 
-      const response = await apiRequest(
-        "DELETE", 
-        `/api/attributes/${selectedAttribute.id}/options/${id}`
-      );
-      return response;
+      try {
+        const response = await apiRequest(
+          "DELETE", 
+          `/api/attributes/${selectedAttribute.id}/options/${id}`
+        );
+        return response;
+      } catch (error) {
+        console.error("Error deleting option:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
       // Invalidate specific options query
@@ -438,16 +456,12 @@ function GlobalAttributesPage() {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     
-    const optionData = {
-      value: formData.get("value") as string,
-      displayValue: formData.get("displayValue") as string,
-      sortOrder: parseInt(formData.get("sortOrder") as string) || 0,
-      metadata: selectedOption?.metadata || null,
-      attributeId: selectedAttribute?.id, // Ensure we include the attributeId
-    };
+    const value = formData.get("value") as string;
+    const displayValue = formData.get("displayValue") as string;
+    const sortOrder = parseInt(formData.get("sortOrder") as string) || 0;
 
     // Validate the value field to ensure it's not empty
-    if (!optionData.value || optionData.value.trim() === '') {
+    if (!value || value.trim() === '') {
       toast({
         title: "Value is required",
         description: "Please enter a value for this option",
@@ -456,17 +470,20 @@ function GlobalAttributesPage() {
       return;
     }
     
-    // If display value is empty, use the value
-    if (!optionData.displayValue || optionData.displayValue.trim() === '') {
-      optionData.displayValue = optionData.value;
-    }
-    
+    // Create simple option data with only the required fields
     if (optionFormMode === "create") {
-      createOptionMutation.mutate(optionData);
+      createOptionMutation.mutate({
+        value, 
+        displayValue: displayValue || value,
+        sortOrder
+      });
     } else if (optionFormMode === "edit" && selectedOption) {
       updateOptionMutation.mutate({
         id: selectedOption.id,
-        ...optionData,
+        value,
+        displayValue: displayValue || value,
+        sortOrder,
+        metadata: selectedOption.metadata
       });
     }
   };
