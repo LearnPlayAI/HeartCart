@@ -20,7 +20,8 @@ import {
   ChevronUp,
   ChevronDown,
   FilterX,
-  RefreshCw 
+  RefreshCw,
+  AlertCircle
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -61,19 +62,28 @@ import { DraftProvider, useDraftContext as useDraft } from "@/components/admin/p
 
 function EmptyState({ onCreateDraft }: { onCreateDraft: () => void }) {
   return (
-    <Card className="w-full border-dashed">
+    <Card className="w-full border-dashed bg-muted/30">
       <CardContent className="flex flex-col items-center justify-center p-10 text-center">
-        <div className="rounded-full bg-primary/10 p-6 mb-4">
-          <PlusCircle className="h-12 w-12 text-primary" />
+        <div className="rounded-full bg-primary/10 p-6 mb-6 shadow-sm">
+          <PlusCircle className="h-16 w-16 text-primary" />
         </div>
-        <CardTitle className="text-xl mb-2">No Product Drafts</CardTitle>
-        <CardDescription className="mb-6 max-w-md">
+        <CardTitle className="text-2xl mb-3 text-primary">No Product Drafts</CardTitle>
+        <CardDescription className="mb-8 max-w-md text-base">
           You don't have any product drafts yet. Create a new draft to start
-          adding products to your store.
+          adding products to your store. Each draft can be edited and published when ready.
         </CardDescription>
-        <Button size="lg" onClick={onCreateDraft}>
-          <PlusCircle className="mr-2 h-4 w-4" /> Create New Product
-        </Button>
+        <div className="space-y-4 w-full max-w-xs">
+          <Button 
+            size="lg" 
+            onClick={onCreateDraft} 
+            className="w-full py-6 text-lg font-medium shadow-md hover:shadow-lg transition-all"
+          >
+            <PlusCircle className="mr-2 h-5 w-5" /> Create New Product
+          </Button>
+          <div className="text-xs text-muted-foreground px-4">
+            You can create multiple drafts and publish them when ready
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
@@ -430,26 +440,38 @@ function ProductDraftList() {
 
       {/* Discard Confirmation Dialog */}
       <Dialog open={!!confirmDiscard} onOpenChange={() => setConfirmDiscard(null)}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Discard Draft</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to discard this draft? This action cannot be
-              undone.
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertCircle className="h-5 w-5" />
+              Confirm Draft Deletion
+            </DialogTitle>
+            <DialogDescription className="pt-2">
+              Are you sure you want to permanently delete this draft? 
+              This action <span className="font-semibold">cannot be undone</span> and all 
+              data in this draft will be lost.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
+          
+          <div className="bg-destructive/10 rounded-md p-3 my-3 border border-destructive/20">
+            <p className="text-sm text-destructive">
+              {drafts.find(d => d.id === confirmDiscard)?.name || "Untitled Product"}
+            </p>
+          </div>
+          
+          <DialogFooter className="sm:justify-between mt-2">
             <Button 
               variant="outline" 
               onClick={() => setConfirmDiscard(null)}
+              className="sm:mr-auto"
             >
               Cancel
             </Button>
-            <Button 
-              variant="destructive" 
+            <Button
+              variant="destructive"
               onClick={handleConfirmDiscard}
             >
-              Discard Draft
+              Yes, Delete Draft
             </Button>
           </DialogFooter>
         </DialogContent>
