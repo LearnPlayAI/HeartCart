@@ -48,12 +48,47 @@ aiRouter.post('/suggest-description', asyncHandler(async (req: Request, res: Res
   } catch (error) {
     logger.error('Error generating product description suggestions', {
       error,
-      productName
+      productName,
+      errorMessage: error instanceof Error ? error.message : String(error)
     });
+    
+    // Handle specific API error types
+    if (error instanceof Error) {
+      const errorMessage = error.message;
+      
+      if (errorMessage.includes('MISSING_API_KEY')) {
+        return res.status(503).json({
+          success: false,
+          error: { 
+            code: 'MISSING_API_KEY',
+            message: 'AI service is not configured. Please contact your administrator to set up the Gemini API key.'
+          }
+        });
+      } else if (errorMessage.includes('INVALID_API_KEY')) {
+        return res.status(503).json({
+          success: false,
+          error: { 
+            code: 'INVALID_API_KEY',
+            message: 'AI service configuration is invalid. Please contact your administrator to update the Gemini API key.'
+          }
+        });
+      } else if (errorMessage.includes('AI service unavailable')) {
+        return res.status(503).json({
+          success: false,
+          error: { 
+            code: 'SERVICE_UNAVAILABLE',
+            message: 'AI service is currently unavailable. Please try again later or contact your administrator.'
+          }
+        });
+      }
+    }
     
     return res.status(500).json({
       success: false,
-      error: { message: error instanceof Error ? error.message : 'Failed to generate descriptions' }
+      error: { 
+        code: 'GENERATION_FAILED',
+        message: error instanceof Error ? error.message : 'Failed to generate descriptions'
+      }
     });
   }
 }));
@@ -102,12 +137,47 @@ aiRouter.post('/optimize-seo', asyncHandler(async (req: Request, res: Response) 
   } catch (error) {
     logger.error('Error generating SEO suggestions', {
       error,
-      productName
+      productName,
+      errorMessage: error instanceof Error ? error.message : String(error)
     });
+    
+    // Handle specific API error types
+    if (error instanceof Error) {
+      const errorMessage = error.message;
+      
+      if (errorMessage.includes('MISSING_API_KEY')) {
+        return res.status(503).json({
+          success: false,
+          error: { 
+            code: 'MISSING_API_KEY',
+            message: 'AI service is not configured. Please contact your administrator to set up the Gemini API key.'
+          }
+        });
+      } else if (errorMessage.includes('INVALID_API_KEY')) {
+        return res.status(503).json({
+          success: false,
+          error: { 
+            code: 'INVALID_API_KEY',
+            message: 'AI service configuration is invalid. Please contact your administrator to update the Gemini API key.'
+          }
+        });
+      } else if (errorMessage.includes('AI service unavailable')) {
+        return res.status(503).json({
+          success: false,
+          error: { 
+            code: 'SERVICE_UNAVAILABLE',
+            message: 'AI service is currently unavailable. Please try again later or contact your administrator.'
+          }
+        });
+      }
+    }
     
     return res.status(500).json({
       success: false,
-      error: { message: error instanceof Error ? error.message : 'Failed to generate SEO suggestions' }
+      error: { 
+        code: 'GENERATION_FAILED',
+        message: error instanceof Error ? error.message : 'Failed to generate SEO suggestions'
+      }
     });
   }
 }));

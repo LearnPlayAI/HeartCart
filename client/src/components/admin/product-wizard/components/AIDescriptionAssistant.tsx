@@ -67,11 +67,13 @@ export const AIDescriptionAssistant: React.FC<AIDescriptionAssistantProps> = ({
           description: `Generated ${data.data.suggestions.length} description suggestions.`,
         });
       } else {
-        // Check for missing API key
+        // Handle specific error codes from the API service
         if (data.error?.code === 'MISSING_API_KEY') {
           setApiError('Google Gemini API key is missing. Please contact your administrator to configure it.');
         } else if (data.error?.code === 'INVALID_API_KEY') {
           setApiError('Google Gemini API key is invalid. Please contact your administrator to update it.');
+        } else if (data.error?.code === 'SERVICE_UNAVAILABLE') {
+          setApiError('AI service is currently unavailable. Please try again later or contact your administrator.');
         } else {
           toast({
             title: 'Error generating suggestions',
