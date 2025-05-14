@@ -6,7 +6,7 @@ import { useLocation } from 'wouter';
 import { useAuth } from '@/hooks/use-auth';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Loader2, Save, Trash2, AlertTriangle } from 'lucide-react';
+import { Loader2, Save, Trash2, AlertTriangle, ChevronRight, CheckCircle2 } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,6 +29,14 @@ const WIZARD_STEPS = [
   { id: 'additional-info', label: 'Additional Info', component: AdditionalInfoStep },
   { id: 'review', label: 'Review & Save', component: ReviewAndSaveStep },
 ];
+
+// Map step names to numeric values for the API
+const STEP_MAP = {
+  'basic-info': 0,
+  'images': 1,
+  'additional-info': 2,
+  'review': 3
+};
 
 export interface ProductDraft {
   id?: number;
@@ -63,6 +71,9 @@ export interface ProductDraft {
   draftStatus: string;
   lastModified: Date;
   completedSteps: string[];
+  wizardProgress: Record<string, boolean>;
+  catalogId: number | null;
+  supplierId: number | null;
 }
 
 export type ProductDraftStep = 'basic-info' | 'images' | 'additional-info' | 'review';
@@ -79,153 +90,7 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ editMode = false, 
   const [currentStep, setCurrentStep] = useState<ProductDraftStep>('basic-info');
   const [draftId, setDraftId] = useState<number | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-
-  // Create a new product draft or load an existing one for editing
-  const createDraftMutation = useMutation({
-    mutationFn: async (draftData: any) => {
-      console.log('Submitting draft data:', draftData);
-      
-      // Format the data according to the server's validation schema
-      // The server expects data with step as a number from 0-3
-      const formattedData = {
-        ...draftData,
-        catalogId: draftData.catalogId || 1, // Default catalog ID if not provided
-        supplierId: draftData.supplierId || null,
-        attributes: draftData.attributes || [],
-        step: 0, // Initial step (0 = basic-info)
-      };
-      
-      console.log('Formatted data for API:', formattedData);
-      
-      // Send the properly formatted data
-      const response = await apiRequest('POST', '/api/product-drafts', formattedData);
-      return response.json();
-    },
-    onSuccess: (data) => {
-      if (data.data && data.data.id) {
-        setDraftId(data.data.id);
-        // Initial fetch of draft data
-        queryClient.invalidateQueries({ queryKey: ['/api/product-drafts', data.data.id] });
-        toast({
-          title: 'Success',
-          description: 'Product draft created successfully',
-        });
-      } else {
-        toast({
-          title: 'Warning',
-          description: 'Response received but draft ID is missing',
-          variant: 'destructive',
-        });
-        console.error('Failed to extract draft ID from response:', data);
-      }
-    },
-    onError: (error) => {
-      toast({
-        title: 'Error',
-        description: `Failed to create product draft: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        variant: 'destructive',
-      });
-      console.error('Draft creation error:', error);
-    },
-  });
-
-  // Fetch the current draft
-  const { data: draftData, isLoading, isError } = useQuery({
-    queryKey: ['/api/product-drafts', draftId],
-    queryFn: async () => {
-      if (!draftId) return null;
-      const response = await apiRequest('GET', `/api/product-drafts/${draftId}`);
-      return response.json();
-    },
-    enabled: !!draftId,
-  });
-
-  // Update a specific wizard step
-  const updateStepMutation = useMutation({
-    mutationFn: async ({ step, data }: { step: ProductDraftStep; data: any }) => {
-      if (!draftId) throw new Error('No draft ID available');
-      
-      // Convert string step to number for API
-      const stepMap: Record<ProductDraftStep, number> = {
-        'basic-info': 0,
-        'images': 1,
-        'additional-info': 2,
-        'review': 3
-      };
-      
-      // Format the data according to server validation schema
-      const requestData = {
-        step: stepMap[step], // Convert string step to number
-        draftData: data
-      };
-      
-      console.log(`Updating product draft step: ${step} (${stepMap[step]}) with data:`, requestData);
-      
-      const response = await apiRequest('PATCH', `/api/product-drafts/${draftId}/wizard-step`, requestData);
-      return response.json();
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/product-drafts', draftId] });
-      toast({
-        title: 'Success',
-        description: 'Product information saved',
-      });
-    },
-    onError: (error) => {
-      console.error('Update step error:', error);
-      toast({
-        title: 'Error',
-        description: `Failed to update product draft: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        variant: 'destructive',
-      });
-    },
-  });
-
-  // Delete a draft
-  const deleteDraftMutation = useMutation({
-    mutationFn: async () => {
-      if (!draftId) throw new Error('No draft ID available');
-      const response = await apiRequest('DELETE', `/api/product-drafts/${draftId}`);
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: 'Success',
-        description: 'Product draft deleted',
-      });
-      setLocation('/admin/catalog');
-    },
-    onError: (error) => {
-      toast({
-        title: 'Error',
-        description: `Failed to delete product draft: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        variant: 'destructive',
-      });
-    },
-  });
-
-  // Publish a draft to create/update the actual product
-  const publishDraftMutation = useMutation({
-    mutationFn: async () => {
-      if (!draftId) throw new Error('No draft ID available');
-      const response = await apiRequest('POST', `/api/product-drafts/${draftId}/publish`);
-      return response.json();
-    },
-    onSuccess: (data) => {
-      toast({
-        title: 'Success',
-        description: `Product ${editMode ? 'updated' : 'created'} successfully`,
-      });
-      setLocation('/admin/catalog');
-    },
-    onError: (error) => {
-      toast({
-        title: 'Error',
-        description: `Failed to publish product: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        variant: 'destructive',
-      });
-    },
-  });
+  const [isAutoAdvancing, setIsAutoAdvancing] = useState(false);
 
   // Get user information to ensure we're authenticated
   const { user, isLoading: isLoadingUser } = useAuth();
@@ -247,10 +112,177 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ editMode = false, 
     },
   });
 
+  // Create a new product draft
+  const createDraftMutation = useMutation({
+    mutationFn: async (initialData: any) => {
+      console.log('Creating product draft with data:', initialData);
+      
+      // Format the request according to the server's expected structure
+      const requestData = {
+        draftData: initialData,
+        step: 0, // First step
+        catalogId: initialData.catalogId
+      };
+      
+      console.log('API Request: POST /api/product-drafts', requestData);
+      const response = await apiRequest('POST', '/api/product-drafts', requestData);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      if (data.success && data.data && data.data.id) {
+        setDraftId(data.data.id);
+        queryClient.invalidateQueries({ queryKey: ['/api/product-drafts', data.data.id] });
+        toast({
+          title: 'Draft Created',
+          description: 'Started working on your new product',
+        });
+      } else {
+        toast({
+          title: 'Error',
+          description: data.error?.message || 'Could not create product draft',
+          variant: 'destructive',
+        });
+        console.error('Failed to create draft:', data);
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: `Failed to create product draft: ${error.message || 'Unknown error'}`,
+        variant: 'destructive',
+      });
+      console.error('Draft creation error:', error);
+    },
+  });
+
+  // Fetch the current draft
+  const { data: draftData, isLoading: isDraftLoading, isError } = useQuery({
+    queryKey: ['/api/product-drafts', draftId],
+    queryFn: async () => {
+      if (!draftId) return null;
+      const response = await apiRequest('GET', `/api/product-drafts/${draftId}`);
+      return response.json();
+    },
+    enabled: !!draftId,
+  });
+
+  // Update a specific wizard step
+  const updateStepMutation = useMutation({
+    mutationFn: async ({ step, stepData }: { step: ProductDraftStep; stepData: any }) => {
+      if (!draftId) throw new Error('No draft ID available');
+      
+      // Format the data according to server validation schema
+      const requestData = {
+        draftData: stepData,
+        step: STEP_MAP[step], // Convert string step to number (0-3)
+      };
+      
+      console.log(`Updating step ${step} (${STEP_MAP[step]}) with data:`, requestData);
+      
+      const response = await apiRequest('PATCH', `/api/product-drafts/${draftId}/wizard-step`, requestData);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        queryClient.invalidateQueries({ queryKey: ['/api/product-drafts', draftId] });
+        toast({
+          title: 'Step Saved',
+          description: 'Your changes have been saved',
+        });
+        
+        // If auto-advancing, move to the next step
+        if (isAutoAdvancing) {
+          const currentIndex = WIZARD_STEPS.findIndex((step) => step.id === currentStep);
+          if (currentIndex < WIZARD_STEPS.length - 1) {
+            setCurrentStep(WIZARD_STEPS[currentIndex + 1].id as ProductDraftStep);
+          }
+          setIsAutoAdvancing(false);
+        }
+      } else {
+        toast({
+          title: 'Error',
+          description: data.error?.message || 'Failed to save changes',
+          variant: 'destructive',
+        });
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: `Failed to update: ${error.message || 'Unknown error'}`,
+        variant: 'destructive',
+      });
+      console.error('Update error:', error);
+      setIsAutoAdvancing(false);
+    },
+  });
+
+  // Delete a draft
+  const deleteDraftMutation = useMutation({
+    mutationFn: async () => {
+      if (!draftId) throw new Error('No draft ID available');
+      const response = await apiRequest('DELETE', `/api/product-drafts/${draftId}`);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        toast({
+          title: 'Deleted',
+          description: 'Product draft has been discarded',
+        });
+        setLocation('/admin/catalog');
+      } else {
+        toast({
+          title: 'Error',
+          description: data.error?.message || 'Failed to delete draft',
+          variant: 'destructive',
+        });
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: `Failed to delete: ${error.message || 'Unknown error'}`,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Publish a draft to create/update the actual product
+  const publishDraftMutation = useMutation({
+    mutationFn: async () => {
+      if (!draftId) throw new Error('No draft ID available');
+      const response = await apiRequest('POST', `/api/product-drafts/${draftId}/publish`);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        toast({
+          title: 'Success',
+          description: `Product ${editMode ? 'updated' : 'created'} successfully`,
+        });
+        setLocation('/admin/catalog');
+      } else {
+        toast({
+          title: 'Error',
+          description: data.error?.message || 'Failed to publish product',
+          variant: 'destructive',
+        });
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: `Failed to publish: ${error.message || 'Unknown error'}`,
+        variant: 'destructive',
+      });
+    },
+  });
+
   // Initialize the wizard
   useEffect(() => {
-    // Wait until we know the user's authenticated state
-    if (isLoadingUser) return;
+    // Wait until we know the user's authenticated state and have catalog data
+    if (isLoadingUser || !catalogsData || !suppliersData) return;
     
     // Make sure user is authenticated before creating a draft
     if (!user) {
@@ -266,12 +298,11 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ editMode = false, 
     // Create a new draft or load one for editing
     if (!draftId) {
       // Get default catalog and supplier if available
-      const defaultCatalogId = catalogsData?.data?.[0]?.id || null;
+      const defaultCatalogId = catalogsData?.data?.[0]?.id || 1;
       const defaultSupplierId = suppliersData?.data?.[0]?.id || null;
       
-      // Create payload matching the API's expected format
-      // This must match createProductDraftSchema from shared/validation-schemas.ts
-      const initialData: any = {
+      // Create initial draft data
+      const initialData = {
         name: '',
         description: '',
         slug: '',
@@ -295,7 +326,6 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ editMode = false, 
         flashDealEnd: null,
         dimensions: '',
         weight: '',
-        // Include catalog and supplier IDs to match server requirements
         catalogId: defaultCatalogId,
         supplierId: defaultSupplierId,
         completedSteps: [],
@@ -313,11 +343,9 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ editMode = false, 
         initialData.originalProductId = productId;
       }
       
-      // Send the draft data directly to the server
-      console.log('Creating product draft with data:', initialData);
       createDraftMutation.mutate(initialData);
     }
-  }, [draftId, editMode, productId, user, isLoadingUser, setLocation, toast, catalogsData, suppliersData]);
+  }, [draftId, editMode, productId, user, isLoadingUser, catalogsData, suppliersData, setLocation, toast]);
 
   // Handle step changes
   const handleStepChange = (step: string) => {
@@ -325,28 +353,27 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ editMode = false, 
   };
 
   // Handle saving the current step
-  const handleSaveStep = (stepData: any) => {
-    console.log('Saving step data:', stepData);
+  const handleSaveStep = (stepData: any, advanceToNext = false) => {
+    if (advanceToNext) {
+      setIsAutoAdvancing(true);
+    }
     
-    // Format and validate data per step requirements before sending
-    // The API route expects { step: string, data: any }
-    // The server will handle partial updates based on the step
+    // Update the draft with the new step data
     const formattedData = {
       ...stepData,
-      // Add the current step to completedSteps if not already there
-      completedSteps: draftData?.data.completedSteps 
-        ? Array.from(new Set([...draftData.data.completedSteps, currentStep]))
-        : [currentStep],
-      // Make sure catalog and supplier IDs are included
-      catalogId: stepData.catalogId || draftData?.data.catalogId || 1,
-      supplierId: stepData.supplierId || draftData?.data.supplierId || null,
+      completedSteps: Array.from(new Set([
+        ...(draftData?.data.completedSteps || []), 
+        currentStep
+      ])),
+      wizardProgress: {
+        ...(draftData?.data.wizardProgress || {}),
+        [currentStep]: true
+      }
     };
-    
-    console.log('Formatted step data for API:', formattedData);
     
     updateStepMutation.mutate({
       step: currentStep,
-      data: formattedData,
+      stepData: formattedData,
     });
   };
 
@@ -361,7 +388,6 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ editMode = false, 
       return;
     }
     
-    console.log('Publishing draft:', draftId);
     publishDraftMutation.mutate();
   };
 
@@ -372,34 +398,35 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ editMode = false, 
 
   // Determine if a step is completed
   const isStepCompleted = (step: string) => {
-    // Handle different formats of completedSteps (string array or possibly undefined)
-    if (!draftData?.data.completedSteps) return false;
-    
-    // Make sure we're working with an array
-    const completedSteps = Array.isArray(draftData.data.completedSteps) 
-      ? draftData.data.completedSteps 
-      : [];
-      
-    return completedSteps.includes(step);
+    const wizardProgress = draftData?.data?.wizardProgress || {};
+    return !!wizardProgress[step];
+  };
+
+  // Handle moving to the next step
+  const handleNextStep = () => {
+    const currentIndex = WIZARD_STEPS.findIndex((step) => step.id === currentStep);
+    if (currentIndex < WIZARD_STEPS.length - 1) {
+      setCurrentStep(WIZARD_STEPS[currentIndex + 1].id as ProductDraftStep);
+    }
   };
 
   // Loading state
-  if (isLoading || createDraftMutation.isPending) {
+  if (isDraftLoading || createDraftMutation.isPending || isLoadingUser) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        <span className="ml-2 text-lg">Loading product information...</span>
+        <Loader2 className="w-8 h-8 animate-spin text-primary mr-3" />
+        <span className="text-lg">Loading product information...</span>
       </div>
     );
   }
 
   // Error state
-  if (isError || !draftId) {
+  if (isError || (!draftId && !createDraftMutation.isPending)) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] text-red-500">
         <AlertTriangle className="w-12 h-12 mb-4" />
         <h3 className="text-xl font-semibold mb-2">Error Loading Product</h3>
-        <p className="mb-4">There was a problem loading the product information.</p>
+        <p className="mb-4">There was a problem loading or creating the product draft.</p>
         <Button onClick={() => setLocation('/admin/catalog')}>Return to Catalog</Button>
       </div>
     );
@@ -421,9 +448,14 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ editMode = false, 
             <TabsTrigger 
               key={step.id} 
               value={step.id}
-              className={isStepCompleted(step.id) ? 'data-[state=active]:border-primary data-[state=active]:bg-primary/10 border-green-500 bg-green-100' : ''}
+              className="relative"
             >
-              {step.label}
+              <span className="flex items-center">
+                {isStepCompleted(step.id) && (
+                  <CheckCircle2 className="w-4 h-4 text-green-500 mr-1" />
+                )}
+                {step.label}
+              </span>
             </TabsTrigger>
           ))}
         </TabsList>
@@ -453,15 +485,12 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ editMode = false, 
         <div className="flex gap-2">
           {currentStep !== 'review' ? (
             <Button
-              onClick={() => {
-                const currentIndex = WIZARD_STEPS.findIndex((step) => step.id === currentStep);
-                if (currentIndex < WIZARD_STEPS.length - 1) {
-                  setCurrentStep(WIZARD_STEPS[currentIndex + 1].id as ProductDraftStep);
-                }
-              }}
+              onClick={handleNextStep}
               variant="outline"
+              className="flex items-center"
             >
               Next Step
+              <ChevronRight className="ml-1 h-4 w-4" />
             </Button>
           ) : (
             <Button
