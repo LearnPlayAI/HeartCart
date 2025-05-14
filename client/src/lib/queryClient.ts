@@ -43,9 +43,15 @@ export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
-  options?: { isFormData?: boolean }
+  options?: { isFormData?: boolean; debug?: boolean }
 ): Promise<Response> {
   const isFormData = options?.isFormData || false;
+  const debug = options?.debug || false;
+  
+  // Log for debugging if requested
+  if (debug || url.includes('/api/product-drafts')) {
+    console.log(`API Request: ${method} ${url}`, data);
+  }
   
   const res = await fetch(url, {
     method,
@@ -54,8 +60,29 @@ export async function apiRequest(
     credentials: "include",
   });
 
-  await throwIfResNotOk(res);
-  return res;
+  try {
+    await throwIfResNotOk(res);
+    
+    // Log successful response for debugging
+    if (debug || url.includes('/api/product-drafts')) {
+      const clonedRes = res.clone();
+      const responseText = await clonedRes.text();
+      try {
+        const responseJson = JSON.parse(responseText);
+        console.log(`API Response: ${method} ${url}`, responseJson);
+      } catch {
+        console.log(`API Response: ${method} ${url}`, responseText);
+      }
+    }
+    
+    return res;
+  } catch (error) {
+    // Always log errors for product-drafts API calls
+    if (url.includes('/api/product-drafts')) {
+      console.error(`API Error: ${method} ${url}`, error);
+    }
+    throw error;
+  }
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";

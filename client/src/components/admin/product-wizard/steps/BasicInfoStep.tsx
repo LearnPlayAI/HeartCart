@@ -122,6 +122,9 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, isL
       data.salePrice = null;
     }
 
+    console.log('BasicInfoStep submitting data:', data);
+    
+    // Pass the validated data to parent component for saving
     onSave(data);
   };
 

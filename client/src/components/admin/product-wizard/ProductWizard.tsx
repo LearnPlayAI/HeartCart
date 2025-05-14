@@ -277,6 +277,10 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ editMode = false, 
 
   // Handle saving the current step
   const handleSaveStep = (stepData: any) => {
+    console.log('Saving step data:', stepData);
+    
+    // Format data exactly as expected by the server's updateProductDraftWizardStepSchema
+    // This schema expects { step: string, data: any }
     updateStepMutation.mutate({
       step: currentStep,
       data: {
@@ -291,6 +295,16 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ editMode = false, 
 
   // Handle publishing the product
   const handlePublish = () => {
+    if (!draftId) {
+      toast({
+        title: 'Error',
+        description: 'No draft available to publish',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    console.log('Publishing draft:', draftId);
     publishDraftMutation.mutate();
   };
 
