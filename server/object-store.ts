@@ -8,6 +8,7 @@ import sharp from 'sharp'; // For image processing
 // Standard folders for organizing files
 export const STORAGE_FOLDERS = {
   PRODUCTS: 'products',
+  PRODUCT_IMAGES: 'product_images',
   CATEGORIES: 'categories',
   SUPPLIERS: 'suppliers',
   CATALOGS: 'catalogs',

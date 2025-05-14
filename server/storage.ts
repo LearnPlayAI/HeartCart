@@ -4578,6 +4578,405 @@ export class DatabaseStorage implements IStorage {
       });
     }
   }
+
+  // Product Draft Methods for Database-Centric Approach
+  async createProductDraft(draft: InsertProductDraft): Promise<ProductDraft> {
+    try {
+      // Set lastModified to current timestamp
+      const draftWithTimestamp = {
+        ...draft,
+        lastModified: new Date()
+      };
+      
+      const [newDraft] = await db
+        .insert(productDrafts)
+        .values(draftWithTimestamp)
+        .returning();
+      
+      return newDraft;
+    } catch (error) {
+      logger.error('Error creating product draft', { error });
+      throw error;
+    }
+  }
+
+  async getProductDraft(id: number): Promise<ProductDraft | undefined> {
+    try {
+      const [draft] = await db
+        .select()
+        .from(productDrafts)
+        .where(eq(productDrafts.id, id));
+      
+      return draft;
+    } catch (error) {
+      logger.error('Error getting product draft', { error, id });
+      throw error;
+    }
+  }
+
+  async getProductDraftByOriginalId(originalProductId: number): Promise<ProductDraft | undefined> {
+    try {
+      const [draft] = await db
+        .select()
+        .from(productDrafts)
+        .where(eq(productDrafts.originalProductId, originalProductId));
+      
+      return draft;
+    } catch (error) {
+      logger.error('Error getting product draft by original ID', { error, originalProductId });
+      throw error;
+    }
+  }
+
+  async getUserProductDrafts(userId: number): Promise<ProductDraft[]> {
+    try {
+      const drafts = await db
+        .select()
+        .from(productDrafts)
+        .where(eq(productDrafts.createdBy, userId));
+      
+      return drafts;
+    } catch (error) {
+      logger.error('Error getting user product drafts', { error, userId });
+      throw error;
+    }
+  }
+
+  async updateProductDraft(id: number, data: Partial<InsertProductDraft>): Promise<ProductDraft | undefined> {
+    try {
+      // Always update the lastModified timestamp
+      const updateData = {
+        ...data,
+        lastModified: new Date()
+      };
+      
+      const [updatedDraft] = await db
+        .update(productDrafts)
+        .set(updateData)
+        .where(eq(productDrafts.id, id))
+        .returning();
+      
+      return updatedDraft;
+    } catch (error) {
+      logger.error('Error updating product draft', { error, id });
+      throw error;
+    }
+  }
+
+  async updateProductDraftWizardStep(id: number, step: string, data: any): Promise<ProductDraft | undefined> {
+    try {
+      // First get the current draft
+      const existingDraft = await this.getProductDraft(id);
+      if (!existingDraft) {
+        return undefined;
+      }
+      
+      // Update the appropriate fields based on the step
+      let updateData: Partial<InsertProductDraft> = {
+        lastModified: new Date()
+      };
+      
+      // Update wizard progress to mark this step as completed
+      const wizardProgress = existingDraft.wizardProgress ? { ...existingDraft.wizardProgress } : {};
+      wizardProgress[step] = true;
+      updateData.wizardProgress = wizardProgress;
+      
+      // Update specific fields based on the step
+      switch(step) {
+        case 'basic-info':
+          updateData = {
+            ...updateData,
+            name: data.name,
+            slug: data.slug,
+            sku: data.sku,
+            description: data.description,
+            brand: data.brand,
+            categoryId: data.categoryId,
+            isActive: data.isActive !== undefined ? data.isActive : existingDraft.isActive,
+            isFeatured: data.isFeatured !== undefined ? data.isFeatured : existingDraft.isFeatured,
+            taxable: data.taxable !== undefined ? data.taxable : existingDraft.taxable,
+            taxClass: data.taxClass || existingDraft.taxClass,
+            supplierId: data.supplierId
+          };
+          break;
+          
+        case 'images':
+          // No field updates here as this is handled by updateProductDraftImages
+          break;
+          
+        case 'additional-info':
+          updateData = {
+            ...updateData,
+            weight: data.weight,
+            dimensions: data.dimensions,
+            attributes: data.attributes,
+            stockLevel: data.stockLevel !== undefined ? data.stockLevel : existingDraft.stockLevel,
+            lowStockThreshold: data.lowStockThreshold !== undefined ? data.lowStockThreshold : existingDraft.lowStockThreshold,
+            backorderEnabled: data.backorderEnabled !== undefined ? data.backorderEnabled : existingDraft.backorderEnabled,
+            metaTitle: data.metaTitle,
+            metaDescription: data.metaDescription,
+            metaKeywords: data.metaKeywords
+          };
+          break;
+          
+        case 'sales-promotions':
+          updateData = {
+            ...updateData,
+            costPrice: data.costPrice !== undefined ? data.costPrice : existingDraft.costPrice,
+            regularPrice: data.regularPrice !== undefined ? data.regularPrice : existingDraft.regularPrice,
+            salePrice: data.salePrice !== undefined ? data.salePrice : existingDraft.salePrice,
+            onSale: data.onSale !== undefined ? data.onSale : existingDraft.onSale,
+            markupPercentage: data.markupPercentage !== undefined ? data.markupPercentage : existingDraft.markupPercentage,
+            discountLabel: data.discountLabel,
+            specialSaleText: data.specialSaleText,
+            specialSaleStart: data.specialSaleStart,
+            specialSaleEnd: data.specialSaleEnd,
+            isFlashDeal: data.isFlashDeal !== undefined ? data.isFlashDeal : existingDraft.isFlashDeal,
+            flashDealEnd: data.flashDealEnd
+          };
+          break;
+          
+        default:
+          // For other steps or for a partial update
+          updateData = {
+            ...updateData,
+            ...data
+          };
+      }
+      
+      // Update the draft
+      return await this.updateProductDraft(id, updateData);
+    } catch (error) {
+      logger.error('Error updating product draft wizard step', { error, id, step });
+      throw error;
+    }
+  }
+
+  async updateProductDraftImages(
+    id: number, 
+    imageUrls: string[], 
+    imageObjectKeys: string[], 
+    mainImageIndex = 0
+  ): Promise<ProductDraft | undefined> {
+    try {
+      const updateData: Partial<InsertProductDraft> = {
+        imageUrls,
+        imageObjectKeys,
+        mainImageIndex,
+        lastModified: new Date()
+      };
+      
+      return await this.updateProductDraft(id, updateData);
+    } catch (error) {
+      logger.error('Error updating product draft images', { error, id });
+      throw error;
+    }
+  }
+
+  async deleteProductDraftImage(id: number, imageIndex: number): Promise<ProductDraft | undefined> {
+    try {
+      // Get the current draft
+      const draft = await this.getProductDraft(id);
+      if (!draft || !draft.imageUrls || !draft.imageObjectKeys) {
+        return undefined;
+      }
+      
+      // Create copies of the arrays
+      const imageUrls = [...draft.imageUrls];
+      const imageObjectKeys = [...draft.imageObjectKeys];
+      
+      // Check if index is valid
+      if (imageIndex < 0 || imageIndex >= imageUrls.length) {
+        throw new Error(`Invalid image index: ${imageIndex}`);
+      }
+      
+      // Get the object key to delete from storage
+      const objectKey = imageObjectKeys[imageIndex];
+      
+      // Remove the image from the arrays
+      imageUrls.splice(imageIndex, 1);
+      imageObjectKeys.splice(imageIndex, 1);
+      
+      // Update main image index if needed
+      let mainImageIndex = draft.mainImageIndex || 0;
+      if (mainImageIndex === imageIndex) {
+        // If we're deleting the main image, set to the first one or -1 if empty
+        mainImageIndex = imageUrls.length > 0 ? 0 : -1;
+      } else if (mainImageIndex > imageIndex) {
+        // If main image is after the one we're deleting, decrement the index
+        mainImageIndex--;
+      }
+      
+      // Delete the image from object storage in the background
+      if (objectKey) {
+        objectStore.deleteObject(objectKey).catch(error => {
+          logger.error('Error deleting image from object storage', { error, objectKey });
+        });
+      }
+      
+      // Update the draft
+      return await this.updateProductDraftImages(id, imageUrls, imageObjectKeys, mainImageIndex);
+    } catch (error) {
+      logger.error('Error deleting product draft image', { error, id, imageIndex });
+      throw error;
+    }
+  }
+
+  async publishProductDraft(id: number): Promise<Product | undefined> {
+    try {
+      // Get the draft
+      const draft = await this.getProductDraft(id);
+      if (!draft) {
+        return undefined;
+      }
+      
+      // Convert draft to product
+      const productData: Partial<InsertProduct> = {
+        name: draft.name || '',
+        slug: draft.slug || '',
+        description: draft.description,
+        categoryId: draft.categoryId,
+        // Map the draft price fields to product price fields
+        price: draft.regularPrice || 0,
+        costPrice: draft.costPrice || 0,
+        salePrice: draft.salePrice || null,
+        discountLabel: draft.discountLabel,
+        // Set the main image URL if available
+        imageUrl: draft.imageUrls && draft.imageUrls.length > 0 
+          ? draft.imageUrls[draft.mainImageIndex || 0] 
+          : null,
+        // Set additional images
+        additionalImages: draft.imageUrls && draft.imageUrls.length > 1
+          ? draft.imageUrls.filter((_, index) => index !== (draft.mainImageIndex || 0))
+          : [],
+        // Map stock to product stock
+        stock: draft.stockLevel || 0,
+        isActive: draft.isActive !== undefined ? draft.isActive : true,
+        isFeatured: draft.isFeatured || false,
+        supplier: draft.supplierId ? (await this.getSupplier(draft.supplierId))?.name : null,
+        weight: draft.weight ? parseFloat(draft.weight) : null,
+        dimensions: draft.dimensions,
+        // Special sale fields
+        specialSaleText: draft.specialSaleText,
+        specialSaleStart: draft.specialSaleStart ? draft.specialSaleStart.toISOString() : null,
+        specialSaleEnd: draft.specialSaleEnd ? draft.specialSaleEnd.toISOString() : null,
+        isFlashDeal: draft.isFlashDeal || false,
+        flashDealEnd: draft.flashDealEnd ? draft.flashDealEnd.toISOString() : null,
+      };
+      
+      // Handle existing product (update) vs. new product (insert)
+      let product: Product;
+      
+      if (draft.originalProductId) {
+        // Update existing product
+        const [updatedProduct] = await db
+          .update(products)
+          .set(productData)
+          .where(eq(products.id, draft.originalProductId))
+          .returning();
+        
+        product = updatedProduct;
+        
+        // Update product attributes
+        if (draft.attributes && Array.isArray(draft.attributes)) {
+          // Delete existing attributes
+          await db
+            .delete(productAttributes)
+            .where(eq(productAttributes.productId, product.id));
+          
+          // Insert new attributes
+          for (const attr of draft.attributes) {
+            await db
+              .insert(productAttributes)
+              .values({
+                productId: product.id,
+                attributeId: attr.attributeId,
+                attributeValue: attr.value
+              });
+          }
+        }
+      } else {
+        // Create new product
+        const [newProduct] = await db
+          .insert(products)
+          .values(productData)
+          .returning();
+        
+        product = newProduct;
+        
+        // Insert product attributes
+        if (draft.attributes && Array.isArray(draft.attributes)) {
+          for (const attr of draft.attributes) {
+            await db
+              .insert(productAttributes)
+              .values({
+                productId: product.id,
+                attributeId: attr.attributeId,
+                attributeValue: attr.value
+              });
+          }
+        }
+      }
+      
+      // Save the images with proper filenames
+      if (draft.imageObjectKeys && draft.imageObjectKeys.length > 0) {
+        for (let i = 0; i < draft.imageObjectKeys.length; i++) {
+          const objectKey = draft.imageObjectKeys[i];
+          const imageUrl = draft.imageUrls?.[i];
+          
+          if (!objectKey || !imageUrl) continue;
+          
+          // Save product image record
+          await db
+            .insert(productImages)
+            .values({
+              productId: product.id,
+              imageUrl,
+              objectKey,
+              isMainImage: i === (draft.mainImageIndex || 0),
+              sortOrder: i
+            });
+        }
+      }
+      
+      // Delete the draft
+      await this.deleteProductDraft(id);
+      
+      return product;
+    } catch (error) {
+      logger.error('Error publishing product draft', { error, id });
+      throw error;
+    }
+  }
+
+  async deleteProductDraft(id: number): Promise<boolean> {
+    try {
+      // Get the draft first to access the image object keys
+      const draft = await this.getProductDraft(id);
+      
+      // Delete from database
+      const result = await db
+        .delete(productDrafts)
+        .where(eq(productDrafts.id, id));
+      
+      // Delete images from object storage if needed
+      if (draft?.imageObjectKeys && draft.imageObjectKeys.length > 0) {
+        for (const objectKey of draft.imageObjectKeys) {
+          if (objectKey) {
+            // Delete in the background, don't wait
+            objectStore.deleteObject(objectKey).catch(error => {
+              logger.error('Error deleting image from object storage', { error, objectKey });
+            });
+          }
+        }
+      }
+      
+      return true;
+    } catch (error) {
+      logger.error('Error deleting product draft', { error, id });
+      throw error;
+    }
+  }
 }
 
 export const storage = new DatabaseStorage();
