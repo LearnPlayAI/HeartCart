@@ -283,13 +283,13 @@ export function AdditionalInfoStep() {
     resolver: zodResolver(additionalInfoSchema),
     defaultValues: {
       // Inventory
-      stockLevel: state.stockLevel,
-      lowStockThreshold: state.lowStockThreshold,
-      backorderEnabled: state.backorderEnabled,
+      stockLevel: state.stockLevel || 0,
+      lowStockThreshold: state.lowStockThreshold || 5,
+      backorderEnabled: state.backorderEnabled || false,
       
       // Tax settings
-      taxable: state.taxable,
-      taxClass: state.taxClass,
+      taxable: state.taxable ?? true,
+      taxClass: state.taxClass || 'standard',
       
       // Product details
       supplier: state.supplier || '',
@@ -298,11 +298,14 @@ export function AdditionalInfoStep() {
       dimensions: state.dimensions || '',
       
       // SEO
-      metaTitle: state.metaTitle || state.name,
-      metaDescription: state.metaDescription || state.description,
-      metaKeywords: state.metaKeywords,
+      metaTitle: state.metaTitle || state.name || '',
+      metaDescription: state.metaDescription || state.description || '',
+      metaKeywords: state.metaKeywords || '',
     },
   });
+  
+  // Save button state
+  const [isSaving, setIsSaving] = useState(false);
   
   // Update form when editing product data is loaded
   useEffect(() => {
@@ -331,28 +334,79 @@ export function AdditionalInfoStep() {
   }, [state.productId, form, state]);
   
   // Handle form submission
-  const onSubmit = (values: AdditionalInfoFormValues) => {
-    // Update state with form values
-    setField('stockLevel', values.stockLevel);
-    setField('lowStockThreshold', values.lowStockThreshold);
-    setField('backorderEnabled', values.backorderEnabled);
-    
-    setField('taxable', values.taxable);
-    setField('taxClass', values.taxClass);
-    
-    // Product details
-    setField('supplier', values.supplier);
-    setField('weight', values.weight);
-    setField('dimensions', values.dimensions);
-    
-    // SEO fields
-    setField('metaTitle', values.metaTitle);
-    setField('metaDescription', values.metaDescription);
-    setField('metaKeywords', values.metaKeywords);
-    
-    // Mark step as complete and valid
-    markStepComplete('additional-info');
-    markStepValid('additional-info', true);
+  const onSubmit = async (values: AdditionalInfoFormValues) => {
+    setIsSaving(true);
+    try {
+      // Update state with form values
+      setField('stockLevel', values.stockLevel);
+      setField('lowStockThreshold', values.lowStockThreshold);
+      setField('backorderEnabled', values.backorderEnabled);
+      
+      setField('taxable', values.taxable);
+      setField('taxClass', values.taxClass);
+      
+      // Product details
+      setField('supplier', values.supplier);
+      setField('weight', values.weight);
+      setField('dimensions', values.dimensions);
+      
+      // SEO fields
+      setField('metaTitle', values.metaTitle);
+      setField('metaDescription', values.metaDescription);
+      setField('metaKeywords', values.metaKeywords);
+      
+      // Mark step as complete and valid
+      markStepComplete('additional-info');
+      markStepValid('additional-info', true);
+      
+      // If this is an edit operation, save the data to the server
+      if (state.productId) {
+        try {
+          // Send a PATCH request to save the current data
+          const response = await fetch(`/api/products/${state.productId}/wizard-step`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              step: 'additional-info',
+              data: {
+                stockLevel: values.stockLevel,
+                lowStockThreshold: values.lowStockThreshold,
+                backorderEnabled: values.backorderEnabled,
+                taxable: values.taxable,
+                taxClass: values.taxClass,
+                supplier: values.supplier,
+                weight: values.weight,
+                dimensions: values.dimensions,
+                metaTitle: values.metaTitle,
+                metaDescription: values.metaDescription,
+                metaKeywords: values.metaKeywords,
+                attributes: state.attributes
+              }
+            })
+          });
+          
+          if (!response.ok) {
+            throw new Error('Failed to save data');
+          }
+          
+          toast({
+            title: "Step saved",
+            description: "Step data saved to the database",
+          });
+        } catch (error) {
+          console.error('Error saving step data:', error);
+          toast({
+            title: "Error saving step",
+            description: error instanceof Error ? error.message : "Unknown error occurred",
+            variant: "destructive",
+          });
+        }
+      }
+    } finally {
+      setIsSaving(false);
+    }
   };
   
   // Only save when the component unmounts or the user clicks next

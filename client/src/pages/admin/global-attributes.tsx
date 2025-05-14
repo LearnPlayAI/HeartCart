@@ -137,9 +137,14 @@ function GlobalAttributesPage() {
         return { success: true, data: [] };
       }
       try {
-        const response = await apiRequest("GET", `/api/attributes/${selectedAttribute.id}/options`);
-        console.log('Options response:', response);
-        return response;
+        // Direct API call with fetch to avoid any potential issues with the wrapper
+        const response = await fetch(`/api/attributes/${selectedAttribute.id}/options`);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch options: ${response.statusText}`);
+        }
+        const data = await response.json();
+        console.log('Options direct fetch response:', data);
+        return data;
       } catch (err) {
         console.error('Error fetching options:', err);
         throw err;
@@ -147,8 +152,9 @@ function GlobalAttributesPage() {
     },
     enabled: !!selectedAttribute?.id,
     refetchOnMount: true,
+    refetchOnWindowFocus: false,
     staleTime: 0, // Consider data stale immediately to force refetch
-    retry: 1,
+    retry: 2,
   });
   
   // Extract the options data from the standardized response
@@ -262,18 +268,32 @@ function GlobalAttributesPage() {
         
         console.log("Creating option with payload:", payload);
         
-        const response = await apiRequest(
-          "POST", 
+        // Use direct fetch for more reliable behavior
+        const response = await fetch(
           `/api/attributes/${attributeId}/options`, 
-          payload
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload)
+          }
         );
-        return response;
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+          throw new Error(errorData.message || `HTTP error ${response.status}`);
+        }
+        
+        return await response.json();
       } catch (error) {
         console.error("Error creating option:", error);
         throw error;
       }
     },
     onSuccess: () => {
+      console.log('Successfully created option');
+      
       // Invalidate both options and attributes
       queryClient.invalidateQueries({ 
         queryKey: ["/api/attributes", selectedAttribute?.id, "options"] 
@@ -283,10 +303,13 @@ function GlobalAttributesPage() {
       });
       setOptionDialogOpen(false);
       
-      // Explicitly refetch options to ensure UI updates
-      if (selectedAttribute) {
-        refetchOptions();
-      }
+      // Explicitly refetch options to ensure UI updates with a small delay to ensure DB consistency
+      setTimeout(() => {
+        if (selectedAttribute) {
+          console.log('Refetching options after creation');
+          refetchOptions();
+        }
+      }, 300);
       
       toast({
         title: "Option created successfully",
@@ -350,17 +373,31 @@ function GlobalAttributesPage() {
       if (!selectedAttribute) return null;
 
       try {
-        const response = await apiRequest(
-          "DELETE", 
-          `/api/attributes/${selectedAttribute.id}/options/${id}`
+        // Use direct fetch for more reliability
+        const response = await fetch(
+          `/api/attributes/${selectedAttribute.id}/options/${id}`,
+          {
+            method: 'DELETE',
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          }
         );
-        return response;
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+          throw new Error(errorData.message || `HTTP error ${response.status}`);
+        }
+        
+        return await response.json();
       } catch (error) {
         console.error("Error deleting option:", error);
         throw error;
       }
     },
     onSuccess: () => {
+      console.log("Successfully deleted option");
+      
       // Invalidate specific options query
       queryClient.invalidateQueries({ 
         queryKey: ["/api/attributes", selectedAttribute?.id, "options"] 
@@ -381,10 +418,13 @@ function GlobalAttributesPage() {
         }
       });
       
-      // Explicitly refetch options to ensure UI is updated immediately
-      if (selectedAttribute) {
-        refetchOptions();
-      }
+      // Explicitly refetch options to ensure UI is updated immediately with a delay to ensure DB consistency
+      setTimeout(() => {
+        if (selectedAttribute) {
+          console.log('Refetching options after deletion');
+          refetchOptions();
+        }
+      }, 300);
       
       setConfirmDeleteDialogOpen(false);
       setItemToDelete(null);
