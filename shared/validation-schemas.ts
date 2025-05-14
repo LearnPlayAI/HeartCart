@@ -19,7 +19,8 @@ import {
   insertCatalogSchema,
   insertProductAttributeSchema,
   insertAttributeSchema,
-  insertAttributeOptionSchema
+  insertAttributeOptionSchema,
+  insertProductDraftSchema
 } from './schema';
 
 /**
@@ -49,6 +50,79 @@ export const changePasswordSchema = z.object({
 export const createCategorySchema = insertCategorySchema;
 
 export const updateCategorySchema = insertCategorySchema.partial();
+
+/**
+ * Product Drafts validation schemas
+ */
+export const createProductDraftSchema = insertProductDraftSchema.extend({
+  // Additional validation for draft creation
+});
+
+export const updateProductDraftSchema = z.object({
+  name: z.string().min(3).max(100).optional(),
+  slug: z.string().min(3).max(100).optional(),
+  sku: z.string().max(50).optional(),
+  description: z.string().optional(),
+  brand: z.string().optional(),
+  categoryId: z.number().optional(),
+  isActive: z.boolean().optional(),
+  isFeatured: z.boolean().optional(),
+  
+  // Pricing information
+  costPrice: z.number().optional(),
+  regularPrice: z.number().optional(),
+  salePrice: z.number().optional(),
+  onSale: z.boolean().optional(),
+  markupPercentage: z.number().optional(),
+  
+  // Inventory
+  stockLevel: z.number().optional(),
+  lowStockThreshold: z.number().optional(),
+  backorderEnabled: z.boolean().optional(),
+  
+  // Attributes (stored as JSON)
+  attributes: z.any().optional(),
+  
+  // Supplier information
+  supplierId: z.number().optional(),
+  
+  // Physical properties
+  weight: z.string().optional(),
+  dimensions: z.string().optional(),
+  
+  // Promotions
+  discountLabel: z.string().optional(),
+  specialSaleText: z.string().optional(),
+  specialSaleStart: z.coerce.date().optional().nullable(),
+  specialSaleEnd: z.coerce.date().optional().nullable(),
+  isFlashDeal: z.boolean().optional(),
+  flashDealEnd: z.coerce.date().optional().nullable(),
+  
+  // Tax information
+  taxable: z.boolean().optional(),
+  taxClass: z.string().optional(),
+  
+  // SEO metadata
+  metaTitle: z.string().optional(),
+  metaDescription: z.string().optional(),
+  metaKeywords: z.string().optional(),
+  
+  // Wizard progress tracking
+  wizardProgress: z.any().optional(),
+});
+
+export const updateProductDraftWizardStepSchema = z.object({
+  step: z.string(),
+  data: z.any()
+});
+
+export const productDraftIdParamSchema = z.object({
+  id: z.coerce.number()
+});
+
+export const publishProductDraftSchema = z.object({
+  id: z.number()
+});
 
 /**
  * Product-related validation schemas

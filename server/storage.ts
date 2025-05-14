@@ -11,7 +11,7 @@ import {
   aiSettings, type AiSetting, type InsertAiSetting,
   suppliers, type Supplier, type InsertSupplier,
   catalogs, type Catalog, type InsertCatalog,
-  productDrafts,
+  productDrafts, type ProductDraft, type InsertProductDraft,
   // Centralized attribute system imports - we've removed the hierarchy to simplify
   attributes, type Attribute, type InsertAttribute,
   attributeOptions, type AttributeOption, type InsertAttributeOption,
@@ -155,11 +155,17 @@ export interface IStorage {
   updateProductAttribute(id: number, productAttributeData: Partial<InsertProductAttribute>): Promise<ProductAttribute | undefined>;
   deleteProductAttribute(id: number): Promise<boolean>;
   
-  // Product draft operations for wizard auto-save functionality
-  saveProductDraft(userId: number, draftData: any, step: number, draftId?: string, catalogId?: number): Promise<any>;
-  getProductDraft(userId: number, draftId: string): Promise<any | undefined>;
-  getUserProductDrafts(userId: number, catalogId?: number): Promise<any[]>;
-  deleteProductDraft(userId: number, draftId: string): Promise<boolean>;
+  // Product draft operations for database-centric approach
+  createProductDraft(draft: InsertProductDraft): Promise<ProductDraft>;
+  getProductDraft(id: number): Promise<ProductDraft | undefined>;
+  getProductDraftByOriginalId(originalProductId: number): Promise<ProductDraft | undefined>;
+  getUserProductDrafts(userId: number): Promise<ProductDraft[]>;
+  updateProductDraft(id: number, data: Partial<InsertProductDraft>): Promise<ProductDraft | undefined>;
+  updateProductDraftWizardStep(id: number, step: string, data: any): Promise<ProductDraft | undefined>;
+  updateProductDraftImages(id: number, imageUrls: string[], imageObjectKeys: string[], mainImageIndex?: number): Promise<ProductDraft | undefined>;
+  deleteProductDraftImage(id: number, imageIndex: number): Promise<ProductDraft | undefined>;
+  publishProductDraft(id: number): Promise<Product | undefined>;
+  deleteProductDraft(id: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
