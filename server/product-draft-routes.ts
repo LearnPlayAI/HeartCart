@@ -16,6 +16,9 @@ import {
 import { objectStore, STORAGE_FOLDERS } from "./object-store";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
+import { db } from "./db";
+import { sql } from "drizzle-orm";
+import { ProductDraft } from "@shared/schema";
 
 // Configure multer for in-memory storage (we'll upload to Replit Object Store)
 const upload = multer({ 
@@ -47,164 +50,127 @@ export default function registerProductDraftRoutes(router: Router) {
         throw new BadRequestError("User ID is required");
       }
 
-      // Add user ID to the draft data for new draft creation
-      let draftData = {
-        ...req.body,
-        createdBy: userId,
-        draftStatus: "draft"
-      };
-
-      // If originalProductId is provided, load the product data
-      if (req.body.originalProductId) {
-        logger.debug('Creating draft from existing product', { originalProductId: req.body.originalProductId });
-        
-        const product = await storage.getProductById(req.body.originalProductId);
-        if (!product) {
-          throw new NotFoundError("Original product not found");
-        }
-        
-        // Check if a draft already exists for this product
-        const existingDraft = await storage.getProductDraftByOriginalId(req.body.originalProductId);
-        if (existingDraft) {
-          logger.debug('Found existing draft for product', { 
-            productId: req.body.originalProductId,
-            draftId: existingDraft.id 
-          });
-          // Return the existing draft
-          return sendSuccess(res, existingDraft);
-        }
-
-        // Prefill the draft with product data
-        logger.debug('Prefilling draft with product data', { productId: product.id });
-        
-        // Log the product data we're working with
-        logger.debug('Product data retrieved for draft creation', { 
-          product: {
-            id: product.id,
-            name: product.name,
-            slug: product.slug,
-            categoryId: product.categoryId,
-            price: product.price,
-            salePrice: product.salePrice
-          }
-        });
-
-        // Create a new draft object with all fields explicitly set from product
-        const draftData = {
-          // Core draft fields
-          originalProductId: product.id,
-          draftStatus: "draft",
+      // If a brand new draft is needed (not editing an existing product)
+      if (!req.body.originalProductId) {
+        let draftData = {
+          ...req.body,
           createdBy: userId,
-          
-          // Basic information
-          name: product.name || "",
-          slug: product.slug || "",
-          sku: product.sku || "",
-          description: product.description || "",
-          brand: product.brand || "",
-          categoryId: product.categoryId || null,
-          catalogId: product.catalogId || null,
-          isActive: product.isActive === true,
-          isFeatured: product.isFeatured === true,
-          
-          // Pricing fields
-          costPrice: product.costPrice || null,
-          regularPrice: product.price || null,
-          salePrice: product.salePrice || null,
-          onSale: product.salePrice !== null && product.salePrice < product.price,
-          markupPercentage: product.markupPercentage || null,
-          
-          // Inventory
-          stockLevel: product.stock || 0,
-          lowStockThreshold: product.lowStockThreshold || 5,
-          backorderEnabled: product.backorderEnabled === true,
-          
-          // Attributes
-          attributes: [], // Will be populated later
-          
-          // Supplier info
-          supplierId: product.supplierId || null,
-          
-          // Tax info
-          taxable: product.taxable !== false, // Default to true
-          taxClass: product.taxClass || "standard",
-          
-          // Images
-          imageUrls: product.imageUrl ? [product.imageUrl, ...(product.additionalImages || [])] : [],
-          imageObjectKeys: product.imageUrl ? Array(1 + (product.additionalImages?.length || 0)).fill('') : [],
-          mainImageIndex: 0,
-          
-          // Physical properties
-          weight: product.weight?.toString() || "",
-          dimensions: product.dimensions || "",
-          
-          // Promotional fields
-          discountLabel: product.discountLabel || "",
-          specialSaleText: product.specialSaleText || "",
-          isFlashDeal: product.isFlashDeal === true,
-          
-          // Date fields - using ISO strings for consistency
-          specialSaleStart: product.specialSaleStart ? new Date(product.specialSaleStart).toISOString() : null,
-          specialSaleEnd: product.specialSaleEnd ? new Date(product.specialSaleEnd).toISOString() : null,
-          flashDealEnd: product.flashDealEnd ? new Date(product.flashDealEnd).toISOString() : null,
-          
-          // SEO fields
-          metaTitle: product.metaTitle || "",
-          metaDescription: product.metaDescription || "",
-          metaKeywords: product.metaKeywords || "",
-          
-          // Wizard state tracking
-          wizardProgress: {
-            "basic-info": false,
-            "images": false,
-            "additional-info": false,
-            "sales-promotions": false,
-            "review": false
-          },
-          completedSteps: [],
+          draftStatus: "draft"
         };
-
-        // Load and map product attributes using the new attribute system
-        try {
-          const productAttributes = await storage.getProductAttributes(product.id);
-          if (productAttributes?.length) {
-            // Prepare attributes array with comprehensive mapping of all fields
-            draftData.attributes = productAttributes.map(pa => ({
-              attributeId: pa.attributeId,
-              // Use any available value (textValue or selectedOptions) with fallbacks
-              value: pa.textValue || (Array.isArray(pa.selectedOptions) && pa.selectedOptions.length > 0 
-                ? pa.selectedOptions 
-                : []),
-              // Include attribute metadata
-              attributeName: pa.attribute?.name || "",
-              attributeDisplayName: pa.overrideDisplayName || pa.attribute?.displayName || "",
-              attributeType: pa.attribute?.attributeType || "text",
-              isRequired: !!pa.isRequired,
-              sortOrder: pa.sortOrder || 0,
-              // Include any override values from the product attribute
-              overrideDisplayName: pa.overrideDisplayName || null,
-              overrideDescription: pa.overrideDescription || null
-            }));
-            
-            logger.debug('Mapped product attributes to draft', { 
-              productId: product.id, 
-              attributesCount: productAttributes.length,
-              attributeIds: productAttributes.map(pa => pa.attributeId)
-            });
-          } else {
-            logger.debug('No product attributes found to map to draft', { productId: product.id });
-            // Initialize with empty array to ensure it's not null
-            draftData.attributes = [];
-          }
-        } catch (attrError) {
-          logger.error('Error loading product attributes for draft', { error: attrError, productId: product.id });
-          // Don't block the draft creation if attribute loading fails
-          draftData.attributes = [];
-        }
+        
+        const draft = await storage.createProductDraft(draftData);
+        return sendSuccess(res, draft);
       }
-
-      const draft = await storage.createProductDraft(draftData);
-      sendSuccess(res, draft);
+      
+      // If we're editing an existing product, use the SQL function to create/get the draft
+      logger.debug('Creating draft from existing product using SQL function', { 
+        originalProductId: req.body.originalProductId,
+        userId
+      });
+      
+      try {
+        // Use the SQL function we created to generate a draft with all fields populated
+        const [result] = await db.execute(
+          sql`SELECT * FROM create_product_draft_from_product(${req.body.originalProductId}, ${userId})`
+        );
+        
+        if (!result) {
+          throw new Error('Failed to create draft from product');
+        }
+        
+        logger.debug('Created draft from product using SQL function', {
+          draftId: result.id,
+          productId: result.original_product_id
+        });
+        
+        // Load product attributes if needed
+        if (!result.attributes || result.attributes.length === 0) {
+          try {
+            const productAttributes = await storage.getProductAttributes(req.body.originalProductId);
+            if (productAttributes?.length) {
+              // Map attributes for the draft
+              const mappedAttributes = productAttributes.map(pa => ({
+                attributeId: pa.attributeId,
+                value: pa.textValue || (Array.isArray(pa.selectedOptions) && pa.selectedOptions.length > 0 
+                  ? pa.selectedOptions 
+                  : []),
+                attributeName: pa.attribute?.name || "",
+                attributeDisplayName: pa.overrideDisplayName || pa.attribute?.displayName || "",
+                attributeType: pa.attribute?.attributeType || "text",
+                isRequired: !!pa.isRequired,
+                sortOrder: pa.sortOrder || 0,
+                overrideDisplayName: pa.overrideDisplayName || null,
+                overrideDescription: pa.overrideDescription || null
+              }));
+              
+              // Update the draft with attributes
+              await storage.updateProductDraft(result.id, { attributes: mappedAttributes });
+              result.attributes = mappedAttributes;
+            } else {
+              logger.debug('No product attributes found to map to draft', { productId: req.body.originalProductId });
+            }
+          } catch (attrError) {
+            logger.error('Error loading product attributes for draft', { 
+              error: attrError, 
+              productId: req.body.originalProductId 
+            });
+          }
+        }
+        
+        // Format the result to match what the client expects
+        const formattedDraft = {
+          id: result.id,
+          originalProductId: result.original_product_id,
+          draftStatus: result.draft_status,
+          createdBy: result.created_by,
+          createdAt: result.created_at,
+          lastModified: result.last_modified,
+          name: result.name,
+          slug: result.slug,
+          sku: result.sku,
+          description: result.description,
+          brand: result.brand,
+          categoryId: result.category_id,
+          isActive: result.is_active,
+          isFeatured: result.is_featured,
+          costPrice: result.cost_price,
+          regularPrice: result.regular_price,
+          salePrice: result.sale_price,
+          onSale: result.on_sale,
+          markupPercentage: result.markup_percentage,
+          imageUrls: result.image_urls,
+          imageObjectKeys: result.image_object_keys,
+          mainImageIndex: result.main_image_index || 0,
+          stockLevel: result.stock_level || 0,
+          lowStockThreshold: result.low_stock_threshold || 5,
+          backorderEnabled: result.backorder_enabled || false,
+          attributes: result.attributes || [],
+          supplierId: result.supplier_id,
+          weight: result.weight,
+          dimensions: result.dimensions,
+          discountLabel: result.discount_label,
+          specialSaleText: result.special_sale_text,
+          specialSaleStart: result.special_sale_start,
+          specialSaleEnd: result.special_sale_end,
+          isFlashDeal: result.is_flash_deal,
+          flashDealEnd: result.flash_deal_end,
+          taxable: result.taxable,
+          taxClass: result.tax_class,
+          metaTitle: result.meta_title,
+          metaDescription: result.meta_description,
+          metaKeywords: result.meta_keywords,
+          wizardProgress: result.wizard_progress,
+          completedSteps: result.completed_steps || []
+        };
+        
+        return sendSuccess(res, formattedDraft);
+      } catch (error) {
+        logger.error('Error creating draft from product', { 
+          error, 
+          productId: req.body.originalProductId 
+        });
+        throw error;
+      }
     })
   );
 
