@@ -66,6 +66,26 @@ import { sendSuccess, sendError } from './api-response';
 import { responseWrapperMiddleware, withStandardResponse, createPaginatedResponse } from './response-wrapper';
 import * as z from "zod"; // For schema validation
 
+// Custom error handling function since handleApiError is missing
+function handleApiError(error: any, res: Response) {
+  logger.error('API Error:', { error });
+  
+  if (error instanceof NotFoundError) {
+    return sendError(res, error.message, 404, 'NOT_FOUND', { entity: error.details?.resourceType });
+  }
+  
+  if (error instanceof ValidationError) {
+    return sendError(res, error.message, 400, 'VALIDATION_ERROR', error.details);
+  }
+  
+  if (error instanceof BadRequestError) {
+    return sendError(res, error.message, 400, 'BAD_REQUEST');
+  }
+
+  // Default error handling
+  return sendError(res, error.message || "An unexpected error occurred", 500, 'INTERNAL_SERVER_ERROR');
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Use memory storage for file uploads to avoid local filesystem
   // Files will go directly to Replit Object Storage
