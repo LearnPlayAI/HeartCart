@@ -154,6 +154,46 @@ export function AdditionalInfoStep() {
     }
   };
   
+  // Fetch options for a selected attribute
+  const fetchOptionsForAttribute = async (attributeId: number) => {
+    if (!attributeId) return [];
+    
+    try {
+      setIsFetchingOptions(true);
+      console.log(`Fetching options for attribute ID: ${attributeId}`);
+      
+      const options = await fetchAttributeOptions(attributeId);
+      console.log(`Got ${options.length} options for attribute ${attributeId}:`, options);
+      
+      // Update our formatted attributes with the fetched options
+      setFormattedAttributes(prev => 
+        prev.map(attr => 
+          attr.id === attributeId ? { 
+            ...attr, 
+            options: options.map(opt => ({
+              id: opt.id,
+              value: opt.value,
+              displayValue: opt.displayValue || opt.value,
+              metadata: opt.metadata || {}
+            }))
+          } : attr
+        )
+      );
+      
+      return options;
+    } catch (err) {
+      console.error(`Error fetching options for attribute ${attributeId}:`, err);
+      toast({
+        title: "Error",
+        description: `Failed to load options for this attribute.`,
+        variant: "destructive",
+      });
+      return [];
+    } finally {
+      setIsFetchingOptions(false);
+    }
+  };
+
   // Handle selecting options for an attribute
   const handleSelectAttributeOptions = async (attrId: number, optionIds: number[]) => {
     console.log(`Setting options for attribute ${attrId}:`, optionIds);
@@ -547,8 +587,7 @@ export function AdditionalInfoStep() {
       setField('backorderEnabled', values.backorderEnabled);
       
       setField('taxable', values.taxable);
-      setField('taxClass', values.taxClass);
-      setField('taxRate', values.taxRate);
+      setField('taxClass', values.taxClass || '');
       
       // Product details
       setField('supplier', values.supplier);
@@ -862,38 +901,19 @@ export function AdditionalInfoStep() {
                                     onCheckedChange={(checked) => {
                                       console.log(`Toggle attribute ${attr.name} (ID: ${attr.id}) to: ${checked}`);
                                       
+                                      // Use our integrated function to handle toggling
+                                      handleToggleAttribute(attr.id, checked);
+                                      
+                                      // Also update the attributesUsed array for UI state
                                       if (checked) {
-                                        // Update local state
                                         setAttributesUsed(prev => [...prev, attr.id]);
                                         
-                                        // Add to product's attributes in context
-                                        // Using the centralized attribute system format
-                                        addAttribute({
-                                          id: attr.id,
-                                          name: attr.name,
-                                          isCustom: false,
-                                          isRequired: attr.isRequired || false,
-                                          attributeType: attr.type || 'select',
-                                          displayInProductSummary: attr.displayInProductSummary || false,
-                                          selectedOptions: [], // Will be populated during checkout
-                                          // Empty textValue since this will be populated by customer
-                                          textValue: "",
-                                          sortOrder: 0
-                                        });
-                                        
-                                        console.log(`Added attribute ${attr.name} to product attributes`);
-                                      } else {
-                                        // Update local state
-                                        setAttributesUsed(prev => prev.filter(id => id !== attr.id));
-                                        
-                                        // Find and remove from product's attributes in context
-                                        const index = state.attributes.findIndex(a => a.id === attr.id);
-                                        if (index !== -1) {
-                                          removeAttribute(index);
-                                          console.log(`Removed attribute ${attr.name} from product attributes at index ${index}`);
-                                        } else {
-                                          console.warn(`Could not find attribute ${attr.name} in product attributes to remove`);
+                                        // Fetch options for this attribute if it's selected
+                                        if (attr.attributeType === 'select' || attr.type === 'select') {
+                                          fetchOptionsForAttribute(attr.id);
                                         }
+                                      } else {
+                                        setAttributesUsed(prev => prev.filter(id => id !== attr.id));
                                       }
                                     }}
                                   />
