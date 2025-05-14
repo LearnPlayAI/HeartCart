@@ -58,6 +58,178 @@ initializeGeminiModel().catch(err => {
   });
 });
 
+/**
+ * Generate product description suggestions using Gemini AI
+ */
+export async function generateProductDescription(
+  productName: string,
+  currentDescription: string = '',
+  categoryName: string = '',
+  brandName: string = '',
+  keyFeatures: string[] = []
+): Promise<string[]> {
+  try {
+    logger.debug('Generating product description with Gemini', {
+      productName,
+      categoryName,
+      brandName,
+      descriptionLength: currentDescription.length,
+      featureCount: keyFeatures.length
+    });
+
+    // Get current model
+    const currentModel = await getCurrentAiModel();
+    
+    // Format the prompt
+    const prompt = `Generate 3 different professional product descriptions for an e-commerce website.
+    Each description should be engaging, highlight benefits, and be 100-150 words in 2-3 paragraphs.
+    Use a professional but conversational tone suitable for online shopping.
+    
+    Product Name: ${productName}
+    ${categoryName ? `Category: ${categoryName}` : ''}
+    ${brandName ? `Brand: ${brandName}` : ''}
+    ${keyFeatures.length > 0 ? `Key Features: ${keyFeatures.join(', ')}` : ''}
+    ${currentDescription ? `Current Description: ${currentDescription}` : ''}
+    
+    Provide 3 distinct descriptions separated by "---" without any additional text, numbering, or commentary.
+    Each description should be substantively different in structure and focus.`;
+
+    // Generate content using Gemini
+    const model = genAI.getGenerativeModel({ model: currentModel });
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const responseText = await response.text();
+    
+    // Split the response by "---" delimiter
+    const descriptions = responseText
+      .split('---')
+      .map(desc => desc.trim())
+      .filter(desc => desc.length > 0);
+    
+    if (descriptions.length === 0) {
+      logger.warn('No descriptions found in Gemini response', {
+        responsePreview: responseText.substring(0, 100) + '...'
+      });
+      throw new Error('No valid descriptions generated');
+    }
+    
+    logger.info('Successfully generated product descriptions', {
+      count: descriptions.length,
+      averageLength: descriptions.reduce((sum, desc) => sum + desc.length, 0) / descriptions.length
+    });
+    
+    return descriptions;
+  } catch (error) {
+    logger.error('Error generating product descriptions with Gemini', {
+      error,
+      productName,
+      errorType: error instanceof Error ? error.name : typeof error,
+      errorMessage: error instanceof Error ? error.message : String(error)
+    });
+    throw error;
+  }
+}
+
+/**
+ * Generate SEO data suggestions using Gemini AI
+ */
+export async function generateSEOData(
+  productName: string,
+  productDescription: string = '',
+  categoryName: string = '',
+  currentTitle: string = '',
+  currentMetaDescription: string = '',
+  currentKeywords: string[] = []
+): Promise<any[]> {
+  try {
+    logger.debug('Generating SEO data with Gemini', {
+      productName,
+      categoryName,
+      descriptionLength: productDescription.length,
+      hasCurrent: {
+        title: !!currentTitle,
+        metaDescription: !!currentMetaDescription,
+        keywords: currentKeywords.length > 0
+      }
+    });
+
+    // Get current model
+    const currentModel = await getCurrentAiModel();
+    
+    // Format the prompt
+    const prompt = `Generate 3 different SEO optimization suggestions for an e-commerce product.
+    For each suggestion, provide:
+    1. A title tag (60-65 characters max)
+    2. A meta description (150-160 characters max)
+    3. 5-7 relevant keywords
+    4. An SEO score (0.0-1.0) indicating optimization quality
+    5. 2-3 SEO improvement tips
+    
+    Product Name: ${productName}
+    ${categoryName ? `Category: ${categoryName}` : ''}
+    ${productDescription ? `Product Description: ${productDescription}` : ''}
+    ${currentTitle ? `Current Title: ${currentTitle}` : ''}
+    ${currentMetaDescription ? `Current Meta Description: ${currentMetaDescription}` : ''}
+    ${currentKeywords.length > 0 ? `Current Keywords: ${currentKeywords.join(', ')}` : ''}
+    
+    Format your response as valid JSON with this structure:
+    [
+      {
+        "title": "...",
+        "metaDescription": "...",
+        "keywords": ["keyword1", "keyword2", ...],
+        "score": 0.85,
+        "tips": ["tip1", "tip2", ...]
+      },
+      ...
+    ]`;
+
+    // Generate content using Gemini
+    const model = genAI.getGenerativeModel({ model: currentModel });
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.7,
+        topK: 40,
+        topP: 0.95,
+        responseFormat: { type: 'json' }
+      }
+    });
+    
+    const response = await result.response;
+    const responseText = await response.text();
+    
+    try {
+      // Parse JSON response
+      const suggestions = JSON.parse(responseText);
+      
+      if (!Array.isArray(suggestions) || suggestions.length === 0) {
+        throw new Error('Invalid suggestions format received');
+      }
+      
+      logger.info('Successfully generated SEO suggestions', {
+        count: suggestions.length
+      });
+      
+      return suggestions;
+    } catch (parseError) {
+      logger.error('Error parsing Gemini JSON response for SEO data', {
+        error: parseError,
+        responsePreview: responseText.substring(0, 200) + '...'
+      });
+      throw new Error('Failed to parse AI-generated SEO data');
+    }
+  } catch (error) {
+    logger.error('Error generating SEO data with Gemini', {
+      error,
+      productName,
+      errorType: error instanceof Error ? error.name : typeof error,
+      errorMessage: error instanceof Error ? error.message : String(error)
+    });
+    throw error;
+  }
+}
+
 // Function to initialize the model based on saved settings
 async function initializeGeminiModel() {
   try {
