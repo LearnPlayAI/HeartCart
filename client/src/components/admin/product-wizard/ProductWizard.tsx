@@ -85,13 +85,14 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ editMode = false, 
     mutationFn: async (draftData: any) => {
       console.log('Submitting draft data:', draftData);
       
-      // The server validation schema expects direct draft data, not wrapped with step and draftData fields
-      // This matches the server's createProductDraftSchema, which extends insertProductDraftSchema
+      // Format the data according to the server's validation schema
+      // The server expects data with step as a number from 0-3
       const formattedData = {
         ...draftData,
         catalogId: draftData.catalogId || 1, // Default catalog ID if not provided
         supplierId: draftData.supplierId || null,
         attributes: draftData.attributes || [],
+        step: 0, // Initial step (0 = basic-info)
       };
       
       console.log('Formatted data for API:', formattedData);
@@ -144,14 +145,21 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ editMode = false, 
     mutationFn: async ({ step, data }: { step: ProductDraftStep; data: any }) => {
       if (!draftId) throw new Error('No draft ID available');
       
-      // Format the data according to the updateProductDraftWizardStepSchema
-      // Looking at the validation schema, it expects { step: string, data: any }
-      const requestData = {
-        step,
-        data
+      // Convert string step to number for API
+      const stepMap: Record<ProductDraftStep, number> = {
+        'basic-info': 0,
+        'images': 1,
+        'additional-info': 2,
+        'review': 3
       };
       
-      console.log(`Updating product draft step: ${step} with data:`, requestData);
+      // Format the data according to server validation schema
+      const requestData = {
+        step: stepMap[step], // Convert string step to number
+        draftData: data
+      };
+      
+      console.log(`Updating product draft step: ${step} (${stepMap[step]}) with data:`, requestData);
       
       const response = await apiRequest('PATCH', `/api/product-drafts/${draftId}/wizard-step`, requestData);
       return response.json();

@@ -5259,18 +5259,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const draftId = req.params.draftId;
     
     try {
-      const draft = await storage.getProductDraft(user.id, draftId);
+      const draft = await storage.getProductDraft(parseInt(draftId));
       
       if (!draft) {
-        throw new NotFoundError("Product draft not found", "draft");
+        return res.status(404).json({
+          success: false,
+          error: {
+            message: "Product draft not found",
+            code: "NOT_FOUND",
+            entity: "draft"
+          }
+        });
       }
       
       res.json({
         success: true,
         data: draft
       });
-    } catch (error) {
-      handleApiError(error, res);
+    } catch (error: any) {
+      // Simplified error handling
+      logger.error('Error fetching product draft:', { error, userId: user.id, draftId });
+      res.status(500).json({
+        success: false,
+        error: {
+          message: error.message || "An unexpected error occurred",
+          code: "INTERNAL_SERVER_ERROR"
+        }
+      });
     }
   }));
   
