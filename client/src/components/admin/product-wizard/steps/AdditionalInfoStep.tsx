@@ -902,7 +902,7 @@ export function AdditionalInfoStep() {
                                       console.log(`Toggle attribute ${attr.name} (ID: ${attr.id}) to: ${checked}`);
                                       
                                       // Use our integrated function to handle toggling
-                                      handleToggleAttribute(attr.id, checked);
+                                      toggleAttribute(attr.id, checked);
                                       
                                       // Also update the attributesUsed array for UI state
                                       if (checked) {
@@ -988,15 +988,45 @@ export function AdditionalInfoStep() {
                                     <div className="mt-3">
                                       <span className="text-sm font-medium mb-1 block">Available options:</span>
                                       <div className="flex flex-wrap gap-2 mt-2">
-                                        {attr.options.map(option => (
-                                          <Badge 
-                                            key={option.id} 
-                                            variant="outline"
-                                            className="px-3 py-1 text-xs"
-                                          >
-                                            {option.displayValue}
-                                          </Badge>
-                                        ))}
+                                        {attr.options.length > 0 ? (
+                                          attr.options.map(option => {
+                                            // Check if this option is selected for this attribute
+                                            const attrInState = state.attributes.find(a => a.id === attr.id);
+                                            const isSelected = attrInState?.selectedOptions?.includes(option.id);
+                                            
+                                            return (
+                                              <Badge 
+                                                key={option.id} 
+                                                variant={isSelected ? "default" : "outline"}
+                                                className={`px-3 py-1 text-xs cursor-pointer hover:bg-primary/10 ${
+                                                  isSelected ? 'bg-primary text-primary-foreground' : ''
+                                                }`}
+                                                onClick={() => {
+                                                  // Get current attribute from state
+                                                  const attrInState = state.attributes.find(a => a.id === attr.id);
+                                                  let currentSelected = attrInState?.selectedOptions || [];
+                                                  
+                                                  if (isSelected) {
+                                                    // Remove option if already selected
+                                                    currentSelected = currentSelected.filter(id => id !== option.id);
+                                                  } else {
+                                                    // Add option if not already selected
+                                                    currentSelected = [...currentSelected, option.id];
+                                                  }
+                                                  
+                                                  // Update options in state
+                                                  updateAttributeOptions(attr.id, currentSelected);
+                                                }}
+                                              >
+                                                {option.displayValue}
+                                              </Badge>
+                                            );
+                                          })
+                                        ) : (
+                                          <div className="text-sm text-muted-foreground italic">
+                                            No options available for this attribute. Please configure options in the global attributes section.
+                                          </div>
+                                        )}
                                       </div>
                                     </div>
                                   </div>
