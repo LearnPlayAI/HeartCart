@@ -35,6 +35,7 @@ export interface ProductDraftData {
   draftStatus: 'draft' | 'review' | 'ready';
   wizardProgress: Record<string, boolean>;
   originalProductId?: number;
+  hasBackgroundRemoved?: boolean; // For image background removal option
 }
 
 export interface ProductAttribute {

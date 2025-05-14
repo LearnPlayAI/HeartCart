@@ -19,7 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Loader2, Save } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { StepComponentProps } from '../types';
-import { Tabs, TabsContent, TabsItem, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { 

@@ -116,8 +116,8 @@ export const StepReview: React.FC<StepComponentProps> = ({
         )}
         
         {draft.wizardProgress && Object.values(draft.wizardProgress).some(v => !v) && (
-          <Alert variant="warning" className="mb-6">
-            <Info className="h-4 w-4" />
+          <Alert className="mb-6 border-yellow-500 bg-yellow-50">
+            <Info className="h-4 w-4 text-yellow-500" />
             <AlertTitle>Incomplete Steps</AlertTitle>
             <AlertDescription>
               Some steps haven't been completed yet. Make sure all information is entered correctly.

@@ -125,14 +125,20 @@ function App() {
               <AdminProtectedRoute path="/admin/catalogs/:id/edit" component={EditCatalog} />
               <AdminProtectedRoute path="/admin/catalogs/:id/products" component={CatalogProducts} />
               <AdminProtectedRoute path="/admin/products" component={AdminProducts} />
-              <AdminProtectedRoute path="/admin/products/new" component={ProductEditPage} />
-              <AdminProtectedRoute path="/admin/products/:id/edit" component={ProductEditPage} />
+              
+              {/* Original Product Routes (Commented out to use new implementation) */}
+              {/* <AdminProtectedRoute path="/admin/products/new" component={ProductEditPage} /> */}
+              {/* <AdminProtectedRoute path="/admin/products/:id/edit" component={ProductEditPage} /> */}
               <AdminProtectedRoute path="/admin/products/:id/images" component={ProductImages} />
               <AdminProtectedRoute path="/admin/products/:productId/attributes" component={ProductAttributes} />
               
-              {/* New Product Wizard Routes */}
-              <AdminProtectedRoute path="/admin/products/wizard/:id?" component={ProductWizardPage} />
-              <AdminProtectedRoute path="/admin/catalogs/:catalogId/products/wizard" component={ProductWizardPage} />
+              {/* New Product Manager Routes */}
+              <AdminProtectedRoute path="/admin/products/new" component={() => import("@/pages/admin/product-create-new").then(module => module.default)} />
+              <AdminProtectedRoute path="/admin/products/:id/edit" component={() => import("@/pages/admin/product-edit-new").then(module => module.default)} />
+              
+              {/* Original Wizard Routes (Commented out to use new implementation) */}
+              {/* <AdminProtectedRoute path="/admin/products/wizard/:id?" component={ProductWizardPage} /> */}
+              {/* <AdminProtectedRoute path="/admin/catalogs/:catalogId/products/wizard" component={ProductWizardPage} /> */}
               <AdminProtectedRoute path="/admin/categories" component={AdminCategories} />
               <AdminProtectedRoute path="/admin/categories/:categoryId/attributes" component={CategoryAttributes} />
               <AdminProtectedRoute path="/admin/category-attributes/:categoryId" component={CategoryAttributes} />
