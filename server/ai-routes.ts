@@ -2,13 +2,13 @@ import express, { Request, Response } from 'express';
 import asyncHandler from 'express-async-handler';
 import { logger } from './logger';
 import { generateProductDescription, generateSEOData, generateProductTags } from './ai-service';
-import { checkAuth } from './auth-middleware';
+import { isAuthenticated } from './auth-middleware';
 
 // Create AI routes router
 const aiRouter = express.Router();
 
 // Add authentication middleware to all AI routes
-aiRouter.use(checkAuth);
+aiRouter.use(isAuthenticated);
 
 /**
  * Generate product description suggestions

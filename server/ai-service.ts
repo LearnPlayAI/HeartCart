@@ -4,14 +4,29 @@ import { storage } from './storage';
 import { InsertAiSetting } from '@shared/schema';
 import { logger } from './logger';
 
-// Environment variable validation
-if (!process.env.GEMINI_API_KEY) {
-  logger.error('GEMINI_API_KEY environment variable is required');
-  process.exit(1);
-}
+// Check for API key and set up a flag to track availability
+let isGeminiAvailable = false;
+let geminiApiKeyError: string | null = null;
 
-// Initialize the Google Generative AI API
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+// Initialize the Google Generative AI API if API key is available
+let genAI: GoogleGenerativeAI;
+
+try {
+  if (!process.env.GEMINI_API_KEY) {
+    geminiApiKeyError = 'MISSING_API_KEY';
+    logger.error('GEMINI_API_KEY environment variable is missing');
+  } else {
+    genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    isGeminiAvailable = true;
+  }
+} catch (error) {
+  geminiApiKeyError = 'INVALID_API_KEY';
+  logger.error('Error initializing Gemini API', {
+    error,
+    errorType: error instanceof Error ? error.name : typeof error,
+    errorMessage: error instanceof Error ? error.message : String(error)
+  });
+}
 
 // Define available Gemini AI models
 const AVAILABLE_GEMINI_MODELS = [
@@ -44,19 +59,32 @@ async function getCurrentAiModel(): Promise<string> {
 }
 
 // Initialize the Gemini Pro Vision model for image tasks
-let geminiProVision: GenerativeModel;
+let geminiProVision: GenerativeModel | null = null;
 
-// Default initialization with fallback model
-geminiProVision = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-
-// Initialize with the saved model (will be updated in the initialize function)
-initializeGeminiModel().catch(err => {
-  logger.error('Error initializing Gemini model', {
-    error: err,
-    errorType: err instanceof Error ? err.name : typeof err,
-    errorMessage: err instanceof Error ? err.message : String(err)
-  });
-});
+// Only initialize if the API is available
+if (isGeminiAvailable) {
+  try {
+    // Default initialization with fallback model
+    geminiProVision = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    
+    // Initialize with the saved model (will be updated in the initialize function)
+    initializeGeminiModel().catch(err => {
+      logger.error('Error initializing Gemini model', {
+        error: err,
+        errorType: err instanceof Error ? err.name : typeof err,
+        errorMessage: err instanceof Error ? err.message : String(err)
+      });
+    });
+  } catch (error) {
+    logger.error('Failed to create initial Gemini model', { 
+      error, 
+      errorType: error instanceof Error ? error.name : typeof error,
+      errorMessage: error instanceof Error ? error.message : String(error)
+    });
+    isGeminiAvailable = false;
+    geminiApiKeyError = 'INITIALIZATION_ERROR';
+  }
+}
 
 /**
  * Generate product description suggestions using Gemini AI
