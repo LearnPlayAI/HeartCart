@@ -3,8 +3,6 @@
  * 
  * This component handles the third step of the product creation wizard,
  * collecting additional product information like inventory, attributes, SEO, etc.
- * 
- * Updated to work with the centralized attribute system.
  */
 
 import React, { useState, useEffect } from 'react';
@@ -24,10 +22,10 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { 
   PackageIcon, 
+  TruckIcon, 
   TagIcon, 
   ChevronDownIcon, 
   ChevronRightIcon,
@@ -45,7 +43,6 @@ import {
   type ProductAttribute,
   type AttributeOption
 } from '../components/AttributeConfig';
-import { useToast } from '@/hooks/use-toast';
 
 // Form validation schema
 const additionalInfoSchema = z.object({
@@ -74,7 +71,6 @@ type AdditionalInfoFormValues = z.infer<typeof additionalInfoSchema>;
 
 export function AdditionalInfoStep() {
   const { state, setField, markStepComplete, markStepValid, addAttribute, updateAttribute, removeAttribute } = useProductWizardContext();
-  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('inventory');
   const [attributeNameInput, setAttributeNameInput] = useState('');
   const [attributeValueInput, setAttributeValueInput] = useState('');
@@ -165,9 +161,9 @@ export function AdditionalInfoStep() {
         .filter(attr => attr.isCustom)
         .map(attr => ({
           name: attr.name,
-          value: attr.textValue || '', // Use textValue for centralized system
-          type: attr.attributeType || 'text',
-          required: attr.isRequired || false
+          value: attr.value || '',
+          type: attr.type || 'text',
+          required: attr.required || false
         }));
       
       if (customAttrs.length > 0) {
@@ -229,9 +225,7 @@ export function AdditionalInfoStep() {
   useEffect(() => {
     if (state.attributes && state.attributes.length > 0) {
       // Extract attribute IDs from state attributes and update attributesUsed
-      const usedAttributeIds = state.attributes
-        .filter(attr => !attr.isCustom)
-        .map(attr => attr.id);
+      const usedAttributeIds = state.attributes.map(attr => attr.id);
       setAttributesUsed(usedAttributeIds);
       console.log('Initializing attributesUsed from state:', usedAttributeIds);
     }
@@ -364,10 +358,32 @@ export function AdditionalInfoStep() {
     };
   }, [form, onSubmit]);
   
+  // Handle adding a custom attribute
+  const handleAddAttribute = () => {
+    if (!attributeNameInput.trim()) return;
+    
+    // Add attribute to state
+    addAttribute({
+      id: Date.now(), // Temporary ID for UI purposes
+      name: attributeNameInput.trim(),
+      value: attributeValueInput.trim(),
+      isCustom: true,
+    });
+    
+    // Clear inputs
+    setAttributeNameInput('');
+    setAttributeValueInput('');
+  };
+  
   // Handle updating an attribute value
   const handleAttributeValueChange = (index: number, value: string) => {
-    const attribute = { ...state.attributes[index], textValue: value };
+    const attribute = { ...state.attributes[index], value };
     updateAttribute(index, attribute);
+  };
+  
+  // Handle removing an attribute
+  const handleRemoveAttribute = (index: number) => {
+    removeAttribute(index);
   };
   
   return (
@@ -432,7 +448,7 @@ export function AdditionalInfoStep() {
                             />
                           </FormControl>
                           <FormDescription>
-                            Trigger alerts when stock falls below this level
+                            Trigger alerts when stock reaches this level
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
@@ -440,42 +456,52 @@ export function AdditionalInfoStep() {
                     />
                   </div>
                   
-                  <div className="grid grid-cols-1 gap-6">
-                    {/* Backorder Option */}
-                    <FormField
-                      control={form.control}
-                      name="backorderEnabled"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                          <div className="space-y-0.5">
-                            <FormLabel>Allow Backorders</FormLabel>
-                            <FormDescription>
-                              Allow customers to purchase products that are out of stock
-                            </FormDescription>
-                          </div>
-                          <FormControl>
-                            <Switch
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                  {/* Backorder Enabled */}
+                  <FormField
+                    control={form.control}
+                    name="backorderEnabled"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                          <FormLabel>Allow Backorders</FormLabel>
+                          <FormDescription>
+                            Customers can order even when out of stock
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </TabsContent>
+                
+                {/* Attributes Tab */}
+                
+                {/* SEO Tab */}
+                <TabsContent value="seo" className="space-y-6">
                   
-                  {/* Supplier Info */}
-                  <div className="space-y-4 pt-4 border-t mt-6">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <h3 className="text-lg font-medium">Supplier Information</h3>
-                        <p className="text-sm text-muted-foreground">
-                          This information is for internal reference only
-                        </p>
+                  {/* Product Details Section */}
+                  <Collapsible
+                    defaultOpen
+                    className="border rounded-md overflow-hidden"
+                  >
+                    <CollapsibleTrigger className="flex w-full items-center justify-between px-4 py-3 bg-muted/30 hover:bg-muted transition-colors">
+                      <div className="flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 mr-2">
+                          <rect width="20" height="14" x="2" y="3" rx="2" />
+                          <line x1="8" x2="16" y1="21" y2="21" />
+                          <line x1="12" x2="12" y1="17" y2="21" />
+                        </svg>
+                        <h3 className="font-medium">Product Details</h3>
                       </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 gap-6">
+                      <ChevronDownIcon className="h-4 w-4" />
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="px-4 py-3 space-y-4">
+                      {/* Supplier - Dynamically populated based on catalog */}
                       <FormField
                         control={form.control}
                         name="supplier"
@@ -484,87 +510,119 @@ export function AdditionalInfoStep() {
                             <FormLabel>Supplier</FormLabel>
                             <FormControl>
                               <Input
+                                placeholder="Supplier name"
                                 {...field}
-                                readOnly={!!state.catalogId} // Make read-only if populated from catalog
-                                className={state.catalogId ? 'bg-muted cursor-not-allowed' : ''}
+                                value={field.value || ''}
+                                readOnly
+                                className="bg-muted/50"
                               />
                             </FormControl>
                             <FormDescription>
-                              {state.catalogId 
-                                ? 'Supplier automatically set from selected catalog' 
-                                : 'Enter the supplier name for this product'}
+                              Name of the product supplier (automatically populated from the associated catalog)
                             </FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
-                    </div>
-                  </div>
+                      
+                      {/* Weight and dimensions have been removed as per requirements */}
+                    </CollapsibleContent>
+                  </Collapsible>
                   
-                  {/* Tax Settings */}
-                  <div className="space-y-4 pt-4 border-t mt-6">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <h3 className="text-lg font-medium">Tax Settings</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Configure taxation for this product
-                        </p>
+                  {/* Sales & Promotions Section has been moved to its own dedicated step */}
+                  
+                  <Collapsible
+                    defaultOpen
+                    className="border rounded-md overflow-hidden"
+                  >
+                    <CollapsibleTrigger className="flex w-full items-center justify-between px-4 py-3 bg-muted/30 hover:bg-muted transition-colors">
+                      <div className="flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 mr-2">
+                          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                        </svg>
+                        <h3 className="font-medium">SEO Information</h3>
                       </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 gap-6">
+                      <ChevronDownIcon className="h-4 w-4" />
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="px-4 py-3 space-y-4">
+                      {/* Meta Title */}
                       <FormField
                         control={form.control}
-                        name="taxable"
+                        name="metaTitle"
                         render={({ field }) => (
-                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                            <div className="space-y-0.5">
-                              <FormLabel>Taxable Product</FormLabel>
-                              <FormDescription>
-                                Apply tax to this product
-                              </FormDescription>
-                            </div>
+                          <FormItem>
+                            <FormLabel>Meta Title</FormLabel>
                             <FormControl>
-                              <Switch
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
+                              <Input
+                                placeholder="Product page title"
+                                {...field}
+                                value={field.value || ''}
                               />
                             </FormControl>
+                            <FormDescription>
+                              Leave empty to use product name
+                            </FormDescription>
+                            <FormMessage />
                           </FormItem>
                         )}
                       />
                       
-                      {form.watch('taxable') && (
-                        <FormField
-                          control={form.control}
-                          name="taxClass"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Tax Class</FormLabel>
-                              <FormControl>
-                                <select 
-                                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                                  {...field}
-                                >
-                                  <option value="standard">Standard Rate</option>
-                                  <option value="reduced">Reduced Rate</option>
-                                  <option value="zero">Zero Rate</option>
-                                </select>
-                              </FormControl>
-                              <FormDescription>
-                                Select the appropriate tax class for this product
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      )}
-                    </div>
-                  </div>
+                      {/* Meta Description */}
+                      <FormField
+                        control={form.control}
+                        name="metaDescription"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Meta Description</FormLabel>
+                            <FormControl>
+                              <Textarea
+                                placeholder="Brief product description for search engines"
+                                className="min-h-20"
+                                {...field}
+                                value={field.value || ''}
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              Leave empty to use product description
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      {/* Meta Keywords */}
+                      <FormField
+                        control={form.control}
+                        name="metaKeywords"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Meta Keywords</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="keyword1, keyword2, keyword3"
+                                {...field}
+                                value={field.value || ''}
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              Comma-separated list of keywords
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </CollapsibleContent>
+                  </Collapsible>
                 </TabsContent>
-                
-                {/* Attributes Tab */}
-                <TabsContent value="attributes" className="space-y-6">
+              </form>
+            </Form>
+          </Tabs>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}                <TabsContent value="attributes" className="space-y-6">
                   {/* Product Attribute Configuration */}
                   <div className="space-y-6">
                     <div className="flex justify-between items-center">
@@ -944,158 +1002,3 @@ export function AdditionalInfoStep() {
                     </div>
                   </div>
                 </TabsContent>
-                
-                {/* SEO Tab */}
-                <TabsContent value="seo" className="space-y-6">
-                  
-                  {/* Product Details Section */}
-                  <Collapsible
-                    defaultOpen
-                    className="border rounded-md overflow-hidden"
-                  >
-                    <CollapsibleTrigger className="flex items-center justify-between w-full p-4 bg-muted/30">
-                      <h3 className="text-lg font-medium">Search Engine Optimization</h3>
-                      <ChevronDownIcon className="h-5 w-5" />
-                    </CollapsibleTrigger>
-                    
-                    <CollapsibleContent className="p-4 pt-2 space-y-6">
-                      <p className="text-sm text-muted-foreground">
-                        Optimize your product for search engines to improve visibility
-                      </p>
-                      
-                      <div className="grid grid-cols-1 gap-6">
-                        <FormField
-                          control={form.control}
-                          name="metaTitle"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Meta Title</FormLabel>
-                              <FormControl>
-                                <Input
-                                  {...field}
-                                  placeholder="Product title for search engines"
-                                />
-                              </FormControl>
-                              <FormDescription>
-                                The title that appears in search engine results (defaults to product name)
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={form.control}
-                          name="metaDescription"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Meta Description</FormLabel>
-                              <FormControl>
-                                <Textarea
-                                  {...field}
-                                  placeholder="Brief description for search engines"
-                                  rows={3}
-                                />
-                              </FormControl>
-                              <FormDescription>
-                                A short description that appears in search results (defaults to product description)
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={form.control}
-                          name="metaKeywords"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Meta Keywords</FormLabel>
-                              <FormControl>
-                                <Input
-                                  {...field}
-                                  placeholder="keyword1, keyword2, keyword3"
-                                />
-                              </FormControl>
-                              <FormDescription>
-                                Comma-separated keywords relevant to this product
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
-
-                  {/* Weight and Dimensions - moved here from Shipping tab */}
-                  <Collapsible
-                    defaultOpen
-                    className="border rounded-md overflow-hidden"
-                  >
-                    <CollapsibleTrigger className="flex items-center justify-between w-full p-4 bg-muted/30">
-                      <h3 className="text-lg font-medium">Weight & Dimensions</h3>
-                      <ChevronDownIcon className="h-5 w-5" />
-                    </CollapsibleTrigger>
-                    
-                    <CollapsibleContent className="p-4 pt-2 space-y-6">
-                      <p className="text-sm text-muted-foreground">
-                        Provide physical characteristics of the product
-                      </p>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <FormField
-                          control={form.control}
-                          name="weight"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Weight (kg)</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  step="0.01"
-                                  {...field}
-                                  value={field.value === null ? '' : field.value}
-                                  onChange={e => field.onChange(e.target.value === '' ? null : parseFloat(e.target.value))}
-                                />
-                              </FormControl>
-                              <FormDescription>
-                                Product weight in kilograms
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={form.control}
-                          name="dimensions"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Dimensions</FormLabel>
-                              <FormControl>
-                                <Input
-                                  {...field}
-                                  placeholder="L x W x H cm"
-                                />
-                              </FormControl>
-                              <FormDescription>
-                                Product dimensions in centimeters (e.g., 10 x 5 x 2 cm)
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
-                </TabsContent>
-              </form>
-            </Form>
-          </Tabs>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
