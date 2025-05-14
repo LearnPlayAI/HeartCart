@@ -152,18 +152,15 @@ export function AdditionalInfoStep() {
     );
   };
   
-  // Function to update attribute text value
+  // Function to update attribute text value in local state only
   const updateAttributeTextValue = (id: number, value: string) => {
-    console.log(`Update attribute ${id} text value: ${value}`);
-    // Find the attribute in the state
-    const attrIndex = state.attributes.findIndex(attr => attr.id === id);
-    if (attrIndex !== -1) {
-      const updatedAttr = {
-        ...state.attributes[attrIndex],
-        textValue: value
-      };
-      updateAttribute(attrIndex, updatedAttr);
-    }
+    console.log(`Update attribute ${id} text value in local state: ${value}`);
+    // Update in local state only
+    setLocalAttributes(prev => 
+      prev.map(attr => 
+        attr.id === id ? { ...attr, textValue: value } : attr
+      )
+    );
   };
   
   // Fetch options for a selected attribute
@@ -589,11 +586,24 @@ export function AdditionalInfoStep() {
   
   // Handle form submission
   const onSubmit = async (values: AdditionalInfoFormValues) => {
-    setIsLoading(true);
+    setIsSaving(true);
     try {
       console.log('Saving form values:', values);
       
-      // Update state with form values
+      // Only on explicit save do we update the context state with our local state
+      console.log('Synchronizing local attributes to global state:', localAttributes);
+      
+      // Clear existing attributes first (to avoid duplicates)
+      state.attributes.forEach((_, index) => {
+        removeAttribute(index);
+      });
+      
+      // Add all attributes from local state
+      localAttributes.forEach(attr => {
+        addAttribute(attr);
+      });
+      
+      // Then update all the other form values to context
       setField('stockLevel', values.stockLevel);
       setField('lowStockThreshold', values.lowStockThreshold);
       setField('backorderEnabled', values.backorderEnabled);
@@ -618,7 +628,7 @@ export function AdditionalInfoStep() {
       // If this is an edit operation, save the data to the server
       if (state.productId) {
         try {
-          // Send a PATCH request to save the current data
+          // Send a PATCH request to save the current data with our local attributes
           const response = await fetch(`/api/products/${state.productId}/wizard-step`, {
             method: 'PATCH',
             headers: {
@@ -638,7 +648,7 @@ export function AdditionalInfoStep() {
                 metaTitle: values.metaTitle,
                 metaDescription: values.metaDescription,
                 metaKeywords: values.metaKeywords,
-                attributes: state.attributes
+                attributes: localAttributes // Use local attributes here!
               }
             })
           });
@@ -878,12 +888,59 @@ export function AdditionalInfoStep() {
                           Select which attributes customers will see when viewing or purchasing this product
                         </p>
                       </div>
-                      <Button
-                        variant="outline"
-                        onClick={() => navigate('/admin/global-attributes')}
-                      >
-                        Manage Global Attributes
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            // Refresh data from context
+                            setAttributesUsed(state.attributes.map(attr => attr.id));
+                            setLocalAttributes(state.attributes);
+                            
+                            // Reload global attributes
+                            fetch('/api/attributes')
+                              .then(res => res.json())
+                              .then(data => {
+                                console.log('Refreshed global attributes:', data);
+                                if (data.success && data.data) {
+                                  // Also reload options for selected attributes
+                                  state.attributes.forEach(attr => {
+                                    if (attr.attributeType === 'select') {
+                                      fetchOptionsForAttribute(attr.id);
+                                    }
+                                  });
+                                }
+                              })
+                              .catch(err => {
+                                console.error('Error refreshing attributes:', err);
+                                toast({
+                                  title: "Refresh Failed",
+                                  description: "Could not reload attributes data.",
+                                  variant: "destructive"
+                                });
+                              });
+                            
+                            toast({
+                              title: "Data Refreshed",
+                              description: "Attributes data has been reloaded.",
+                            });
+                          }}
+                        >
+                          <span className="mr-2">Refresh Data</span>
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M21 2v6h-6"></path>
+                            <path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path>
+                            <path d="M3 22v-6h6"></path>
+                            <path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path>
+                          </svg>
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => navigate('/admin/global-attributes')}
+                        >
+                          Manage Global Attributes
+                        </Button>
+                      </div>
                     </div>
                     
                     {formattedAttributes.length > 0 ? (
