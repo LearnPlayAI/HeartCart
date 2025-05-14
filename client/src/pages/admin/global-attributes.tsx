@@ -131,6 +131,20 @@ function GlobalAttributesPage() {
     refetch: refetchOptions
   } = useQuery({
     queryKey: ["/api/attributes", selectedAttribute?.id, "options"],
+    queryFn: async () => {
+      console.log(`Fetching options for attribute ID: ${selectedAttribute?.id}`);
+      if (!selectedAttribute?.id) {
+        return { success: true, data: [] };
+      }
+      try {
+        const response = await apiRequest("GET", `/api/attributes/${selectedAttribute.id}/options`);
+        console.log('Options response:', response);
+        return response;
+      } catch (err) {
+        console.error('Error fetching options:', err);
+        throw err;
+      }
+    },
     enabled: !!selectedAttribute?.id,
     refetchOnMount: true,
     staleTime: 0, // Consider data stale immediately to force refetch
@@ -139,6 +153,14 @@ function GlobalAttributesPage() {
   
   // Extract the options data from the standardized response
   const options = optionsResponse?.data || [];
+  
+  // Debug log the options
+  useEffect(() => {
+    if (selectedAttribute) {
+      console.log(`Selected attribute: ${selectedAttribute.name} (ID: ${selectedAttribute.id})`);
+      console.log('Options loaded:', options);
+    }
+  }, [selectedAttribute, options]);
 
   // Create attribute mutation
   const createAttributeMutation = useMutation({
@@ -567,7 +589,14 @@ function GlobalAttributesPage() {
     if (selectedAttribute?.id === attribute.id) {
       setSelectedAttribute(null);
     } else {
+      console.log(`Selecting attribute: ${attribute.name} (ID: ${attribute.id})`);
       setSelectedAttribute(attribute);
+      
+      // Force a manual refetch of options
+      setTimeout(() => {
+        console.log('Manual refetch of options for attribute:', attribute.id);
+        refetchOptions();
+      }, 100);
     }
   };
 
@@ -795,9 +824,16 @@ function GlobalAttributesPage() {
                 <div className="flex justify-center py-8">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
-              ) : options?.length === 0 ? (
+              ) : !options || options.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground border rounded-md">
                   No options found for this attribute. Add options to make this attribute selectable.
+                  <pre className="text-xs text-gray-500 mt-2">
+                    Debug: {JSON.stringify({
+                      attributeId: selectedAttribute?.id, 
+                      hasOptionsResponse: !!optionsResponse,
+                      options: options
+                    }, null, 2)}
+                  </pre>
                 </div>
               ) : (
                 <div className="rounded-md border">
