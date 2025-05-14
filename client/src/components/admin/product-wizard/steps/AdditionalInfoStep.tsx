@@ -1,1524 +1,352 @@
-/**
- * AdditionalInfoStep Component
- * 
- * This component handles the third step of the product creation wizard,
- * collecting additional product information like inventory, attributes, SEO, etc.
- * 
- * Updated to work with the centralized attribute system.
- */
-
-import React, { useState, useEffect } from 'react';
-import { useProductWizardContext } from '../context';
-import { useQuery } from '@tanstack/react-query';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useLocation } from 'wouter';
-
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
-import { Separator } from '@/components/ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Badge } from '@/components/ui/badge';
-import { 
-  PackageIcon, 
-  TagIcon, 
-  ChevronDownIcon, 
-  ChevronRightIcon,
-  PlusIcon,
-  XIcon,
-  InfoIcon,
-  SearchIcon,
-  GlobeIcon
-} from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Separator } from '@/components/ui/separator';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { format } from 'date-fns';
+import { Calendar as CalendarIcon, Loader2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { ProductDraft } from '../ProductWizard';
 
-// Import our attribute configuration component
-import { 
-  AttributeConfig, 
-  type AttributeValue, 
-  type ProductAttribute,
-  type AttributeOption
-} from '../components/AttributeConfig';
-import { useToast } from '@/hooks/use-toast';
-
-// Form validation schema
+// Validation schema for the additional info step
 const additionalInfoSchema = z.object({
-  // Inventory
-  stockLevel: z.coerce.number().min(0, 'Stock level must be 0 or greater'),
-  lowStockThreshold: z.coerce.number().min(0, 'Threshold must be 0 or greater'),
-  backorderEnabled: z.boolean().default(false),
-  
-  // Tax settings
-  taxable: z.boolean().default(true),
-  taxClass: z.string().optional(),
-  
-  // Product details
-  supplier: z.string().optional(),
-  attributeValues: z.array(z.any()).optional(), // For attribute metadata like weight, dimensions
-  weight: z.coerce.number().min(0).nullable().optional(),
-  dimensions: z.string().optional(),
-  
-  // SEO
-  metaTitle: z.string().optional(),
-  metaDescription: z.string().optional(),
-  metaKeywords: z.string().optional(),
+  dimensions: z.string().nullable(),
+  weight: z.string().nullable(),
+  discountLabel: z.string().nullable(),
+  specialSaleText: z.string().nullable(),
+  specialSaleStart: z.date().nullable(),
+  specialSaleEnd: z.date().nullable(),
+  isFlashDeal: z.boolean().default(false),
+  flashDealEnd: z.date().nullable(),
 });
 
 type AdditionalInfoFormValues = z.infer<typeof additionalInfoSchema>;
 
-export function AdditionalInfoStep() {
-  const { 
-    state, 
-    setField, 
-    markStepComplete, 
-    markStepValid, 
-    addAttribute, 
-    updateAttribute, 
-    removeAttribute,
-    setCurrentStep
-  } = useProductWizardContext();
-  
-  // Navigation helpers since they might not be directly available in context
-  const nextStep = () => {
-    const steps = ['basic-info', 'images', 'additional-info', 'sales-promotions', 'review'];
-    const currentIndex = steps.indexOf(state.currentStep);
-    if (currentIndex < steps.length - 1) {
-      setCurrentStep(steps[currentIndex + 1] as any);
-    }
-  };
-  
-  const prevStep = () => {
-    const steps = ['basic-info', 'images', 'additional-info', 'sales-promotions', 'review'];
-    const currentIndex = steps.indexOf(state.currentStep);
-    if (currentIndex > 0) {
-      setCurrentStep(steps[currentIndex - 1] as any);
-    }
-  };
-  
-  // Create local versions of attribute toggle/update functions that maintain changes in local state only
-  // Changes will only be persisted to context when the user clicks Save
-  const [localAttributes, setLocalAttributes] = useState<any[]>([]);
-  
-  // Initialize local attributes from global state on component mount
-  useEffect(() => {
-    setLocalAttributes(state.attributes || []);
-  }, []);
-  
-  // Toggle attribute (only in local state)
-  const toggleAttribute = (id: number, enabled: boolean) => {
-    console.log(`Toggle attribute ${id}: ${enabled} (local state only)`);
-    
-    if (enabled) {
-      // If enabled, add to local state if not already present
-      const existingAttrIndex = localAttributes.findIndex(attr => attr.id === id);
-      if (existingAttrIndex === -1) {
-        const attr = attributeDefinitions.find(a => a.id === id);
-        if (attr) {
-          setLocalAttributes(prev => [
-            ...prev, 
-            {
-              id,
-              attributeType: attr.attributeType || 'select',
-              isRequired: false,
-              textValue: '',
-              selectedOptions: [],
-              sortOrder: localAttributes.length
-            }
-          ]);
-        }
-      }
-    } else {
-      // If disabled, remove from local state
-      setLocalAttributes(prev => prev.filter(attr => attr.id !== id));
-    }
-  };
-  
-  // Function to update attribute options (only in local state)
-  const updateAttributeOptions = (id: number, optionIds: number[]) => {
-    console.log(`Update attribute ${id} options in local state:`, optionIds);
-    
-    setLocalAttributes(prev => 
-      prev.map(attr => 
-        attr.id === id 
-          ? { ...attr, selectedOptions: optionIds } 
-          : attr
-      )
-    );
-  };
-  
-  // Function to update attribute text value in local state only
-  const updateAttributeTextValue = (id: number, value: string) => {
-    console.log(`Update attribute ${id} text value in local state: ${value}`);
-    // Update in local state only
-    setLocalAttributes(prev => 
-      prev.map(attr => 
-        attr.id === id ? { ...attr, textValue: value } : attr
-      )
-    );
-  };
-  
-  // Function to update selected options for an attribute in local state only
-  const setSelectedOptions = (id: number, optionIds: number[]) => {
-    console.log(`Set selected options for attribute ${id} in local state: ${optionIds.join(', ')}`);
-    
-    setLocalAttributes(prev => 
-      prev.map(attr => 
-        attr.id === id 
-          ? { ...attr, selectedOptions: optionIds } 
-          : attr
-      )
-    );
-  };
-  
-  // Fetch options for a selected attribute
-  const fetchOptionsForAttribute = async (attributeId: number) => {
-    if (!attributeId) return [];
-    
-    try {
-      setIsFetchingOptions(true);
-      console.log(`Fetching options for attribute ID: ${attributeId}`);
-      
-      const options = await fetchAttributeOptions(attributeId);
-      console.log(`Got ${options.length} options for attribute ${attributeId}:`, options);
-      
-      // Update our formatted attributes with the fetched options
-      setFormattedAttributes(prev => 
-        prev.map(attr => 
-          attr.id === attributeId ? { 
-            ...attr, 
-            options: options.map(opt => ({
-              id: opt.id,
-              value: opt.value,
-              displayValue: opt.displayValue || opt.value,
-              metadata: opt.metadata || {}
-            }))
-          } : attr
-        )
-      );
-      
-      return options;
-    } catch (err) {
-      console.error(`Error fetching options for attribute ${attributeId}:`, err);
-      toast({
-        title: "Error",
-        description: `Failed to load options for this attribute.`,
-        variant: "destructive",
-      });
-      return [];
-    } finally {
-      setIsFetchingOptions(false);
-    }
-  };
+interface AdditionalInfoStepProps {
+  draft: ProductDraft;
+  onSave: (data: any) => void;
+  isLoading: boolean;
+}
 
-  // Handle selecting options for an attribute
-  const handleSelectAttributeOptions = async (attrId: number, optionIds: number[]) => {
-    console.log(`Setting options for attribute ${attrId}:`, optionIds);
-    
-    // Update in the context
-    updateAttributeOptions(attrId, optionIds);
-    
-    // Update in our local state for UI
-    setFormattedAttributes(prev => 
-      prev.map(attr => 
-        attr.id === attrId ? { ...attr, selectedOptions: optionIds } : attr
-      )
-    );
-    
-    // Provide feedback
-    toast({
-      title: "Options Updated",
-      description: `Updated attribute options.`,
-      variant: "default",
-    });
-  };
-  
-  // Handle toggling an attribute on/off
-  const handleToggleAttribute = async (attrId: number, enabled: boolean) => {
-    console.log(`Toggling attribute ${attrId}: ${enabled ? 'ON' : 'OFF'}`);
-    
-    if (enabled) {
-      // Add attribute to state with default values
-      const attr = attributeDefinitions.find(a => a.id === attrId);
-      if (attr) {
-        console.log('Adding attribute to product:', attr);
-        
-        // First, fetch options for this attribute if it's a select type
-        let options: any[] = [];
-        if (attr.attributeType === 'select') {
-          try {
-            options = await fetchAttributeOptions(attrId);
-            console.log(`Fetched ${options.length} options for attribute ${attrId}:`, options);
-          } catch (err) {
-            console.error(`Error fetching options for attribute ${attrId}:`, err);
-          }
-        }
-        
-        // Add the attribute to state
-        addAttribute({
-          id: attrId,
-          attributeType: attr.attributeType || 'select',
-          isRequired: false,
-          textValue: '',
-          selectedOptions: [],
-          sortOrder: state.attributes.length
-        });
-        
-        toast({
-          title: "Attribute Enabled",
-          description: `Added ${attr.displayName || attr.name} to product attributes.`,
-        });
-      }
-    } else {
-      // Find and remove the attribute from state
-      const index = state.attributes.findIndex(a => a.id === attrId);
-      if (index !== -1) {
-        const attr = state.attributes[index];
-        removeAttribute(index);
-        
-        // Provide user feedback
-        toast({
-          title: "Attribute Disabled",
-          description: `Removed attribute from product.`,
-        });
-      }
-    }
-    
-    // Toggle in our local state too for immediate UI feedback
-    setFormattedAttributes(prev => 
-      prev.map(attr => 
-        attr.id === attrId ? { ...attr, enabled } : attr
-      )
-    );
-  };
-  
-  // Loading states
-  const [isLoading, setIsLoading] = useState(false);
-  const [isFetchingOptions, setIsFetchingOptions] = useState(false);
-  
-  // Function to fetch attribute options directly
-  const fetchAttributeOptions = async (attributeId: number) => {
-    if (!attributeId) return [];
-    setIsFetchingOptions(true);
-    try {
-      console.log(`Fetching options for attribute ID: ${attributeId}`);
-      const response = await fetch(`/api/attributes/${attributeId}/options`);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch options: ${response.statusText}`);
-      }
-      const data = await response.json();
-      console.log('Options direct fetch response:', data);
-      setIsFetchingOptions(false);
-      return data.data || [];
-    } catch (err) {
-      console.error('Error fetching attribute options:', err);
-      setIsFetchingOptions(false);
-      return [];
-    }
-  };
+export const AdditionalInfoStep: React.FC<AdditionalInfoStepProps> = ({ draft, onSave, isLoading }) => {
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState('inventory');
-  const [attributeNameInput, setAttributeNameInput] = useState('');
-  const [attributeValueInput, setAttributeValueInput] = useState('');
-  const [attributesUsed, setAttributesUsed] = useState<number[]>([]);
-  const [newCustomAttrName, setNewCustomAttrName] = useState('');
-  const [newCustomAttrValue, setNewCustomAttrValue] = useState('');
-  const [newCustomAttrType, setNewCustomAttrType] = useState('text');
-  const [newCustomAttrRequired, setNewCustomAttrRequired] = useState(false);
-  const [customAttributes, setCustomAttributes] = useState<{
-    name: string, 
-    value: string, 
-    type: string,
-    required: boolean
-  }[]>([]);
-  const [, navigate] = useLocation();
+  const [activeTab, setActiveTab] = useState('specifications');
   
-  // Fetch global attributes only once when the component mounts
-  const { data: globalAttributesData } = useQuery({
-    queryKey: ['/api/attributes'],
-    queryFn: async () => {
-      try {
-        // Direct API call with fetch to avoid any potential issues with wrapper
-        console.log('Fetching global attributes directly');
-        const response = await fetch('/api/attributes');
-        if (!response.ok) {
-          throw new Error(`Failed to fetch attributes: ${response.statusText}`);
-        }
-        const data = await response.json();
-        console.log('Global attributes direct fetch response:', data);
-        return data;
-      } catch (err) {
-        console.error('Error fetching global attributes:', err);
-        throw err;
-      }
-    },
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    staleTime: Infinity // Keep the data cached and never consider it stale
-  });
-  
-  // Format global attributes for our component
-  const attributeDefinitions = React.useMemo(() => {
-    if (globalAttributesData?.data) {
-      return globalAttributesData.data;
-    }
-    return [];
-  }, [globalAttributesData]);
-  
-  // Fetch suppliers list
-  const { data: suppliers = [] } = useQuery({
-    queryKey: ['/api/suppliers'],
-  });
-  
-  // Fetch catalog supplier information if we have a catalogId
-  const { data: catalogData } = useQuery({
-    queryKey: ['/api/catalogs', state.catalogId],
-    enabled: !!state.catalogId, // Only run query if catalogId exists
-  });
-  
-  // Format product attributes from global attributes
-  const productAttributes = React.useMemo(() => {
-    if (globalAttributesData?.data) {
-      return globalAttributesData.data;
-    }
-    return [];
-  }, [globalAttributesData]);
-  
-  // Format attributes for our attribute configuration component
-  const [formattedAttributes, setFormattedAttributes] = useState<ProductAttribute[]>([]);
-  const [attributeValues, setAttributeValues] = useState<AttributeValue[]>([]);
-  
-  // Auto-populate supplier information from catalog when available
-  useEffect(() => {
-    if (catalogData?.data && state.catalogId) {
-      const catalog = catalogData.data;
-      if (catalog.supplierId && catalog.supplierName) {
-        // Update the supplier in the state
-        setField('supplier', catalog.supplierName);
-        // Reset form with new supplier value
-        form.setValue('supplier', catalog.supplierName);
-      }
-    }
-  }, [catalogData, state.catalogId, setField]);
-  
-  // Initialize attribute values from the state
-  useEffect(() => {
-    // If we have attribute values in the state, use those
-    if (state.attributeValues && state.attributeValues.length > 0) {
-      setAttributeValues(state.attributeValues);
-    }
-  }, [state.attributeValues]);
-  
-  // Initialize attributesUsed from existing product data when editing
-  useEffect(() => {
-    if (state.attributes && state.attributes.length > 0) {
-      // Get the attribute IDs that aren't custom attributes
-      const usedAttributeIds = state.attributes
-        .filter(attr => !attr.isCustom)
-        .map(attr => attr.id);
-      
-      setAttributesUsed(usedAttributeIds);
-      
-      // Also initialize custom attributes if any
-      const customAttrs = state.attributes
-        .filter(attr => attr.isCustom)
-        .map(attr => ({
-          name: attr.name,
-          value: attr.textValue || '', // Use textValue for centralized system
-          type: attr.attributeType || 'text',
-          required: attr.isRequired || false
-        }));
-      
-      if (customAttrs.length > 0) {
-        setCustomAttributes(customAttrs);
-      }
-    }
-  }, [state.attributes]);
-
-  // Format available product attributes for our attribute configuration component
-  // Using the centralized attribute system
-  useEffect(() => {
-    if (globalAttributesData?.data && globalAttributesData.data.length > 0) {
-      // Convert global attributes to the format expected by AttributeConfig
-      // This takes Attribute objects from our centralized system and formats them
-      const formatted = globalAttributesData.data.map(attr => ({
-        id: attr.id,
-        name: attr.name,
-        type: attr.attributeType || 'select',
-        isRequired: attr.isRequired || false,
-        displayInProductSummary: attr.displayInProductSummary || false,
-        isFilterable: attr.isFilterable || false,
-        isSwatch: attr.isSwatch || false,
-        options: attr.options?.map(opt => ({
-          id: opt.id,
-          value: opt.value,
-          displayValue: opt.displayValue || opt.value,
-          metadata: opt.metadata || {}
-        })) || []
-      }));
-      
-      setFormattedAttributes(formatted);
-      
-      // Initialize attribute values if not already set
-      if (attributeValues.length === 0 && formatted.length > 0) {
-        const values: AttributeValue[] = [];
-        
-        // Create initial attribute values from all options
-        formatted.forEach(attr => {
-          attr.options.forEach(opt => {
-            values.push({
-              id: `${attr.id}-${opt.id}`,
-              attributeId: attr.id,
-              attributeName: attr.name,
-              value: opt.value,
-              displayValue: opt.displayValue,
-              isRequired: attr.isRequired,
-              sortOrder: 0,
-              metadata: opt.metadata || {}
-            });
-          });
-        });
-        
-        setAttributeValues(values);
-      }
-    }
-  }, [globalAttributesData, attributeValues.length]);
-  
-  // Initialize attributesUsed from product's attributes when component loads
-  useEffect(() => {
-    if (state.attributes && state.attributes.length > 0) {
-      // Extract attribute IDs from state attributes and update attributesUsed
-      const usedAttributeIds = state.attributes
-        .filter(attr => !attr.isCustom)
-        .map(attr => attr.id);
-      setAttributesUsed(usedAttributeIds);
-      console.log('Initializing attributesUsed from state:', usedAttributeIds);
-    }
-  }, [state.attributes]);
-
-  // Handle attribute values changes from pricing component
-  const handleAttributeValuesChange = (newValues: AttributeValue[]) => {
-    console.log('AdditionalInfoStep: Attribute values changed:', newValues);
-    
-    // Store these values in local state for the current step session
-    setAttributeValues(newValues);
-    
-    // Update the form value without updating the context immediately
-    form.setValue('attributeValues', newValues);
-    
-    // Extract required attribute information
-    const requiredAttributeIds = newValues
-      .filter(val => val.isRequired)
-      .map(val => val.attributeId);
-    
-    // Update local state for formatted attributes 
-    const updatedAttributes = formattedAttributes.map(attr => ({
-      ...attr,
-      isRequired: requiredAttributeIds.includes(attr.id)
-    }));
-    
-    // Only update formatted attributes in local state
-    setFormattedAttributes(updatedAttributes);
-    
-    // Extract size-based metadata like weight and dimensions
-    const sizeAttribute = newValues.find(attr => 
-      attr.attributeName.toLowerCase().includes('size'));
-    
-    if (sizeAttribute?.metadata) {
-      // Update weight if provided in the metadata
-      if (sizeAttribute.metadata.weight !== undefined) {
-        form.setValue('weight', sizeAttribute.metadata.weight);
-      }
-      
-      // Update dimensions if provided in the metadata
-      if (sizeAttribute.metadata.dimensions) {
-        form.setValue('dimensions', sizeAttribute.metadata.dimensions);
-      }
-    }
-  };
-  
-  // Initialize form with values from context
+  // Initialize the form with draft values
   const form = useForm<AdditionalInfoFormValues>({
     resolver: zodResolver(additionalInfoSchema),
     defaultValues: {
-      // Inventory
-      stockLevel: state.stockLevel || 0,
-      lowStockThreshold: state.lowStockThreshold || 5,
-      backorderEnabled: state.backorderEnabled || false,
-      
-      // Tax settings
-      taxable: state.taxable ?? true,
-      taxClass: state.taxClass || 'standard',
-      
-      // Product details
-      supplier: state.supplier || '',
-      attributeValues: state.attributeValues || [],
-      weight: state.weight || null,
-      dimensions: state.dimensions || '',
-      
-      // SEO
-      metaTitle: state.metaTitle || state.name || '',
-      metaDescription: state.metaDescription || state.description || '',
-      metaKeywords: state.metaKeywords || '',
+      dimensions: draft.dimensions || '',
+      weight: draft.weight || '',
+      discountLabel: draft.discountLabel || '',
+      specialSaleText: draft.specialSaleText || '',
+      specialSaleStart: draft.specialSaleStart ? new Date(draft.specialSaleStart) : null,
+      specialSaleEnd: draft.specialSaleEnd ? new Date(draft.specialSaleEnd) : null,
+      isFlashDeal: draft.isFlashDeal || false,
+      flashDealEnd: draft.flashDealEnd ? new Date(draft.flashDealEnd) : null,
     },
   });
-  
-  // Save button state
-  const [isSaving, setIsSaving] = useState(false);
-  
-  // Update form when editing product data is loaded
-  useEffect(() => {
-    if (state.productId) {
-      console.log('AdditionalInfoStep: Updating form with state values for editing:', state);
-      
-      // Inventory
-      form.setValue('stockLevel', state.stockLevel || 0);
-      form.setValue('lowStockThreshold', state.lowStockThreshold || 5);
-      form.setValue('backorderEnabled', state.backorderEnabled || false);
-      
-      // Tax settings
-      form.setValue('taxable', state.taxable || true);
-      form.setValue('taxClass', state.taxClass || '');
-      
-      // Product details
-      form.setValue('supplier', state.supplier || '');
-      form.setValue('weight', state.weight || null);
-      form.setValue('dimensions', state.dimensions || '');
-      
-      // SEO
-      form.setValue('metaTitle', state.metaTitle || state.name || '');
-      form.setValue('metaDescription', state.metaDescription || state.description || '');
-      form.setValue('metaKeywords', state.metaKeywords || '');
-    }
-  }, [state.productId, form, state]);
-  
-  // Handle form submission
-  const onSubmit = async (values: AdditionalInfoFormValues) => {
-    setIsSaving(true);
-    try {
-      console.log('Saving form values:', values);
-      
-      // Only on explicit save do we update the context state with our local state
-      console.log('Synchronizing local attributes to global state:', localAttributes);
-      
-      // Clear existing attributes first (to avoid duplicates)
-      state.attributes.forEach((_, index) => {
-        removeAttribute(index);
-      });
-      
-      // Add all attributes from local state
-      localAttributes.forEach(attr => {
-        addAttribute(attr);
-      });
-      
-      // Then update all the other form values to context
-      setField('stockLevel', values.stockLevel);
-      setField('lowStockThreshold', values.lowStockThreshold);
-      setField('backorderEnabled', values.backorderEnabled);
-      
-      setField('taxable', values.taxable);
-      setField('taxClass', values.taxClass || '');
-      
-      // Product details
-      setField('supplier', values.supplier);
-      setField('weight', values.weight);
-      setField('dimensions', values.dimensions);
-      
-      // SEO fields
-      setField('metaTitle', values.metaTitle);
-      setField('metaDescription', values.metaDescription);
-      setField('metaKeywords', values.metaKeywords);
-      
-      // Mark step as complete and valid
-      markStepComplete('additional-info');
-      markStepValid('additional-info', true);
-      
-      // If this is an edit operation, save the data to the server
-      if (state.productId) {
-        try {
-          // Send a PATCH request to save the current data with our local attributes
-          const response = await fetch(`/api/products/${state.productId}/wizard-step`, {
-            method: 'PATCH',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              step: 'additional-info',
-              data: {
-                stockLevel: values.stockLevel,
-                lowStockThreshold: values.lowStockThreshold,
-                backorderEnabled: values.backorderEnabled,
-                taxable: values.taxable,
-                taxClass: values.taxClass,
-                supplier: values.supplier,
-                weight: values.weight,
-                dimensions: values.dimensions,
-                metaTitle: values.metaTitle,
-                metaDescription: values.metaDescription,
-                metaKeywords: values.metaKeywords,
-                attributes: localAttributes // Use local attributes here!
-              }
-            })
-          });
-          
-          if (!response.ok) {
-            throw new Error('Failed to save data');
-          }
-          
-          toast({
-            title: "Step saved",
-            description: "Step data saved to the database",
-          });
-        } catch (error) {
-          console.error('Error saving step data:', error);
-          toast({
-            title: "Error saving step",
-            description: error instanceof Error ? error.message : "Unknown error occurred",
-            variant: "destructive",
-          });
-        }
-      }
-    } finally {
-      setIsSaving(false);
-    }
-  };
-  
-  // We no longer auto-save when unmounting - only when the user clicks save
-  // This prevents unwanted auto-saving
-  
-  // Handle updating an attribute value
-  const handleAttributeValueChange = (index: number, value: string) => {
-    const attribute = { ...state.attributes[index], textValue: value };
-    updateAttribute(index, attribute);
-  };
-  
-  return (
-    <div className="space-y-6">
-      <Card>
-        <CardContent className="pt-6">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="mb-4">
-              <TabsTrigger value="inventory" className="flex items-center gap-1">
-                <PackageIcon className="h-4 w-4" />
-                <span>Inventory</span>
-              </TabsTrigger>
-              <TabsTrigger value="attributes" className="flex items-center gap-1">
-                <TagIcon className="h-4 w-4" />
-                <span>Attributes</span>
-              </TabsTrigger>
-              <TabsTrigger value="seo" className="flex items-center gap-1">
-                <GlobeIcon className="h-4 w-4" />
-                <span>SEO</span>
-              </TabsTrigger>
-            </TabsList>
-            
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                {/* Inventory Tab */}
-                <TabsContent value="inventory" className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Stock Level */}
-                    <FormField
-                      control={form.control}
-                      name="stockLevel"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Stock Level</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              min="0"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Current available quantity
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    {/* Low Stock Threshold */}
-                    <FormField
-                      control={form.control}
-                      name="lowStockThreshold"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Low Stock Threshold</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              min="0"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Trigger alerts when stock falls below this level
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  <div className="grid grid-cols-1 gap-6">
-                    {/* Backorder Option */}
-                    <FormField
-                      control={form.control}
-                      name="backorderEnabled"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                          <div className="space-y-0.5">
-                            <FormLabel>Allow Backorders</FormLabel>
-                            <FormDescription>
-                              Allow customers to purchase products that are out of stock
-                            </FormDescription>
-                          </div>
-                          <FormControl>
-                            <Switch
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  {/* Supplier Info */}
-                  <div className="space-y-4 pt-4 border-t mt-6">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <h3 className="text-lg font-medium">Supplier Information</h3>
-                        <p className="text-sm text-muted-foreground">
-                          This information is for internal reference only
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 gap-6">
-                      <FormField
-                        control={form.control}
-                        name="supplier"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Supplier</FormLabel>
-                            <FormControl>
-                              <Input
-                                {...field}
-                                readOnly={!!state.catalogId} // Make read-only if populated from catalog
-                                className={state.catalogId ? 'bg-muted cursor-not-allowed' : ''}
-                              />
-                            </FormControl>
-                            <FormDescription>
-                              {state.catalogId 
-                                ? 'Supplier automatically set from selected catalog' 
-                                : 'Enter the supplier name for this product'}
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                  </div>
-                  
-                  {/* Tax Settings */}
-                  <div className="space-y-4 pt-4 border-t mt-6">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <h3 className="text-lg font-medium">Tax Settings</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Configure taxation for this product
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 gap-6">
-                      <FormField
-                        control={form.control}
-                        name="taxable"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                            <div className="space-y-0.5">
-                              <FormLabel>Taxable Product</FormLabel>
-                              <FormDescription>
-                                Apply tax to this product
-                              </FormDescription>
-                            </div>
-                            <FormControl>
-                              <Switch
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      
-                      {form.watch('taxable') && (
-                        <FormField
-                          control={form.control}
-                          name="taxClass"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Tax Class</FormLabel>
-                              <FormControl>
-                                <select 
-                                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                                  {...field}
-                                >
-                                  <option value="standard">Standard Rate</option>
-                                  <option value="reduced">Reduced Rate</option>
-                                  <option value="zero">Zero Rate</option>
-                                </select>
-                              </FormControl>
-                              <FormDescription>
-                                Select the appropriate tax class for this product
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      )}
-                    </div>
-                  </div>
-                </TabsContent>
-                
-                {/* Attributes Tab */}
-                <TabsContent value="attributes" className="space-y-6">
-                  {/* Product Attribute Configuration */}
-                  <div className="space-y-6">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <h3 className="text-lg font-medium">Product Attributes</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Select which attributes customers will see when viewing or purchasing this product
-                        </p>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => {
-                            // Refresh data from context
-                            setAttributesUsed(state.attributes.map(attr => attr.id));
-                            setLocalAttributes(state.attributes);
-                            
-                            // Reload global attributes
-                            fetch('/api/attributes')
-                              .then(res => res.json())
-                              .then(data => {
-                                console.log('Refreshed global attributes:', data);
-                                if (data.success && data.data) {
-                                  // Also reload options for selected attributes
-                                  state.attributes.forEach(attr => {
-                                    if (attr.attributeType === 'select') {
-                                      fetchOptionsForAttribute(attr.id);
-                                    }
-                                  });
-                                }
-                              })
-                              .catch(err => {
-                                console.error('Error refreshing attributes:', err);
-                                toast({
-                                  title: "Refresh Failed",
-                                  description: "Could not reload attributes data.",
-                                  variant: "destructive"
-                                });
-                              });
-                            
-                            toast({
-                              title: "Data Refreshed",
-                              description: "Attributes data has been reloaded.",
-                            });
-                          }}
-                        >
-                          <span className="mr-2">Refresh Data</span>
-                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M21 2v6h-6"></path>
-                            <path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path>
-                            <path d="M3 22v-6h6"></path>
-                            <path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path>
-                          </svg>
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() => navigate('/admin/global-attributes')}
-                        >
-                          Manage Global Attributes
-                        </Button>
-                      </div>
-                    </div>
-                    
-                    {formattedAttributes.length > 0 ? (
-                      <div className="space-y-6">
-                        {/* Section to select which attributes apply to this product */}
-                        <div className="space-y-4">
-                          <p className="text-sm font-medium">
-                            Select which attributes are available for this product. These determine the options customers need to select.
-                          </p>
-                          
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {formattedAttributes.map((attr) => (
-                              <div 
-                                key={attr.id} 
-                                className={`border rounded-md p-4 shadow-sm ${attributesUsed.includes(attr.id) ? 'border-primary/30 bg-primary/5' : ''}`}
-                              >
-                                <div className="flex justify-between items-center mb-2">
-                                  <span className="font-medium">{attr.name}</span>
-                                  <Switch 
-                                    checked={attributesUsed.includes(attr.id)}
-                                    onCheckedChange={(checked) => {
-                                      console.log(`Toggle attribute ${attr.name} (ID: ${attr.id}) to: ${checked}`);
-                                      
-                                      // Use our integrated function to handle toggling
-                                      toggleAttribute(attr.id, checked);
-                                      
-                                      // Also update the attributesUsed array for UI state
-                                      if (checked) {
-                                        setAttributesUsed(prev => [...prev, attr.id]);
-                                        
-                                        // Fetch options for this attribute if it's selected
-                                        if (attr.attributeType === 'select' || attr.type === 'select') {
-                                          fetchOptionsForAttribute(attr.id);
-                                        }
-                                      } else {
-                                        setAttributesUsed(prev => prev.filter(id => id !== attr.id));
-                                      }
-                                    }}
-                                  />
-                                </div>
-                                
-                                {/* Attribute type and options count */}
-                                <div className="flex flex-wrap gap-2 text-sm text-muted-foreground mb-2">
-                                  <Badge variant="secondary" className="text-xs">
-                                    Type: {attr.type || 'select'}
-                                  </Badge>
-                                  <Badge variant="outline" className="text-xs">
-                                    {attr.options.length} options
-                                  </Badge>
-                                </div>
-                                
-                                {/* Display checkbox for requiring the attribute */}
-                                {attributesUsed.includes(attr.id) && (
-                                  <div className="mt-3 border-t pt-3">
-                                    <div className="flex items-center justify-between">
-                                      <div className="flex items-center">
-                                        <Checkbox 
-                                          id={`required-${attr.id}`}
-                                          checked={(() => {
-                                            const existingAttr = state.attributes.find(a => a.id === attr.id);
-                                            return existingAttr?.isRequired || false;
-                                          })()}
-                                          onCheckedChange={(checked) => {
-                                            // Find the attribute in the state
-                                            const attrIndex = state.attributes.findIndex(a => a.id === attr.id);
-                                            if (attrIndex !== -1) {
-                                              // Update the attribute
-                                              const updatedAttr = {
-                                                ...state.attributes[attrIndex],
-                                                isRequired: !!checked
-                                              };
-                                              updateAttribute(attrIndex, updatedAttr);
-                                            }
-                                          }}
-                                        />
-                                        <label htmlFor={`required-${attr.id}`} className="ml-2 text-sm">
-                                          Required for checkout
-                                        </label>
-                                      </div>
-                                      
-                                      <div className="flex items-center">
-                                        <Checkbox 
-                                          id={`display-${attr.id}`}
-                                          checked={(() => {
-                                            const existingAttr = state.attributes.find(a => a.id === attr.id);
-                                            return existingAttr?.displayInProductSummary || false;
-                                          })()}
-                                          onCheckedChange={(checked) => {
-                                            // Find the attribute in the state
-                                            const attrIndex = state.attributes.findIndex(a => a.id === attr.id);
-                                            if (attrIndex !== -1) {
-                                              // Update the attribute
-                                              const updatedAttr = {
-                                                ...state.attributes[attrIndex],
-                                                displayInProductSummary: !!checked
-                                              };
-                                              updateAttribute(attrIndex, updatedAttr);
-                                            }
-                                          }}
-                                        />
-                                        <label htmlFor={`display-${attr.id}`} className="ml-2 text-sm">
-                                          Show in product summary
-                                        </label>
-                                      </div>
-                                    </div>
-                                    
-                                    {/* Display available options */}
-                                    <div className="mt-3">
-                                      <span className="text-sm font-medium mb-1 block">Available options:</span>
-                                      <div className="flex flex-wrap gap-2 mt-2">
-                                        {attr.options.length > 0 ? (
-                                          attr.options.map(option => {
-                                            // Check if this option is selected for this attribute in local state
-                                            const attrInLocalState = localAttributes.find(a => a.id === attr.id);
-                                            const isSelected = attrInLocalState?.selectedOptions?.includes(option.id);
-                                            
-                                            return (
-                                              <Badge 
-                                                key={option.id} 
-                                                variant={isSelected ? "default" : "outline"}
-                                                className={`px-3 py-1 text-xs cursor-pointer hover:bg-primary/10 ${
-                                                  isSelected ? 'bg-primary text-primary-foreground' : ''
-                                                }`}
-                                                onClick={() => {
-                                                  // Get current attribute from LOCAL state
-                                                  const attrInLocalState = localAttributes.find(a => a.id === attr.id);
-                                                  let currentSelected = attrInLocalState?.selectedOptions || [];
-                                                  
-                                                  if (isSelected) {
-                                                    // Remove option if already selected
-                                                    currentSelected = currentSelected.filter(id => id !== option.id);
-                                                  } else {
-                                                    // Add option if not already selected
-                                                    currentSelected = [...currentSelected, option.id];
-                                                  }
-                                                  
-                                                  // Update options in LOCAL state only
-                                                  setSelectedOptions(attr.id, currentSelected);
-                                                  
-                                                  console.log(`Updated attribute ${attr.id} options in local state:`, currentSelected);
-                                                }}
-                                              >
-                                                {option.displayValue}
-                                              </Badge>
-                                            );
-                                          })
-                                        ) : (
-                                          <div className="text-sm text-muted-foreground italic">
-                                            No options available for this attribute. Please configure options in the global attributes section.
-                                          </div>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                        
-                        {/* Attribute configuration for dimensions and weight */}
-                        {attributesUsed.length > 0 && (
-                          <div className="mt-6 pt-6 border-t">
-                            <h4 className="font-medium">Attribute Configuration</h4>
-                            <p className="text-sm text-muted-foreground mb-4">
-                              Configure additional information for attributes when applicable
-                            </p>
-                            
-                            <AttributeConfig
-                              attributes={formattedAttributes.filter(attr => attributesUsed.includes(attr.id))}
-                              attributeValues={attributeValues}
-                              onChange={handleAttributeValuesChange}
-                            />
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8 border rounded-md bg-muted/20">
-                        <InfoIcon className="h-12 w-12 mx-auto text-muted-foreground" />
-                        <p className="mt-2 text-muted-foreground">No product attributes available</p>
-                        <p className="text-sm text-muted-foreground">
-                          Click "Manage Global Attributes" to add attributes to the system
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Custom Attributes Section */}
-                  <div className="space-y-4 pt-6 border-t mt-8">
-                    <div>
-                      <h3 className="text-lg font-medium">Custom Product Attributes</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Add one-time custom attributes for this product only
-                      </p>
-                    </div>
-                    
-                    {customAttributes.length === 0 ? (
-                      <p className="text-sm text-muted-foreground italic mb-2">No custom attributes added yet</p>
-                    ) : (
-                      <div className="space-y-3 mb-4">
-                        {customAttributes.map((attr, index) => (
-                          <div 
-                            key={index} 
-                            className="flex items-center gap-2 border rounded-md p-3"
-                          >
-                            <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                              <div>
-                                <span className="text-sm font-semibold">{attr.name}</span>
-                                <div className="flex items-center mt-1">
-                                  <Badge variant="outline" className="text-xs">
-                                    {attr.type || 'text'}
-                                  </Badge>
-                                  {attr.required && (
-                                    <Badge variant="secondary" className="ml-2 text-xs">
-                                      Required
-                                    </Badge>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Input
-                                  type={attr.type === 'number' ? 'number' : 'text'}
-                                  value={attr.value}
-                                  onChange={(e) => {
-                                    const updatedAttrs = [...customAttributes];
-                                    updatedAttrs[index] = { ...attr, value: e.target.value };
-                                    setCustomAttributes(updatedAttrs);
-                                    
-                                    // Also update in context
-                                    const attrIndex = state.attributes.findIndex(a => 
-                                      a.isCustom && a.name === attr.name
-                                    );
-                                    
-                                    if (attrIndex !== -1) {
-                                      const updatedAttr = {
-                                        ...state.attributes[attrIndex],
-                                        textValue: e.target.value
-                                      };
-                                      updateAttribute(attrIndex, updatedAttr);
-                                    }
-                                  }}
-                                  placeholder="Enter value"
-                                />
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    // Remove custom attribute from array
-                                    const updatedAttrs = [...customAttributes];
-                                    updatedAttrs.splice(index, 1);
-                                    setCustomAttributes(updatedAttrs);
-                                    
-                                    // Also find and remove from product attributes in context if it exists
-                                    const attrIndex = state.attributes.findIndex(a => 
-                                      a.isCustom && a.name === attr.name
-                                    );
-                                    
-                                    if (attrIndex !== -1) {
-                                      removeAttribute(attrIndex);
-                                    }
-                                  }}
-                                >
-                                  <XIcon className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    
-                    <div className="border rounded-md p-4">
-                      <h5 className="font-medium mb-3">Add New Custom Attribute</h5>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <div>
-                          <label className="text-sm font-medium mb-1 block">Attribute Name</label>
-                          <Input
-                            type="text"
-                            value={newCustomAttrName}
-                            onChange={(e) => setNewCustomAttrName(e.target.value)}
-                            placeholder="e.g. Material, Pattern, etc."
-                          />
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium mb-1 block">Attribute Value</label>
-                          <Input
-                            type="text"
-                            value={newCustomAttrValue}
-                            onChange={(e) => setNewCustomAttrValue(e.target.value)}
-                            placeholder="e.g. Cotton, Striped, etc."
-                          />
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center mb-3">
-                        <div className="flex items-center mr-4">
-                          <input
-                            id="attr-type-text"
-                            type="radio"
-                            checked={newCustomAttrType === 'text'}
-                            onChange={() => setNewCustomAttrType('text')}
-                            className="h-4 w-4 text-primary border-gray-300 focus:ring-primary"
-                          />
-                          <label htmlFor="attr-type-text" className="ml-2 text-sm">Text</label>
-                        </div>
-                        <div className="flex items-center mr-4">
-                          <input
-                            id="attr-type-number"
-                            type="radio"
-                            checked={newCustomAttrType === 'number'}
-                            onChange={() => setNewCustomAttrType('number')}
-                            className="h-4 w-4 text-primary border-gray-300 focus:ring-primary"
-                          />
-                          <label htmlFor="attr-type-number" className="ml-2 text-sm">Number</label>
-                        </div>
-                        <div className="flex items-center">
-                          <input
-                            id="attr-required"
-                            type="checkbox"
-                            checked={newCustomAttrRequired}
-                            onChange={(e) => setNewCustomAttrRequired(e.target.checked)}
-                            className="h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary"
-                          />
-                          <label htmlFor="attr-required" className="ml-2 text-sm">Required</label>
-                        </div>
-                      </div>
-                      
-                      <Button
-                        type="button"
-                        onClick={() => {
-                          if (!newCustomAttrName.trim()) {
-                            toast({
-                              title: "Attribute name is required",
-                              description: "Please enter a name for the custom attribute",
-                              variant: "destructive"
-                            });
-                            return;
-                          }
-                          
-                          // Add to local state
-                          const newAttr = {
-                            name: newCustomAttrName.trim(),
-                            value: newCustomAttrValue.trim(),
-                            type: newCustomAttrType,
-                            required: newCustomAttrRequired
-                          };
-                          
-                          setCustomAttributes(prev => [...prev, newAttr]);
-                          
-                          // Add to product attributes in context
-                          // Using centralized attribute system structure
-                          addAttribute({
-                            id: -Date.now(), // Use negative timestamp as temporary ID for custom attrs
-                            name: newCustomAttrName.trim(),
-                            isCustom: true,
-                            attributeType: newCustomAttrType,
-                            isRequired: newCustomAttrRequired,
-                            displayInProductSummary: true,
-                            // Store the value directly in textValue
-                            textValue: newCustomAttrValue.trim(),
-                            selectedOptions: [],
-                            sortOrder: 0
-                          });
-                          
-                          // Reset inputs
-                          setNewCustomAttrName('');
-                          setNewCustomAttrValue('');
-                          setNewCustomAttrType('text');
-                          setNewCustomAttrRequired(false);
-                        }}
-                      >
-                        Add Custom Attribute
-                      </Button>
-                    </div>
-                  </div>
-                </TabsContent>
-                
-                {/* SEO Tab */}
-                <TabsContent value="seo" className="space-y-6">
-                  
-                  {/* Product Details Section */}
-                  <Collapsible
-                    defaultOpen
-                    className="border rounded-md overflow-hidden"
-                  >
-                    <CollapsibleTrigger className="flex items-center justify-between w-full p-4 bg-muted/30">
-                      <h3 className="text-lg font-medium">Search Engine Optimization</h3>
-                      <ChevronDownIcon className="h-5 w-5" />
-                    </CollapsibleTrigger>
-                    
-                    <CollapsibleContent className="p-4 pt-2 space-y-6">
-                      <p className="text-sm text-muted-foreground">
-                        Optimize your product for search engines to improve visibility
-                      </p>
-                      
-                      <div className="grid grid-cols-1 gap-6">
-                        <FormField
-                          control={form.control}
-                          name="metaTitle"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Meta Title</FormLabel>
-                              <FormControl>
-                                <Input
-                                  {...field}
-                                  placeholder="Product title for search engines"
-                                />
-                              </FormControl>
-                              <FormDescription>
-                                The title that appears in search engine results (defaults to product name)
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={form.control}
-                          name="metaDescription"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Meta Description</FormLabel>
-                              <FormControl>
-                                <Textarea
-                                  {...field}
-                                  placeholder="Brief description for search engines"
-                                  rows={3}
-                                />
-                              </FormControl>
-                              <FormDescription>
-                                A short description that appears in search results (defaults to product description)
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={form.control}
-                          name="metaKeywords"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Meta Keywords</FormLabel>
-                              <FormControl>
-                                <Input
-                                  {...field}
-                                  placeholder="keyword1, keyword2, keyword3"
-                                />
-                              </FormControl>
-                              <FormDescription>
-                                Comma-separated keywords relevant to this product
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
 
-                  {/* Weight and Dimensions - moved here from Shipping tab */}
-                  <Collapsible
-                    defaultOpen
-                    className="border rounded-md overflow-hidden"
-                  >
-                    <CollapsibleTrigger className="flex items-center justify-between w-full p-4 bg-muted/30">
-                      <h3 className="text-lg font-medium">Weight & Dimensions</h3>
-                      <ChevronDownIcon className="h-5 w-5" />
-                    </CollapsibleTrigger>
-                    
-                    <CollapsibleContent className="p-4 pt-2 space-y-6">
-                      <p className="text-sm text-muted-foreground">
-                        Provide physical characteristics of the product
-                      </p>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <FormField
-                          control={form.control}
-                          name="weight"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Weight (kg)</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  step="0.01"
-                                  {...field}
-                                  value={field.value === null ? '' : field.value}
-                                  onChange={e => field.onChange(e.target.value === '' ? null : parseFloat(e.target.value))}
-                                />
-                              </FormControl>
-                              <FormDescription>
-                                Product weight in kilograms
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={form.control}
-                          name="dimensions"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Dimensions</FormLabel>
-                              <FormControl>
-                                <Input
-                                  {...field}
-                                  placeholder="L x W x H cm"
-                                />
-                              </FormControl>
-                              <FormDescription>
-                                Product dimensions in centimeters (e.g., 10 x 5 x 2 cm)
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
-                </TabsContent>
-                
-                {/* Navigation and Save buttons */}
-                <div className="flex justify-between mt-8 px-2 pb-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => prevStep()}
-                    disabled={isLoading || isSaving}
-                  >
-                    Back
-                  </Button>
+  // Handle form submission
+  const onSubmit = (data: AdditionalInfoFormValues) => {
+    onSave(data);
+  };
+
+  // Watch values to enable/disable related fields
+  const isFlashDeal = form.watch('isFlashDeal');
+
+  return (
+    <Card>
+      <CardContent className="p-6">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+              <TabsList>
+                <TabsTrigger value="specifications">Specifications</TabsTrigger>
+                <TabsTrigger value="discounts">Discounts & Special Offers</TabsTrigger>
+              </TabsList>
+              
+              {/* Specifications Tab */}
+              <TabsContent value="specifications" className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="dimensions"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Dimensions</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g. 10 x 5 x 2 cm" {...field} value={field.value || ''} />
+                        </FormControl>
+                        <FormDescription>
+                          Product dimensions in length x width x height format
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   
-                  <div className="flex space-x-3">
-                    <Button 
-                      type="button" 
-                      variant="secondary"
-                      onClick={form.handleSubmit(onSubmit)}
-                      disabled={isLoading || isFetchingOptions || isSaving}
-                    >
-                      {isSaving ? 'Saving...' : 'Save'}
-                    </Button>
+                  <FormField
+                    control={form.control}
+                    name="weight"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Weight</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g. 0.5 kg" {...field} value={field.value || ''} />
+                        </FormControl>
+                        <FormDescription>
+                          Product weight with unit (e.g., kg, g)
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </TabsContent>
+              
+              {/* Discounts & Special Offers Tab */}
+              <TabsContent value="discounts" className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="discountLabel"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Discount Label</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="e.g. 20% OFF" 
+                          {...field} 
+                          value={field.value || ''} 
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Label to display for the discount (e.g., "20% OFF", "Clearance")
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <Separator className="my-4" />
+                
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium">Special Sale Period</h3>
+                  
+                  <FormField
+                    control={form.control}
+                    name="specialSaleText"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Special Sale Text</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="e.g. Spring Sale" 
+                            {...field} 
+                            value={field.value || ''} 
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Text to display for the special sale
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="specialSaleStart"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                          <FormLabel>Sale Start Date</FormLabel>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant="outline"
+                                  className={cn(
+                                    "pl-3 text-left font-normal",
+                                    !field.value && "text-muted-foreground"
+                                  )}
+                                >
+                                  {field.value ? (
+                                    format(field.value, "PPP")
+                                  ) : (
+                                    <span>Pick a date</span>
+                                  )}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={field.value || undefined}
+                                onSelect={field.onChange}
+                                disabled={(date) => date < new Date()}
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
+                          <FormDescription>
+                            When the special sale starts
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                     
-                    <Button 
-                      type="button" 
-                      variant="default" 
-                      onClick={() => {
-                        form.handleSubmit(onSubmit)();
-                        if (!form.formState.isValid) return;
-                        nextStep();
-                      }}
-                      disabled={isLoading || isFetchingOptions || isSaving}
-                    >
-                      {isLoading ? 'Loading...' : 'Next'}
-                    </Button>
+                    <FormField
+                      control={form.control}
+                      name="specialSaleEnd"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                          <FormLabel>Sale End Date</FormLabel>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant="outline"
+                                  className={cn(
+                                    "pl-3 text-left font-normal",
+                                    !field.value && "text-muted-foreground"
+                                  )}
+                                >
+                                  {field.value ? (
+                                    format(field.value, "PPP")
+                                  ) : (
+                                    <span>Pick a date</span>
+                                  )}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={field.value || undefined}
+                                onSelect={field.onChange}
+                                disabled={(date) => 
+                                  date < new Date() || 
+                                  (form.getValues('specialSaleStart') ? date < form.getValues('specialSaleStart') : false)
+                                }
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
+                          <FormDescription>
+                            When the special sale ends
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </div>
                 </div>
-              </form>
-            </Form>
-          </Tabs>
-        </CardContent>
-      </Card>
-    </div>
+                
+                <Separator className="my-4" />
+                
+                <div className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="isFlashDeal"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-base">Flash Deal</FormLabel>
+                          <FormDescription>
+                            Mark this product as a flash deal with limited time availability
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  {isFlashDeal && (
+                    <FormField
+                      control={form.control}
+                      name="flashDealEnd"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                          <FormLabel>Flash Deal End Date</FormLabel>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant="outline"
+                                  className={cn(
+                                    "pl-3 text-left font-normal",
+                                    !field.value && "text-muted-foreground"
+                                  )}
+                                >
+                                  {field.value ? (
+                                    format(field.value, "PPP")
+                                  ) : (
+                                    <span>Pick a date</span>
+                                  )}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={field.value || undefined}
+                                onSelect={field.onChange}
+                                disabled={(date) => date < new Date()}
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
+                          <FormDescription>
+                            When the flash deal ends
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                </div>
+              </TabsContent>
+            </Tabs>
+
+            <div className="flex justify-end">
+              <Button 
+                type="submit" 
+                disabled={isLoading}
+              >
+                {isLoading && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Save & Continue
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </CardContent>
+    </Card>
   );
-}
+};
+
+export default AdditionalInfoStep;

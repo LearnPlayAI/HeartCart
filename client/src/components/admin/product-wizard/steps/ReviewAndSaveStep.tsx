@@ -1,915 +1,318 @@
-/**
- * ReviewAndSaveStep Component
- * 
- * This component presents a summary of all product information for review
- * before saving the product. It also allows going back to previous steps
- * to make changes if needed.
- */
-
-import React, { useState } from 'react';
-import { useProductWizardContext } from '../context';
+import React from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { formatCurrency } from '../../../../utils/format';
-import { truncateText } from '../../../../utils/string-utils';
-
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-import { Label } from '@/components/ui/label';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { 
-  CheckIcon, 
-  ImageIcon, 
-  Package, 
-  Edit, 
-  SaveIcon, 
-  AlertTriangleIcon, 
-  Loader2
-} from 'lucide-react';
-import ProductImageGallery from '../ProductImageGallery';
-
-/**
- * Simple schema validator that checks for required fields
- */
-const validateProduct = (state: any) => {
-  const errors: string[] = [];
-  
-  // Basic Info validation
-  if (!state.name) errors.push('Product name is required');
-  if (!state.slug) errors.push('Product slug is required');
-  if (!state.sku) errors.push('Product SKU is required');
-  if (state.costPrice <= 0) errors.push('Cost price must be greater than 0');
-  if (state.regularPrice <= 0) errors.push('Regular price must be greater than 0');
-  
-  // If sale is enabled, ensure a sale price is set
-  if (state.onSale && (!state.salePrice || state.salePrice <= 0)) {
-    errors.push('Sale price must be set when product is on sale');
-  }
-  
-  // Warn if main image is not set
-  if (state.imageUrls.length === 0) {
-    errors.push('Product has no images - at least one is recommended');
-  }
-  
-  return errors;
-};
+import { Separator } from '@/components/ui/separator';
+import { Loader2, Check, X, AlertTriangle, Save } from 'lucide-react';
+import { format } from 'date-fns';
+import { ProductDraft } from '../ProductWizard';
 
 interface ReviewAndSaveStepProps {
-  onComplete?: (product: any) => void;
+  draft: ProductDraft;
+  onSave: (data: any) => void;
+  isLoading: boolean;
 }
 
-export function ReviewAndSaveStep({ onComplete }: ReviewAndSaveStepProps = {}) {
-  const { 
-    state, 
-    markStepComplete, 
-    setCurrentStep, 
-    resetWizard,
-    clearProductDraft
-  } = useProductWizardContext();
+export const ReviewAndSaveStep: React.FC<ReviewAndSaveStepProps> = ({ draft, onSave, isLoading }) => {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [savingError, setSavingError] = useState<string | null>(null);
   
-  // Fetch categories for display
-  const { data: categoriesResponse } = useQuery({
+  // Get categories for displaying category name
+  const { data: categoriesData } = useQuery({
     queryKey: ['/api/categories'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/categories');
+      return response.json();
+    },
   });
   
-  // Query catalogs
-  const { data: catalogsResponse } = useQuery({
-    queryKey: ['/api/catalogs'],
-    enabled: true,
+  // Get attributes for displaying attribute names
+  const { data: attributesData } = useQuery({
+    queryKey: ['/api/product-attributes'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/product-attributes');
+      return response.json();
+    },
   });
   
-  // Extract categories from the API response
-  const categories = categoriesResponse && categoriesResponse.data && Array.isArray(categoriesResponse.data) 
-    ? categoriesResponse.data 
-    : [];
+  // Check if all required steps are completed
+  const requiredSteps = ['basic-info', 'images'];
+  const incompleteSteps = requiredSteps.filter(step => !draft.completedSteps?.includes(step));
   
   // Get category name
   const getCategoryName = (categoryId: number | null) => {
     if (!categoryId) return 'None';
-    const category = categories.find((cat: any) => cat.id === categoryId);
+    const category = categoriesData?.data?.find((cat: any) => cat.id === categoryId);
     return category ? category.name : 'Unknown';
   };
   
-  // Validate product data
-  const validationErrors = validateProduct(state);
-  const hasErrors = validationErrors.length > 0;
-  
-  // Mutation for creating or updating a product
-  const saveProductMutation = useMutation({
-    mutationFn: async (productData: any) => {
-      // Set submitting state
-      setIsSubmitting(true);
-      setSavingError(null);
-      
-      const isUpdate = !!state.productId;
-      
-      try {
-        // API request to create or update product
-        const url = isUpdate ? `/api/products/${state.productId}` : '/api/products';
-        const method = isUpdate ? 'PUT' : 'POST';
-        
-        const response = await fetch(url, {
-          method,
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(productData),
-        });
-        
-        // Handle API errors
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error?.message || `Failed to ${isUpdate ? 'update' : 'create'} product`);
-        }
-        
-        // Get created/updated product data
-        const productResult = await response.json();
-        
-        // Move any temporary images to their final location
-        if (state.imageUrls.length > 0 && state.imageObjectKeys.length > 0) {
-          try {
-            console.log('Moving temporary product images to final location');
-            
-            // Get category name
-            const categoryName = getCategoryName(state.categoryId);
-            
-            // Find provider name based on catalog
-            const provider = state.catalogId && catalogsResponse?.data 
-              ? catalogsResponse.data.find((cat: any) => cat.id === state.catalogId)
-              : null;
-              
-            const supplierName = (provider?.supplierName || 'default');
-            const catalogName = (state.catalogName || provider?.name || 'default');
-            
-            // Send a single request with all image keys
-            try {
-              // Move all images from temp storage to final product location
-              const moveResponse = await fetch('/api/files/products/images/move', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  sourceKeys: state.imageObjectKeys, // Send as array to match server expectation
-                  productId: productResult.data.id,
-                  productName: state.name,
-                  categoryId: state.categoryId,
-                  catalogId: state.catalogId
-                }),
-              });
-              
-              if (!moveResponse.ok) {
-                const errorData = await moveResponse.json();
-                console.error('Failed to move images:', errorData);
-                setSavingError(prev => 
-                  prev ? `${prev}. Images may not have been properly saved.` : 
-                  'Product images may not have been properly saved. Product data was saved successfully.'
-                );
-              } else {
-                console.log('Successfully moved all product images');
-              }
-            } catch (moveError) {
-              console.error('Error moving images:', moveError);
-              setSavingError(prev => 
-                prev ? `${prev}. Error moving images.` : 
-                'Error moving images. Product data was saved successfully.'
-              );
-            }
-          } catch (imageError) {
-            console.error('Error processing images:', imageError);
-            setSavingError(prev => 
-              prev ? `${prev}. Error processing images.` : 
-              'Error processing images. Product data was saved successfully but images could not be processed.'
-            );
-          }
-        }
-        
-        // Return created product data
-        return productResult;
-      } catch (error) {
-        if (error instanceof Error) {
-          setSavingError(error.message);
-        } else {
-          setSavingError('An unknown error occurred');
-        }
-        throw error;
-      } finally {
-        setIsSubmitting(false);
-      }
-    },
-    onSuccess: (data) => {
-      const isUpdate = !!state.productId;
-      
-      // Invalidate queries to ensure fresh data
-      queryClient.invalidateQueries({ queryKey: ['/api/products'] });
-      
-      if (state.productId) {
-        queryClient.invalidateQueries({ 
-          queryKey: ['/api/products', state.productId] 
-        });
-      }
-      
-      if (state.catalogId) {
-        queryClient.invalidateQueries({ 
-          queryKey: ['/api/catalogs', state.catalogId, 'products'] 
-        });
-      }
-      
-      // Mark step complete
-      markStepComplete('review');
-      
-      // Clear any saved draft since the product was saved successfully
-      clearProductDraft();
-      
-      // Reset wizard state for a new product if creating
-      // If updating, don't reset as user might want to make more changes
-      if (!isUpdate) {
-        resetWizard();
-      }
-      
-      // Show success toast
-      toast({
-        title: isUpdate ? 'Product updated' : 'Product created',
-        description: `${state.name} has been ${isUpdate ? 'updated' : 'created'} successfully`,
-        variant: 'default',
-      });
-      
-      // Call the onComplete callback if provided (for wizard navigation)
-      if (onComplete) {
-        onComplete(data);
-      }
-    },
-    onError: (error) => {
-      const isUpdate = !!state.productId;
-      
-      // Detailed error logging
-      console.error('Product save error details:', error);
-      
-      // Try to extract more details from the error
-      let errorMessage = 'An unknown error occurred';
-      if (error instanceof Error) {
-        errorMessage = error.message;
-        
-        // Try to parse JSON error responses
-        try {
-          if (error.message.includes('{')) {
-            const jsonStart = error.message.indexOf('{');
-            const jsonPart = error.message.substring(jsonStart);
-            const errorData = JSON.parse(jsonPart);
-            console.error('Validation error details:', errorData);
-            
-            // Extract validation details if available
-            if (errorData.error?.details) {
-              const validationErrors = errorData.error.details;
-              const validationMessages = [];
-              
-              // Handle both object and array formats
-              if (Array.isArray(validationErrors)) {
-                validationErrors.forEach(err => {
-                  validationMessages.push(`${err.path}: ${err.message}`);
-                });
-              } else {
-                Object.entries(validationErrors).forEach(([field, msg]) => {
-                  validationMessages.push(`${field}: ${msg}`);
-                });
-              }
-              
-              if (validationMessages.length > 0) {
-                errorMessage = `Validation failed: ${validationMessages.join(', ')}`;
-              }
-            }
-          }
-        } catch (parseError) {
-          console.error('Could not parse error details:', parseError);
-        }
-      }
-      
-      // Show error toast with enhanced detail
-      toast({
-        title: `Failed to ${isUpdate ? 'update' : 'create'} product`,
-        description: errorMessage,
-        variant: 'destructive',
-      });
-    },
-  });
-  
-  // Handle save product
-  const handleSaveProduct = async () => {
-    try {
-      // Clear any previous errors
-      setSavingError(null);
-      setIsSubmitting(true);
-      
-      const isUpdate = !!state.productId;
-      
-      // Prepare product data for API - ensure numeric values for price fields
-      const productData = {
-        name: state.name,
-        slug: state.slug,
-        sku: state.sku,
-        brand: state.brand || null,
-        description: state.description || null,
-        categoryId: Number(state.categoryId),
-        // Important: Make sure catalogId is included
-        catalogId: state.catalogId ? Number(state.catalogId) : null,
-        supplierId: state.supplierId ? Number(state.supplierId) : null,
-        price: Number(state.regularPrice), // Required field in schema
-        costPrice: Number(state.costPrice),
-        regularPrice: Number(state.regularPrice),
-        salePrice: state.onSale ? Number(state.salePrice) : null,
-        markupPercentage: Number(state.markupPercentage),
-        isActive: state.isActive,
-        isFeatured: state.isFeatured,
-        
-        // Inventory
-        stockLevel: Number(state.stockLevel || 0),
-        lowStockThreshold: Number(state.lowStockThreshold || 0),
-        backorderEnabled: Boolean(state.backorderEnabled),
-        
-        // Images
-        imageUrls: state.imageUrls,
-        imageObjectKeys: state.imageObjectKeys,
-        mainImageIndex: Number(state.mainImageIndex),
-        
-        // SEO
-        metaTitle: state.metaTitle || state.name, // Use product name as fallback
-        metaDescription: state.metaDescription || state.description || null,
-        metaKeywords: state.metaKeywords || '',
-        
-        // Tax settings
-        taxable: Boolean(state.taxable),
-        taxClass: state.taxClass || '',
-        
-        // Product details
-        supplier: state.supplier || null,
-        weight: state.weight ? Number(state.weight) : null,
-        dimensions: state.dimensions || null,
-        
-        // Sales and promotions
-        discountLabel: state.discountLabel || null,
-        specialSaleText: state.specialSaleText || null,
-        // Initially set date fields (will be properly formatted later)
-        specialSaleStart: state.specialSaleStart,
-        specialSaleEnd: state.specialSaleEnd,
-        // Flash deal configuration
-        isFlashDeal: state.isFlashDeal || false,
-        flashDealEnd: state.flashDealEnd,
-        
-        // Attributes
-        attributes: state.attributes || [],
-        attributeValues: state.attributeValues || [],
-        
-        // Catalog context - we already defined catalogId above
-        catalogName: state.catalogName || null,
-      };
-      
-      // Function to safely format date values for API submission as strings
-      const formatDateForApi = (value: any): string | null => {
-        if (!value) return null;
-        
-        try {
-          // If it's a Date object, convert to ISO string
-          if (value instanceof Date) {
-            return value.toISOString();
-          }
-          
-          // If it's already a string, return as is (even if not a valid date)
-          if (typeof value === 'string') {
-            return value;
-          }
-          
-          // Otherwise return null
-          return null;
-        } catch (error) {
-          console.error('Error formatting date:', error);
-          return null;
-        }
-      };
-      
-      // Update date fields with properly formatted values
-      productData.specialSaleStart = formatDateForApi(productData.specialSaleStart);
-      productData.specialSaleEnd = formatDateForApi(productData.specialSaleEnd);
-      productData.flashDealEnd = formatDateForApi(productData.flashDealEnd);
-      
-      // Log the product data for debugging
-      console.log(`${isUpdate ? 'Updating' : 'Creating'} product data:`, productData);
-      
-      // Debug date fields
-      console.log('Date fields being sent:');
-      console.log('specialSaleStart:', productData.specialSaleStart, typeof productData.specialSaleStart);
-      console.log('specialSaleEnd:', productData.specialSaleEnd, typeof productData.specialSaleEnd);
-      console.log('flashDealEnd:', productData.flashDealEnd, typeof productData.flashDealEnd);
-      
-      // Submit data
-      await saveProductMutation.mutateAsync(productData);
-      
-      // Success! Toast is handled by the mutation's onSuccess callback
-    } catch (error) {
-      console.error(`Product ${state.productId ? 'update' : 'creation'} error:`, error);
-      
-      // Handle both Error objects and response errors
-      if (error instanceof Error) {
-        // Try to extract more detail if possible
-        let errorMessage = error.message;
-        try {
-          if (error.message.includes('{')) {
-            const jsonStart = error.message.indexOf('{');
-            const jsonPart = error.message.substring(jsonStart);
-            const errorData = JSON.parse(jsonPart);
-            console.error('Detailed validation failure:', errorData);
-            
-            // Log raw data to help debugging
-            if (errorData.error?.details) {
-              console.error('Field validation details:', errorData.error.details);
-              
-              // Try to build a more descriptive error message
-              const detailsObj = errorData.error.details;
-              if (typeof detailsObj === 'object') {
-                const errorItems = Object.entries(detailsObj).map(([key, value]) => 
-                  `${key}: ${value}`
-                ).join(', ');
-                
-                if (errorItems) {
-                  errorMessage = `Validation errors: ${errorItems}`;
-                }
-              }
-            }
-          }
-        } catch (parseErr) {
-          console.error('Failed to parse error details', parseErr);
-        }
-        
-        setSavingError(`Failed to ${state.productId ? 'update' : 'create'} product: ${errorMessage}`);
-      } else {
-        setSavingError(`Failed to ${state.productId ? 'update' : 'create'} product due to an unknown error`);
-      }
-    } finally {
-      setIsSubmitting(false);
+  // Get attribute name and value display
+  const getAttributeDisplay = (attributeId: number, value: string | string[] | null) => {
+    if (!attributesData?.data) return { name: 'Loading...', value: value?.toString() || 'None' };
+    
+    const attribute = attributesData.data.find((attr: any) => attr.id === attributeId);
+    if (!attribute) return { name: 'Unknown', value: value?.toString() || 'None' };
+    
+    // Format the value based on attribute type
+    let formattedValue: string;
+    if (Array.isArray(value)) {
+      formattedValue = value.join(', ');
+    } else if (value === null) {
+      formattedValue = 'None';
+    } else {
+      formattedValue = value;
     }
+    
+    return { name: attribute.displayName || attribute.name, value: formattedValue };
   };
   
-  // Handle navigate to step
-  const handleNavigateToStep = (step: string) => {
-    setCurrentStep(step as any);
+  // Handle the final save action
+  const handleSave = () => {
+    // The save action is the same as for other steps, just pass an empty object
+    // The actual publishing will be handled by the parent component
+    onSave({});
   };
-  
+
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Review {state.productId ? 'and Update' : ''} Product Information</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Review all product details before {state.productId ? 'updating' : 'saving'}. You can go back to any step to make changes.
-          </p>
-        </CardHeader>
-        <CardContent>
-          {/* Validation Errors */}
-          {hasErrors && (
-            <Alert variant="destructive" className="mb-6">
-              <AlertTriangleIcon className="h-4 w-4" />
-              <AlertTitle>Validation Errors</AlertTitle>
-              <AlertDescription>
-                <ul className="list-disc pl-5 mt-2">
-                  {validationErrors.map((error, index) => (
-                    <li key={index}>{error}</li>
-                  ))}
-                </ul>
-              </AlertDescription>
-            </Alert>
+    <Card>
+      <CardContent className="p-6">
+        <div className="space-y-6">
+          {/* Validation summary */}
+          {incompleteSteps.length > 0 ? (
+            <div className="bg-amber-50 border border-amber-200 rounded-md p-4 mb-6">
+              <div className="flex items-start">
+                <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 mr-3" />
+                <div>
+                  <h3 className="text-amber-800 font-medium">Please complete the following steps:</h3>
+                  <ul className="mt-2 list-disc list-inside text-amber-700">
+                    {incompleteSteps.map(step => (
+                      <li key={step}>{
+                        step === 'basic-info' ? 'Basic Information' : 
+                        step === 'images' ? 'Product Images' : 
+                        step === 'additional-info' ? 'Additional Information' : 
+                        step
+                      }</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-green-50 border border-green-200 rounded-md p-4 mb-6">
+              <div className="flex items-center">
+                <Check className="h-5 w-5 text-green-600 mr-3" />
+                <p className="text-green-800 font-medium">All required steps are completed! Review the information below and submit.</p>
+              </div>
+            </div>
           )}
           
-          {/* Basic Info Section */}
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium">Basic Information</h3>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="flex items-center gap-1"
-                onClick={() => handleNavigateToStep('basic-info')}
-              >
-                <Edit className="h-3 w-3" />
-                <span>Edit</span>
-              </Button>
-            </div>
-            
-            <Separator />
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
-              <div className="space-y-1">
-                <Label className="text-muted-foreground">Product Name</Label>
-                <p className="font-medium">{state.name || 'Not specified'}</p>
+          {/* Basic Information */}
+          <div>
+            <h3 className="text-lg font-medium mb-4">Basic Information</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm font-medium text-gray-500">Product Name</p>
+                <p className="text-base">{draft.name || 'Not specified'}</p>
               </div>
               
-              <div className="space-y-1">
-                <Label className="text-muted-foreground">SKU</Label>
-                <p className="font-medium">{state.sku || 'Not specified'}</p>
+              <div>
+                <p className="text-sm font-medium text-gray-500">Slug</p>
+                <p className="text-base">{draft.slug || 'Not specified'}</p>
               </div>
               
-              <div className="space-y-1">
-                <Label className="text-muted-foreground">URL Slug</Label>
-                <p className="font-medium">{state.slug || 'Not specified'}</p>
+              <div>
+                <p className="text-sm font-medium text-gray-500">Category</p>
+                <p className="text-base">{getCategoryName(draft.categoryId)}</p>
               </div>
               
-              <div className="space-y-1">
-                <Label className="text-muted-foreground">Brand</Label>
-                <p className="font-medium">{state.brand || 'Not specified'}</p>
+              <div>
+                <p className="text-sm font-medium text-gray-500">Stock Level</p>
+                <p className="text-base">{draft.stockLevel !== null ? draft.stockLevel : 'Not specified'}</p>
               </div>
               
-              <div className="space-y-1">
-                <Label className="text-muted-foreground">Category</Label>
-                <p className="font-medium">{getCategoryName(state.categoryId)}</p>
-              </div>
-              
-              <div className="space-y-1">
-                <Label className="text-muted-foreground">Status</Label>
-                <div className="flex items-center gap-2">
-                  <Badge variant={state.isActive ? "default" : "outline"}>
-                    {state.isActive ? 'Active' : 'Inactive'}
-                  </Badge>
-                  {state.isFeatured && (
-                    <Badge variant="secondary">Featured</Badge>
-                  )}
-                </div>
-              </div>
-              
-              <div className="space-y-1 col-span-2">
-                <Label className="text-muted-foreground">Description</Label>
-                <p className="font-medium whitespace-pre-wrap">
-                  {state.description || 'No description provided'}
+              <div>
+                <p className="text-sm font-medium text-gray-500">Regular Price</p>
+                <p className="text-base">
+                  {draft.regularPrice !== null ? `$${draft.regularPrice.toFixed(2)}` : 'Not specified'}
                 </p>
               </div>
+              
+              <div>
+                <p className="text-sm font-medium text-gray-500">Sale Price</p>
+                <p className="text-base">
+                  {draft.salePrice !== null ? `$${draft.salePrice.toFixed(2)}` : 'Not applicable'}
+                </p>
+              </div>
+              
+              <div>
+                <p className="text-sm font-medium text-gray-500">Status</p>
+                <Badge className={draft.isActive ? "bg-green-100 text-green-800" : ""}>
+                  {draft.isActive ? 'Active' : 'Inactive'}
+                </Badge>
+              </div>
+              
+              <div>
+                <p className="text-sm font-medium text-gray-500">Featured</p>
+                <Badge className={draft.isFeatured ? "bg-green-100 text-green-800" : ""}>
+                  {draft.isFeatured ? 'Yes' : 'No'}
+                </Badge>
+              </div>
+            </div>
+            
+            <div className="mt-4">
+              <p className="text-sm font-medium text-gray-500">Description</p>
+              <p className="text-base whitespace-pre-wrap">{draft.description || 'No description provided'}</p>
             </div>
           </div>
           
-          {/* Pricing Section */}
-          <div className="mt-8 space-y-6">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium">Pricing</h3>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="flex items-center gap-1"
-                onClick={() => handleNavigateToStep('basic-info')}
-              >
-                <Edit className="h-3 w-3" />
-                <span>Edit</span>
-              </Button>
-            </div>
-            
-            <Separator />
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-6">
-              <div className="space-y-1">
-                <Label className="text-muted-foreground">Cost Price</Label>
-                <p className="font-medium">{formatCurrency(state.costPrice)}</p>
-              </div>
-              
-              <div className="space-y-1">
-                <Label className="text-muted-foreground">Markup</Label>
-                <p className="font-medium">{state.markupPercentage}%</p>
-              </div>
-              
-              <div className="space-y-1">
-                <Label className="text-muted-foreground">Regular Price</Label>
-                <p className="font-medium">{formatCurrency(state.regularPrice)}</p>
-              </div>
-              
-              {state.onSale && (
-                <>
-                  <div className="space-y-1">
-                    <Label className="text-muted-foreground">Sale Price</Label>
-                    <p className="font-medium">{formatCurrency(state.salePrice)}</p>
-                  </div>
-                  
-                  <div className="space-y-1">
-                    <Label className="text-muted-foreground">Discount</Label>
-                    <Badge variant="destructive" className="font-medium">
-                      {state.salePrice && state.regularPrice 
-                        ? `${Math.round((1 - state.salePrice / state.regularPrice) * 100)}% OFF` 
-                        : 'N/A'
-                      }
-                    </Badge>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
+          <Separator />
           
-          {/* Images Section */}
-          <div className="mt-8 space-y-6">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium">Images</h3>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="flex items-center gap-1"
-                onClick={() => handleNavigateToStep('images')}
-              >
-                <Edit className="h-3 w-3" />
-                <span>Edit</span>
-              </Button>
-            </div>
-            
-            <Separator />
-            
-            {/* Use our standardized ProductImageGallery component */}
-            <ProductImageGallery 
-              images={state.imageUrls.map((url, index) => ({
-                url,
-                index,
-                isMain: index === state.mainImageIndex
-              }))}
-              mainImageIndex={state.mainImageIndex}
-              columns={4}
-              showBadges={true}
-              layout="grid"
-              aspectRatio="square"
-              emptyState={
-                <div className="text-center py-8 border rounded-md bg-muted/20">
-                  <ImageIcon className="h-12 w-12 mx-auto text-muted-foreground" />
-                  <p className="mt-2 text-muted-foreground">No images uploaded</p>
+          {/* Images */}
+          <div>
+            <h3 className="text-lg font-medium mb-4">Product Images</h3>
+            {draft.imageUrls && draft.imageUrls.length > 0 ? (
+              <div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                  {draft.imageUrls.map((url, index) => (
+                    <div 
+                      key={index} 
+                      className={`relative border rounded-md overflow-hidden ${
+                        index === draft.mainImageIndex ? 'border-primary ring-2 ring-primary' : 'border-gray-200'
+                      }`}
+                    >
+                      <img 
+                        src={url} 
+                        alt={`Product image ${index + 1}`} 
+                        className="w-full h-24 object-cover"
+                      />
+                      {index === draft.mainImageIndex && (
+                        <div className="absolute top-2 left-2 bg-primary text-white px-2 py-0.5 rounded text-xs">
+                          Main
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              }
-              className="mb-4"
-            />
-            
-            {state.imageUrls.length > 0 && (
-              <p className="text-sm text-muted-foreground">
-                {state.imageUrls.length} image{state.imageUrls.length !== 1 ? 's' : ''} uploaded
-              </p>
+                <p className="text-sm text-gray-500 mt-2">Total images: {draft.imageUrls.length}</p>
+              </div>
+            ) : (
+              <p className="text-yellow-600">No images have been added</p>
             )}
           </div>
           
-          {/* Inventory Section */}
-          <div className="mt-8 space-y-6">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium">Inventory</h3>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="flex items-center gap-1"
-                onClick={() => handleNavigateToStep('additional-info')}
-              >
-                <Edit className="h-3 w-3" />
-                <span>Edit</span>
-              </Button>
-            </div>
-            
-            <Separator />
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-6">
-              <div className="space-y-1">
-                <Label className="text-muted-foreground">Stock Level</Label>
-                <p className="font-medium">{state.stockLevel}</p>
-              </div>
-              
-              <div className="space-y-1">
-                <Label className="text-muted-foreground">Low Stock Threshold</Label>
-                <p className="font-medium">{state.lowStockThreshold}</p>
-              </div>
-              
-              <div className="space-y-1">
-                <Label className="text-muted-foreground">Backorders</Label>
-                <Badge variant={state.backorderEnabled ? "default" : "outline"}>
-                  {state.backorderEnabled ? 'Allowed' : 'Not Allowed'}
-                </Badge>
-              </div>
-            </div>
-          </div>
+          <Separator />
           
-          {/* Product Details Section */}
-          <div className="mt-8 space-y-6">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium">Product Details</h3>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="flex items-center gap-1"
-                onClick={() => handleNavigateToStep('additional-info')}
-              >
-                <Edit className="h-3 w-3" />
-                <span>Edit</span>
-              </Button>
-            </div>
-            
-            <Separator />
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-6">
-              <div className="space-y-1">
-                <Label className="text-muted-foreground">Supplier</Label>
-                <p className="font-medium">{state.supplier || 'Not specified'}</p>
+          {/* Additional Information */}
+          <div>
+            <h3 className="text-lg font-medium mb-4">Additional Information</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm font-medium text-gray-500">Dimensions</p>
+                <p className="text-base">{draft.dimensions || 'Not specified'}</p>
               </div>
               
-              <div className="space-y-1">
-                <Label className="text-muted-foreground">Weight</Label>
-                <p className="font-medium">{state.weight ? `${state.weight} kg` : 'Not specified'}</p>
+              <div>
+                <p className="text-sm font-medium text-gray-500">Weight</p>
+                <p className="text-base">{draft.weight || 'Not specified'}</p>
               </div>
               
-              <div className="space-y-1">
-                <Label className="text-muted-foreground">Dimensions</Label>
-                <p className="font-medium">{state.dimensions || 'Not specified'}</p>
-              </div>
-            </div>
-          </div>
-          
-          {/* Sales & Promotions Section */}
-          <div className="mt-8 space-y-6">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium">Sales & Promotions</h3>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="flex items-center gap-1"
-                onClick={() => handleNavigateToStep('additional-info')}
-              >
-                <Edit className="h-3 w-3" />
-                <span>Edit</span>
-              </Button>
-            </div>
-            
-            <Separator />
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-              <div className="space-y-1">
-                <Label className="text-muted-foreground">Discount Label</Label>
-                <p className="font-medium">{state.discountLabel || 'Not specified'}</p>
-              </div>
-              
-              <div className="space-y-1">
-                <Label className="text-muted-foreground">Special Sale Text</Label>
-                <p className="font-medium">{state.specialSaleText || 'Not specified'}</p>
-              </div>
-              
-              <div className="space-y-1">
-                <Label className="text-muted-foreground">Special Sale Period</Label>
-                <p className="font-medium">
-                  {state.specialSaleStart && state.specialSaleEnd 
-                    ? `${new Date(state.specialSaleStart).toLocaleDateString()} - ${new Date(state.specialSaleEnd).toLocaleDateString()}`
-                    : 'Not specified'}
-                </p>
-              </div>
-            </div>
-          </div>
-          
-          {/* Attributes Section */}
-          {state.attributes.length > 0 && (
-            <div className="mt-8 space-y-6">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium">Attributes</h3>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="flex items-center gap-1"
-                  onClick={() => handleNavigateToStep('additional-info')}
-                >
-                  <Edit className="h-3 w-3" />
-                  <span>Edit</span>
-                </Button>
-              </div>
-              
-              <Separator />
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {state.attributes.map((attr: any) => (
-                  <div key={attr.id} className="flex items-start gap-2 p-3 rounded-md border">
-                    <div className="w-1/3 font-medium">{attr.name}:</div>
-                    <div className="flex-1">{attr.value || 'Not specified'}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          
-          {/* Tax Section */}
-          <div className="mt-8 space-y-6">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium">Tax Information</h3>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="flex items-center gap-1"
-                onClick={() => handleNavigateToStep('additional-info')}
-              >
-                <Edit className="h-3 w-3" />
-                <span>Edit</span>
-              </Button>
-            </div>
-            
-            <Separator />
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-              <div className="space-y-1">
-                <Label className="text-muted-foreground">Taxable</Label>
-                <Badge variant={state.taxable ? "default" : "outline"}>
-                  {state.taxable ? 'Yes' : 'No'}
-                </Badge>
-              </div>
-              
-              {state.taxable && (
-                <div className="space-y-1">
-                  <Label className="text-muted-foreground">Tax Class</Label>
-                  <p className="font-medium">{state.taxClass || 'Standard'}</p>
+              {draft.discountLabel && (
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Discount Label</p>
+                  <p className="text-base">{draft.discountLabel}</p>
                 </div>
               )}
-            </div>
-          </div>
-          
-          {/* SEO Section */}
-          <div className="mt-8 space-y-6">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium">SEO Information</h3>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="flex items-center gap-1"
-                onClick={() => handleNavigateToStep('additional-info')}
-              >
-                <Edit className="h-3 w-3" />
-                <span>Edit</span>
-              </Button>
-            </div>
-            
-            <Separator />
-            
-            <div className="grid grid-cols-1 gap-y-6">
-              <div className="space-y-1">
-                <Label className="text-muted-foreground">Meta Title</Label>
-                <p className="font-medium">{state.metaTitle || state.name || 'Not specified'}</p>
-              </div>
               
-              <div className="space-y-1">
-                <Label className="text-muted-foreground">Meta Description</Label>
-                <p className="font-medium">{state.metaDescription || truncateText(state.description || '', 150) || 'Not specified'}</p>
-              </div>
+              {draft.specialSaleText && (
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Special Sale</p>
+                  <p className="text-base">{draft.specialSaleText}</p>
+                </div>
+              )}
               
-              <div className="space-y-1">
-                <Label className="text-muted-foreground">Meta Keywords</Label>
-                <p className="font-medium">{state.metaKeywords || 'Not specified'}</p>
-              </div>
-            </div>
-          </div>
-          
-          {/* Catalog Context */}
-          {state.catalogId && (
-            <div className="mt-8 space-y-6">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium">Catalog Information</h3>
-              </div>
+              {draft.specialSaleStart && (
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Sale Start Date</p>
+                  <p className="text-base">{format(new Date(draft.specialSaleStart), 'PPP')}</p>
+                </div>
+              )}
               
-              <Separator />
+              {draft.specialSaleEnd && (
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Sale End Date</p>
+                  <p className="text-base">{format(new Date(draft.specialSaleEnd), 'PPP')}</p>
+                </div>
+              )}
               
-              <div className="p-4 border rounded-md bg-muted/10">
-                <p className="text-sm">
-                  This product will be {state.productId ? 'updated in' : 'added to'} the <strong>{state.catalogName || 'Selected'}</strong> catalog.
-                </p>
-              </div>
-            </div>
-          )}
-          
-          {/* Saving Error */}
-          {savingError && (
-            <Alert variant="destructive" className="mt-8">
-              <AlertTriangleIcon className="h-4 w-4" />
-              <AlertTitle>Error {state.productId ? 'Updating' : 'Saving'} Product</AlertTitle>
-              <AlertDescription>
-                {savingError}
-              </AlertDescription>
-            </Alert>
-          )}
-          
-          {/* Save Button */}
-          <div className="mt-8 flex justify-end gap-4">
-            <Button 
-              variant="default"
-              size="lg"
-              className="w-full md:w-auto"
-              onClick={handleSaveProduct}
-              disabled={isSubmitting || (hasErrors && validationErrors.some(err => !err.includes('recommended')))}
-              data-save-product-button
-            >
-              {isSubmitting ? (
+              {draft.isFlashDeal && (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  <span>{state.productId ? 'Updating...' : 'Saving...'}</span>
-                </>
-              ) : (
-                <>
-                  <SaveIcon className="mr-2 h-4 w-4" />
-                  <span>{state.productId ? 'Update Product' : 'Save Product'}</span>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Flash Deal</p>
+                    <Badge className="bg-yellow-100 text-yellow-800">Yes</Badge>
+                  </div>
+                  
+                  {draft.flashDealEnd && (
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Flash Deal End Date</p>
+                      <p className="text-base">{format(new Date(draft.flashDealEnd), 'PPP')}</p>
+                    </div>
+                  )}
                 </>
               )}
-            </Button>
+            </div>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+          
+          <Separator />
+          
+          {/* Attributes */}
+          {draft.attributes && draft.attributes.length > 0 && (
+            <>
+              <div>
+                <h3 className="text-lg font-medium mb-4">Product Attributes</h3>
+                <div className="space-y-3">
+                  {draft.attributes.map((attr, index) => {
+                    const { name, value } = getAttributeDisplay(attr.attributeId, attr.value);
+                    return (
+                      <div key={index} className="flex items-start py-2 border-b border-gray-100">
+                        <div className="w-1/3 font-medium">{name}</div>
+                        <div className="w-2/3">{value}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              <Separator />
+            </>
+          )}
+          
+          {/* Summary & Save */}
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h3 className="text-lg font-medium mb-2">Ready to Publish?</h3>
+            <p className="text-gray-600 mb-4">
+              {draft.originalProductId 
+                ? 'This will update the existing product with the information above.' 
+                : 'This will create a new product with the information above.'}
+            </p>
+            
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                onClick={handleSave}
+                disabled={isLoading || incompleteSteps.length > 0}
+                size="lg"
+              >
+                {isLoading && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
+                <Save className="mr-2 h-5 w-5" />
+                {draft.originalProductId ? 'Update Product' : 'Create Product'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
-}
+};
+
+export default ReviewAndSaveStep;

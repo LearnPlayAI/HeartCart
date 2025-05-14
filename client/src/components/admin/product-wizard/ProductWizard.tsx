@@ -18,8 +18,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import BasicInfoStep from './steps/BasicInfoStep';
 import ProductImagesStep from './steps/ProductImagesStep';
-import AdditionalInfoStep from './steps/AdditionalInfoStep';
-import ReviewAndSaveStep from './steps/ReviewAndSaveStep';
+import { AdditionalInfoStep } from './steps/AdditionalInfoStep';
+import { ReviewAndSaveStep } from './steps/ReviewAndSaveStep';
 
 // Define the steps in the wizard
 const WIZARD_STEPS = [
@@ -71,7 +71,7 @@ interface ProductWizardProps {
   productId?: number;
 }
 
-const ProductWizard: React.FC<ProductWizardProps> = ({ editMode = false, productId }) => {
+export const ProductWizard: React.FC<ProductWizardProps> = ({ editMode = false, productId }) => {
   const { toast } = useToast();
   const [_, setLocation] = useLocation();
   const queryClient = useQueryClient();
