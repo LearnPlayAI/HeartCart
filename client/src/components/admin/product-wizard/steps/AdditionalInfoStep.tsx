@@ -73,7 +73,24 @@ const additionalInfoSchema = z.object({
 type AdditionalInfoFormValues = z.infer<typeof additionalInfoSchema>;
 
 export function AdditionalInfoStep() {
-  const { state, setField, markStepComplete, markStepValid, addAttribute, updateAttribute, removeAttribute } = useProductWizardContext();
+  const { 
+    state, 
+    setField, 
+    markStepComplete, 
+    markStepValid, 
+    addAttribute, 
+    updateAttribute, 
+    removeAttribute,
+    nextStep,
+    prevStep,
+    toggleAttribute,
+    updateAttributeOptions,
+    updateAttributeTextValue
+  } = useProductWizardContext();
+  
+  // Loading states
+  const [isLoading, setIsLoading] = useState(false);
+  const [isFetchingOptions, setIsFetchingOptions] = useState(false);
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('inventory');
   const [attributeNameInput, setAttributeNameInput] = useState('');
