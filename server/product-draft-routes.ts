@@ -56,14 +56,20 @@ export default function registerProductDraftRoutes(router: Router) {
 
       // If originalProductId is provided, load the product data
       if (draftData.originalProductId) {
+        logger.debug('Creating draft from existing product', { originalProductId: draftData.originalProductId });
+        
         const product = await storage.getProductById(draftData.originalProductId);
         if (!product) {
           throw new NotFoundError("Original product not found");
         }
-
+        
         // Check if a draft already exists for this product
         const existingDraft = await storage.getProductDraftByOriginalId(draftData.originalProductId);
         if (existingDraft) {
+          logger.debug('Found existing draft for product', { 
+            productId: draftData.originalProductId,
+            draftId: existingDraft.id 
+          });
           // Return the existing draft
           return sendSuccess(res, existingDraft);
         }
