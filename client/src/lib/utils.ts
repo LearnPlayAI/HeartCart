@@ -121,3 +121,43 @@ export function calculateDiscountPercentage(
   // Round to nearest integer
   return Math.round(discountPercentage);
 }
+
+/**
+ * Calculates time remaining until a target date
+ * 
+ * @param endDate The target date/time
+ * @returns Object with time components remaining
+ */
+export function getTimeRemaining(endDate: Date | string) {
+  const total = new Date(endDate).getTime() - Date.now();
+  const seconds = Math.floor((total / 1000) % 60);
+  const minutes = Math.floor((total / 1000 / 60) % 60);
+  const hours = Math.floor((total / (1000 * 60 * 60)) % 24);
+  const days = Math.floor(total / (1000 * 60 * 60 * 24));
+  
+  return {
+    total,
+    days,
+    hours,
+    minutes,
+    seconds
+  };
+}
+
+type TimeFormat = {
+  hours: number;
+  minutes: number;
+  seconds: number;
+};
+
+/**
+ * Formats time components into a readable string
+ * 
+ * @param time Object with time components
+ * @returns Formatted time string (HH:MM:SS)
+ */
+export function formatTimeRemaining(time: TimeFormat): string {
+  const padZero = (num: number): string => num.toString().padStart(2, '0');
+  
+  return `${padZero(time.hours)}:${padZero(time.minutes)}:${padZero(time.seconds)}`;
+}
