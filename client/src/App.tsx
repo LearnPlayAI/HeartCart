@@ -147,9 +147,28 @@ function App() {
               <AdminProtectedRoute path="/admin/products/new" component={React.lazy(() => import("@/pages/admin/product-create-new"))} />
               <AdminProtectedRoute path="/admin/products/:id/edit" component={React.lazy(() => import("@/pages/admin/product-edit-new"))} />
               
-              {/* Original Wizard Routes (Commented out to use new implementation) */}
-              {/* <AdminProtectedRoute path="/admin/products/wizard/:id?" component={ProductWizardPage} /> */}
-              {/* <AdminProtectedRoute path="/admin/catalogs/:catalogId/products/wizard" component={ProductWizardPage} /> */}
+              {/* Original Wizard Routes - Redirected to new implementation */}
+              <Route path="/admin/products/wizard/:id?">
+                {(params) => {
+                  const [_, navigate] = useLocation();
+                  React.useEffect(() => {
+                    const targetPath = params.id 
+                      ? `/admin/products/${params.id}/edit` 
+                      : `/admin/products/new`;
+                    navigate(targetPath, { replace: true });
+                  }, [params.id, navigate]);
+                  return <div className="p-8 text-center">Redirecting to new product manager...</div>;
+                }}
+              </Route>
+              <Route path="/admin/catalogs/:catalogId/products/wizard">
+                {(params) => {
+                  const [_, navigate] = useLocation();
+                  React.useEffect(() => {
+                    navigate(`/admin/catalogs/${params.catalogId}/products/new`, { replace: true });
+                  }, [params.catalogId, navigate]);
+                  return <div className="p-8 text-center">Redirecting to new product manager...</div>;
+                }}
+              </Route>
               <AdminProtectedRoute path="/admin/catalogs/:catalogId/products/new" component={React.lazy(() => import("@/pages/admin/product-create-new"))} />
               <AdminProtectedRoute path="/admin/categories" component={AdminCategories} />
               <AdminProtectedRoute path="/admin/categories/:categoryId/attributes" component={CategoryAttributes} />
