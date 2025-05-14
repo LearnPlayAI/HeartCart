@@ -163,6 +163,19 @@ export function AdditionalInfoStep() {
     );
   };
   
+  // Function to update selected options for an attribute in local state only
+  const setSelectedOptions = (id: number, optionIds: number[]) => {
+    console.log(`Set selected options for attribute ${id} in local state: ${optionIds.join(', ')}`);
+    
+    setLocalAttributes(prev => 
+      prev.map(attr => 
+        attr.id === id 
+          ? { ...attr, selectedOptions: optionIds } 
+          : attr
+      )
+    );
+  };
+  
   // Fetch options for a selected attribute
   const fetchOptionsForAttribute = async (attributeId: number) => {
     if (!attributeId) return [];
