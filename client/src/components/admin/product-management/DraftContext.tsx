@@ -48,27 +48,41 @@ export interface ProductDraft {
 // Context interface
 interface DraftContextType {
   draft: ProductDraft | null;
+  drafts: ProductDraft[];
   loading: boolean;
+  isLoading: boolean;
+  isCreating: boolean;
   error: string | null;
-  createDraft: () => Promise<ProductDraft | null>;
+  currentDraft: ProductDraft | null;
+  selectedDraftId: number | null;
+  createDraft: () => Promise<number | null>;
   loadDraft: (draftId: number) => Promise<void>;
   updateDraft: (updates: Partial<ProductDraft>) => Promise<void>;
   saveDraft: () => Promise<void>;
-  publishDraft: () => Promise<void>;
+  publishDraft: (draftId: number) => Promise<boolean>;
   deleteDraft: () => Promise<void>;
+  discardDraft: (draftId: number) => Promise<boolean>;
+  refreshDrafts: () => Promise<void>;
 }
 
 // Create context with default values
 const DraftContext = createContext<DraftContextType>({
   draft: null,
+  drafts: [],
   loading: false,
+  isLoading: false,
+  isCreating: false,
   error: null,
+  currentDraft: null,
+  selectedDraftId: null,
   createDraft: async () => null,
   loadDraft: async () => {},
   updateDraft: async () => {},
   saveDraft: async () => {},
-  publishDraft: async () => {},
+  publishDraft: async () => false,
   deleteDraft: async () => {},
+  discardDraft: async () => false,
+  refreshDrafts: async () => {},
 });
 
 // Context provider props
@@ -80,10 +94,24 @@ interface DraftProviderProps {
 // Provider component
 export function DraftProvider({ children, initialDraftId }: DraftProviderProps) {
   const [draft, setDraft] = useState<ProductDraft | null>(null);
+  const [drafts, setDrafts] = useState<ProductDraft[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedDraftId, setSelectedDraftId] = useState<number | null>(null);
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  
+  // Alias for currentDraft
+  const currentDraft = draft;
+  
+  // Load all drafts on mount
+  useEffect(() => {
+    refreshDrafts().catch(err => {
+      console.error('Error loading drafts:', err);
+    });
+  }, []);
   
   // Load initial draft if ID is provided
   useEffect(() => {
@@ -276,17 +304,136 @@ export function DraftProvider({ children, initialDraftId }: DraftProviderProps) 
     }
   };
   
+  // Fetch all drafts
+  const refreshDrafts = async (): Promise<void> => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const response = await apiRequest('/api/product-drafts');
+      
+      if (response.success && response.data) {
+        setDrafts(response.data);
+      } else {
+        throw new Error(response.message || 'Failed to fetch drafts');
+      }
+    } catch (err) {
+      console.error('Error loading drafts:', err);
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      
+      toast({
+        title: 'Error Loading Drafts',
+        description: 'Could not load product drafts. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Discard changes to a draft
+  const discardDraft = async (draftId: number): Promise<boolean> => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await apiRequest(`/api/product-drafts/${draftId}/discard`, {
+        method: 'POST',
+      });
+      
+      if (response.success && response.data) {
+        // If this is the current draft, update it
+        if (draft?.id === draftId) {
+          setDraft(response.data);
+        }
+        
+        // Update in the drafts list
+        setDrafts(prev => prev.map(d => d.id === draftId ? response.data : d));
+        
+        toast({
+          title: 'Changes Discarded',
+          description: 'Draft changes have been discarded.',
+        });
+        
+        return true;
+      } else {
+        throw new Error(response.message || 'Failed to discard changes');
+      }
+    } catch (err) {
+      console.error('Error discarding draft changes:', err);
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      
+      toast({
+        title: 'Error Discarding Changes',
+        description: err instanceof Error ? err.message : 'Could not discard draft changes.',
+        variant: 'destructive',
+      });
+      
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Override the createDraft to return id
+  const createDraftWithId = async (): Promise<number | null> => {
+    setIsCreating(true);
+    try {
+      const result = await createDraft();
+      if (result && result.id) {
+        setSelectedDraftId(result.id);
+        // Add to drafts list
+        setDrafts(prev => [result, ...prev]);
+        return result.id;
+      }
+      return null;
+    } finally {
+      setIsCreating(false);
+    }
+  };
+  
+  // Override publishDraft to match the interface
+  const publishDraftWithReturn = async (draftId: number): Promise<boolean> => {
+    try {
+      if (!draftId) {
+        setError('No draft ID provided');
+        return false;
+      }
+      
+      // If the current draft is selected, use that
+      if (draft?.id === draftId) {
+        await publishDraft();
+        return true;
+      }
+      
+      // Otherwise, load and publish
+      await loadDraft(draftId);
+      await publishDraft();
+      return true;
+    } catch (err) {
+      console.error('Error in publishDraftWithReturn:', err);
+      return false;
+    }
+  };
+  
   // Context value
   const contextValue: DraftContextType = {
     draft,
+    drafts,
     loading,
+    isLoading,
+    isCreating,
     error,
-    createDraft,
+    currentDraft,
+    selectedDraftId,
+    createDraft: createDraftWithId,
     loadDraft,
     updateDraft,
     saveDraft,
-    publishDraft,
+    publishDraft: publishDraftWithReturn,
     deleteDraft,
+    discardDraft,
+    refreshDrafts,
   };
   
   return (

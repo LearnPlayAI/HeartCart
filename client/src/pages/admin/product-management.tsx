@@ -41,7 +41,7 @@ import { Separator } from "@/components/ui/separator";
 
 import { AdminLayout } from "@/components/admin/layout";
 import { ProductWizard } from "@/components/admin/product-wizard/ProductWizard";
-import { DraftProvider, useDraft } from "@/components/admin/product-management/DraftContext";
+import { DraftProvider, useDraftContext as useDraft } from "@/components/admin/product-management/DraftContext";
 
 function EmptyState({ onCreateDraft }: { onCreateDraft: () => void }) {
   return (
