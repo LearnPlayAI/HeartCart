@@ -5309,10 +5309,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async publishProductDraft(id: number): Promise<Product | undefined> {
+    let transaction;
     try {
+      // Begin transaction to ensure atomicity during publish
+      transaction = await db.transaction();
+      
       // Get the draft
       const draft = await this.getProductDraft(id);
       if (!draft) {
+        if (transaction) await transaction.rollback();
         return undefined;
       }
       
@@ -5329,10 +5334,22 @@ export class DatabaseStorage implements IStorage {
         slug: draft.slug || '',
         description: draft.description,
         categoryId: draft.categoryId,
-        // Map the draft price fields to product price fields
-        price: draft.regularPrice || 0,
-        costPrice: draft.costPrice || 0,
-        salePrice: draft.salePrice || null,
+        // Map the draft price fields to product price fields with type safety
+        price: draft.regularPrice 
+          ? (typeof draft.regularPrice === 'string' 
+             ? parseFloat(draft.regularPrice) 
+             : draft.regularPrice) 
+          : 0,
+        costPrice: draft.costPrice 
+          ? (typeof draft.costPrice === 'string' 
+             ? parseFloat(draft.costPrice) 
+             : draft.costPrice)
+          : 0,
+        salePrice: draft.salePrice 
+          ? (typeof draft.salePrice === 'string' 
+             ? parseFloat(draft.salePrice) 
+             : draft.salePrice)
+          : null,
         discountLabel: draft.discountLabel,
         // Set the main image URL if available
         imageUrl: draft.imageUrls && draft.imageUrls.length > 0 
@@ -5342,19 +5359,49 @@ export class DatabaseStorage implements IStorage {
         additionalImages: draft.imageUrls && draft.imageUrls.length > 1
           ? draft.imageUrls.filter((_, index) => index !== (draft.mainImageIndex || 0))
           : [],
-        // Map stock to product stock
-        stock: draft.stockLevel || 0,
+        // Map stock to product stock with type safety
+        stock: draft.stockLevel 
+          ? (typeof draft.stockLevel === 'string' 
+             ? parseInt(draft.stockLevel, 10) 
+             : typeof draft.stockLevel === 'number' 
+               ? draft.stockLevel 
+               : 0)
+          : 0,
         isActive: draft.isActive !== undefined ? draft.isActive : true,
         isFeatured: draft.isFeatured || false,
         supplier: draft.supplierId ? (await this.getSupplier(draft.supplierId))?.name : null,
-        weight: draft.weight ? parseFloat(draft.weight) : null,
+        weight: draft.weight 
+          ? (typeof draft.weight === 'string' 
+             ? parseFloat(draft.weight) 
+             : typeof draft.weight === 'number' 
+               ? draft.weight 
+               : null)
+          : null,
         dimensions: draft.dimensions,
         // Convert Date timestamps to text strings for storage in products table
         specialSaleText: draft.specialSaleText,
-        specialSaleStart: draft.specialSaleStart ? draft.specialSaleStart.toISOString() : null,
-        specialSaleEnd: draft.specialSaleEnd ? draft.specialSaleEnd.toISOString() : null,
+        specialSaleStart: draft.specialSaleStart 
+          ? (typeof draft.specialSaleStart === 'string' 
+             ? draft.specialSaleStart 
+             : draft.specialSaleStart instanceof Date 
+               ? draft.specialSaleStart.toISOString() 
+               : null) 
+          : null,
+        specialSaleEnd: draft.specialSaleEnd 
+          ? (typeof draft.specialSaleEnd === 'string' 
+             ? draft.specialSaleEnd 
+             : draft.specialSaleEnd instanceof Date 
+               ? draft.specialSaleEnd.toISOString() 
+               : null) 
+          : null,
         isFlashDeal: draft.isFlashDeal || false,
-        flashDealEnd: draft.flashDealEnd ? draft.flashDealEnd.toISOString() : null,
+        flashDealEnd: draft.flashDealEnd 
+          ? (typeof draft.flashDealEnd === 'string' 
+             ? draft.flashDealEnd 
+             : draft.flashDealEnd instanceof Date 
+               ? draft.flashDealEnd.toISOString() 
+               : null) 
+          : null,
         // Additional fields
         brand: draft.brand,
         tags: draft.metaKeywords ? [draft.metaKeywords] : [],
@@ -5365,18 +5412,24 @@ export class DatabaseStorage implements IStorage {
       
       if (draft.originalProductId) {
         // Update existing product
-        const [updatedProduct] = await db
+        const [updatedProduct] = await transaction
           .update(products)
           .set(productData)
           .where(eq(products.id, draft.originalProductId))
           .returning();
+        
+        if (!updatedProduct) {
+          logger.error('Failed to update product from draft', { draftId: id, originalProductId: draft.originalProductId });
+          await transaction.rollback();
+          throw new Error(`Failed to update product from draft ${id}`);
+        }
         
         product = updatedProduct;
         
         // Update product attributes using new centralized attribute system
         if (draft.attributes && Array.isArray(draft.attributes)) {
           // Delete existing attributes
-          await db
+          await transaction
             .delete(productAttributes)
             .where(eq(productAttributes.productId, product.id));
           
@@ -5388,7 +5441,7 @@ export class DatabaseStorage implements IStorage {
           // Insert new attributes
           for (const attr of draft.attributes) {
             try {
-              await db
+              await transaction
                 .insert(productAttributes)
                 .values({
                   productId: product.id,
@@ -5409,15 +5462,23 @@ export class DatabaseStorage implements IStorage {
                 attributeId: attr.attributeId,
                 valueType: typeof attr.value
               });
+              await transaction.rollback();
+              throw attrError;
             }
           }
         }
       } else {
         // Create new product
-        const [newProduct] = await db
+        const [newProduct] = await transaction
           .insert(products)
           .values(productData)
           .returning();
+        
+        if (!newProduct) {
+          logger.error('Failed to create new product from draft', { draftId: id });
+          await transaction.rollback();
+          throw new Error(`Failed to create new product from draft ${id}`);
+        }
         
         product = newProduct;
         
@@ -5431,7 +5492,7 @@ export class DatabaseStorage implements IStorage {
           // Insert new attributes
           for (const attr of draft.attributes) {
             try {
-              await db
+              await transaction
                 .insert(productAttributes)
                 .values({
                   productId: product.id,
@@ -5452,12 +5513,17 @@ export class DatabaseStorage implements IStorage {
                 attributeId: attr.attributeId,
                 valueType: typeof attr.value
               });
+              await transaction.rollback();
+              throw attrError;
             }
           }
         }
       }
       
       // Process and move the images from draft location to final product location
+      let imagesMoved = false;
+      let movedImageRecords = [];
+      
       if (draft.imageObjectKeys && draft.imageObjectKeys.length > 0) {
         // Get supplier and catalog info for image path construction
         const supplier = draft.supplierId ? await this.getSupplier(draft.supplierId) : null;
@@ -5484,8 +5550,8 @@ export class DatabaseStorage implements IStorage {
               i
             );
             
-            // Save product image record with updated locations
-            await db
+            // Save product image record with updated locations using the transaction
+            await transaction
               .insert(productImages)
               .values({
                 productId: product.id,
@@ -5495,14 +5561,23 @@ export class DatabaseStorage implements IStorage {
                 sortOrder: i
               });
             
+            // Keep track of moved images for potential rollback
+            movedImageRecords.push({
+              sourceKey: sourceObjectKey,
+              newKey: newObjectKey,
+              imageUrl: newImageUrl
+            });
+            
             logger.debug('Moved product image from draft to final location', {
               productId: product.id,
               draftId: draft.id,
               sourceKey: sourceObjectKey,
               destinationKey: newObjectKey
             });
+            
+            imagesMoved = true;
           } catch (imageError) {
-            // If image move fails, still create the product but log the error
+            // If image move fails, use more robust error handling
             logger.error('Failed to move image from draft to product location', {
               error: imageError,
               productId: product.id, 
@@ -5510,8 +5585,9 @@ export class DatabaseStorage implements IStorage {
               sourceKey: sourceObjectKey
             });
             
-            // Fallback to using original image locations
-            await db
+            // Fallback to using original image locations 
+            // but still use transaction to maintain consistency
+            await transaction
               .insert(productImages)
               .values({
                 productId: product.id,
@@ -5524,12 +5600,177 @@ export class DatabaseStorage implements IStorage {
         }
       }
       
-      // Delete the draft
-      await this.deleteProductDraft(id);
+      // Delete the draft using the same transaction
+      if (draft.id) {
+        await transaction
+          .delete(productDrafts)
+          .where(eq(productDrafts.id, draft.id));
+      }
+      
+      // Commit the transaction after everything is successful
+      await transaction.commit();
+      
+      logger.info('Successfully published product draft', { 
+        draftId: id, 
+        productId: product.id, 
+        imagesMoved,
+        movedImagesCount: movedImageRecords.length
+      });
       
       return product;
     } catch (error) {
+      // Roll back the transaction in case of any error
+      if (transaction) {
+        await transaction.rollback();
+      }
+      
       logger.error('Error publishing product draft', { error, id });
+      throw error;
+    }
+  }
+
+  /**
+   * Creates a new draft from an existing product for editing
+   * This function sets up a draft with all the product data for the edit workflow
+   */
+  async createDraftFromProduct(productId: number): Promise<ProductDraft | undefined> {
+    let transaction;
+    try {
+      // Begin transaction for atomicity
+      transaction = await db.transaction();
+      
+      // Get the product data
+      const product = await this.getProduct(productId);
+      if (!product) {
+        if (transaction) await transaction.rollback();
+        throw new Error(`Product with ID ${productId} not found`);
+      }
+      
+      // Get all product attributes
+      const attributes = await this.getProductAttributes(productId);
+      
+      // Get all product images
+      const images = await this.getProductImages(productId);
+      
+      // Prepare draft data
+      const draftData: Partial<InsertProductDraft> = {
+        name: product.name,
+        slug: product.slug,
+        description: product.description,
+        // Map the product price fields to draft price fields
+        regularPrice: product.price,
+        costPrice: product.costPrice,
+        salePrice: product.salePrice,
+        discountLabel: product.discountLabel,
+        // Set category, supplier, catalog
+        categoryId: product.categoryId,
+        supplierId: product.supplierId,
+        catalogId: product.catalogId,
+        // Stock info
+        stockLevel: product.stock,
+        // Set status flags
+        isActive: product.isActive,
+        isFeatured: product.isFeatured,
+        // Product specs
+        weight: product.weight ? product.weight.toString() : null,
+        dimensions: product.dimensions,
+        // Promo settings
+        specialSaleText: product.specialSaleText,
+        // Convert date strings back to Date objects if needed
+        specialSaleStart: product.specialSaleStart ? new Date(product.specialSaleStart) : null,
+        specialSaleEnd: product.specialSaleEnd ? new Date(product.specialSaleEnd) : null,
+        isFlashDeal: product.isFlashDeal,
+        flashDealEnd: product.flashDealEnd ? new Date(product.flashDealEnd) : null,
+        // SEO Info
+        metaTitle: product.metaTitle,
+        metaDescription: product.metaDescription,
+        metaKeywords: product.tags?.join(', ') || '',
+        canonicalUrl: product.canonicalUrl,
+        // Additional fields
+        brand: product.brand,
+        // Reference to original product
+        originalProductId: product.id,
+        // Set draft status
+        draftStatus: 'draft',
+        // Initialize tracking fields
+        wizardProgress: 0,
+        completedSteps: [],
+        // Image fields - will be populated below
+        imageUrls: [],
+        imageObjectKeys: [],
+        mainImageIndex: 0
+      };
+      
+      // Add image data
+      if (images && Array.isArray(images)) {
+        const imageUrls: string[] = [];
+        const imageObjectKeys: string[] = [];
+        let mainImageIndex = 0;
+        
+        images.forEach((image, index) => {
+          if (image.imageUrl) imageUrls.push(image.imageUrl);
+          if (image.objectKey) imageObjectKeys.push(image.objectKey);
+          if (image.isMainImage) mainImageIndex = index;
+        });
+        
+        draftData.imageUrls = imageUrls;
+        draftData.imageObjectKeys = imageObjectKeys;
+        draftData.mainImageIndex = mainImageIndex;
+      }
+      
+      // Insert the draft
+      const [newDraft] = await transaction
+        .insert(productDrafts)
+        .values(draftData)
+        .returning();
+      
+      if (!newDraft) {
+        await transaction.rollback();
+        throw new Error(`Failed to create draft from product ${productId}`);
+      }
+      
+      // Add attributes to the draft if available
+      if (attributes && attributes.length > 0) {
+        for (const attr of attributes) {
+          try {
+            await transaction
+              .update(productDrafts)
+              .set({
+                attributes: attributes,
+              })
+              .where(eq(productDrafts.id, newDraft.id));
+            
+            break; // Once we've added attributes, we can break the loop
+          } catch (attrError) {
+            logger.error('Error adding attributes to product draft', {
+              error: attrError,
+              draftId: newDraft.id,
+              productId
+            });
+          }
+        }
+      }
+      
+      // Commit the transaction
+      await transaction.commit();
+      
+      logger.info('Created product draft from existing product', {
+        productId,
+        draftId: newDraft.id
+      });
+      
+      return newDraft;
+    } catch (error) {
+      // Rollback the transaction on error
+      if (transaction) {
+        await transaction.rollback();
+      }
+      
+      logger.error('Failed to create draft from product', {
+        error,
+        productId
+      });
+      
       throw error;
     }
   }
