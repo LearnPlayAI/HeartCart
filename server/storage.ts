@@ -5296,6 +5296,125 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async updateProductDraftStatus(id: number, status: string, note?: string): Promise<ProductDraft> {
+    try {
+      // Get the existing draft 
+      const draft = await this.getProductDraft(id);
+      if (!draft) {
+        throw new Error(`Product draft with ID ${id} not found`);
+      }
+      
+      // Prepare the update data
+      const updateData: Partial<ProductDraft> = {
+        draftStatus: status,
+        lastModified: new Date()
+      };
+      
+      // Add additional information based on status
+      if (status === 'rejected' && note) {
+        updateData.rejectionReason = note;
+      }
+      
+      // Update the change history if available
+      if (draft.changeHistory) {
+        const changeEntry = {
+          timestamp: new Date(),
+          fromStatus: draft.draftStatus,
+          toStatus: status,
+          note: note || null
+        };
+        
+        try {
+          const currentHistory = draft.changeHistory as any[] || [];
+          updateData.changeHistory = [...currentHistory, changeEntry];
+        } catch (error) {
+          logger.error('Error updating change history', { error, draftId: id });
+          // Continue with the update even if change history fails
+        }
+      }
+      
+      // Update the database record
+      const [updatedDraft] = await db
+        .update(productDrafts)
+        .set(updateData)
+        .where(eq(productDrafts.id, id))
+        .returning();
+      
+      if (!updatedDraft) {
+        throw new Error(`Failed to update status for draft ${id}`);
+      }
+      
+      return updatedDraft;
+    } catch (error) {
+      logger.error('Error updating product draft status', { error, id, status });
+      throw error;
+    }
+  }
+  
+  async validateProductDraft(id: number, step?: string): Promise<{ isValid: boolean, errors?: Record<string, string[]> }> {
+    try {
+      const draft = await this.getProductDraft(id);
+      
+      if (!draft) {
+        throw new Error(`Product draft with ID ${id} not found`);
+      }
+      
+      // Validation based on step
+      const errors: Record<string, string[]> = {};
+      let isValid = true;
+      
+      // Basic info validation
+      if (!step || step === 'basic-info') {
+        if (!draft.name || draft.name.trim() === '') {
+          errors['name'] = errors['name'] || [];
+          errors['name'].push("Product name is required");
+          isValid = false;
+        }
+        
+        if (!draft.slug || draft.slug.trim() === '') {
+          errors['slug'] = errors['slug'] || [];
+          errors['slug'].push("Product URL slug is required");
+          isValid = false;
+        }
+        
+        if (!draft.categoryId) {
+          errors['categoryId'] = errors['categoryId'] || [];
+          errors['categoryId'].push("Product category is required");
+          isValid = false;
+        }
+      }
+      
+      // Pricing validation
+      if (!step || step === 'pricing') {
+        if (!draft.regularPrice) {
+          errors['regularPrice'] = errors['regularPrice'] || [];
+          errors['regularPrice'].push("Regular price is required");
+          isValid = false;
+        }
+        
+        if (draft.onSale && !draft.salePrice) {
+          errors['salePrice'] = errors['salePrice'] || [];
+          errors['salePrice'].push("Sale price is required when on sale");
+          isValid = false;
+        }
+      }
+      
+      // Images validation
+      if (!step || step === 'images') {
+        if (!draft.imageUrls || draft.imageUrls.length === 0 || draft.imageUrls.every(url => !url)) {
+          errors['images'] = errors['images'] || [];
+          errors['images'].push("At least one product image is required");
+          isValid = false;
+        }
+      }
+      
+      return { isValid, errors: Object.keys(errors).length > 0 ? errors : undefined };
+    } catch (error) {
+      logger.error('Error validating product draft', { error, id });
+      throw error;
+    }
+  }
+
   async deleteProductDraft(id: number): Promise<boolean> {
     try {
       // Get the draft first to access the image object keys

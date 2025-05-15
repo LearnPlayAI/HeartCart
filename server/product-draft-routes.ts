@@ -11,7 +11,8 @@ import {
   updateProductDraftSchema, 
   productDraftIdParamSchema, 
   updateProductDraftWizardStepSchema,
-  publishProductDraftSchema
+  publishProductDraftSchema,
+  updateProductDraftStatusSchema
 } from "@shared/validation-schemas";
 import { objectStore, STORAGE_FOLDERS } from "./object-store";
 import path from "path";
@@ -611,6 +612,61 @@ export default function registerProductDraftRoutes(router: Router) {
           return false;
         })
       });
+    })
+  );
+  
+  /**
+   * Update the status of a product draft
+   * PATCH /api/product-drafts/:id/status
+   */
+  router.patch(
+    "/api/product-drafts/:id/status",
+    isAuthenticated,
+    validateRequest({ 
+      params: productDraftIdParamSchema,
+      body: updateProductDraftStatusSchema
+    }),
+    asyncHandler(async (req, res) => {
+      const draftId = parseInt(req.params.id);
+      const { status, note } = req.body;
+      
+      const draft = await storage.getProductDraft(draftId);
+      
+      if (!draft) {
+        throw new NotFoundError("Product draft not found");
+      }
+      
+      // Check if user has permission to update this draft
+      if (draft.createdBy !== req.user?.id && req.user?.role !== 'admin') {
+        throw new BadRequestError("You don't have permission to update this draft");
+      }
+      
+      // Perform status-specific validations
+      if (status === 'ready_to_publish') {
+        // Perform validation to ensure the draft is complete enough to be published
+        const validationResult = await storage.validateProductDraft(draftId);
+        
+        if (!validationResult.isValid) {
+          return sendSuccess(res, {
+            success: false,
+            message: "Draft validation failed",
+            errors: validationResult.errors
+          });
+        }
+      }
+      
+      // Update the draft status
+      const updatedDraft = await storage.updateProductDraftStatus(draftId, status, note);
+      
+      // Log the status change
+      logger.info(`Product draft status updated`, {
+        draftId,
+        oldStatus: draft.draftStatus,
+        newStatus: status,
+        updatedBy: req.user?.id
+      });
+      
+      sendSuccess(res, updatedDraft);
     })
   );
 }
