@@ -58,6 +58,8 @@ interface AttributeValue {
   options?: AttributeOption[];
   selectedOptions?: number[];
   textValue?: string | null;
+  isRequired?: boolean; // Whether this attribute is required for customers
+  isAppliedToProduct?: boolean; // Whether this attribute is applied to this product
 }
 
 // Define the props for the AttributesStep component
