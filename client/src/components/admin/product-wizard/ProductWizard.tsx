@@ -224,13 +224,26 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ draftId, initialDa
     },
     onSuccess: (data) => {
       if (data.success && data.data && data.data.id) {
+        // Set the internal draft ID to prevent further creation attempts
         setInternalDraftId(data.data.id);
+        
+        // Also ensure the hasDraftBeenCreated flag remains true
+        hasDraftBeenCreated.current = true;
+        
+        // Invalidate any queries related to this draft
         queryClient.invalidateQueries({ queryKey: ['/api/product-drafts', data.data.id] });
+        
+        // Notify the user
         toast({
           title: 'Draft Created',
           description: 'Started working on your new product',
         });
+        
+        console.log(`Draft created successfully with ID: ${data.data.id}`);
       } else {
+        // Reset the flag if creation failed to allow retrying
+        hasDraftBeenCreated.current = false;
+        
         toast({
           title: 'Error',
           description: data.error?.message || 'Could not create product draft',
@@ -240,6 +253,9 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ draftId, initialDa
       }
     },
     onError: (error: any) => {
+      // Reset the creation flag to allow retry
+      hasDraftBeenCreated.current = false;
+      
       toast({
         title: 'Error',
         description: `Failed to create product draft: ${error.message || 'Unknown error'}`,
@@ -452,7 +468,7 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ draftId, initialDa
       console.log("Initiating draft creation - one time only");
       createDraftMutation.mutate(initialData);
     }
-  }, [draftId, internalDraftId, editMode, user, isLoadingUser, catalogsData, suppliersData, setLocation, toast, createDraftMutation]);
+  }, [draftId, internalDraftId, user, isLoadingUser, catalogsData, suppliersData]);
 
   // Handle step changes
   const handleStepChange = (step: string) => {
