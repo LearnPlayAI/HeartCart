@@ -105,71 +105,6 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
     }).filter(Boolean);
   };
 
-  // Define the function to create a new attribute option
-  const handleCreateAttributeOption = async () => {
-    if (!currentAttributeId || !newOptionData.value) {
-      return;
-    }
-
-    try {
-      setIsCreatingOption(true);
-      const currentAttribute = allAttributes.find(attr => attr.id === currentAttributeId);
-      if (!currentAttribute) {
-        return;
-      }
-
-      const option = {
-        attributeId: currentAttributeId,
-        value: newOptionData.value,
-        displayValue: newOptionData.displayValue || newOptionData.value,
-        sortOrder: (currentAttribute.options?.length || 0),
-      };
-
-      const response = await apiRequest(
-        'POST',
-        `/api/attributes/${currentAttributeId}/options`,
-        option
-      );
-
-      if (response.ok) {
-        const newOption = await response.json();
-        if (newOption.success && newOption.data) {
-          // Add to local cache
-          const attribute = attributesCache[currentAttributeId];
-          if (attribute) {
-            attribute.options = [...(attribute.options || []), newOption.data];
-            setAttributesCache({...attributesCache});
-          }
-          
-          // Clear form, close dialog
-          setNewOptionData({ value: '', displayValue: '' });
-          setIsAddingOption(false);
-          
-          // Invalidate related queries
-          queryClient.invalidateQueries({ queryKey: [`/api/attributes/${currentAttributeId}/options`] });
-          
-          // Show success message
-          toast({
-            title: "Option created",
-            description: `Added "${newOption.data.displayValue}" option to ${currentAttribute.displayName}`,
-          });
-        }
-      } else {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to create option');
-      }
-    } catch (error) {
-      console.error("Error creating option:", error);
-      toast({
-        title: "Error creating option",
-        description: error.message,
-        variant: "destructive"
-      });
-    } finally {
-      setIsCreatingOption(false);
-    }
-  };
-
   // State management
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -183,7 +118,7 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
   const [showAttributeInfo, setShowAttributeInfo] = useState<Record<number, boolean>>({});
   const [attributeFilter, setAttributeFilter] = useState<string>('');
   const [attributeTypeFilter, setAttributeTypeFilter] = useState<string>('all');
-  const [activeTab, setActiveTab] = useState<string>('required');
+  const [activeTab, setActiveTab] = useState<string>('applied');
 
   // Query to get all attributes
   const { data: attributesData, isLoading: isLoadingAttributes } = useQuery({
@@ -210,14 +145,11 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
     const attribute = getAllAttributes().find(a => a.id === attributeId);
     if (attribute) {
       console.log(`Preloading options for attribute: ${attribute.displayName} (${attributeId})`);
-      console.log(`Fetching options for attribute ID: ${attributeId}`);
       
       // Manual fetch instead of using a hook
-      console.log(`Manual refetch of options for attribute:`, attributeId);
       apiRequest('GET', `/api/attributes/${attributeId}/options`)
         .then(res => res.json())
         .then(data => {
-          console.log(`Options direct fetch response:`, data);
           if (data?.success && data?.data) {
             setAttributesCache(prev => ({
               ...prev,
@@ -247,6 +179,16 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
       ...attr,
       options: attributesCache[attr.id]?.options || []
     }));
+  };
+  
+  // Function to get attributes that are applied to this product
+  const getAppliedAttributes = (): AttributeValue[] => {
+    return attributeValues.filter(attr => attr.isAppliedToProduct);
+  };
+  
+  // Function to get attributes that are not applied to this product
+  const getUnappliedAttributes = (): AttributeValue[] => {
+    return attributeValues.filter(attr => !attr.isAppliedToProduct);
   };
 
   // Function to get required attributes for the category
@@ -370,6 +312,13 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
     }
     
     setAttributeValues(newValues);
+    
+    // Clear validation error for this attribute if it exists
+    if (validationErrors[attributeId]) {
+      const newErrors = {...validationErrors};
+      delete newErrors[attributeId];
+      setValidationErrors(newErrors);
+    }
   };
   
   // Toggle whether an attribute is applied to this product
@@ -447,14 +396,6 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
     
     setAttributeValues(newValues);
   };
-    
-    // Clear validation error for this attribute if it exists
-    if (validationErrors[attributeId]) {
-      const newErrors = {...validationErrors};
-      delete newErrors[attributeId];
-      setValidationErrors(newErrors);
-    }
-  };
 
   // Handle option selection for multiselect attributes (admin makes multiple options available to customer)
   const handleOptionSelect = (attributeId: number, optionId: number, isSelected: boolean) => {
@@ -473,31 +414,19 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
       // For customer-facing display, we store the selected values in comma-separated string 
       // when admin selects multiple options to make available to customers
       newValues[existingIndex].value = newValues[existingIndex].selectedOptions
-        ?.map(optId => safelyFindOption(getAllAttributes().find(a => a.id === attributeId), optId)?.value)
-        .filter(Boolean)
-        .join(', ');
-    } else {
-      // Find attribute details
-      const attribute = getAllAttributes().find(a => a.id === attributeId);
-      if (attribute) {
-        // Get the display string for the selected value(s)
-        const selectedValues = [optionId].map(optId => 
-          safelyFindOption(attribute, optId)?.value)
-          .filter(Boolean)
-          .join(', ');
-        
-        // Ensure options have attributeId to match AttributeOption interface
-        const formattedOptions = safelyMapOptions(attribute, attributeId);
+        .map(optId => {
+          const attr = getAllAttributes().find(a => a.id === attributeId);
+          if (!attr) return null;
           
-        newValues.push({
-          attributeId,
-          attributeName: attribute.name,
-          displayName: attribute.displayName,
-          attributeType: attribute.attributeType,
-          value: selectedValues,
-          selectedOptions: [optionId],
-          options: formattedOptions
-        });
+          const option = safelyFindOption(attr, optId);
+          return option ? option.value : null;
+        })
+        .filter(Boolean)
+        .join(',');
+        
+      // Mark attribute as applied if we're selecting options
+      if (isSelected) {
+        newValues[existingIndex].isAppliedToProduct = true;
       }
     }
     
@@ -511,352 +440,427 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
     }
   };
 
-  // Get selected options for an attribute
-  const getSelectedOptions = (attributeId: number): number[] => {
-    const attrValue = attributeValues.find(v => v.attributeId === attributeId);
-    return attrValue?.selectedOptions || [];
+  // Define the function to create a new attribute option
+  const handleCreateAttributeOption = async () => {
+    if (!currentAttributeId || !newOptionData.value) {
+      return;
+    }
+
+    try {
+      setIsCreatingOption(true);
+      const currentAttribute = getAllAttributes().find(attr => attr.id === currentAttributeId);
+      if (!currentAttribute) {
+        return;
+      }
+
+      const option = {
+        attributeId: currentAttributeId,
+        value: newOptionData.value,
+        displayValue: newOptionData.displayValue || newOptionData.value,
+        sortOrder: (currentAttribute.options?.length || 0),
+      };
+
+      const response = await apiRequest(
+        'POST',
+        `/api/attributes/${currentAttributeId}/options`,
+        option
+      );
+
+      if (response.ok) {
+        const newOption = await response.json();
+        if (newOption.success && newOption.data) {
+          // Add to local cache
+          const attribute = attributesCache[currentAttributeId];
+          if (attribute) {
+            attribute.options = [...(attribute.options || []), newOption.data];
+            setAttributesCache({...attributesCache});
+          }
+          
+          // Clear form, close dialog
+          setNewOptionData({ value: '', displayValue: '' });
+          setIsAddingOption(false);
+          
+          // Invalidate related queries
+          queryClient.invalidateQueries({ queryKey: [`/api/attributes/${currentAttributeId}/options`] });
+          
+          // Show success message
+          toast({
+            title: "Option created",
+            description: `Added "${newOption.data.displayValue}" option to ${currentAttribute.displayName}`,
+          });
+        }
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to create option');
+      }
+    } catch (error) {
+      console.error("Error creating option:", error);
+      toast({
+        title: "Error creating option",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setIsCreatingOption(false);
+    }
   };
 
-  // Check if all required attributes have values
-  const validateRequiredAttributes = (): boolean => {
-    const requiredAttributes = getRequiredAttributes();
-    const newErrors: Record<number, string> = {};
-    let isValid = true;
+  // Handle the save action
+  const handleSave = (advanceToNext: boolean = false) => {
+    // Validate each attribute
+    const errors: Record<number, string> = {};
     
-    requiredAttributes.forEach(attributeId => {
-      const attribute = getAllAttributes().find(a => a.id === attributeId);
-      const attributeValue = attributeValues.find(v => v.attributeId === attributeId);
+    getAppliedAttributes().forEach(attr => {
+      // Skip validation if the attribute is not applied to this product
+      if (!attr.isAppliedToProduct) return;
       
-      // Skip if attribute not found (shouldn't happen)
-      if (!attribute) return;
+      // Required fields must have a value
+      if (attr.isRequired && (!attr.value || attr.value === '')) {
+        errors[attr.attributeId] = `${attr.displayName} is required`;
+      }
       
-      const hasValue = attributeValue && (
-        (typeof attributeValue.value === 'string' && attributeValue.value.trim() !== '') ||
-        typeof attributeValue.value === 'number' ||
-        typeof attributeValue.value === 'boolean' ||
-        (Array.isArray(attributeValue.value) && attributeValue.value.length > 0) ||
-        (Array.isArray(attributeValue.selectedOptions) && attributeValue.selectedOptions.length > 0)
-      );
-      
-      if (!hasValue) {
-        newErrors[attributeId] = `${attribute.displayName} is required`;
-        isValid = false;
+      // Select/multiselect attributes must have selected options
+      if ((attr.attributeType === 'select' || attr.attributeType === 'multiselect') && 
+          (!attr.selectedOptions || attr.selectedOptions.length === 0)) {
+        errors[attr.attributeId] = `Please select at least one option for ${attr.displayName}`;
       }
     });
     
-    setValidationErrors(newErrors);
-    return isValid;
-  };
-
-  // Save the attribute values to the draft
-  const handleSave = (advanceToNext: boolean = false) => {
-    // Validate required attributes
-    if (!validateRequiredAttributes()) {
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
       toast({
-        title: "Missing required attributes",
-        description: "Please provide values for all required attributes",
+        title: "Validation Error",
+        description: "Please fix the errors before saving",
         variant: "destructive"
       });
       return;
     }
     
-    // Create a simplified format for storage
-    const simplifiedAttributes = attributeValues.map(attr => ({
+    // Format and save attributes
+    const attributes = getAppliedAttributes().map(attr => ({
       attributeId: attr.attributeId,
-      value: attr.value
+      value: attr.value,
+      isRequired: attr.isRequired || false
     }));
     
-    // Save both the simplified and enhanced versions
-    onSave({
-      attributes: simplifiedAttributes,
-      attributesData: attributeValues
+    onSave({ 
+      attributes,
+      attributesData: getAppliedAttributes()
     }, advanceToNext);
   };
 
-  // Toggle showing additional info for an attribute
-  const toggleAttributeInfo = (attributeId: number) => {
-    setShowAttributeInfo(prev => ({
-      ...prev,
-      [attributeId]: !prev[attributeId]
-    }));
-  };
-
-  // Filter attributes based on user's search and selected tab
-  const getFilteredAttributes = () => {
-    const allAttributes = getAllAttributes();
-    const requiredAttributeIds = getRequiredAttributes();
+  // Render an individual attribute input field based on its type
+  const renderAttributeInput = (attribute: AttributeValue) => {
+    const attributeId = attribute.attributeId;
+    const attrDetails = getAllAttributes().find(a => a.id === attributeId);
+    const type = attribute.attributeType || (attrDetails?.attributeType || 'text');
     
-    let filteredAttrs = allAttributes;
-    
-    // Filter by category tab
-    if (activeTab === 'required') {
-      filteredAttrs = filteredAttrs.filter(attr => requiredAttributeIds.includes(attr.id));
-    } else if (activeTab === 'optional') {
-      filteredAttrs = filteredAttrs.filter(attr => !requiredAttributeIds.includes(attr.id));
+    // Only render the input if the attribute is applied to this product
+    if (!attribute.isAppliedToProduct) {
+      return null;
     }
     
-    // Filter by attribute type if specified
-    if (attributeTypeFilter !== 'all') {
-      filteredAttrs = filteredAttrs.filter(attr => attr.attributeType === attributeTypeFilter);
+    // If this is a select or multiselect attribute but options aren't loaded yet,
+    // fetch them now
+    if ((type === 'select' || type === 'multiselect') && 
+        (!attribute.options || attribute.options.length === 0)) {
+      preloadOptions(attributeId);
     }
     
-    // Filter by search text
-    if (attributeFilter) {
-      const searchLower = attributeFilter.toLowerCase();
-      filteredAttrs = filteredAttrs.filter(attr => 
-        attr.displayName.toLowerCase().includes(searchLower) || 
-        attr.name.toLowerCase().includes(searchLower) ||
-        (attr.description && attr.description.toLowerCase().includes(searchLower))
-      );
-    }
-    
-    return filteredAttrs;
-  };
-
-  // Render an enhanced attribute input based on its type
-  const renderEnhancedAttributeInput = (attribute: Attribute) => {
-    const attributeId = attribute.id;
-    const attributeValue = attributeValues.find(v => v.attributeId === attributeId);
-    const currentValue = attributeValue?.value || '';
-    
-    switch (attribute.attributeType) {
+    switch (type) {
       case 'text':
         return (
-          <div className="space-y-2">
-            <Textarea 
-              id={`attribute-${attributeId}`}
-              value={currentValue as string || ''}
-              onChange={(e) => handleAttributeChange(attributeId, e.target.value)}
-              placeholder={`Enter ${attribute.displayName.toLowerCase()}`}
-              className="min-h-24"
-            />
-          </div>
+          <Input
+            id={`attribute-${attributeId}`}
+            value={attribute.value as string || ''}
+            onChange={(e) => handleAttributeChange(attributeId, e.target.value)}
+            placeholder={`Enter ${attribute.displayName}`}
+            className={validationErrors[attributeId] ? "border-red-500" : ""}
+          />
         );
         
       case 'number':
         return (
-          <div className="space-y-2">
-            <Input 
-              id={`attribute-${attributeId}`}
-              type="number"
-              value={currentValue as string || ''}
-              onChange={(e) => handleAttributeChange(attributeId, e.target.value ? Number(e.target.value) : null)}
-              placeholder={`Enter ${attribute.displayName.toLowerCase()}`}
-            />
-          </div>
+          <Input
+            id={`attribute-${attributeId}`}
+            type="number"
+            value={attribute.value as string || ''}
+            onChange={(e) => handleAttributeChange(attributeId, e.target.value)}
+            placeholder={`Enter ${attribute.displayName}`}
+            className={validationErrors[attributeId] ? "border-red-500" : ""}
+          />
         );
         
       case 'boolean':
         return (
-          <div className="space-y-2">
-            <div className="flex items-center space-x-2">
-              <Switch
-                id={`attribute-${attributeId}`}
-                checked={(currentValue as boolean) || false}
-                onCheckedChange={(checked) => handleAttributeChange(attributeId, checked)}
-              />
-              <Label htmlFor={`attribute-${attributeId}`} className="text-sm text-gray-600">
-                {(currentValue as boolean) ? 'Yes' : 'No'}
-              </Label>
-            </div>
+          <div className="flex items-center space-x-2">
+            <Switch
+              id={`attribute-${attributeId}`}
+              checked={!!attribute.value}
+              onCheckedChange={(checked) => handleAttributeChange(attributeId, checked)}
+            />
+            <Label htmlFor={`attribute-${attributeId}`}>
+              {attribute.value ? "Yes" : "No"}
+            </Label>
           </div>
         );
         
       case 'select':
-      case 'multiselect':
-        const options = safelyMapOptions(attribute, attributeId);
-        const selectedOptions = getSelectedOptions(attributeId);
-        
         return (
-          <div className="space-y-4">
-            <div className="flex flex-col space-y-1">
-              <div className="text-sm font-medium text-gray-600 mb-2">
-                Available options to customers:
-              </div>
-              
-              {options.length === 0 ? (
-                <div className="text-sm text-gray-500 italic">
-                  No options defined for this attribute
-                </div>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  {options.map(option => (
-                    <div key={option.id} className="flex items-center space-x-2 border rounded-md p-2">
-                      <Checkbox
-                        id={`option-${option.id}`}
-                        checked={selectedOptions.includes(option.id)}
-                        onCheckedChange={(checked) => 
-                          handleOptionSelect(attributeId, option.id, !!checked)
-                        }
-                      />
-                      <Label 
-                        htmlFor={`option-${option.id}`}
-                        className="text-sm cursor-pointer"
-                      >
-                        {option.displayValue}
-                      </Label>
-                    </div>
+          <div>
+            <Select
+              value={attribute.value as string || ''}
+              onValueChange={(value) => handleAttributeChange(attributeId, value)}
+            >
+              <SelectTrigger className={validationErrors[attributeId] ? "border-red-500" : ""}>
+                <SelectValue placeholder={`Select ${attribute.displayName}`} />
+              </SelectTrigger>
+              <SelectContent>
+                {/* Only show options that have been selected by the admin for this product */}
+                {(attribute.options || [])
+                  .filter(option => {
+                    // If no selected options, show all
+                    if (!attribute.selectedOptions || attribute.selectedOptions.length === 0) {
+                      return true;
+                    }
+                    // Only show options selected by the admin
+                    return attribute.selectedOptions.includes(option.id);
+                  })
+                  .map(option => (
+                    <SelectItem key={option.id} value={option.value}>
+                      {option.displayValue}
+                    </SelectItem>
                   ))}
-                </div>
-              )}
-              
-              <div className="mt-4 flex items-center">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setCurrentAttributeId(attributeId);
-                    setNewOptionData({ value: '', displayValue: '' });
-                    setIsAddingOption(true);
-                  }}
-                  className="flex items-center gap-1"
-                >
-                  <Plus className="h-4 w-4" />
-                  Add Option
-                </Button>
-              </div>
-              
-              {selectedOptions.length > 0 && (
-                <div className="mt-4">
-                  <div className="text-sm font-medium text-gray-600 mb-2">
-                    Selected options summary:
+                {((attribute.options || []).length === 0) && (
+                  <div className="p-2 text-center text-gray-500">
+                    <span>No options available</span>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedOptions.map((optionId) => {
-                      const option = safelyFindOption(attribute, optionId);
-                      return option ? (
-                        <Badge key={option.id} variant="outline">
-                          {option.displayValue}
-                        </Badge>
-                      ) : null;
-                    })}
-                  </div>
-                </div>
-              )}
+                )}
+              </SelectContent>
+            </Select>
+            
+            {/* Quick add option button */}
+            <div className="mt-1 text-right">
+              <Button 
+                type="button" 
+                variant="ghost" 
+                size="sm"
+                onClick={() => {
+                  setCurrentAttributeId(attributeId);
+                  setNewOptionData({ value: '', displayValue: '' });
+                  setIsAddingOption(true);
+                }}
+              >
+                <Plus className="w-3 h-3 mr-1" />
+                <span className="text-xs">Add Option</span>
+              </Button>
             </div>
           </div>
         );
         
-      case 'color':
+      case 'multiselect':
+        // For multiselect, we use checkboxes to let the admin select multiple options
+        // that will be available to the customer. The customer will then select one option
+        // from these available options.
         return (
           <div className="space-y-2">
-            <Input 
-              id={`attribute-${attributeId}`}
-              type="color"
-              value={(currentValue as string) || '#000000'}
-              onChange={(e) => handleAttributeChange(attributeId, e.target.value)}
-              className="h-10 w-full"
-            />
-          </div>
-        );
-        
-      case 'date':
-        return (
-          <div className="space-y-2">
-            <Input 
-              id={`attribute-${attributeId}`}
-              type="date"
-              value={(currentValue as string) || ''}
-              onChange={(e) => handleAttributeChange(attributeId, e.target.value)}
-            />
+            <Label className="mb-1 inline-block">
+              Available options to customers:
+            </Label>
+            <div className="space-y-2 border rounded-md p-2 bg-muted/20">
+              {(attribute.options || []).length === 0 ? (
+                <div className="text-center text-gray-500 py-2">
+                  <span>No options available yet</span>
+                </div>
+              ) : (
+                (attribute.options || []).map(option => {
+                  const isSelected = attribute.selectedOptions?.includes(option.id) || false;
+                  return (
+                    <div key={option.id} className="flex items-center space-x-2">
+                      <Checkbox 
+                        id={`option-${option.id}`} 
+                        checked={isSelected}
+                        onCheckedChange={(checked) => {
+                          handleOptionSelect(attributeId, option.id, checked === true);
+                        }}
+                      />
+                      <Label 
+                        htmlFor={`option-${option.id}`}
+                        className={`font-normal ${isSelected ? 'text-primary' : ''}`}
+                      >
+                        {option.displayValue}
+                      </Label>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+            
+            {validationErrors[attributeId] && (
+              <p className="text-red-500 text-sm mt-1">{validationErrors[attributeId]}</p>
+            )}
+            
+            {/* Quick add option button */}
+            <div className="mt-1 text-right">
+              <Button 
+                type="button" 
+                variant="ghost" 
+                size="sm"
+                onClick={() => {
+                  setCurrentAttributeId(attributeId);
+                  setNewOptionData({ value: '', displayValue: '' });
+                  setIsAddingOption(true);
+                }}
+              >
+                <Plus className="w-3 h-3 mr-1" />
+                <span className="text-xs">Add Option</span>
+              </Button>
+            </div>
+            
+            {/* Selected options summary */}
+            {attribute.selectedOptions && attribute.selectedOptions.length > 0 && (
+              <div className="mt-2 bg-muted/10 p-2 rounded">
+                <p className="text-sm text-muted-foreground font-medium">
+                  Selected options: {attribute.selectedOptions
+                    .map(optId => {
+                      const option = safelyFindOption(attrDetails, optId);
+                      return option ? option.displayValue : null;
+                    })
+                    .filter(Boolean)
+                    .join(', ')}
+                </p>
+              </div>
+            )}
           </div>
         );
         
       default:
         return (
-          <div className="space-y-2">
-            <Input 
-              id={`attribute-${attributeId}`}
-              value={(currentValue as string) || ''}
-              onChange={(e) => handleAttributeChange(attributeId, e.target.value)}
-              placeholder={`Enter ${attribute.displayName.toLowerCase()}`}
-            />
-          </div>
+          <Input
+            id={`attribute-${attributeId}`}
+            value={attribute.value as string || ''}
+            onChange={(e) => handleAttributeChange(attributeId, e.target.value)}
+            placeholder={`Enter ${attribute.displayName}`}
+            className={validationErrors[attributeId] ? "border-red-500" : ""}
+          />
         );
     }
   };
 
-  // Render an attribute item with label, input, and validation
-  const renderAttributeItem = (attribute: Attribute) => {
-    const attributeId = attribute.id;
-    const isRequired = getRequiredAttributes().includes(attributeId);
-    const hasError = !!validationErrors[attributeId];
-    const isExpanded = showAttributeInfo[attributeId] || false;
-    const attributeValue = attributeValues.find(v => v.attributeId === attributeId);
-    const selectedOptions = attributeValue?.selectedOptions || [];
-        
+  // Render an attribute list item with the input control
+  const renderAttributeItem = (attribute: AttributeValue) => {
+    const requiredForCategory = getRequiredAttributes().includes(attribute.attributeId);
+    const hasError = !!validationErrors[attribute.attributeId];
+    const infoVisible = showAttributeInfo[attribute.attributeId] || false;
+    
     return (
       <div 
-        key={attributeId}
-        className={`border rounded-lg p-4 mb-4 ${hasError ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}
+        key={attribute.attributeId} 
+        className={`border rounded-lg p-4 mb-4 transition-all ${
+          hasError ? 'border-red-500 shadow-sm bg-red-50/20' : 
+          attribute.isAppliedToProduct ? 'border-primary/30 shadow-sm' : 'border-gray-200'
+        }`}
       >
-        <div className="flex justify-between items-start mb-3">
-          <div className="flex items-start">
-            <div>
-              <Label 
-                htmlFor={`attribute-${attributeId}`}
-                className="text-base font-medium"
-              >
-                {attribute.displayName}
-                {isRequired && <span className="text-red-500 ml-1">*</span>}
-              </Label>
+        <div className="flex flex-col space-y-2">
+          {/* Attribute header with name and controls */}
+          <div className="flex items-start justify-between mb-1">
+            <div className="flex-1">
+              <div className="flex items-center space-x-2">
+                <h3 className="text-base font-medium">{attribute.displayName}</h3>
+                
+                {/* Badge indicating if it's required by the category */}
+                {requiredForCategory && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                          Required for category
+                        </Badge>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>This attribute is required for products in the {draft.categoryName} category</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+                
+                {/* Info toggle button */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0 rounded-full"
+                  onClick={() => setShowAttributeInfo({
+                    ...showAttributeInfo,
+                    [attribute.attributeId]: !infoVisible
+                  })}
+                >
+                  <Info className="h-4 w-4 text-muted-foreground" />
+                </Button>
+              </div>
               
-              <div className="flex items-center mt-1 text-sm text-gray-500">
-                <span className="text-xs text-gray-400 mr-2">{attribute.name}</span>
-                <Badge variant="outline" className="mr-2">
-                  {attribute.attributeType}
-                </Badge>
-                {attribute.isFilterable && (
-                  <Badge variant="outline" className="bg-blue-50">
-                    filterable
-                  </Badge>
+              {/* Attribute info section (collapsible) */}
+              {infoVisible && (
+                <div className="mt-2 p-2 bg-muted/20 rounded-md text-sm">
+                  <p><strong>Name:</strong> {attribute.attributeName}</p>
+                  {attribute.attributeType && (
+                    <p><strong>Type:</strong> {attribute.attributeType}</p>
+                  )}
+                  <p><strong>Applied to product:</strong> {attribute.isAppliedToProduct ? 'Yes' : 'No'}</p>
+                  <p><strong>Required for customers:</strong> {attribute.isRequired ? 'Yes' : 'No'}</p>
+                </div>
+              )}
+            </div>
+            
+            {/* Attribute controls */}
+            <div className="flex items-center space-x-2">
+              {/* Apply to Product toggle */}
+              <div className="flex flex-col items-end space-y-1">
+                <div className="flex items-center space-x-2">
+                  <Label htmlFor={`apply-${attribute.attributeId}`} className="text-sm">
+                    Apply to product
+                  </Label>
+                  <Switch
+                    id={`apply-${attribute.attributeId}`}
+                    checked={attribute.isAppliedToProduct}
+                    onCheckedChange={(checked) => toggleAttributeApplied(attribute.attributeId, checked)}
+                    disabled={requiredForCategory} // Can't disable category-required attributes
+                  />
+                </div>
+                
+                {/* Required for Customers toggle (only visible if applied to product) */}
+                {attribute.isAppliedToProduct && (
+                  <div className="flex items-center space-x-2">
+                    <Label htmlFor={`required-${attribute.attributeId}`} className="text-sm">
+                      Required for customers
+                    </Label>
+                    <Switch
+                      id={`required-${attribute.attributeId}`}
+                      checked={attribute.isRequired}
+                      onCheckedChange={(checked) => toggleAttributeRequired(attribute.attributeId, checked)}
+                    />
+                  </div>
                 )}
               </div>
             </div>
           </div>
           
-          <div className="flex items-center">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => toggleAttributeInfo(attributeId)}
-              className="p-1"
-            >
-              {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-            </Button>
-          </div>
+          {/* Attribute input field (only shown if applied to product) */}
+          {attribute.isAppliedToProduct && (
+            <div className="mt-2">
+              {renderAttributeInput(attribute)}
+              
+              {/* Error message */}
+              {hasError && (
+                <p className="text-red-500 text-sm mt-1">{validationErrors[attribute.attributeId]}</p>
+              )}
+            </div>
+          )}
         </div>
-        
-        {isExpanded && attribute.description && (
-          <div className="mb-3 text-sm text-gray-600 bg-gray-50 p-2 rounded">
-            {attribute.description}
-          </div>
-        )}
-        
-        {renderEnhancedAttributeInput(attribute)}
-        
-        {hasError && (
-          <div className="mt-2 text-sm text-red-600 flex items-center">
-            <AlertTriangle className="h-4 w-4 mr-1" />
-            {validationErrors[attributeId]}
-          </div>
-        )}
-        
-        {/* Value summary - shows what's been selected for reference */}
-        {attributeValue && (attribute.attributeType === 'select' || attribute.attributeType === 'multiselect') && selectedOptions.length > 0 && (
-          <div className="mt-3 text-xs text-gray-500">
-            Selected: {selectedOptions
-              .map(optId => safelyFindOption(attribute, optId)?.displayValue)
-              .filter(Boolean)
-              .join(', ')}
-          </div>
-        )}
       </div>
     );
   };
 
+  // Main render return
   return (
     <div className="space-y-6">
       <div>
@@ -865,21 +869,24 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
           Attributes define the properties and specifications of a product. These values help with filtering, searching, and provide important information to customers.
         </p>
         
+        {/* Filter and controls */}
         <div className="flex justify-between items-center mb-4">
           <div className="flex items-center space-x-2 w-full max-w-sm">
             <div className="relative w-full">
-              <Search className="h-4 w-4 absolute left-3 top-3 text-gray-400" />
-              <Input 
-                placeholder="Search attributes..." 
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Filter attributes..."
+                className="pl-8"
                 value={attributeFilter}
                 onChange={(e) => setAttributeFilter(e.target.value)}
-                className="pl-9"
               />
             </div>
-            
-            <Select value={attributeTypeFilter} onValueChange={setAttributeTypeFilter}>
-              <SelectTrigger className="w-[160px]">
-                <SelectValue placeholder="Filter by type" />
+            <Select
+              value={attributeTypeFilter}
+              onValueChange={setAttributeTypeFilter}
+            >
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="Type" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Types</SelectItem>
@@ -888,161 +895,132 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
                 <SelectItem value="boolean">Boolean</SelectItem>
                 <SelectItem value="select">Select</SelectItem>
                 <SelectItem value="multiselect">Multi-select</SelectItem>
-                <SelectItem value="color">Color</SelectItem>
-                <SelectItem value="date">Date</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </div>
         
-        <Tabs defaultValue="required" value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-4">
-            <TabsTrigger value="required">Required Attributes</TabsTrigger>
-            <TabsTrigger value="optional">Optional Attributes</TabsTrigger>
-            <TabsTrigger value="all">All Attributes</TabsTrigger>
+        {/* Tabs for Applied/Available attributes */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
+          <TabsList className="grid grid-cols-2 w-[300px]">
+            <TabsTrigger value="applied">
+              Applied Attributes <Badge variant="outline" className="ml-2 bg-primary/10">{getAppliedAttributes().length}</Badge>
+            </TabsTrigger>
+            <TabsTrigger value="available">
+              Available <Badge variant="outline" className="ml-2">{getUnappliedAttributes().length}</Badge>
+            </TabsTrigger>
           </TabsList>
           
-          <TabsContent value="required" className="space-y-4">
-            {isLoadingAttributes || isLoadingRequiredAttributes ? (
-              <div className="flex justify-center p-8">
-                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-              </div>
-            ) : getFilteredAttributes().length === 0 ? (
-              <div className="text-center p-8 border border-dashed rounded-lg">
-                <div className="text-gray-500">
-                  {attributeFilter ? (
-                    <>No attributes match your search</>
-                  ) : (
-                    <>No required attributes for this category</>
-                  )}
+          <TabsContent value="applied" className="mt-4">
+            <div className="space-y-2">
+              {getAppliedAttributes().length === 0 ? (
+                <div className="text-center p-8 border border-dashed rounded-lg">
+                  <p className="text-muted-foreground">No attributes applied to this product yet</p>
+                  <p className="text-sm text-muted-foreground mt-1">Switch to the "Available" tab to add attributes</p>
                 </div>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {getFilteredAttributes().map(attribute => renderAttributeItem(attribute))}
-              </div>
-            )}
+              ) : (
+                getAppliedAttributes()
+                  .filter(attr => 
+                    attributeTypeFilter === 'all' || attr.attributeType === attributeTypeFilter
+                  )
+                  .filter(attr => 
+                    !attributeFilter || 
+                    attr.displayName?.toLowerCase().includes(attributeFilter.toLowerCase()) ||
+                    attr.attributeName?.toLowerCase().includes(attributeFilter.toLowerCase())
+                  )
+                  .map(attr => renderAttributeItem(attr))
+              )}
+            </div>
           </TabsContent>
           
-          <TabsContent value="optional" className="space-y-4">
-            {isLoadingAttributes || isLoadingRequiredAttributes ? (
-              <div className="flex justify-center p-8">
-                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-              </div>
-            ) : getFilteredAttributes().length === 0 ? (
-              <div className="text-center p-8 border border-dashed rounded-lg">
-                <div className="text-gray-500">
-                  {attributeFilter ? (
-                    <>No attributes match your search</>
-                  ) : (
-                    <>No optional attributes available</>
-                  )}
+          <TabsContent value="available" className="mt-4">
+            <div className="space-y-2">
+              {getUnappliedAttributes().length === 0 ? (
+                <div className="text-center p-8 border border-dashed rounded-lg">
+                  <p className="text-muted-foreground">All available attributes are already applied to this product</p>
                 </div>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {getFilteredAttributes().map(attribute => renderAttributeItem(attribute))}
-              </div>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="all" className="space-y-4">
-            {isLoadingAttributes ? (
-              <div className="flex justify-center p-8">
-                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-              </div>
-            ) : getFilteredAttributes().length === 0 ? (
-              <div className="text-center p-8 border border-dashed rounded-lg">
-                <div className="text-gray-500">
-                  {attributeFilter ? (
-                    <>No attributes match your search</>
-                  ) : (
-                    <>No attributes available</>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {getFilteredAttributes().map(attribute => renderAttributeItem(attribute))}
-              </div>
-            )}
+              ) : (
+                getUnappliedAttributes()
+                  .filter(attr => 
+                    attributeTypeFilter === 'all' || attr.attributeType === attributeTypeFilter
+                  )
+                  .filter(attr => 
+                    !attributeFilter || 
+                    attr.displayName?.toLowerCase().includes(attributeFilter.toLowerCase()) ||
+                    attr.attributeName?.toLowerCase().includes(attributeFilter.toLowerCase())
+                  )
+                  .map(attr => renderAttributeItem(attr))
+              )}
+            </div>
           </TabsContent>
         </Tabs>
       </div>
       
+      {/* Save buttons */}
       <div className="flex justify-between pt-4 border-t">
         <Button 
           type="button" 
-          variant="outline"
+          variant="outline" 
           onClick={() => handleSave(false)}
           disabled={isLoading}
         >
-          {isLoading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            <>
-              <Save className="mr-2 h-4 w-4" />
-              Save
-            </>
-          )}
+          {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+          Save
         </Button>
-        
         <Button 
-          type="button"
+          type="button" 
           onClick={() => handleSave(true)}
           disabled={isLoading}
         >
-          Continue
+          {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <><Save className="mr-2 h-4 w-4" /></>}
+          Save & Continue
         </Button>
       </div>
       
-      {/* Add New Option Dialog */}
+      {/* Option creation dialog */}
       <Dialog open={isAddingOption} onOpenChange={setIsAddingOption}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add Attribute Option</DialogTitle>
+            <DialogTitle>Add New Option</DialogTitle>
             <DialogDescription>
-              Create a new option for attribute: {getAllAttributes().find(a => a.id === currentAttributeId)?.displayName}
+              Create a new option for this attribute
             </DialogDescription>
           </DialogHeader>
           
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="value" className="text-right">
-                Value
-              </Label>
+            <div className="grid gap-2">
+              <Label htmlFor="option-value">Value</Label>
               <Input
-                id="value"
+                id="option-value"
+                placeholder="Enter option value (e.g. 'red')"
                 value={newOptionData.value}
-                onChange={(e) => setNewOptionData({ ...newOptionData, value: e.target.value })}
-                className="col-span-3"
-                placeholder="Internal value (e.g. xl)"
+                onChange={(e) => setNewOptionData({
+                  ...newOptionData,
+                  value: e.target.value,
+                  displayValue: newOptionData.displayValue || e.target.value
+                })}
               />
             </div>
             
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="displayValue" className="text-right">
-                Display Value
-              </Label>
+            <div className="grid gap-2">
+              <Label htmlFor="option-display-value">Display Label</Label>
               <Input
-                id="displayValue"
+                id="option-display-value"
+                placeholder="Enter display label (e.g. 'Ruby Red')"
                 value={newOptionData.displayValue}
-                onChange={(e) => setNewOptionData({ ...newOptionData, displayValue: e.target.value })}
-                className="col-span-3"
-                placeholder="Customer-facing value (e.g. Extra Large)"
+                onChange={(e) => setNewOptionData({
+                  ...newOptionData,
+                  displayValue: e.target.value
+                })}
               />
+              <p className="text-sm text-muted-foreground">
+                This is what customers will see. If empty, the value will be used.
+              </p>
             </div>
           </div>
           
           <DialogFooter>
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={() => setIsAddingOption(false)}
-            >
+            <Button variant="outline" onClick={() => setIsAddingOption(false)}>
               Cancel
             </Button>
             <Button 
