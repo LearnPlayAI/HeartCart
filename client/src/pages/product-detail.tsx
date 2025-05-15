@@ -468,13 +468,7 @@ const ProductDetailContent = ({
               )}
             </div>
             
-            {/* Supplier */}
-            {product.supplier && (
-              <div className="text-sm text-gray-500">
-                Supplier: <span className="font-medium">{product.supplier}</span>
-              </div>
-            )}
-            
+            {/* Separator between price and product options */}
             <Separator className="my-4" />
             
             {/* Global Attribute Selection */}

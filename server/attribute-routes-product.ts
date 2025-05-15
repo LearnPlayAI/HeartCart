@@ -125,9 +125,106 @@ router.get('/product/:productId/attribute-values', asyncHandler(async (req: Requ
   }
 }));
 
+// Get global attributes for a specific product
+router.get('/product/:productId/global-attributes', asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const productId = parseInt(req.params.productId);
+    
+    if (isNaN(productId)) {
+      return sendError(res, 'Invalid product ID', 400);
+    }
+    
+    // Get the product
+    const product = await storage.getProductById(productId);
+    
+    if (!product) {
+      return sendError(res, 'Product not found', 404);
+    }
+    
+    logger.debug(`Getting global attributes for product ${productId}`);
+    
+    // Add cache control headers to ensure clients always get fresh data
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    
+    // Get all product global attributes from the database
+    const productGlobalAttributes = await storage.getProductGlobalAttributes(productId);
+    
+    if (!productGlobalAttributes || productGlobalAttributes.length === 0) {
+      // If no attributes found, return empty array
+      return sendSuccess(res, []);
+    }
+    
+    // Format the response to match the expected structure
+    const formattedAttributes = productGlobalAttributes.map(attr => ({
+      id: attr.id,
+      productId: attr.productId,
+      attribute: {
+        id: attr.attribute.id,
+        name: attr.attribute.name,
+        displayName: attr.attribute.displayName || attr.attribute.name,
+        attributeType: attr.attribute.attributeType,
+        isRequired: attr.attribute.isRequired
+      },
+      options: attr.options || []
+    }));
+    
+    sendSuccess(res, formattedAttributes);
+  } catch (error) {
+    logger.error('Failed to retrieve product global attributes', { error, path: req.path });
+    sendError(res, 'Failed to retrieve product global attributes', 500);
+  }
+}));
+
 // Function to register routes with the app
 function registerProductAttributeRoutes(app: Express) {
   app.use('/api/product-attributes', router);
+  
+  // Add additional route to support direct endpoint access
+  app.get('/api/products/:productId/global-attributes', asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const productId = parseInt(req.params.productId);
+      
+      if (isNaN(productId)) {
+        return sendError(res, 'Invalid product ID', 400);
+      }
+      
+      // Get the product
+      const product = await storage.getProductById(productId);
+      
+      if (!product) {
+        return sendError(res, 'Product not found', 404);
+      }
+      
+      // Get all product global attributes from the database
+      const productGlobalAttributes = await storage.getProductGlobalAttributes(productId);
+      
+      if (!productGlobalAttributes || productGlobalAttributes.length === 0) {
+        // If no attributes found, return empty array
+        return sendSuccess(res, []);
+      }
+      
+      // Format the response to match the expected structure
+      const formattedAttributes = productGlobalAttributes.map(attr => ({
+        id: attr.id,
+        productId: attr.productId,
+        attribute: {
+          id: attr.attribute.id,
+          name: attr.attribute.name,
+          displayName: attr.attribute.displayName || attr.attribute.name,
+          attributeType: attr.attribute.attributeType,
+          isRequired: attr.attribute.isRequired
+        },
+        options: attr.options || []
+      }));
+      
+      sendSuccess(res, formattedAttributes);
+    } catch (error) {
+      logger.error('Failed to retrieve product global attributes', { error, path: req.path });
+      sendError(res, 'Failed to retrieve product global attributes', 500);
+    }
+  }));
 }
 
 export default registerProductAttributeRoutes;
