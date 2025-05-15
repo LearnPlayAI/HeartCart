@@ -373,7 +373,9 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ draftId, initialDa
     },
   });
 
-  // Initialize the wizard
+  // Initialize the wizard - using a ref to track whether we've initiated a draft creation
+  const hasDraftBeenCreated = React.useRef(false);
+  
   useEffect(() => {
     // Wait until we know the user's authenticated state and have catalog data
     if (isLoadingUser || !catalogsData || !suppliersData) return;
@@ -390,7 +392,11 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ draftId, initialDa
     }
     
     // Create a new draft or load one for editing
-    if (!draftId) {
+    // Only create a draft if we don't have a draftId AND we haven't already initiated draft creation
+    if (!draftId && !internalDraftId && !hasDraftBeenCreated.current) {
+      // Set the flag to true to prevent multiple creation attempts
+      hasDraftBeenCreated.current = true;
+      
       // Get default catalog and supplier if available
       const defaultCatalogId = catalogsData?.data?.[0]?.id || 1;
       const defaultSupplierId = suppliersData?.data?.[0]?.id || null;
@@ -443,11 +449,10 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ draftId, initialDa
         }
       };
       
-      // originalProductId is already set in the initialData
-      
+      console.log("Initiating draft creation - one time only");
       createDraftMutation.mutate(initialData);
     }
-  }, [internalDraftId, editMode, user, isLoadingUser, catalogsData, suppliersData, setLocation, toast]);
+  }, [draftId, internalDraftId, editMode, user, isLoadingUser, catalogsData, suppliersData, setLocation, toast, createDraftMutation]);
 
   // Handle step changes
   const handleStepChange = (step: string) => {
