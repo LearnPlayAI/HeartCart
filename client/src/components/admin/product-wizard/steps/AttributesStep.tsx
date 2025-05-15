@@ -84,6 +84,20 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
     
     return attribute.options.find(opt => opt.id === optionId) || null;
   };
+  
+  // Helper function to safely convert selected option IDs to their values
+  const safelyMapOptionIdsToValues = (attribute: any, optionIds: number[]) => {
+    if (!attribute) return [];
+    if (!attribute.options) return [];
+    if (!Array.isArray(attribute.options)) return [];
+    if (!optionIds) return [];
+    if (!Array.isArray(optionIds)) return [];
+    
+    return optionIds.map(optId => {
+      const option = attribute.options.find(opt => opt.id === optId);
+      return option ? option.value : null;
+    }).filter(Boolean);
+  };
   // Define the function to create a new attribute option
   const handleCreateAttributeOption = async () => {
     if (!currentAttributeId || !newOptionData.value) {
