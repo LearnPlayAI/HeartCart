@@ -200,12 +200,21 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
       // Find attribute details from API data
       const attribute = getAllAttributes().find(a => a.id === attributeId);
       if (attribute) {
+        // Ensure options have attributeId to match AttributeOption interface
+        const formattedOptions = attribute.options ? 
+          attribute.options.map(opt => ({
+            ...opt,
+            attributeId: attributeId // Ensure attributeId is included
+          })) : 
+          [];
+          
         newValues.push({ 
           attributeId, 
           value,
           attributeName: attribute.name,
           displayName: attribute.displayName,
-          attributeType: attribute.attributeType
+          attributeType: attribute.attributeType,
+          options: formattedOptions
         });
       } else {
         newValues.push({ attributeId, value });
@@ -257,12 +266,21 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
           .map(optId => attribute.options.find(opt => opt.id === optId)?.value)
           .filter(Boolean) as string[];
         
+        // Ensure options have attributeId to match AttributeOption interface
+        const formattedOptions = attribute.options ? 
+          attribute.options.map(opt => ({
+            ...opt,
+            attributeId: attributeId // Ensure attributeId is included
+          })) : 
+          [];
+        
         newValues.push({
           attributeId,
           value: attribute.attributeType === 'multiselect' ? optionValues : optionValues[0] || null,
           attributeName: attribute.name,
           displayName: attribute.displayName,
           attributeType: attribute.attributeType,
+          options: formattedOptions,
           selectedOptions
         });
       }
@@ -291,13 +309,22 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
       // Add new text value
       const attribute = getAllAttributes().find(a => a.id === attributeId);
       if (attribute) {
+        // Ensure options have attributeId to match AttributeOption interface
+        const formattedOptions = attribute.options ? 
+          attribute.options.map(opt => ({
+            ...opt,
+            attributeId: attributeId // Ensure attributeId is included
+          })) : 
+          [];
+          
         newValues.push({
           attributeId,
           value: textValue,
           textValue,
           attributeName: attribute.name,
           displayName: attribute.displayName,
-          attributeType: attribute.attributeType
+          attributeType: attribute.attributeType,
+          options: formattedOptions
         });
       }
     }
