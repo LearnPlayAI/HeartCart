@@ -212,7 +212,6 @@ function App() {
               <AdminProtectedRoute path="/admin/ai-settings" component={AdminAISettings} />
               <AdminProtectedRoute path="/admin/batch-upload" component={BatchUpload} />
               <AdminProtectedRoute path="/admin/auth-test" component={AuthTestDashboard} />
-              <AdminProtectedRoute path="/admin/draft-test" component={React.lazy(() => import("@/pages/admin/DraftTestPage"))} />
               
               {/* Developer Routes - No header/footer */}
               <DeveloperProtectedRoute path="/developer" component={DeveloperDashboard} />

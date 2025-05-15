@@ -376,4 +376,3 @@ export const requiredAttributesSchema = z.array(
     isRequired: z.boolean().default(false)
   })
 );
-

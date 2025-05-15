@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
 import { useAuth } from '@/hooks/use-auth';
-import { ChevronRight, Home, Package, ShoppingCart, Users, PieChart, Settings, Database, Book, Grid, List, Layers, Box, Image, FileText, Clipboard } from 'lucide-react';
+import { ChevronRight, Home, Package, ShoppingCart, Users, PieChart, Settings, Database, Book, Grid, List, Layers, Box, Image, FileText } from 'lucide-react';
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -32,7 +32,6 @@ function AdminLayout({ children, title, subtitle }: AdminLayoutProps) {
     { name: 'Batch Upload', href: '/admin/batch-upload', icon: <FileText className="h-5 w-5" /> },
     { name: 'AI Settings', href: '/admin/ai-settings', icon: <Settings className="h-5 w-5" /> },
     { name: 'Auth Testing', href: '/admin/auth-test', icon: <Users className="h-5 w-5" /> },
-    { name: 'Draft Test', href: '/admin/draft-test', icon: <Clipboard className="h-5 w-5" /> },
   ];
   
   const currentNavItem = navigation.find(item => location === item.href);
