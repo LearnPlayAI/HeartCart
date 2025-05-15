@@ -301,11 +301,20 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
         setAttributeValues(mergedAttributes);
       }
       
-      // Pre-load options for attributes with values
+      // IMPORTANT: We've disabled automatic loading of attribute options
+      // Instead, we're just initializing the cache with empty arrays 
+      // The user will need to use the refresh buttons to load options
       draft.attributes.forEach(async (attr) => {
         const attribute = getAllAttributes().find(a => a.id === attr.attributeId);
         if (attribute && (attribute.attributeType === 'select' || attribute.attributeType === 'multiselect')) {
-          preloadOptions(attr.attributeId);
+          // Add to cache with an empty array to prevent auto-loading attempts
+          setAttributesCache(prev => ({
+            ...prev,
+            [attr.attributeId]: {
+              ...prev[attr.attributeId],
+              options: [] // Initialize with empty array
+            }
+          }));
         }
       });
     } else {
@@ -615,11 +624,21 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
     const attrDetails = getAllAttributes().find(a => a.id === attributeId);
     const type = attribute.attributeType || (attrDetails?.attributeType || 'text');
     
-    // If this is a select or multiselect attribute but options aren't loaded yet,
-    // fetch them now
+    // MANUAL REFRESH IMPLEMENTATION:
+    // We no longer automatically load options when rendering inputs
+    // User must use the refresh button instead
     if ((type === 'select' || type === 'multiselect') && 
         (!attribute.options || attribute.options.length === 0)) {
-      preloadOptions(attributeId);
+      // Only initialize the cache with empty array if it doesn't exist yet
+      if (!attributesCache[attributeId]) {
+        setAttributesCache(prev => ({
+          ...prev,
+          [attributeId]: {
+            ...prev[attributeId],
+            options: [] // Initialize with empty array
+          }
+        }));
+      }
     }
     
     switch (type) {
