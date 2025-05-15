@@ -418,7 +418,7 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
             
             {product.supplier && (
               <div className="text-xs text-gray-500">
-                Supplier: {product.supplier}
+                Brand: {product.supplier}
               </div>
             )}
           </div>
