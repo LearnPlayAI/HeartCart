@@ -197,10 +197,18 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
   // Save attributes
   const handleSaveAttributes = (advanceToNext: boolean = false) => {
     // Format attribute values for the API
-    const formattedAttributes = attributeValues.map(attr => ({
-      attributeId: attr.attributeId,
-      value: attr.value
-    }));
+    const formattedAttributes = attributeValues.map(attr => {
+      // Convert any non-string, non-array values to strings to match ProductDraft interface
+      let value = attr.value;
+      if (value !== null && typeof value !== 'string' && !Array.isArray(value)) {
+        value = String(value);
+      }
+      
+      return {
+        attributeId: attr.attributeId,
+        value: value
+      };
+    });
     
     onSave({ attributes: formattedAttributes }, advanceToNext);
   };

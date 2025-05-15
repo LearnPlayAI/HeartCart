@@ -598,6 +598,7 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, isL
         </Form>
       </CardContent>
     </Card>
+    </>
   );
 };
 
