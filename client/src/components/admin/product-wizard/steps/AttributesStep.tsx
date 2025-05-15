@@ -850,7 +850,7 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
             {hasError && (
               <p className="text-red-500 text-sm mt-1">{validationErrors[attribute.attributeId]}</p>
             )}
-          </div>}
+          </div>
         </div>
       </div>
     );
