@@ -199,35 +199,8 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  // Create a custom hook to load attribute options
-  const useAttributeOptions = (attributeId: number, enabled = true) => {
-    const { data, isLoading, isError } = useQuery({
-      queryKey: [`/api/attributes/${attributeId}/options`],
-      queryFn: () => 
-        apiRequest('GET', `/api/attributes/${attributeId}/options`)
-          .then(res => res.json()),
-      enabled: !!attributeId && enabled,
-      staleTime: 5 * 60 * 1000, // 5 minutes
-    });
-    
-    useEffect(() => {
-      if (data?.success && data?.data && attributeId) {
-        console.log(`Options response:`, data);
-        setAttributesCache(prev => ({
-          ...prev,
-          [attributeId]: {
-            ...prev[attributeId],
-            options: data.data
-          }
-        }));
-      }
-    }, [data, attributeId]);
-
-    return { data, isLoading, isError };
-  };
-
-  // Keep track of loaded attribute options
-  const preloadOptions = (attributeId: number) => {
+  // Load attribute options directly, not as a hook
+  const loadAttributeOptions = (attributeId: number) => {
     if (!attributeId || attributesCache[attributeId]?.options) {
       return;
     }
@@ -236,9 +209,31 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
     if (attribute) {
       console.log(`Preloading options for attribute: ${attribute.displayName} (${attributeId})`);
       console.log(`Fetching options for attribute ID: ${attributeId}`);
-      useAttributeOptions(attributeId);
+      
+      // Manual fetch instead of using a hook
+      console.log(`Manual refetch of options for attribute:`, attributeId);
+      apiRequest('GET', `/api/attributes/${attributeId}/options`)
+        .then(res => res.json())
+        .then(data => {
+          console.log(`Options direct fetch response:`, data);
+          if (data?.success && data?.data) {
+            setAttributesCache(prev => ({
+              ...prev,
+              [attributeId]: {
+                ...prev[attributeId],
+                options: data.data
+              }
+            }));
+          }
+        })
+        .catch(error => {
+          console.error(`Error fetching options for attribute ${attributeId}:`, error);
+        });
     }
   };
+
+  // Define preloadOptions as alias for loadAttributeOptions for compatibility
+  const preloadOptions = loadAttributeOptions;
 
   // Function to get all attributes, including those in cache
   const getAllAttributes = (): Attribute[] => {
