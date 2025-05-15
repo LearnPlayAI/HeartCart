@@ -464,7 +464,7 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ editMode = false, 
       <Tabs value={currentStep} onValueChange={handleStepChange} className="w-full">
         {/* Mobile-optimized TabsList - scrollable on small screens */}
         <div className="overflow-x-auto pb-2 -mx-6 px-6">
-          <TabsList className="grid grid-cols-4 mb-6 min-w-[500px] md:min-w-0">
+          <TabsList className="grid grid-cols-5 mb-6 min-w-[600px] md:min-w-0">
             {WIZARD_STEPS.map((step) => (
               <TabsTrigger 
                 key={step.id} 

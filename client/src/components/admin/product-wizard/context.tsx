@@ -645,7 +645,7 @@ export const ProductWizardProvider: React.FC<ProductWizardProviderProps> = ({
   
   // Wizard step navigation
   const nextStep = useCallback(() => {
-    const steps: WizardStep[] = ['basic-info', 'images', 'additional-info', 'sales-promotions', 'review'];
+    const steps: WizardStep[] = ['basic-info', 'images', 'additional-info', 'seo', 'sales-promotions', 'review'];
     const currentIndex = steps.indexOf(state.currentStep);
     if (currentIndex < steps.length - 1) {
       const nextStep = steps[currentIndex + 1];
@@ -654,7 +654,7 @@ export const ProductWizardProvider: React.FC<ProductWizardProviderProps> = ({
   }, [state.currentStep]);
   
   const previousStep = useCallback(() => {
-    const steps: WizardStep[] = ['basic-info', 'images', 'additional-info', 'sales-promotions', 'review'];
+    const steps: WizardStep[] = ['basic-info', 'images', 'additional-info', 'seo', 'sales-promotions', 'review'];
     const currentIndex = steps.indexOf(state.currentStep);
     if (currentIndex > 0) {
       const prevStep = steps[currentIndex - 1];
@@ -705,6 +705,31 @@ export const ProductWizardProvider: React.FC<ProductWizardProviderProps> = ({
         const isValid = true;
         dispatch({ type: 'MARK_STEP_VALID', step: 'additional-info', isValid });
         dispatch({ type: 'MARK_STEP_COMPLETE', step: 'additional-info' });
+        return isValid;
+      },
+      'seo': () => {
+        // Validate that there's at least a meta title if set
+        let isValid = true;
+        
+        // If meta title is provided, it should be at least 5 characters
+        if (state.metaTitle && state.metaTitle.length < 5) {
+          isValid = false;
+        }
+        
+        // If meta description is provided, it should be at least 10 characters
+        if (state.metaDescription && state.metaDescription.length < 10) {
+          isValid = false;
+        }
+        
+        console.log('SEO validation:', {
+          isValid,
+          metaTitle: state.metaTitle,
+          metaDescription: state.metaDescription,
+          metaKeywords: state.metaKeywords
+        });
+        
+        dispatch({ type: 'MARK_STEP_VALID', step: 'seo', isValid });
+        dispatch({ type: 'MARK_STEP_COMPLETE', step: 'seo' });
         return isValid;
       },
       'sales-promotions': () => {
