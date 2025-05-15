@@ -5738,12 +5738,12 @@ export class DatabaseStorage implements IStorage {
         throw new Error(`Product draft with ID ${id} not found`);
       }
       
-      // Prepare the update data - Format date as text string in ISO format
-      // Using the proper string format (YYYY-MM-DDTHH:mm:ss.sssZ) for consistency
-      const now = new Date().toISOString();
+      // Prepare the update data with proper type handling
+      // For timestamp fields, use actual Date objects as Drizzle will handle the conversion
+      const now = new Date();
       const updateData: Partial<ProductDraft> = {
         draftStatus: status,
-        lastModified: now // Storing as a string, not a Date object
+        lastModified: now // Use Date object for timestamp columns
       };
       
       // Add additional information based on status
@@ -5756,40 +5756,71 @@ export class DatabaseStorage implements IStorage {
         updateData.changeHistory = [];
       }
       
-      // Create the new change entry with proper timestamp
+      // Create the new change entry with proper timestamp (for the jsonb field)
       const changeEntry = {
-        timestamp: now, // Already a string from toISOString()
+        timestamp: now.toISOString(), // For jsonb, we need to store as string
         fromStatus: draft.draftStatus,
         toStatus: status,
         note: note || null
       };
       
       try {
-        // Process existing history to ensure all timestamps are strings
+        // Process existing history and ensure it's a proper array for JSONB
         let currentHistory = [];
-        if (draft.changeHistory) {
-          // Handle different formats of changeHistory
-          if (Array.isArray(draft.changeHistory)) {
-            currentHistory = (draft.changeHistory as any[]).map(entry => {
-              // Make sure all existing timestamps are strings
-              return {
-                ...entry,
-                timestamp: typeof entry.timestamp === 'string' 
-                  ? entry.timestamp 
-                  : (entry.timestamp instanceof Date 
-                      ? entry.timestamp.toISOString() 
-                      : new Date().toISOString())
-              };
-            });
-          } else {
-            // If changeHistory is not an array (could be object or null), 
-            // initialize to empty array
-            logger.warn('Change history is not an array', {
-              type: typeof draft.changeHistory,
-              changeHistory: draft.changeHistory
-            });
-            currentHistory = [];
+        
+        try {
+          if (draft.changeHistory) {
+            // Handle different formats of changeHistory
+            if (Array.isArray(draft.changeHistory)) {
+              // Process each entry to ensure valid format
+              currentHistory = (draft.changeHistory as any[]).map(entry => {
+                try {
+                  // Make sure all existing timestamps are strings
+                  return {
+                    fromStatus: entry.fromStatus || 'unknown',
+                    toStatus: entry.toStatus || 'unknown',
+                    note: entry.note || null,
+                    timestamp: typeof entry.timestamp === 'string' 
+                      ? entry.timestamp 
+                      : (entry.timestamp instanceof Date 
+                          ? entry.timestamp.toISOString() 
+                          : new Date().toISOString())
+                  };
+                } catch (entryError) {
+                  logger.warn('Error processing history entry', { 
+                    entryError, 
+                    entry: typeof entry === 'object' ? JSON.stringify(entry) : typeof entry 
+                  });
+                  // Return a simple valid entry rather than failing
+                  return {
+                    fromStatus: 'unknown',
+                    toStatus: 'unknown',
+                    note: null,
+                    timestamp: new Date().toISOString()
+                  };
+                }
+              });
+            } else if (typeof draft.changeHistory === 'object') {
+              // It might be a single object rather than an array
+              logger.warn('Change history is an object, not an array', {
+                type: typeof draft.changeHistory
+              });
+              currentHistory = [];
+            } else {
+              // Initialize to empty array for any other type
+              logger.warn('Change history is not valid', {
+                type: typeof draft.changeHistory
+              });
+              currentHistory = [];
+            }
           }
+        } catch (historyError) {
+          logger.error('Failed to process change history', { 
+            historyError,
+            changeHistoryType: typeof draft.changeHistory
+          });
+          // Always use a new array if there's an error
+          currentHistory = [];
         }
         
         // Add new entry to history
@@ -5815,13 +5846,20 @@ export class DatabaseStorage implements IStorage {
       
       // Update the database record
       try {
-        // Extra validation to ensure all data is in the correct format
+        // Handle changeHistory as a proper array for the jsonb field
         if (updateData.changeHistory) {
-          // Ensure changeHistory is always a proper array of objects with string timestamps
-          updateData.changeHistory = JSON.parse(JSON.stringify(updateData.changeHistory));
-          logger.debug('Change history sanitized', { 
+          if (Array.isArray(updateData.changeHistory)) {
+            // Ensure the array is properly formatted for PostgreSQL JSONB
+            updateData.changeHistory = JSON.parse(JSON.stringify(updateData.changeHistory));
+          } else {
+            // If somehow it's not an array, make it one
+            updateData.changeHistory = [];
+          }
+          
+          logger.debug('Change history prepared for database', {
             changeHistoryType: typeof updateData.changeHistory,
-            isArray: Array.isArray(updateData.changeHistory)
+            isArray: Array.isArray(updateData.changeHistory),
+            length: Array.isArray(updateData.changeHistory) ? updateData.changeHistory.length : 0
           });
         }
         
