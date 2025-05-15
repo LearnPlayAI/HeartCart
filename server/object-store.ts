@@ -595,7 +595,7 @@ class ObjectStoreService {
       return;
     }
     
-    console.log(`Starting delete operation for: ${objectKey}`);
+    console.log(`Starting ENHANCED delete operation for: ${objectKey}`);
     await this.initialize();
     
     try {
@@ -612,8 +612,73 @@ class ObjectStoreService {
         return;
       }
       
-      console.log(`File exists, attempting to delete: ${normalizedKey}`);
+      console.log(`File exists, attempting direct delete: ${normalizedKey}`);
       
+      // ENHANCED APPROACH: Access the raw client directly for more reliable deletion
+      try {
+        // Use the low-level delete operation
+        const deletePromise = new Promise<boolean>((resolve, reject) => {
+          // Ensure we have full access to the Replit object store client
+          if (!this.objectStore || typeof this.objectStore.delete !== 'function') {
+            console.error('Invalid object store client or missing delete method');
+            reject(new Error('Invalid object store client configuration'));
+            return;
+          }
+          
+          // Execute the delete operation with forced options
+          try {
+            const result = this.objectStore.delete(normalizedKey);
+            
+            if (result && typeof result.then === 'function') {
+              // It's a promise, wait for it
+              result
+                .then((deleteResult) => {
+                  if (deleteResult && 'err' in deleteResult && deleteResult.err) {
+                    console.error(`Direct delete error: ${normalizedKey}`, deleteResult.err);
+                    resolve(false);
+                  } else {
+                    console.log(`Direct delete succeeded: ${normalizedKey}`, deleteResult);
+                    resolve(true);
+                  }
+                })
+                .catch((error) => {
+                  console.error(`Direct delete exception: ${normalizedKey}`, error);
+                  resolve(false);
+                });
+            } else {
+              // Not a promise, handle synchronously
+              const deleteResult = result as any;
+              if (deleteResult && 'err' in deleteResult && deleteResult.err) {
+                console.error(`Sync delete error: ${normalizedKey}`, deleteResult.err);
+                resolve(false);
+              } else {
+                console.log(`Sync delete succeeded: ${normalizedKey}`, deleteResult);
+                resolve(true);
+              }
+            }
+          } catch (directError) {
+            console.error(`Exception in direct delete: ${normalizedKey}`, directError);
+            resolve(false);
+          }
+        });
+        
+        // Wait for the direct delete with timeout
+        const deleteSucceeded = await Promise.race([
+          deletePromise,
+          new Promise<boolean>(resolve => setTimeout(() => {
+            console.log(`Delete timeout for: ${normalizedKey}`);
+            resolve(false);
+          }, 5000))
+        ]);
+        
+        if (!deleteSucceeded) {
+          console.warn(`Direct delete failed for: ${normalizedKey}`);
+        }
+      } catch (directError) {
+        console.error(`Error in direct delete approach: ${normalizedKey}`, directError);
+      }
+      
+      // FALLBACK: If direct approach failed or as additional measure, use retry approach
       // Implement retry logic for deletions (up to 3 attempts)
       let deleteSuccess = false;
       let attempts = 0;
@@ -623,8 +688,8 @@ class ObjectStoreService {
       while (!deleteSuccess && attempts < maxAttempts) {
         attempts++;
         try {
+          console.log(`Standard delete attempt ${attempts} for: ${normalizedKey}`);
           const result = await this.objectStore.delete(normalizedKey);
-          console.log(`Delete attempt ${attempts} result:`, result);
           
           if ('err' in result && result.err) {
             console.error(`Error in delete attempt ${attempts} for ${normalizedKey}:`, result.err);
@@ -634,15 +699,6 @@ class ObjectStoreService {
           } else {
             deleteSuccess = true;
             console.log(`Successfully deleted file on attempt ${attempts}: ${normalizedKey}`);
-            
-            // Verify the file is actually gone
-            const stillExists = await this.exists(normalizedKey);
-            if (stillExists) {
-              console.warn(`File appears to still exist after deletion: ${normalizedKey}`);
-              deleteSuccess = false;
-              lastError = new Error("File still exists after delete operation");
-              await new Promise(resolve => setTimeout(resolve, 1000)); // Wait longer before retrying
-            }
           }
         } catch (attemptError) {
           console.error(`Exception in delete attempt ${attempts} for ${normalizedKey}:`, attemptError);
@@ -651,15 +707,24 @@ class ObjectStoreService {
         }
       }
       
-      // If all attempts failed, throw an error
-      if (!deleteSuccess) {
-        const errorMessage = lastError instanceof Error ? lastError.message : 
-                           typeof lastError === 'object' && lastError !== null ? 
-                           JSON.stringify(lastError) : String(lastError);
-        throw new Error(`Failed to delete file after ${maxAttempts} attempts: ${errorMessage}`);
+      // Final verification that file is gone
+      // Wait a moment before checking as Replit storage might have eventual consistency
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      const stillExists = await this.exists(normalizedKey);
+      if (stillExists) {
+        console.error(`⚠️ CRITICAL: File still exists after all deletion attempts: ${normalizedKey}`);
+        // Try a last-resort direct deletion
+        try {
+          console.log(`Attempting last-resort deletion for: ${normalizedKey}`);
+          await this.objectStore.delete(normalizedKey);
+        } catch (lastError) {
+          console.error(`Last resort deletion failed: ${normalizedKey}`, lastError);
+        }
+      } else {
+        console.log(`✅ Verified file is gone: ${normalizedKey}`);
       }
       
-      console.log(`Successfully deleted file: ${normalizedKey}`);
+      console.log(`Delete operation complete for: ${normalizedKey}`);
     } catch (error) {
       console.error(`Failed to delete ${objectKey}:`, error);
       // Don't throw the error, just log it - we want the delete draft operation to succeed

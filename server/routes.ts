@@ -5,6 +5,7 @@ import { storage } from "./storage";
 import { ZodError } from "zod";
 import { logger } from "./logger";
 import crypto from "crypto";
+import { cleanupOrphanedDraftImages, cleanupAllOrphanedDraftImages } from "./clean-orphaned-images";
 // Import AI routes separately
 import aiRouter from "./ai-routes";
 import { imageService, THUMBNAIL_SIZES } from "./image-service";
@@ -5311,6 +5312,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register file browser routes for object storage management
   app.use('/api/file-browser', fileBrowserRoutes);
+  
+  // Cleanup utilities for orphaned images
+  app.get('/api/admin/cleanup/draft-images/:draftId', isAuthenticated, isAdmin, asyncHandler(async (req: Request, res: Response) => {
+    const draftId = parseInt(req.params.draftId);
+    if (isNaN(draftId)) {
+      return res.status(400).json({ success: false, error: 'Invalid draft ID' });
+    }
+    
+    logger.info(`Admin requested cleanup of orphaned images for draft ${draftId}`);
+    const result = await cleanupOrphanedDraftImages(draftId);
+    return res.json({ 
+      success: true, 
+      data: result
+    });
+  }));
+  
+  app.get('/api/admin/cleanup/all-drafts', isAuthenticated, isAdmin, asyncHandler(async (req: Request, res: Response) => {
+    logger.info('Admin requested cleanup of all orphaned draft images');
+    const result = await cleanupAllOrphanedDraftImages();
+    return res.json({ 
+      success: true, 
+      data: result
+    });
+  }));
 
   const httpServer = createServer(app);
   return httpServer;
