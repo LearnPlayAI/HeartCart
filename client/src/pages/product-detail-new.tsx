@@ -247,11 +247,11 @@ const ProductDetailView = ({
   
   // Effect to set initial image on component mount or when product changes
   useEffect(() => {
-    if (product) {
+    if (product && !currentImage) {
       // First check for imageUrl, then fall back to objectKey
-      if (product.imageUrl && !currentImage) {
+      if (product.imageUrl) {
         setCurrentImage(ensureValidImageUrl(product.imageUrl));
-      } else if (product.originalImageObjectKey && !currentImage) {
+      } else if (product.originalImageObjectKey) {
         // If we have an object key, use it
         setCurrentImage(ensureValidImageUrl(product.originalImageObjectKey));
       }
@@ -275,8 +275,8 @@ const ProductDetailView = ({
         const selectedOptionId = selectedAttributes[attrId];
         
         return selectedOptionId && 
-          (value.optionId === parseInt(selectedOptionId) || 
-           value.textValue === selectedOptionId);
+          (value.attributeOptionId === parseInt(selectedOptionId) || 
+           value.valueText === selectedOptionId);
       });
       
       // No price adjustments based on attributes as per requirements
@@ -298,7 +298,7 @@ const ProductDetailView = ({
       setSelectedAttributeValues([]);
       setPriceAdjustments(null);
     }
-  }, [selectedAttributes, attributeValues, product, productAttributes, quantity, calculatePriceAdjustments]);
+  }, [selectedAttributes, attributeValues, product, productAttributes]);
   
   // Handle quantity change (memoized to prevent recreating on each render)
   const handleQuantityChange = useCallback((newQuantity: number) => {
