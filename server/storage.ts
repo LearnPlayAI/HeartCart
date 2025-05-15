@@ -172,6 +172,40 @@ export interface IStorage {
 
 export class DatabaseStorage implements IStorage {
   /**
+   * Generates a slug from a product name
+   * Used for slug creation and ensuring uniqueness
+   */
+  private generateSlug(name: string): string {
+    if (!name) return `product-${Date.now()}`;
+    
+    return name
+      .toLowerCase()
+      .replace(/[^\w\s-]/g, '') // Remove all non-word chars
+      .replace(/[\s_-]+/g, '-') // Replace spaces, underscores and hyphens with a single hyphen
+      .replace(/^-+|-+$/g, '')  // Remove leading/trailing hyphens
+      .substring(0, 60);        // Truncate to reasonable length
+  }
+  
+  /**
+   * Checks if a slug belongs to the specified product
+   */
+  private async isSlugOwnedByProduct(slug: string, productId: number): Promise<boolean> {
+    try {
+      const result = await db
+        .select({ id: products.id })
+        .from(products)
+        .where(and(
+          eq(products.slug, slug),
+          eq(products.id, productId)
+        ));
+      
+      return result.length > 0;
+    } catch (error) {
+      logger.error('Error checking slug ownership', { error, slug, productId });
+      return false;
+    }
+  }
+  /**
    * Helper method to enrich products with their main image URL and additional images
    * @param productList The list of products to enrich
    * @returns The enriched product list with imageUrl and additionalImages fields
