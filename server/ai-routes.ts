@@ -1,287 +1,121 @@
 import express, { Request, Response } from 'express';
 import asyncHandler from 'express-async-handler';
-import { logger } from './logger';
-import { generateProductDescription, generateSEOData, generateProductTags } from './ai-service';
+import { generateProductDescription, generateProductTags, optimizeSEO } from './ai-service';
 import { isAuthenticated } from './auth-middleware';
 
-// Create AI routes router
-const aiRouter = express.Router();
+const router = express.Router();
 
-// Add authentication middleware to all AI routes
-aiRouter.use(isAuthenticated);
+// API route for suggesting a product description
+router.post('/suggest-description', isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
+  const { productName, categoryName, keyPoints } = req.body;
 
-/**
- * Generate product description suggestions
- * POST /api/ai/suggest-description
- */
-aiRouter.post('/suggest-description', asyncHandler(async (req: Request, res: Response) => {
-  const { productName, currentDescription, categoryName, brandName, keyFeatures } = req.body;
-  
   if (!productName) {
     return res.status(400).json({
       success: false,
-      error: { message: 'Product name is required' }
+      error: {
+        message: 'Product name is required'
+      }
     });
   }
-  
-  logger.debug('Generating product description suggestions', {
-    productName,
-    categoryName,
-    brandName,
-    hasCurrentDescription: !!currentDescription,
-    featureCount: keyFeatures?.length
-  });
-  
+
   try {
-    const suggestions = await generateProductDescription(
-      productName,
-      currentDescription || '',
-      categoryName || '',
-      brandName || '',
-      keyFeatures || []
-    );
+    const suggestions = await generateProductDescription(productName, categoryName, keyPoints);
     
-    return res.json({
+    res.json({
       success: true,
-      data: { suggestions }
+      data: {
+        suggestions
+      }
     });
   } catch (error) {
-    logger.error('Error generating product description suggestions', {
-      error,
-      productName,
-      errorMessage: error instanceof Error ? error.message : String(error)
-    });
-    
-    // Handle specific API error types
-    if (error instanceof Error) {
-      const errorMessage = error.message;
-      
-      if (errorMessage.includes('MISSING_API_KEY')) {
-        return res.status(503).json({
-          success: false,
-          error: { 
-            code: 'MISSING_API_KEY',
-            message: 'AI service is not configured. Please contact your administrator to set up the Gemini API key.'
-          }
-        });
-      } else if (errorMessage.includes('INVALID_API_KEY')) {
-        return res.status(503).json({
-          success: false,
-          error: { 
-            code: 'INVALID_API_KEY',
-            message: 'AI service configuration is invalid. Please contact your administrator to update the Gemini API key.'
-          }
-        });
-      } else if (errorMessage.includes('AI service unavailable')) {
-        return res.status(503).json({
-          success: false,
-          error: { 
-            code: 'SERVICE_UNAVAILABLE',
-            message: 'AI service is currently unavailable. Please try again later or contact your administrator.'
-          }
-        });
-      }
-    }
-    
-    return res.status(500).json({
+    console.error('Error generating product description:', error);
+    res.status(500).json({
       success: false,
-      error: { 
-        code: 'GENERATION_FAILED',
-        message: error instanceof Error ? error.message : 'Failed to generate descriptions'
+      error: {
+        message: error instanceof Error ? error.message : 'Failed to generate description'
       }
     });
   }
 }));
 
-/**
- * Generate SEO optimization suggestions
- * POST /api/ai/optimize-seo
- */
-aiRouter.post('/optimize-seo', asyncHandler(async (req: Request, res: Response) => {
-  const {
-    productName,
+// API route for generating product tags
+router.post('/generate-tags', isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
+  const { productName, productDescription, categoryName } = req.body;
+
+  if (!productName && !productDescription) {
+    return res.status(400).json({
+      success: false,
+      error: {
+        message: 'Product name or description is required'
+      }
+    });
+  }
+
+  try {
+    const tags = await generateProductTags(productName, productDescription, categoryName);
+    
+    res.json({
+      success: true,
+      data: {
+        tags
+      }
+    });
+  } catch (error) {
+    console.error('Error generating product tags:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: error instanceof Error ? error.message : 'Failed to generate tags'
+      }
+    });
+  }
+}));
+
+// API route for optimizing SEO metadata
+router.post('/optimize-seo', isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
+  const { 
+    productName, 
+    productDescription, 
+    categoryName,
     currentTitle,
     currentDescription,
-    currentKeywords,
-    productDescription,
-    categoryName
+    currentKeywords
   } = req.body;
-  
-  if (!productName) {
+
+  if (!productName && !productDescription) {
     return res.status(400).json({
       success: false,
-      error: { message: 'Product name is required' }
+      error: {
+        message: 'Product name or description is required'
+      }
     });
   }
-  
-  logger.debug('Generating SEO optimization suggestions', {
-    productName,
-    categoryName,
-    hasProductDescription: !!productDescription
-  });
-  
+
   try {
-    const suggestions = await generateSEOData(
-      productName,
-      productDescription || '',
-      categoryName || '',
-      currentTitle || '',
-      currentDescription || '',
-      currentKeywords || []
+    const suggestions = await optimizeSEO(
+      productName, 
+      productDescription, 
+      categoryName,
+      currentTitle,
+      currentDescription,
+      currentKeywords
     );
     
-    return res.json({
+    res.json({
       success: true,
-      data: { suggestions }
+      data: {
+        suggestions
+      }
     });
   } catch (error) {
-    logger.error('Error generating SEO suggestions', {
-      error,
-      productName,
-      errorMessage: error instanceof Error ? error.message : String(error)
-    });
-    
-    // Handle specific API error types
-    if (error instanceof Error) {
-      const errorMessage = error.message;
-      
-      if (errorMessage.includes('MISSING_API_KEY')) {
-        return res.status(503).json({
-          success: false,
-          error: { 
-            code: 'MISSING_API_KEY',
-            message: 'AI service is not configured. Please contact your administrator to set up the Gemini API key.'
-          }
-        });
-      } else if (errorMessage.includes('INVALID_API_KEY')) {
-        return res.status(503).json({
-          success: false,
-          error: { 
-            code: 'INVALID_API_KEY',
-            message: 'AI service configuration is invalid. Please contact your administrator to update the Gemini API key.'
-          }
-        });
-      } else if (errorMessage.includes('AI service unavailable')) {
-        return res.status(503).json({
-          success: false,
-          error: { 
-            code: 'SERVICE_UNAVAILABLE',
-            message: 'AI service is currently unavailable. Please try again later or contact your administrator.'
-          }
-        });
-      }
-    }
-    
-    return res.status(500).json({
+    console.error('Error optimizing SEO:', error);
+    res.status(500).json({
       success: false,
-      error: { 
-        code: 'GENERATION_FAILED',
-        message: error instanceof Error ? error.message : 'Failed to generate SEO suggestions'
+      error: {
+        message: error instanceof Error ? error.message : 'Failed to optimize SEO'
       }
     });
   }
 }));
 
-/**
- * Generate product tags
- * POST /api/ai/generate-tags
- */
-aiRouter.post('/generate-tags', asyncHandler(async (req: Request, res: Response) => {
-  const { productName, productDescription, productImageBase64, categoryName } = req.body;
-  
-  if (!productName) {
-    return res.status(400).json({
-      success: false,
-      error: { message: 'Product name is required' }
-    });
-  }
-  
-  logger.debug('Generating product tags', {
-    productName,
-    categoryName,
-    hasImage: !!productImageBase64,
-    descriptionLength: productDescription?.length
-  });
-  
-  try {
-    const tags = await generateProductTags(
-      productImageBase64 || '',
-      productName,
-      productDescription || '',
-      undefined // productId is optional
-    );
-    
-    return res.json({
-      success: true,
-      data: { tags }
-    });
-  } catch (error) {
-    logger.error('Error generating product tags', {
-      error,
-      productName,
-      errorMessage: error instanceof Error ? error.message : String(error)
-    });
-    
-    // Handle specific API error types
-    if (error instanceof Error) {
-      const errorMessage = error.message;
-      
-      if (errorMessage.includes('MISSING_API_KEY')) {
-        return res.status(503).json({
-          success: false,
-          error: { 
-            code: 'MISSING_API_KEY',
-            message: 'AI service is not configured. Please contact your administrator to set up the Gemini API key.'
-          }
-        });
-      } else if (errorMessage.includes('INVALID_API_KEY')) {
-        return res.status(503).json({
-          success: false,
-          error: { 
-            code: 'INVALID_API_KEY',
-            message: 'AI service configuration is invalid. Please contact your administrator to update the Gemini API key.'
-          }
-        });
-      } else if (errorMessage.includes('AI service unavailable')) {
-        return res.status(503).json({
-          success: false,
-          error: { 
-            code: 'SERVICE_UNAVAILABLE',
-            message: 'AI service is currently unavailable. Please try again later or contact your administrator.'
-          }
-        });
-      }
-    }
-    
-    return res.status(500).json({
-      success: false,
-      error: { 
-        code: 'GENERATION_FAILED',
-        message: error instanceof Error ? error.message : 'Failed to generate product tags'
-      }
-    });
-  }
-}));
-
-/**
- * Record AI suggestion feedback
- * POST /api/ai/feedback
- */
-aiRouter.post('/feedback', asyncHandler(async (req: Request, res: Response) => {
-  const { suggestionType, suggestionIndex, feedbackType, suggestion } = req.body;
-  
-  // In a production system, we would store this feedback for model improvement
-  logger.info('AI suggestion feedback received', {
-    suggestionType,
-    suggestionIndex,
-    feedbackType,
-    userId: req.user?.id
-  });
-  
-  return res.json({
-    success: true,
-    data: { recorded: true }
-  });
-}));
-
-export default aiRouter;
+export default router;

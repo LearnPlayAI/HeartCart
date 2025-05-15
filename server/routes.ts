@@ -5,7 +5,8 @@ import { storage } from "./storage";
 import { ZodError } from "zod";
 import { logger } from "./logger";
 import crypto from "crypto";
-import { removeImageBackground, generateProductTags, analyzeProductImage, suggestPrice, getAvailableAiModels, getCurrentAiModelSetting, updateAiModel, suggestProductAttributes } from "./ai-service";
+// Import AI routes separately
+import aiRouter from "./ai-routes";
 import { imageService, THUMBNAIL_SIZES } from "./image-service";
 import { 
   insertCartItemSchema, 
@@ -34,7 +35,6 @@ import registerProductDraftRoutes from "./product-draft-routes";
 import pricingRoutes from "./pricing-routes";
 import batchUploadRoutes from "./batch-upload-routes";
 import aiApiRoutes from "./routes/ai-api";
-import aiRouter from "./ai-routes";
 import { registerAuthTestRoutes } from "./auth-test-routes";
 import { registerDatabaseTestRoutes } from "./database-test-routes";
 import { registerApiTestRoutes } from "./api-test-routes";

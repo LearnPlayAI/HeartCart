@@ -1,1772 +1,224 @@
-import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
-import sharp from 'sharp';
-import { storage } from './storage';
-import { InsertAiSetting } from '@shared/schema';
-import { logger } from './logger';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// Check for API key and set up a flag to track availability
-let isGeminiAvailable = false;
-let geminiApiKeyError: string | null = null;
-
-// Initialize the Google Generative AI API if API key is available
-let genAI: GoogleGenerativeAI;
-
-try {
-  if (!process.env.GEMINI_API_KEY) {
-    geminiApiKeyError = 'MISSING_API_KEY';
-    logger.error('GEMINI_API_KEY environment variable is missing');
-  } else {
-    genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    isGeminiAvailable = true;
-  }
-} catch (error) {
-  geminiApiKeyError = 'INVALID_API_KEY';
-  logger.error('Error initializing Gemini API', {
-    error,
-    errorType: error instanceof Error ? error.name : typeof error,
-    errorMessage: error instanceof Error ? error.message : String(error)
-  });
-}
-
-// Define available Gemini AI models
-const AVAILABLE_GEMINI_MODELS = [
-  'gemini-1.5-flash',     // Default - fast, cost-effective
-  'gemini-1.5-pro',       // Better quality, more expensive
-  'gemini-pro-vision',    // Legacy model
-  'gemini-pro'            // Text-only model
-];
-
-// Key for storing the current model in database
-const AI_MODEL_SETTING_KEY = 'current_ai_model';
-
-// Get current model setting or use default
-async function getCurrentAiModel(): Promise<string> {
-  try {
-    const modelSetting = await storage.getAiSetting(AI_MODEL_SETTING_KEY);
-    if (modelSetting && AVAILABLE_GEMINI_MODELS.includes(modelSetting.settingValue)) {
-      return modelSetting.settingValue;
-    }
-    return 'gemini-1.5-flash'; // Default model
-  } catch (error) {
-    logger.warn('Error fetching AI model setting, using default model', {
-      error,
-      errorType: error instanceof Error ? error.name : typeof error,
-      errorMessage: error instanceof Error ? error.message : String(error),
-      defaultModel: 'gemini-1.5-flash'
-    });
-    return 'gemini-1.5-flash'; // Default model on error
-  }
-}
-
-// Initialize the Gemini Pro Vision model for image tasks
-let geminiProVision: GenerativeModel | null = null;
-
-// Only initialize if the API is available
-if (isGeminiAvailable) {
-  try {
-    // Default initialization with fallback model
-    geminiProVision = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-    
-    // Initialize with the saved model (will be updated in the initialize function)
-    initializeGeminiModel().catch(err => {
-      logger.error('Error initializing Gemini model', {
-        error: err,
-        errorType: err instanceof Error ? err.name : typeof err,
-        errorMessage: err instanceof Error ? err.message : String(err)
-      });
-    });
-  } catch (error) {
-    logger.error('Failed to create initial Gemini model', { 
-      error, 
-      errorType: error instanceof Error ? error.name : typeof error,
-      errorMessage: error instanceof Error ? error.message : String(error)
-    });
-    isGeminiAvailable = false;
-    geminiApiKeyError = 'INITIALIZATION_ERROR';
-  }
-}
+// Initialize the Gemini API
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
 /**
- * Generate product description suggestions using Gemini AI
+ * Generates product description suggestions based on product name and optional category
  */
 export async function generateProductDescription(
   productName: string,
-  currentDescription: string = '',
-  categoryName: string = '',
-  brandName: string = '',
-  keyFeatures: string[] = []
+  categoryName?: string,
+  keyPoints?: string[]
 ): Promise<string[]> {
-  // Check if API is available first
-  if (!isGeminiAvailable || !genAI) {
-    logger.warn('Gemini AI service unavailable for product description generation', {
-      error: geminiApiKeyError || 'Unknown error',
-      productName
-    });
-    throw new Error(`AI service unavailable: ${geminiApiKeyError || 'Unknown error'}`);
-  }
-  
   try {
-    logger.debug('Generating product description with Gemini', {
-      productName,
-      categoryName,
-      brandName,
-      descriptionLength: currentDescription.length,
-      featureCount: keyFeatures.length
-    });
-
-    // Get current model
-    const currentModel = await getCurrentAiModel();
+    let promptText = `Generate 3 distinct, persuasive, and compelling product descriptions for a South African e-commerce website for: "${productName}"`;
     
-    // Format the prompt
-    const prompt = `Generate 3 different professional product descriptions for an e-commerce website.
-    Each description should be engaging, highlight benefits, and be 100-150 words in 2-3 paragraphs.
-    Use a professional but conversational tone suitable for online shopping.
-    
-    Product Name: ${productName}
-    ${categoryName ? `Category: ${categoryName}` : ''}
-    ${brandName ? `Brand: ${brandName}` : ''}
-    ${keyFeatures.length > 0 ? `Key Features: ${keyFeatures.join(', ')}` : ''}
-    ${currentDescription ? `Current Description: ${currentDescription}` : ''}
-    
-    Provide 3 distinct descriptions separated by "---" without any additional text, numbering, or commentary.
-    Each description should be substantively different in structure and focus.`;
-
-    // Generate content using Gemini
-    const model = genAI.getGenerativeModel({ model: currentModel });
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const responseText = await response.text();
-    
-    // Split the response by "---" delimiter
-    const descriptions = responseText
-      .split('---')
-      .map(desc => desc.trim())
-      .filter(desc => desc.length > 0);
-    
-    if (descriptions.length === 0) {
-      logger.warn('No descriptions found in Gemini response', {
-        responsePreview: responseText.substring(0, 100) + '...'
-      });
-      throw new Error('No valid descriptions generated');
+    if (categoryName) {
+      promptText += ` in the category "${categoryName}"`;
     }
     
-    logger.info('Successfully generated product descriptions', {
-      count: descriptions.length,
-      averageLength: descriptions.reduce((sum, desc) => sum + desc.length, 0) / descriptions.length
-    });
+    promptText += `. Each description should be between 75-150 words, be search engine optimized, highlight unique selling points, and include emotional appeal.`;
     
-    return descriptions;
-  } catch (error) {
-    logger.error('Error generating product descriptions with Gemini', {
-      error,
-      productName,
-      errorType: error instanceof Error ? error.name : typeof error,
-      errorMessage: error instanceof Error ? error.message : String(error)
-    });
-    throw error;
-  }
-}
+    if (keyPoints && keyPoints.length > 0) {
+      promptText += ` Focus on these key points: ${keyPoints.join(', ')}.`;
+    }
 
-/**
- * Generate SEO data suggestions using Gemini AI
- */
-export async function generateSEOData(
-  productName: string,
-  productDescription: string = '',
-  categoryName: string = '',
-  currentTitle: string = '',
-  currentMetaDescription: string = '',
-  currentKeywords: string[] = []
-): Promise<any[]> {
-  // Check if API is available first
-  if (!isGeminiAvailable || !genAI) {
-    logger.warn('Gemini AI service unavailable for SEO optimization', {
-      error: geminiApiKeyError || 'Unknown error',
-      productName
-    });
-    throw new Error(`AI service unavailable: ${geminiApiKeyError || 'Unknown error'}`);
-  }
-  
-  try {
-    logger.debug('Generating SEO data with Gemini', {
-      productName,
-      categoryName,
-      descriptionLength: productDescription.length,
-      hasCurrent: {
-        title: !!currentTitle,
-        metaDescription: !!currentMetaDescription,
-        keywords: currentKeywords.length > 0
-      }
-    });
+    promptText += `
+    Format your response as a JSON array of strings, with each element containing one description.
+    Example:
+    ["Description 1 text here", "Description 2 text here", "Description 3 text here"]
+    
+    Do not include any other text or explanation, only the JSON array with 3 descriptions.`;
 
-    // Get current model
-    const currentModel = await getCurrentAiModel();
-    
-    // Format the prompt
-    const prompt = `Generate 3 different SEO optimization suggestions for an e-commerce product.
-    For each suggestion, provide:
-    1. A title tag (60-65 characters max)
-    2. A meta description (150-160 characters max)
-    3. 5-7 relevant keywords
-    4. An SEO score (0.0-1.0) indicating optimization quality
-    5. 2-3 SEO improvement tips
-    
-    Product Name: ${productName}
-    ${categoryName ? `Category: ${categoryName}` : ''}
-    ${productDescription ? `Product Description: ${productDescription}` : ''}
-    ${currentTitle ? `Current Title: ${currentTitle}` : ''}
-    ${currentMetaDescription ? `Current Meta Description: ${currentMetaDescription}` : ''}
-    ${currentKeywords.length > 0 ? `Current Keywords: ${currentKeywords.join(', ')}` : ''}
-    
-    Format your response as valid JSON with this structure:
-    [
-      {
-        "title": "...",
-        "metaDescription": "...",
-        "keywords": ["keyword1", "keyword2", ...],
-        "score": 0.85,
-        "tips": ["tip1", "tip2", ...]
-      },
-      ...
-    ]`;
-
-    // Generate content using Gemini
-    const model = genAI.getGenerativeModel({ model: currentModel });
-    const result = await model.generateContent({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.7,
-        topK: 40,
-        topP: 0.95,
-        responseFormat: { type: 'json' }
-      }
-    });
-    
-    const response = await result.response;
-    const responseText = await response.text();
+    const result = await model.generateContent(promptText);
+    const text = result.response.text();
     
     try {
-      // Parse JSON response
-      const suggestions = JSON.parse(responseText);
-      
-      if (!Array.isArray(suggestions) || suggestions.length === 0) {
-        throw new Error('Invalid suggestions format received');
+      // Extract the JSON array from the response
+      const jsonMatch = text.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        const descriptions = JSON.parse(jsonMatch[0]);
+        return Array.isArray(descriptions) ? descriptions : [text];
       }
-      
-      logger.info('Successfully generated SEO suggestions', {
-        count: suggestions.length
-      });
-      
-      return suggestions;
-    } catch (parseError) {
-      logger.error('Error parsing Gemini JSON response for SEO data', {
-        error: parseError,
-        responsePreview: responseText.substring(0, 200) + '...'
-      });
-      throw new Error('Failed to parse AI-generated SEO data');
+      return [text];
+    } catch (error) {
+      console.error('Error parsing AI response as JSON:', error);
+      return [text];
     }
   } catch (error) {
-    logger.error('Error generating SEO data with Gemini', {
-      error,
-      productName,
-      errorType: error instanceof Error ? error.name : typeof error,
-      errorMessage: error instanceof Error ? error.message : String(error)
-    });
-    throw error;
-  }
-}
-
-// Function to initialize the model based on saved settings
-async function initializeGeminiModel() {
-  try {
-    // Get the current model from DB or default to gemini-1.5-flash
-    const currentModel = await getCurrentAiModel();
-    geminiProVision = genAI.getGenerativeModel({ model: currentModel });
-    logger.info(`Initialized Gemini AI with model`, {
-      model: currentModel,
-      isDefault: currentModel === 'gemini-1.5-flash'
-    });
-  } catch (error) {
-    logger.error('Failed to initialize Gemini model', {
-      error,
-      errorType: error instanceof Error ? error.name : typeof error,
-      errorMessage: error instanceof Error ? error.message : String(error)
-    });
-    // We already have the fallback model initialized above
-    logger.info('Using default Gemini model as fallback', {
-      model: 'gemini-1.5-flash'
-    });
+    console.error('Error generating product description:', error);
+    throw new Error('Failed to generate product descriptions');
   }
 }
 
 /**
- * Convert base64 string to Buffer
- */
-function base64ToBuffer(base64String: string): Buffer {
-  // Extract base64 data part if it includes data URI scheme
-  const base64Data = base64String.includes('base64,') 
-    ? base64String.split('base64,')[1] 
-    : base64String;
-    
-  return Buffer.from(base64Data, 'base64');
-}
-
-/**
- * Convert Buffer to base64 string with proper data URI
- */
-function bufferToBase64(buffer: Buffer, mimeType: string = 'image/png'): string {
-  return `data:${mimeType};base64,${buffer.toString('base64')}`;
-}
-
-/**
- * Safely process an image with robust error handling and format detection
- * Returns a buffer of the processed image or null if processing fails
- */
-async function safeImageProcessing(imageBase64: string): Promise<{ dataUri: string, mimeType: string } | null> {
-  try {
-    // Extract content type and convert to buffer
-    const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, '');
-    const buffer = Buffer.from(base64Data, 'base64');
-    
-    logger.debug('Starting image processing', {
-      bufferSize: buffer.length,
-      hasValidData: buffer.length > 0
-    });
-    
-    // Try multiple approaches in sequence
-    try {
-      // First attempt: Process as PNG
-      const processedBuffer = await sharp(buffer)
-        .resize({ width: 512, height: 512, fit: 'inside' })
-        .png()
-        .toBuffer();
-      
-      logger.debug('Successfully processed image as PNG', {
-        processedSize: processedBuffer.length,
-        dimensions: '512x512'
-      });
-      
-      return {
-        dataUri: `data:image/png;base64,${processedBuffer.toString('base64')}`,
-        mimeType: 'image/png'
-      };
-    } catch (pngError) {
-      logger.warn('PNG processing failed, trying JPEG format', {
-        error: pngError,
-        errorType: pngError instanceof Error ? pngError.name : typeof pngError,
-        errorMessage: pngError instanceof Error ? pngError.message : String(pngError)
-      });
-      
-      // Second attempt: Process as JPEG
-      try {
-        const processedBuffer = await sharp(buffer)
-          .resize({ width: 512, height: 512, fit: 'inside' })
-          .jpeg()
-          .toBuffer();
-        
-        logger.debug('Successfully processed image as JPEG', {
-          processedSize: processedBuffer.length,
-          dimensions: '512x512'
-        });
-        
-        return {
-          dataUri: `data:image/jpeg;base64,${processedBuffer.toString('base64')}`,
-          mimeType: 'image/jpeg'
-        };
-      } catch (jpegError) {
-        logger.warn('JPEG processing failed, trying with original format', {
-          error: jpegError,
-          errorType: jpegError instanceof Error ? jpegError.name : typeof jpegError,
-          errorMessage: jpegError instanceof Error ? jpegError.message : String(jpegError)
-        });
-        
-        // Third attempt: Process with original format with minimal transformation
-        const metadata = await sharp(buffer).metadata();
-        const processedBuffer = await sharp(buffer)
-          .resize({ width: 512, height: 512, fit: 'inside' })
-          .toBuffer();
-        
-        logger.debug('Successfully processed image with original format', {
-          format: metadata.format || 'unknown',
-          processedSize: processedBuffer.length,
-          dimensions: '512x512',
-          originalWidth: metadata.width,
-          originalHeight: metadata.height
-        });
-        
-        return {
-          dataUri: `data:image/${metadata.format || 'jpeg'};base64,${processedBuffer.toString('base64')}`,
-          mimeType: `image/${metadata.format || 'jpeg'}`
-        };
-      }
-    }
-  } catch (error) {
-    logger.error('All image processing attempts failed', {
-      error,
-      errorType: error instanceof Error ? error.name : typeof error,
-      errorMessage: error instanceof Error ? error.message : String(error),
-      inputDataLength: imageBase64 ? imageBase64.length : 0
-    });
-    return null;
-  }
-}
-
-/**
- * Process an image to remove its background using Gemini AI
- */
-export async function removeImageBackground(imageBase64: string): Promise<string> {
-  // Define responseTextOuter at the function scope level for error handling
-  let responseTextOuter = "";
-  
-  try {
-    // Check if imageBase64 is valid
-    if (!imageBase64 || typeof imageBase64 !== 'string') {
-      logger.error('Invalid image data provided to background removal', {
-        type: typeof imageBase64,
-        isEmpty: !imageBase64,
-        dataLength: imageBase64 ? imageBase64.length : 0
-      });
-      throw new Error('Invalid image data provided');
-    }
-    
-    logger.debug('Starting background removal process', {
-      dataSize: imageBase64.length,
-      isDataUrl: imageBase64.startsWith('data:'),
-      aiModel: await getCurrentAiModel()
-    });
-    
-    try {
-      // Extract content type and convert to buffer
-      const imageBuffer = base64ToBuffer(imageBase64);
-      
-      // Resize image and convert to PNG for consistency
-      try {
-        const resizedImageBuffer = await sharp(imageBuffer)
-          .resize({ width: 1024, height: 1024, fit: 'inside' })
-          .png() // Convert to PNG format for consistency
-          .toBuffer();
-        
-        // Create prompt with image data
-        const imageData = bufferToBase64(resizedImageBuffer, 'image/png');
-        
-        logger.debug('Successfully processed image before background removal', {
-          originalSize: imageBuffer.length,
-          processedSize: resizedImageBuffer.length,
-          resizedDimensions: '1024x1024',
-          format: 'png'
-        });
-        
-        try {
-          // Create the generation request
-          const result = await geminiProVision.generateContent([
-            "Please remove the background from this product image, preserving only the product with a transparent background. Return only the processed image without any text.",
-            { inlineData: { data: imageData, mimeType: 'image/png' } }
-          ]);
-          
-          // Get the response
-          const response = await result.response;
-          const responseText = await response.text();
-          responseTextOuter = responseText; // Store for error handling
-          
-          // Check if we got image parts in the response
-          if (response.candidates && response.candidates[0]?.content?.parts) {
-            for (const part of response.candidates[0].content.parts) {
-              if (part.inlineData?.data) {
-                logger.info('Successfully removed background from image', {
-                  hasResponseData: true,
-                  responseSize: part.inlineData.data.length,
-                  mimeType: part.inlineData.mimeType
-                });
-                return part.inlineData.data;
-              }
-            }
-          }
-          
-          logger.error('No image data in Gemini response', {
-            hasResponse: !!response,
-            hasCandidates: !!response?.candidates,
-            candidateCount: response?.candidates?.length,
-            firstCandidateHasParts: !!response?.candidates?.[0]?.content?.parts,
-            partsCount: response?.candidates?.[0]?.content?.parts?.length
-          });
-          
-          throw new Error('No processed image was returned from Gemini AI');
-        } catch (aiError) {
-          logger.error('Error during Gemini AI background removal request', {
-            error: aiError,
-            errorType: aiError instanceof Error ? aiError.name : typeof aiError,
-            errorMessage: aiError instanceof Error ? aiError.message : String(aiError),
-            responsePreview: responseTextOuter ? responseTextOuter.substring(0, 100) + '...' : 'No response text available'
-          });
-          throw aiError; // Re-throw for outer catch
-        }
-      } catch (imageProcessingError) {
-        logger.error('Error processing image for background removal', {
-          error: imageProcessingError,
-          errorType: imageProcessingError instanceof Error ? imageProcessingError.name : typeof imageProcessingError,
-          errorMessage: imageProcessingError instanceof Error ? imageProcessingError.message : String(imageProcessingError),
-          bufferSize: imageBuffer ? imageBuffer.length : 0
-        });
-        throw imageProcessingError; // Re-throw for outer catch
-      }
-    } catch (bufferError) {
-      logger.error('Error converting image data to buffer', {
-        error: bufferError,
-        errorType: bufferError instanceof Error ? bufferError.name : typeof bufferError,
-        errorMessage: bufferError instanceof Error ? bufferError.message : String(bufferError),
-        dataLength: imageBase64.length,
-        dataFormat: imageBase64.substring(0, 30) + '...'
-      });
-      throw bufferError; // Re-throw for outer catch
-    }
-  } catch (error) {
-    logger.error('Background removal operation failed', {
-      error,
-      errorType: error instanceof Error ? error.name : typeof error,
-      errorMessage: error instanceof Error ? error.message : String(error),
-      responsePreview: responseTextOuter ? responseTextOuter.substring(0, 100) + '...' : 'No response text available',
-      aiModel: await getCurrentAiModel().catch(() => 'unknown'),
-      dataFormat: imageBase64 ? (imageBase64.startsWith('data:') ? 'data-url' : 'base64-string') : 'empty'
-    });
-    
-    throw new Error('Failed to remove background: ' + (error instanceof Error ? error.message : 'Unknown error'));
-  }
-}
-
-/**
- * Generate product tags based on image and product information
+ * Generates product tags based on product information
  */
 export async function generateProductTags(
-  imageBase64: string, 
-  productName: string, 
-  productDescription: string,
-  productId?: number
-): Promise<string[]> {
-  // Define responseTextOuter at the function scope level so it's accessible in all catch blocks
-  let responseTextOuter = "";
-  
-  try {
-    // Input validation
-    if (!productName) {
-      logger.error('Missing product name for tag generation', {
-        hasProductName: !!productName,
-        productId,
-        descriptionLength: productDescription?.length
-      });
-      throw new Error('Product name is required for tag generation');
-    }
-
-    logger.debug('Starting product tag generation', {
-      productId,
-      hasImage: !!imageBase64,
-      imageType: imageBase64?.startsWith('http') ? 'url' : 'base64',
-      productNameLength: productName.length,
-      descriptionLength: productDescription?.length,
-      aiModel: await getCurrentAiModel()
-    });
-    
-    let imageData: string;
-    
-    // Check if imageBase64 is a URL or a base64 string
-    if (!imageBase64 || imageBase64.startsWith('http')) {
-      // If it's a URL or empty, we'll skip image processing and use text-only prompt
-      logger.info("Using text-only prompt for tag generation", {
-        reason: !imageBase64 ? 'No image provided' : 'URL provided instead of base64',
-        productId
-      });
-      
-      try {
-        // Generate tags based only on text
-        const textOnlyResult = await genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
-          .generateContent([
-            `Generate 5-7 relevant product tags for an e-commerce website based on this product information. 
-            Focus on features, use cases, materials, style, benefits, and relevant categories.
-            Return only the tags in a comma-separated list format, with each tag being 1-3 words maximum.
-            
-            Product Name: ${productName}
-            Product Description: ${productDescription || 'Not provided'}`
-          ]);
-        
-        const textResponse = await textOnlyResult.response;
-        const responseText = await textResponse.text();
-        responseTextOuter = responseText;
-        
-        // Parse comma-separated tags
-        const tags = responseText
-          .split(',')
-          .map(tag => tag.trim())
-          .filter(tag => tag && tag.length > 0);
-        
-        logger.info('Successfully generated tags using text-only prompt', {
-          productId,
-          tagCount: tags.length,
-          tags: tags.join(', ')
-        });
-        
-        return tags;
-      } catch (textPromptError) {
-        logger.error('Failed to generate tags with text-only prompt', {
-          error: textPromptError,
-          errorType: textPromptError instanceof Error ? textPromptError.name : typeof textPromptError,
-          errorMessage: textPromptError instanceof Error ? textPromptError.message : String(textPromptError),
-          productId,
-          responsePreview: responseTextOuter ? responseTextOuter.substring(0, 100) + '...' : 'No response text available'
-        });
-        throw new Error('Failed to generate tags with text prompt: ' + 
-          (textPromptError instanceof Error ? textPromptError.message : 'AI service error'));
-      }
-    }
-    
-    // Process image if we have a base64 string
-    try {
-      logger.debug('Processing image for tag generation', {
-        productId,
-        imageDataSize: imageBase64.length
-      });
-      
-      // Extract content type and convert to buffer
-      const imageBuffer = base64ToBuffer(imageBase64);
-      
-      // Resize image to reduce processing time
-      const resizedImageBuffer = await sharp(imageBuffer)
-        .resize({ width: 512, height: 512, fit: 'inside' })
-        .png() // Convert to PNG format for consistency
-        .toBuffer();
-      
-      // Create prompt with image
-      imageData = bufferToBase64(resizedImageBuffer, 'image/png');
-      
-      logger.debug('Successfully processed image for tag generation', {
-        productId,
-        originalSize: imageBuffer.length,
-        processedSize: resizedImageBuffer.length
-      });
-    } catch (imageError) {
-      logger.warn('Image processing failed for tag generation, falling back to text-only', {
-        error: imageError,
-        errorType: imageError instanceof Error ? imageError.name : typeof imageError,
-        errorMessage: imageError instanceof Error ? imageError.message : String(imageError),
-        productId,
-        imageDataLength: imageBase64?.length
-      });
-      
-      // Generate tags based only on text as fallback
-      try {
-        const textOnlyResult = await genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
-          .generateContent([
-            `Generate 5-7 relevant product tags for an e-commerce website based on this product information. 
-            Focus on features, use cases, materials, style, benefits, and relevant categories.
-            Return only the tags in a comma-separated list format, with each tag being 1-3 words maximum.
-            
-            Product Name: ${productName}
-            Product Description: ${productDescription || 'Not provided'}`
-          ]);
-        
-        const textResponse = await textOnlyResult.response;
-        const responseText = await textResponse.text();
-        
-        // Parse comma-separated tags
-        const tags = responseText
-          .split(',')
-          .map(tag => tag.trim())
-          .filter(tag => tag && tag.length > 0);
-        
-        logger.info('Successfully generated tags using text-only fallback', {
-          productId,
-          tagCount: tags.length,
-          tags: tags.join(', '),
-          reason: 'Image processing failed'
-        });
-        
-        return tags;
-      } catch (fallbackError) {
-        logger.error('Both image processing and text fallback failed for tag generation', {
-          originalError: imageError,
-          fallbackError,
-          productId
-        });
-        throw new Error('Failed to generate tags: Image processing failed and text fallback also failed');
-      }
-    }
-    
-    try {
-      // Create the generation request with image
-      const result = await geminiProVision.generateContent([
-        `Generate 5-7 relevant product tags for an e-commerce website based on this product image, name, and description. 
-        Focus on features, use cases, materials, style, benefits, and relevant categories.
-        Return only the tags in a comma-separated list format, with each tag being 1-3 words maximum.
-        
-        Product Name: ${productName}
-        Product Description: ${productDescription || 'Not provided'}`,
-        { inlineData: { data: imageData, mimeType: 'image/png' } }
-      ]);
-      
-      // Get the response
-      const response = await result.response;
-      const responseText = await response.text();
-      responseTextOuter = responseText;
-      
-      // Parse comma-separated tags
-      const tags = responseText
-        .split(',')
-        .map(tag => tag.trim())
-        .filter(tag => tag && tag.length > 0);
-      
-      logger.info('Successfully generated tags with image analysis', {
-        productId,
-        tagCount: tags.length,
-        tags: tags.join(', ')
-      });
-      
-      return tags;
-    } catch (aiError) {
-      logger.error('AI service failed during image-based tag generation', {
-        error: aiError,
-        errorType: aiError instanceof Error ? aiError.name : typeof aiError,
-        errorMessage: aiError instanceof Error ? aiError.message : String(aiError),
-        productId,
-        productName,
-        responsePreview: responseTextOuter ? responseTextOuter.substring(0, 100) + '...' : 'No response text available'
-      });
-      
-      // Try one more time with text-only as final fallback
-      try {
-        logger.info('Attempting final text-only fallback for tag generation', { productId });
-        
-        const textOnlyResult = await genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
-          .generateContent([
-            `Generate 5-7 relevant product tags for an e-commerce website based on this product information. 
-            Focus on features, use cases, materials, style, benefits, and relevant categories.
-            Return only the tags in a comma-separated list format, with each tag being 1-3 words maximum.
-            
-            Product Name: ${productName}
-            Product Description: ${productDescription || 'Not provided'}`
-          ]);
-        
-        const textResponse = await textOnlyResult.response;
-        const responseText = await textResponse.text();
-        
-        // Parse comma-separated tags
-        const tags = responseText
-          .split(',')
-          .map(tag => tag.trim())
-          .filter(tag => tag && tag.length > 0);
-        
-        logger.info('Successfully generated tags using final text-only fallback', {
-          productId,
-          tagCount: tags.length,
-          tags: tags.join(', '),
-          reason: 'Image-based generation failed'
-        });
-        
-        return tags;
-      } catch (finalFallbackError) {
-        logger.error('All tag generation attempts failed', {
-          productId,
-          productName,
-          imageError: aiError,
-          textFallbackError: finalFallbackError,
-          textFallbackErrorType: finalFallbackError instanceof Error ? finalFallbackError.name : typeof finalFallbackError,
-          textFallbackErrorMessage: finalFallbackError instanceof Error ? finalFallbackError.message : String(finalFallbackError),
-          responsePreview: responseTextOuter ? responseTextOuter.substring(0, 100) + '...' : 'No response text available'
-        });
-        throw new Error('Failed to generate tags after multiple attempts: ' + 
-          (aiError instanceof Error ? aiError.message : 'AI service error'));
-      }
-    }
-  } catch (error) {
-    logger.error('Tag generation operation failed', {
-      error,
-      errorType: error instanceof Error ? error.name : typeof error,
-      errorMessage: error instanceof Error ? error.message : String(error),
-      productId,
-      productName,
-      productDescriptionLength: productDescription?.length || 0,
-      responsePreview: responseTextOuter ? responseTextOuter.substring(0, 100) + '...' : 'No response text available',
-      aiModel: await getCurrentAiModel().catch(() => 'unknown'),
-      hasImage: !!imageBase64,
-      imageType: imageBase64?.startsWith('data:') ? 'data-url' : imageBase64?.startsWith('http') ? 'url' : 'base64-string'
-    });
-    throw new Error('Failed to generate tags: ' + (error instanceof Error ? error.message : 'Unknown error'));
-  }
-}
-
-/**
- * Suggest selling price for a product based on cost price and product info
- */
-export async function suggestPrice(
-  costPrice: number,
-  productName: string,
-  categoryName?: string,
-  categoryId?: number,
-  productId?: number
-): Promise<{ suggestedPrice: number; markupPercentage: number; markupSource: string }> {
-  // Define responseTextOuter at the function scope level so it's accessible in all catch blocks
-  let responseTextOuter = "";
-  
-  try {
-    // First, try to get category-specific markup if we have a categoryId
-    let markupPercentage: number | null = null; // No default markup
-    let markupSource = 'ai_only'; // Default to AI-only
-    
-    if (categoryId) {
-      try {
-        // Get category-specific pricing settings
-        const categorySetting = await storage.getPricingByCategoryId(categoryId);
-        
-        if (categorySetting) {
-          markupPercentage = categorySetting.markupPercentage;
-          markupSource = `category_${categoryId}`;
-          logger.info(`Using category-specific markup for price calculation`, {
-            markupPercentage,
-            categoryId,
-            productId: productId || 'unknown',
-            productName,
-            source: 'category_specific'
-          });
-        } else {
-          // No category-specific setting, try global default
-          markupPercentage = await storage.getDefaultMarkupPercentage();
-          if (markupPercentage !== null) {
-            markupSource = 'global_default';
-            logger.info(`Using global default markup for price calculation`, {
-              markupPercentage,
-              productId: productId || 'unknown',
-              productName,
-              source: 'global_default'
-            });
-          } else {
-            logger.info('No markup percentage defined, will rely on AI suggestion', {
-              productId: productId || 'unknown',
-              productName,
-              source: 'ai_only'
-            });
-          }
-        }
-      } catch (dbError) {
-        logger.error('Error fetching markup settings', {
-          error: dbError,
-          errorType: dbError instanceof Error ? dbError.name : typeof dbError,
-          errorMessage: dbError instanceof Error ? dbError.message : String(dbError),
-          productId: productId || 'unknown',
-          productName,
-          categoryId,
-          categoryName
-        });
-        // Continue with no markup if DB access fails
-      }
-    }
-    
-    // Create the prompt with category context (even if we already have a markup)
-    // The AI might provide industry-specific insights
-    const prompt = `
-    As a retail pricing expert in South Africa, suggest a competitive retail price in ZAR for the following product:
-    
-    Product: ${productName}
-    Category: ${categoryName || 'Unknown'}
-    Cost Price: ${costPrice} ZAR
-    
-    Consider these South African market factors:
-    1. The average monthly income in South Africa is around 25,000 ZAR
-    2. Standard retail markups range from 40-100% depending on product category
-    3. Electronics generally have 30-50% markup
-    4. Fashion items typically have 50-100% markup
-    5. Luxury goods can have 200%+ markup
-    6. Market competition from sites like Takealot
-    
-    Provide only a single number representing the suggested retail price in ZAR. 
-    Format response as valid JSON with a single key "suggestedPrice" with a numeric value.
-    `;
-
-    // Create the generation request
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-    const result = await model.generateContent(prompt);
-    
-    // Get the response
-    const response = await result.response;
-    const responseText = await response.text();
-    responseTextOuter = responseText;
-    
-    // Parse JSON response
-    try {
-      // First, try to parse the response as-is
-      const jsonResponse = JSON.parse(responseText);
-      let suggestedPrice = Number(jsonResponse.suggestedPrice);
-      let useAiSuggestion = true;
-      
-      // Apply business rule: Suggested price should never be lower than cost price
-      if (suggestedPrice < costPrice) {
-        if (markupPercentage !== null) {
-          // If AI suggestion is below cost price and we have a markup, use our markup
-          suggestedPrice = costPrice * (1 + markupPercentage / 100);
-          useAiSuggestion = false;
-          logger.info(`AI suggested price was below cost price, using category markup instead`, {
-            aiSuggestedPrice: jsonResponse.suggestedPrice,
-            costPrice,
-            markupSource,
-            calculatedPrice: suggestedPrice.toFixed(2),
-            productName,
-            productId: productId || 'unknown'
-          });
-        } else {
-          // If no markup is set, just use cost price as minimum
-          suggestedPrice = costPrice;
-          useAiSuggestion = false;
-          logger.info(`AI suggested price was below cost price with no markup set, using cost price`, {
-            aiSuggestedPrice: jsonResponse.suggestedPrice,
-            costPrice,
-            calculatedPrice: suggestedPrice.toFixed(2),
-            productName,
-            productId: productId || 'unknown'
-          });
-        }
-      }
-      
-      // If AI suggestion seems reasonable, we'll use it
-      // Otherwise fall back to our category markup calculation or cost price
-      if (!useAiSuggestion) {
-        const actualMarkupPercent = markupPercentage !== null 
-          ? markupPercentage 
-          : Math.round(((suggestedPrice / costPrice) - 1) * 100);
-        
-        return { 
-          suggestedPrice, 
-          markupPercentage: actualMarkupPercent, 
-          markupSource: markupPercentage !== null ? markupSource : 'cost_price_minimum'
-        };
-      }
-      
-      // AI suggestion is used, but still provide markup info
-      // Calculate the implied markup percentage from the AI suggestion
-      const impliedMarkup = Math.round(((suggestedPrice / costPrice) - 1) * 100);
-      return { 
-        suggestedPrice, 
-        markupPercentage: impliedMarkup, 
-        markupSource: 'ai_suggestion' 
-      };
-    } catch (jsonError) {
-      // If direct parsing fails, try to extract just the number
-      const priceMatch = responseText.match(/\d+(\.\d+)?/);
-      if (priceMatch) {
-        let suggestedPrice = Number(priceMatch[0]);
-        let useAiSuggestion = true;
-        
-        // Apply business rule: Suggested price should never be lower than cost price
-        if (suggestedPrice < costPrice) {
-          if (markupPercentage !== null) {
-            // If AI suggestion is below cost price and we have a markup, use our markup
-            suggestedPrice = costPrice * (1 + markupPercentage / 100);
-            useAiSuggestion = false;
-            logger.info(`AI suggested price from pattern match was below cost price, using category markup`, {
-              aiSuggestedPrice: priceMatch[0],
-              costPrice,
-              markupSource,
-              calculatedPrice: suggestedPrice.toFixed(2),
-              productName,
-              productId: productId || 'unknown'
-            });
-          } else {
-            // If no markup is set, just use cost price as minimum
-            suggestedPrice = costPrice;
-            useAiSuggestion = false;
-            logger.info(`AI suggested price from pattern match was below cost price with no markup, using cost price`, {
-              aiSuggestedPrice: priceMatch[0],
-              costPrice,
-              calculatedPrice: suggestedPrice.toFixed(2),
-              productName,
-              productId: productId || 'unknown'
-            });
-          }
-        }
-        
-        // If AI suggestion seems reasonable, we'll use it
-        // Otherwise fall back to our category markup calculation or cost price
-        if (!useAiSuggestion) {
-          const actualMarkupPercent = markupPercentage !== null 
-            ? markupPercentage 
-            : Math.round(((suggestedPrice / costPrice) - 1) * 100);
-          
-          return { 
-            suggestedPrice, 
-            markupPercentage: actualMarkupPercent, 
-            markupSource: markupPercentage !== null ? markupSource : 'cost_price_minimum'
-          };
-        }
-        
-        // AI suggestion is used, but still provide markup info
-        // Calculate the implied markup percentage from the AI suggestion
-        const impliedMarkup = Math.round(((suggestedPrice / costPrice) - 1) * 100);
-        return { 
-          suggestedPrice, 
-          markupPercentage: impliedMarkup, 
-          markupSource: 'ai_suggestion_extracted' 
-        };
-      } else {
-        // If no valid price found and we have a markup, use it
-        if (markupPercentage !== null) {
-          const suggestedPrice = costPrice * (1 + markupPercentage / 100);
-          logger.info(`No valid AI price found in pattern matching, using category markup`, {
-            costPrice,
-            markupSource,
-            markupPercentage,
-            calculatedPrice: suggestedPrice.toFixed(2),
-            productName,
-            productId: productId || 'unknown'
-          });
-          
-          return { 
-            suggestedPrice, 
-            markupPercentage, 
-            markupSource 
-          };
-        } else {
-          // If no markup and no AI price, just use cost price
-          logger.info(`No valid AI price found in pattern matching and no markup set, using cost price`, {
-            costPrice,
-            calculatedPrice: costPrice.toFixed(2),
-            productName,
-            productId: productId || 'unknown'
-          });
-          return {
-            suggestedPrice: costPrice,
-            markupPercentage: 0,
-            markupSource: 'cost_price_only'
-          };
-        }
-      }
-    }
-  } catch (error) {
-    logger.error('Price suggestion failed', {
-      error,
-      errorType: error instanceof Error ? error.name : typeof error,
-      errorMessage: error instanceof Error ? error.message : String(error),
-      costPrice,
-      productName,
-      productId: productId || 'unknown',
-      categoryId,
-      categoryName,
-      responsePreview: responseTextOuter ? responseTextOuter.substring(0, 100) + '...' : 'No response text available',
-      aiModel: await getCurrentAiModel().catch(() => 'unknown'),
-      aiModelSettingKey: AI_MODEL_SETTING_KEY
-    });
-    
-    // Even on error, return cost price as minimum
-    return { 
-      suggestedPrice: costPrice, 
-      markupPercentage: 0, 
-      markupSource: 'cost_price_fallback_on_error' 
-    };
-  }
-}
-
-/**
- * Get a list of all available Gemini AI models
- */
-export function getAvailableAiModels(): string[] {
-  return [...AVAILABLE_GEMINI_MODELS];
-}
-
-/**
- * Get currently selected Gemini AI model
- */
-export async function getCurrentAiModelSetting(): Promise<{ modelName: string, isDefault: boolean }> {
-  const modelName = await getCurrentAiModel();
-  const modelSetting = await storage.getAiSetting(AI_MODEL_SETTING_KEY);
-  
-  return {
-    modelName,
-    isDefault: !modelSetting // If no setting exists, we're using the default
-  };
-}
-
-/**
- * Update the current AI model and reinitialize services
- */
-export async function updateAiModel(modelName: string): Promise<boolean> {
-  // Define responseTextOuter at the function scope level for error handling
-  let responseTextOuter = "";
-  
-  try {
-    // Verify the model is valid
-    if (!AVAILABLE_GEMINI_MODELS.includes(modelName)) {
-      throw new Error(`Invalid model name: ${modelName}. Available models: ${AVAILABLE_GEMINI_MODELS.join(', ')}`);
-    }
-    
-    // Save to database
-    await storage.saveAiSetting({
-      settingName: AI_MODEL_SETTING_KEY,
-      settingValue: modelName,
-      description: `AI model selected for TeeMeYou AI operations. Selected at ${new Date().toISOString()}`
-    });
-    
-    // Update the current model instance
-    try {
-      geminiProVision = genAI.getGenerativeModel({ model: modelName });
-      logger.info(`Successfully updated AI model`, {
-        modelName,
-        aiModelSettingKey: AI_MODEL_SETTING_KEY
-      });
-      return true;
-    } catch (modelError) {
-      logger.error(`Error initializing AI model`, {
-        error: modelError,
-        errorType: modelError instanceof Error ? modelError.name : typeof modelError,
-        errorMessage: modelError instanceof Error ? modelError.message : String(modelError),
-        modelName,
-        fallbackModel: 'gemini-1.5-flash',
-        responsePreview: responseTextOuter ? responseTextOuter.substring(0, 100) + '...' : 'No response text available',
-        aiModelSettingKey: AI_MODEL_SETTING_KEY
-      });
-      
-      // Fallback to default model if the requested model fails
-      geminiProVision = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-      
-      // Still save the requested model to DB - we'll try it again on next restart
-      return false;
-    }
-  } catch (error) {
-    logger.error('Failed to update AI model', {
-      error,
-      errorType: error instanceof Error ? error.name : typeof error,
-      errorMessage: error instanceof Error ? error.message : String(error),
-      aiModelSettingKey: AI_MODEL_SETTING_KEY,
-      responsePreview: responseTextOuter ? responseTextOuter.substring(0, 100) + '...' : 'No response text available'
-    });
-    throw new Error('Failed to update AI model: ' + (error instanceof Error ? error.message : 'Unknown error'));
-  }
-}
-
-/**
- * Suggest appropriate attributes for a product based on its category, name, and description
- * This helps merchants create complete product information with recommended attribute values
- * 
- * @param categoryId The ID of the product category
- * @param productName The name of the product
- * @param productDescription The description of the product (optional)
- * @param existingAttributes Existing attribute values to consider (optional)
- * @returns Suggested attribute values with their IDs
- */
-export async function suggestProductAttributes(
-  categoryId: number,
   productName: string,
   productDescription?: string,
-  existingAttributes?: Array<{ id: number; name: string; value: string }>
-): Promise<Array<{ attributeId: number; attributeName: string; suggestedValue: string }>> {
+  categoryName?: string
+): Promise<string[]> {
   try {
-    logger.debug('Starting attribute suggestion process', {
-      categoryId,
-      productName,
-      hasDescription: !!productDescription,
-      existingAttributesCount: existingAttributes?.length || 0
-    });
+    let promptText = `Generate 10-15 relevant, search-optimized tags for a South African e-commerce product: "${productName}"`;
     
-    // Fetch category attributes from database
-    const categoryAttributes = await storage.getCategoryAttributes(categoryId);
-    
-    if (!categoryAttributes || categoryAttributes.length === 0) {
-      logger.info('No attributes found for category', { categoryId });
-      return [];
+    if (categoryName) {
+      promptText += ` in the category "${categoryName}"`;
     }
     
-    // Get category information for context
-    const category = await storage.getCategoryById(categoryId);
-    
-    if (!category) {
-      logger.warn('Category not found for attribute suggestion', { categoryId });
-      return [];
+    if (productDescription) {
+      promptText += `. The product description is: "${productDescription}"`;
     }
     
-    // Format existing attributes for the prompt
-    const existingAttributesText = existingAttributes && existingAttributes.length > 0
-      ? existingAttributes.map(attr => `${attr.name}: ${attr.value}`).join('\n')
-      : 'None';
+    promptText += `
+    The tags should be specific, relevant to South African shoppers, and optimized for search.
+    Include a mix of:
+    - Product type tags
+    - Feature tags
+    - Benefit tags
+    - Occasion tags (if applicable)
+    - Seasonal tags (if applicable)
     
-    // Create a prompt for the AI to suggest attribute values
-    const promptText = `
-    As a product data specialist, suggest appropriate values for the following attributes
-    based on the product information provided. The product belongs to the "${category.name}" category.
+    Format your response as a JSON array of strings, with each tag as a separate element.
+    Example: ["tag1", "tag2", "tag3", ...]
     
-    Product Name: ${productName}
-    ${productDescription ? `Product Description: ${productDescription}` : ''}
+    Do not include any other text or explanation, only the JSON array with tags.`;
+
+    const result = await model.generateContent(promptText);
+    const text = result.response.text();
     
-    Category: ${category.name}
-    
-    Attributes that need values:
-    ${categoryAttributes.map(attr => 
-      `- ${attr.name}${attr.description ? ` (${attr.description})` : ''}`
-    ).join('\n')}
-    
-    Existing attribute values to consider:
-    ${existingAttributesText}
-    
-    For each attribute, provide a sensible, realistic value appropriate for this product.
-    Return your response as a JSON array with objects containing "attributeId", "attributeName", and "suggestedValue" keys.
-    `;
-    
-    // Get the current AI model
-    const currentModel = await getCurrentAiModel();
-    
-    // Use the text-only model for attribute suggestions
-    const generationResult = await genAI.getGenerativeModel({ model: currentModel })
-      .generateContent(promptText);
-    
-    const response = await generationResult.response;
-    const responseText = await response.text();
-    
-    // Try to extract JSON from the response
     try {
-      let jsonResponse: Array<{ attributeId: number; attributeName: string; suggestedValue: string }> = [];
-      
-      // First attempt: Parse the entire response as JSON
-      try {
-        jsonResponse = JSON.parse(responseText);
-      } catch (parseError) {
-        logger.debug('Failed to parse entire response as JSON, trying to extract JSON', {
-          responsePreview: responseText.substring(0, 100)
-        });
-        
-        // Second attempt: Try to extract JSON with regex
-        const jsonMatch = responseText.match(/\[.*\]/s);
-        if (jsonMatch) {
-          jsonResponse = JSON.parse(jsonMatch[0]);
-        } else {
-          throw new Error('Could not extract valid JSON from AI response');
-        }
+      // Extract the JSON array from the response
+      const jsonMatch = text.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        const tags = JSON.parse(jsonMatch[0]);
+        return Array.isArray(tags) ? tags : [text];
       }
-      
-      // Validate and match with actual category attributes
-      const validSuggestions = jsonResponse.filter(suggestion => {
-        const matchingAttribute = categoryAttributes.find(attr => 
-          attr.id === suggestion.attributeId || attr.name === suggestion.attributeName
-        );
-        return matchingAttribute && suggestion.suggestedValue;
-      }).map(suggestion => {
-        // If attributeId is not provided or incorrect, look up by name
-        if (!suggestion.attributeId || !categoryAttributes.some(attr => attr.id === suggestion.attributeId)) {
-          const matchingAttribute = categoryAttributes.find(attr => 
-            attr.name.toLowerCase() === suggestion.attributeName.toLowerCase()
-          );
-          if (matchingAttribute) {
-            suggestion.attributeId = matchingAttribute.id;
-            suggestion.attributeName = matchingAttribute.name; // Use exact name from DB
-          }
-        }
-        return suggestion;
-      });
-      
-      logger.info('Successfully generated attribute suggestions', {
-        categoryId,
-        productName,
-        suggestionsCount: validSuggestions.length,
-        attributesCount: categoryAttributes.length
-      });
-      
-      return validSuggestions;
-    } catch (jsonError) {
-      logger.error('Failed to parse AI response for attribute suggestions', {
-        error: jsonError,
-        responsePreview: responseText.substring(0, 200),
-        categoryId
-      });
-      
-      // Fallback: Return empty suggestions
-      return [];
+      return [text];
+    } catch (error) {
+      console.error('Error parsing AI response as JSON:', error);
+      // Extract text as fallback when JSON parsing fails
+      const fallbackTags = text.split(',').map(tag => tag.trim());
+      return fallbackTags.length > 0 ? fallbackTags : [text];
     }
   } catch (error) {
-    logger.error('Error generating attribute suggestions', {
-      error,
-      categoryId,
-      productName
-    });
-    
-    // Return empty array on error
-    return [];
+    console.error('Error generating product tags:', error);
+    throw new Error('Failed to generate product tags');
   }
 }
 
-export async function analyzeProductImage(imageBase64: string, productName: string, productId?: number): Promise<{
-  suggestedName?: string;
-  suggestedDescription?: string;
-  suggestedCategory?: string;
-  suggestedBrand?: string;
-  suggestedTags?: string[];
-  suggestedCostPrice?: number; 
-  suggestedPrice?: number;
-  marketResearch?: string;
-}> {
-  // Define responseTextOuter at the function scope level so it's accessible in all catch blocks
-  let responseTextOuter = "";
-  
+/**
+ * Generates SEO optimization suggestions
+ */
+export async function optimizeSEO(
+  productName: string,
+  productDescription: string,
+  categoryName?: string,
+  currentTitle?: string | null,
+  currentDescription?: string | null,
+  currentKeywords?: string[]
+): Promise<Array<{
+  title: string;
+  metaDescription: string;
+  keywords: string[];
+  score: number;
+  tips: string[];
+}>> {
   try {
-    // Validate inputs
-    if (!imageBase64) {
-      logger.error('Missing image data for product analysis', {
-        productId,
-        productName
-      });
-      throw new Error('Image data is required for product analysis');
+    let promptText = `Generate 3 SEO-optimized metadata suggestions for a South African e-commerce product: "${productName}"`;
+    
+    if (categoryName) {
+      promptText += ` in the category "${categoryName}"`;
     }
     
-    if (!productName) {
-      logger.error('Missing product name for product analysis', {
-        productId,
-        hasImage: !!imageBase64
-      });
-      throw new Error('Product name is required for analysis');
+    if (productDescription) {
+      promptText += `. The product description is: "${productDescription}"`;
+    }
+
+    if (currentTitle) {
+      promptText += `. Current meta title: "${currentTitle}"`;
+    }
+
+    if (currentDescription) {
+      promptText += `. Current meta description: "${currentDescription}"`;
+    }
+
+    if (currentKeywords && currentKeywords.length > 0) {
+      promptText += `. Current keywords: ${currentKeywords.join(', ')}`;
     }
     
-    logger.debug('Starting product image analysis', {
-      productId,
-      productName,
-      imageType: imageBase64.startsWith('http') ? 'url' : 'base64',
-      aiModel: await getCurrentAiModel()
-    });
+    promptText += `
+    For each suggestion, provide:
+    1. Meta Title (50-65 characters, include primary keyword)
+    2. Meta Description (120-160 characters, include call to action)
+    3. Keywords (10-15 relevant keywords/phrases, comma-separated)
+    4. SEO score (0.0-1.0 representing how well optimized this suggestion is)
+    5. Tips (2-3 bullet points explaining the strengths of this metadata or how to improve it further)
     
-    let imageData: string;
-    
-    // Check if imageBase64 is a URL or a base64 string
-    if (imageBase64.startsWith('http')) {
-      try {
-        // If it's a URL, we can still process it with the Gemini 1.5 Flash multimodal model
-        // by sending the URL directly in the prompt
-        logger.info(`Using image URL for product analysis`, {
-          productId,
-          productName,
-          aiModel: await getCurrentAiModel(),
-          imageUrlLength: imageBase64.length
-        });
-        
-        // Create a multimodal request that includes the image URL and product name
-        const textResult = await geminiProVision.generateContent([
-          {
-            text: `Analyze this product (image URL: ${imageBase64}) and provide the following details formatted as JSON for a South African e-commerce store:
-            1. "description": A detailed product description (max 100 words) that includes materials, features, and benefits
-            2. "category": A single likely product category (e.g., Bedding, Home Decor, Kitchen, etc.)
-            3. "brand": A likely brand name based on product type
-            4. "tags": An array of 5-7 relevant tags (each 1-3 words)
-            5. "costPrice": Estimated wholesale/cost price in South African Rand (ZAR)
-            6. "price": Suggested retail price in South African Rand (ZAR) with appropriate markup
-            7. "marketResearch": A brief summary of current market prices for similar products in South Africa (3-4 sentences)
-            
-            The product name is: "${productName}"
-            
-            Important: Research current market prices for similar products in South Africa to provide realistic price estimates.
-            Specifically look at what similar products cost in South African stores like Mr Price Home, Woolworths, @Home, and Takealot.
-            
-            Format the response as valid JSON only, with no additional text.`
-          }
-        ]);
-        
-        const textResponse = await textResult.response;
-        const responseText = await textResponse.text();
-        
-        try {
-          responseTextOuter = responseText; // Store for error handling
-          const jsonResponse = JSON.parse(responseText);
-          
-          // Validate response structure with detailed logging
-          if (!jsonResponse.description) {
-            logger.warn(`Missing description in AI analysis for product with URL image`, {
-              productId,
-              productName
-            });
-          }
-          
-          if (!jsonResponse.category) {
-            logger.warn(`Missing category in AI analysis for product with URL image`, {
-              productId,
-              productName
-            });
-          }
-          
-          if (!jsonResponse.tags || !Array.isArray(jsonResponse.tags)) {
-            logger.warn(`Missing or invalid tags in AI analysis for product with URL image`, {
-              productId,
-              productName,
-              tagsType: typeof jsonResponse.tags,
-              hasTagsArray: Array.isArray(jsonResponse.tags)
-            });
-          }
-          
-          return {
-            suggestedName: productName, // Use the provided product name
-            suggestedDescription: jsonResponse.description || "",
-            suggestedCategory: jsonResponse.category || "",
-            suggestedBrand: jsonResponse.brand || "",
-            suggestedTags: Array.isArray(jsonResponse.tags) ? jsonResponse.tags : [],
-            suggestedCostPrice: jsonResponse.costPrice ? Number(jsonResponse.costPrice) : undefined,
-            suggestedPrice: jsonResponse.price ? Number(jsonResponse.price) : undefined,
-            marketResearch: jsonResponse.marketResearch || ""
-          };
-        } catch (jsonError) {
-          logger.error(`Failed to parse URL image JSON response`, {
-            error: jsonError,
-            errorType: jsonError instanceof Error ? jsonError.name : typeof jsonError, 
-            errorMessage: jsonError instanceof Error ? jsonError.message : String(jsonError),
-            productId,
-            productName,
-            responsePreview: responseText.substring(0, 100) + '...'
-          });
-          
-          return {
-            suggestedName: productName,
-            suggestedDescription: "",
-            suggestedCategory: "",
-            suggestedBrand: "",
-            suggestedTags: []
-          };
-        }
-      } catch (urlAnalysisError) {
-        logger.error(`Error analyzing product with URL image`, {
-          error: urlAnalysisError,
-          errorType: urlAnalysisError instanceof Error ? urlAnalysisError.name : typeof urlAnalysisError,
-          errorMessage: urlAnalysisError instanceof Error ? urlAnalysisError.message : String(urlAnalysisError),
-          productId,
-          productName,
-          imageUrlLength: imageBase64.length,
-          responsePreview: responseTextOuter ? responseTextOuter.substring(0, 100) + '...' : 'No response text available',
-          aiModel: await getCurrentAiModel().catch(() => 'unknown')
-        });
-        
-        throw new Error(`Failed to analyze URL image: ${urlAnalysisError instanceof Error ? urlAnalysisError.message : 'Unknown error'}`);
+    Format your response as a JSON array with 3 objects, each containing the fields: title, metaDescription, keywords (as array), score, and tips (as array).
+    Example:
+    [
+      {
+        "title": "Example Title with Keywords | Brand",
+        "metaDescription": "Example description with benefits, features and a call to action. Includes keywords naturally.",
+        "keywords": ["keyword1", "keyword2", "keyword phrase", "..."],
+        "score": 0.85,
+        "tips": ["Tip explanation 1", "Tip explanation 2"]
+      },
+      {
+        "title": "Another Example Title | Brand",
+        "metaDescription": "Different description approach focusing on different aspects.",
+        "keywords": ["keyword1", "different keyword", "..."],
+        "score": 0.9,
+        "tips": ["Tip explanation 1", "Different tip 2"]
+      },
+      {
+        "title": "Third Example Title Variation | Brand",
+        "metaDescription": "Third variation with different approach.",
+        "keywords": ["primary keyword", "different variations", "..."],
+        "score": 0.78,
+        "tips": ["Different tip 1", "Different tip 2"]
       }
-    }
+    ]
+    
+    Do not include any other text or explanation, only the JSON array with 3 suggestions.`;
+
+    const result = await model.generateContent(promptText);
+    const text = result.response.text();
     
     try {
-      // Extract content type and convert to buffer
-      logger.info(`Processing image data for product analysis`, {
-        productId,
-        productName,
-        imageDataLength: imageBase64.length
-      });
-      
-      const imageBuffer = base64ToBuffer(imageBase64);
-      
-      // Resize image to reduce processing time and convert to PNG format
-      const resizedImageBuffer = await sharp(imageBuffer)
-        .resize({ width: 512, height: 512, fit: 'inside' })
-        .png() // Convert to PNG format for consistency
-        .toBuffer();
-      
-      // Create prompt
-      imageData = bufferToBase64(resizedImageBuffer, 'image/png');
-      
-      logger.info(`Successfully processed image for product analysis`, {
-        productId,
-        productName,
-        originalSize: imageBase64.length,
-        processedSize: imageData.length
-      });
-    } catch (imageError) {
-      logger.error(`Image processing failed for product analysis`, {
-        error: imageError,
-        errorType: imageError instanceof Error ? imageError.name : typeof imageError,
-        errorMessage: imageError instanceof Error ? imageError.message : String(imageError),
-        productId,
-        productName,
-        imageDataLength: imageBase64 ? imageBase64.length : 0
-      });
-      
-      // If image processing fails, fall back to text-only analysis using the product name
-      logger.info(`Falling back to text-only analysis for product due to image processing failure`, {
-        productId,
-        productName
-      });
-      
-      try {
-        // Create a text-only request using Gemini 1.5 Flash's multimodal capabilities
-        const textResult = await geminiProVision.generateContent([
-          {
-            text: `Analyze this product and provide the following details formatted as JSON for a South African e-commerce store:
-            1. "description": A detailed product description (max 100 words) including materials, features, and benefits
-            2. "category": A single likely product category (e.g., Bedding, Home Decor, Kitchen, etc.)
-            3. "brand": A likely brand name based on product type
-            4. "tags": An array of 5-7 relevant tags (each 1-3 words)
-            5. "costPrice": Estimated wholesale/cost price in South African Rand (ZAR)
-            6. "price": Suggested retail price in South African Rand (ZAR) with appropriate markup
-            7. "marketResearch": Brief summary of current market prices for similar products in South Africa (3-4 sentences)
-            
-            The product name is: "${productName}"
-            
-            Important: Research current market prices for similar products in South Africa to provide realistic price estimates.
-            Specifically look at what similar products cost in South African stores like Mr Price Home, Woolworths, @Home, and Takealot.
-            
-            Format the response as valid JSON only, with no additional text.`
-          }
-        ]);
-        
-        try {
-          const textResponse = await textResult.response;
-          const responseText = await textResponse.text();
-          
-          // Store in outer variable for error handling blocks
-          responseTextOuter = responseText;
-          
-          const jsonResponse = JSON.parse(responseText);
-          
-          // Validate response structure with detailed logging
-          if (!jsonResponse.description) {
-            logger.warn(`Missing description in text-only AI analysis for product`, {
-              productId,
-              productName
-            });
-          }
-          
-          if (!jsonResponse.category) {
-            logger.warn(`Missing category in text-only AI analysis for product`, {
-              productId,
-              productName
-            });
-          }
-          
-          if (!jsonResponse.tags || !Array.isArray(jsonResponse.tags)) {
-            logger.warn(`Missing or invalid tags in text-only AI analysis for product`, {
-              productId,
-              productName,
-              tagsType: typeof jsonResponse.tags,
-              hasTagsArray: Array.isArray(jsonResponse.tags)
-            });
-          }
-          
-          return {
-            suggestedName: productName,
-            suggestedDescription: jsonResponse.description || "",
-            suggestedCategory: jsonResponse.category || "",
-            suggestedBrand: jsonResponse.brand || "",
-            suggestedTags: Array.isArray(jsonResponse.tags) ? jsonResponse.tags : [],
-            suggestedCostPrice: jsonResponse.costPrice ? Number(jsonResponse.costPrice) : undefined,
-            suggestedPrice: jsonResponse.price ? Number(jsonResponse.price) : undefined,
-            marketResearch: jsonResponse.marketResearch || ""
-          };
-        } catch (jsonError) {
-          logger.error(`Failed to parse text-only fallback JSON response`, {
-            error: jsonError,
-            errorType: jsonError instanceof Error ? jsonError.name : typeof jsonError,
-            errorMessage: jsonError instanceof Error ? jsonError.message : String(jsonError),
-            productId,
-            productName,
-            responsePreview: responseTextOuter ? responseTextOuter.substring(0, 100) + '...' : 'No response text available'
-          });
-          
-          // If all else fails, return just the product name as a fallback
-          return {
-            suggestedName: productName,
-            suggestedDescription: "",
-            suggestedCategory: "",
-            suggestedBrand: "",
-            suggestedTags: []
-          };
-        }
-      } catch (textAnalysisError) {
-        logger.error(`Error in text-only analysis fallback`, {
-          error: textAnalysisError,
-          errorType: textAnalysisError instanceof Error ? textAnalysisError.name : typeof textAnalysisError,
-          errorMessage: textAnalysisError instanceof Error ? textAnalysisError.message : String(textAnalysisError),
-          productId,
-          productName,
-          responsePreview: responseTextOuter ? responseTextOuter.substring(0, 100) + '...' : 'No response text available',
-          aiModel: await getCurrentAiModel().catch(() => 'unknown')
-        });
-        
-        throw new Error(`Failed to analyze product via text-only fallback: ${textAnalysisError instanceof Error ? textAnalysisError.message : 'Unknown model error'}`);
-      }
-    }
-    
-    try {
-      // Create the generation request using multimodal capabilities of Gemini 1.5
-      // This will analyze both the image and the text (product name)
-      logger.info(`Making multimodal Gemini AI request for product analysis`, {
-        productId,
-        productName,
-        imageDataSize: imageData.length
-      });
-      
-      const result = await geminiProVision.generateContent([
-        {
-          text: `Analyze this product image and provide the following details formatted as JSON for a South African e-commerce store:
-          1. "name": A concise product name (max 10 words) - note that the user provided the name "${productName}"
-          2. "description": A detailed product description (max 100 words) including material, features, and benefits
-          3. "category": A single likely product category (e.g., Bedding, Home Decor, Kitchen, etc.)
-          4. "brand": A likely brand name if visible (otherwise suggest a suitable one)
-          5. "tags": An array of 5-7 relevant tags (each 1-3 words)
-          6. "costPrice": Estimated wholesale/cost price in South African Rand (ZAR)
-          7. "price": Suggested retail price in South African Rand (ZAR) with appropriate markup
-          8. "marketResearch": Brief summary of current market prices for similar products in South Africa (3-4 sentences)
-          
-          The product name is: "${productName}"
-          
-          Important: Research current market prices for similar products in South Africa to provide realistic price estimates.
-          Specifically look at what similar products cost in South African stores like Mr Price Home, Woolworths, @Home, and Takealot.
-          
-          Format the response as valid JSON only, with no additional text.`
-        },
-        {
-          inlineData: { 
-            data: imageData, 
-            mimeType: 'image/png' 
-          }
-        }
-      ]);
-      
-      // Get the response
-      const response = await result.response;
-      // Use await when calling response.text() as it returns a Promise
-      const responseText = await response.text(); // This contains the text response directly
-      
-      // Store in outer variable for error handling blocks
-      responseTextOuter = responseText;
-      
-      // Parse JSON response
-      try {
-        // First, try to parse the response as-is
-        logger.info(`Received AI response for product analysis, attempting to parse JSON`, {
-          productId, 
-          productName,
-          responseLength: responseTextOuter.length
-        });
-        
-        const jsonResponse = JSON.parse(responseText);
-        
-        // Validate response structure with detailed logging
-        if (!jsonResponse.name) {
-          logger.warn(`Missing name in AI analysis result`, {
-            productId,
-            productName,
-            responseKeys: Object.keys(jsonResponse)
-          });
-        }
-        
-        if (!jsonResponse.description) {
-          logger.warn(`Missing description in AI analysis result`, {
-            productId,
-            productName,
-            responseKeys: Object.keys(jsonResponse)
-          });
-        }
-        
-        if (!jsonResponse.category) {
-          logger.warn(`Missing category in AI analysis result`, {
-            productId,
-            productName,
-            responseKeys: Object.keys(jsonResponse)
-          });
-        }
-        
-        if (!jsonResponse.tags || !Array.isArray(jsonResponse.tags)) {
-          logger.warn(`Missing or invalid tags in AI analysis result`, {
-            productId,
-            productName,
-            tagsType: typeof jsonResponse.tags,
-            hasTagsArray: Array.isArray(jsonResponse.tags),
-            responseKeys: Object.keys(jsonResponse)
-          });
-        }
-        
-        return {
-          suggestedName: jsonResponse.name || productName,
-          suggestedDescription: jsonResponse.description || "",
-          suggestedCategory: jsonResponse.category || "",
-          suggestedBrand: jsonResponse.brand || "",
-          suggestedTags: Array.isArray(jsonResponse.tags) ? jsonResponse.tags : [],
-          suggestedCostPrice: jsonResponse.costPrice ? Number(jsonResponse.costPrice) : undefined,
-          suggestedPrice: jsonResponse.price ? Number(jsonResponse.price) : undefined,
-          marketResearch: jsonResponse.marketResearch || ""
-        };
-      } catch (jsonError) {
-        // If direct parsing fails, try to extract JSON from the text
-        logger.error(`Failed to parse JSON response`, {
-          error: jsonError,
-          errorType: jsonError instanceof Error ? jsonError.name : typeof jsonError,
-          errorMessage: jsonError instanceof Error ? jsonError.message : String(jsonError),
-          productId,
-          productName,
-          responseLength: responseTextOuter.length
-        });
-        
-        logger.info(`Attempting to extract JSON from raw text response`, {
-          productId,
-          productName
-        });
-        
-        const jsonMatch = responseTextOuter.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const jsonStr = jsonMatch[0];
-          try {
-            const extractedJson = JSON.parse(jsonStr);
-            
-            logger.info(`Successfully extracted and parsed JSON from text response`, {
-              productId,
-              productName,
-              extractedJsonLength: jsonStr.length,
-              extractedKeys: Object.keys(extractedJson)
-            });
-            
-            return {
-              suggestedName: extractedJson.name || productName,
-              suggestedDescription: extractedJson.description || "",
-              suggestedCategory: extractedJson.category || "",
-              suggestedBrand: extractedJson.brand || "",
-              suggestedTags: Array.isArray(extractedJson.tags) ? extractedJson.tags : [],
-              suggestedCostPrice: extractedJson.costPrice ? Number(extractedJson.costPrice) : undefined,
-              suggestedPrice: extractedJson.price ? Number(extractedJson.price) : undefined,
-              marketResearch: extractedJson.marketResearch || ""
-            };
-          } catch (extractError) {
-            logger.error(`Failed to parse extracted JSON pattern`, {
-              error: extractError,
-              errorType: extractError instanceof Error ? extractError.name : typeof extractError,
-              errorMessage: extractError instanceof Error ? extractError.message : String(extractError),
-              productId,
-              productName,
-              extractedJsonLength: jsonStr.length,
-              extractedSample: jsonStr.substring(0, 100) + '...'
-            });
-            
-            throw new Error(`Failed to parse extracted JSON: ${extractError instanceof Error ? extractError.message : 'Unknown parsing error'}`);
-          }
-        } else {
-          logger.error(`No valid JSON pattern found in AI response`, {
-            productId,
-            productName,
-            responseLength: responseTextOuter.length,
-            responseSample: responseTextOuter.substring(0, 100) + '...'
-          });
-          
-          throw new Error(`No valid JSON found in AI response for product "${productName}"`);
+      // Extract the JSON array from the response
+      const jsonMatch = text.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        const suggestions = JSON.parse(jsonMatch[0]);
+        if (Array.isArray(suggestions) && suggestions.length > 0) {
+          // Validate each suggestion has the required properties
+          return suggestions.map(suggestion => ({
+            title: suggestion.title || '',
+            metaDescription: suggestion.metaDescription || '',
+            keywords: Array.isArray(suggestion.keywords) ? suggestion.keywords : [],
+            score: typeof suggestion.score === 'number' ? suggestion.score : 0.5,
+            tips: Array.isArray(suggestion.tips) ? suggestion.tips : []
+          }));
         }
       }
-    } catch (aiRequestError) {
-      logger.error(`AI request failed`, {
-        error: aiRequestError,
-        errorType: aiRequestError instanceof Error ? aiRequestError.name : typeof aiRequestError,
-        errorMessage: aiRequestError instanceof Error ? aiRequestError.message : String(aiRequestError),
-        productId,
-        productName,
-        model: await getCurrentAiModel(),
-        responsePreview: responseTextOuter ? responseTextOuter.substring(0, 100) + '...' : 'No response text available',
-        aiModelSettingKey: AI_MODEL_SETTING_KEY,
-        imageDataLength: imageBase64?.length || 0,
-        geminiApiKeyExists: !!process.env.GEMINI_API_KEY
-      });
       
-      throw new Error(`AI analysis request failed: ${aiRequestError instanceof Error ? aiRequestError.message : 'Unknown AI processing error'}`);
+      // Fallback: return a default suggestion based on existing data
+      return [{
+        title: currentTitle || `${productName} | Shop Online`,
+        metaDescription: currentDescription || `Buy ${productName} online. Fast delivery across South Africa.`,
+        keywords: currentKeywords || [productName.toLowerCase()],
+        score: 0.5,
+        tips: ['Add more specific keywords', 'Include benefits in description']
+      }];
+    } catch (error) {
+      console.error('Error parsing AI response as JSON:', error);
+      throw new Error('Failed to parse SEO optimization suggestions');
     }
   } catch (error) {
-    logger.error(`Product analysis failed`, {
-      error,
-      errorType: error instanceof Error ? error.name : typeof error,
-      errorMessage: error instanceof Error ? error.message : String(error),
-      productId,
-      productName,
-      model: await getCurrentAiModel().catch(() => 'unknown'),
-      responsePreview: responseTextOuter ? responseTextOuter.substring(0, 100) + '...' : 'No response text available',
-      aiModelSettingKey: AI_MODEL_SETTING_KEY,
-      hasImage: !!imageBase64,
-      imageType: imageBase64?.startsWith('data:') ? 'data-url' : imageBase64?.startsWith('http') ? 'url' : 'base64-string',
-      imageDataLength: imageBase64?.length || 0,
-      geminiApiKeyExists: !!process.env.GEMINI_API_KEY
-    });
-    
-    throw new Error('Failed to analyze product image: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    console.error('Error generating SEO optimization:', error);
+    throw new Error('Failed to generate SEO optimization suggestions');
   }
 }
