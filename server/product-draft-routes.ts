@@ -260,7 +260,7 @@ export default function registerProductDraftRoutes(router: Router) {
     }),
     asyncHandler(async (req, res) => {
       const draftId = parseInt(req.params.id);
-      const { step, data } = req.body;
+      const { step, draftData } = req.body;
       
       const draft = await storage.getProductDraft(draftId);
       
@@ -273,7 +273,7 @@ export default function registerProductDraftRoutes(router: Router) {
         throw new BadRequestError("You don't have permission to update this draft");
       }
       
-      const updatedDraft = await storage.updateProductDraftWizardStep(draftId, step, data);
+      const updatedDraft = await storage.updateProductDraftWizardStep(draftId, step, draftData);
       sendSuccess(res, updatedDraft);
     })
   );
