@@ -43,22 +43,36 @@ export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
-  options?: { isFormData?: boolean; debug?: boolean }
+  options?: { 
+    isFormData?: boolean; 
+    debug?: boolean;
+    credentials?: RequestCredentials;
+    headers?: Record<string, string>;
+  }
 ): Promise<Response> {
   const isFormData = options?.isFormData || false;
   const debug = options?.debug || false;
   
   // Log for debugging if requested
   if (debug || url.includes('/api/product-drafts')) {
-    console.log(`API Request: ${method} ${url}`, data);
+    console.log(`API Request: ${method} ${url}`, data, options);
   }
   
-  const res = await fetch(url, {
+  const fetchOptions: RequestInit = {
     method,
-    headers: data && !isFormData ? { "Content-Type": "application/json" } : {},
+    credentials: options?.credentials || "include",
     body: data ? (isFormData ? data as FormData : JSON.stringify(data)) : undefined,
-    credentials: "include",
-  });
+  };
+  
+  // Set headers
+  fetchOptions.headers = {
+    ...(data && !isFormData ? { "Content-Type": "application/json" } : {}),
+    ...(options?.headers || {})
+  };
+  
+  console.log('Full fetch options:', fetchOptions);
+  
+  const res = await fetch(url, fetchOptions);
 
   try {
     await throwIfResNotOk(res);

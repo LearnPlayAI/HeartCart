@@ -103,8 +103,22 @@ export const DraftDashboard: React.FC = () => {
   // Delete draft mutation
   const deleteDraftMutation = useMutation({
     mutationFn: async (draftId: number) => {
-      const response = await apiRequest('DELETE', `/api/product-drafts/${draftId}`);
-      return response.json();
+      console.log(`Attempting to delete draft with ID: ${draftId}`);
+      try {
+        // Add a credentials flag to ensure cookies are sent
+        const response = await apiRequest('DELETE', `/api/product-drafts/${draftId}`, null, {
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        console.log('Delete draft response:', response);
+        return response.json();
+      } catch (error) {
+        console.error('Error deleting draft:', error);
+        throw error;
+      }
     },
     onSuccess: (data) => {
       if (data.success) {
