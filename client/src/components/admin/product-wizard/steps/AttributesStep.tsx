@@ -119,6 +119,7 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
   const [attributeFilter, setAttributeFilter] = useState<string>('');
   const [attributeTypeFilter, setAttributeTypeFilter] = useState<string>('all');
   const [activeTab, setActiveTab] = useState<string>('applied');
+  const [isManagingOptions, setIsManagingOptions] = useState<boolean>(false);
 
   // Query to get all attributes
   const { data: attributesData, isLoading: isLoadingAttributes } = useQuery({
