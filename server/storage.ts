@@ -4853,7 +4853,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async updateProductDraftWizardStep(id: number, step: string, data: any): Promise<ProductDraft | undefined> {
+  async updateProductDraftWizardStep(id: number, step: string | number, draftData: any): Promise<ProductDraft | undefined> {
     try {
       // First get the current draft
       const existingDraft = await this.getProductDraft(id);
@@ -4884,7 +4884,7 @@ export class DatabaseStorage implements IStorage {
         timestamp: new Date(),
         userId: existingDraft.createdBy,
         step: step,
-        fields: Object.keys(data),
+        fields: Object.keys(draftData),
         notes: `Updated ${step} step`
       };
       updateData.changeHistory = [...changeHistory, changeRecord];
@@ -4895,86 +4895,97 @@ export class DatabaseStorage implements IStorage {
       // Update specific fields based on the step
       switch(step) {
         case 'basic-info':
+        case 0: // Handle numeric equivalent
           updateData = {
             ...updateData,
-            name: data.name,
-            slug: data.slug,
-            sku: data.sku,
-            description: data.description,
-            brand: data.brand,
-            categoryId: data.categoryId,
-            isActive: data.isActive !== undefined ? data.isActive : existingDraft.isActive,
-            isFeatured: data.isFeatured !== undefined ? data.isFeatured : existingDraft.isFeatured,
-            taxable: data.taxable !== undefined ? data.taxable : existingDraft.taxable,
-            taxClass: data.taxClass || existingDraft.taxClass,
-            supplierId: data.supplierId,
-            catalogId: data.catalogId
+            name: draftData.name,
+            slug: draftData.slug,
+            sku: draftData.sku,
+            description: draftData.description,
+            brand: draftData.brand,
+            categoryId: draftData.categoryId,
+            isActive: draftData.isActive !== undefined ? draftData.isActive : existingDraft.isActive,
+            isFeatured: draftData.isFeatured !== undefined ? draftData.isFeatured : existingDraft.isFeatured,
+            taxable: draftData.taxable !== undefined ? draftData.taxable : existingDraft.taxable,
+            taxClass: draftData.taxClass || existingDraft.taxClass,
+            supplierId: draftData.supplierId,
+            catalogId: draftData.catalogId
           };
           break;
           
         case 'images':
+        case 1: // Handle numeric equivalent
           // No field updates here as this is handled by updateProductDraftImages
+          updateData = {
+            ...updateData,
+            ...draftData
+          };
           break;
           
         case 'additional-info':
+        case 2: // Handle numeric equivalent
           updateData = {
             ...updateData,
-            weight: data.weight,
-            dimensions: data.dimensions,
-            attributes: data.attributes,
-            stockLevel: data.stockLevel !== undefined ? data.stockLevel : existingDraft.stockLevel,
-            lowStockThreshold: data.lowStockThreshold !== undefined ? data.lowStockThreshold : existingDraft.lowStockThreshold,
-            backorderEnabled: data.backorderEnabled !== undefined ? data.backorderEnabled : existingDraft.backorderEnabled,
-            freeShipping: data.freeShipping !== undefined ? data.freeShipping : existingDraft.freeShipping,
-            shippingClass: data.shippingClass || existingDraft.shippingClass
+            weight: draftData.weight,
+            dimensions: draftData.dimensions,
+            attributes: draftData.attributes,
+            stockLevel: draftData.stockLevel !== undefined ? draftData.stockLevel : existingDraft.stockLevel,
+            lowStockThreshold: draftData.lowStockThreshold !== undefined ? draftData.lowStockThreshold : existingDraft.lowStockThreshold,
+            backorderEnabled: draftData.backorderEnabled !== undefined ? draftData.backorderEnabled : existingDraft.backorderEnabled,
+            freeShipping: draftData.freeShipping !== undefined ? draftData.freeShipping : existingDraft.freeShipping,
+            shippingClass: draftData.shippingClass || existingDraft.shippingClass
           };
           break;
           
         case 'attributes':
+        case 3: // Handle numeric equivalent
           // For the new attributes step, specifically handling attributesData
           updateData = {
             ...updateData,
-            attributes: data.attributes || existingDraft.attributes,
-            attributesData: data.attributesData || existingDraft.attributesData
+            attributes: draftData.attributes || existingDraft.attributes,
+            attributesData: draftData.attributesData || existingDraft.attributesData
           };
           break;
           
         case 'seo':
+        case 4: // Handle numeric equivalent
           updateData = {
             ...updateData,
-            metaTitle: data.metaTitle,
-            metaDescription: data.metaDescription,
-            metaKeywords: data.metaKeywords,
-            canonicalUrl: data.canonicalUrl,
-            hasAISeo: data.hasAISeo !== undefined ? data.hasAISeo : existingDraft.hasAISeo
+            metaTitle: draftData.metaTitle,
+            metaDescription: draftData.metaDescription,
+            metaKeywords: draftData.metaKeywords,
+            canonicalUrl: draftData.canonicalUrl,
+            hasAISeo: draftData.hasAISeo !== undefined ? draftData.hasAISeo : existingDraft.hasAISeo
           };
           break;
           
         case 'sales-promotions':
+        case 5: // Handle numeric equivalent
           updateData = {
             ...updateData,
-            costPrice: data.costPrice !== undefined ? data.costPrice : existingDraft.costPrice,
-            regularPrice: data.regularPrice !== undefined ? data.regularPrice : existingDraft.regularPrice,
-            salePrice: data.salePrice !== undefined ? data.salePrice : existingDraft.salePrice,
-            onSale: data.onSale !== undefined ? data.onSale : existingDraft.onSale,
-            markupPercentage: data.markupPercentage !== undefined ? data.markupPercentage : existingDraft.markupPercentage,
-            minimumPrice: data.minimumPrice !== undefined ? data.minimumPrice : existingDraft.minimumPrice,
-            discountLabel: data.discountLabel,
-            specialSaleText: data.specialSaleText,
-            specialSaleStart: data.specialSaleStart,
-            specialSaleEnd: data.specialSaleEnd,
-            isFlashDeal: data.isFlashDeal !== undefined ? data.isFlashDeal : existingDraft.isFlashDeal,
-            flashDealEnd: data.flashDealEnd
+            costPrice: draftData.costPrice !== undefined ? draftData.costPrice : existingDraft.costPrice,
+            regularPrice: draftData.regularPrice !== undefined ? draftData.regularPrice : existingDraft.regularPrice,
+            salePrice: draftData.salePrice !== undefined ? draftData.salePrice : existingDraft.salePrice,
+            onSale: draftData.onSale !== undefined ? draftData.onSale : existingDraft.onSale,
+            markupPercentage: draftData.markupPercentage !== undefined ? draftData.markupPercentage : existingDraft.markupPercentage,
+            minimumPrice: draftData.minimumPrice !== undefined ? draftData.minimumPrice : existingDraft.minimumPrice,
+            discountLabel: draftData.discountLabel,
+            specialSaleText: draftData.specialSaleText,
+            specialSaleStart: draftData.specialSaleStart,
+            specialSaleEnd: draftData.specialSaleEnd,
+            isFlashDeal: draftData.isFlashDeal !== undefined ? draftData.isFlashDeal : existingDraft.isFlashDeal,
+            flashDealEnd: draftData.flashDealEnd
           };
           break;
           
         case 'review':
+        case 6: // Handle numeric equivalent
           // For final review step, update any review-related fields
           updateData = {
             ...updateData,
-            draftStatus: data.draftStatus || existingDraft.draftStatus,
+            draftStatus: draftData.draftStatus || existingDraft.draftStatus,
             // If marked as 'ready', set the time for tracking purposes
-            ...(data.draftStatus === 'ready' && { publishedAt: new Date() })
+            ...(draftData.draftStatus === 'ready' && { publishedAt: new Date() })
           };
           break;
           
@@ -4982,7 +4993,7 @@ export class DatabaseStorage implements IStorage {
           // For other steps or for a partial update
           updateData = {
             ...updateData,
-            ...data
+            ...draftData
           };
       }
       

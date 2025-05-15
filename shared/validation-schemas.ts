@@ -112,8 +112,8 @@ export const updateProductDraftSchema = z.object({
 });
 
 export const updateProductDraftWizardStepSchema = z.object({
-  step: z.string(),
-  data: z.any()
+  step: z.union([z.string(), z.number()]),
+  draftData: z.any()
 });
 
 export const productDraftIdParamSchema = z.object({
