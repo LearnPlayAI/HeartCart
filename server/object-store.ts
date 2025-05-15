@@ -268,10 +268,11 @@ class ObjectStoreService {
   }
   
   /**
-   * Move a draft image to its final product location when publishing
+   * Copy a draft image to its final product location when publishing
    * Format: /root/{supplier_supplierId}/{catalog_catalogId}/{product_productId}/image1.xxx
+   * This implementation copies the file instead of moving it, for greater reliability
    */
-  async moveDraftImageToProduct(
+  async copyDraftImageToProduct(
     sourceKey: string,
     productId: number,
     supplierName: string,
@@ -317,7 +318,7 @@ class ObjectStoreService {
       const data = downloadResult.value;
       
       // Determine content type
-      const contentType = this.detectContentType(sanitizedFilename);
+      const contentType = this.detectContentType(sourceFilename);
       
       // Upload to the new location
       await this.uploadFromBuffer(destObjectKey, data, { contentType });
@@ -328,17 +329,76 @@ class ObjectStoreService {
         throw new Error(`Failed to copy file to destination: ${destObjectKey}`);
       }
       
-      // Delete the source file (draft image)
-      await this.objectStore.delete(sourceKey);
-      
+      // Return the new URL and object key WITHOUT deleting the source
       return {
         url: this.getPublicUrl(destObjectKey),
         objectKey: destObjectKey
       };
     } catch (error) {
-      console.error(`Failed to move draft image to product location: ${error}`);
-      throw new Error(`Image move failed: ${error instanceof Error ? error.message : String(error)}`);
+      console.error(`Failed to copy draft image to product location: ${error}`);
+      throw new Error(`Image copy failed: ${error instanceof Error ? error.message : String(error)}`);
     }
+  }
+  
+  /**
+   * Delete a file from object storage
+   */
+  async deleteFile(objectKey: string): Promise<boolean> {
+    await this.initialize();
+    
+    try {
+      // Check if file exists before attempting to delete
+      const exists = await this.exists(objectKey);
+      if (!exists) {
+        console.warn(`File does not exist, skipping delete: ${objectKey}`);
+        return true;
+      }
+      
+      // Delete the file
+      const result = await this.objectStore.delete(objectKey);
+      
+      if ('err' in result && result.err) {
+        const errorMessage = typeof result.err === 'object' ? 
+          JSON.stringify(result.err) : String(result.err);
+        throw new Error(`Delete error: ${errorMessage}`);
+      }
+      
+      return true;
+    } catch (error) {
+      console.error(`Failed to delete file ${objectKey}:`, error);
+      return false;
+    }
+  }
+  
+  /**
+   * Move a draft image to its final product location when publishing
+   * Format: /root/{supplier_supplierId}/{catalog_catalogId}/{product_productId}/image1.xxx
+   * @deprecated Use copyDraftImageToProduct instead which is more reliable
+   */
+  async moveDraftImageToProduct(
+    sourceKey: string,
+    productId: number,
+    supplierName: string,
+    catalogName: string,
+    categoryName: string,
+    productName: string,
+    imageIndex: number
+  ): Promise<{ url: string; objectKey: string }> {
+    // Copy first
+    const result = await this.copyDraftImageToProduct(
+      sourceKey,
+      productId,
+      supplierName,
+      catalogName,
+      categoryName,
+      productName,
+      imageIndex
+    );
+    
+    // Then attempt to delete the original
+    await this.deleteFile(sourceKey);
+    
+    return result;
   }
   
   /**

@@ -5513,8 +5513,8 @@ export class DatabaseStorage implements IStorage {
           if (!sourceObjectKey || !imageUrl) continue;
           
           try {
-            // Move image from draft location to final product location
-            const { url: newImageUrl, objectKey: newObjectKey } = await objectStore.moveDraftImageToProduct(
+            // First copy image from draft location to final product location (don't delete yet)
+            const { url: newImageUrl, objectKey: newObjectKey } = await objectStore.copyDraftImageToProduct(
               sourceObjectKey,
               product.id,
               supplierName,
@@ -5535,15 +5535,15 @@ export class DatabaseStorage implements IStorage {
                 sortOrder: i
               });
             
-            logger.debug('Moved product image from draft to final location', {
+            logger.debug('Copied product image from draft to final location', {
               productId: product.id,
               draftId: draft.id,
               sourceKey: sourceObjectKey,
               destinationKey: newObjectKey
             });
           } catch (imageError) {
-            // If image move fails, still create the product but log the error
-            logger.error('Failed to move image from draft to product location', {
+            // If image copy fails, still create the product but log the error
+            logger.error('Failed to copy image from draft to product location', {
               error: imageError,
               productId: product.id, 
               draftId: draft.id,
@@ -5560,6 +5560,29 @@ export class DatabaseStorage implements IStorage {
                 isMainImage: i === (draft.mainImageIndex || 0),
                 sortOrder: i
               });
+          }
+        }
+      }
+      
+      // Clean up the draft images - do this after all data has been published successfully
+      if (imageObjectKeys && imageObjectKeys.length > 0) {
+        for (const sourceObjectKey of imageObjectKeys) {
+          if (sourceObjectKey) {
+            try {
+              // Delete the draft image now that we've successfully published
+              await objectStore.deleteFile(sourceObjectKey);
+              logger.debug('Deleted draft image after successful publish', {
+                draftId: draft.id,
+                sourceKey: sourceObjectKey
+              });
+            } catch (cleanupError) {
+              // Just log cleanup errors, don't fail the publish process
+              logger.warn('Failed to delete draft image during cleanup', {
+                error: cleanupError,
+                draftId: draft.id,
+                sourceKey: sourceObjectKey
+              });
+            }
           }
         }
       }
