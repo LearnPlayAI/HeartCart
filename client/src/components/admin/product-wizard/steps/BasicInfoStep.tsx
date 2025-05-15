@@ -185,6 +185,15 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, isL
         categoryName = category?.name || '';
       }
       
+      // Get product images if available to enhance AI descriptions
+      let imageUrls: string[] = [];
+      if (draft.imageUrls && draft.imageUrls.length > 0) {
+        // Filter out any undefined or empty image URLs
+        imageUrls = draft.imageUrls
+          .filter(url => url && typeof url === 'string' && !url.includes('undefined'))
+          .slice(0, 3); // Limit to 3 images to avoid token limits
+      }
+      
       // API request to generate descriptions
       const response = await apiRequest('/api/ai/suggest-description', {
         method: 'POST',
@@ -193,7 +202,8 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, isL
           currentDescription,
           categoryName,
           brandName,
-          keyFeatures: [] // You could add key features here in the future
+          keyFeatures: [], // You could add key features here in the future
+          imageUrls: imageUrls.length > 0 ? imageUrls : undefined
         }
       });
       

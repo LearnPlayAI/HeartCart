@@ -78,11 +78,21 @@ export const SEOStep: React.FC<SEOStepProps> = ({
     try {
       const categoryName = categoryData?.data?.name || 'Unknown';
       
+      // Get product images if available to enhance AI SEO generation
+      let imageUrls: string[] = [];
+      if (draft.imageUrls && draft.imageUrls.length > 0) {
+        // Filter out any undefined or empty image URLs
+        imageUrls = draft.imageUrls
+          .filter(url => url && typeof url === 'string' && !url.includes('undefined'))
+          .slice(0, 3); // Limit to 3 images to avoid token limits
+      }
+      
       const response = await apiRequest('POST', '/api/ai/generate-seo', {
         productName: draft.name,
         productDescription: draft.description || '',
         categoryName,
-        attributes: draft.attributes
+        attributes: draft.attributes,
+        imageUrls: imageUrls.length > 0 ? imageUrls : undefined
       });
       
       const data = await response.json();
