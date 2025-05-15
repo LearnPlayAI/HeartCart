@@ -915,7 +915,7 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
         return (
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <Label htmlFor={`attr-${attribute.id}`} className={hasError ? 'text-red-500' : ''}>
+              <Label className={hasError ? 'text-red-500' : ''}>
                 {attribute.displayName}
                 {isRequired && <span className="text-red-500 ml-1">*</span>}
               </Label>
@@ -925,50 +925,88 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
                     <Info className="h-4 w-4 text-muted-foreground cursor-help" />
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>{attribute.description || `Select a value for ${attribute.displayName}`}</p>
+                    <p>{attribute.description || `Select which ${attribute.displayName} options will be available to customers`}</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             </div>
-            <Select 
-              value={selectedOptions[0]?.toString() || ''}
-              onValueChange={(val) => handleOptionSelection(attribute.id, parseInt(val), true)}
-            >
-              <SelectTrigger 
-                id={`attr-${attribute.id}`}
-                className={hasError ? 'border-red-500' : ''}
-              >
-                <SelectValue placeholder={`Select ${attribute.displayName.toLowerCase()}`} />
-              </SelectTrigger>
-              <SelectContent>
-                {attribute.options && Array.isArray(attribute.options) && attribute.options.length > 0 ? 
-                  attribute.options.map((option) => (
-                    <SelectItem key={option.id} value={option.id.toString()}>
-                      {option.displayValue}
-                    </SelectItem>
-                  ))
-                : (
-                  <>
-                    <div className="p-2 text-sm text-muted-foreground">No options available</div>
-                    <div className="p-2 pt-0">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="w-full" 
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setCurrentAttributeId(attribute.id);
-                          setShowAddOptionDialog(true);
-                        }}
-                      >
-                        <Plus className="mr-1 h-3 w-3" /> Add Option
-                      </Button>
-                    </div>
-                  </>
+            
+            {/* Overview of selected options */}
+            <div className="mb-2 mt-1">
+              <p className="text-sm font-medium mb-1">Available options to customers: <span className="text-muted-foreground">(customers will select one)</span></p>
+              <div className="flex flex-wrap gap-2">
+                {selectedOptions.length > 0 ? (
+                  selectedOptions.map((optionId) => {
+                    const option = attribute.options && Array.isArray(attribute.options) ? 
+                      attribute.options.find(opt => opt.id === optionId) : null;
+                    return option ? (
+                      <Badge key={optionId} variant="secondary" className="flex items-center gap-1">
+                        {option.displayValue}
+                        <X 
+                          className="h-3 w-3 cursor-pointer" 
+                          onClick={() => handleOptionSelection(attribute.id, optionId, false)}
+                        />
+                      </Badge>
+                    ) : null;
+                  })
+                ) : (
+                  <p className="text-xs text-muted-foreground italic">No options selected - customers won't be able to select this attribute</p>
                 )}
-              </SelectContent>
-            </Select>
+              </div>
+            </div>
+            
+            {/* All available options as checkboxes */}
+            <div className="border rounded-md p-3 space-y-2">
+              <p className="text-sm font-medium mb-2">Select available options:</p>
+              {(() => {
+                // Get options either from loaded map or from attribute
+                const options = loadedOptionsMap[attribute.id] || 
+                  (attribute.options && Array.isArray(attribute.options) ? attribute.options : []);
+                
+                if (options.length > 0) {
+                  return (
+                    <div className="grid grid-cols-2 gap-2">
+                      {options.map((option) => {
+                        const isSelected = selectedOptions.includes(option.id);
+                        return (
+                          <div key={option.id} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`option-${option.id}`}
+                              checked={isSelected}
+                              onCheckedChange={(checked) => 
+                                handleOptionSelection(attribute.id, option.id, !!checked)
+                              }
+                            />
+                            <label 
+                              htmlFor={`option-${option.id}`}
+                              className="text-sm cursor-pointer"
+                            >
+                              {option.displayValue}
+                            </label>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                } else {
+                  return <div className="text-sm text-muted-foreground">No options available</div>;
+                }
+              })()}
+            </div>
+            
+            {/* Add new option button */}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setCurrentAttributeId(attribute.id);
+                setShowAddOptionDialog(true);
+              }}
+              className="mt-2"
+            >
+              <Plus className="h-4 w-4 mr-1" /> Add New Option
+            </Button>
             {hasError && (
               <p className="text-sm text-red-500">{validationErrors[`attribute-${attribute.id}`][0]}</p>
             )}
@@ -989,56 +1027,88 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
                     <Info className="h-4 w-4 text-muted-foreground cursor-help" />
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>{attribute.description || `Select options for ${attribute.displayName}`}</p>
+                    <p>{attribute.description || `Select which ${attribute.displayName} options will be available to customers`}</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             </div>
-            <div className="flex flex-wrap gap-2 mb-2">
-              {selectedOptions.map((optionId) => {
-                const option = attribute.options && Array.isArray(attribute.options) ? 
-                  attribute.options.find(opt => opt.id === optionId) : null;
-                return option ? (
-                  <Badge key={optionId} variant="secondary" className="flex items-center gap-1">
-                    {option.displayValue}
-                    <X 
-                      className="h-3 w-3 cursor-pointer" 
-                      onClick={() => handleOptionSelection(attribute.id, optionId, false)}
-                    />
-                  </Badge>
-                ) : null;
-              })}
+            
+            {/* Overview of selected options */}
+            <div className="mb-2 mt-1">
+              <p className="text-sm font-medium mb-1">Available options to customers: <span className="text-muted-foreground">(customers will select one)</span></p>
+              <div className="flex flex-wrap gap-2">
+                {selectedOptions.length > 0 ? (
+                  selectedOptions.map((optionId) => {
+                    const option = attribute.options && Array.isArray(attribute.options) ? 
+                      attribute.options.find(opt => opt.id === optionId) : null;
+                    return option ? (
+                      <Badge key={optionId} variant="secondary" className="flex items-center gap-1">
+                        {option.displayValue}
+                        <X 
+                          className="h-3 w-3 cursor-pointer" 
+                          onClick={() => handleOptionSelection(attribute.id, optionId, false)}
+                        />
+                      </Badge>
+                    ) : null;
+                  })
+                ) : (
+                  <p className="text-xs text-muted-foreground italic">No options selected - customers won't be able to select this attribute</p>
+                )}
+              </div>
             </div>
-            <Select 
-              value=""
-              onValueChange={(val) => handleOptionSelection(attribute.id, parseInt(val), true)}
+            
+            {/* All available options as checkboxes */}
+            <div className="border rounded-md p-3 space-y-2">
+              <p className="text-sm font-medium mb-2">Select available options:</p>
+              {(() => {
+                // Get options either from loaded map or from attribute
+                const options = loadedOptionsMap[attribute.id] || 
+                  (attribute.options && Array.isArray(attribute.options) ? attribute.options : []);
+                
+                if (options.length > 0) {
+                  return (
+                    <div className="grid grid-cols-2 gap-2">
+                      {options.map((option) => {
+                        const isSelected = selectedOptions.includes(option.id);
+                        return (
+                          <div key={option.id} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`option-${option.id}`}
+                              checked={isSelected}
+                              onCheckedChange={(checked) => 
+                                handleOptionSelection(attribute.id, option.id, !!checked)
+                              }
+                            />
+                            <label 
+                              htmlFor={`option-${option.id}`}
+                              className="text-sm cursor-pointer"
+                            >
+                              {option.displayValue}
+                            </label>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                } else {
+                  return <div className="text-sm text-muted-foreground">No options available</div>;
+                }
+              })()}
+            </div>
+            
+            {/* Add new option button */}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setCurrentAttributeId(attribute.id);
+                setShowAddOptionDialog(true);
+              }}
+              className="mt-2"
             >
-              <SelectTrigger 
-                id={`attr-${attribute.id}`}
-                className={hasError ? 'border-red-500' : ''}
-              >
-                <SelectValue placeholder={`Add ${attribute.displayName.toLowerCase()}`} />
-              </SelectTrigger>
-              <SelectContent>
-                {(() => {
-                  // First check if we have options loaded in our local map
-                  const options = loadedOptionsMap[attribute.id] || 
-                    (attribute.options && Array.isArray(attribute.options) ? attribute.options : []);
-                  
-                  if (options.length > 0) {
-                    return options
-                      .filter(option => !selectedOptions.includes(option.id))
-                      .map((option) => (
-                        <SelectItem key={option.id} value={option.id.toString()}>
-                          {option.displayValue}
-                        </SelectItem>
-                      ));
-                  } else {
-                    return <SelectItem value="no-options">No options available</SelectItem>;
-                  }
-                })()}
-              </SelectContent>
-            </Select>
+              <Plus className="h-4 w-4 mr-1" /> Add New Option
+            </Button>
             {hasError && (
               <p className="text-sm text-red-500">{validationErrors[`attribute-${attribute.id}`][0]}</p>
             )}
