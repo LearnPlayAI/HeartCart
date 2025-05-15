@@ -128,7 +128,10 @@ ALTER TABLE attribute_discount_rules
 -- Product Drafts table
 ALTER TABLE product_drafts
   ALTER COLUMN created_at TYPE TEXT,
-  ALTER COLUMN updated_at TYPE TEXT;
+  ALTER COLUMN last_modified TYPE TEXT,
+  ALTER COLUMN special_sale_start TYPE TEXT,
+  ALTER COLUMN special_sale_end TYPE TEXT,
+  ALTER COLUMN flash_deal_end TYPE TEXT;
 
 -- Session Table (Special Case)
 -- The session table must use timestamp with time zone for its expire column
