@@ -43,6 +43,7 @@ export const ReviewAndSaveStep: React.FC<ReviewAndSaveStepProps> = ({
   const [validationErrors, setValidationErrors] = useState<Record<string, string[]>>({});
   const [reviewNote, setReviewNote] = useState('');
   const [activeTab, setActiveTab] = useState('review');
+  const [selectedStatus, setSelectedStatus] = useState<ProductDraftStatus>('draft');
   
   // Status options for the workflow
   const statusOptions: StatusOption[] = [
@@ -311,7 +312,10 @@ export const ReviewAndSaveStep: React.FC<ReviewAndSaveStepProps> = ({
             <div className="space-y-2">
               <h4 className="text-sm font-medium">Select New Status</h4>
               <Select
-                onValueChange={(value) => setReviewNote(value === 'ready_to_publish' ? 'Product is ready to be published' : '')}
+                onValueChange={(value) => {
+                  setSelectedStatus(value as ProductDraftStatus);
+                  setReviewNote(value === 'ready_to_publish' ? 'Product is ready to be published' : '');
+                }}
                 defaultValue={draft.draftStatus || 'draft'}
               >
                 <SelectTrigger className="w-full">
@@ -354,14 +358,14 @@ export const ReviewAndSaveStep: React.FC<ReviewAndSaveStepProps> = ({
             </Button>
             <Button 
               onClick={() => updateStatusMutation.mutate({ 
-                status: 'ready_to_publish',
+                status: selectedStatus,
                 note: reviewNote
               })}
               disabled={isUpdatingStatus}
               className="gap-2"
             >
               {isUpdatingStatus && <Loader2 className="h-4 w-4 animate-spin" />}
-              Set as Ready to Publish
+              {`Set as ${statusOptions.find(o => o.value === selectedStatus)?.label || 'Draft'}`}
             </Button>
           </DialogFooter>
         </DialogContent>
