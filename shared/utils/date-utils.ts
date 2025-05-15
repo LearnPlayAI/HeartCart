@@ -6,6 +6,7 @@
 /**
  * Format current date in SAST (UTC+2) format as string
  * @returns The current date and time as a string in SAST timezone
+ * Format: YYYY-MM-DD HH:MM:SS+02:00
  */
 export function formatCurrentDateSAST(): string {
   const now = new Date();
@@ -13,17 +14,21 @@ export function formatCurrentDateSAST(): string {
   // Add 2 hours to account for SAST (UTC+2)
   const sastDate = new Date(now.getTime() + (2 * 60 * 60 * 1000));
   
-  // Format the date as ISO string but remove the 'Z' to indicate it's not UTC
-  const dateString = sastDate.toISOString().replace('Z', '');
+  // Format as YYYY-MM-DD HH:MM:SS+02:00
+  const year = sastDate.getFullYear();
+  const month = String(sastDate.getMonth() + 1).padStart(2, '0');
+  const day = String(sastDate.getDate()).padStart(2, '0');
+  const hours = String(sastDate.getHours()).padStart(2, '0');
+  const minutes = String(sastDate.getMinutes()).padStart(2, '0');
+  const seconds = String(sastDate.getSeconds()).padStart(2, '0');
   
-  // Add the +02:00 suffix to indicate SAST timezone
-  return dateString.replace(/\.\d+$/, '') + '+02:00';
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}+02:00`;
 }
 
 /**
  * Convert a Date object to SAST string format
  * @param date The Date object to convert
- * @returns The date as a string in SAST timezone format
+ * @returns The date as a string in SAST timezone format (YYYY-MM-DD HH:MM:SS+02:00)
  */
 export function dateToSASTString(date: Date | null): string | null {
   if (!date) return null;
@@ -31,11 +36,15 @@ export function dateToSASTString(date: Date | null): string | null {
   // Add 2 hours to account for SAST (UTC+2)
   const sastDate = new Date(date.getTime() + (2 * 60 * 60 * 1000));
   
-  // Format the date as ISO string but remove the 'Z' to indicate it's not UTC
-  const dateString = sastDate.toISOString().replace('Z', '');
+  // Format as YYYY-MM-DD HH:MM:SS+02:00
+  const year = sastDate.getFullYear();
+  const month = String(sastDate.getMonth() + 1).padStart(2, '0');
+  const day = String(sastDate.getDate()).padStart(2, '0');
+  const hours = String(sastDate.getHours()).padStart(2, '0');
+  const minutes = String(sastDate.getMinutes()).padStart(2, '0');
+  const seconds = String(sastDate.getSeconds()).padStart(2, '0');
   
-  // Add the +02:00 suffix to indicate SAST timezone
-  return dateString.replace(/\.\d+$/, '') + '+02:00';
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}+02:00`;
 }
 
 /**
