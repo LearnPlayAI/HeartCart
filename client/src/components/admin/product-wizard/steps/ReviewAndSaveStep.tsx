@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { apiRequest } from '@/lib/queryClient';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,8 +8,21 @@ import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Loader2, Check, AlertCircle } from 'lucide-react';
+import { Loader2, Check, AlertCircle, Clock, CornerRightDown, Eye, ArrowLeft, ArrowRight, FileCheck, FilePen, Tag } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from '@/components/ui/textarea';
 import type { ProductDraft } from '../ProductWizard';
+
+// Status types for product drafts
+type ProductDraftStatus = 'draft' | 'in_review' | 'ready_to_publish' | 'published' | 'rejected';
+
+interface StatusOption {
+  value: ProductDraftStatus;
+  label: string;
+  icon?: React.ReactNode;
+  description: string;
+}
 
 interface ReviewAndSaveStepProps {
   draft: ProductDraft;
@@ -24,8 +37,46 @@ export const ReviewAndSaveStep: React.FC<ReviewAndSaveStepProps> = ({
 }) => {
   const { toast } = useToast();
   const [isPublishing, setIsPublishing] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [showPublishDialog, setShowPublishDialog] = useState(false);
+  const [showStatusDialog, setShowStatusDialog] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string[]>>({});
+  const [reviewNote, setReviewNote] = useState('');
+  const [activeTab, setActiveTab] = useState('review');
+  
+  // Status options for the workflow
+  const statusOptions: StatusOption[] = [
+    { 
+      value: 'draft', 
+      label: 'Draft', 
+      icon: <FilePen className="h-4 w-4" />,
+      description: 'Product is being edited and is not ready for review'
+    },
+    { 
+      value: 'in_review', 
+      label: 'In Review', 
+      icon: <Eye className="h-4 w-4" />,
+      description: 'Product is awaiting approval from a manager'
+    },
+    { 
+      value: 'ready_to_publish', 
+      label: 'Ready to Publish', 
+      icon: <FileCheck className="h-4 w-4" />,
+      description: 'Product has been approved and is ready to go live'
+    },
+    { 
+      value: 'published', 
+      label: 'Published', 
+      icon: <Check className="h-4 w-4" />,
+      description: 'Product is live on the store'
+    },
+    { 
+      value: 'rejected', 
+      label: 'Rejected', 
+      icon: <AlertCircle className="h-4 w-4" />,
+      description: 'Product needs more work before it can be published'
+    }
+  ];
   
   // Get category for display purposes
   const { data: categoryData } = useQuery({
@@ -48,6 +99,46 @@ export const ReviewAndSaveStep: React.FC<ReviewAndSaveStepProps> = ({
     enabled: !!draft.id
   });
   
+  // Use mutation for status updates
+  const updateStatusMutation = useMutation({
+    mutationFn: async (updateData: { status: ProductDraftStatus, note?: string }) => {
+      const response = await apiRequest('PATCH', `/api/product-drafts/${draft.id}/status`, updateData);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        toast({
+          title: 'Status Updated',
+          description: 'The product draft status has been updated successfully.',
+          variant: 'default',
+        });
+        
+        // Refresh draft data
+        queryClient.invalidateQueries({ queryKey: ['/api/product-drafts', draft.id] });
+        
+        // Clear review note after successful update
+        setReviewNote('');
+      } else {
+        toast({
+          title: 'Status Update Failed',
+          description: data.error?.message || 'An error occurred while updating the status.',
+          variant: 'destructive',
+        });
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Status Update Failed',
+        description: error.message || 'An error occurred while updating the status.',
+        variant: 'destructive',
+      });
+    },
+    onSettled: () => {
+      setIsUpdatingStatus(false);
+      setShowStatusDialog(false);
+    }
+  });
+
   // Use mutation for publishing
   const publishMutation = useMutation({
     mutationFn: async () => {
@@ -62,8 +153,13 @@ export const ReviewAndSaveStep: React.FC<ReviewAndSaveStepProps> = ({
           variant: 'default',
         });
         
+        // Update the status to published
+        updateStatusMutation.mutate({ status: 'published' });
+        
         // Redirect to product view or product listing
-        window.location.href = `/admin/products/${data.data.id}`;
+        setTimeout(() => {
+          window.location.href = `/admin/products/${data.data.id}`;
+        }, 1000);
       } else {
         toast({
           title: 'Publication Failed',
@@ -85,6 +181,31 @@ export const ReviewAndSaveStep: React.FC<ReviewAndSaveStepProps> = ({
     }
   });
   
+  // Handle status change
+  const handleStatusChange = (newStatus: ProductDraftStatus) => {
+    setIsUpdatingStatus(true);
+    
+    // If changing to 'ready_to_publish' or 'published', validate first
+    if (newStatus === 'ready_to_publish' || newStatus === 'published') {
+      // Validation will be handled in the dialog confirmation
+      setShowStatusDialog(true);
+    } else {
+      // For other statuses, just update
+      updateStatusMutation.mutate({ 
+        status: newStatus,
+        note: reviewNote 
+      });
+    }
+  };
+  
+  // Handle dialog confirmation of status change
+  const confirmStatusChange = (newStatus: ProductDraftStatus) => {
+    updateStatusMutation.mutate({ 
+      status: newStatus,
+      note: reviewNote 
+    });
+  };
+
   // Handle publishing
   const handlePublish = async () => {
     setIsPublishing(true);
@@ -169,35 +290,123 @@ export const ReviewAndSaveStep: React.FC<ReviewAndSaveStepProps> = ({
         </DialogContent>
       </Dialog>
       
+      {/* Status Change Dialog */}
+      <Dialog open={showStatusDialog} onOpenChange={setShowStatusDialog}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Change Product Status</DialogTitle>
+            <DialogDescription>
+              Update the status of this product draft and add any notes for the review process.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <h4 className="text-sm font-medium">Select New Status</h4>
+              <Select
+                onValueChange={(value) => confirmStatusChange(value as ProductDraftStatus)}
+                defaultValue={draft.draftStatus || 'draft'}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {statusOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      <div className="flex items-center gap-2">
+                        {option.icon}
+                        <span>{option.label}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                {statusOptions.find(o => o.value === (draft.draftStatus || 'draft'))?.description}
+              </p>
+            </div>
+            
+            <div className="space-y-2">
+              <h4 className="text-sm font-medium">Review Notes</h4>
+              <Textarea
+                placeholder="Add any notes about this status change..."
+                value={reviewNote}
+                onChange={(e) => setReviewNote(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowStatusDialog(false)} 
+              disabled={isUpdatingStatus}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => confirmStatusChange(draft.draftStatus === 'draft' ? 'in_review' : 'ready_to_publish')} 
+              disabled={isUpdatingStatus}
+              className="gap-2"
+            >
+              {isUpdatingStatus && <Loader2 className="h-4 w-4 animate-spin" />}
+              Update Status
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
       <Card>
         <CardHeader>
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
             <div>
               <CardTitle>Review & Publish</CardTitle>
               <CardDescription>
                 Review your product information before publishing
               </CardDescription>
             </div>
-            <div className="flex items-center gap-3">
-              {isValidating ? (
-                <Badge variant="outline" className="gap-1">
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                  Validating
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex flex-col xs:flex-row items-start xs:items-center gap-2">
+                <Badge 
+                  variant="outline" 
+                  className={`gap-1 ${
+                    draft.draftStatus === 'published' 
+                      ? 'bg-green-50 text-green-700 border-green-300' 
+                      : draft.draftStatus === 'ready_to_publish' 
+                      ? 'bg-blue-50 text-blue-700 border-blue-300'
+                      : draft.draftStatus === 'in_review'
+                      ? 'bg-purple-50 text-purple-700 border-purple-300'
+                      : draft.draftStatus === 'rejected'
+                      ? 'bg-red-50 text-red-700 border-red-300'
+                      : 'bg-amber-50 text-amber-700 border-amber-300'
+                  }`}
+                >
+                  {draft.draftStatus === 'published' ? (
+                    <Check className="h-3 w-3" />
+                  ) : draft.draftStatus === 'ready_to_publish' ? (
+                    <FileCheck className="h-3 w-3" />
+                  ) : draft.draftStatus === 'in_review' ? (
+                    <Eye className="h-3 w-3" />
+                  ) : draft.draftStatus === 'rejected' ? (
+                    <AlertCircle className="h-3 w-3" />
+                  ) : (
+                    <FilePen className="h-3 w-3" />
+                  )}
+                  {statusOptions.find(o => o.value === (draft.draftStatus || 'draft'))?.label || 'Draft'}
                 </Badge>
-              ) : isValid ? (
-                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300 gap-1">
-                  <Check className="h-3 w-3" />
-                  Ready to Publish
-                </Badge>
-              ) : (
-                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300 gap-1">
-                  <AlertCircle className="h-3 w-3" />
-                  Not Ready
-                </Badge>
-              )}
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setShowStatusDialog(true)}
+                  className="text-xs h-8"
+                >
+                  Change Status
+                </Button>
+              </div>
               <Button 
                 onClick={() => setShowPublishDialog(true)} 
-                disabled={!isValid || isPublishing}
+                disabled={!isValid || isPublishing || draft.draftStatus !== 'ready_to_publish'}
                 className="gap-2"
               >
                 {isPublishing && <Loader2 className="h-4 w-4 animate-spin" />}
@@ -207,7 +416,14 @@ export const ReviewAndSaveStep: React.FC<ReviewAndSaveStepProps> = ({
           </div>
         </CardHeader>
         <CardContent>
-          <Accordion type="multiple" defaultValue={['basic-info', 'pricing', 'images']} className="w-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-6">
+              <TabsTrigger value="review">Product Review</TabsTrigger>
+              <TabsTrigger value="workflow">Publishing Workflow</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="review" className="space-y-4">
+              <Accordion type="multiple" defaultValue={['basic-info', 'pricing', 'images']} className="w-full">
             {/* Basic Info Section */}
             <AccordionItem value="basic-info">
               <AccordionTrigger className="text-lg font-medium">
