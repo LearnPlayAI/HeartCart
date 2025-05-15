@@ -16,7 +16,7 @@ function calculateMarkupPercentage(costPrice: number, sellingPrice: number): num
 }
 
 // Define the steps in the wizard
-export type WizardStep = 'basic-info' | 'images' | 'additional-info' | 'sales-promotions' | 'review';
+export type WizardStep = 'basic-info' | 'images' | 'additional-info' | 'seo' | 'sales-promotions' | 'review';
 
 // Define the state interface for the wizard
 interface ProductWizardState {
@@ -154,6 +154,7 @@ const defaultInitialState: ProductWizardState = {
     'basic-info': false,
     'images': false,
     'additional-info': false,
+    'seo': false,
     'sales-promotions': false,
     'review': false,
   },
@@ -161,6 +162,7 @@ const defaultInitialState: ProductWizardState = {
     'basic-info': false,
     'images': false,
     'additional-info': false,
+    'seo': false,
     'sales-promotions': false,
     'review': false,
   },

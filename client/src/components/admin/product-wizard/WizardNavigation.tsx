@@ -41,6 +41,7 @@ export function WizardNavigation({ onComplete }: WizardNavigationProps) {
     { id: 'basic-info', label: 'Basic Info' },
     { id: 'images', label: 'Images' },
     { id: 'additional-info', label: 'Additional Info' },
+    { id: 'seo', label: 'SEO' },
     { id: 'sales-promotions', label: 'Sales & Promotions' },
     { id: 'review', label: 'Review & Save' }
   ];

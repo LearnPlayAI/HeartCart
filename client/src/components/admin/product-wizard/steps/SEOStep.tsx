@@ -174,7 +174,7 @@ export const SEOStep: React.FC<SEOStepProps> = ({ draft, onSave, isLoading = fal
         setSeoSuggestions(responseData.data.suggestions);
         setShowSEODialog(true);
       } else {
-        throw new Error(responseData.error?.message || 'Failed to generate SEO suggestions');
+        throw new Error('Failed to generate SEO suggestions');
       }
     } catch (error) {
       console.error('Error generating SEO suggestions:', error);
