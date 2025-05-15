@@ -111,9 +111,57 @@ export const updateProductDraftSchema = z.object({
   wizardProgress: z.any().optional(),
 });
 
+/**
+ * Product Draft Wizard Step Update Schema
+ * This is used for the PATCH /api/product-drafts/:id/wizard-step endpoint
+ */
 export const updateProductDraftWizardStepSchema = z.object({
   step: z.union([z.string(), z.number()]),
-  draftData: z.any()
+  draftData: z.object({
+    // Basic product draft fields that might be updated
+    name: z.string().optional(),
+    slug: z.string().optional(),
+    description: z.string().nullable().optional(),
+    categoryId: z.number().nullable().optional(),
+    regularPrice: z.number().nullable().optional(),
+    salePrice: z.number().nullable().optional(),
+    costPrice: z.number().nullable().optional(),
+    onSale: z.boolean().optional(),
+    stockLevel: z.number().nullable().optional(),
+    isActive: z.boolean().optional(),
+    isFeatured: z.boolean().optional(),
+    
+    // Image fields
+    imageUrls: z.array(z.string()).optional(),
+    imageObjectKeys: z.array(z.string()).optional(),
+    mainImageIndex: z.number().optional(),
+    
+    // Additional fields
+    attributes: z.array(z.any()).optional(),
+    attributesData: z.array(z.any()).optional(),
+    brand: z.string().nullable().optional(),
+    dimensions: z.string().nullable().optional(),
+    weight: z.string().nullable().optional(),
+    
+    // SEO fields
+    metaTitle: z.string().nullable().optional(),
+    metaDescription: z.string().nullable().optional(),
+    metaKeywords: z.string().nullable().optional(),
+    canonicalUrl: z.string().nullable().optional(),
+    tags: z.array(z.string()).optional(),
+    
+    // Promotion fields
+    discountLabel: z.string().nullable().optional(),
+    specialSaleText: z.string().nullable().optional(),
+    specialSaleStart: z.string().nullable().optional(),
+    specialSaleEnd: z.string().nullable().optional(),
+    isFlashDeal: z.boolean().optional(),
+    flashDealEnd: z.string().nullable().optional(),
+    
+    // System fields
+    completedSteps: z.array(z.string()).optional(),
+    wizardProgress: z.record(z.string(), z.boolean()).optional(),
+  }).passthrough() // Allow unknown properties
 });
 
 export const productDraftIdParamSchema = z.object({
