@@ -5751,22 +5751,47 @@ export class DatabaseStorage implements IStorage {
         updateData.rejectionReason = note;
       }
       
-      // Update the change history if available
-      if (draft.changeHistory) {
-        const changeEntry = {
-          timestamp: now,
-          fromStatus: draft.draftStatus,
-          toStatus: status,
-          note: note || null
-        };
-        
-        try {
-          const currentHistory = draft.changeHistory as any[] || [];
-          updateData.changeHistory = [...currentHistory, changeEntry];
-        } catch (error) {
-          logger.error('Error updating change history', { error, draftId: id });
-          // Continue with the update even if change history fails
+      // Initialize change history if it doesn't exist yet
+      if (!draft.changeHistory) {
+        updateData.changeHistory = [];
+      }
+      
+      // Create the new change entry with proper timestamp
+      const changeEntry = {
+        timestamp: now, // Already a string from toISOString()
+        fromStatus: draft.draftStatus,
+        toStatus: status,
+        note: note || null
+      };
+      
+      try {
+        // Process existing history to ensure all timestamps are strings
+        let currentHistory = [];
+        if (draft.changeHistory) {
+          currentHistory = (draft.changeHistory as any[]).map(entry => {
+            // Make sure all existing timestamps are strings
+            return {
+              ...entry,
+              timestamp: typeof entry.timestamp === 'string' 
+                ? entry.timestamp 
+                : (entry.timestamp instanceof Date 
+                    ? entry.timestamp.toISOString() 
+                    : new Date().toISOString())
+            };
+          });
         }
+        
+        // Add new entry to history
+        updateData.changeHistory = [...currentHistory, changeEntry];
+        
+        // Log what we're adding to help with debugging
+        logger.debug('Change history entry added', { 
+          newEntry: changeEntry,
+          historyLength: (currentHistory.length + 1)
+        });
+      } catch (error) {
+        logger.error('Error updating change history', { error, draftId: id });
+        // Continue with the update even if change history fails
       }
       
       // Add debugging info to help diagnose issues
