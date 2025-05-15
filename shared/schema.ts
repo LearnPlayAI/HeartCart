@@ -520,8 +520,8 @@ export const productDrafts = pgTable("product_drafts", {
   originalProductId: integer("original_product_id").references(() => products.id),
   draftStatus: text("draft_status").default("draft").notNull(), // 'draft', 'review', 'ready', 'published'
   createdBy: integer("created_by").references(() => users.id),
-  createdAt: text("created_at").default(String(new Date().toISOString())).notNull(),
-  lastModified: text("last_modified").default(String(new Date().toISOString())).notNull(),
+  createdAt: text("created_at").notNull(), // We'll set this in storage.ts with proper SAST format
+  lastModified: text("last_modified").notNull(), // We'll set this in storage.ts with proper SAST format
   
   // Basic product information
   name: text("name"),
@@ -621,12 +621,12 @@ export const productDrafts = pgTable("product_drafts", {
 
 // Insert schema for product drafts
 export const insertProductDraftSchema = createInsertSchema(productDrafts, {
-  createdAt: z.coerce.date().optional(),
-  lastModified: z.coerce.date().optional(),
-  specialSaleStart: z.coerce.date().optional().nullable(),
-  specialSaleEnd: z.coerce.date().optional().nullable(),
-  flashDealEnd: z.coerce.date().optional().nullable(),
-  publishedAt: z.coerce.date().optional().nullable(),
+  createdAt: z.string().optional(),
+  lastModified: z.string().optional(),
+  specialSaleStart: z.string().optional().nullable(),
+  specialSaleEnd: z.string().optional().nullable(),
+  flashDealEnd: z.string().optional().nullable(),
+  publishedAt: z.string().optional().nullable(),
   wizardProgress: z.any().optional(),
   attributes: z.any().optional(),
   attributesData: z.any().optional(),
