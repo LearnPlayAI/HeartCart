@@ -274,17 +274,28 @@ class ObjectStoreService {
   async moveDraftImageToProduct(
     sourceKey: string,
     productId: number,
-    supplierId: number,
-    catalogId: number,
-    newFilename: string
+    supplierName: string,
+    catalogName: string,
+    categoryName: string,
+    productName: string,
+    imageIndex: number
   ): Promise<{ url: string; objectKey: string }> {
     await this.initialize();
     
-    // Sanitize the new filename first
-    const sanitizedFilename = this.sanitizeFilename(newFilename);
+    // Extract filename from source key
+    const sourceFilename = sourceKey.split('/').pop() || `product-image-${imageIndex}.jpg`;
     
-    // Create the destination path
-    const destObjectKey = `${STORAGE_FOLDERS.SUPPLIERS}/${supplierId}/${STORAGE_FOLDERS.CATALOGS}/${catalogId}/${STORAGE_FOLDERS.PRODUCTS}/${productId}/${sanitizedFilename}`;
+    // Create a new filename based on product name and image index
+    const newFilename = `${this.sanitizeFilename(productName)}-${imageIndex + 1}-${sourceFilename}`;
+    
+    // Sanitize supplier, catalog and category names for folder path
+    const sanitizedSupplier = this.sanitizeFilename(supplierName);
+    const sanitizedCatalog = this.sanitizeFilename(catalogName); 
+    const sanitizedCategory = this.sanitizeFilename(categoryName);
+    
+    // Create the destination path with this structure:
+    // /root/suppliers/{supplier_name}/{catalog_name}/{product_id}/{filename}
+    const destObjectKey = `${STORAGE_FOLDERS.SUPPLIERS}/${sanitizedSupplier}/${STORAGE_FOLDERS.CATALOGS}/${sanitizedCatalog}/${STORAGE_FOLDERS.PRODUCTS}/${productId}/${newFilename}`;
     
     try {
       // Check if the source file exists

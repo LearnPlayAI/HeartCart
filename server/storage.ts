@@ -5324,16 +5324,26 @@ export class DatabaseStorage implements IStorage {
         attributesCount: draft.attributes?.length || 0
       });
       
+      // Create comprehensive product data from draft
       const productData: Partial<InsertProduct> = {
+        // Basic product information
         name: draft.name || '',
         slug: draft.slug || '',
+        sku: draft.sku,
         description: draft.description,
         categoryId: draft.categoryId,
-        // Map the draft price fields to product price fields
-        price: draft.regularPrice || 0,
-        costPrice: draft.costPrice || 0,
-        salePrice: draft.salePrice || null,
+        supplierId: draft.supplierId,
+        catalogId: draft.catalogId,
+        
+        // Pricing information
+        price: draft.regularPrice ? parseFloat(String(draft.regularPrice)) : 0,
+        costPrice: draft.costPrice ? parseFloat(String(draft.costPrice)) : 0,
+        salePrice: draft.salePrice ? parseFloat(String(draft.salePrice)) : null,
+        onSale: draft.onSale || false,
         discountLabel: draft.discountLabel,
+        markupPercentage: draft.markupPercentage,
+        minimumPrice: draft.minimumPrice,
+        
         // Set the main image URL if available
         imageUrl: draft.imageUrls && draft.imageUrls.length > 0 
           ? draft.imageUrls[draft.mainImageIndex || 0] 
@@ -5342,22 +5352,43 @@ export class DatabaseStorage implements IStorage {
         additionalImages: draft.imageUrls && draft.imageUrls.length > 1
           ? draft.imageUrls.filter((_, index) => index !== (draft.mainImageIndex || 0))
           : [],
-        // Map stock to product stock
+        
+        // Inventory information
         stock: draft.stockLevel || 0,
+        lowStockThreshold: draft.lowStockThreshold || 5,
+        backorderEnabled: draft.backorderEnabled || false,
+        
+        // SEO and metadata
+        metaTitle: draft.metaTitle,
+        metaDescription: draft.metaDescription,
+        metaKeywords: draft.metaKeywords,
+        canonicalUrl: draft.canonicalUrl || `https://www.teemeyou.shop/product/id/${draft.originalProductId || 'new'}`,
+        
+        // Product status flags
         isActive: draft.isActive !== undefined ? draft.isActive : true,
         isFeatured: draft.isFeatured || false,
+        
+        // Product attributes and specifications
         supplier: draft.supplierId ? (await this.getSupplier(draft.supplierId))?.name : null,
-        weight: draft.weight ? parseFloat(draft.weight) : null,
+        brand: draft.brand,
+        weight: draft.weight ? parseFloat(String(draft.weight)) : null,
         dimensions: draft.dimensions,
-        // Convert Date timestamps to text strings for storage in products table
+        
+        // Sales promotion data
         specialSaleText: draft.specialSaleText,
         specialSaleStart: draft.specialSaleStart ? draft.specialSaleStart.toISOString() : null,
         specialSaleEnd: draft.specialSaleEnd ? draft.specialSaleEnd.toISOString() : null,
         isFlashDeal: draft.isFlashDeal || false,
         flashDealEnd: draft.flashDealEnd ? draft.flashDealEnd.toISOString() : null,
-        // Additional fields
-        brand: draft.brand,
-        tags: draft.metaKeywords ? [draft.metaKeywords] : [],
+        hasSpecialSale: draft.hasSpecialSale || false,
+        hasDynamicPricing: draft.hasDynamicPricing || false,
+        
+        // Categorization and grouping
+        tags: draft.metaKeywords ? draft.metaKeywords.split(',').map(tag => tag.trim()) : [],
+        
+        // Timestamps - these will be handled by database defaults
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       };
       
       // Handle existing product (update) vs. new product (insert)
