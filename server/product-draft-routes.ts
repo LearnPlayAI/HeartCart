@@ -322,12 +322,18 @@ export default function registerProductDraftRoutes(router: Router) {
           autoRotate: true
         });
         
-        // Upload to object store with the proper draft path structure: /root/drafts/{draftId}/image.xxx
+        // Get supplier and catalog info for new image path strategy
+        const supplierName = draft.supplier || 'unknown-supplier';
+        const catalogId = draft.catalogId || 0;
+        
+        // Upload with new path strategy using supplier and catalog info
         const uploadResult = await objectStore.uploadDraftImage(
           processedBuffer,
           file.originalname,
           draftId,
-          file.mimetype
+          file.mimetype,
+          supplierName,
+          catalogId
         );
         
         // Return image info

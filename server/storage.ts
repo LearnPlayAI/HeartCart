@@ -5496,26 +5496,54 @@ export class DatabaseStorage implements IStorage {
           // Insert new attributes
           for (const attr of draft.attributes) {
             try {
-              await db
-                .insert(productAttributes)
-                .values({
+              // Process each attribute differently based on its type/value
+              if (Array.isArray(attr.value)) {
+                // For array values (like multiple selected options)
+                logger.debug('Processing attribute array', {
                   productId: product.id,
                   attributeId: attr.attributeId,
-                  // Handle different attribute value types
-                  textValue: typeof attr.value === 'string' ? attr.value : null,
-                  numberValue: typeof attr.value === 'number' ? attr.value : null,
-                  booleanValue: typeof attr.value === 'boolean' ? attr.value : null,
-                  // Handle arrays (like selected options) by serializing to JSON
-                  selectedOptions: Array.isArray(attr.value) ? attr.value : null,
-                  // Optional display name override
-                  overrideDisplayName: attr.attributeDisplayName || null,
+                  valueCount: attr.value.length,
+                  values: attr.value
                 });
+                
+                // Insert attribute record with all selected options
+                await db
+                  .insert(productAttributes)
+                  .values({
+                    productId: product.id,
+                    attributeId: attr.attributeId,
+                    textValue: null,
+                    numberValue: null,
+                    booleanValue: null,
+                    // Store the full array of selected option IDs
+                    selectedOptions: attr.value,
+                    // Optional display name override
+                    overrideDisplayName: attr.attributeDisplayName || null,
+                  });
+              } else {
+                // For scalar values (string, number, boolean)
+                await db
+                  .insert(productAttributes)
+                  .values({
+                    productId: product.id,
+                    attributeId: attr.attributeId,
+                    // Handle different attribute value types
+                    textValue: typeof attr.value === 'string' ? attr.value : null,
+                    numberValue: typeof attr.value === 'number' ? attr.value : null,
+                    booleanValue: typeof attr.value === 'boolean' ? attr.value : null,
+                    // No selected options for scalar values
+                    selectedOptions: null,
+                    // Optional display name override
+                    overrideDisplayName: attr.attributeDisplayName || null,
+                  });
+              }
             } catch (attrError) {
               logger.error('Error saving product attribute', { 
                 error: attrError, 
                 productId: product.id,
                 attributeId: attr.attributeId,
-                valueType: typeof attr.value
+                valueType: typeof attr.value,
+                value: attr.value
               });
             }
           }
@@ -5539,42 +5567,80 @@ export class DatabaseStorage implements IStorage {
           // Insert new attributes
           for (const attr of draft.attributes) {
             try {
-              await db
-                .insert(productAttributes)
-                .values({
+              // Process each attribute differently based on its type/value
+              if (Array.isArray(attr.value)) {
+                // For array values (like multiple selected options)
+                logger.debug('Processing attribute array for new product', {
                   productId: product.id,
                   attributeId: attr.attributeId,
-                  // Handle different attribute value types
-                  textValue: typeof attr.value === 'string' ? attr.value : null,
-                  numberValue: typeof attr.value === 'number' ? attr.value : null,
-                  booleanValue: typeof attr.value === 'boolean' ? attr.value : null,
-                  // Handle arrays (like selected options) by serializing to JSON
-                  selectedOptions: Array.isArray(attr.value) ? attr.value : null,
-                  // Optional display name override
-                  overrideDisplayName: attr.attributeDisplayName || null,
+                  valueCount: attr.value.length,
+                  values: attr.value
                 });
+                
+                // Insert attribute record with all selected options
+                await db
+                  .insert(productAttributes)
+                  .values({
+                    productId: product.id,
+                    attributeId: attr.attributeId,
+                    textValue: null,
+                    numberValue: null,
+                    booleanValue: null,
+                    // Store the full array of selected option IDs
+                    selectedOptions: attr.value,
+                    // Optional display name override
+                    overrideDisplayName: attr.attributeDisplayName || null,
+                  });
+              } else {
+                // For scalar values (string, number, boolean)
+                await db
+                  .insert(productAttributes)
+                  .values({
+                    productId: product.id,
+                    attributeId: attr.attributeId,
+                    // Handle different attribute value types
+                    textValue: typeof attr.value === 'string' ? attr.value : null,
+                    numberValue: typeof attr.value === 'number' ? attr.value : null,
+                    booleanValue: typeof attr.value === 'boolean' ? attr.value : null,
+                    // No selected options for scalar values
+                    selectedOptions: null,
+                    // Optional display name override
+                    overrideDisplayName: attr.attributeDisplayName || null,
+                  });
+              }
             } catch (attrError) {
               logger.error('Error saving product attribute for new product', { 
                 error: attrError, 
                 productId: product.id,
                 attributeId: attr.attributeId,
-                valueType: typeof attr.value
+                valueType: typeof attr.value,
+                value: attr.value
               });
             }
           }
         }
       }
       
-      // Process and move the images from draft location to final product location
+      // With new image path strategy, we don't need to move images during publish
+      // The images are already in the correct final location
       if (draft.imageUrls && draft.imageUrls.length > 0) {
-        // Extract image object keys from image URLs if not available
-        const imageObjectKeys = draft.imageUrls.map(url => {
+        // Just extract the image object keys from image URLs if needed
+        // The image path contains supplier and catalog info already
+        const imageObjectKeys = draft.imageObjectKeys || draft.imageUrls.map(url => {
           const urlParts = url.split('/');
-          // Format: /api/files/drafts/{draftId}/filename.jpg
-          const draftIndex = urlParts.indexOf('drafts');
-          if (draftIndex !== -1 && draftIndex + 1 < urlParts.length) {
-            return `drafts/${urlParts[draftIndex + 1]}/${urlParts[urlParts.length - 1]}`;
+          const lastSegment = urlParts[urlParts.length - 1];
+          const draftId = draft.id.toString();
+          
+          // Try to find the correct path in the URL
+          for (let i = 0; i < urlParts.length; i++) {
+            if (urlParts[i] === draftId && i > 0) {
+              // Format is now /supplier/catalog/draftId/filename.jpg
+              const supplierName = urlParts[i-2] || 'unknown-supplier';
+              const catalogName = urlParts[i-1] || 'catalog-0';
+              return `${supplierName}/${catalogName}/${draftId}/${lastSegment}`;
+            }
           }
+          
           return null;
         }).filter(Boolean) as string[];
         
@@ -5590,18 +5656,22 @@ export class DatabaseStorage implements IStorage {
           if (!sourceObjectKey || !imageUrl) continue;
           
           try {
-            // First copy image from draft location to final product location (don't delete yet)
-            const { url: newImageUrl, objectKey: newObjectKey } = await objectStore.copyDraftImageToProduct(
-              sourceObjectKey,
-              product.id,
-              supplierName,
-              catalogName,
-              categoryName,
-              product.name || `product-${product.id}`,
-              i
-            );
+            // With the new path strategy, we can use the existing image directly
+            // No need to copy/move files since they are already in their final location
+            const newObjectKey = sourceObjectKey;
+            const newImageUrl = objectStore.getPublicUrl(newObjectKey);
             
-            // Save product image record with updated locations
+            // Verify image exists
+            const exists = await objectStore.exists(sourceObjectKey);
+            if (!exists) {
+              logger.warn('Image referenced in draft does not exist in object store', {
+                objectKey: sourceObjectKey,
+                draftId: draft.id,
+                productId: product.id
+              });
+            }
+            
+            // Save product image record with the same locations
             await db
               .insert(productImages)
               .values({
@@ -5612,11 +5682,10 @@ export class DatabaseStorage implements IStorage {
                 sortOrder: i
               });
             
-            logger.debug('Copied product image from draft to final location', {
+            logger.debug('Registered product image using existing draft location', {
               productId: product.id,
               draftId: draft.id,
-              sourceKey: sourceObjectKey,
-              destinationKey: newObjectKey
+              objectKey: newObjectKey
             });
           } catch (imageError) {
             // If image copy fails, still create the product but log the error
@@ -5643,25 +5712,12 @@ export class DatabaseStorage implements IStorage {
       
       // Clean up the draft images - do this after all data has been published successfully
       if (imageObjectKeys && imageObjectKeys.length > 0) {
-        for (const sourceObjectKey of imageObjectKeys) {
-          if (sourceObjectKey) {
-            try {
-              // Delete the draft image now that we've successfully published
-              await objectStore.deleteFile(sourceObjectKey);
-              logger.debug('Deleted draft image after successful publish', {
-                draftId: draft.id,
-                sourceKey: sourceObjectKey
-              });
-            } catch (cleanupError) {
-              // Just log cleanup errors, don't fail the publish process
-              logger.warn('Failed to delete draft image during cleanup', {
-                error: cleanupError,
-                draftId: draft.id,
-                sourceKey: sourceObjectKey
-              });
-            }
-          }
-        }
+        // With the new image path strategy, we don't need to delete the draft images
+        // because they're already in their final location and we're reusing them
+        logger.debug('Skipping draft image deletion with new path strategy', {
+          draftId: draft.id,
+          imageCount: imageObjectKeys.length
+        });
       }
       
       // Delete the draft
