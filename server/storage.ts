@@ -280,15 +280,15 @@ export class DatabaseStorage implements IStorage {
    */
   async updateUserLastLogin(id: number): Promise<boolean> {
     try {
-      // Update lastLogin timestamp to current time
-      const now = new Date();
+      // Update lastLogin timestamp to current time in SAST format
+      const formattedNow = formatCurrentDateSAST();
       
       // Update the user record with new login timestamp
       const result = await db
         .update(users)
         .set({ 
-          lastLogin: now,
-          updatedAt: now // Also update the general updatedAt field
+          lastLogin: formattedNow,
+          updatedAt: formattedNow // Also update the general updatedAt field
         })
         .where(eq(users.id, id));
       
@@ -4861,10 +4861,10 @@ export class DatabaseStorage implements IStorage {
 
   async updateProductDraft(id: number, data: Partial<InsertProductDraft>): Promise<ProductDraft | undefined> {
     try {
-      // Always update the lastModified timestamp
+      // Always update the lastModified timestamp with SAST formatted string
       const updateData = {
         ...data,
-        lastModified: new Date()
+        lastModified: formatCurrentDateSAST()
       };
       
       const [updatedDraft] = await db
@@ -4890,7 +4890,7 @@ export class DatabaseStorage implements IStorage {
       
       // Update the appropriate fields based on the step
       let updateData: Partial<InsertProductDraft> = {
-        lastModified: new Date()
+        lastModified: formatCurrentDateSAST()
       };
       
       // Update wizard progress to mark this step as completed
