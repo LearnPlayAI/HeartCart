@@ -5311,17 +5311,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async publishProductDraft(id: number): Promise<Product | undefined> {
-    let transaction;
     try {
-      // Begin transaction to ensure atomicity during publish
-      transaction = await db.transaction();
-      
-      // Get the draft
+      // Get the draft first (outside transaction)
       const draft = await this.getProductDraft(id);
       if (!draft) {
-        if (transaction) await transaction.rollback();
         return undefined;
       }
+      
+      // Use the drizzle-orm transaction correctly
+      return await db.transaction(async (tx) => {
       
       // Convert draft to product
       // Log draft data for debugging
@@ -5602,15 +5600,12 @@ export class DatabaseStorage implements IStorage {
         }
       }
       
-      // Delete the draft using the same transaction
+      // Delete the draft as part of the transaction
       if (draft.id) {
-        await transaction
+        await tx
           .delete(productDrafts)
           .where(eq(productDrafts.id, draft.id));
       }
-      
-      // Commit the transaction after everything is successful
-      await transaction.commit();
       
       logger.info('Successfully published product draft', { 
         draftId: id, 
@@ -5619,13 +5614,11 @@ export class DatabaseStorage implements IStorage {
         movedImagesCount: movedImageRecords.length
       });
       
+      // Return the product (transaction will be committed automatically)
       return product;
+      });
     } catch (error) {
-      // Roll back the transaction in case of any error
-      if (transaction) {
-        await transaction.rollback();
-      }
-      
+      // Transaction will be rolled back automatically on error
       logger.error('Error publishing product draft', { error, id });
       throw error;
     }
