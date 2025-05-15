@@ -99,16 +99,17 @@ export interface ProductDraft {
 export type ProductDraftStep = 'basic-info' | 'images' | 'additional-info' | 'attributes' | 'seo' | 'sales-promotions' | 'review';
 
 interface ProductWizardProps {
+  draftId?: number;
+  initialData?: ProductDraft;
   editMode?: boolean;
-  productId?: number;
 }
 
-export const ProductWizard: React.FC<ProductWizardProps> = ({ editMode = false, productId }) => {
+export const ProductWizard: React.FC<ProductWizardProps> = ({ draftId, initialData, editMode = false }) => {
   const { toast } = useToast();
   const [_, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const [currentStep, setCurrentStep] = useState<ProductDraftStep>('basic-info');
-  const [draftId, setDraftId] = useState<number | null>(null);
+  const [internalDraftId, setInternalDraftId] = useState<number | null>(draftId || null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isAutoAdvancing, setIsAutoAdvancing] = useState(false);
 
@@ -150,7 +151,7 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ editMode = false, 
     },
     onSuccess: (data) => {
       if (data.success && data.data && data.data.id) {
-        setDraftId(data.data.id);
+        setInternalDraftId(data.data.id);
         queryClient.invalidateQueries({ queryKey: ['/api/product-drafts', data.data.id] });
         toast({
           title: 'Draft Created',
@@ -352,7 +353,7 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ editMode = false, 
         metaKeywords: null,
         canonicalUrl: null,
         // System fields
-        originalProductId: productId || null,
+        originalProductId: null,
         catalogId: defaultCatalogId,
         supplierId: defaultSupplierId,
         completedSteps: [],
@@ -372,7 +373,7 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ editMode = false, 
       
       createDraftMutation.mutate(initialData);
     }
-  }, [draftId, editMode, productId, user, isLoadingUser, catalogsData, suppliersData, setLocation, toast]);
+  }, [internalDraftId, editMode, user, isLoadingUser, catalogsData, suppliersData, setLocation, toast]);
 
   // Handle step changes
   const handleStepChange = (step: string) => {
