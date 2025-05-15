@@ -4939,10 +4939,13 @@ export class DatabaseStorage implements IStorage {
           
         case 'images':
         case 1: // Handle numeric equivalent
-          // No field updates here as this is handled by updateProductDraftImages
+          // Most image updates are handled by updateProductDraftImages
+          // But ensure we properly handle any mainImageIndex that might be sent with this step
           updateData = {
             ...updateData,
-            ...draftData
+            mainImageIndex: draftData.mainImageIndex !== undefined ? draftData.mainImageIndex : existingDraft.mainImageIndex,
+            imageUrls: draftData.imageUrls || existingDraft.imageUrls,
+            imageObjectKeys: draftData.imageObjectKeys || existingDraft.imageObjectKeys
           };
           break;
           
@@ -4950,14 +4953,17 @@ export class DatabaseStorage implements IStorage {
         case 2: // Handle numeric equivalent
           updateData = {
             ...updateData,
-            weight: draftData.weight,
-            dimensions: draftData.dimensions,
-            attributes: draftData.attributes,
+            weight: draftData.weight !== undefined ? draftData.weight : existingDraft.weight,
+            dimensions: draftData.dimensions !== undefined ? draftData.dimensions : existingDraft.dimensions,
+            attributes: draftData.attributes !== undefined ? draftData.attributes : existingDraft.attributes,
             stockLevel: draftData.stockLevel !== undefined ? draftData.stockLevel : existingDraft.stockLevel,
             lowStockThreshold: draftData.lowStockThreshold !== undefined ? draftData.lowStockThreshold : existingDraft.lowStockThreshold,
             backorderEnabled: draftData.backorderEnabled !== undefined ? draftData.backorderEnabled : existingDraft.backorderEnabled,
             freeShipping: draftData.freeShipping !== undefined ? draftData.freeShipping : existingDraft.freeShipping,
-            shippingClass: draftData.shippingClass || existingDraft.shippingClass
+            shippingClass: draftData.shippingClass || existingDraft.shippingClass,
+            // Add any other additional info fields that might be on the form
+            sku: draftData.sku !== undefined ? draftData.sku : existingDraft.sku,
+            brand: draftData.brand !== undefined ? draftData.brand : existingDraft.brand
           };
           break;
           
@@ -4966,8 +4972,10 @@ export class DatabaseStorage implements IStorage {
           // For the new attributes step, specifically handling attributesData
           updateData = {
             ...updateData,
-            attributes: draftData.attributes || existingDraft.attributes,
-            attributesData: draftData.attributesData || existingDraft.attributesData
+            attributes: draftData.attributes !== undefined ? draftData.attributes : existingDraft.attributes,
+            attributesData: draftData.attributesData !== undefined ? draftData.attributesData : existingDraft.attributesData,
+            // Add any custom attribute toggles or flags
+            hasCustomAttributes: draftData.hasCustomAttributes !== undefined ? draftData.hasCustomAttributes : existingDraft.hasCustomAttributes
           };
           break;
           
@@ -4975,11 +4983,12 @@ export class DatabaseStorage implements IStorage {
         case 4: // Handle numeric equivalent
           updateData = {
             ...updateData,
-            metaTitle: draftData.metaTitle,
-            metaDescription: draftData.metaDescription,
-            metaKeywords: draftData.metaKeywords,
-            canonicalUrl: draftData.canonicalUrl,
-            hasAISeo: draftData.hasAISeo !== undefined ? draftData.hasAISeo : existingDraft.hasAISeo
+            metaTitle: draftData.metaTitle !== undefined ? draftData.metaTitle : existingDraft.metaTitle,
+            metaDescription: draftData.metaDescription !== undefined ? draftData.metaDescription : existingDraft.metaDescription,
+            metaKeywords: draftData.metaKeywords !== undefined ? draftData.metaKeywords : existingDraft.metaKeywords,
+            canonicalUrl: draftData.canonicalUrl !== undefined ? draftData.canonicalUrl : existingDraft.canonicalUrl,
+            hasAISeo: draftData.hasAISeo !== undefined ? draftData.hasAISeo : existingDraft.hasAISeo,
+            seoTags: draftData.seoTags !== undefined ? draftData.seoTags : existingDraft.seoTags
           };
           break;
           
@@ -4993,12 +5002,15 @@ export class DatabaseStorage implements IStorage {
             onSale: draftData.onSale !== undefined ? draftData.onSale : existingDraft.onSale,
             markupPercentage: draftData.markupPercentage !== undefined ? draftData.markupPercentage : existingDraft.markupPercentage,
             minimumPrice: draftData.minimumPrice !== undefined ? draftData.minimumPrice : existingDraft.minimumPrice,
-            discountLabel: draftData.discountLabel,
-            specialSaleText: draftData.specialSaleText,
-            specialSaleStart: draftData.specialSaleStart,
-            specialSaleEnd: draftData.specialSaleEnd,
+            discountLabel: draftData.discountLabel !== undefined ? draftData.discountLabel : existingDraft.discountLabel,
+            specialSaleText: draftData.specialSaleText !== undefined ? draftData.specialSaleText : existingDraft.specialSaleText,
+            specialSaleStart: draftData.specialSaleStart !== undefined ? draftData.specialSaleStart : existingDraft.specialSaleStart,
+            specialSaleEnd: draftData.specialSaleEnd !== undefined ? draftData.specialSaleEnd : existingDraft.specialSaleEnd,
             isFlashDeal: draftData.isFlashDeal !== undefined ? draftData.isFlashDeal : existingDraft.isFlashDeal,
-            flashDealEnd: draftData.flashDealEnd
+            flashDealEnd: draftData.flashDealEnd !== undefined ? draftData.flashDealEnd : existingDraft.flashDealEnd,
+            // Additional sales flags
+            hasSpecialSale: draftData.hasSpecialSale !== undefined ? draftData.hasSpecialSale : existingDraft.hasSpecialSale,
+            hasDynamicPricing: draftData.hasDynamicPricing !== undefined ? draftData.hasDynamicPricing : existingDraft.hasDynamicPricing
           };
           break;
           
@@ -5009,7 +5021,11 @@ export class DatabaseStorage implements IStorage {
             ...updateData,
             draftStatus: draftData.draftStatus || existingDraft.draftStatus,
             // If marked as 'ready', set the time for tracking purposes
-            ...(draftData.draftStatus === 'ready' && { publishedAt: new Date() })
+            ...(draftData.draftStatus === 'ready' && { publishedAt: new Date() }),
+            // Handle any additional review-specific fields
+            reviewNotes: draftData.reviewNotes !== undefined ? draftData.reviewNotes : existingDraft.reviewNotes,
+            reviewApprovedBy: draftData.reviewApprovedBy !== undefined ? draftData.reviewApprovedBy : existingDraft.reviewApprovedBy,
+            isApproved: draftData.isApproved !== undefined ? draftData.isApproved : existingDraft.isApproved
           };
           break;
           
