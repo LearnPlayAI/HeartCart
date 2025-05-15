@@ -5265,24 +5265,70 @@ export class DatabaseStorage implements IStorage {
         }
       }
       
-      // Save the images with proper filenames
+      // Process and move the images from draft location to final product location
       if (draft.imageObjectKeys && draft.imageObjectKeys.length > 0) {
+        // Get supplier and catalog info for image path construction
+        const supplier = draft.supplierId ? await this.getSupplier(draft.supplierId) : null;
+        const catalog = draft.catalogId ? await this.getCatalog(draft.catalogId) : null;
+        
+        // Get category for path construction (for more organized structure)
+        const category = draft.categoryId ? await this.getCategory(draft.categoryId) : null;
+        
         for (let i = 0; i < draft.imageObjectKeys.length; i++) {
-          const objectKey = draft.imageObjectKeys[i];
+          const sourceObjectKey = draft.imageObjectKeys[i];
           const imageUrl = draft.imageUrls?.[i];
           
-          if (!objectKey || !imageUrl) continue;
+          if (!sourceObjectKey || !imageUrl) continue;
           
-          // Save product image record
-          await db
-            .insert(productImages)
-            .values({
+          try {
+            // Move image from draft location to final product location
+            const { url: newImageUrl, objectKey: newObjectKey } = await objectStore.moveDraftImageToProduct(
+              sourceObjectKey,
+              product.id,
+              supplier?.name || 'unknown-supplier',
+              catalog?.name || 'unknown-catalog',
+              category?.name || 'unknown-category',
+              product.name || `product-${product.id}`,
+              i
+            );
+            
+            // Save product image record with updated locations
+            await db
+              .insert(productImages)
+              .values({
+                productId: product.id,
+                imageUrl: newImageUrl,
+                objectKey: newObjectKey,
+                isMainImage: i === (draft.mainImageIndex || 0),
+                sortOrder: i
+              });
+            
+            logger.debug('Moved product image from draft to final location', {
               productId: product.id,
-              imageUrl,
-              objectKey,
-              isMainImage: i === (draft.mainImageIndex || 0),
-              sortOrder: i
+              draftId: draft.id,
+              sourceKey: sourceObjectKey,
+              destinationKey: newObjectKey
             });
+          } catch (imageError) {
+            // If image move fails, still create the product but log the error
+            logger.error('Failed to move image from draft to product location', {
+              error: imageError,
+              productId: product.id, 
+              draftId: draft.id,
+              sourceKey: sourceObjectKey
+            });
+            
+            // Fallback to using original image locations
+            await db
+              .insert(productImages)
+              .values({
+                productId: product.id,
+                imageUrl,
+                objectKey: sourceObjectKey,
+                isMainImage: i === (draft.mainImageIndex || 0),
+                sortOrder: i
+              });
+          }
         }
       }
       
