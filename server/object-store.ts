@@ -755,9 +755,23 @@ class ObjectStoreService {
       if (!('err' in result) || !result.err) {
         if (result.value && Array.isArray(result.value)) {
           for (const obj of result.value) {
-            if (obj && typeof obj === 'object' && 'key' in obj) {
-              const key = obj.key as string;
-              keys.push(key);
+            if (obj && typeof obj === 'object') {
+              let objectKey = null;
+              
+              // Try key property first
+              if ('key' in obj && obj.key && typeof obj.key === 'string') {
+                objectKey = obj.key as string;
+                console.log(`Using key property: ${objectKey}`);
+              } 
+              // Then try name property 
+              else if ('name' in obj && obj.name && typeof obj.name === 'string') {
+                objectKey = obj.name as string;
+                console.log(`Using name property: ${objectKey}`);
+              }
+              
+              if (objectKey) {
+                keys.push(objectKey);
+              }
             }
           }
         }

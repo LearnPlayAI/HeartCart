@@ -5394,9 +5394,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.log("Parent list result:", JSON.stringify(result));
             if (result && result.value && Array.isArray(result.value)) {
               parentListFiles = result.value
-                .filter(obj => obj !== null && typeof obj === 'object' && obj.key)
+                .filter(obj => obj !== null && typeof obj === 'object')
                 .map(obj => {
-                  return obj.key || null;
+                  // Try both name and key fields
+                  let objectKey = null;
+                  if (obj.key && typeof obj.key === 'string') {
+                    objectKey = obj.key;
+                    console.log('Parent using key field:', objectKey);
+                  } else if (obj.name && typeof obj.name === 'string') {
+                    objectKey = obj.name;
+                    console.log('Parent using name field:', objectKey);
+                  }
+                  return objectKey;
                 })
                 .filter(key => key !== null && key.includes(`/${draftId}/`));
               logger.info(`TEST: Parent list found ${parentListFiles.length} matching files`);
@@ -5557,9 +5566,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         for (const item of result.value) {
           if (item && typeof item === 'object') {
             console.log('Raw item:', JSON.stringify(item));
-            const key = item.key;
-            if (key && typeof key === 'string') {
-              rawKeys.push(key);
+            // Try both name and key fields
+            let objectKey = null;
+            if (item.key && typeof item.key === 'string') {
+              objectKey = item.key;
+              console.log('Using key field:', objectKey);
+            } else if (item.name && typeof item.name === 'string') {
+              objectKey = item.name;
+              console.log('Using name field:', objectKey);
+            }
+            
+            if (objectKey) {
+              rawKeys.push(objectKey);
             }
           }
         }
