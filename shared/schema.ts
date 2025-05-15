@@ -518,7 +518,7 @@ export const suppliersRelations = relations(suppliers, ({ many }) => ({
 export const productDrafts = pgTable("product_drafts", {
   id: serial("id").primaryKey(),
   originalProductId: integer("original_product_id").references(() => products.id),
-  draftStatus: text("draft_status").default("draft").notNull(), // 'draft', 'review', 'ready'
+  draftStatus: text("draft_status").default("draft").notNull(), // 'draft', 'review', 'ready', 'published'
   createdBy: integer("created_by").references(() => users.id),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   lastModified: timestamp("last_modified", { withTimezone: true }).defaultNow().notNull(),
@@ -532,6 +532,7 @@ export const productDrafts = pgTable("product_drafts", {
   categoryId: integer("category_id").references(() => categories.id),
   isActive: boolean("is_active").default(true),
   isFeatured: boolean("is_featured").default(false),
+  catalogId: integer("catalog_id").references(() => catalogs.id),
   
   // Pricing information
   costPrice: decimal("cost_price", { precision: 10, scale: 2 }),
@@ -539,6 +540,7 @@ export const productDrafts = pgTable("product_drafts", {
   salePrice: decimal("sale_price", { precision: 10, scale: 2 }),
   onSale: boolean("on_sale").default(false),
   markupPercentage: integer("markup_percentage"),
+  minimumPrice: decimal("minimum_price", { precision: 10, scale: 2 }),
   
   // Images
   imageUrls: text("image_urls").array(),
@@ -552,6 +554,8 @@ export const productDrafts = pgTable("product_drafts", {
   
   // Attributes (stored as JSON)
   attributes: jsonb("attributes").default('[]'),
+  // Enhanced product attributes with structured format
+  attributesData: jsonb("attributes_data").default('[]'),
   
   // Supplier information
   supplierId: integer("supplier_id").references(() => suppliers.id),
@@ -576,13 +580,42 @@ export const productDrafts = pgTable("product_drafts", {
   metaTitle: text("meta_title"),
   metaDescription: text("meta_description"),
   metaKeywords: text("meta_keywords"),
+  canonicalUrl: text("canonical_url"),
+  
+  // Publication information
+  publishedAt: timestamp("published_at", { withTimezone: true }),
+  publishedVersion: integer("published_version").default(1),
+  
+  // AI-generated content flags
+  hasAIDescription: boolean("has_ai_description").default(false),
+  hasAISeo: boolean("has_ai_seo").default(false),
+  
+  // Shipping information
+  freeShipping: boolean("free_shipping").default(false),
+  shippingClass: text("shipping_class").default("standard"),
+  
+  // Detailed audit information
+  lastReviewer: integer("last_reviewer").references(() => users.id),
+  rejectionReason: text("rejection_reason"),
   
   // Wizard progress tracking
-  wizardProgress: jsonb("wizard_progress").default('{"basic-info": false, "images": false, "additional-info": false, "sales-promotions": false, "review": false}'),
+  wizardProgress: jsonb("wizard_progress").default('{"basic-info": false, "images": false, "additional-info": false, "attributes": false, "seo": false, "sales-promotions": false, "review": false}'),
+  
+  // Stores completed steps in the wizard
+  completedSteps: text("completed_steps").array(),
+  
+  // Version control
+  version: integer("version").default(1),
+  
+  // Change history
+  changeHistory: jsonb("change_history").default('[]'),
 }, (table) => {
   return {
     originalProductIdx: index("idx_product_drafts_original_product").on(table.originalProductId),
     statusIdx: index("idx_product_drafts_status").on(table.draftStatus),
+    categoryIdIdx: index("idx_product_drafts_category").on(table.categoryId),
+    supplierIdIdx: index("idx_product_drafts_supplier").on(table.supplierId),
+    catalogIdIdx: index("idx_product_drafts_catalog").on(table.catalogId),
   };
 });
 
@@ -593,8 +626,12 @@ export const insertProductDraftSchema = createInsertSchema(productDrafts, {
   specialSaleStart: z.coerce.date().optional().nullable(),
   specialSaleEnd: z.coerce.date().optional().nullable(),
   flashDealEnd: z.coerce.date().optional().nullable(),
+  publishedAt: z.coerce.date().optional().nullable(),
   wizardProgress: z.any().optional(),
   attributes: z.any().optional(),
+  attributesData: z.any().optional(),
+  completedSteps: z.array(z.string()).optional(),
+  changeHistory: z.any().optional(),
 }).omit({ 
   id: true 
 });

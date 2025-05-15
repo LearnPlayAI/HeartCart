@@ -49,51 +49,123 @@ const STEP_MAP = {
 
 export interface ProductDraft {
   id?: number;
+  // Basic product information
   name: string;
   description: string | null;
   slug: string;
+  sku: string | null;
+  brand: string | null;
   categoryId: number | null;
   category?: {
     id: number;
     name: string;
     slug: string;
   } | null;
+  isActive: boolean;
+  isFeatured: boolean;
+  catalogId: number | null;
+  
+  // Pricing information
   regularPrice: number | null;
   salePrice: number | null;
   costPrice: number | null;
   onSale: boolean;
+  markupPercentage: number | null;
+  minimumPrice: number | null;
+  
+  // Images
+  imageUrls: string[];
+  imageObjectKeys: string[];
+  mainImageIndex: number;
+  
+  // Inventory
   stockLevel: number | null;
-  isActive: boolean;
-  isFeatured: boolean;
+  lowStockThreshold: number | null;
+  backorderEnabled: boolean;
+  
+  // Attributes
   attributes: Array<{
     attributeId: number;
     value: string | string[] | null;
   }>;
-  imageUrls: string[];
-  imageObjectKeys: string[];
-  mainImageIndex: number;
+  attributesData?: Array<{
+    attributeId: number;
+    attributeName: string;
+    displayName: string;
+    attributeType: string;
+    isRequired: boolean;
+    options?: Array<{
+      id: number;
+      value: string;
+      displayValue: string;
+      metadata?: any;
+    }>;
+    selectedOptions?: number[]; 
+    textValue?: string | null;
+  }>;
+  
+  // Supplier information
+  supplierId: number | null;
+  
+  // Physical properties
+  weight: string | null;
+  dimensions: string | null;
+  
+  // Promotions
   discountLabel: string | null;
   specialSaleText: string | null;
   specialSaleStart: Date | null;
   specialSaleEnd: Date | null;
   isFlashDeal: boolean;
   flashDealEnd: Date | null;
-  dimensions: string | null;
-  weight: string | null;
-  // SEO fields
+  
+  // Tax information
+  taxable: boolean;
+  taxClass: string;
+  
+  // SEO metadata
   metaTitle: string | null;
   metaDescription: string | null;
   metaKeywords: string | null;
   canonicalUrl: string | null;
+  
+  // Publication information
+  publishedAt?: Date | null;
+  publishedVersion?: number;
+  
+  // AI-generated content flags
+  hasAIDescription?: boolean;
+  hasAISeo?: boolean;
+  
+  // Shipping information
+  freeShipping?: boolean;
+  shippingClass?: string;
+  
   // System fields
   originalProductId: number | null;
   createdBy: number;
+  createdAt?: Date;
   draftStatus: string;
   lastModified: Date;
   completedSteps: string[];
   wizardProgress: Record<string, boolean>;
-  catalogId: number | null;
-  supplierId: number | null;
+  
+  // Detailed audit information
+  lastReviewer?: number | null;
+  rejectionReason?: string | null;
+  
+  // Version control
+  version?: number;
+  
+  // Change history
+  changeHistory?: Array<{
+    timestamp: Date;
+    userId: number;
+    fields: string[];
+    changedFrom: any;
+    changedTo: any;
+    notes?: string;
+  }>;
 }
 
 export type ProductDraftStep = 'basic-info' | 'images' | 'additional-info' | 'attributes' | 'seo' | 'sales-promotions' | 'review';
