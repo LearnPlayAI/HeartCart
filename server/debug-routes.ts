@@ -151,4 +151,91 @@ router.get('/debug/cleanup-all-drafts', async (req: Request, res: Response) => {
   }
 });
 
+// Force cleanup of a specific draft folder, even if draft no longer exists
+router.get('/real-debug/force-cleanup-draft-folder/:draftId', async (req: Request, res: Response) => {
+  // Set headers to ensure this is treated as JSON
+  res.setHeader('Content-Type', 'application/json');
+  
+  const draftId = parseInt(req.params.draftId);
+  if (isNaN(draftId)) {
+    return res.status(400).json({ 
+      success: false, 
+      error: 'Invalid draft ID' 
+    });
+  }
+  
+  logger.info(`DEBUG: Force cleaning up folder for deleted draft ${draftId}`);
+  
+  try {
+    const draftPrefix = `drafts/${draftId}/`;
+    const results = {
+      deletedFiles: [] as string[],
+      failedFiles: [] as string[]
+    };
+    
+    // Get direct listing of all files using raw object store client
+    const rawResult = await objectStore.getClient().list("");
+    
+    if ('err' in rawResult || !rawResult.value || !Array.isArray(rawResult.value)) {
+      return res.status(500).json({
+        success: false,
+        error: `Error listing files: ${
+          'err' in rawResult ? JSON.stringify(rawResult.err) : 'Unknown error'
+        }`
+      });
+    }
+    
+    // Find files with the draft prefix
+    for (const obj of rawResult.value) {
+      if (obj && typeof obj === 'object') {
+        let objectKey = null;
+        
+        // Try to extract the key/name property
+        if ('key' in obj && obj.key && typeof obj.key === 'string') {
+          objectKey = obj.key;
+        } else if ('name' in obj && obj.name && typeof obj.name === 'string') {
+          objectKey = obj.name;
+        }
+        
+        // If we found a key that matches our draft prefix
+        if (objectKey && objectKey.startsWith(draftPrefix)) {
+          logger.info(`Found file to delete: ${objectKey}`);
+          
+          try {
+            await objectStore.deleteFile(objectKey);
+            const stillExists = await objectStore.exists(objectKey);
+            
+            if (!stillExists) {
+              logger.info(`Successfully deleted file: ${objectKey}`);
+              results.deletedFiles.push(objectKey);
+            } else {
+              logger.error(`Failed to delete file: ${objectKey}`);
+              results.failedFiles.push(objectKey);
+            }
+          } catch (error) {
+            logger.error(`Error deleting file ${objectKey}:`, { 
+              error: error instanceof Error ? error.message : String(error) 
+            });
+            results.failedFiles.push(objectKey);
+          }
+        }
+      }
+    }
+    
+    return res.json({
+      success: true,
+      draftId,
+      results
+    });
+  } catch (error) {
+    logger.error(`Error in force cleanup for draft ${draftId}:`, { 
+      error: error instanceof Error ? error.message : String(error) 
+    });
+    return res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
+
 export default router;
