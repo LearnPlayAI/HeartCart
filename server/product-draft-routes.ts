@@ -710,18 +710,29 @@ export default function registerProductDraftRoutes(router: Router) {
         }
       }
       
-      // Update the draft status
-      const updatedDraft = await storage.updateProductDraftStatus(draftId, status, note);
-      
-      // Log the status change
-      logger.info(`Product draft status updated`, {
-        draftId,
-        oldStatus: draft.draftStatus,
-        newStatus: status,
-        updatedBy: req.user?.id
-      });
-      
-      sendSuccess(res, updatedDraft);
+      try {
+        // Update the draft status
+        const updatedDraft = await storage.updateProductDraftStatus(draftId, status, note);
+        
+        // Log the status change
+        logger.info(`Product draft status updated`, {
+          draftId,
+          oldStatus: draft.draftStatus,
+          newStatus: status,
+          updatedBy: req.user?.id
+        });
+        
+        sendSuccess(res, updatedDraft);
+      } catch (error) {
+        logger.error(`Error updating product draft status in route handler`, {
+          error,
+          draftId,
+          status,
+          errorName: error.name,
+          errorMessage: error.message
+        });
+        throw error;
+      }
     })
   );
 }

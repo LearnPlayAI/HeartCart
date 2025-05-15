@@ -5738,7 +5738,8 @@ export class DatabaseStorage implements IStorage {
         throw new Error(`Product draft with ID ${id} not found`);
       }
       
-      // Prepare the update data
+      // Prepare the update data - Format date as text string in SAST timezone format
+      // Using the proper string format (YYYY-MM-DDTHH:mm:ss.sssZ) for consistency
       const now = new Date().toISOString();
       const updateData: Partial<ProductDraft> = {
         draftStatus: status,
@@ -5768,20 +5769,46 @@ export class DatabaseStorage implements IStorage {
         }
       }
       
+      // Add debugging info to help diagnose issues
+      logger.debug('Updating product draft status with data', { 
+        draftId: id, 
+        status, 
+        updateData,
+        lastModifiedType: typeof updateData.lastModified
+      });
+      
       // Update the database record
-      const [updatedDraft] = await db
-        .update(productDrafts)
-        .set(updateData)
-        .where(eq(productDrafts.id, id))
-        .returning();
-      
-      if (!updatedDraft) {
-        throw new Error(`Failed to update status for draft ${id}`);
+      try {
+        const [updatedDraft] = await db
+          .update(productDrafts)
+          .set(updateData)
+          .where(eq(productDrafts.id, id))
+          .returning();
+        
+        if (!updatedDraft) {
+          throw new Error(`Failed to update status for draft ${id}`);
+        }
+        
+        return updatedDraft;
+      } catch (dbError) {
+        // More detailed error for database operations
+        logger.error('Database error when updating product draft status', { 
+          error: dbError, 
+          id, 
+          status,
+          errorName: dbError.name,
+          errorMessage: dbError.message
+        });
+        throw dbError;
       }
-      
-      return updatedDraft;
     } catch (error) {
-      logger.error('Error updating product draft status', { error, id, status });
+      logger.error('Error updating product draft status', { 
+        error, 
+        id, 
+        status,
+        errorName: error.name,
+        errorMessage: error.message 
+      });
       throw error;
     }
   }
