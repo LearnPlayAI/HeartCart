@@ -56,8 +56,8 @@ export default function registerProductDraftRoutes(router: Router) {
       const productId = parseInt(req.params.productId);
       
       try {
-        // Create a draft from an existing product
-        const draft = await storage.createDraftFromProduct(productId);
+        // Create a draft from an existing product and associate it with the current user
+        const draft = await storage.createDraftFromProduct(productId, userId);
         
         if (!draft) {
           throw new NotFoundError(`Failed to create draft from product ${productId}`);

@@ -41,6 +41,7 @@ export interface IStorage {
   getUserProductDrafts(userId: number, catalogId?: number): Promise<any[]>;
   deleteProductDraft(userId: number, draftId: string | number): Promise<boolean>;
   publishProductDraft(userId: number, draftId: string | number): Promise<any>;
+  createDraftFromProduct(productId: number, userId?: number): Promise<ProductDraft | undefined>;
   
   // API Testing support methods
   getProductWithSlug(): Promise<Product | undefined>;
@@ -5634,7 +5635,7 @@ export class DatabaseStorage implements IStorage {
    * Creates a new draft from an existing product for editing
    * This function sets up a draft with all the product data for the edit workflow
    */
-  async createDraftFromProduct(productId: number): Promise<ProductDraft | undefined> {
+  async createDraftFromProduct(productId: number, userId?: number): Promise<ProductDraft | undefined> {
     let transaction;
     try {
       // Begin transaction for atomicity
@@ -5657,6 +5658,7 @@ export class DatabaseStorage implements IStorage {
       const draftData: Partial<InsertProductDraft> = {
         name: product.name,
         slug: product.slug,
+        createdBy: userId || 0, // Use provided userId or default to 0 (system)
         description: product.description,
         // Map the product price fields to draft price fields
         regularPrice: product.price,
