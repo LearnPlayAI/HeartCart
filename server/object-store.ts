@@ -599,25 +599,67 @@ class ObjectStoreService {
     await this.initialize();
     
     try {
+      // Normalize the key (remove leading/trailing spaces)
+      const normalizedKey = objectKey.trim();
+      if (normalizedKey !== objectKey) {
+        console.log(`Normalized object key for deletion: ${normalizedKey} (original: ${objectKey})`);
+      }
+      
       // First check if file exists
-      const exists = await this.exists(objectKey);
+      const exists = await this.exists(normalizedKey);
       if (!exists) {
-        console.log(`File does not exist, skipping delete: ${objectKey}`);
+        console.log(`File does not exist, skipping delete: ${normalizedKey}`);
         return;
       }
       
-      console.log(`File exists, attempting to delete: ${objectKey}`);
-      const result = await this.objectStore.delete(objectKey);
-      console.log(`Delete result:`, result);
+      console.log(`File exists, attempting to delete: ${normalizedKey}`);
       
-      if ('err' in result && result.err) {
-        console.error(`Error deleting ${objectKey}:`, result.err);
-        const errorMessage = typeof result.err === 'object' ? 
-          JSON.stringify(result.err) : String(result.err);
-        throw new Error(`Failed to delete file: ${errorMessage}`);
+      // Implement retry logic for deletions (up to 3 attempts)
+      let deleteSuccess = false;
+      let attempts = 0;
+      const maxAttempts = 3;
+      let lastError: unknown = null;
+      
+      while (!deleteSuccess && attempts < maxAttempts) {
+        attempts++;
+        try {
+          const result = await this.objectStore.delete(normalizedKey);
+          console.log(`Delete attempt ${attempts} result:`, result);
+          
+          if ('err' in result && result.err) {
+            console.error(`Error in delete attempt ${attempts} for ${normalizedKey}:`, result.err);
+            lastError = result.err;
+            // Wait before retrying
+            await new Promise(resolve => setTimeout(resolve, 500));
+          } else {
+            deleteSuccess = true;
+            console.log(`Successfully deleted file on attempt ${attempts}: ${normalizedKey}`);
+            
+            // Verify the file is actually gone
+            const stillExists = await this.exists(normalizedKey);
+            if (stillExists) {
+              console.warn(`File appears to still exist after deletion: ${normalizedKey}`);
+              deleteSuccess = false;
+              lastError = new Error("File still exists after delete operation");
+              await new Promise(resolve => setTimeout(resolve, 1000)); // Wait longer before retrying
+            }
+          }
+        } catch (attemptError) {
+          console.error(`Exception in delete attempt ${attempts} for ${normalizedKey}:`, attemptError);
+          lastError = attemptError;
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
       }
       
-      console.log(`Successfully deleted file: ${objectKey}`);
+      // If all attempts failed, throw an error
+      if (!deleteSuccess) {
+        const errorMessage = lastError instanceof Error ? lastError.message : 
+                           typeof lastError === 'object' && lastError !== null ? 
+                           JSON.stringify(lastError) : String(lastError);
+        throw new Error(`Failed to delete file after ${maxAttempts} attempts: ${errorMessage}`);
+      }
+      
+      console.log(`Successfully deleted file: ${normalizedKey}`);
     } catch (error) {
       console.error(`Failed to delete ${objectKey}:`, error);
       // Don't throw the error, just log it - we want the delete draft operation to succeed
