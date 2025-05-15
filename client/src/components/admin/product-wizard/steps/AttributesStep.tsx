@@ -763,13 +763,31 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
                 <SelectValue placeholder={`Select ${attribute.displayName.toLowerCase()}`} />
               </SelectTrigger>
               <SelectContent>
-                {attribute.options && Array.isArray(attribute.options) ? 
+                {attribute.options && Array.isArray(attribute.options) && attribute.options.length > 0 ? 
                   attribute.options.map((option) => (
                     <SelectItem key={option.id} value={option.id.toString()}>
                       {option.displayValue}
                     </SelectItem>
                   ))
-                : <SelectItem value="no-options">No options available</SelectItem>}
+                : (
+                  <>
+                    <div className="p-2 text-sm text-muted-foreground">No options available</div>
+                    <div className="p-2 pt-0">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="w-full" 
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleAddAttributeOption(attribute.id);
+                        }}
+                      >
+                        <Plus className="mr-1 h-3 w-3" /> Add Option
+                      </Button>
+                    </div>
+                  </>
+                )}
               </SelectContent>
             </Select>
             {hasError && (
@@ -861,7 +879,7 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
               </TooltipProvider>
             </div>
             <div className="flex flex-wrap gap-3 mb-3">
-              {attribute.options && Array.isArray(attribute.options) ? 
+              {attribute.options && Array.isArray(attribute.options) && attribute.options.length > 0 ? 
                 attribute.options.map((option) => {
                   const colorCode = option.metadata?.colorCode || '#CCCCCC';
                   const isSelected = selectedOptions.includes(option.id);
