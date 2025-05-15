@@ -114,10 +114,11 @@ export interface ProductDraft {
   // Promotions
   discountLabel: string | null;
   specialSaleText: string | null;
-  specialSaleStart: Date | null;
-  specialSaleEnd: Date | null;
+  // Store dates as strings for SAST timezone correctness (not as Date objects)
+  specialSaleStart: string | null;
+  specialSaleEnd: string | null;
   isFlashDeal: boolean;
-  flashDealEnd: Date | null;
+  flashDealEnd: string | null;
   
   // Tax information
   taxable: boolean;

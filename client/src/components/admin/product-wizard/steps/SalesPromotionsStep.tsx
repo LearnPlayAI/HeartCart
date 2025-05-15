@@ -127,7 +127,24 @@ export const SalesPromotionsStep: React.FC<SalesPromotionsStepProps> = ({
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setSaving(true);
     try {
-      // Convert dates for API - the ProductDraft interface expects Date objects
+      // Format dates as strings in SAST timezone for South Africa (UTC+2)
+      // This ensures dates are saved as text strings to preserve the correct timezone
+      const formatDateToSASTString = (date: Date | null): string | null => {
+        if (!date) return null;
+        
+        // Create a formatter that outputs dates in SA timezone
+        // Format: YYYY-MM-DD HH:MM:SS (local SAST time)
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const seconds = String(date.getSeconds()).padStart(2, '0');
+        
+        return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+      };
+      
+      // Convert dates to SAST text strings for South Africa
       const formattedValues: Partial<ProductDraft> = {
         ...values,
         // When onSale is false, explicitly set salePrice and discountLabel to null when saving
@@ -135,10 +152,10 @@ export const SalesPromotionsStep: React.FC<SalesPromotionsStepProps> = ({
           salePrice: null,
           discountLabel: null
         }),
-        // These are stored as Date objects in the ProductDraft interface but serialized to ISO strings in the API
-        specialSaleStart: values.specialSaleStart || null,
-        specialSaleEnd: values.specialSaleEnd || null,
-        flashDealEnd: values.flashDealEnd || null
+        // Convert date objects to text strings in SAST format
+        specialSaleStart: formatDateToSASTString(values.specialSaleStart),
+        specialSaleEnd: formatDateToSASTString(values.specialSaleEnd),
+        flashDealEnd: formatDateToSASTString(values.flashDealEnd)
       };
       
       // Add debugging logs to see what's being sent

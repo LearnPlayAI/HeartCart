@@ -4994,6 +4994,7 @@ export class DatabaseStorage implements IStorage {
           
         case 'sales-promotions':
         case 5: // Handle numeric equivalent
+          // For sales promotions step, ensure date fields are stored as strings
           updateData = {
             ...updateData,
             costPrice: draftData.costPrice !== undefined ? draftData.costPrice : existingDraft.costPrice,
@@ -5004,14 +5005,49 @@ export class DatabaseStorage implements IStorage {
             minimumPrice: draftData.minimumPrice !== undefined ? draftData.minimumPrice : existingDraft.minimumPrice,
             discountLabel: draftData.discountLabel !== undefined ? draftData.discountLabel : existingDraft.discountLabel,
             specialSaleText: draftData.specialSaleText !== undefined ? draftData.specialSaleText : existingDraft.specialSaleText,
-            specialSaleStart: draftData.specialSaleStart !== undefined ? draftData.specialSaleStart : existingDraft.specialSaleStart,
-            specialSaleEnd: draftData.specialSaleEnd !== undefined ? draftData.specialSaleEnd : existingDraft.specialSaleEnd,
+            
+            // Store dates as strings for SAST timezone correctness (not as Date objects)
+            specialSaleStart: draftData.specialSaleStart !== undefined 
+              ? (typeof draftData.specialSaleStart === 'string' 
+                  ? draftData.specialSaleStart 
+                  : (draftData.specialSaleStart ? draftData.specialSaleStart.toString() : null))
+              : existingDraft.specialSaleStart,
+              
+            specialSaleEnd: draftData.specialSaleEnd !== undefined 
+              ? (typeof draftData.specialSaleEnd === 'string' 
+                  ? draftData.specialSaleEnd 
+                  : (draftData.specialSaleEnd ? draftData.specialSaleEnd.toString() : null))
+              : existingDraft.specialSaleEnd,
+              
             isFlashDeal: draftData.isFlashDeal !== undefined ? draftData.isFlashDeal : existingDraft.isFlashDeal,
-            flashDealEnd: draftData.flashDealEnd !== undefined ? draftData.flashDealEnd : existingDraft.flashDealEnd,
+            
+            flashDealEnd: draftData.flashDealEnd !== undefined 
+              ? (typeof draftData.flashDealEnd === 'string' 
+                  ? draftData.flashDealEnd 
+                  : (draftData.flashDealEnd ? draftData.flashDealEnd.toString() : null))
+              : existingDraft.flashDealEnd,
+              
             // Additional sales flags
             hasSpecialSale: draftData.hasSpecialSale !== undefined ? draftData.hasSpecialSale : existingDraft.hasSpecialSale,
             hasDynamicPricing: draftData.hasDynamicPricing !== undefined ? draftData.hasDynamicPricing : existingDraft.hasDynamicPricing
           };
+          
+          // Add debug logging
+          logger.debug(`Sales promotions step update:`, {
+            step: step,
+            draftId: id,
+            data: {
+              salePrice: updateData.salePrice,
+              onSale: updateData.onSale,
+              discountLabel: updateData.discountLabel,
+              specialSaleText: updateData.specialSaleText,
+              specialSaleStart: updateData.specialSaleStart,
+              specialSaleEnd: updateData.specialSaleEnd,
+              isFlashDeal: updateData.isFlashDeal,
+              flashDealEnd: updateData.flashDealEnd
+            }
+          });
+          
           break;
           
         case 'review':
