@@ -97,20 +97,9 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
       });
       
       if (response.ok) {
-        console.log("Successfully created option");
-        
-        // Refetch the options for this attribute
-        console.log("Refetching options after creation");
-        
-        // We no longer need to manually fetch options - we'll use React Query invalidation instead
-        
-        // Invalidate the options query
-        queryClient.invalidateQueries({ 
-          queryKey: ['/api/attributes', String(currentAttributeId), 'options'] 
-        });
-        
-        // Also invalidate the main attributes query to update the options in the attributes list
-        queryClient.invalidateQueries({ queryKey: ['/api/attributes'] });
+        const result = await response.json();
+        const newOption = result.data;
+        console.log("Successfully created option:", newOption);
         
         // Reset form and close dialog
         setNewOptionData({
@@ -127,17 +116,39 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
           variant: "default"
         });
         
-        // Invalidate attribute queries to trigger a refetch
+        // Update the local options map immediately for a faster UI update
+        setLoadedOptionsMap(prevMap => {
+          const currentOptions = prevMap[currentAttributeId] || [];
+          return {
+            ...prevMap,
+            [currentAttributeId]: [...currentOptions, newOption]
+          };
+        });
+        
+        // Also update the attribute in the attributes array
+        if (attributesData?.success && attributesData.data) {
+          const updatedAttributes = [...attributesData.data];
+          const attrIndex = updatedAttributes.findIndex(a => a.id === currentAttributeId);
+          
+          if (attrIndex !== -1) {
+            updatedAttributes[attrIndex] = {
+              ...updatedAttributes[attrIndex],
+              options: [
+                ...(updatedAttributes[attrIndex].options || []),
+                newOption
+              ]
+            };
+          }
+        }
+        
+        // Invalidate all related queries to ensure data consistency
         queryClient.invalidateQueries({ queryKey: ['/api/attributes'] });
         
-        // Also invalidate specific attribute and options queries
         if (currentAttributeId) {
-          // Invalidate the specific attribute query
           queryClient.invalidateQueries({ 
             queryKey: ['/api/attributes', currentAttributeId.toString()]
           });
           
-          // Invalidate the options for this attribute
           queryClient.invalidateQueries({ 
             queryKey: ['/api/attributes', currentAttributeId.toString(), 'options']
           });
@@ -286,6 +297,26 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
   // Get the query client for cache invalidation
   const queryClient = useQueryClient();
   
+  // Function to fetch options for a specific attribute
+  const fetchAttributeOptions = async (attributeId: number) => {
+    try {
+      console.log(`Fetching options for attribute ID: ${attributeId}`);
+      const response = await fetch(`/api/attributes/${attributeId}/options`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch options: ${response.statusText}`);
+      }
+      const data = await response.json();
+      console.log('Options response:', data);
+      if (data.success && data.data) {
+        return data.data;
+      }
+      return [];
+    } catch (err) {
+      console.error('Error fetching options:', err);
+      return [];
+    }
+  };
+  
   // Fetch all attributes
   const { data: attributesData, isLoading: isLoadingAttributes } = useQuery({
     queryKey: ['/api/attributes'],
@@ -354,7 +385,39 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
     }
   }, [draft.attributes, draft.attributesData]);
 
-  // Get all attributes from the API data
+  // Create a custom hook to load attribute options
+  const useAttributeOptions = (attributeId: number) => {
+    return useQuery({
+      queryKey: ['/api/attributes', attributeId, 'options'],
+      queryFn: () => fetchAttributeOptions(attributeId),
+      enabled: !!attributeId,
+    });
+  };
+  
+  // Keep track of loaded attribute options
+  const [loadedOptionsMap, setLoadedOptionsMap] = useState<Record<number, AttributeOption[]>>({});
+  
+  // Load options for visible attributes if they don't already have options
+  useEffect(() => {
+    if (!attributesData?.success) return;
+    
+    const attributes = attributesData.data || [];
+    
+    // Load options for attributes that don't have them
+    attributes.forEach(async (attr: Attribute) => {
+      if ((!attr.options || attr.options.length === 0) && attr.attributeType !== 'text' && attr.attributeType !== 'number') {
+        console.log(`Preloading options for attribute: ${attr.displayName} (${attr.id})`);
+        const options = await fetchAttributeOptions(attr.id);
+        
+        setLoadedOptionsMap(prevMap => ({
+          ...prevMap,
+          [attr.id]: options
+        }));
+      }
+    });
+  }, [attributesData]);
+
+  // Get all attributes from the API data with loaded options
   const getAllAttributes = (): Attribute[] => {
     if (!attributesData?.success) return [];
     
@@ -385,7 +448,16 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
       );
     }
     
-    return filteredAttrs;
+    // Add loaded options to attributes if available
+    return filteredAttrs.map((attr: Attribute) => {
+      if (loadedOptionsMap[attr.id] && (!attr.options || attr.options.length === 0)) {
+        return {
+          ...attr,
+          options: loadedOptionsMap[attr.id]
+        };
+      }
+      return attr;
+    });
   };
 
   // Handle attribute value changes
@@ -948,16 +1020,23 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
                 <SelectValue placeholder={`Add ${attribute.displayName.toLowerCase()}`} />
               </SelectTrigger>
               <SelectContent>
-                {attribute.options && Array.isArray(attribute.options) ? 
-                  attribute.options
-                    .filter(option => !selectedOptions.includes(option.id))
-                    .map((option) => (
-                      <SelectItem key={option.id} value={option.id.toString()}>
-                        {option.displayValue}
-                      </SelectItem>
-                    ))
-                  : <SelectItem value="no-options">No options available</SelectItem>
-                }
+                {(() => {
+                  // First check if we have options loaded in our local map
+                  const options = loadedOptionsMap[attribute.id] || 
+                    (attribute.options && Array.isArray(attribute.options) ? attribute.options : []);
+                  
+                  if (options.length > 0) {
+                    return options
+                      .filter(option => !selectedOptions.includes(option.id))
+                      .map((option) => (
+                        <SelectItem key={option.id} value={option.id.toString()}>
+                          {option.displayValue}
+                        </SelectItem>
+                      ));
+                  } else {
+                    return <SelectItem value="no-options">No options available</SelectItem>;
+                  }
+                })()}
               </SelectContent>
             </Select>
             {hasError && (
