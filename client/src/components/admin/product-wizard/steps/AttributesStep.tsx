@@ -139,33 +139,30 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
 
   // Load attribute options directly, not as a hook
   const loadAttributeOptions = (attributeId: number) => {
-    // Check if we need to load options - only return early if we have non-empty options array
-    if (!attributeId || (attributesCache[attributeId]?.options && attributesCache[attributeId]?.options.length > 0)) {
+    // MANUAL REFRESH IMPLEMENTATION:
+    // This function is now disabled for automatic loading. Instead, users must use
+    // the manual refresh button we added to load options.
+    
+    // Only do initial loading if the attribute options aren't loaded at all
+    if (!attributeId || attributesCache[attributeId]?.options) {
+      // If we already have any options array (even empty), don't auto-load
       return;
     }
     
+    // For first-time initialization only, we'll set an empty array
+    // This prevents repeated loading attempts while still allowing manual refresh
+    setAttributesCache(prev => ({
+      ...prev,
+      [attributeId]: {
+        ...prev[attributeId],
+        options: [] // Initialize with empty array to prevent auto-loading
+      }
+    }));
+    
+    // Log that automatic loading is disabled
     const attribute = getAllAttributes().find(a => a.id === attributeId);
     if (attribute) {
-      console.log(`Preloading options for attribute: ${attribute.displayName} (${attributeId})`);
-      
-      // Manual fetch instead of using a hook
-      apiRequest('GET', `/api/attributes/${attributeId}/options`)
-        .then(res => res.json())
-        .then(data => {
-          console.log(`Received options for ${attribute.displayName}:`, data);
-          if (data?.success && data?.data) {
-            setAttributesCache(prev => ({
-              ...prev,
-              [attributeId]: {
-                ...prev[attributeId],
-                options: data.data
-              }
-            }));
-          }
-        })
-        .catch(error => {
-          console.error(`Error fetching options for attribute ${attributeId}:`, error);
-        });
+      console.log(`Auto-loading disabled for ${attribute.displayName}. Use refresh button instead.`);
     }
   };
 
