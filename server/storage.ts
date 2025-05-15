@@ -5369,7 +5369,7 @@ export class DatabaseStorage implements IStorage {
         isFeatured: draft.isFeatured || false,
         
         // Product attributes and specifications
-        supplier: draft.supplierId ? (await this.getSupplier(draft.supplierId))?.name : null,
+        supplier: draft.supplier || 'Unknown Supplier',
         brand: draft.brand,
         weight: draft.weight ? parseFloat(String(draft.weight)) : null,
         dimensions: draft.dimensions,
@@ -5489,16 +5489,25 @@ export class DatabaseStorage implements IStorage {
       }
       
       // Process and move the images from draft location to final product location
-      if (draft.imageObjectKeys && draft.imageObjectKeys.length > 0) {
-        // Get supplier and catalog info for image path construction
-        const supplier = draft.supplierId ? await this.getSupplier(draft.supplierId) : null;
-        const catalog = draft.catalogId ? await this.getCatalog(draft.catalogId) : null;
+      if (draft.imageUrls && draft.imageUrls.length > 0) {
+        // Extract image object keys from image URLs if not available
+        const imageObjectKeys = draft.imageUrls.map(url => {
+          const urlParts = url.split('/');
+          // Format: /api/files/drafts/{draftId}/filename.jpg
+          const draftIndex = urlParts.indexOf('drafts');
+          if (draftIndex !== -1 && draftIndex + 1 < urlParts.length) {
+            return `drafts/${urlParts[draftIndex + 1]}/${urlParts[urlParts.length - 1]}`;
+          }
+          return null;
+        }).filter(Boolean) as string[];
         
-        // Get category for path construction (for more organized structure)
-        const category = draft.categoryId ? await this.getCategory(draft.categoryId) : null;
+        // Use draft data directly for path construction
+        const supplierName = draft.supplier || 'unknown-supplier';
+        const catalogName = `catalog-${draft.catalogId || 0}`;
+        const categoryName = `category-${draft.categoryId || 0}`;
         
-        for (let i = 0; i < draft.imageObjectKeys.length; i++) {
-          const sourceObjectKey = draft.imageObjectKeys[i];
+        for (let i = 0; i < imageObjectKeys.length; i++) {
+          const sourceObjectKey = imageObjectKeys[i];
           const imageUrl = draft.imageUrls?.[i];
           
           if (!sourceObjectKey || !imageUrl) continue;
@@ -5508,9 +5517,9 @@ export class DatabaseStorage implements IStorage {
             const { url: newImageUrl, objectKey: newObjectKey } = await objectStore.moveDraftImageToProduct(
               sourceObjectKey,
               product.id,
-              supplier?.name || 'unknown-supplier',
-              catalog?.name || 'unknown-catalog',
-              category?.name || 'unknown-category',
+              supplierName,
+              catalogName,
+              categoryName,
               product.name || `product-${product.id}`,
               i
             );
