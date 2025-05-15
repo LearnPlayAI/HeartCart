@@ -7,6 +7,7 @@ import { Router, Request, Response } from 'express';
 import { logger } from './logger';
 import { objectStore } from './object-store';
 import { storage } from './storage';
+import { cleanupOrphanedDraftImages, cleanupAllOrphanedDraftImages } from './clean-orphaned-images';
 
 const router = Router();
 
@@ -85,81 +86,67 @@ router.get('/debug/cleanup-draft/:draftId', async (req: Request, res: Response) 
     });
   }
   
-  logger.info(`DEBUG: Cleaning up orphaned images for draft ${draftId}`);
+  logger.info(`DEBUG: Cleaning up orphaned images for draft ${draftId} using enhanced method`);
   
   try {
-    // Step 1: Get the draft record to see what images should be there
+    // Use our enhanced cleanup function
+    const result = await cleanupOrphanedDraftImages(draftId);
+    
+    // Get details about the draft for context
     const draft = await storage.getProductDraft(draftId);
-    if (!draft) {
-      return res.status(404).json({ 
-        success: false, 
-        error: `Draft ${draftId} not found` 
-      });
-    }
-
-    // Step 2: Get all tracked images from the database
-    const trackedObjectKeys = draft.imageObjectKeys || [];
+    const trackedObjectKeys = draft?.imageObjectKeys || [];
     
-    // Step 3: List all files in the draft folder
-    const draftPrefix = `drafts/${draftId}/`;
-    const allDraftFiles = await objectStore.listFiles(draftPrefix);
+    // Get all possible files for this draft (post-cleanup)
+    const allDraftFiles = await objectStore.listFiles(`drafts/${draftId}/`);
     
-    // Step 4: Find orphaned files
-    const orphanedFiles = allDraftFiles.filter(file => 
-      !trackedObjectKeys.includes(file)
-    );
-    
-    const results = {
-      draftId,
-      trackedImages: {
-        count: trackedObjectKeys.length,
-        files: trackedObjectKeys
-      },
-      actualImages: {
-        count: allDraftFiles.length,
-        files: allDraftFiles
-      },
-      orphanedImages: {
-        count: orphanedFiles.length,
-        files: orphanedFiles
-      }
-    };
-    
-    // Step 5: Attempt to delete each orphaned file
-    const deleteResults = [];
-    
-    for (const file of orphanedFiles) {
-      try {
-        const existsBefore = await objectStore.exists(file);
-        await objectStore.deleteFile(file);
-        const existsAfter = await objectStore.exists(file);
-        
-        deleteResults.push({
-          file,
-          existedBefore: existsBefore,
-          existsAfter: existsAfter,
-          success: !existsAfter
-        });
-      } catch (error) {
-        deleteResults.push({
-          file,
-          error: error instanceof Error ? error.message : String(error),
-          success: false
-        });
-      }
-    }
-    
+    // Return detailed results
     return res.json({
       success: true,
-      data: results,
-      deleteResults
+      draftId,
+      cleanupResults: result,
+      draftInfo: {
+        exists: !!draft,
+        trackedImages: {
+          count: trackedObjectKeys.length,
+          files: trackedObjectKeys
+        },
+        remainingFiles: {
+          count: allDraftFiles.length,
+          files: allDraftFiles
+        }
+      }
     });
   } catch (error) {
-    logger.error(`DEBUG: Error in draft cleanup: ${draftId}`, { error });
+    logger.error(`DEBUG: Error in enhanced draft cleanup: ${draftId}`, { 
+      error: error instanceof Error ? error.message : String(error) 
+    });
     return res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : String(error),
       draftId
+    });
+  }
+});
+
+// Debug endpoint for cleaning up all drafts
+router.get('/debug/cleanup-all-drafts', async (req: Request, res: Response) => {
+  logger.info('DEBUG: Cleaning up orphaned images for all drafts using enhanced method');
+  
+  try {
+    // Use our enhanced bulk cleanup function
+    const result = await cleanupAllOrphanedDraftImages();
+    
+    return res.json({
+      success: true,
+      cleanupResults: result
+    });
+  } catch (error) {
+    logger.error('DEBUG: Error in enhanced bulk draft cleanup', { 
+      error: error instanceof Error ? error.message : String(error) 
+    });
+    return res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
     });
   }
 });
