@@ -130,6 +130,8 @@ export const SalesPromotionsStep: React.FC<SalesPromotionsStepProps> = ({
       // Convert dates for API - the ProductDraft interface expects Date objects
       const formattedValues: Partial<ProductDraft> = {
         ...values,
+        // When onSale is false, explicitly set salePrice to null when saving
+        ...(values.onSale === false && { salePrice: null }),
         // These are stored as Date objects in the ProductDraft interface but serialized to ISO strings in the API
         specialSaleStart: values.specialSaleStart || null,
         specialSaleEnd: values.specialSaleEnd || null,
@@ -169,7 +171,16 @@ export const SalesPromotionsStep: React.FC<SalesPromotionsStepProps> = ({
                     <FormControl>
                       <Switch
                         checked={field.value}
-                        onCheckedChange={field.onChange}
+                        onCheckedChange={(checked) => {
+                          // When toggling off, keep the sale price value in the form state
+                          // but it won't be sent to the server since the field will be hidden
+                          field.onChange(checked);
+                          
+                          // If turning off sale mode, ensure salePrice validation doesn't trigger
+                          if (!checked) {
+                            form.clearErrors('salePrice');
+                          }
+                        }}
                       />
                     </FormControl>
                   </FormItem>
@@ -201,7 +212,8 @@ export const SalesPromotionsStep: React.FC<SalesPromotionsStepProps> = ({
                 />
                 
                 {/* Sale Price (conditionally shown) */}
-                {form.watch('onSale') && (
+                {/* When onSale is toggled off, we keep the field value in state but hide the field */}
+                {form.watch('onSale') ? (
                   <FormField
                     control={form.control}
                     name="salePrice"
@@ -231,6 +243,14 @@ export const SalesPromotionsStep: React.FC<SalesPromotionsStepProps> = ({
                       </FormItem>
                     )}
                   />
+                ) : (
+                  // Show a placeholder when onSale is false
+                  <div className="flex flex-col space-y-2 opacity-50">
+                    <span className="text-sm font-medium">Sale Price</span>
+                    <div className="h-10 rounded-md border border-input bg-muted flex items-center px-3 text-sm text-muted-foreground">
+                      Toggle "On Sale" to set a sale price
+                    </div>
+                  </div>
                 )}
               </div>
 
