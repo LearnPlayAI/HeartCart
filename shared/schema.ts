@@ -162,12 +162,13 @@ export const productImages = pgTable("product_images", {
   id: serial("id").primaryKey(),
   productId: integer("product_id").references(() => products.id).notNull(),
   url: text("url").notNull(),
-  sortOrder: integer("sort_order").default(0),
-  alt: text("alt"),
-  title: text("title"),
-  objectKey: text("object_key"),
+  objectKey: text("object_key").notNull(),
+  isMain: boolean("is_main"),
+  hasBgRemoved: boolean("has_bg_removed"),
+  bgRemovedUrl: text("bg_removed_url"),
   bgRemovedObjectKey: text("bg_removed_object_key"),
-  createdAt: text("created_at").default(() => formatCurrentDateSAST()).notNull(),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: text("created_at").default(() => formatCurrentDateSAST()),
 });
 
 // Product Images relations
