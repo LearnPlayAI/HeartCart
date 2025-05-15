@@ -5401,6 +5401,28 @@ export class DatabaseStorage implements IStorage {
         }
       }
       
+      // Get required attributes information
+      const requiredAttributes = (draft.attributeValues || [])
+        .filter(attr => attr.isRequired)
+        .map(attr => attr.attributeId);
+      
+      // Lookup supplier name from supplier table
+      let supplierName = 'Unknown Supplier';
+      if (draft.supplierId) {
+        const supplierData = await db
+          .select()
+          .from(suppliers)
+          .where(eq(suppliers.id, draft.supplierId))
+          .limit(1);
+          
+        if (supplierData && supplierData.length > 0) {
+          supplierName = supplierData[0].name;
+        }
+      }
+      
+      // Create discount data object
+      const discountData = draft.discount || { type: 'none', value: 0 };
+      
       // Create comprehensive product data from draft
       const productData: Partial<InsertProduct> = {
         // Basic product information
@@ -5446,10 +5468,16 @@ export class DatabaseStorage implements IStorage {
         isFeatured: draft.isFeatured || false,
         
         // Product attributes and specifications
-        supplier: draft.supplier || 'Unknown Supplier',
+        supplier: supplierName,
         brand: draft.brand,
         weight: draft.weight ? parseFloat(String(draft.weight)) : null,
         dimensions: draft.dimensions,
+        
+        // Required attributes
+        requiredAttributeIds: requiredAttributes,
+        
+        // Discount information
+        discount: discountData,
         
         // Sales promotion data
         specialSaleText: draft.specialSaleText,
