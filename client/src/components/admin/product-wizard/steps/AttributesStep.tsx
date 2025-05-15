@@ -83,6 +83,13 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
   const [activeTab, setActiveTab] = useState('attributes');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string[]>>({});
+  const [showAddOptionDialog, setShowAddOptionDialog] = useState(false);
+  const [currentAttributeId, setCurrentAttributeId] = useState<number | null>(null);
+  const [newOptionData, setNewOptionData] = useState({
+    value: '',
+    displayValue: '',
+    colorCode: '#CCCCCC'
+  });
   
   // Tags management
   const [productTags, setProductTags] = useState<string[]>(draft.tags || []);
@@ -780,7 +787,8 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
-                          handleAddAttributeOption(attribute.id);
+                          setCurrentAttributeId(attribute.id);
+                          setShowAddOptionDialog(true);
                         }}
                       >
                         <Plus className="mr-1 h-3 w-3" /> Add Option
@@ -1466,6 +1474,76 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
             >
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Create Attribute
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Add Option Dialog */}
+      <Dialog open={showAddOptionDialog} onOpenChange={setShowAddOptionDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New Option</DialogTitle>
+            <DialogDescription>
+              Create a new option for {currentAttributeId && 
+                getAllAttributes().find(a => a.id === currentAttributeId)?.displayName}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="value" className="text-right">
+                Value
+              </Label>
+              <Input
+                id="value"
+                value={newOptionData.value}
+                onChange={(e) => setNewOptionData({...newOptionData, value: e.target.value})}
+                className="col-span-3"
+              />
+            </div>
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="displayValue" className="text-right">
+                Display Name
+              </Label>
+              <Input
+                id="displayValue"
+                value={newOptionData.displayValue}
+                onChange={(e) => setNewOptionData({...newOptionData, displayValue: e.target.value})}
+                className="col-span-3"
+              />
+            </div>
+            
+            {currentAttributeId && 
+             getAllAttributes().find(a => a.id === currentAttributeId)?.attributeType === 'color' && (
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="colorCode" className="text-right">
+                  Color Code
+                </Label>
+                <div className="col-span-3 flex gap-2">
+                  <Input
+                    id="colorCode"
+                    type="color"
+                    value={newOptionData.colorCode}
+                    onChange={(e) => setNewOptionData({...newOptionData, colorCode: e.target.value})}
+                    className="w-16"
+                  />
+                  <Input
+                    value={newOptionData.colorCode}
+                    onChange={(e) => setNewOptionData({...newOptionData, colorCode: e.target.value})}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddOptionDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateAttributeOption} disabled={!newOptionData.value}>
+              Create Option
             </Button>
           </DialogFooter>
         </DialogContent>
