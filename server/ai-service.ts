@@ -426,7 +426,7 @@ export async function generateSEO(
         const seoContent = JSON.parse(jsonMatch[0]);
         return {
           title: seoContent.title || productName,
-          description: seoContent.description || `Shop ${productName} online. Fast shipping across South Africa.`,
+          description: seoContent.description ? seoContent.description.slice(0, 160) : `Shop ${productName} online. Fast shipping across South Africa.`.slice(0, 160),
           keywords: seoContent.keywords || productName.toLowerCase()
         };
       }
@@ -434,7 +434,7 @@ export async function generateSEO(
       // Fallback when JSON extraction fails
       return {
         title: `${productName} | Shop Online`,
-        description: `Buy ${productName} online. Fast delivery across South Africa.`,
+        description: `Buy ${productName} online. Fast delivery across South Africa.`.slice(0, 160),
         keywords: `${productName.toLowerCase()}, ${categoryName.toLowerCase()}, south africa, shop online`
       };
     } catch (error) {
