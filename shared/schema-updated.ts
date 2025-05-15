@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, doublePrecision, jsonb, varchar, unique, decimal, index, numeric } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, doublePrecision, jsonb, varchar, unique, decimal, index } from "drizzle-orm/pg-core";
 import { formatCurrentDateSAST } from "./utils/date-utils";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
@@ -99,48 +99,50 @@ export const catalogsRelations = relations(catalogs, ({ one, many }) => ({
 // Products table
 export const products = pgTable("products", {
   id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  slug: text("slug").notNull().unique(),
+  name: varchar("name", { length: 255 }).notNull(),
+  slug: varchar("slug", { length: 255 }).notNull().unique(),
+  sku: varchar("sku", { length: 50 }),
   description: text("description"),
+  brand: varchar("brand", { length: 100 }),
   categoryId: integer("category_id").references(() => categories.id),
-  price: doublePrecision("price"),
-  salePrice: doublePrecision("sale_price"),
-  discount: integer("discount"),
-  imageUrl: text("image_url"),
-  additionalImages: text("additional_images").array(),
-  stock: integer("stock").default(0),
-  rating: doublePrecision("rating"),
-  reviewCount: integer("review_count"),
   isActive: boolean("is_active").default(true),
   isFeatured: boolean("is_featured").default(false),
-  isFlashDeal: boolean("is_flash_deal").default(false),
-  soldCount: integer("sold_count"),
-  supplier: text("supplier"),
-  freeShipping: boolean("free_shipping"),
-  weight: doublePrecision("weight"),
-  dimensions: text("dimensions"),
-  brand: text("brand"),
-  tags: text("tags").array(),
-  hasBackgroundRemoved: boolean("has_background_removed"),
-  originalImageObjectKey: text("original_image_object_key"),
-  costPrice: doublePrecision("cost_price"),
+  supplierId: integer("supplier_id").references(() => suppliers.id),
   catalogId: integer("catalog_id").references(() => catalogs.id),
-  displayOrder: integer("display_order"),
   
-  // Date fields as text in SAST format
-  createdAt: text("created_at").default(() => formatCurrentDateSAST()),
+  // Pricing fields
+  costPrice: decimal("cost_price", { precision: 10, scale: 2 }),
+  regularPrice: decimal("regular_price", { precision: 10, scale: 2 }).notNull(),
+  salePrice: decimal("sale_price", { precision: 10, scale: 2 }),
+  onSale: boolean("on_sale").default(false),
+  markupPercentage: integer("markup_percentage"),
+  minimumPrice: decimal("minimum_price", { precision: 10, scale: 2 }),
+  
+  // Inventory fields
+  stock: integer("stock").default(0),
+  lowStockThreshold: integer("low_stock_threshold").default(5),
+  stockStatus: varchar("stock_status", { length: 20 }).default("in_stock"),
+  weight: varchar("weight", { length: 20 }),
+  dimensions: varchar("dimensions", { length: 50 }),
+  
+  // Image fields - main images are stored in product_images table
+  imageUrl: text("image_url"),
+  originalImageObjectKey: text("original_image_object_key"),
   
   // Sales promotion fields
-  flashDealEnd: text("flash_deal_end"),
-  minimumPrice: doublePrecision("minimum_price"),
-  minimumOrder: integer("minimum_order"),
   discountLabel: text("discount_label"),
   specialSaleText: text("special_sale_text"),
   specialSaleStart: text("special_sale_start"),
   specialSaleEnd: text("special_sale_end"),
+  isFlashDeal: boolean("is_flash_deal").default(false),
+  flashDealEnd: text("flash_deal_end"),
   
-  // Attributes
-  requiredAttributeIds: integer("required_attribute_ids").array(),
+  // SEO fields
+  metaTitle: text("meta_title"),
+  metaDescription: text("meta_description"),
+  metaKeywords: text("meta_keywords"),
+  
+  createdAt: text("created_at").default(() => formatCurrentDateSAST()).notNull(),
 });
 
 // Product relations
@@ -149,7 +151,10 @@ export const productsRelations = relations(products, ({ one, many }) => ({
     fields: [products.categoryId],
     references: [categories.id],
   }),
-  // No direct supplier relation in current DB schema, supplier is stored as text
+  supplier: one(suppliers, {
+    fields: [products.supplierId],
+    references: [suppliers.id],
+  }),
   catalog: one(catalogs, {
     fields: [products.catalogId],
     references: [catalogs.id],
@@ -182,17 +187,18 @@ export const productImagesRelations = relations(productImages, ({ one }) => ({
 export const productDrafts = pgTable("product_drafts", {
   id: serial("id").primaryKey(),
   originalProductId: integer("original_product_id").references(() => products.id),
-  draftStatus: text("draft_status").default("draft").notNull(),
+  draftStatus: varchar("draft_status", { length: 20 }).default("draft").notNull(),
   createdBy: integer("created_by").references(() => users.id),
   createdAt: text("created_at").default(() => formatCurrentDateSAST()).notNull(),
   lastModified: text("last_modified").default(() => formatCurrentDateSAST()),
+  publishedAt: text("published_at"),
   
   // Basic product info
-  name: text("name").notNull(),
-  slug: text("slug").notNull(),
-  sku: text("sku"),
+  name: varchar("name", { length: 255 }).notNull(),
+  slug: varchar("slug", { length: 255 }).notNull(),
+  sku: varchar("sku", { length: 50 }),
   description: text("description"),
-  brand: text("brand"),
+  brand: varchar("brand", { length: 100 }),
   categoryId: integer("category_id").references(() => categories.id),
   isActive: boolean("is_active").default(false),
   isFeatured: boolean("is_featured").default(false),
@@ -200,24 +206,22 @@ export const productDrafts = pgTable("product_drafts", {
   catalogId: integer("catalog_id").references(() => catalogs.id),
   
   // Pricing fields
-  costPrice: numeric("cost_price"),
-  regularPrice: numeric("regular_price"),
-  salePrice: numeric("sale_price"),
+  costPrice: decimal("cost_price", { precision: 10, scale: 2 }),
+  regularPrice: decimal("regular_price", { precision: 10, scale: 2 }),
+  salePrice: decimal("sale_price", { precision: 10, scale: 2 }),
   onSale: boolean("on_sale").default(false),
   markupPercentage: integer("markup_percentage"),
-  minimumPrice: numeric("minimum_price"),
+  minimumPrice: decimal("minimum_price", { precision: 10, scale: 2 }),
   
   // Inventory fields
   stockLevel: integer("stock_level").default(0),
   lowStockThreshold: integer("low_stock_threshold").default(5),
-  backorderEnabled: boolean("backorder_enabled").default(false),
-  weight: text("weight"),
-  dimensions: text("dimensions"),
+  stockStatus: varchar("stock_status", { length: 20 }).default("in_stock"),
+  weight: varchar("weight", { length: 20 }),
+  dimensions: varchar("dimensions", { length: 50 }),
   
-  // Image fields
+  // Image fields - stored as array of URLs for simplicity in draft
   imageUrls: text("image_urls").array(),
-  imageObjectKeys: text("image_object_keys").array(),
-  mainImageIndex: integer("main_image_index"),
   
   // Sales promotion fields
   discountLabel: text("discount_label"),
@@ -231,25 +235,10 @@ export const productDrafts = pgTable("product_drafts", {
   metaTitle: text("meta_title"),
   metaDescription: text("meta_description"),
   metaKeywords: text("meta_keywords"),
-  canonicalUrl: text("canonical_url"),
   
-  // Additional fields
-  taxable: boolean("taxable"),
-  taxClass: text("tax_class"),
-  wizardProgress: jsonb("wizard_progress").default({}),
-  attributes: jsonb("attributes"),
-  attributesData: jsonb("attributes_data"),
-  publishedAt: text("published_at"),
-  publishedVersion: integer("published_version"),
-  hasAiDescription: boolean("has_ai_description"),
-  hasAiSeo: boolean("has_ai_seo"),
-  freeShipping: boolean("free_shipping"),
-  shippingClass: text("shipping_class"),
-  lastReviewer: integer("last_reviewer"),
-  rejectionReason: text("rejection_reason"),
+  // Wizard state tracking
   completedSteps: text("completed_steps").array(),
-  version: integer("version"),
-  changeHistory: jsonb("change_history"),
+  wizardProgress: jsonb("wizard_progress").default({}),
   
   // Selected attributes (will be stored as relations when published)
   selectedAttributes: jsonb("selected_attributes").default({}),
