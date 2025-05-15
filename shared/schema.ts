@@ -102,20 +102,20 @@ export const catalogsRelations = relations(catalogs, ({ one, many }) => ({
 export const products = pgTable("products", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
-  slug: text("slug").notNull().unique(),
+  slug: text("slug").notNull(),
   description: text("description"),
   categoryId: integer("category_id").references(() => categories.id),
-  price: doublePrecision("price"),
+  price: doublePrecision("price").notNull(),
   salePrice: doublePrecision("sale_price"),
   discount: integer("discount"),
   imageUrl: text("image_url"),
   additionalImages: text("additional_images").array(),
-  stock: integer("stock").default(0),
+  stock: integer("stock").notNull(),
   rating: doublePrecision("rating"),
   reviewCount: integer("review_count"),
-  isActive: boolean("is_active").default(true),
-  isFeatured: boolean("is_featured").default(false),
-  isFlashDeal: boolean("is_flash_deal").default(false),
+  isActive: boolean("is_active").notNull(),
+  isFeatured: boolean("is_featured").notNull(),
+  isFlashDeal: boolean("is_flash_deal").notNull(),
   soldCount: integer("sold_count"),
   supplier: text("supplier"),
   freeShipping: boolean("free_shipping"),
@@ -128,11 +128,7 @@ export const products = pgTable("products", {
   costPrice: doublePrecision("cost_price"),
   catalogId: integer("catalog_id").references(() => catalogs.id),
   displayOrder: integer("display_order"),
-  
-  // Date fields as text in SAST format
-  createdAt: text("created_at").default(() => formatCurrentDateSAST()),
-  
-  // Sales promotion fields
+  createdAt: text("created_at"),
   flashDealEnd: text("flash_deal_end"),
   minimumPrice: doublePrecision("minimum_price"),
   minimumOrder: integer("minimum_order"),
@@ -140,9 +136,11 @@ export const products = pgTable("products", {
   specialSaleText: text("special_sale_text"),
   specialSaleStart: text("special_sale_start"),
   specialSaleEnd: text("special_sale_end"),
-  
-  // Attributes
   requiredAttributeIds: integer("required_attribute_ids").array(),
+  
+  // Schema-only columns made nullable
+  updatedAt: text("updated_at"),
+  sku: text("sku"),
 });
 
 // Product relations
@@ -305,11 +303,13 @@ export const attributes = pgTable("attributes", {
 export const attributeOptions = pgTable("attribute_options", {
   id: serial("id").primaryKey(),
   attributeId: integer("attribute_id").references(() => attributes.id).notNull(),
-  value: varchar("value", { length: 100 }).notNull(),
-  displayValue: varchar("display_value", { length: 100 }).notNull(),
-  sortOrder: integer("sort_order").default(0),
-  createdAt: text("created_at").default(() => formatCurrentDateSAST()).notNull(),
-  updatedAt: text("updated_at").default(() => formatCurrentDateSAST()).notNull(),
+  value: varchar("value").notNull(),
+  displayValue: varchar("display_value").notNull(),
+  // Add metadata column from database
+  metadata: jsonb("metadata"),
+  sortOrder: integer("sort_order"),
+  createdAt: text("created_at"),
+  updatedAt: text("updated_at"),
 }, (table) => {
   return {
     attributeValueUnique: unique().on(table.attributeId, table.value),
@@ -443,17 +443,19 @@ export const cartItemsRelations = relations(cartItems, ({ one }) => ({
 // AI Settings table
 export const aiSettings = pgTable("ai_settings", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id).notNull(),
-  preferredModel: varchar("preferred_model", { length: 50 }).default("gpt-4"),
-  maxTokens: integer("max_tokens").default(1000),
-  temperature: doublePrecision("temperature").default(0.7),
+  // Actual database columns
+  settingName: varchar("setting_name").notNull(),
+  settingValue: text("setting_value").notNull(),
+  description: text("description"),
+  createdAt: text("created_at"),
+  updatedAt: text("updated_at"),
+  
+  // Schema-only columns made nullable
+  userId: integer("user_id").references(() => users.id),
+  preferredModel: varchar("preferred_model", { length: 50 }),
+  maxTokens: integer("max_tokens"),
+  temperature: doublePrecision("temperature"),
   customSettings: jsonb("custom_settings"),
-  createdAt: text("created_at").default(() => formatCurrentDateSAST()).notNull(),
-  updatedAt: text("updated_at").default(() => formatCurrentDateSAST()).notNull(),
-}, (table) => {
-  return {
-    userUnique: unique().on(table.userId),
-  };
 });
 
 // AI Settings relations
