@@ -12,7 +12,8 @@ import {
   productDraftIdParamSchema, 
   updateProductDraftWizardStepSchema,
   publishProductDraftSchema,
-  updateProductDraftStatusSchema
+  updateProductDraftStatusSchema,
+  productIdParamSchema
 } from "@shared/validation-schemas";
 import { objectStore, STORAGE_FOLDERS } from "./object-store";
 import path from "path";
@@ -37,6 +38,49 @@ const upload = multer({
 });
 
 export default function registerProductDraftRoutes(router: Router) {
+  /**
+   * Create a new draft from an existing product
+   * POST /api/products/:productId/create-draft
+   */
+  router.post(
+    "/api/products/:productId/create-draft",
+    isAuthenticated,
+    isAdmin,
+    validateRequest({ params: productIdParamSchema }),
+    asyncHandler(async (req, res) => {
+      const userId = req.user?.id;
+      if (!userId) {
+        throw new BadRequestError("User ID is required");
+      }
+      
+      const productId = parseInt(req.params.productId);
+      
+      try {
+        // Create a draft from an existing product
+        const draft = await storage.createDraftFromProduct(productId);
+        
+        if (!draft) {
+          throw new NotFoundError(`Failed to create draft from product ${productId}`);
+        }
+        
+        // Return the draft data
+        return sendSuccess(res, draft);
+      } catch (error) {
+        logger.error('Error creating draft from product', {
+          error,
+          productId,
+          userId
+        });
+        
+        if (error instanceof NotFoundError) {
+          throw error;
+        }
+        
+        throw new BadRequestError(`Failed to create draft: ${error.message}`);
+      }
+    })
+  );
+  
   /**
    * Create a new product draft
    * POST /api/product-drafts
