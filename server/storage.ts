@@ -5324,11 +5324,54 @@ export class DatabaseStorage implements IStorage {
         attributesCount: draft.attributes?.length || 0
       });
       
+      // Check if the slug already exists to avoid unique constraint violation
+      let uniqueSlug = draft.slug || '';
+      
+      if (uniqueSlug) {
+        // Check if this slug exists in products table
+        const existingWithSlug = await db
+          .select({ count: sql`count(*)` })
+          .from(products)
+          .where(eq(products.slug, uniqueSlug));
+        
+        // If slug exists and this is a new product (not updating an existing one)
+        if (existingWithSlug[0]?.count > 0 && !draft.originalProductId) {
+          let slugCounter = 1;
+          let isUnique = false;
+          
+          // Try numbered variations until we find a unique slug
+          while (!isUnique && slugCounter < 100) { // prevent infinite loops
+            const testSlug = `${uniqueSlug}-${slugCounter}`;
+            
+            const existingWithTestSlug = await db
+              .select({ count: sql`count(*)` })
+              .from(products)
+              .where(eq(products.slug, testSlug));
+            
+            if (existingWithTestSlug[0]?.count === 0) {
+              // Found a unique slug
+              uniqueSlug = testSlug;
+              isUnique = true;
+              logger.debug('Using unique slug variation', { 
+                originalSlug: draft.slug, 
+                uniqueSlug 
+              });
+            }
+            
+            slugCounter++;
+          }
+          
+          if (!isUnique) {
+            throw new Error(`Could not generate a unique slug for "${draft.name}" after ${slugCounter} attempts`);
+          }
+        }
+      }
+      
       // Create comprehensive product data from draft
       const productData: Partial<InsertProduct> = {
         // Basic product information
         name: draft.name || '',
-        slug: draft.slug || '',
+        slug: uniqueSlug, // Use potentially updated unique slug
         sku: draft.sku,
         description: draft.description,
         categoryId: draft.categoryId,
