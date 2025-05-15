@@ -130,8 +130,11 @@ export const SalesPromotionsStep: React.FC<SalesPromotionsStepProps> = ({
       // Convert dates for API - the ProductDraft interface expects Date objects
       const formattedValues: Partial<ProductDraft> = {
         ...values,
-        // When onSale is false, explicitly set salePrice to null when saving
-        ...(values.onSale === false && { salePrice: null }),
+        // When onSale is false, explicitly set salePrice and discountLabel to null when saving
+        ...(values.onSale === false && { 
+          salePrice: null,
+          discountLabel: null
+        }),
         // These are stored as Date objects in the ProductDraft interface but serialized to ISO strings in the API
         specialSaleStart: values.specialSaleStart || null,
         specialSaleEnd: values.specialSaleEnd || null,
@@ -255,7 +258,7 @@ export const SalesPromotionsStep: React.FC<SalesPromotionsStepProps> = ({
               </div>
 
               {/* Discount Label */}
-              {form.watch('onSale') && (
+              {form.watch('onSale') ? (
                 <FormField
                   control={form.control}
                   name="discountLabel"
@@ -277,6 +280,14 @@ export const SalesPromotionsStep: React.FC<SalesPromotionsStepProps> = ({
                     </FormItem>
                   )}
                 />
+              ) : (
+                <div className="opacity-50">
+                  <span className="text-sm font-medium">Discount Label</span>
+                  <div className="h-10 rounded-md border border-input bg-muted mt-2"></div>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Enable "On Sale" to add a discount label
+                  </p>
+                </div>
               )}
 
               <div className="border-t pt-4 mt-4">
