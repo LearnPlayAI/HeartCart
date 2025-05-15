@@ -67,15 +67,28 @@ export function useDateFormat() {
     },
 
     /**
-     * Format a date for form submission (ISO string)
+     * Format a date for form submission (SAST text format)
+     * This ensures dates are stored consistently as text strings
      */
     formatForSubmission: (date: Date | null | undefined): string | null => {
       if (!date) return null;
-      return toSASTTimezone(date).toISOString();
+      
+      // Import the dateToSASTString function from shared/utils/date-utils
+      const sastDate = toSASTTimezone(date);
+      const year = sastDate.getFullYear();
+      const month = String(sastDate.getMonth() + 1).padStart(2, '0');
+      const day = String(sastDate.getDate()).padStart(2, '0');
+      const hours = String(sastDate.getHours()).padStart(2, '0');
+      const minutes = String(sastDate.getMinutes()).padStart(2, '0');
+      const seconds = String(sastDate.getSeconds()).padStart(2, '0');
+      
+      // Format as YYYY-MM-DD HH:MM:SS+02:00 for SAST
+      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}+02:00`;
     },
 
     /**
      * Parse a date for form usage
+     * Handles our text-based SAST date format and converts to Date object for UI
      */
     parseForForm: (dateString: string | null | undefined): Date | null => {
       if (!dateString) return null;
