@@ -688,14 +688,11 @@ const ProductDetailView = ({
                 <h3 className="text-lg font-semibold">Product Options</h3>
                 
                 {productAttributes.map(attribute => {
-                  // Get options for this attribute
-                  const options = attributeOptions[attribute.id] || [];
-                  
-                  // Skip if no options available
-                  if (options.length === 0 && attribute.type !== 'text') return null;
+                  // Get the attribute ID from the attribute object
+                  const attributeId = attribute.id;
                   
                   // Find available options for this attribute from the attribute values
-                  const attrValue = attributeValues.find(val => val.attributeId === attribute.id);
+                  const attrValue = attributeValues.find(val => val.attributeId === attributeId);
                   let availableOptionValues: string[] = [];
                   
                   if (attrValue && attrValue.valueText) {
@@ -703,18 +700,31 @@ const ProductDetailView = ({
                     availableOptionValues = attrValue.valueText.split(',');
                   }
                   
-                  // Filter options to only show those in the availableOptionValues array
-                  const filteredOptions = options.filter(option => 
-                    availableOptionValues.length === 0 || 
-                    availableOptionValues.includes(option.value) || 
-                    availableOptionValues.includes(option.id.toString())
-                  );
+                  // Get options for this attribute - the structure is different from what we expected
+                  // Need to lookup in the attributeOptions object using the attribute.name to find the right key
+                  // Or iterate through all keys and find the matching options
+                  let options: ProductAttributeOption[] = [];
+                  Object.keys(attributeOptions).forEach(key => {
+                    // Try to find options that match our available values
+                    const optionsForKey = attributeOptions[parseInt(key)] || [];
+                    if (optionsForKey.length > 0) {
+                      // Check if any of these options match our available values
+                      const matchingOptions = optionsForKey.filter(option => 
+                        availableOptionValues.length === 0 || 
+                        availableOptionValues.includes(option.value) || 
+                        availableOptionValues.includes(option.id.toString())
+                      );
+                      if (matchingOptions.length > 0) {
+                        options = [...options, ...matchingOptions];
+                      }
+                    }
+                  });
                   
-                  // Skip if no filtered options are available
-                  if (filteredOptions.length === 0 && attribute.type !== 'text') return null;
+                  // Skip if no options available
+                  if (options.length === 0 && attribute.type !== 'text') return null;
                   
                   return (
-                    <div key={attribute.id} className="space-y-2">
+                    <div key={attributeId} className="space-y-2">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center">
                           <label className="font-medium text-sm">{attribute.displayName || attribute.name}</label>
@@ -723,12 +733,12 @@ const ProductDetailView = ({
                           )}
                         </div>
                         
-                        {selectedAttributes[attribute.id] && (
+                        {selectedAttributes[attributeId] && (
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Badge variant="outline" className="ml-2">
-                                  {selectedAttributes[attribute.id]}
+                                  {selectedAttributes[attributeId]}
                                 </Badge>
                               </TooltipTrigger>
                               <TooltipContent>
@@ -742,14 +752,14 @@ const ProductDetailView = ({
                       {/* Display different input types based on attribute type */}
                       {attribute.type === 'select' && (
                         <Select 
-                          value={selectedAttributes[attribute.id] || ''}
-                          onValueChange={value => handleAttributeChange(attribute.id, value)}
+                          value={selectedAttributes[attributeId] || ''}
+                          onValueChange={value => handleAttributeChange(attributeId, value)}
                         >
                           <SelectTrigger className="w-full">
                             <SelectValue placeholder={`Select ${attribute.displayName || attribute.name}`} />
                           </SelectTrigger>
                           <SelectContent>
-                            {filteredOptions.map(option => (
+                            {options.map(option => (
                               <SelectItem key={option.id} value={option.value}>
                                 {option.displayValue || option.value}
                                 {option.priceAdjustment && parseFloat(option.priceAdjustment) !== 0 && (
