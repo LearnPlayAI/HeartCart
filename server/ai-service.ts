@@ -382,7 +382,7 @@ export async function generateSEO(
         text: `
         Generate the following SEO elements tailored for the South African market:
         1. Meta Title (50-60 characters including the product name and main keywords)
-        2. Meta Description (150-160 characters with a compelling reason to click and a call to action)
+        2. Meta Description (EXACTLY 150-160 characters maximum, no more! Include a compelling reason to click and a call to action)
         3. Meta Keywords (10-12 relevant keyword phrases, comma-separated)
         
         Format your response as a single JSON object with the fields: title, description, and keywords.
@@ -400,7 +400,7 @@ export async function generateSEO(
       promptText += `
       Generate the following SEO elements tailored for the South African market:
       1. Meta Title (50-60 characters including the product name and main keywords)
-      2. Meta Description (150-160 characters with a compelling reason to click and a call to action)
+      2. Meta Description (EXACTLY 150-160 characters maximum, no more! Include a compelling reason to click and a call to action)
       3. Meta Keywords (10-12 relevant keyword phrases, comma-separated)
       
       Format your response as a single JSON object with the fields: title, description, and keywords.
@@ -487,7 +487,7 @@ export async function optimizeSEO(
     promptText += `
     For each suggestion, provide:
     1. Meta Title (50-65 characters, include primary keyword)
-    2. Meta Description (120-160 characters, include call to action)
+    2. Meta Description (EXACTLY 150-160 characters maximum, no more! Include a compelling reason to click and a call to action)
     3. Keywords (10-15 relevant keywords/phrases, comma-separated)
     4. SEO score (0.0-1.0 representing how well optimized this suggestion is)
     5. Tips (2-3 bullet points explaining the strengths of this metadata or how to improve it further)
@@ -532,7 +532,7 @@ export async function optimizeSEO(
           // Validate each suggestion has the required properties
           return suggestions.map(suggestion => ({
             title: suggestion.title || '',
-            metaDescription: suggestion.metaDescription ? suggestion.metaDescription.slice(0, 160) : '',
+            metaDescription: suggestion.metaDescription || '',
             keywords: Array.isArray(suggestion.keywords) ? suggestion.keywords : [],
             score: typeof suggestion.score === 'number' ? suggestion.score : 0.5,
             tips: Array.isArray(suggestion.tips) ? suggestion.tips : []
@@ -543,7 +543,7 @@ export async function optimizeSEO(
       // Fallback: return a default suggestion based on existing data
       return [{
         title: currentTitle || `${productName} | Shop Online`,
-        metaDescription: currentDescription ? currentDescription.slice(0, 160) : `Buy ${productName} online. Fast delivery across South Africa.`.slice(0, 160),
+        metaDescription: currentDescription || `Buy ${productName} online. Fast delivery across South Africa.`,
         keywords: currentKeywords || [productName.toLowerCase()],
         score: 0.5,
         tips: ['Add more specific keywords', 'Include benefits in description']
