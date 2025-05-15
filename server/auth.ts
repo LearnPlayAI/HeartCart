@@ -124,13 +124,26 @@ export function setupAuth(app: Express): void {
       createTableIfMissing: true,
       // Cleanup expired sessions periodically
       pruneSessionInterval: 60, // Check for expired sessions every minute
-      // Custom query to handle text-based expire column
-      pruneSessionQuery: 
-        `DELETE FROM session WHERE expire < $1::text`,
-      // Custom insert query to store date as text string
-      insertQuery: `INSERT INTO session(sid, sess, expire) VALUES ($1, $2, $3::text) RETURNING sid`,
-      // Custom get query to retrieve session
-      selectQuery: `SELECT sid, sess, expire FROM session WHERE sid = $1 AND expire >= $2::text`
+      // Custom parameter handling to convert Date to SAST text format
+      errorOnPruneFail: false, // Don't throw on prune failure
+      // Custom transformer for parameters
+      customParamTransformer: (param) => {
+        if (param instanceof Date) {
+          // Convert Date to SAST string format
+          const options = { 
+            timeZone: 'Africa/Johannesburg',
+            year: 'numeric', 
+            month: '2-digit', 
+            day: '2-digit',
+            hour: '2-digit', 
+            minute: '2-digit', 
+            second: '2-digit',
+            hour12: false 
+          };
+          return new Date(param).toLocaleString('en-ZA', options);
+        }
+        return param;
+      }
     })
   };
 

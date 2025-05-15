@@ -199,18 +199,18 @@ export class DatabaseStorage implements IStorage {
         return product;
       }
       
-      // Find the main image
-      const mainImage = allImages.find(img => img.isMain);
+      // Use the first image as the main image (sorted by sortOrder)
+      const mainImage = allImages[0];
       
-      // Get additional (non-main) images
+      // Get additional images (all except the first one)
       const additionalImageUrls = allImages
-        .filter(img => !img.isMain)
+        .slice(1)
         .map(img => img.url);
       
       // Return enriched product
       return {
         ...product,
-        imageUrl: mainImage ? mainImage.url : allImages[0].url,
+        imageUrl: mainImage.url,
         additionalImages: additionalImageUrls.length > 0 ? additionalImageUrls : null
       };
     }));
