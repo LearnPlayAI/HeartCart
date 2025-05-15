@@ -4746,7 +4746,10 @@ export class DatabaseStorage implements IStorage {
         pool,
         tableName: 'session',
         createTableIfMissing: true,
-        pruneSessionInterval: 60 // Check for expired sessions every minute
+        pruneSessionInterval: 60, // Check for expired sessions every minute
+        // Custom query to handle text-based expire column
+        pruneSessionQuery: 
+          `DELETE FROM session WHERE expire < $1::text`,
       });
       
       logger.info('PostgreSQL session store initialized successfully');

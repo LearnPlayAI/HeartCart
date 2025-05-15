@@ -1,4 +1,5 @@
 import { pgTable, text, serial, integer, boolean, timestamp, doublePrecision, jsonb, varchar, unique, decimal, index } from "drizzle-orm/pg-core";
+import { formatCurrentDateSAST } from "./utils/date-utils";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";

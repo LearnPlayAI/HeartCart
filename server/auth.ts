@@ -124,6 +124,13 @@ export function setupAuth(app: Express): void {
       createTableIfMissing: true,
       // Cleanup expired sessions periodically
       pruneSessionInterval: 60, // Check for expired sessions every minute
+      // Custom query to handle text-based expire column
+      pruneSessionQuery: 
+        `DELETE FROM session WHERE expire < $1::text`,
+      // Custom insert query to store date as text string
+      insertQuery: `INSERT INTO session(sid, sess, expire) VALUES ($1, $2, $3::text) RETURNING sid`,
+      // Custom get query to retrieve session
+      selectQuery: `SELECT sid, sess, expire FROM session WHERE sid = $1 AND expire >= $2::text`
     })
   };
 
