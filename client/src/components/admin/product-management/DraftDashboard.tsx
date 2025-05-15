@@ -21,7 +21,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { 
   Plus, Search, MoreVertical, Edit, Trash2, Copy, ExternalLink, 
   Check, X, Clock, Loader2, Filter, SortAsc, SortDesc, 
-  FileQuestion, ShoppingCart 
+  FileQuestion, ShoppingCart, FileCheck, Eye, AlertCircle
 } from 'lucide-react';
 
 // Types
@@ -33,10 +33,13 @@ interface ProductDraft {
   categoryId: number | null;
   images: any[];
   createdAt: string;
+  lastModified: string; // Date in ISO format string
   updatedAt: string;
   isPublished: boolean;
   publishedProductId: number | null;
   categoryName?: string; // From join
+  completedSteps: string[];
+  draftStatus: 'draft' | 'in_review' | 'ready_to_publish' | 'published' | 'rejected';
 }
 
 export const DraftDashboard: React.FC = () => {
@@ -187,9 +190,22 @@ export const DraftDashboard: React.FC = () => {
   // Format date relative to now
   const formatDate = (dateString: string) => {
     try {
-      return formatDistanceToNow(new Date(dateString), { addSuffix: true });
+      if (!dateString) return 'Not available';
+      
+      // Log the date string to debug
+      console.log('Formatting date:', dateString);
+      const date = new Date(dateString);
+      
+      // Check if the date is valid
+      if (isNaN(date.getTime())) {
+        console.warn('Invalid date string:', dateString);
+        return 'Not available';
+      }
+      
+      return formatDistanceToNow(date, { addSuffix: true });
     } catch (e) {
-      return 'Invalid date';
+      console.error('Error formatting date:', e, dateString);
+      return 'Not available';
     }
   };
   
@@ -300,13 +316,28 @@ export const DraftDashboard: React.FC = () => {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {draft.isPublished ? (
+                        {draft.draftStatus === 'published' ? (
                           <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300 gap-1">
                             <Check className="h-3 w-3" />
                             Published
                           </Badge>
+                        ) : draft.draftStatus === 'ready_to_publish' ? (
+                          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300 gap-1">
+                            <FileCheck className="h-3 w-3" />
+                            Ready to Publish
+                          </Badge>
+                        ) : draft.draftStatus === 'in_review' ? (
+                          <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-300 gap-1">
+                            <Eye className="h-3 w-3" />
+                            In Review
+                          </Badge>
+                        ) : draft.draftStatus === 'rejected' ? (
+                          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-300 gap-1">
+                            <AlertCircle className="h-3 w-3" />
+                            Rejected
+                          </Badge>
                         ) : (
-                          <Badge variant="outline" className="gap-1">
+                          <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300 gap-1">
                             <Clock className="h-3 w-3" />
                             Draft
                           </Badge>
@@ -314,12 +345,14 @@ export const DraftDashboard: React.FC = () => {
                       </TableCell>
                       <TableCell>
                         <div className="text-sm">
-                          {formatDate(draft.updatedAt)}
+                          {formatDate(draft.lastModified)}
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="text-sm">
-                          {getStepDisplayName(draft.wizardStep)}
+                          {draft.completedSteps ? 
+                            `${draft.completedSteps.length} of 7 steps completed` : 
+                            getStepDisplayName(draft.wizardStep)}
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
