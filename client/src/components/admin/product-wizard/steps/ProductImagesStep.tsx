@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -9,14 +9,16 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Form } from '@/components/ui/form';
 import { useDropzone } from 'react-dropzone';
-import { Loader2, X, Upload, ImagePlus, Star, StarOff } from 'lucide-react';
+import { Loader2, X, Upload, ImagePlus, Star, StarOff, MoveVertical, AlertCircle } from 'lucide-react';
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
+import { ensureValidImageUrl } from '@/utils/file-manager';
 import { ProductDraft } from '../ProductWizard';
 
 // Validation schema for the image step
 const imageSchema = z.object({
   imageUrls: z.array(z.string()),
   imageObjectKeys: z.array(z.string()),
-  mainImageIndex: z.number().int().min(0),
+  mainImageIndex: z.number().int().min(0).optional().default(0),
 });
 
 type ImageFormValues = z.infer<typeof imageSchema>;
@@ -39,7 +41,7 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ draft, onS
     defaultValues: {
       imageUrls: draft.imageUrls || [],
       imageObjectKeys: draft.imageObjectKeys || [],
-      mainImageIndex: draft.mainImageIndex || 0,
+      mainImageIndex: draft.mainImageIndex ?? 0,
     },
   });
 
@@ -133,6 +135,43 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ draft, onS
     },
   });
 
+  // Mutation to reorder images
+  const reorderImagesMutation = useMutation({
+    mutationFn: async (imageIndexes: number[]) => {
+      if (!draft.id) {
+        throw new Error('No draft ID available');
+      }
+      
+      const response = await apiRequest(
+        'POST',
+        `/api/product-drafts/${draft.id}/images/reorder`,
+        { imageIndexes }
+      );
+      return response.json();
+    },
+    onSuccess: (data) => {
+      // Update the form values with the reordered images
+      form.setValue('imageUrls', data.data.imageUrls);
+      form.setValue('imageObjectKeys', data.data.imageObjectKeys);
+      form.setValue('mainImageIndex', data.data.mainImageIndex);
+      
+      // Invalidate the draft query to refresh the draft data
+      queryClient.invalidateQueries({ queryKey: ['/api/product-drafts', draft.id] });
+      
+      toast({
+        title: 'Images Reordered',
+        description: 'Successfully reordered images',
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Reordering Failed',
+        description: `Failed to reorder images: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: 'destructive',
+      });
+    },
+  });
+
   // Dropzone setup
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
@@ -197,6 +236,24 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ draft, onS
     deleteImageMutation.mutate(index);
   };
 
+  // Handle drag and drop reordering
+  const handleDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
+    
+    const { source, destination } = result;
+    const imageUrls = form.getValues('imageUrls');
+    
+    if (source.index === destination.index) return;
+    
+    // Create an array of indexes in their new order
+    const imageIndexes = Array.from({ length: imageUrls.length }, (_, i) => i);
+    const [removed] = imageIndexes.splice(source.index, 1);
+    imageIndexes.splice(destination.index, 0, removed);
+    
+    // Send the new order to the server
+    reorderImagesMutation.mutate(imageIndexes);
+  };
+
   const imageUrls = form.watch('imageUrls');
   const mainImageIndex = form.watch('mainImageIndex');
 
@@ -240,69 +297,114 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ draft, onS
                 </div>
               </div>
 
-              {/* Image Preview Grid - Mobile Optimized */}
+              {/* Image Preview Grid with Drag and Drop - Mobile Optimized */}
               {imageUrls && imageUrls.length > 0 ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4 mt-4 sm:mt-6">
-                  {imageUrls.map((url, index) => (
-                    <div 
-                      key={index} 
-                      className={`relative group rounded-lg overflow-hidden border ${
-                        index === mainImageIndex ? 'border-primary ring-2 ring-primary' : 'border-gray-200'
-                      }`}
-                    >
-                      <img 
-                        src={url} 
-                        alt={`Product image ${index + 1}`} 
-                        className="w-full h-24 sm:h-32 object-cover"
-                      />
-                      
-                      {/* Overlay controls - visible on hover/touch */}
-                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center touch-none">
-                        <div className="flex flex-row sm:flex-col items-center space-x-2 sm:space-x-0 sm:space-y-2">
-                          {index === mainImageIndex ? (
-                            <Button 
-                              type="button" 
-                              variant="ghost" 
-                              size="sm" 
-                              className="text-yellow-400 hover:text-yellow-300 h-8 w-8 p-1 sm:h-9 sm:w-9 sm:p-2"
-                              disabled
-                            >
-                              <Star className="h-5 w-5 fill-yellow-400" />
-                            </Button>
-                          ) : (
-                            <Button 
-                              type="button" 
-                              variant="ghost" 
-                              size="sm" 
-                              className="text-white hover:text-yellow-400 h-8 w-8 p-1 sm:h-9 sm:w-9 sm:p-2"
-                              onClick={() => setMainImage(index)}
-                            >
-                              <StarOff className="h-5 w-5" />
-                            </Button>
-                          )}
-                          
-                          <Button 
-                            type="button" 
-                            variant="ghost" 
-                            size="sm" 
-                            className="text-white hover:text-red-400 h-8 w-8 p-1 sm:h-9 sm:w-9 sm:p-2"
-                            onClick={() => handleDeleteImage(index)}
-                            disabled={deleteImageMutation.isPending}
-                          >
-                            <X className="h-5 w-5" />
-                          </Button>
-                        </div>
-                      </div>
-                      
-                      {/* Always visible badge for main image */}
-                      {index === mainImageIndex && (
-                        <div className="absolute top-1 left-1 sm:top-2 sm:left-2 bg-primary text-white px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-md text-[10px] sm:text-xs">
-                          Main
+                <>
+                  <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
+                    <MoveVertical className="h-4 w-4" />
+                    <span>Drag images to reorder them. The first image will be used as the main product image.</span>
+                  </div>
+                  
+                  <DragDropContext onDragEnd={handleDragEnd}>
+                    <Droppable droppableId="product-images" direction="horizontal" type="image">
+                      {(provided) => (
+                        <div 
+                          {...provided.droppableProps}
+                          ref={provided.innerRef}
+                          className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4 mt-4 sm:mt-1"
+                        >
+                          {imageUrls.map((url, index) => (
+                            <Draggable key={index.toString()} draggableId={index.toString()} index={index}>
+                              {(provided, snapshot) => (
+                                <div
+                                  ref={provided.innerRef}
+                                  {...provided.draggableProps}
+                                  {...provided.dragHandleProps}
+                                  className={`relative group rounded-lg overflow-hidden border ${
+                                    snapshot.isDragging ? 'border-primary ring-1 ring-primary shadow-md' : 
+                                    index === mainImageIndex ? 'border-primary ring-2 ring-primary' : 'border-gray-200'
+                                  }`}
+                                  style={{
+                                    ...provided.draggableProps.style,
+                                    height: snapshot.isDragging ? 'auto' : undefined
+                                  }}
+                                >
+                                  <img 
+                                    src={ensureValidImageUrl(url)} 
+                                    alt={`Product image ${index + 1}`} 
+                                    className="w-full h-24 sm:h-32 object-cover"
+                                    onError={(e) => {
+                                      (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjIwMCIgaGVpZ2h0PSIyMDAiIGZpbGw9IiNFRUVFRUUiLz48cGF0aCBkPSJNNzQgODZINjJWMTE0SDc0VjEzMEgxMjZWMTE0SDEzOFY4NkgxMjZWNzBINzRWODZaTTc0IDg2SDEyNlYxMTRINzRWODZaIiBmaWxsPSIjQUFBQUFBIi8+PC9zdmc+';
+                                    }}
+                                  />
+                                  
+                                  {/* Overlay controls - visible on hover/touch */}
+                                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                    <div className="flex flex-row sm:flex-col items-center space-x-2 sm:space-x-0 sm:space-y-2">
+                                      {index === mainImageIndex ? (
+                                        <Button 
+                                          type="button" 
+                                          variant="ghost" 
+                                          size="sm" 
+                                          className="text-yellow-400 hover:text-yellow-300 h-8 w-8 p-1 sm:h-9 sm:w-9 sm:p-2"
+                                          disabled
+                                        >
+                                          <Star className="h-5 w-5 fill-yellow-400" />
+                                        </Button>
+                                      ) : (
+                                        <Button 
+                                          type="button" 
+                                          variant="ghost" 
+                                          size="sm" 
+                                          className="text-white hover:text-yellow-400 h-8 w-8 p-1 sm:h-9 sm:w-9 sm:p-2"
+                                          onClick={() => setMainImage(index)}
+                                        >
+                                          <StarOff className="h-5 w-5" />
+                                        </Button>
+                                      )}
+                                      
+                                      <Button 
+                                        type="button" 
+                                        variant="ghost" 
+                                        size="sm" 
+                                        className="text-white hover:text-red-400 h-8 w-8 p-1 sm:h-9 sm:w-9 sm:p-2"
+                                        onClick={() => handleDeleteImage(index)}
+                                        disabled={deleteImageMutation.isPending}
+                                      >
+                                        <X className="h-5 w-5" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                  
+                                  {/* Always visible badge for main image */}
+                                  {index === mainImageIndex && (
+                                    <div className="absolute top-1 left-1 sm:top-2 sm:left-2 bg-primary text-white px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-md text-[10px] sm:text-xs">
+                                      Main
+                                    </div>
+                                  )}
+                                  
+                                  {/* Order number badge */}
+                                  <div className="absolute bottom-1 right-1 sm:bottom-2 sm:right-2 bg-black/70 text-white px-1.5 py-0.5 rounded-md text-[10px]">
+                                    {index + 1}
+                                  </div>
+                                </div>
+                              )}
+                            </Draggable>
+                          ))}
+                          {provided.placeholder}
                         </div>
                       )}
+                    </Droppable>
+                  </DragDropContext>
+                  
+                  {/* Validation warnings */}
+                  {imageUrls.length === 0 && (
+                    <div className="flex items-center space-x-2 text-amber-600 text-sm mt-2">
+                      <AlertCircle className="h-4 w-4" />
+                      <span>Your product should have at least one image</span>
                     </div>
-                  ))}
-                </div>
+                  )}
+                </>
               ) : (
                 <div className="text-center py-6 sm:py-10 text-gray-500 bg-gray-50 rounded-lg text-sm">
                   <p>No images uploaded yet</p>
@@ -313,10 +415,10 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ draft, onS
             <div className="flex justify-end mt-4 sm:mt-6">
               <Button 
                 type="submit" 
-                disabled={isLoading || uploadingImages || deleteImageMutation.isPending}
+                disabled={isLoading || uploadingImages || deleteImageMutation.isPending || reorderImagesMutation.isPending}
                 className="h-9 w-full sm:w-auto sm:h-10 text-sm sm:text-base"
               >
-                {(isLoading || uploadingImages || deleteImageMutation.isPending) && (
+                {(isLoading || uploadingImages || deleteImageMutation.isPending || reorderImagesMutation.isPending) && (
                   <Loader2 className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
                 )}
                 Save & Continue
