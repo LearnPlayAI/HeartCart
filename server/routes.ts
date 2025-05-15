@@ -5532,6 +5532,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   }));
+  
+  // Special direct object store access for debugging
+  app.get('/test/raw-list/:path(*)', asyncHandler(async (req: Request, res: Response) => {
+    const path = req.params.path;
+    logger.info(`TEST: Raw object store list for path ${path}`);
+    
+    try {
+      // Get raw client
+      const client = objectStore.getClient();
+      if (!client) {
+        return res.status(500).json({
+          success: false,
+          error: 'Object store client not available'
+        });
+      }
+      
+      // Direct raw result from object store
+      const result = await client.list(path);
+      
+      // Also get raw keys
+      const rawKeys: string[] = [];
+      if (result && result.value && Array.isArray(result.value)) {
+        for (const item of result.value) {
+          if (item && typeof item === 'object') {
+            console.log('Raw item:', JSON.stringify(item));
+            const key = item.key;
+            if (key && typeof key === 'string') {
+              rawKeys.push(key);
+            }
+          }
+        }
+      }
+      
+      return res.json({
+        success: true,
+        path,
+        rawResult: result,
+        rawKeys
+      });
+    } catch (error) {
+      logger.error(`TEST: Error in raw object store list: ${error instanceof Error ? error.message : String(error)}`);
+      return res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  }));
 
   const httpServer = createServer(app);
   return httpServer;
