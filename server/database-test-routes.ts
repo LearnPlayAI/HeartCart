@@ -775,7 +775,6 @@ export function registerDatabaseTestRoutes(app: Express): void {
           await db.query.products.findMany({
             limit: 20,
             offset: 0,
-            // Sort by created_at since updated_at doesn't exist in the products table
             orderBy: (products, { desc }) => [desc(products.createdAt)],
             with: {
               category: true,

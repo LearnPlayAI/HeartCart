@@ -146,9 +146,9 @@ export interface ProductDraft {
   // System fields
   originalProductId: number | null;
   createdBy: number;
-  createdAt?: string;
-  lastModified?: string;
+  createdAt?: Date;
   draftStatus: string;
+  lastModified: Date;
   completedSteps: string[];
   wizardProgress: Record<string, boolean>;
   

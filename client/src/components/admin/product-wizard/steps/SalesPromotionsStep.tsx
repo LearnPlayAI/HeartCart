@@ -174,7 +174,7 @@ export const SalesPromotionsStep: React.FC<SalesPromotionsStepProps> = ({
       
       // Type assertion to avoid TypeScript errors with ProductDraft interface
       // We're safely converting Date objects to strings
-      const formattedValues: Partial<ProductDraft> = {
+      const formattedValues = {
         ...values,
         // When onSale is false, explicitly set salePrice and discountLabel to null when saving
         ...(values.onSale === false && { 
@@ -185,7 +185,7 @@ export const SalesPromotionsStep: React.FC<SalesPromotionsStepProps> = ({
         specialSaleStart: formatDateToSASTString(values.specialSaleStart),
         specialSaleEnd: formatDateToSASTString(values.specialSaleEnd),
         flashDealEnd: formatDateToSASTString(values.flashDealEnd)
-      };
+      } as Partial<ProductDraft>;
       
       // Add debugging logs to see what's being sent
       console.log('Submitting sales promotions data:', formattedValues);

@@ -170,24 +170,6 @@ export interface IStorage {
   deleteProductDraft(id: number): Promise<boolean>;
 }
 
-// Helper function to format current date in SAST format (UTC+2)
-function formatCurrentDateSAST(): string {
-  const now = new Date();
-  
-  // Add 2 hours to account for SAST (UTC+2)
-  const sastDate = new Date(now.getTime() + (2 * 60 * 60 * 1000));
-  
-  // Format as YYYY-MM-DD HH:MM:SS+02:00
-  const year = sastDate.getFullYear();
-  const month = String(sastDate.getMonth() + 1).padStart(2, '0');
-  const day = String(sastDate.getDate()).padStart(2, '0');
-  const hours = String(sastDate.getHours()).padStart(2, '0');
-  const minutes = String(sastDate.getMinutes()).padStart(2, '0');
-  const seconds = String(sastDate.getSeconds()).padStart(2, '0');
-  
-  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}+02:00`;
-}
-
 export class DatabaseStorage implements IStorage {
   /**
    * Helper method to enrich products with their main image URL and additional images
@@ -211,18 +193,18 @@ export class DatabaseStorage implements IStorage {
         return product;
       }
       
-      // Use the first image as the main image (sorted by sortOrder)
-      const mainImage = allImages[0];
+      // Find the main image
+      const mainImage = allImages.find(img => img.isMain);
       
-      // Get additional images (all except the first one)
+      // Get additional (non-main) images
       const additionalImageUrls = allImages
-        .slice(1)
+        .filter(img => !img.isMain)
         .map(img => img.url);
       
       // Return enriched product
       return {
         ...product,
-        imageUrl: mainImage.url,
+        imageUrl: mainImage ? mainImage.url : allImages[0].url,
         additionalImages: additionalImageUrls.length > 0 ? additionalImageUrls : null
       };
     }));
@@ -292,15 +274,15 @@ export class DatabaseStorage implements IStorage {
    */
   async updateUserLastLogin(id: number): Promise<boolean> {
     try {
-      // Update lastLogin timestamp to current time in SAST format
-      const formattedNow = formatCurrentDateSAST();
+      // Update lastLogin timestamp to current time
+      const now = new Date();
       
       // Update the user record with new login timestamp
       const result = await db
         .update(users)
         .set({ 
-          lastLogin: formattedNow,
-          updatedAt: formattedNow // Also update the general updatedAt field
+          lastLogin: now,
+          updatedAt: now // Also update the general updatedAt field
         })
         .where(eq(users.id, id));
       
@@ -2728,11 +2710,11 @@ export class DatabaseStorage implements IStorage {
       
       try {
         // Update all existing products in the list to the new status
-        // Note: products table doesn't have updated_at column, only created_at
         await db
           .update(products)
           .set({ 
-            isActive
+            isActive,
+            updatedAt: new Date() 
           })
           .where(inArray(products.id, existingIds));
           
@@ -3011,7 +2993,7 @@ export class DatabaseStorage implements IStorage {
 
   async createSupplier(supplier: InsertSupplier): Promise<Supplier> {
     try {
-      const now = formatCurrentDateSAST(); // Use our date formatter instead of raw Date object
+      const now = new Date();
       const [newSupplier] = await db
         .insert(suppliers)
         .values({
@@ -3033,7 +3015,7 @@ export class DatabaseStorage implements IStorage {
         .update(suppliers)
         .set({
           ...supplierData,
-          updatedAt: formatCurrentDateSAST() // Use our date formatter
+          updatedAt: new Date()
         })
         .where(eq(suppliers.id, id))
         .returning();
@@ -3051,7 +3033,7 @@ export class DatabaseStorage implements IStorage {
         .update(suppliers)
         .set({ 
           isActive: false,
-          updatedAt: formatCurrentDateSAST() // Use our date formatter
+          updatedAt: new Date()
         })
         .where(eq(suppliers.id, id))
         .returning();
@@ -4758,10 +4740,7 @@ export class DatabaseStorage implements IStorage {
         pool,
         tableName: 'session',
         createTableIfMissing: true,
-        pruneSessionInterval: 60, // Check for expired sessions every minute
-        // Custom query to handle text-based expire column
-        pruneSessionQuery: 
-          `DELETE FROM session WHERE expire < $1::text`,
+        pruneSessionInterval: 60 // Check for expired sessions every minute
       });
       
       logger.info('PostgreSQL session store initialized successfully');
@@ -4781,13 +4760,10 @@ export class DatabaseStorage implements IStorage {
   // Product Draft Methods for Database-Centric Approach
   async createProductDraft(draft: InsertProductDraft): Promise<ProductDraft> {
     try {
-      // Set lastModified and createdAt to current timestamp in SAST format
-      const formattedDate = formatCurrentDateSAST();
-      
+      // Set lastModified to current timestamp
       const draftWithTimestamp = {
         ...draft,
-        lastModified: formattedDate,
-        createdAt: formattedDate
+        lastModified: new Date()
       };
       
       // Debug log the data we're about to insert
@@ -4876,10 +4852,10 @@ export class DatabaseStorage implements IStorage {
 
   async updateProductDraft(id: number, data: Partial<InsertProductDraft>): Promise<ProductDraft | undefined> {
     try {
-      // Always update the lastModified timestamp with SAST formatted string
+      // Always update the lastModified timestamp
       const updateData = {
         ...data,
-        lastModified: formatCurrentDateSAST()
+        lastModified: new Date()
       };
       
       const [updatedDraft] = await db
@@ -4905,7 +4881,7 @@ export class DatabaseStorage implements IStorage {
       
       // Update the appropriate fields based on the step
       let updateData: Partial<InsertProductDraft> = {
-        lastModified: formatCurrentDateSAST()
+        lastModified: new Date()
       };
       
       // Update wizard progress to mark this step as completed
@@ -5080,8 +5056,8 @@ export class DatabaseStorage implements IStorage {
           updateData = {
             ...updateData,
             draftStatus: draftData.draftStatus || existingDraft.draftStatus,
-            // If marked as 'ready', set the time for tracking purposes in SAST format
-            ...(draftData.draftStatus === 'ready' && { publishedAt: formatCurrentDateSAST() }),
+            // If marked as 'ready', set the time for tracking purposes
+            ...(draftData.draftStatus === 'ready' && { publishedAt: new Date() }),
             // Handle any additional review-specific fields
             reviewNotes: draftData.reviewNotes !== undefined ? draftData.reviewNotes : existingDraft.reviewNotes,
             reviewApprovedBy: draftData.reviewApprovedBy !== undefined ? draftData.reviewApprovedBy : existingDraft.reviewApprovedBy,
@@ -5346,12 +5322,12 @@ export class DatabaseStorage implements IStorage {
         supplier: draft.supplierId ? (await this.getSupplier(draft.supplierId))?.name : null,
         weight: draft.weight ? parseFloat(draft.weight) : null,
         dimensions: draft.dimensions,
-        // Use existing string dates - already in proper SAST format
+        // Convert Date timestamps to text strings for storage in products table
         specialSaleText: draft.specialSaleText,
-        specialSaleStart: draft.specialSaleStart, // Already stored as string in SAST format
-        specialSaleEnd: draft.specialSaleEnd, // Already stored as string in SAST format
+        specialSaleStart: draft.specialSaleStart ? draft.specialSaleStart.toISOString() : null,
+        specialSaleEnd: draft.specialSaleEnd ? draft.specialSaleEnd.toISOString() : null,
         isFlashDeal: draft.isFlashDeal || false,
-        flashDealEnd: draft.flashDealEnd, // Already stored as string in SAST format
+        flashDealEnd: draft.flashDealEnd ? draft.flashDealEnd.toISOString() : null,
         // Additional fields
         brand: draft.brand,
         tags: draft.metaKeywords ? [draft.metaKeywords] : [],

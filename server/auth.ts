@@ -117,15 +117,13 @@ export function setupAuth(app: Express): void {
       maxAge: SESSION_MAX_AGE, // Maximum lifetime
       path: '/', // Restrict cookie to root path
     },
-    // Use standard PostgreSQL session store with default timestamp handling
-    // This is an exception to our text-based date standardization
+    // Use standard PostgreSQL session store with proper timestamp typing
     store: new PostgresSessionStore({
       pool,
       tableName: 'session',
       createTableIfMissing: true,
       // Cleanup expired sessions periodically
       pruneSessionInterval: 60, // Check for expired sessions every minute
-      errorOnPruneFail: false // Don't throw on prune failure
     })
   };
 
