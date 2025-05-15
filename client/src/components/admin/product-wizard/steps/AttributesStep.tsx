@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Plus, Search, Tag, Save, X, ChevronRight, ChevronDown, Info, AlertTriangle, Wand2 } from 'lucide-react';
+import { Loader2, Plus, Search, Tag, Save, X, ChevronRight, ChevronDown, Info, AlertTriangle, Wand2, RefreshCcw, HelpCircle } from 'lucide-react';
 import type { ProductDraft } from '../ProductWizard';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -177,12 +177,17 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
     if (attribute) {
       console.log(`Force loading options for attribute: ${attribute.displayName} (${attributeId})`);
       
-      // Always fetch fresh data
+      // Always fetch fresh data with proper error handling
       apiRequest('GET', `/api/attributes/${attributeId}/options`)
-        .then(res => res.json())
+        .then(res => {
+          if (!res.ok) {
+            throw new Error(`HTTP error! Status: ${res.status}`);
+          }
+          return res.json();
+        })
         .then(data => {
-          console.log(`Received options for ${attribute.displayName}:`, data);
-          if (data?.success && data?.data) {
+          if (data?.success && Array.isArray(data.data)) {
+            console.log(`Successfully loaded options for ${attribute.displayName}:`, data.data);
             setAttributesCache(prev => ({
               ...prev,
               [attributeId]: {
@@ -190,15 +195,13 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
                 options: data.data
               }
             }));
+          } else {
+            console.warn(`Data format issue for ${attribute.displayName}:`, data);
           }
         })
         .catch(error => {
           console.error(`Failed to load options for attribute ${attributeId}:`, error);
-          toast({
-            variant: "destructive",
-            title: "Failed to load options",
-            description: "Please try again or contact support."
-          });
+          // Don't show toast for every error to avoid spamming the user
         });
     }
   };
@@ -959,6 +962,40 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
             
             {/* Attribute controls */}
             <div className="flex items-center space-x-2">
+              {/* Manual refresh button */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                title={`Refresh options for ${attribute.displayName}`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  console.log(`Manual refetch of options for attribute:`, attribute.attributeId);
+                  // Use the force load function to fetch fresh data
+                  preloadOptions(attribute.attributeId);
+                  // Show a toast notification for feedback
+                  toast({
+                    title: "Refreshing options",
+                    description: `Refreshing options for ${attribute.displayName}...`,
+                    duration: 3000
+                  });
+                  // For option-based attributes, make sure the dialog gets fresh data
+                  if (attribute.attributeType === 'select' || attribute.attributeType === 'multiselect') {
+                    apiRequest('GET', `/api/attributes/${attribute.attributeId}/options`)
+                      .then(res => res.json())
+                      .then(data => {
+                        console.log(`Options direct fetch response:`, data);
+                        if (data?.success && Array.isArray(data.data)) {
+                          attribute.options = data.data;
+                          console.log(`Options loaded:`, data.data);
+                        }
+                      });
+                  }
+                }}
+              >
+                <RefreshCcw size={16} className="text-muted-foreground" />
+              </Button>
+              
               {/* Apply to Product toggle */}
               <div className="flex flex-col items-end space-y-1">
                 <div className="flex items-center space-x-2">
