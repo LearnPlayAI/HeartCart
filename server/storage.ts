@@ -5046,7 +5046,12 @@ export class DatabaseStorage implements IStorage {
       
       // Get the object key to delete from storage
       const objectKey = imageObjectKeys[imageIndex];
-      logger.debug('Attempting to delete draft image', { draftId: id, imageIndex, objectKey });
+      logger.debug('Attempting to delete draft image', { 
+        draftId: id, 
+        imageIndex, 
+        objectKey,
+        allObjectKeys: imageObjectKeys
+      });
       
       // Remove the image from the arrays
       imageUrls.splice(imageIndex, 1);
@@ -5062,24 +5067,70 @@ export class DatabaseStorage implements IStorage {
         mainImageIndex--;
       }
       
-      // Delete the image from object storage - wait for completion to ensure it's deleted
+      // Build an array of files to delete
+      const filesToDelete = [];
+      
+      // Add the specific objectKey from the database
+      if (objectKey) {
+        filesToDelete.push(objectKey);
+      }
+      
+      // Extract base filename patterns to look for related untracked files
       if (objectKey) {
         try {
-          await objectStore.deleteFile(objectKey);
-          logger.debug('Successfully deleted image from object store', { draftId: id, objectKey });
+          // Extract the base pattern from the objectKey to find similar files
+          // Example: from drafts/98/WhatsApp-Image-2025-05-08-at-12.25.32-1-1747300372451-s4u0f8pu4pa.jpeg
+          // We want to extract: drafts/98/WhatsApp-Image-2025-05-08-at-12.25.32
+          const parts = objectKey.split('-');
+          // Extract base pattern by removing the last 2 parts which are usually the timestamp and random id
+          if (parts.length > 2) {
+            parts.pop(); // Remove random id
+            parts.pop(); // Remove timestamp
+            const basePattern = parts.join('-');
+            
+            // List all files in the draft folder
+            logger.debug('Searching for related files with pattern', { basePattern, draftId: id });
+            const draftFolder = `drafts/${id}`;
+            const files = await objectStore.listFiles(draftFolder);
+            
+            // Find files that match our pattern but aren't in the imageObjectKeys array
+            for (const file of files) {
+              if (file.startsWith(basePattern) && !imageObjectKeys.includes(file) && !filesToDelete.includes(file)) {
+                logger.debug('Found related file that may need deletion', { file, draftId: id });
+                filesToDelete.push(file);
+              }
+            }
+          }
+        } catch (listError) {
+          logger.warn('Error listing related files for deletion', { 
+            error: listError instanceof Error ? listError.message : String(listError),
+            draftId: id,
+            objectKey
+          });
+          // Continue even if we can't find related files
+        }
+      }
+      
+      // Delete all identified files
+      for (const fileToDelete of filesToDelete) {
+        try {
+          logger.debug('Deleting file from object store', { draftId: id, fileToDelete });
+          await objectStore.deleteFile(fileToDelete);
           
           // Verify the image was actually deleted
-          const stillExists = await objectStore.exists(objectKey);
+          const stillExists = await objectStore.exists(fileToDelete);
           if (stillExists) {
-            logger.warn('Image still exists after deletion attempt', { draftId: id, objectKey });
+            logger.warn('Image still exists after deletion attempt', { draftId: id, fileToDelete });
+          } else {
+            logger.debug('Successfully deleted file from object store', { draftId: id, fileToDelete });
           }
         } catch (deleteError) {
-          logger.error('Error deleting image from object storage', { 
+          logger.error('Error deleting file from object storage', { 
             error: deleteError instanceof Error ? deleteError.message : String(deleteError), 
             draftId: id,
-            objectKey 
+            fileToDelete 
           });
-          // Continue with draft update even if image deletion fails
+          // Continue with other files even if one deletion fails
         }
       }
       
@@ -5088,7 +5139,9 @@ export class DatabaseStorage implements IStorage {
       logger.debug('Updated draft after image deletion', { 
         draftId: id, 
         remainingImageCount: imageUrls.length,
-        newMainImageIndex: mainImageIndex
+        newMainImageIndex: mainImageIndex,
+        filesDeleted: filesToDelete.length,
+        mainFileDeleted: objectKey
       });
       
       return updatedDraft;

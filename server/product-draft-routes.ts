@@ -382,6 +382,20 @@ export default function registerProductDraftRoutes(router: Router) {
         throw new BadRequestError("You don't have permission to update this draft");
       }
       
+      // Check if the image exists at the specified index
+      if (!draft.imageObjectKeys || !draft.imageObjectKeys[imageIndex]) {
+        throw new BadRequestError(`No image exists at index ${imageIndex}`);
+      }
+      
+      // Log the image object key that we're about to delete for debugging
+      const objectKey = draft.imageObjectKeys[imageIndex];
+      console.log(`Attempting to delete image at index ${imageIndex}:`, {
+        draftId, 
+        imageIndex, 
+        objectKey,
+        allObjectKeys: draft.imageObjectKeys
+      });
+      
       const updatedDraft = await storage.deleteProductDraftImage(draftId, imageIndex);
       sendSuccess(res, updatedDraft);
     })
