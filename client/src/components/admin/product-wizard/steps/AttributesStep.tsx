@@ -260,11 +260,28 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
 
   // Initialize attribute values from the draft
   useEffect(() => {
+    // First, get all available attributes to initialize the complete list
+    const allAvailableAttributes = getAllAttributes().map(attr => ({
+      attributeId: attr.id,
+      attributeName: attr.name,
+      displayName: attr.displayName,
+      attributeType: attr.attributeType,
+      value: null,
+      textValue: null,
+      selectedOptions: [],
+      options: attr.options || [],
+      isRequired: attr.isRequired || false, // Use the attribute's default isRequired setting
+      isAppliedToProduct: false // Default to false - not applied to this product
+    }));
+    
+    // If the draft has attributes, overlay their values
     if (draft.attributes && draft.attributes.length > 0) {
       // Simple format
       const simpleValues = draft.attributes.map(attr => ({
         attributeId: attr.attributeId,
-        value: attr.value
+        value: attr.value,
+        isAppliedToProduct: true, // Mark as applied since it's in the draft.attributes
+        isRequired: attr.isRequired || false
       }));
       
       // Enhanced format (if available)
@@ -281,13 +298,31 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
             value: attr.value,
             textValue: attr.textValue,
             selectedOptions: attr.selectedOptions || [],
-            options: formattedOptions
+            options: formattedOptions,
+            isRequired: attr.isRequired || false,
+            isAppliedToProduct: true // Mark as applied since it's in draft.attributesData
           };
         });
         
-        setAttributeValues(enhancedValues);
+        // Merge the enhanced values with all available attributes
+        // This ensures we have a complete list, including those not yet applied to the product
+        const mergedAttributes = allAvailableAttributes.map(attr => {
+          const existingAttr = enhancedValues.find(ea => ea.attributeId === attr.attributeId);
+          return existingAttr || attr;
+        });
+        
+        setAttributeValues(mergedAttributes);
       } else {
-        setAttributeValues(simpleValues);
+        // Merge simple values with all available attributes
+        const mergedAttributes = allAvailableAttributes.map(attr => {
+          const existingAttr = simpleValues.find(sa => sa.attributeId === attr.attributeId);
+          if (existingAttr) {
+            return { ...attr, ...existingAttr };
+          }
+          return attr;
+        });
+        
+        setAttributeValues(mergedAttributes);
       }
       
       // Pre-load options for attributes with values
@@ -297,6 +332,9 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
           preloadOptions(attr.attributeId);
         }
       });
+    } else {
+      // No attributes in draft, just use all available attributes with default flags
+      setAttributeValues(allAvailableAttributes);
     }
   }, [draft.attributes, draft.attributesData, attributesData]);
 
@@ -308,7 +346,8 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
     if (existingIndex >= 0) {
       newValues[existingIndex] = { 
         ...newValues[existingIndex],
-        value 
+        value, 
+        isAppliedToProduct: true // If setting a value, make sure it's marked as applied
       };
     } else {
       // Find attribute details from API data
@@ -323,12 +362,91 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
           displayName: attribute.displayName,
           attributeType: attribute.attributeType,
           value,
-          options: formattedOptions
+          options: formattedOptions,
+          isAppliedToProduct: true, // New attribute values are automatically applied
+          isRequired: attribute.isRequired || false // Default to attribute's global setting
         });
       }
     }
     
     setAttributeValues(newValues);
+  };
+  
+  // Toggle whether an attribute is applied to this product
+  const toggleAttributeApplied = (attributeId: number, isApplied: boolean) => {
+    const newValues = [...attributeValues];
+    const existingIndex = newValues.findIndex(v => v.attributeId === attributeId);
+    
+    if (existingIndex >= 0) {
+      // If we're removing an attribute and it was required, un-require it
+      const isRequired = isApplied ? newValues[existingIndex].isRequired : false;
+      
+      newValues[existingIndex] = { 
+        ...newValues[existingIndex],
+        isAppliedToProduct: isApplied,
+        isRequired
+      };
+    } else {
+      // Find attribute details from API data
+      const attribute = getAllAttributes().find(a => a.id === attributeId);
+      
+      if (attribute) {
+        // Ensure options have attributeId to match AttributeOption interface
+        const formattedOptions = safelyMapOptions(attribute, attributeId);
+        
+        newValues.push({
+          attributeId,
+          attributeName: attribute.name,
+          displayName: attribute.displayName,
+          attributeType: attribute.attributeType,
+          value: null,
+          options: formattedOptions,
+          isAppliedToProduct: isApplied,
+          isRequired: false // Default to not required when adding new
+        });
+      }
+    }
+    
+    setAttributeValues(newValues);
+  };
+  
+  // Toggle whether an attribute is required for customers
+  const toggleAttributeRequired = (attributeId: number, isRequired: boolean) => {
+    const newValues = [...attributeValues];
+    const existingIndex = newValues.findIndex(v => v.attributeId === attributeId);
+    
+    if (existingIndex >= 0) {
+      // If we're making an attribute required, ensure it's applied
+      const isApplied = isRequired ? true : newValues[existingIndex].isAppliedToProduct;
+      
+      newValues[existingIndex] = { 
+        ...newValues[existingIndex],
+        isRequired,
+        isAppliedToProduct: isApplied
+      };
+    } else {
+      // Find attribute details from API data
+      const attribute = getAllAttributes().find(a => a.id === attributeId);
+      
+      if (attribute) {
+        // Ensure options have attributeId to match AttributeOption interface
+        const formattedOptions = safelyMapOptions(attribute, attributeId);
+        
+        newValues.push({
+          attributeId,
+          attributeName: attribute.name,
+          displayName: attribute.displayName,
+          attributeType: attribute.attributeType,
+          value: null,
+          options: formattedOptions,
+          isAppliedToProduct: isRequired, // If required, it must be applied
+          isRequired
+        });
+      }
+    }
+    
+    setAttributeValues(newValues);
+  };
     
     // Clear validation error for this attribute if it exists
     if (validationErrors[attributeId]) {
