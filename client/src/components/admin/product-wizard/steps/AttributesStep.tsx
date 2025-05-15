@@ -152,6 +152,9 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
         .then(res => res.json())
         .then(data => {
           if (data?.success && data?.data) {
+            console.log(`Loaded ${data.data.length} options for attribute ${attributeId}:`, data.data);
+            
+            // Update attributesCache with the options
             setAttributesCache(prev => ({
               ...prev,
               [attributeId]: {
@@ -159,6 +162,17 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
                 options: data.data
               }
             }));
+            
+            // Also update attributeValues to ensure any attributes currently being displayed get the options too
+            setAttributeValues(prevValues => 
+              prevValues.map(attr => 
+                attr.attributeId === attributeId 
+                  ? { ...attr, options: data.data } 
+                  : attr
+              )
+            );
+          } else {
+            console.warn(`No options data returned for attribute ${attributeId}:`, data);
           }
         })
         .catch(error => {
@@ -508,6 +522,40 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
           // Force refresh all attributes data to ensure consistency
           queryClient.invalidateQueries({ queryKey: ['/api/attributes'] });
           
+          // Explicitly load fresh options
+          console.log("Created new option, explicitly reloading options for attribute:", currentAttributeId);
+          loadAttributeOptions(currentAttributeId);
+          
+          // Update attribute values too
+          const attribute = attributeValues.find(attr => attr.attributeId === currentAttributeId);
+          if (attribute) {
+            // Force update the existing attribute with new option
+            const updatedValues = [...attributeValues];
+            const index = updatedValues.findIndex(attr => attr.attributeId === currentAttributeId);
+            
+            if (index !== -1) {
+              // First make sure the options array exists
+              if (!updatedValues[index].options) {
+                updatedValues[index].options = [];
+              }
+              
+              // Add the new option to the options array
+              updatedValues[index].options.push({
+                id: newOption.data.id,
+                attributeId: currentAttributeId,
+                value: newOption.data.value,
+                displayValue: newOption.data.displayValue,
+                metadata: newOption.data.metadata || null,
+                sortOrder: newOption.data.sortOrder || 0
+              });
+              
+              // Update the state
+              setAttributeValues(updatedValues);
+              
+              console.log("Added new option to attributeValues:", updatedValues[index].options);
+            }
+          }
+          
           // Show success message
           toast({
             title: "Option created",
@@ -628,6 +676,30 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
         );
         
       case 'select':
+        // Debug attribute structure
+        console.log(`Rendering select for attribute [${attributeId}]: `, {
+          name: attribute.attributeName,
+          displayName: attribute.displayName,
+          options: attribute.options,
+          optionCount: attribute.options?.length || 0,
+          selectedOptions: attribute.selectedOptions,
+          value: attribute.value,
+          cache: attributesCache[attributeId]
+        });
+        
+        // Determine the actual options to show
+        const selectOptions = (attribute.options || [])
+          .filter(option => {
+            // If no selected options, show all
+            if (!attribute.selectedOptions || attribute.selectedOptions.length === 0) {
+              return true;
+            }
+            // Only show options selected by the admin
+            return attribute.selectedOptions.includes(option.id);
+          });
+          
+        console.log(`Available options for select [${attributeId}]:`, selectOptions);
+        
         return (
           <div>
             <Select
@@ -639,21 +711,12 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
               </SelectTrigger>
               <SelectContent>
                 {/* Only show options that have been selected by the admin for this product */}
-                {(attribute.options || [])
-                  .filter(option => {
-                    // If no selected options, show all
-                    if (!attribute.selectedOptions || attribute.selectedOptions.length === 0) {
-                      return true;
-                    }
-                    // Only show options selected by the admin
-                    return attribute.selectedOptions.includes(option.id);
-                  })
-                  .map(option => (
-                    <SelectItem key={option.id} value={option.value}>
-                      {option.displayValue}
-                    </SelectItem>
-                  ))}
-                {((attribute.options || []).length === 0) && (
+                {selectOptions.map(option => (
+                  <SelectItem key={option.id} value={option.value}>
+                    {option.displayValue}
+                  </SelectItem>
+                ))}
+                {(selectOptions.length === 0) && (
                   <div className="p-2 text-center text-gray-500">
                     <span>No options available</span>
                   </div>
@@ -684,6 +747,22 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
         // For multiselect, we use checkboxes to let the admin select multiple options
         // that will be available to the customer. The customer will then select one option
         // from these available options.
+        
+        // Debug multiselect options
+        console.log(`Rendering multiselect for attribute [${attributeId}]: `, {
+          name: attribute.attributeName,
+          displayName: attribute.displayName,
+          options: attribute.options,
+          optionCount: attribute.options?.length || 0,
+          selectedOptions: attribute.selectedOptions
+        });
+        
+        // Force load options if they're not already loaded
+        if ((!attribute.options || attribute.options.length === 0) && !attributesCache[attributeId]?.options) {
+          console.log(`No options for attribute ${attributeId}, loading them now...`);
+          loadAttributeOptions(attributeId);
+        }
+        
         return (
           <div className="space-y-2">
             <Label className="mb-1 inline-block">
@@ -692,11 +771,12 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
             <div className="space-y-2 border rounded-md p-2 bg-muted/20">
               {(attribute.options || []).length === 0 ? (
                 <div className="text-center text-gray-500 py-2">
-                  <span>No options available yet</span>
+                  <span>No options available yet - click "Add Option" to create some</span>
                 </div>
               ) : (
                 (attribute.options || []).map(option => {
                   const isSelected = attribute.selectedOptions?.includes(option.id) || false;
+                  console.log(`Option ${option.id} (${option.displayValue}): Selected=${isSelected}`);
                   return (
                     <div key={option.id} className="flex items-center space-x-2">
                       <Checkbox 
