@@ -582,8 +582,8 @@ export const productDrafts = pgTable("product_drafts", {
   metaKeywords: text("meta_keywords"),
   canonicalUrl: text("canonical_url"),
   
-  // Publication information
-  publishedAt: timestamp("published_at", { withTimezone: true }),
+  // Publication information - use text for SAST date storage
+  publishedAt: text("published_at"),
   publishedVersion: integer("published_version").default(1),
   
   // AI-generated content flags

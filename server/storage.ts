@@ -5065,8 +5065,8 @@ export class DatabaseStorage implements IStorage {
           updateData = {
             ...updateData,
             draftStatus: draftData.draftStatus || existingDraft.draftStatus,
-            // If marked as 'ready', set the time for tracking purposes
-            ...(draftData.draftStatus === 'ready' && { publishedAt: new Date() }),
+            // If marked as 'ready', set the time for tracking purposes in SAST format
+            ...(draftData.draftStatus === 'ready' && { publishedAt: formatCurrentDateSAST() }),
             // Handle any additional review-specific fields
             reviewNotes: draftData.reviewNotes !== undefined ? draftData.reviewNotes : existingDraft.reviewNotes,
             reviewApprovedBy: draftData.reviewApprovedBy !== undefined ? draftData.reviewApprovedBy : existingDraft.reviewApprovedBy,
