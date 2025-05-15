@@ -45,6 +45,7 @@ const formSchema = z.object({
   salePrice: z.coerce.number().min(0, "Sale price must be a positive number").nullable().optional(),
   discountLabel: z.string().nullable().optional(),
   specialSaleText: z.string().nullable().optional(),
+  // Use Date objects in the form for better UX, but store as strings in the database
   specialSaleStart: z.date().nullable().optional(),
   specialSaleEnd: z.date().nullable().optional(),
   isFlashDeal: z.boolean().default(false),
@@ -95,6 +96,33 @@ export const SalesPromotionsStep: React.FC<SalesPromotionsStepProps> = ({
   const [saving, setSaving] = useState(false);
   
   // Initialize form with draft data
+  // Convert string dates to Date objects for the date pickers
+  const parseStringToDate = (dateStr: string | null): Date | null => {
+    if (!dateStr) return null;
+    
+    try {
+      // Parse SAST formatted date string (YYYY-MM-DD HH:MM:SS) to Date object
+      const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2}):(\d{2})$/);
+      if (match) {
+        const [_, year, month, day, hours, minutes, seconds] = match;
+        return new Date(
+          parseInt(year), 
+          parseInt(month) - 1, // Month is 0-indexed in JS Date
+          parseInt(day),
+          parseInt(hours),
+          parseInt(minutes),
+          parseInt(seconds)
+        );
+      }
+      
+      // Fallback: try to parse as ISO string
+      return new Date(dateStr);
+    } catch (e) {
+      console.error("Error parsing date string:", dateStr, e);
+      return null;
+    }
+  };
+  
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -103,10 +131,10 @@ export const SalesPromotionsStep: React.FC<SalesPromotionsStepProps> = ({
       salePrice: draft.salePrice || null,
       discountLabel: draft.discountLabel || null,
       specialSaleText: draft.specialSaleText || null,
-      specialSaleStart: draft.specialSaleStart ? new Date(draft.specialSaleStart) : null,
-      specialSaleEnd: draft.specialSaleEnd ? new Date(draft.specialSaleEnd) : null,
+      specialSaleStart: draft.specialSaleStart ? parseStringToDate(draft.specialSaleStart) : null,
+      specialSaleEnd: draft.specialSaleEnd ? parseStringToDate(draft.specialSaleEnd) : null,
       isFlashDeal: draft.isFlashDeal || false,
-      flashDealEnd: draft.flashDealEnd ? new Date(draft.flashDealEnd) : null
+      flashDealEnd: draft.flashDealEnd ? parseStringToDate(draft.flashDealEnd) : null
     }
   });
 
@@ -144,8 +172,9 @@ export const SalesPromotionsStep: React.FC<SalesPromotionsStepProps> = ({
         return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
       };
       
-      // Convert dates to SAST text strings for South Africa
-      const formattedValues: Partial<ProductDraft> = {
+      // Type assertion to avoid TypeScript errors with ProductDraft interface
+      // We're safely converting Date objects to strings
+      const formattedValues = {
         ...values,
         // When onSale is false, explicitly set salePrice and discountLabel to null when saving
         ...(values.onSale === false && { 
@@ -156,10 +185,11 @@ export const SalesPromotionsStep: React.FC<SalesPromotionsStepProps> = ({
         specialSaleStart: formatDateToSASTString(values.specialSaleStart),
         specialSaleEnd: formatDateToSASTString(values.specialSaleEnd),
         flashDealEnd: formatDateToSASTString(values.flashDealEnd)
-      };
+      } as Partial<ProductDraft>;
       
       // Add debugging logs to see what's being sent
       console.log('Submitting sales promotions data:', formattedValues);
+      console.log('Step ID: sales-promotions (5)');
       
       await onSave(formattedValues, true);
     } finally {
