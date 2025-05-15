@@ -2999,7 +2999,7 @@ export class DatabaseStorage implements IStorage {
 
   async createSupplier(supplier: InsertSupplier): Promise<Supplier> {
     try {
-      const now = new Date();
+      const now = formatCurrentDateSAST(); // Use our date formatter instead of raw Date object
       const [newSupplier] = await db
         .insert(suppliers)
         .values({
@@ -3021,7 +3021,7 @@ export class DatabaseStorage implements IStorage {
         .update(suppliers)
         .set({
           ...supplierData,
-          updatedAt: new Date()
+          updatedAt: formatCurrentDateSAST() // Use our date formatter
         })
         .where(eq(suppliers.id, id))
         .returning();
@@ -3039,7 +3039,7 @@ export class DatabaseStorage implements IStorage {
         .update(suppliers)
         .set({ 
           isActive: false,
-          updatedAt: new Date()
+          updatedAt: formatCurrentDateSAST() // Use our date formatter
         })
         .where(eq(suppliers.id, id))
         .returning();

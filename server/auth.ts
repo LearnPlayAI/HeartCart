@@ -117,33 +117,15 @@ export function setupAuth(app: Express): void {
       maxAge: SESSION_MAX_AGE, // Maximum lifetime
       path: '/', // Restrict cookie to root path
     },
-    // Use standard PostgreSQL session store with proper timestamp typing
+    // Use standard PostgreSQL session store with default timestamp handling
+    // This is an exception to our text-based date standardization
     store: new PostgresSessionStore({
       pool,
       tableName: 'session',
       createTableIfMissing: true,
       // Cleanup expired sessions periodically
       pruneSessionInterval: 60, // Check for expired sessions every minute
-      // Custom parameter handling to convert Date to SAST text format
-      errorOnPruneFail: false, // Don't throw on prune failure
-      // Custom transformer for parameters
-      customParamTransformer: (param) => {
-        if (param instanceof Date) {
-          // Convert Date to SAST string format
-          const options = { 
-            timeZone: 'Africa/Johannesburg',
-            year: 'numeric', 
-            month: '2-digit', 
-            day: '2-digit',
-            hour: '2-digit', 
-            minute: '2-digit', 
-            second: '2-digit',
-            hour12: false 
-          };
-          return new Date(param).toLocaleString('en-ZA', options);
-        }
-        return param;
-      }
+      errorOnPruneFail: false // Don't throw on prune failure
     })
   };
 
