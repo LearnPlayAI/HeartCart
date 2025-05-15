@@ -5474,11 +5474,20 @@ export class DatabaseStorage implements IStorage {
       // Delete images from object storage if needed
       if (draft?.imageObjectKeys && draft.imageObjectKeys.length > 0) {
         for (const objectKey of draft.imageObjectKeys) {
-          if (objectKey) {
-            // Delete in the background, don't wait
-            objectStore.deleteObject(objectKey).catch(error => {
-              logger.error('Error deleting image from object storage', { error, objectKey });
-            });
+          if (objectKey && objectKey !== 'undefined') {
+            try {
+              // Delete in the background, don't wait
+              objectStore.deleteFile(objectKey).catch(error => {
+                logger.error('Error deleting image from object storage', { error, objectKey });
+              });
+            } catch (deleteError) {
+              // Log but don't fail if image deletion fails
+              logger.error('Failed to delete draft image', { 
+                draftId: id, 
+                objectKey, 
+                error: deleteError 
+              });
+            }
           }
         }
       }

@@ -4445,13 +4445,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             for (const image of productImages) {
               try {
                 if (image.objectKey) {
-                  await objectStore.deleteObject(image.objectKey);
+                  await objectStore.deleteFile(image.objectKey);
                   logger.debug(`Deleted product image from object storage: ${image.objectKey}`);
                 }
                 
                 // Also delete background-removed image if it exists
                 if (image.hasBgRemoved && image.bgRemovedObjectKey) {
-                  await objectStore.deleteObject(image.bgRemovedObjectKey);
+                  await objectStore.deleteFile(image.bgRemovedObjectKey);
                   logger.debug(`Deleted background-removed image from object storage: ${image.bgRemovedObjectKey}`);
                 }
               } catch (imageDeleteError) {
