@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Loader2, Check, AlertCircle, Clock, CornerRightDown, Eye, ArrowLeft, ArrowRight, FileCheck, FilePen, Tag } from 'lucide-react';
+import { Loader2, Check, AlertCircle, Clock, Eye, FileCheck, FilePen } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from '@/components/ui/textarea';
@@ -244,7 +244,7 @@ export const ReviewAndSaveStep: React.FC<ReviewAndSaveStepProps> = ({
   
   // Get validation status and publish readiness
   const isValid = validationData?.data?.isValid || false;
-  const hasImages = draft.images && draft.images.length > 0;
+  const hasImages = draft.imageUrls && draft.imageUrls.length > 0;
   
   return (
     <>
@@ -424,158 +424,241 @@ export const ReviewAndSaveStep: React.FC<ReviewAndSaveStepProps> = ({
             
             <TabsContent value="review" className="space-y-4">
               <Accordion type="multiple" defaultValue={['basic-info', 'pricing', 'images']} className="w-full">
-            {/* Basic Info Section */}
-            <AccordionItem value="basic-info">
-              <AccordionTrigger className="text-lg font-medium">
-                Basic Information
-              </AccordionTrigger>
-              <AccordionContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/30 rounded-md">
-                  <div>
-                    <h4 className="text-sm font-medium text-muted-foreground">Product Name</h4>
-                    <p className="text-base">{draft.name || 'Not set'}</p>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-muted-foreground">URL Slug</h4>
-                    <p className="text-base">{draft.slug || 'Not set'}</p>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-muted-foreground">Category</h4>
-                    <p className="text-base">{categoryData?.data?.name || 'Not set'}</p>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-muted-foreground">Stock Level</h4>
-                    <p className="text-base">{draft.stockLevel !== undefined ? draft.stockLevel : 'Not set'}</p>
-                  </div>
-                  <div className="md:col-span-2">
-                    <h4 className="text-sm font-medium text-muted-foreground">Description</h4>
-                    <p className="text-base whitespace-pre-line">{draft.description || 'No description provided'}</p>
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-            
-            {/* Pricing Section */}
-            <AccordionItem value="pricing">
-              <AccordionTrigger className="text-lg font-medium">
-                Pricing Information
-              </AccordionTrigger>
-              <AccordionContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-muted/30 rounded-md">
-                  <div>
-                    <h4 className="text-sm font-medium text-muted-foreground">Regular Price</h4>
-                    <p className="text-base">{formatPrice(draft.regularPrice)}</p>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-muted-foreground">Sale Price</h4>
-                    <p className="text-base">{formatPrice(draft.salePrice)}</p>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-muted-foreground">Cost Price</h4>
-                    <p className="text-base">{formatPrice(draft.costPrice)}</p>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-muted-foreground">On Sale</h4>
-                    <p className="text-base">{draft.onSale ? 'Yes' : 'No'}</p>
-                  </div>
-                  {draft.onSale && draft.saleStartDate && (
-                    <div>
-                      <h4 className="text-sm font-medium text-muted-foreground">Sale Start Date</h4>
-                      <p className="text-base">
-                        {new Date(draft.saleStartDate).toLocaleDateString()}
-                      </p>
-                    </div>
-                  )}
-                  {draft.onSale && draft.saleEndDate && (
-                    <div>
-                      <h4 className="text-sm font-medium text-muted-foreground">Sale End Date</h4>
-                      <p className="text-base">
-                        {new Date(draft.saleEndDate).toLocaleDateString()}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-            
-            {/* Images Section */}
-            <AccordionItem value="images">
-              <AccordionTrigger className="text-lg font-medium">
-                Product Images
-              </AccordionTrigger>
-              <AccordionContent>
-                {hasImages ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                    {draft.images.map((image, index) => (
-                      <div key={index} className="aspect-square rounded-md overflow-hidden border">
-                        <img 
-                          src={image.url} 
-                          alt={`Product image ${index + 1}`} 
-                          className="w-full h-full object-cover" 
-                        />
+                {/* Basic Info Section */}
+                <AccordionItem value="basic-info">
+                  <AccordionTrigger className="text-lg font-medium">
+                    Basic Information
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/30 rounded-md">
+                      <div>
+                        <h4 className="text-sm font-medium text-muted-foreground">Product Name</h4>
+                        <p className="text-base">{draft.name || 'Not set'}</p>
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center p-8 bg-muted/30 rounded-md">
-                    <p className="text-muted-foreground">No images have been added yet</p>
-                  </div>
-                )}
-              </AccordionContent>
-            </AccordionItem>
-            
-            {/* Attributes Section */}
-            <AccordionItem value="attributes">
-              <AccordionTrigger className="text-lg font-medium">
-                Product Attributes
-              </AccordionTrigger>
-              <AccordionContent>
-                {draft.attributes && draft.attributes.length > 0 ? (
-                  <div className="space-y-4 p-4 bg-muted/30 rounded-md">
-                    {draft.attributes.map((attribute, index) => (
-                      <div key={index} className="flex flex-col gap-1">
-                        <h4 className="text-sm font-medium text-muted-foreground">{attribute.name}</h4>
-                        <p className="text-base">{attribute.value || 'Not set'}</p>
+                      <div>
+                        <h4 className="text-sm font-medium text-muted-foreground">URL Slug</h4>
+                        <p className="text-base">{draft.slug || 'Not set'}</p>
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center p-8 bg-muted/30 rounded-md">
-                    <p className="text-muted-foreground">No attributes have been set</p>
-                  </div>
-                )}
-              </AccordionContent>
-            </AccordionItem>
-            
-            {/* SEO Section */}
-            <AccordionItem value="seo">
-              <AccordionTrigger className="text-lg font-medium">
-                SEO Information
-              </AccordionTrigger>
-              <AccordionContent>
-                <div className="space-y-4 p-4 bg-muted/30 rounded-md">
-                  <div>
-                    <h4 className="text-sm font-medium text-muted-foreground">Meta Title</h4>
-                    <p className="text-base">{draft.metaTitle || draft.name || 'Not set'}</p>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-muted-foreground">Meta Description</h4>
-                    <p className="text-base">{draft.metaDescription || 'Not set'}</p>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-muted-foreground">Meta Keywords</h4>
-                    <p className="text-base">{draft.metaKeywords || 'Not set'}</p>
-                  </div>
-                  {draft.canonicalUrl && (
-                    <div>
-                      <h4 className="text-sm font-medium text-muted-foreground">Canonical URL</h4>
-                      <p className="text-base">{draft.canonicalUrl}</p>
+                      <div>
+                        <h4 className="text-sm font-medium text-muted-foreground">Category</h4>
+                        <p className="text-base">{categoryData?.data?.name || 'Not set'}</p>
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-medium text-muted-foreground">Stock Level</h4>
+                        <p className="text-base">{draft.stockLevel !== undefined ? draft.stockLevel : 'Not set'}</p>
+                      </div>
+                      <div className="md:col-span-2">
+                        <h4 className="text-sm font-medium text-muted-foreground">Description</h4>
+                        <p className="text-base whitespace-pre-line">{draft.description || 'No description provided'}</p>
+                      </div>
                     </div>
-                  )}
+                  </AccordionContent>
+                </AccordionItem>
+                
+                {/* Pricing Section */}
+                <AccordionItem value="pricing">
+                  <AccordionTrigger className="text-lg font-medium">
+                    Pricing Information
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-muted/30 rounded-md">
+                      <div>
+                        <h4 className="text-sm font-medium text-muted-foreground">Regular Price</h4>
+                        <p className="text-base">{formatPrice(draft.regularPrice)}</p>
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-medium text-muted-foreground">Sale Price</h4>
+                        <p className="text-base">{formatPrice(draft.salePrice)}</p>
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-medium text-muted-foreground">Cost Price</h4>
+                        <p className="text-base">{formatPrice(draft.costPrice)}</p>
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-medium text-muted-foreground">On Sale</h4>
+                        <p className="text-base">{draft.onSale ? 'Yes' : 'No'}</p>
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+                
+                {/* Images Section */}
+                <AccordionItem value="images">
+                  <AccordionTrigger className="text-lg font-medium">
+                    Product Images
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    {hasImages ? (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                        {draft.imageUrls.map((imageUrl, index) => (
+                          <div key={index} className="aspect-square rounded-md overflow-hidden border">
+                            <img 
+                              src={imageUrl} 
+                              alt={`Product image ${index + 1}`} 
+                              className="w-full h-full object-cover" 
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center p-8 bg-muted/30 rounded-md">
+                        <p className="text-muted-foreground">No images have been added yet</p>
+                      </div>
+                    )}
+                  </AccordionContent>
+                </AccordionItem>
+                
+                {/* Attributes Section */}
+                <AccordionItem value="attributes">
+                  <AccordionTrigger className="text-lg font-medium">
+                    Product Attributes
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    {draft.attributes && draft.attributes.length > 0 ? (
+                      <div className="space-y-4 p-4 bg-muted/30 rounded-md">
+                        {draft.attributes.map((attribute, index) => (
+                          <div key={index} className="flex flex-col gap-1">
+                            <h4 className="text-sm font-medium text-muted-foreground">{attribute.attributeId}</h4>
+                            <p className="text-base">{attribute.value || 'Not set'}</p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center p-8 bg-muted/30 rounded-md">
+                        <p className="text-muted-foreground">No attributes have been set</p>
+                      </div>
+                    )}
+                  </AccordionContent>
+                </AccordionItem>
+                
+                {/* SEO Section */}
+                <AccordionItem value="seo">
+                  <AccordionTrigger className="text-lg font-medium">
+                    SEO Information
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="space-y-4 p-4 bg-muted/30 rounded-md">
+                      <div>
+                        <h4 className="text-sm font-medium text-muted-foreground">Meta Title</h4>
+                        <p className="text-base">{draft.metaTitle || draft.name || 'Not set'}</p>
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-medium text-muted-foreground">Meta Description</h4>
+                        <p className="text-base">{draft.metaDescription || 'Not set'}</p>
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-medium text-muted-foreground">Meta Keywords</h4>
+                        <p className="text-base">{draft.metaKeywords || 'Not set'}</p>
+                      </div>
+                      {draft.canonicalUrl && (
+                        <div>
+                          <h4 className="text-sm font-medium text-muted-foreground">Canonical URL</h4>
+                          <p className="text-base">{draft.canonicalUrl}</p>
+                        </div>
+                      )}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </TabsContent>
+            
+            <TabsContent value="workflow" className="space-y-4">
+              <div className="bg-muted/30 rounded-lg p-6">
+                <div className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-2">
+                    <h3 className="text-lg font-medium">Current Status</h3>
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className={`w-3 h-3 rounded-full ${
+                          draft.draftStatus === 'published' 
+                            ? 'bg-green-500' 
+                            : draft.draftStatus === 'ready_to_publish' 
+                            ? 'bg-blue-500'
+                            : draft.draftStatus === 'in_review'
+                            ? 'bg-purple-500'
+                            : draft.draftStatus === 'rejected'
+                            ? 'bg-red-500'
+                            : 'bg-amber-500'
+                        }`}
+                      />
+                      <span className="font-medium">
+                        {statusOptions.find(o => o.value === (draft.draftStatus || 'draft'))?.label || 'Draft'}
+                      </span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {statusOptions.find(o => o.value === (draft.draftStatus || 'draft'))?.description}
+                    </p>
+                  </div>
+                  
+                  <div className="relative mt-4 pb-2">
+                    <div className="absolute left-4 top-0 h-full w-px bg-muted-foreground/20"></div>
+                    <ol className="relative space-y-8">
+                      {statusOptions.map((option, index) => {
+                        const isCurrentStatus = option.value === (draft.draftStatus || 'draft');
+                        const isPastStatus = statusOptions.findIndex(o => o.value === (draft.draftStatus || 'draft')) > index;
+                        
+                        return (
+                          <li key={option.value} className="relative pl-10">
+                            <div className={`absolute left-1 top-1.5 flex h-6 w-6 -translate-x-1/2 items-center justify-center rounded-full border ${
+                              isCurrentStatus 
+                                ? 'bg-primary border-primary text-primary-foreground' 
+                                : isPastStatus
+                                ? 'bg-primary/20 border-primary/20 text-primary'
+                                : 'bg-muted border-muted-foreground/20'
+                            }`}>
+                              {isPastStatus ? (
+                                <Check className="h-3 w-3" />
+                              ) : isCurrentStatus ? (
+                                <div className="h-2 w-2 rounded-full bg-current" />
+                              ) : (
+                                <div className="h-1.5 w-1.5 rounded-full bg-current opacity-40" />
+                              )}
+                            </div>
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                {option.icon}
+                                <h4 className={`text-base font-medium ${isCurrentStatus ? 'text-primary' : ''}`}>
+                                  {option.label}
+                                </h4>
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                {option.description}
+                              </p>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ol>
+                  </div>
+                  
+                  <div className="flex justify-between mt-6 pt-4 border-t">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setShowStatusDialog(true)}
+                      className="gap-2"
+                    >
+                      <Clock className="h-4 w-4" />
+                      Change Status
+                    </Button>
+                    
+                    {draft.draftStatus === 'ready_to_publish' && (
+                      <Button 
+                        onClick={() => setShowPublishDialog(true)} 
+                        size="sm"
+                        disabled={!isValid || isPublishing}
+                        className="gap-2"
+                      >
+                        {isPublishing && <Loader2 className="h-4 w-4 animate-spin" />}
+                        <Check className="h-4 w-4" />
+                        Publish Product
+                      </Button>
+                    )}
+                  </div>
                 </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
+              </div>
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
     </>
