@@ -138,11 +138,11 @@ export const products = pgTable("products", {
   specialSaleEnd: text("special_sale_end"),
   requiredAttributeIds: integer("required_attribute_ids").array(),
   
-  // Schema-only columns made nullable
-  // Note: updated_at column doesn't exist in the actual database table
-  // Keep this commented out to avoid errors
+  // Schema-only columns
+  // Note: these columns don't exist in the actual database table
+  // Keep these commented out to avoid errors
   // updatedAt: text("updated_at"),
-  sku: text("sku"),
+  // sku: text("sku"),
 });
 
 // Product relations
