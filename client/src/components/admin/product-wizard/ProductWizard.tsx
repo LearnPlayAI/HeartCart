@@ -20,6 +20,7 @@ import {
 import BasicInfoStep from './steps/BasicInfoStep';
 import ProductImagesStep from './steps/ProductImagesStep';
 import { AdditionalInfoStep } from './steps/AdditionalInfoStep';
+import { SEOStep } from './steps/SEOStep';
 import { ReviewAndSaveStep } from './steps/ReviewAndSaveStep';
 
 // Define the steps in the wizard
@@ -27,6 +28,7 @@ const WIZARD_STEPS = [
   { id: 'basic-info', label: 'Basic Info', component: BasicInfoStep },
   { id: 'images', label: 'Images', component: ProductImagesStep },
   { id: 'additional-info', label: 'Additional Info', component: AdditionalInfoStep },
+  { id: 'seo', label: 'SEO', component: SEOStep },
   { id: 'review', label: 'Review & Save', component: ReviewAndSaveStep },
 ];
 
@@ -35,7 +37,8 @@ const STEP_MAP = {
   'basic-info': 0,
   'images': 1,
   'additional-info': 2,
-  'review': 3
+  'seo': 3,
+  'review': 4
 };
 
 export interface ProductDraft {
@@ -44,6 +47,11 @@ export interface ProductDraft {
   description: string | null;
   slug: string;
   categoryId: number | null;
+  category?: {
+    id: number;
+    name: string;
+    slug: string;
+  } | null;
   regularPrice: number | null;
   salePrice: number | null;
   costPrice: number | null;
@@ -66,6 +74,12 @@ export interface ProductDraft {
   flashDealEnd: Date | null;
   dimensions: string | null;
   weight: string | null;
+  // SEO fields
+  metaTitle: string | null;
+  metaDescription: string | null;
+  metaKeywords: string | null;
+  canonicalUrl: string | null;
+  // System fields
   originalProductId: number | null;
   createdBy: number;
   draftStatus: string;
@@ -76,7 +90,7 @@ export interface ProductDraft {
   supplierId: number | null;
 }
 
-export type ProductDraftStep = 'basic-info' | 'images' | 'additional-info' | 'review';
+export type ProductDraftStep = 'basic-info' | 'images' | 'additional-info' | 'seo' | 'review';
 
 interface ProductWizardProps {
   editMode?: boolean;
