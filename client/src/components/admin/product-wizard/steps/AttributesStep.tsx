@@ -770,7 +770,7 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
         const attribute = getAllAttributes().find(a => a.id === attr.attributeId);
         
         // Ensure options include the attributeId property to match AttributeOption interface
-        const formattedOptions = attribute?.options ? 
+        const formattedOptions = attribute?.options && Array.isArray(attribute.options) ? 
           attribute.options.map(opt => ({
             ...opt,
             attributeId: attr.attributeId // Ensure attributeId is included
@@ -1560,7 +1560,9 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
                       
                       if (attr.selectedOptions && attr.selectedOptions.length > 0) {
                         displayValue = attr.selectedOptions
-                          .map(optId => attribute?.options.find(opt => opt.id === optId)?.displayValue)
+                          .map(optId => attribute?.options && Array.isArray(attribute.options) 
+                            ? attribute.options.find(opt => opt.id === optId)?.displayValue
+                            : null)
                           .filter(Boolean)
                           .join(', ');
                       } else if (attr.textValue) {
