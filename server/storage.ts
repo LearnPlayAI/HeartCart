@@ -5463,7 +5463,7 @@ export class DatabaseStorage implements IStorage {
         // Categorization and grouping
         tags: draft.metaKeywords ? draft.metaKeywords.split(',').map(tag => tag.trim()) : [],
         
-        // Timestamps - these will be handled by database defaults
+        // Timestamps as ISO strings for text fields
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -5669,6 +5669,31 @@ export class DatabaseStorage implements IStorage {
                 draftId: draft.id,
                 productId: product.id
               });
+              continue; // Skip this image if it doesn't exist
+            }
+            
+            // Make sure we have a valid URL before inserting
+            if (!newImageUrl) {
+              logger.warn('Could not generate valid public URL for image', {
+                objectKey: newObjectKey,
+                draftId: draft.id,
+                productId: product.id
+              });
+              
+              // Use the original image URL from the draft if available
+              if (imageUrl) {
+                // Save product image record with the original URL
+                await db
+                  .insert(productImages)
+                  .values({
+                    productId: product.id,
+                    imageUrl: imageUrl,
+                    objectKey: newObjectKey,
+                    isMainImage: i === (draft.mainImageIndex || 0),
+                    sortOrder: i
+                  });
+              }
+              continue;
             }
             
             // Save product image record with the same locations
@@ -5697,15 +5722,23 @@ export class DatabaseStorage implements IStorage {
             });
             
             // Fallback to using original image locations
-            await db
-              .insert(productImages)
-              .values({
+            if (imageUrl) {
+              await db
+                .insert(productImages)
+                .values({
+                  productId: product.id,
+                  imageUrl: imageUrl,
+                  objectKey: sourceObjectKey,
+                  isMainImage: i === (draft.mainImageIndex || 0),
+                  sortOrder: i
+                });
+            } else {
+              logger.error('Cannot create product image: No valid URL available', {
                 productId: product.id,
-                imageUrl,
-                objectKey: sourceObjectKey,
-                isMainImage: i === (draft.mainImageIndex || 0),
-                sortOrder: i
+                draftId: draft.id,
+                sourceKey: sourceObjectKey
               });
+            }
           }
         }
       }
