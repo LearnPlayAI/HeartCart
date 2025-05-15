@@ -124,6 +124,11 @@ export const publishProductDraftSchema = z.object({
   id: z.number()
 });
 
+export const updateProductDraftStatusSchema = z.object({
+  status: z.enum(['draft', 'in_review', 'ready_to_publish', 'published', 'rejected']),
+  note: z.string().optional()
+});
+
 /**
  * Product-related validation schemas
  */
