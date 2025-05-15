@@ -115,16 +115,26 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
       
       // Enhanced format (if available)
       if (draft.attributesData && draft.attributesData.length > 0) {
-        const enhancedValues = draft.attributesData.map(attr => ({
-          attributeId: attr.attributeId,
-          attributeName: attr.attributeName,
-          displayName: attr.displayName,
-          attributeType: attr.attributeType,
-          value: null, // Will be populated from the simple attributes
-          options: attr.options,
-          selectedOptions: attr.selectedOptions,
-          textValue: attr.textValue
-        }));
+        const enhancedValues = draft.attributesData.map(attr => {
+          // Ensure options have attributeId to match AttributeOption interface
+          const formattedOptions = attr.options ? 
+            attr.options.map(opt => ({
+              ...opt,
+              attributeId: attr.attributeId // Add missing attributeId
+            })) : 
+            [];
+            
+          return {
+            attributeId: attr.attributeId,
+            attributeName: attr.attributeName,
+            displayName: attr.displayName,
+            attributeType: attr.attributeType,
+            value: null, // Will be populated from the simple attributes
+            options: formattedOptions,
+            selectedOptions: attr.selectedOptions,
+            textValue: attr.textValue
+          };
+        });
         
         // Merge the simple values with enhanced data
         const mergedValues = enhancedValues.map(enhanced => {
@@ -456,13 +466,21 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
       const attributesData = attributeValues.map(attr => {
         const attribute = getAllAttributes().find(a => a.id === attr.attributeId);
         
+        // Ensure options include the attributeId property to match AttributeOption interface
+        const formattedOptions = attribute?.options ? 
+          attribute.options.map(opt => ({
+            ...opt,
+            attributeId: attr.attributeId // Ensure attributeId is included
+          })) : 
+          [];
+        
         return {
           attributeId: attr.attributeId,
           attributeName: attr.attributeName || attribute?.name || '',
           displayName: attr.displayName || attribute?.displayName || '',
           attributeType: attr.attributeType || attribute?.attributeType || 'text',
           isRequired: attribute?.isRequired || false,
-          options: attribute?.options || [],
+          options: formattedOptions,
           selectedOptions: attr.selectedOptions || [],
           textValue: attr.textValue || null
         };
