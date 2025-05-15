@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Plus, Search, Tag, Save, X, ChevronRight, ChevronDown, Info, AlertTriangle, Wand2, RefreshCcw, HelpCircle } from 'lucide-react';
+import { Loader2, Plus, Search, Tag, Save, X, ChevronRight, ChevronDown, Info, AlertTriangle, Wand2 } from 'lucide-react';
 import type { ProductDraft } from '../ProductWizard';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -139,52 +139,19 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
 
   // Load attribute options directly, not as a hook
   const loadAttributeOptions = (attributeId: number) => {
-    // MANUAL REFRESH IMPLEMENTATION:
-    // This function is now disabled for automatic loading. Instead, users must use
-    // the manual refresh button we added to load options.
-    
-    // Only do initial loading if the attribute options aren't loaded at all
     if (!attributeId || attributesCache[attributeId]?.options) {
-      // If we already have any options array (even empty), don't auto-load
       return;
     }
     
-    // For first-time initialization only, we'll set an empty array
-    // This prevents repeated loading attempts while still allowing manual refresh
-    setAttributesCache(prev => ({
-      ...prev,
-      [attributeId]: {
-        ...prev[attributeId],
-        options: [] // Initialize with empty array to prevent auto-loading
-      }
-    }));
-    
-    // Log that automatic loading is disabled
     const attribute = getAllAttributes().find(a => a.id === attributeId);
     if (attribute) {
-      console.log(`Auto-loading disabled for ${attribute.displayName}. Use refresh button instead.`);
-    }
-  };
-
-  // Define preloadOptions function to forcefully reload options regardless of cache
-  const preloadOptions = (attributeId: number) => {
-    if (!attributeId) return;
-    
-    const attribute = getAllAttributes().find(a => a.id === attributeId);
-    if (attribute) {
-      console.log(`Force loading options for attribute: ${attribute.displayName} (${attributeId})`);
+      console.log(`Preloading options for attribute: ${attribute.displayName} (${attributeId})`);
       
-      // Always fetch fresh data with proper error handling
+      // Manual fetch instead of using a hook
       apiRequest('GET', `/api/attributes/${attributeId}/options`)
-        .then(res => {
-          if (!res.ok) {
-            throw new Error(`HTTP error! Status: ${res.status}`);
-          }
-          return res.json();
-        })
+        .then(res => res.json())
         .then(data => {
-          if (data?.success && Array.isArray(data.data)) {
-            console.log(`Successfully loaded options for ${attribute.displayName}:`, data.data);
+          if (data?.success && data?.data) {
             setAttributesCache(prev => ({
               ...prev,
               [attributeId]: {
@@ -192,16 +159,16 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
                 options: data.data
               }
             }));
-          } else {
-            console.warn(`Data format issue for ${attribute.displayName}:`, data);
           }
         })
         .catch(error => {
-          console.error(`Failed to load options for attribute ${attributeId}:`, error);
-          // Don't show toast for every error to avoid spamming the user
+          console.error(`Error fetching options for attribute ${attributeId}:`, error);
         });
     }
   };
+
+  // Define preloadOptions as alias for loadAttributeOptions for compatibility
+  const preloadOptions = loadAttributeOptions;
 
   // Function to get all attributes, including those in cache
   const getAllAttributes = (): Attribute[] => {
@@ -301,20 +268,11 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
         setAttributeValues(mergedAttributes);
       }
       
-      // IMPORTANT: We've disabled automatic loading of attribute options
-      // Instead, we're just initializing the cache with empty arrays 
-      // The user will need to use the refresh buttons to load options
+      // Pre-load options for attributes with values
       draft.attributes.forEach(async (attr) => {
         const attribute = getAllAttributes().find(a => a.id === attr.attributeId);
         if (attribute && (attribute.attributeType === 'select' || attribute.attributeType === 'multiselect')) {
-          // Add to cache with an empty array to prevent auto-loading attempts
-          setAttributesCache(prev => ({
-            ...prev,
-            [attr.attributeId]: {
-              ...prev[attr.attributeId],
-              options: [] // Initialize with empty array
-            }
-          }));
+          preloadOptions(attr.attributeId);
         }
       });
     } else {
@@ -624,21 +582,11 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
     const attrDetails = getAllAttributes().find(a => a.id === attributeId);
     const type = attribute.attributeType || (attrDetails?.attributeType || 'text');
     
-    // MANUAL REFRESH IMPLEMENTATION:
-    // We no longer automatically load options when rendering inputs
-    // User must use the refresh button instead
+    // If this is a select or multiselect attribute but options aren't loaded yet,
+    // fetch them now
     if ((type === 'select' || type === 'multiselect') && 
         (!attribute.options || attribute.options.length === 0)) {
-      // Only initialize the cache with empty array if it doesn't exist yet
-      if (!attributesCache[attributeId]) {
-        setAttributesCache(prev => ({
-          ...prev,
-          [attributeId]: {
-            ...prev[attributeId],
-            options: [] // Initialize with empty array
-          }
-        }));
-      }
+      preloadOptions(attributeId);
     }
     
     switch (type) {
@@ -874,9 +822,10 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
                         onClick={() => {
                           setCurrentAttributeId(attribute.attributeId);
                           setIsManagingOptions(true);
-                          // Always load options when the dialog is opened - this ensures we have the latest options
-                          console.log('Opening options dialog for attribute:', attribute.displayName);
-                          preloadOptions(attribute.attributeId);
+                          // Make sure options are loaded
+                          if ((attribute.options || []).length === 0) {
+                            preloadOptions(attribute.attributeId);
+                          }
                         }}
                       >
                         <span className="text-xs">
@@ -978,40 +927,6 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
             
             {/* Attribute controls */}
             <div className="flex items-center space-x-2">
-              {/* Manual refresh button */}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                title={`Refresh options for ${attribute.displayName}`}
-                onClick={(e) => {
-                  e.preventDefault();
-                  console.log(`Manual refetch of options for attribute:`, attribute.attributeId);
-                  // Use the force load function to fetch fresh data
-                  preloadOptions(attribute.attributeId);
-                  // Show a toast notification for feedback
-                  toast({
-                    title: "Refreshing options",
-                    description: `Refreshing options for ${attribute.displayName}...`,
-                    duration: 3000
-                  });
-                  // For option-based attributes, make sure the dialog gets fresh data
-                  if (attribute.attributeType === 'select' || attribute.attributeType === 'multiselect') {
-                    apiRequest('GET', `/api/attributes/${attribute.attributeId}/options`)
-                      .then(res => res.json())
-                      .then(data => {
-                        console.log(`Options direct fetch response:`, data);
-                        if (data?.success && Array.isArray(data.data)) {
-                          attribute.options = data.data;
-                          console.log(`Options loaded:`, data.data);
-                        }
-                      });
-                  }
-                }}
-              >
-                <RefreshCcw size={16} className="text-muted-foreground" />
-              </Button>
-              
               {/* Apply to Product toggle */}
               <div className="flex flex-col items-end space-y-1">
                 <div className="flex items-center space-x-2">
