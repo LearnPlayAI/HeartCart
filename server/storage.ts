@@ -170,6 +170,12 @@ export interface IStorage {
   deleteProductDraft(id: number): Promise<boolean>;
 }
 
+// Helper function to format current date in SAST format
+function formatCurrentDateSAST(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+}
+
 export class DatabaseStorage implements IStorage {
   /**
    * Helper method to enrich products with their main image URL and additional images
@@ -4760,10 +4766,13 @@ export class DatabaseStorage implements IStorage {
   // Product Draft Methods for Database-Centric Approach
   async createProductDraft(draft: InsertProductDraft): Promise<ProductDraft> {
     try {
-      // Set lastModified to current timestamp
+      // Set lastModified to current timestamp in SAST format
+      const now = new Date();
+      const formattedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+      
       const draftWithTimestamp = {
         ...draft,
-        lastModified: new Date()
+        lastModified: formattedDate
       };
       
       // Debug log the data we're about to insert
