@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
+import type { Supplier, Catalog } from '@shared/schema';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -90,6 +91,15 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, isL
     },
   });
 
+  // Fetch suppliers for the dropdown
+  const { data: suppliersData, isLoading: isSuppliersLoading } = useQuery({
+    queryKey: ['/api/suppliers'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/suppliers');
+      return response.json();
+    },
+  });
+
   // Initialize form with draft values
   const form = useForm<BasicInfoFormValues>({
     resolver: zodResolver(basicInfoSchema),
@@ -139,6 +149,35 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, isL
       form.setValue('slug', generatedSlug);
     }
   }, [watchName, form, isNameTouched]);
+  
+  // Watch supplier ID to load related catalogs
+  const watchSupplierId = form.watch('supplierId');
+  
+  // Fetch catalogs for the selected supplier
+  const { data: catalogsData, isLoading: isCatalogsLoading } = useQuery({
+    queryKey: ['/api/suppliers', watchSupplierId, 'catalogs'],
+    queryFn: async () => {
+      if (!watchSupplierId) return { data: [] };
+      const response = await apiRequest('GET', `/api/suppliers/${watchSupplierId}/catalogs`);
+      return response.json();
+    },
+    enabled: !!watchSupplierId,
+  });
+  
+  // Reset catalog selection when supplier changes
+  useEffect(() => {
+    if (watchSupplierId && form.getValues('catalogId')) {
+      // Check if the current catalogId belongs to the selected supplier
+      const currentCatalogId = form.getValues('catalogId');
+      const catalogs = catalogsData?.data || [];
+      const catalogBelongsToSupplier = catalogs.some((catalog: any) => catalog.id === currentCatalogId);
+      
+      // If not, reset the catalog selection
+      if (!catalogBelongsToSupplier) {
+        form.setValue('catalogId', 0);
+      }
+    }
+  }, [watchSupplierId, catalogsData, form]);
 
   // Handle form submission
   const onSubmit = (data: BasicInfoFormValues) => {
@@ -410,6 +449,89 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, isL
                         categoriesData?.data?.map((category: any) => (
                           <SelectItem key={category.id} value={category.id.toString()}>
                             {category.name}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Supplier Selection */}
+            <FormField
+              control={form.control}
+              name="supplierId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Supplier*</FormLabel>
+                  <Select
+                    onValueChange={(value) => field.onChange(Number(value))}
+                    defaultValue={field.value?.toString() || undefined}
+                    value={field.value?.toString() || undefined}
+                  >
+                    <FormControl>
+                      <SelectTrigger className="h-9 sm:h-10">
+                        <SelectValue placeholder="Select a supplier" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {isSuppliersLoading ? (
+                        <div className="flex items-center justify-center p-2">
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          <span>Loading suppliers...</span>
+                        </div>
+                      ) : (
+                        suppliersData?.data?.map((supplier: any) => (
+                          <SelectItem key={supplier.id} value={supplier.id.toString()}>
+                            {supplier.name}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Catalog Selection */}
+            <FormField
+              control={form.control}
+              name="catalogId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Catalog*</FormLabel>
+                  <Select
+                    onValueChange={(value) => field.onChange(Number(value))}
+                    defaultValue={field.value?.toString() || undefined}
+                    value={field.value?.toString() || undefined}
+                    disabled={!watchSupplierId || isCatalogsLoading}
+                  >
+                    <FormControl>
+                      <SelectTrigger className="h-9 sm:h-10">
+                        <SelectValue placeholder={watchSupplierId ? "Select a catalog" : "Select a supplier first"} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {!watchSupplierId ? (
+                        <div className="flex items-center justify-center p-2">
+                          <span className="text-muted-foreground">Please select a supplier first</span>
+                        </div>
+                      ) : isCatalogsLoading ? (
+                        <div className="flex items-center justify-center p-2">
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          <span>Loading catalogs...</span>
+                        </div>
+                      ) : catalogsData?.data?.length === 0 ? (
+                        <div className="flex items-center justify-center p-2">
+                          <span className="text-muted-foreground">No catalogs found for this supplier</span>
+                        </div>
+                      ) : (
+                        catalogsData?.data?.map((catalog: any) => (
+                          <SelectItem key={catalog.id} value={catalog.id.toString()}>
+                            {catalog.name}
                           </SelectItem>
                         ))
                       )}
