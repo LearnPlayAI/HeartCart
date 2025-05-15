@@ -208,14 +208,21 @@ class ObjectStoreService {
     draftId: number,
     contentType?: string,
     supplierName?: string,
-    catalogId?: number
+    catalogId?: number,
+    catalogName?: string
   ): Promise<{ url: string; objectKey: string }> {
     await this.initialize();
     
     // Sanitize the filename and inputs
     const sanitizedFilename = this.sanitizeFilename(filename);
+    
+    // Use the actual supplier name and catalog name if provided
     const safeSupplierName = supplierName ? this.sanitizeFolderName(supplierName) : 'unknown-supplier';
-    const safeCatalogName = `catalog-${catalogId || 0}`;
+    
+    // Use actual catalog name if provided, otherwise fall back to ID-based naming
+    const safeCatalogName = catalogName 
+      ? this.sanitizeFolderName(catalogName) 
+      : `catalog-${catalogId || 0}`;
     
     // Generate a unique filename to avoid collisions
     const uniqueId = new Date().getTime() + '-' + Math.random().toString(36).substring(2, 15);
@@ -226,6 +233,14 @@ class ObjectStoreService {
     // Create the improved path structure that doesn't need to be moved during publish:
     // /root/{supplierName}/{catalogName}/{draftId}/image.xxx
     const objectKey = `${safeSupplierName}/${safeCatalogName}/${draftId}/${uniqueFilename}`;
+    
+    console.log('Creating image at path:', {
+      supplierName: safeSupplierName,
+      catalogName: safeCatalogName,
+      draftId,
+      filename: uniqueFilename,
+      objectKey
+    });
     
     try {
       await this.uploadFromBuffer(objectKey, buffer, {

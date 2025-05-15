@@ -310,6 +310,28 @@ export default function registerProductDraftRoutes(router: Router) {
       const currentImageUrls = draft.imageUrls || [];
       const currentImageObjectKeys = draft.imageObjectKeys || [];
       
+      // Get supplier and catalog details for proper folder naming
+      let supplierName = 'unknown-supplier';
+      let catalogName = '';
+      
+      if (draft.supplierId) {
+        // Get supplier name from database
+        const supplier = await storage.getSupplierById(draft.supplierId);
+        if (supplier) {
+          supplierName = supplier.name;
+          console.log(`Using supplier name: ${supplierName} for folder path`);
+        }
+      }
+      
+      if (draft.catalogId) {
+        // Get catalog name from database
+        const catalog = await storage.getCatalogById(draft.catalogId);
+        if (catalog) {
+          catalogName = catalog.name;
+          console.log(`Using catalog name: ${catalogName} for folder path`);
+        }
+      }
+      
       // Upload new images to object store with the correct draft folder structure
       const imagePromises = files.map(async (file) => {
         // Process the image to optimize it
@@ -322,18 +344,15 @@ export default function registerProductDraftRoutes(router: Router) {
           autoRotate: true
         });
         
-        // Get supplier and catalog info for new image path strategy
-        const supplierName = draft.supplier || 'unknown-supplier';
-        const catalogId = draft.catalogId || 0;
-        
-        // Upload with new path strategy using supplier and catalog info
+        // Upload with new path strategy using correct supplier and catalog names
         const uploadResult = await objectStore.uploadDraftImage(
           processedBuffer,
           file.originalname,
           draftId,
           file.mimetype,
           supplierName,
-          catalogId
+          draft.catalogId,
+          catalogName
         );
         
         // Return image info
