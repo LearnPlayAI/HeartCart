@@ -199,18 +199,23 @@ class ObjectStoreService {
 
   /**
    * Upload a product draft image with the proper folder structure
-   * Path: /root/drafts/{draftId}/{filename}
+   * New path strategy: /root/{supplierName}/{catalogName}/{draftId}/{filename}
+   * This allows us to keep the same location during publishing
    */
   async uploadDraftImage(
     buffer: Buffer,
     filename: string,
     draftId: number,
-    contentType?: string
+    contentType?: string,
+    supplierName?: string,
+    catalogId?: number
   ): Promise<{ url: string; objectKey: string }> {
     await this.initialize();
     
-    // Sanitize the filename first
+    // Sanitize the filename and inputs
     const sanitizedFilename = this.sanitizeFilename(filename);
+    const safeSupplierName = supplierName ? this.sanitizeFolderName(supplierName) : 'unknown-supplier';
+    const safeCatalogName = `catalog-${catalogId || 0}`;
     
     // Generate a unique filename to avoid collisions
     const uniqueId = new Date().getTime() + '-' + Math.random().toString(36).substring(2, 15);
@@ -218,8 +223,9 @@ class ObjectStoreService {
     const baseName = path.basename(sanitizedFilename, extension);
     const uniqueFilename = `${baseName}-${uniqueId}${extension}`;
     
-    // Create the correct path structure: /root/drafts/{draftId}/image1.xxx
-    const objectKey = `${STORAGE_FOLDERS.DRAFTS}/${draftId}/${uniqueFilename}`;
+    // Create the improved path structure that doesn't need to be moved during publish:
+    // /root/{supplierName}/{catalogName}/{draftId}/image.xxx
+    const objectKey = `${safeSupplierName}/${safeCatalogName}/${draftId}/${uniqueFilename}`;
     
     try {
       await this.uploadFromBuffer(objectKey, buffer, {
@@ -234,6 +240,18 @@ class ObjectStoreService {
       console.error(`Failed to upload draft image ${filename}:`, error);
       throw new Error(`Draft image upload failed: ${error instanceof Error ? error.message : String(error)}`);
     }
+  }
+  
+  /**
+   * Helper method to sanitize folder names
+   */
+  private sanitizeFolderName(name: string): string {
+    return name
+      .toLowerCase()
+      .replace(/[^\w\s-]/g, '') // Remove non-word chars
+      .replace(/[\s_-]+/g, '-')  // Replace spaces and symbols with hyphens
+      .replace(/^-+|-+$/g, '')   // Remove leading/trailing hyphens
+      .substring(0, 50);         // Limit length
   }
   
   /**
