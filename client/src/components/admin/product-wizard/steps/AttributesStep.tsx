@@ -64,6 +64,17 @@ interface AttributesStepProps {
 }
 
 export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, isLoading = false }) => {
+  // Helper function to safely check if an attribute has options and map them
+  const safelyMapOptions = (attribute: any, attributeId: number) => {
+    if (!attribute) return [];
+    if (!attribute.options) return [];
+    if (!Array.isArray(attribute.options)) return [];
+    
+    return attribute.options.map(opt => ({
+      ...opt,
+      attributeId: attributeId
+    }));
+  };
   // Define the function to create a new attribute option
   const handleCreateAttributeOption = async () => {
     if (!currentAttributeId || !newOptionData.value) {
@@ -350,7 +361,7 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
       if (draft.attributesData && draft.attributesData.length > 0) {
         const enhancedValues = draft.attributesData.map(attr => {
           // Ensure options have attributeId to match AttributeOption interface
-          const formattedOptions = attr.options ? 
+          const formattedOptions = attr.options && Array.isArray(attr.options) ? 
             attr.options.map(opt => ({
               ...opt,
               attributeId: attr.attributeId // Add missing attributeId
