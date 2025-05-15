@@ -5407,7 +5407,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   }
                   return objectKey;
                 })
-                .filter(key => key !== null && key.includes(`/${draftId}/`));
+                .filter(key => key !== null && key.includes(`/drafts/${draftId}/`));
               logger.info(`TEST: Parent list found ${parentListFiles.length} matching files`);
             }
           }

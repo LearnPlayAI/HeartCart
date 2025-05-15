@@ -770,7 +770,14 @@ class ObjectStoreService {
               }
               
               if (objectKey) {
-                keys.push(objectKey);
+                // Only add keys that actually match our prefix
+                // This is important because object store may return ALL files
+                if (objectKey.startsWith(normalizedPrefix)) {
+                  console.log(`File matches prefix ${normalizedPrefix}: ${objectKey}`);
+                  keys.push(objectKey);
+                } else {
+                  console.log(`File does NOT match prefix ${normalizedPrefix} (skipping): ${objectKey}`);
+                }
               }
             }
           }
@@ -789,9 +796,29 @@ class ObjectStoreService {
         if (!('err' in retryResult) || !retryResult.err) {
           if (retryResult.value && Array.isArray(retryResult.value)) {
             for (const obj of retryResult.value) {
-              if (obj && typeof obj === 'object' && 'key' in obj) {
-                const key = obj.key as string;
-                keys.push(key);
+              if (obj && typeof obj === 'object') {
+                let objectKey = null;
+                
+                // Try key property first
+                if ('key' in obj && obj.key && typeof obj.key === 'string') {
+                  objectKey = obj.key as string;
+                  console.log(`Using key property on retry: ${objectKey}`);
+                } 
+                // Then try name property 
+                else if ('name' in obj && obj.name && typeof obj.name === 'string') {
+                  objectKey = obj.name as string;
+                  console.log(`Using name property on retry: ${objectKey}`);
+                }
+                
+                if (objectKey) {
+                  // Only add keys that actually match our prefix
+                  if (objectKey.startsWith(prefixWithSlash)) {
+                    console.log(`File matches prefix ${prefixWithSlash}: ${objectKey}`);
+                    keys.push(objectKey);
+                  } else {
+                    console.log(`File does NOT match prefix ${prefixWithSlash} (skipping): ${objectKey}`);
+                  }
+                }
               }
             }
           }
