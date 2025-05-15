@@ -346,7 +346,8 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
       if (attribute) {
         const selectedOptions = newValues[existingIndex].selectedOptions || [];
         const optionValues = selectedOptions
-          .map(optId => attribute.options.find(opt => opt.id === optId)?.value)
+          .map(optId => attribute.options && Array.isArray(attribute.options) ?
+            attribute.options.find(opt => opt.id === optId)?.value : null)
           .filter(Boolean) as string[];
         
         newValues[existingIndex].value = attribute.attributeType === 'multiselect' ? 
@@ -359,7 +360,8 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
       if (attribute) {
         const selectedOptions = [optionId];
         const optionValues = selectedOptions
-          .map(optId => attribute.options.find(opt => opt.id === optId)?.value)
+          .map(optId => attribute.options && Array.isArray(attribute.options) ? 
+            attribute.options.find(opt => opt.id === optId)?.value : null)
           .filter(Boolean) as string[];
         
         // Ensure options have attributeId to match AttributeOption interface
@@ -797,7 +799,8 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
             </div>
             <div className="flex flex-wrap gap-2 mb-2">
               {selectedOptions.map((optionId) => {
-                const option = attribute.options.find(opt => opt.id === optionId);
+                const option = attribute.options && Array.isArray(attribute.options) ? 
+                  attribute.options.find(opt => opt.id === optionId) : null;
                 return option ? (
                   <Badge key={optionId} variant="secondary" className="flex items-center gap-1">
                     {option.displayValue}
@@ -863,20 +866,21 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
                   const colorCode = option.metadata?.colorCode || '#CCCCCC';
                   const isSelected = selectedOptions.includes(option.id);
                   return (
-                  <div 
-                    key={option.id} 
-                    className={`
-                      w-8 h-8 rounded-full cursor-pointer border-2 flex items-center justify-center
-                      ${isSelected ? 'border-primary' : 'border-gray-200'}
-                    `}
-                    style={{ backgroundColor: colorCode }}
-                    onClick={() => handleOptionSelection(attribute.id, option.id, !isSelected)}
-                    title={option.displayValue}
-                  >
-                    {isSelected && <div className="w-2 h-2 bg-white rounded-full" />}
-                  </div>
-                );
-              })}
+                    <div 
+                      key={option.id} 
+                      className={`
+                        w-8 h-8 rounded-full cursor-pointer border-2 flex items-center justify-center
+                        ${isSelected ? 'border-primary' : 'border-gray-200'}
+                      `}
+                      style={{ backgroundColor: colorCode }}
+                      onClick={() => handleOptionSelection(attribute.id, option.id, !isSelected)}
+                      title={option.displayValue}
+                    >
+                      {isSelected && <div className="w-2 h-2 bg-white rounded-full" />}
+                    </div>
+                  );
+                })
+              : <div className="text-sm text-muted-foreground">No color options available</div>}
             </div>
             {hasError && (
               <p className="text-sm text-red-500">{validationErrors[`attribute-${attribute.id}`][0]}</p>
