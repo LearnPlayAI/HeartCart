@@ -284,13 +284,27 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ draftId, initialDa
       // Format the data according to server validation schema
       const requestData = {
         draftData: stepData,
-        step: STEP_MAP[step], // Convert string step to number (0-3)
+        step: STEP_MAP[step], // Convert string step to number (0-6)
       };
       
       console.log(`Updating step ${step} (${STEP_MAP[step]}) with data:`, requestData);
       
+      // Enhanced logging to debug sales promotions issue
+      if (step === 'sales-promotions') {
+        console.log(`Sales promotions data being sent:`, {
+          step: step,
+          stepNumber: STEP_MAP[step],
+          data: stepData
+        });
+      }
+      
       const response = await apiRequest('PATCH', `/api/product-drafts/${draftId}/wizard-step`, requestData);
-      return response.json();
+      const responseData = await response.json();
+      
+      // Log response for debugging
+      console.log(`Server response for step ${step}:`, responseData);
+      
+      return responseData;
     },
     onSuccess: (data) => {
       if (data.success) {

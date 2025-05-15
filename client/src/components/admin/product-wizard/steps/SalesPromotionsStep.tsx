@@ -141,6 +141,9 @@ export const SalesPromotionsStep: React.FC<SalesPromotionsStepProps> = ({
         flashDealEnd: values.flashDealEnd || null
       };
       
+      // Add debugging logs to see what's being sent
+      console.log('Submitting sales promotions data:', formattedValues);
+      
       await onSave(formattedValues, true);
     } finally {
       setSaving(false);
