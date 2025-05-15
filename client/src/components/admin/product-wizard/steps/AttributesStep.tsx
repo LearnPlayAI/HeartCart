@@ -998,6 +998,7 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="mb-4">
           <TabsTrigger value="attributes">Attributes</TabsTrigger>
+          <TabsTrigger value="tags">Tags</TabsTrigger>
           <TabsTrigger value="summary">Summary</TabsTrigger>
         </TabsList>
         
@@ -1036,6 +1037,112 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
           <ScrollArea className="h-[500px] pr-4">
             {renderAttributesContent()}
           </ScrollArea>
+        </TabsContent>
+        
+        <TabsContent value="tags" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <div>
+                  <CardTitle>AI Tag Suggestions</CardTitle>
+                  <CardDescription>Generate tags based on product data</CardDescription>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="gap-2"
+                  onClick={generateAITags}
+                  disabled={isGeneratingTags || !draft.name}
+                >
+                  {isGeneratingTags ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <span>Generating...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Wand2 className="h-3.5 w-3.5" />
+                      <span>Generate Tags</span>
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex flex-wrap gap-2">
+                  {productTags.map((tag, index) => (
+                    <Badge 
+                      key={index} 
+                      variant="outline" 
+                      className="px-3 py-1 flex items-center gap-1 group hover:bg-secondary"
+                    >
+                      <span>{tag}</span>
+                      <X 
+                        className="h-3 w-3 text-muted-foreground cursor-pointer opacity-70 group-hover:opacity-100" 
+                        onClick={() => removeTag(index)}
+                      />
+                    </Badge>
+                  ))}
+                  {productTags.length === 0 && (
+                    <div className="text-muted-foreground text-sm flex gap-2 items-center">
+                      <Tag size={16} />
+                      <span>No tags yet. Click "Generate Tags" to create AI-powered tags</span>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="flex gap-2 mt-4">
+                  <div className="relative flex-1">
+                    <Input
+                      placeholder="Add custom tag"
+                      value={customTag}
+                      onChange={(e) => setCustomTag(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && customTag.trim() !== '') {
+                          addCustomTag();
+                          e.preventDefault();
+                        }
+                      }}
+                    />
+                  </div>
+                  <Button 
+                    onClick={addCustomTag} 
+                    variant="secondary" 
+                    size="sm"
+                    disabled={customTag.trim() === ''}
+                  >
+                    Add
+                  </Button>
+                </div>
+                
+                {aiTagError && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-md text-red-600 text-sm flex gap-2 items-start">
+                    <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                    <span>{aiTagError}</span>
+                  </div>
+                )}
+                
+                {aiTagSuggestions.length > 0 && (
+                  <div className="mt-6 space-y-3">
+                    <h4 className="text-sm font-medium">Additional Suggestions</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {aiTagSuggestions.map((tag, index) => (
+                        <Badge 
+                          key={index} 
+                          variant="secondary" 
+                          className="px-3 py-1 cursor-pointer hover:bg-primary hover:text-primary-foreground"
+                          onClick={() => addSuggestedTag(tag)}
+                        >
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
         
         <TabsContent value="summary" className="space-y-6">
