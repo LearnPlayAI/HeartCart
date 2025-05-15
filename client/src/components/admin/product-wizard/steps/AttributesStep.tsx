@@ -139,7 +139,8 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
 
   // Load attribute options directly, not as a hook
   const loadAttributeOptions = (attributeId: number) => {
-    if (!attributeId || attributesCache[attributeId]?.options) {
+    // Check if we need to load options - only return early if we have non-empty options array
+    if (!attributeId || (attributesCache[attributeId]?.options && attributesCache[attributeId]?.options.length > 0)) {
       return;
     }
     
@@ -151,6 +152,7 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
       apiRequest('GET', `/api/attributes/${attributeId}/options`)
         .then(res => res.json())
         .then(data => {
+          console.log(`Received options for ${attribute.displayName}:`, data);
           if (data?.success && data?.data) {
             setAttributesCache(prev => ({
               ...prev,
@@ -167,8 +169,39 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
     }
   };
 
-  // Define preloadOptions as alias for loadAttributeOptions for compatibility
-  const preloadOptions = loadAttributeOptions;
+  // Define preloadOptions function to forcefully reload options regardless of cache
+  const preloadOptions = (attributeId: number) => {
+    if (!attributeId) return;
+    
+    const attribute = getAllAttributes().find(a => a.id === attributeId);
+    if (attribute) {
+      console.log(`Force loading options for attribute: ${attribute.displayName} (${attributeId})`);
+      
+      // Always fetch fresh data
+      apiRequest('GET', `/api/attributes/${attributeId}/options`)
+        .then(res => res.json())
+        .then(data => {
+          console.log(`Received options for ${attribute.displayName}:`, data);
+          if (data?.success && data?.data) {
+            setAttributesCache(prev => ({
+              ...prev,
+              [attributeId]: {
+                ...prev[attributeId],
+                options: data.data
+              }
+            }));
+          }
+        })
+        .catch(error => {
+          console.error(`Failed to load options for attribute ${attributeId}:`, error);
+          toast({
+            variant: "destructive",
+            title: "Failed to load options",
+            description: "Please try again or contact support."
+          });
+        });
+    }
+  };
 
   // Function to get all attributes, including those in cache
   const getAllAttributes = (): Attribute[] => {
@@ -822,10 +855,9 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
                         onClick={() => {
                           setCurrentAttributeId(attribute.attributeId);
                           setIsManagingOptions(true);
-                          // Make sure options are loaded
-                          if ((attribute.options || []).length === 0) {
-                            preloadOptions(attribute.attributeId);
-                          }
+                          // Always load options when the dialog is opened - this ensures we have the latest options
+                          console.log('Opening options dialog for attribute:', attribute.displayName);
+                          preloadOptions(attribute.attributeId);
                         }}
                       >
                         <span className="text-xs">
