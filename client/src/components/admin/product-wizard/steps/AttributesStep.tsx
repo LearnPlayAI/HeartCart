@@ -90,6 +90,95 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
   const [isGeneratingTags, setIsGeneratingTags] = useState(false);
   const [aiTagError, setAiTagError] = useState<string | null>(null);
   const [customTag, setCustomTag] = useState('');
+  
+  // AI Tag Generation Functions
+  const generateAITags = async () => {
+    if (!draft.name) {
+      setAiTagError("Product name is required to generate tags");
+      return;
+    }
+    
+    setIsGeneratingTags(true);
+    setAiTagError(null);
+    
+    try {
+      const response = await apiRequest("POST", "/api/generate-tags", {
+        productName: draft.name,
+        productDescription: draft.description || "",
+        categoryName: draft.category?.name || "",
+        imageUrls: draft.imageUrls || []
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+          // Set some tags as active and some as suggestions
+          const allTags = result.data.tags || [];
+          
+          // Get the first 5 tags as active
+          const activeTags = allTags.slice(0, 5);
+          
+          // Get the remaining tags as suggestions
+          const suggestions = allTags.slice(5);
+          
+          setProductTags(activeTags);
+          setAiTagSuggestions(suggestions);
+          
+          // Save the tags to the draft
+          handleSaveTags(activeTags);
+        } else {
+          setAiTagError(result.error || "Failed to generate tags");
+        }
+      } else {
+        setAiTagError("Server error when generating tags");
+      }
+    } catch (error) {
+      setAiTagError("Error generating tags: " + (error as Error).message);
+    } finally {
+      setIsGeneratingTags(false);
+    }
+  };
+  
+  const addCustomTag = () => {
+    if (customTag.trim() === "") return;
+    
+    const newTags = [...productTags, customTag.trim()];
+    setProductTags(newTags);
+    setCustomTag("");
+    
+    // Save the tags to the draft
+    handleSaveTags(newTags);
+  };
+  
+  const removeTag = (index: number) => {
+    const newTags = [...productTags];
+    newTags.splice(index, 1);
+    setProductTags(newTags);
+    
+    // Save the tags to the draft
+    handleSaveTags(newTags);
+  };
+  
+  const addSuggestedTag = (tag: string) => {
+    if (productTags.includes(tag)) return;
+    
+    const newTags = [...productTags, tag];
+    
+    // Remove from suggestions
+    const newSuggestions = aiTagSuggestions.filter(t => t !== tag);
+    
+    setProductTags(newTags);
+    setAiTagSuggestions(newSuggestions);
+    
+    // Save the tags to the draft
+    handleSaveTags(newTags);
+  };
+  
+  const handleSaveTags = (tags: string[]) => {
+    // Save tags to the draft with debouncing (we're updating directly)
+    onSave({ tags });
+  };
 
   // Fetch all attributes
   const { data: attributesData, isLoading: isLoadingAttributes } = useQuery({
