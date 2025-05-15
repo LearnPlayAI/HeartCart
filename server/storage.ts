@@ -5031,6 +5031,7 @@ export class DatabaseStorage implements IStorage {
       // Get the current draft
       const draft = await this.getProductDraft(id);
       if (!draft || !draft.imageUrls || !draft.imageObjectKeys) {
+        logger.warn('Cannot delete image: draft not found or has no images', { id, imageIndex });
         return undefined;
       }
       
@@ -5045,6 +5046,7 @@ export class DatabaseStorage implements IStorage {
       
       // Get the object key to delete from storage
       const objectKey = imageObjectKeys[imageIndex];
+      logger.debug('Attempting to delete draft image', { draftId: id, imageIndex, objectKey });
       
       // Remove the image from the arrays
       imageUrls.splice(imageIndex, 1);
@@ -5060,17 +5062,42 @@ export class DatabaseStorage implements IStorage {
         mainImageIndex--;
       }
       
-      // Delete the image from object storage in the background
+      // Delete the image from object storage - wait for completion to ensure it's deleted
       if (objectKey) {
-        objectStore.deleteFile(objectKey).catch(error => {
-          logger.error('Error deleting image from object storage', { error, objectKey });
-        });
+        try {
+          await objectStore.deleteFile(objectKey);
+          logger.debug('Successfully deleted image from object store', { draftId: id, objectKey });
+          
+          // Verify the image was actually deleted
+          const stillExists = await objectStore.exists(objectKey);
+          if (stillExists) {
+            logger.warn('Image still exists after deletion attempt', { draftId: id, objectKey });
+          }
+        } catch (deleteError) {
+          logger.error('Error deleting image from object storage', { 
+            error: deleteError instanceof Error ? deleteError.message : String(deleteError), 
+            draftId: id,
+            objectKey 
+          });
+          // Continue with draft update even if image deletion fails
+        }
       }
       
       // Update the draft
-      return await this.updateProductDraftImages(id, imageUrls, imageObjectKeys, mainImageIndex);
+      const updatedDraft = await this.updateProductDraftImages(id, imageUrls, imageObjectKeys, mainImageIndex);
+      logger.debug('Updated draft after image deletion', { 
+        draftId: id, 
+        remainingImageCount: imageUrls.length,
+        newMainImageIndex: mainImageIndex
+      });
+      
+      return updatedDraft;
     } catch (error) {
-      logger.error('Error deleting product draft image', { error, id, imageIndex });
+      logger.error('Error deleting product draft image', { 
+        error: error instanceof Error ? error.message : String(error), 
+        id, 
+        imageIndex 
+      });
       throw error;
     }
   }
