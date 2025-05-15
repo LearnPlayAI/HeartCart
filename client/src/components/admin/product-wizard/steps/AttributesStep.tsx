@@ -12,34 +12,49 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Plus, Search, Tag, Save, X, ChevronRight, ChevronDown } from 'lucide-react';
+import { Loader2, Plus, Search, Tag, Save, X, ChevronRight, ChevronDown, Info, AlertTriangle } from 'lucide-react';
 import type { ProductDraft } from '../ProductWizard';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
 
 // Define the attribute types
-type AttributeType = 'text' | 'number' | 'boolean' | 'select' | 'multiselect';
+type AttributeType = 'text' | 'number' | 'boolean' | 'select' | 'multiselect' | 'color' | 'date';
 
 interface Attribute {
   id: number;
   name: string;
-  slug: string;
+  displayName: string;
   description: string | null;
-  type: AttributeType;
-  required: boolean;
+  attributeType: AttributeType;
+  isRequired: boolean;
+  isFilterable: boolean;
+  isComparable: boolean;
+  validationRules?: any;
   options: AttributeOption[];
-  categoryIds: number[] | null;
+  sortOrder?: number;
 }
 
 interface AttributeOption {
   id: number;
   attributeId: number;
   value: string;
-  label: string | null;
-  sortOrder: number | null;
+  displayValue: string;
+  metadata?: any;
+  sortOrder?: number;
 }
 
 interface AttributeValue {
   attributeId: number;
   value: string | string[] | boolean | number | null;
+  attributeName?: string;
+  displayName?: string;
+  attributeType?: string;
+  options?: AttributeOption[];
+  selectedOptions?: number[];
+  textValue?: string | null;
 }
 
 interface AttributesStepProps {
@@ -53,10 +68,21 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
   const [attributeValues, setAttributeValues] = useState<AttributeValue[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showNewAttributeDialog, setShowNewAttributeDialog] = useState(false);
-  const [newAttributeData, setNewAttributeData] = useState({ name: '', type: 'text' as AttributeType, value: '' });
-  const [categoryAttributes, setCategoryAttributes] = useState<Attribute[]>([]);
-  const [globalAttributes, setGlobalAttributes] = useState<Attribute[]>([]);
+  const [newAttributeData, setNewAttributeData] = useState({ 
+    name: '', 
+    displayName: '',
+    description: '',
+    type: 'text' as AttributeType, 
+    value: '',
+    isRequired: false,
+    isFilterable: false 
+  });
+  const [attributeView, setAttributeView] = useState<'list' | 'grid'>('grid');
+  const [attributeFilter, setAttributeFilter] = useState<'all' | 'required' | 'configured'>('all');
   const [expandedSections, setExpandedSections] = useState({ category: true, global: true });
+  const [activeTab, setActiveTab] = useState('attributes');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string[]>>({});
 
   // Fetch all attributes
   const { data: attributesData, isLoading: isLoadingAttributes } = useQuery({
@@ -81,47 +107,73 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
   // Initialize attribute values from the draft
   useEffect(() => {
     if (draft.attributes && draft.attributes.length > 0) {
-      setAttributeValues(draft.attributes.map(attr => ({
+      // Simple format
+      const simpleValues = draft.attributes.map(attr => ({
         attributeId: attr.attributeId,
         value: attr.value
-      })));
-    }
-  }, [draft.attributes]);
-
-  // Sort attributes when data is loaded 
-  useEffect(() => {
-    if (attributesData?.success && requiredAttributesData?.success) {
-      // Get all attributes and required attribute IDs
-      const allAttributes = attributesData.data || [];
-      const requiredAttributeIds = new Set(
-        (requiredAttributesData.data || []).map((attr: any) => attr.attributeId)
-      );
-
-      // Category-specific attributes
-      const categoryAttrs = allAttributes.filter((attr: Attribute) => 
-        attr.categoryIds?.includes(draft.categoryId || 0) || requiredAttributeIds.has(attr.id)
-      );
+      }));
       
-      // Global attributes (not category-specific)
-      const globalAttrs = allAttributes.filter((attr: Attribute) => 
-        !attr.categoryIds || attr.categoryIds.length === 0
-      );
-      
-      setCategoryAttributes(categoryAttrs);
-      setGlobalAttributes(globalAttrs);
+      // Enhanced format (if available)
+      if (draft.attributesData && draft.attributesData.length > 0) {
+        const enhancedValues = draft.attributesData.map(attr => ({
+          attributeId: attr.attributeId,
+          attributeName: attr.attributeName,
+          displayName: attr.displayName,
+          attributeType: attr.attributeType,
+          value: null, // Will be populated from the simple attributes
+          options: attr.options,
+          selectedOptions: attr.selectedOptions,
+          textValue: attr.textValue
+        }));
+        
+        // Merge the simple values with enhanced data
+        const mergedValues = enhancedValues.map(enhanced => {
+          const simple = simpleValues.find(s => s.attributeId === enhanced.attributeId);
+          return {
+            ...enhanced,
+            value: simple?.value || null
+          };
+        });
+        
+        setAttributeValues(mergedValues);
+      } else {
+        setAttributeValues(simpleValues);
+      }
     }
-  }, [attributesData, requiredAttributesData, draft.categoryId]);
+  }, [draft.attributes, draft.attributesData]);
 
-  // Get all attributes (combined and filtered by search)
-  const getAllAttributes = () => {
-    const allAttributes = [...categoryAttributes, ...globalAttributes];
+  // Get all attributes from the API data
+  const getAllAttributes = (): Attribute[] => {
+    if (!attributesData?.success) return [];
     
-    if (!searchTerm.trim()) return allAttributes;
+    const allAttributes = attributesData.data || [];
+    const requiredAttrIds = new Set(
+      requiredAttributesData?.success ? 
+        (requiredAttributesData.data || []).map((attr: any) => attr.attributeId) : 
+        []
+    );
     
-    return allAttributes.filter(attr => 
+    // Filter by search term
+    let filteredAttrs = allAttributes.filter((attr: Attribute) => 
+      !searchTerm.trim() || 
       attr.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      attr.displayName.toLowerCase().includes(searchTerm.toLowerCase()) || 
       attr.description?.toLowerCase().includes(searchTerm.toLowerCase())
     );
+    
+    // Apply additional filters
+    if (attributeFilter === 'required') {
+      filteredAttrs = filteredAttrs.filter((attr: Attribute) => 
+        requiredAttrIds.has(attr.id) || attr.isRequired
+      );
+    } else if (attributeFilter === 'configured') {
+      const configuredIds = new Set(attributeValues.map(v => v.attributeId));
+      filteredAttrs = filteredAttrs.filter((attr: Attribute) => 
+        configuredIds.has(attr.id)
+      );
+    }
+    
+    return filteredAttrs;
   };
 
   // Handle attribute value changes
@@ -130,12 +182,124 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
     const existingIndex = newValues.findIndex(v => v.attributeId === attributeId);
     
     if (existingIndex >= 0) {
-      newValues[existingIndex] = { attributeId, value };
+      newValues[existingIndex] = { 
+        ...newValues[existingIndex],
+        value 
+      };
     } else {
-      newValues.push({ attributeId, value });
+      // Find attribute details from API data
+      const attribute = getAllAttributes().find(a => a.id === attributeId);
+      if (attribute) {
+        newValues.push({ 
+          attributeId, 
+          value,
+          attributeName: attribute.name,
+          displayName: attribute.displayName,
+          attributeType: attribute.attributeType
+        });
+      } else {
+        newValues.push({ attributeId, value });
+      }
     }
     
     setAttributeValues(newValues);
+    
+    // Clear validation errors for this attribute
+    if (validationErrors[`attribute-${attributeId}`]) {
+      const newErrors = { ...validationErrors };
+      delete newErrors[`attribute-${attributeId}`];
+      setValidationErrors(newErrors);
+    }
+  };
+
+  // Handle option selection for the enhanced attributes
+  const handleOptionSelection = (attributeId: number, optionId: number, isSelected: boolean) => {
+    const newValues = [...attributeValues];
+    const existingIndex = newValues.findIndex(v => v.attributeId === attributeId);
+    
+    if (existingIndex >= 0) {
+      const currentSelectedOptions = newValues[existingIndex].selectedOptions || [];
+      
+      if (isSelected) {
+        newValues[existingIndex].selectedOptions = [...currentSelectedOptions, optionId];
+      } else {
+        newValues[existingIndex].selectedOptions = currentSelectedOptions.filter(id => id !== optionId);
+      }
+      
+      // Also update the simple value format for backward compatibility
+      const attribute = getAllAttributes().find(a => a.id === attributeId);
+      if (attribute) {
+        const selectedOptions = newValues[existingIndex].selectedOptions || [];
+        const optionValues = selectedOptions
+          .map(optId => attribute.options.find(opt => opt.id === optId)?.value)
+          .filter(Boolean) as string[];
+        
+        newValues[existingIndex].value = attribute.attributeType === 'multiselect' ? 
+          optionValues : 
+          optionValues[0] || null;
+      }
+    } else {
+      // Add new selection
+      const attribute = getAllAttributes().find(a => a.id === attributeId);
+      if (attribute) {
+        const selectedOptions = [optionId];
+        const optionValues = selectedOptions
+          .map(optId => attribute.options.find(opt => opt.id === optId)?.value)
+          .filter(Boolean) as string[];
+        
+        newValues.push({
+          attributeId,
+          value: attribute.attributeType === 'multiselect' ? optionValues : optionValues[0] || null,
+          attributeName: attribute.name,
+          displayName: attribute.displayName,
+          attributeType: attribute.attributeType,
+          selectedOptions
+        });
+      }
+    }
+    
+    setAttributeValues(newValues);
+    
+    // Clear validation errors for this attribute
+    if (validationErrors[`attribute-${attributeId}`]) {
+      const newErrors = { ...validationErrors };
+      delete newErrors[`attribute-${attributeId}`];
+      setValidationErrors(newErrors);
+    }
+  };
+
+  // Handle text value changes for the enhanced attributes
+  const handleTextValueChange = (attributeId: number, textValue: string) => {
+    const newValues = [...attributeValues];
+    const existingIndex = newValues.findIndex(v => v.attributeId === attributeId);
+    
+    if (existingIndex >= 0) {
+      newValues[existingIndex].textValue = textValue;
+      // Also update simple value for backward compatibility
+      newValues[existingIndex].value = textValue;
+    } else {
+      // Add new text value
+      const attribute = getAllAttributes().find(a => a.id === attributeId);
+      if (attribute) {
+        newValues.push({
+          attributeId,
+          value: textValue,
+          textValue,
+          attributeName: attribute.name,
+          displayName: attribute.displayName,
+          attributeType: attribute.attributeType
+        });
+      }
+    }
+    
+    setAttributeValues(newValues);
+    
+    // Clear validation errors for this attribute
+    if (validationErrors[`attribute-${attributeId}`]) {
+      const newErrors = { ...validationErrors };
+      delete newErrors[`attribute-${attributeId}`];
+      setValidationErrors(newErrors);
+    }
   };
 
   // Get value for a specific attribute
@@ -144,16 +308,37 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
     return attrValue ? attrValue.value : null;
   };
 
+  // Get selected options for a specific attribute
+  const getSelectedOptions = (attributeId: number): number[] => {
+    const attrValue = attributeValues.find(v => v.attributeId === attributeId);
+    return attrValue?.selectedOptions || [];
+  };
+
+  // Get text value for a specific attribute
+  const getTextValue = (attributeId: number): string => {
+    const attrValue = attributeValues.find(v => v.attributeId === attributeId);
+    return attrValue?.textValue || '';
+  };
+
   // Create new custom attribute
   const handleCreateAttribute = async () => {
+    setIsSubmitting(true);
+    
     try {
       // Create a new attribute
       const createResponse = await apiRequest('POST', '/api/attributes', {
         name: newAttributeData.name,
-        type: newAttributeData.type,
-        required: false,
-        options: newAttributeData.type === 'select' || newAttributeData.type === 'multiselect' 
-          ? [{ value: newAttributeData.value, label: newAttributeData.value }] 
+        displayName: newAttributeData.displayName || newAttributeData.name,
+        description: newAttributeData.description,
+        attributeType: newAttributeData.type,
+        isRequired: newAttributeData.isRequired,
+        isFilterable: newAttributeData.isFilterable,
+        options: newAttributeData.type === 'select' || newAttributeData.type === 'multiselect' || newAttributeData.type === 'color'
+          ? [{ 
+              value: newAttributeData.value, 
+              displayValue: newAttributeData.value,
+              metadata: newAttributeData.type === 'color' ? { colorCode: newAttributeData.value } : undefined
+            }] 
           : []
       });
       
@@ -164,12 +349,14 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
         const newAttr = createData.data;
         
         // Add to attribute values
-        handleAttributeChange(newAttr.id, 
+        const value = 
           newAttributeData.type === 'boolean' ? true : 
           newAttributeData.type === 'number' ? Number(newAttributeData.value) : 
           newAttributeData.type === 'multiselect' ? [newAttributeData.value] :
-          newAttributeData.value
-        );
+          newAttributeData.value;
+          
+        // Add with enhanced data
+        handleAttributeChange(newAttr.id, value);
         
         toast({
           title: 'Attribute Created',
@@ -177,11 +364,16 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
         });
         
         // Reset the form
-        setNewAttributeData({ name: '', type: 'text', value: '' });
+        setNewAttributeData({ 
+          name: '', 
+          displayName: '',
+          description: '',
+          type: 'text', 
+          value: '',
+          isRequired: false,
+          isFilterable: false
+        });
         setShowNewAttributeDialog(false);
-        
-        // Refresh attributes list
-        await apiRequest('GET', '/api/attributes');
       } else {
         throw new Error(createData.error?.message || 'Failed to create attribute');
       }
@@ -191,26 +383,98 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
         description: error instanceof Error ? error.message : 'Failed to create attribute',
         variant: 'destructive',
       });
+    } finally {
+      setIsSubmitting(false);
     }
+  };
+
+  // Validate attributes before saving
+  const validateAttributes = (): boolean => {
+    const errors: Record<string, string[]> = {};
+    let isValid = true;
+    
+    // Get required attributes
+    const requiredAttrIds = new Set(
+      requiredAttributesData?.success ? 
+        (requiredAttributesData.data || []).map((attr: any) => attr.attributeId) : 
+        []
+    );
+    
+    // Check all required attributes
+    getAllAttributes().forEach(attr => {
+      const isRequired = requiredAttrIds.has(attr.id) || attr.isRequired;
+      if (isRequired) {
+        const value = getAttributeValue(attr.id);
+        const selectedOptions = getSelectedOptions(attr.id);
+        const textValue = getTextValue(attr.id);
+        
+        // Check if the attribute has a value
+        if (
+          (value === null || value === '' || (Array.isArray(value) && value.length === 0)) &&
+          (selectedOptions.length === 0) &&
+          (!textValue || textValue.trim() === '')
+        ) {
+          errors[`attribute-${attr.id}`] = [`${attr.displayName} is required`];
+          isValid = false;
+        }
+      }
+    });
+    
+    setValidationErrors(errors);
+    return isValid;
   };
 
   // Save attributes
   const handleSaveAttributes = (advanceToNext: boolean = false) => {
-    // Format attribute values for the API
-    const formattedAttributes = attributeValues.map(attr => {
-      // Convert any non-string, non-array values to strings to match ProductDraft interface
-      let value = attr.value;
-      if (value !== null && typeof value !== 'string' && !Array.isArray(value)) {
-        value = String(value);
-      }
-      
-      return {
-        attributeId: attr.attributeId,
-        value: value
-      };
-    });
+    if (!validateAttributes()) {
+      toast({
+        title: 'Validation Failed',
+        description: 'Please fill in all required attributes',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
     
-    onSave({ attributes: formattedAttributes }, advanceToNext);
+    try {
+      // Format attribute values for the API
+      const formattedAttributes = attributeValues.map(attr => {
+        // Convert any non-string, non-array values to strings to match ProductDraft interface
+        let value = attr.value;
+        if (value !== null && typeof value !== 'string' && !Array.isArray(value)) {
+          value = String(value);
+        }
+        
+        return {
+          attributeId: attr.attributeId,
+          value: value
+        };
+      });
+      
+      // Format enhanced attribute data
+      const attributesData = attributeValues.map(attr => {
+        const attribute = getAllAttributes().find(a => a.id === attr.attributeId);
+        
+        return {
+          attributeId: attr.attributeId,
+          attributeName: attr.attributeName || attribute?.name || '',
+          displayName: attr.displayName || attribute?.displayName || '',
+          attributeType: attr.attributeType || attribute?.attributeType || 'text',
+          isRequired: attribute?.isRequired || false,
+          options: attribute?.options || [],
+          selectedOptions: attr.selectedOptions || [],
+          textValue: attr.textValue || null
+        };
+      });
+      
+      onSave({ 
+        attributes: formattedAttributes,
+        attributesData
+      }, advanceToNext);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Check if an attribute is required
@@ -219,31 +483,45 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
     
     return (requiredAttributesData.data || []).some(
       (attr: any) => attr.attributeId === attributeId
-    );
+    ) || getAllAttributes().find(attr => attr.id === attributeId)?.isRequired || false;
   };
 
-  // Render input field based on attribute type
-  const renderAttributeInput = (attribute: Attribute) => {
-    const value = getAttributeValue(attribute.id);
+  // Render enhanced attribute input based on attribute type
+  const renderEnhancedAttributeInput = (attribute: Attribute) => {
     const isRequired = isAttributeRequired(attribute.id);
+    const hasError = !!validationErrors[`attribute-${attribute.id}`];
+    const selectedOptions = getSelectedOptions(attribute.id);
+    const textValue = getTextValue(attribute.id);
     
-    switch (attribute.type) {
+    switch (attribute.attributeType) {
       case 'text':
         return (
           <div className="space-y-2">
-            <Label htmlFor={`attr-${attribute.id}`}>
-              {attribute.name}
-              {isRequired && <span className="text-red-500 ml-1">*</span>}
-            </Label>
+            <div className="flex items-center gap-2">
+              <Label htmlFor={`attr-${attribute.id}`} className={hasError ? 'text-red-500' : ''}>
+                {attribute.displayName}
+                {isRequired && <span className="text-red-500 ml-1">*</span>}
+              </Label>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{attribute.description || `Enter text for ${attribute.displayName}`}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
             <Textarea 
               id={`attr-${attribute.id}`}
-              value={value as string || ''}
-              onChange={(e) => handleAttributeChange(attribute.id, e.target.value)}
-              placeholder={`Enter ${attribute.name.toLowerCase()}`}
-              className="resize-none"
+              value={textValue}
+              onChange={(e) => handleTextValueChange(attribute.id, e.target.value)}
+              placeholder={`Enter ${attribute.displayName.toLowerCase()}`}
+              className={`resize-none ${hasError ? 'border-red-500' : ''}`}
             />
-            {attribute.description && (
-              <p className="text-sm text-muted-foreground">{attribute.description}</p>
+            {hasError && (
+              <p className="text-sm text-red-500">{validationErrors[`attribute-${attribute.id}`][0]}</p>
             )}
           </div>
         );
@@ -251,19 +529,32 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
       case 'number':
         return (
           <div className="space-y-2">
-            <Label htmlFor={`attr-${attribute.id}`}>
-              {attribute.name}
-              {isRequired && <span className="text-red-500 ml-1">*</span>}
-            </Label>
+            <div className="flex items-center gap-2">
+              <Label htmlFor={`attr-${attribute.id}`} className={hasError ? 'text-red-500' : ''}>
+                {attribute.displayName}
+                {isRequired && <span className="text-red-500 ml-1">*</span>}
+              </Label>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{attribute.description || `Enter a number for ${attribute.displayName}`}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
             <Input 
               id={`attr-${attribute.id}`}
               type="number"
-              value={value as number || ''}
-              onChange={(e) => handleAttributeChange(attribute.id, e.target.valueAsNumber || null)}
-              placeholder={`Enter ${attribute.name.toLowerCase()}`}
+              value={textValue}
+              onChange={(e) => handleTextValueChange(attribute.id, e.target.value)}
+              placeholder={`Enter ${attribute.displayName.toLowerCase()}`}
+              className={hasError ? 'border-red-500' : ''}
             />
-            {attribute.description && (
-              <p className="text-sm text-muted-foreground">{attribute.description}</p>
+            {hasError && (
+              <p className="text-sm text-red-500">{validationErrors[`attribute-${attribute.id}`][0]}</p>
             )}
           </div>
         );
@@ -273,15 +564,28 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
           <div className="flex items-center space-x-2">
             <Switch
               id={`attr-${attribute.id}`}
-              checked={value as boolean || false}
+              checked={!!getAttributeValue(attribute.id)}
               onCheckedChange={(checked) => handleAttributeChange(attribute.id, checked)}
             />
-            <Label htmlFor={`attr-${attribute.id}`} className="cursor-pointer">
-              {attribute.name}
+            <Label 
+              htmlFor={`attr-${attribute.id}`} 
+              className={`cursor-pointer ${hasError ? 'text-red-500' : ''}`}
+            >
+              {attribute.displayName}
               {isRequired && <span className="text-red-500 ml-1">*</span>}
             </Label>
-            {attribute.description && (
-              <p className="text-sm text-muted-foreground ml-2">{attribute.description}</p>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{attribute.description || `Toggle ${attribute.displayName}`}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            {hasError && (
+              <p className="text-sm text-red-500">{validationErrors[`attribute-${attribute.id}`][0]}</p>
             )}
           </div>
         );
@@ -289,317 +593,585 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
       case 'select':
         return (
           <div className="space-y-2">
-            <Label htmlFor={`attr-${attribute.id}`}>
-              {attribute.name}
-              {isRequired && <span className="text-red-500 ml-1">*</span>}
-            </Label>
+            <div className="flex items-center gap-2">
+              <Label htmlFor={`attr-${attribute.id}`} className={hasError ? 'text-red-500' : ''}>
+                {attribute.displayName}
+                {isRequired && <span className="text-red-500 ml-1">*</span>}
+              </Label>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{attribute.description || `Select a value for ${attribute.displayName}`}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
             <Select 
-              value={value as string || ''}
-              onValueChange={(val) => handleAttributeChange(attribute.id, val)}
+              value={selectedOptions[0]?.toString() || ''}
+              onValueChange={(val) => handleOptionSelection(attribute.id, parseInt(val), true)}
             >
-              <SelectTrigger id={`attr-${attribute.id}`}>
-                <SelectValue placeholder={`Select ${attribute.name.toLowerCase()}`} />
+              <SelectTrigger 
+                id={`attr-${attribute.id}`}
+                className={hasError ? 'border-red-500' : ''}
+              >
+                <SelectValue placeholder={`Select ${attribute.displayName.toLowerCase()}`} />
               </SelectTrigger>
               <SelectContent>
                 {attribute.options.map((option) => (
-                  <SelectItem key={option.id} value={option.value}>
-                    {option.label || option.value}
+                  <SelectItem key={option.id} value={option.id.toString()}>
+                    {option.displayValue}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            {attribute.description && (
-              <p className="text-sm text-muted-foreground">{attribute.description}</p>
+            {hasError && (
+              <p className="text-sm text-red-500">{validationErrors[`attribute-${attribute.id}`][0]}</p>
             )}
           </div>
         );
         
       case 'multiselect':
-        const selectedValues = (value as string[]) || [];
         return (
           <div className="space-y-2">
-            <Label>
-              {attribute.name}
-              {isRequired && <span className="text-red-500 ml-1">*</span>}
-            </Label>
+            <div className="flex items-center gap-2">
+              <Label className={hasError ? 'text-red-500' : ''}>
+                {attribute.displayName}
+                {isRequired && <span className="text-red-500 ml-1">*</span>}
+              </Label>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{attribute.description || `Select options for ${attribute.displayName}`}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
             <div className="flex flex-wrap gap-2 mb-2">
-              {selectedValues.map((val) => (
-                <Badge key={val} variant="secondary" className="flex items-center gap-1">
-                  {val}
-                  <X 
-                    className="h-3 w-3 cursor-pointer" 
-                    onClick={() => {
-                      const newValues = selectedValues.filter(v => v !== val);
-                      handleAttributeChange(attribute.id, newValues.length > 0 ? newValues : null);
-                    }} 
-                  />
-                </Badge>
-              ))}
+              {selectedOptions.map((optionId) => {
+                const option = attribute.options.find(opt => opt.id === optionId);
+                return option ? (
+                  <Badge key={optionId} variant="secondary" className="flex items-center gap-1">
+                    {option.displayValue}
+                    <X 
+                      className="h-3 w-3 cursor-pointer" 
+                      onClick={() => handleOptionSelection(attribute.id, optionId, false)}
+                    />
+                  </Badge>
+                ) : null;
+              })}
             </div>
             <Select 
               value=""
-              onValueChange={(val) => {
-                const newValues = [...selectedValues, val];
-                handleAttributeChange(attribute.id, newValues);
-              }}
+              onValueChange={(val) => handleOptionSelection(attribute.id, parseInt(val), true)}
             >
-              <SelectTrigger id={`attr-${attribute.id}`}>
-                <SelectValue placeholder={`Add ${attribute.name.toLowerCase()}`} />
+              <SelectTrigger 
+                id={`attr-${attribute.id}`}
+                className={hasError ? 'border-red-500' : ''}
+              >
+                <SelectValue placeholder={`Add ${attribute.displayName.toLowerCase()}`} />
               </SelectTrigger>
               <SelectContent>
                 {attribute.options
-                  .filter(option => !selectedValues.includes(option.value))
+                  .filter(option => !selectedOptions.includes(option.id))
                   .map((option) => (
-                    <SelectItem key={option.id} value={option.value}>
-                      {option.label || option.value}
+                    <SelectItem key={option.id} value={option.id.toString()}>
+                      {option.displayValue}
                     </SelectItem>
                   ))
                 }
               </SelectContent>
             </Select>
-            {attribute.description && (
-              <p className="text-sm text-muted-foreground">{attribute.description}</p>
+            {hasError && (
+              <p className="text-sm text-red-500">{validationErrors[`attribute-${attribute.id}`][0]}</p>
             )}
           </div>
         );
         
+      case 'color':
+        return (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Label className={hasError ? 'text-red-500' : ''}>
+                {attribute.displayName}
+                {isRequired && <span className="text-red-500 ml-1">*</span>}
+              </Label>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{attribute.description || `Select colors for ${attribute.displayName}`}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <div className="flex flex-wrap gap-3 mb-3">
+              {attribute.options.map((option) => {
+                const colorCode = option.metadata?.colorCode || '#CCCCCC';
+                const isSelected = selectedOptions.includes(option.id);
+                return (
+                  <div 
+                    key={option.id} 
+                    className={`
+                      w-8 h-8 rounded-full cursor-pointer border-2 flex items-center justify-center
+                      ${isSelected ? 'border-primary' : 'border-gray-200'}
+                    `}
+                    style={{ backgroundColor: colorCode }}
+                    onClick={() => handleOptionSelection(attribute.id, option.id, !isSelected)}
+                    title={option.displayValue}
+                  >
+                    {isSelected && <div className="w-2 h-2 bg-white rounded-full" />}
+                  </div>
+                );
+              })}
+            </div>
+            {hasError && (
+              <p className="text-sm text-red-500">{validationErrors[`attribute-${attribute.id}`][0]}</p>
+            )}
+          </div>
+        );
+        
+      case 'date':
+        return (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Label htmlFor={`attr-${attribute.id}`} className={hasError ? 'text-red-500' : ''}>
+                {attribute.displayName}
+                {isRequired && <span className="text-red-500 ml-1">*</span>}
+              </Label>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{attribute.description || `Select a date for ${attribute.displayName}`}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <Input 
+              id={`attr-${attribute.id}`}
+              type="date"
+              value={textValue}
+              onChange={(e) => handleTextValueChange(attribute.id, e.target.value)}
+              className={hasError ? 'border-red-500' : ''}
+            />
+            {hasError && (
+              <p className="text-sm text-red-500">{validationErrors[`attribute-${attribute.id}`][0]}</p>
+            )}
+          </div>
+        );
+      
       default:
         return null;
     }
   };
-
-  return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-medium">Product Attributes</h3>
-        <div className="flex items-center space-x-2">
-          <Button variant="outline" onClick={() => setShowNewAttributeDialog(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Custom
-          </Button>
+  
+  // Render attribute cards or list items
+  const renderAttributeItem = (attribute: Attribute) => {
+    const isRequired = isAttributeRequired(attribute.id);
+    
+    if (attributeView === 'grid') {
+      return (
+        <Card key={attribute.id} className={`overflow-hidden ${validationErrors[`attribute-${attribute.id}`] ? 'border-red-500' : ''}`}>
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-md flex items-center gap-2">
+                {attribute.displayName}
+                {isRequired && <Badge variant="destructive" className="ml-1 text-xs">Required</Badge>}
+                {attribute.isFilterable && <Badge variant="outline" className="ml-1 text-xs">Filterable</Badge>}
+              </CardTitle>
+            </div>
+            {attribute.description && (
+              <CardDescription>{attribute.description}</CardDescription>
+            )}
+          </CardHeader>
+          <CardContent className="pt-0">
+            {renderEnhancedAttributeInput(attribute)}
+          </CardContent>
+        </Card>
+      );
+    } else {
+      return (
+        <div key={attribute.id} className={`border-b py-3 ${validationErrors[`attribute-${attribute.id}`] ? 'border-red-500 bg-red-50 p-2 rounded' : ''}`}>
+          <div className="flex md:items-center justify-between flex-col md:flex-row gap-2">
+            <div className="flex items-center gap-2">
+              <h4 className="font-medium">{attribute.displayName}</h4>
+              {isRequired && <Badge variant="destructive" className="text-xs">Required</Badge>}
+              {attribute.isFilterable && <Badge variant="outline" className="text-xs">Filterable</Badge>}
+              {attribute.description && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{attribute.description}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </div>
+            <div className="w-full md:w-1/2">
+              {renderEnhancedAttributeInput(attribute)}
+            </div>
+          </div>
         </div>
-      </div>
-      
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-        <Input 
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder="Search attributes..."
-          className="pl-10"
-        />
-      </div>
-      
-      {isLoadingAttributes || isLoadingRequired ? (
+      );
+    }
+  };
+
+  // Render the attribute management content
+  const renderAttributesContent = () => {
+    const allAttributes = getAllAttributes();
+    
+    if (isLoadingAttributes || isLoadingRequired) {
+      return (
         <div className="flex items-center justify-center p-8">
           <Loader2 className="mr-2 h-5 w-5 animate-spin" />
           <span>Loading attributes...</span>
         </div>
-      ) : (
-        <div className="space-y-6">
-          {/* Category-specific attributes */}
-          {draft.categoryId && categoryAttributes.length > 0 && (
-            <Card>
-              <CardHeader 
-                className="pb-2 cursor-pointer" 
-                onClick={() => setExpandedSections({...expandedSections, category: !expandedSections.category})}
-              >
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-md">
-                    {draft.category?.name || 'Category'} Attributes
-                  </CardTitle>
-                  {expandedSections.category ? (
-                    <ChevronDown className="h-5 w-5" />
-                  ) : (
-                    <ChevronRight className="h-5 w-5" />
-                  )}
-                </div>
-                <CardDescription>
-                  Attributes specific to this product category
-                </CardDescription>
-              </CardHeader>
-              
-              {expandedSections.category && (
-                <CardContent className="pt-4 grid grid-cols-1 gap-6 md:grid-cols-2">
-                  {categoryAttributes
-                    .filter(attr => searchTerm === '' || 
-                      attr.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                      attr.description?.toLowerCase().includes(searchTerm.toLowerCase())
-                    )
-                    .map(attribute => (
-                      <div key={attribute.id}>
-                        {renderAttributeInput(attribute)}
-                      </div>
-                    ))
-                  }
-                  
-                  {categoryAttributes.length > 0 && 
-                    categoryAttributes.filter(attr => 
-                      searchTerm === '' || 
-                      attr.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                      attr.description?.toLowerCase().includes(searchTerm.toLowerCase())
-                    ).length === 0 && (
-                      <div className="col-span-full text-center py-4 text-muted-foreground">
-                        No matching category attributes found.
-                      </div>
-                    )
-                  }
-                </CardContent>
-              )}
-            </Card>
-          )}
-          
-          {/* Global attributes */}
-          {globalAttributes.length > 0 && (
-            <Card>
-              <CardHeader 
-                className="pb-2 cursor-pointer" 
-                onClick={() => setExpandedSections({...expandedSections, global: !expandedSections.global})}
-              >
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-md">
-                    General Attributes
-                  </CardTitle>
-                  {expandedSections.global ? (
-                    <ChevronDown className="h-5 w-5" />
-                  ) : (
-                    <ChevronRight className="h-5 w-5" />
-                  )}
-                </div>
-                <CardDescription>
-                  Attributes applicable to all products
-                </CardDescription>
-              </CardHeader>
-              
-              {expandedSections.global && (
-                <CardContent className="pt-4 grid grid-cols-1 gap-6 md:grid-cols-2">
-                  {globalAttributes
-                    .filter(attr => searchTerm === '' || 
-                      attr.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                      attr.description?.toLowerCase().includes(searchTerm.toLowerCase())
-                    )
-                    .map(attribute => (
-                      <div key={attribute.id}>
-                        {renderAttributeInput(attribute)}
-                      </div>
-                    ))
-                  }
-                  
-                  {globalAttributes.length > 0 && 
-                    globalAttributes.filter(attr => 
-                      searchTerm === '' || 
-                      attr.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                      attr.description?.toLowerCase().includes(searchTerm.toLowerCase())
-                    ).length === 0 && (
-                      <div className="col-span-full text-center py-4 text-muted-foreground">
-                        No matching general attributes found.
-                      </div>
-                    )
-                  }
-                </CardContent>
-              )}
-            </Card>
-          )}
-          
-          {/* If no attributes for the search term */}
-          {searchTerm !== '' && getAllAttributes().length === 0 && (
-            <div className="text-center py-8 border rounded-md">
-              <Tag className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-              <h3 className="text-lg font-medium mb-1">No matching attributes</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                No attributes match your search term. Try a different search or create a custom attribute.
-              </p>
-              <Button variant="outline" onClick={() => setShowNewAttributeDialog(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Create new attribute
-              </Button>
+      );
+    }
+    
+    if (allAttributes.length === 0) {
+      return (
+        <div className="text-center p-8 border rounded-md">
+          <Tag className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+          <h4 className="text-lg font-medium">No Attributes Found</h4>
+          <p className="text-muted-foreground mb-4">
+            {searchTerm ? 
+              `No attributes matching "${searchTerm}"` : 
+              draft.categoryId ? 
+                "This category doesn't have any attributes yet." : 
+                "Please select a category first or add custom attributes."
+            }
+          </p>
+          <Button variant="outline" onClick={() => setShowNewAttributeDialog(true)}>
+            Add Custom Attribute
+          </Button>
+        </div>
+      );
+    }
+    
+    return attributeView === 'grid' ? (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {allAttributes.map(renderAttributeItem)}
+      </div>
+    ) : (
+      <div className="space-y-1">
+        {allAttributes.map(renderAttributeItem)}
+      </div>
+    );
+  };
+
+  // Render attribute statistics and summary
+  const renderAttributeSummary = () => {
+    const attributes = getAllAttributes();
+    const requiredAttributes = attributes.filter(attr => isAttributeRequired(attr.id));
+    const configuredAttributes = attributeValues.filter(value => {
+      const hasValue = value.value !== null && value.value !== '' && 
+                       (!Array.isArray(value.value) || value.value.length > 0);
+      const hasSelectedOptions = value.selectedOptions && value.selectedOptions.length > 0;
+      const hasTextValue = value.textValue && value.textValue.trim() !== '';
+      
+      return hasValue || hasSelectedOptions || hasTextValue;
+    });
+    
+    const requiredConfigured = requiredAttributes.filter(attr => 
+      configuredAttributes.some(val => val.attributeId === attr.id)
+    );
+    
+    const requiredProgress = requiredAttributes.length > 0 
+      ? Math.round((requiredConfigured.length / requiredAttributes.length) * 100) 
+      : 100;
+    
+    return (
+      <div className="p-4 bg-muted rounded-lg">
+        <h4 className="font-medium mb-2">Attribute Progress</h4>
+        <div className="space-y-2">
+          <div>
+            <div className="flex justify-between items-center mb-1">
+              <span className="text-sm">Required Attributes</span>
+              <span className="text-sm font-medium">{requiredConfigured.length}/{requiredAttributes.length}</span>
             </div>
-          )}
+            <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div 
+                className={`h-full rounded-full ${requiredProgress === 100 ? 'bg-green-500' : 'bg-amber-500'}`}
+                style={{ width: `${requiredProgress}%` }}
+              />
+            </div>
+          </div>
           
-          {/* If no attributes at all */}
-          {!draft.categoryId && categoryAttributes.length === 0 && globalAttributes.length === 0 && searchTerm === '' && (
-            <div className="text-center py-8 border rounded-md">
-              <Tag className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-              <h3 className="text-lg font-medium mb-1">No attributes defined</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                {draft.categoryId 
-                  ? 'No attributes have been defined for this product category yet.'
-                  : 'Please select a category to see relevant attributes, or create a custom attribute.'
-                }
+          <div>
+            <div className="flex justify-between items-center mb-1">
+              <span className="text-sm">Total Attributes</span>
+              <span className="text-sm font-medium">{configuredAttributes.length}/{attributes.length}</span>
+            </div>
+            <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-blue-500 rounded-full"
+                style={{ width: `${attributes.length > 0 ? (configuredAttributes.length / attributes.length) * 100 : 0}%` }}
+              />
+            </div>
+          </div>
+          
+          {requiredAttributes.length > 0 && requiredProgress < 100 && (
+            <div className="flex items-start mt-3 bg-amber-50 p-2 rounded border border-amber-200">
+              <AlertTriangle className="h-5 w-5 text-amber-500 mr-2 mt-0.5 flex-shrink-0" />
+              <p className="text-sm">
+                Some required attributes haven't been configured yet. Complete them before proceeding to the next step.
               </p>
-              <Button variant="outline" onClick={() => setShowNewAttributeDialog(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Create new attribute
-              </Button>
             </div>
           )}
         </div>
-      )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 md:flex-row md:justify-between md:items-center">
+        <div>
+          <h3 className="text-lg font-medium">Product Attributes</h3>
+          <p className="text-muted-foreground text-sm">Define the attributes and specifications of your product</p>
+        </div>
+        <Button variant="outline" onClick={() => setShowNewAttributeDialog(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Custom Attribute
+        </Button>
+      </div>
       
-      {/* Create new attribute dialog */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="mb-4">
+          <TabsTrigger value="attributes">Attributes</TabsTrigger>
+          <TabsTrigger value="summary">Summary</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="attributes" className="space-y-4">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center justify-between">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search attributes..."
+                className="pl-10"
+              />
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <ToggleGroup type="single" value={attributeFilter} onValueChange={(value) => value && setAttributeFilter(value as any)}>
+                <ToggleGroupItem value="all" size="sm">All</ToggleGroupItem>
+                <ToggleGroupItem value="required" size="sm">Required</ToggleGroupItem>
+                <ToggleGroupItem value="configured" size="sm">Configured</ToggleGroupItem>
+              </ToggleGroup>
+              
+              <Separator orientation="vertical" className="h-6" />
+              
+              <ToggleGroup type="single" value={attributeView} onValueChange={(value) => value && setAttributeView(value as any)}>
+                <ToggleGroupItem value="grid" size="sm" className="px-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="7" height="7" x="3" y="3" rx="1" /><rect width="7" height="7" x="14" y="3" rx="1" /><rect width="7" height="7" x="14" y="14" rx="1" /><rect width="7" height="7" x="3" y="14" rx="1" /></svg>
+                </ToggleGroupItem>
+                <ToggleGroupItem value="list" size="sm" className="px-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" x2="21" y1="6" y2="6" /><line x1="8" x2="21" y1="12" y2="12" /><line x1="8" x2="21" y1="18" y2="18" /><line x1="3" x2="3.01" y1="6" y2="6" /><line x1="3" x2="3.01" y1="12" y2="12" /><line x1="3" x2="3.01" y1="18" y2="18" /></svg>
+                </ToggleGroupItem>
+              </ToggleGroup>
+            </div>
+          </div>
+          
+          <ScrollArea className="h-[500px] pr-4">
+            {renderAttributesContent()}
+          </ScrollArea>
+        </TabsContent>
+        
+        <TabsContent value="summary" className="space-y-6">
+          {renderAttributeSummary()}
+          
+          <div className="space-y-4">
+            <h4 className="font-medium">Configured Attributes</h4>
+            {attributeValues.length > 0 ? (
+              <div className="border rounded-lg overflow-hidden">
+                <div className="bg-muted px-4 py-2 font-medium text-sm grid grid-cols-3">
+                  <div>Attribute</div>
+                  <div>Type</div>
+                  <div>Value</div>
+                </div>
+                <div className="divide-y">
+                  {attributeValues
+                    .filter(attr => {
+                      const hasValue = attr.value !== null && attr.value !== '' && 
+                                       (!Array.isArray(attr.value) || attr.value.length > 0);
+                      const hasSelectedOptions = attr.selectedOptions && attr.selectedOptions.length > 0;
+                      const hasTextValue = attr.textValue && attr.textValue.trim() !== '';
+                      
+                      return hasValue || hasSelectedOptions || hasTextValue;
+                    })
+                    .map(attr => {
+                      const attribute = getAllAttributes().find(a => a.id === attr.attributeId);
+                      let displayValue = '';
+                      
+                      if (attr.selectedOptions && attr.selectedOptions.length > 0) {
+                        displayValue = attr.selectedOptions
+                          .map(optId => attribute?.options.find(opt => opt.id === optId)?.displayValue)
+                          .filter(Boolean)
+                          .join(', ');
+                      } else if (attr.textValue) {
+                        displayValue = attr.textValue;
+                      } else if (attr.value !== null) {
+                        if (typeof attr.value === 'boolean') {
+                          displayValue = attr.value ? 'Yes' : 'No';
+                        } else if (Array.isArray(attr.value)) {
+                          displayValue = attr.value.join(', ');
+                        } else {
+                          displayValue = String(attr.value);
+                        }
+                      }
+                      
+                      return (
+                        <div key={attr.attributeId} className="px-4 py-3 grid grid-cols-3 text-sm">
+                          <div className="font-medium">{attribute?.displayName || attr.displayName || `Attribute #${attr.attributeId}`}</div>
+                          <div>{attribute?.attributeType || attr.attributeType || 'text'}</div>
+                          <div className="truncate">{displayValue}</div>
+                        </div>
+                      );
+                    })
+                  }
+                </div>
+              </div>
+            ) : (
+              <div className="text-center p-8 border rounded-md">
+                <p className="text-muted-foreground">No attributes have been configured yet</p>
+              </div>
+            )}
+          </div>
+        </TabsContent>
+      </Tabs>
+      
+      {/* Dialog for adding custom attribute */}
       <Dialog open={showNewAttributeDialog} onOpenChange={setShowNewAttributeDialog}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Create Custom Attribute</DialogTitle>
+            <DialogTitle>Add Custom Attribute</DialogTitle>
             <DialogDescription>
-              Add a new custom attribute for this product.
+              Create a new attribute for this product. You can reuse it for other products later.
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="new-attr-name">Attribute Name</Label>
-              <Input 
-                id="new-attr-name"
-                value={newAttributeData.name}
-                onChange={(e) => setNewAttributeData({...newAttributeData, name: e.target.value})}
-                placeholder="e.g., Material, Size, Color"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="attribute-name">Internal Name</Label>
+                <Input
+                  id="attribute-name"
+                  value={newAttributeData.name}
+                  onChange={(e) => setNewAttributeData({...newAttributeData, name: e.target.value})}
+                  placeholder="e.g. color, size, material"
+                />
+                <p className="text-xs text-muted-foreground">Used for system identification</p>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="attribute-display-name">Display Name</Label>
+                <Input
+                  id="attribute-display-name"
+                  value={newAttributeData.displayName}
+                  onChange={(e) => setNewAttributeData({...newAttributeData, displayName: e.target.value})}
+                  placeholder="e.g. Color, Size, Material"
+                />
+                <p className="text-xs text-muted-foreground">Shown to customers</p>
+              </div>
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="new-attr-type">Attribute Type</Label>
-              <Select 
+              <Label htmlFor="attribute-description">Description (Optional)</Label>
+              <Textarea
+                id="attribute-description"
+                value={newAttributeData.description}
+                onChange={(e) => setNewAttributeData({...newAttributeData, description: e.target.value})}
+                placeholder="Describe what this attribute represents"
+                className="resize-none"
+              />
+              <p className="text-xs text-muted-foreground">Helps explain this attribute's purpose</p>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="attribute-type">Attribute Type</Label>
+              <Select
                 value={newAttributeData.type}
-                onValueChange={(val: AttributeType) => setNewAttributeData({...newAttributeData, type: val})}
+                onValueChange={(val) => setNewAttributeData({...newAttributeData, type: val as AttributeType})}
               >
-                <SelectTrigger id="new-attr-type">
-                  <SelectValue placeholder="Select attribute type" />
+                <SelectTrigger id="attribute-type">
+                  <SelectValue placeholder="Select type" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="text">Text</SelectItem>
                   <SelectItem value="number">Number</SelectItem>
                   <SelectItem value="boolean">Yes/No</SelectItem>
-                  <SelectItem value="select">Select (Single)</SelectItem>
-                  <SelectItem value="multiselect">Select (Multiple)</SelectItem>
+                  <SelectItem value="select">Single Choice</SelectItem>
+                  <SelectItem value="multiselect">Multiple Choice</SelectItem>
+                  <SelectItem value="color">Color</SelectItem>
+                  <SelectItem value="date">Date</SelectItem>
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground">Determines the input type for this attribute</p>
             </div>
             
-            {(newAttributeData.type === 'text' || 
-              newAttributeData.type === 'number' || 
-              newAttributeData.type === 'select' || 
-              newAttributeData.type === 'multiselect') && (
+            {(newAttributeData.type === 'text' || newAttributeData.type === 'number' || 
+             newAttributeData.type === 'select' || newAttributeData.type === 'multiselect' ||
+             newAttributeData.type === 'color') && (
               <div className="space-y-2">
-                <Label htmlFor="new-attr-value">
-                  {newAttributeData.type === 'select' || newAttributeData.type === 'multiselect' 
-                    ? 'First Option Value'
-                    : 'Default Value'
-                  }
+                <Label htmlFor="attribute-value">
+                  {newAttributeData.type === 'select' || newAttributeData.type === 'multiselect' || newAttributeData.type === 'color'
+                    ? 'First Option Value' 
+                    : 'Default Value'}
                 </Label>
-                <Input 
-                  id="new-attr-value"
-                  type={newAttributeData.type === 'number' ? 'number' : 'text'}
+                <Input
+                  id="attribute-value"
+                  type={newAttributeData.type === 'number' ? 'number' : newAttributeData.type === 'color' ? 'color' : 'text'}
                   value={newAttributeData.value}
                   onChange={(e) => setNewAttributeData({...newAttributeData, value: e.target.value})}
                   placeholder={
-                    newAttributeData.type === 'number' ? 'e.g., 100' :
-                    newAttributeData.type === 'select' || newAttributeData.type === 'multiselect' ? 'e.g., Small, Red, Cotton' :
-                    'Enter default value'
+                    newAttributeData.type === 'select' || newAttributeData.type === 'multiselect'
+                      ? 'e.g. Red, Large, Cotton'
+                      : 'Enter default value'
                   }
                 />
+                <p className="text-xs text-muted-foreground">
+                  {newAttributeData.type === 'select' || newAttributeData.type === 'multiselect' || newAttributeData.type === 'color'
+                    ? 'You can add more options later' 
+                    : 'Initial value for this attribute'}
+                </p>
               </div>
             )}
+            
+            <div className="flex gap-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="attribute-required"
+                  checked={newAttributeData.isRequired}
+                  onCheckedChange={(checked) => setNewAttributeData({...newAttributeData, isRequired: !!checked})}
+                />
+                <Label htmlFor="attribute-required">Required</Label>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="attribute-filterable"
+                  checked={newAttributeData.isFilterable}
+                  onCheckedChange={(checked) => setNewAttributeData({...newAttributeData, isFilterable: !!checked})}
+                />
+                <Label htmlFor="attribute-filterable">Filterable</Label>
+              </div>
+            </div>
           </div>
           
           <DialogFooter>
@@ -608,40 +1180,53 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
             </Button>
             <Button 
               onClick={handleCreateAttribute}
-              disabled={!newAttributeData.name || 
-                ((newAttributeData.type === 'text' || 
-                  newAttributeData.type === 'number' || 
-                  newAttributeData.type === 'select' || 
-                  newAttributeData.type === 'multiselect') && 
-                  !newAttributeData.value)
-              }
+              disabled={isSubmitting || !newAttributeData.name || (
+                (newAttributeData.type === 'text' || 
+                 newAttributeData.type === 'number' || 
+                 newAttributeData.type === 'select' || 
+                 newAttributeData.type === 'multiselect' ||
+                 newAttributeData.type === 'color') && 
+                !newAttributeData.value
+              )}
             >
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Create Attribute
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
       
-      {/* Save buttons */}
-      <div className="flex justify-between pt-6 border-t">
-        <Button variant="outline" type="button" onClick={() => handleSaveAttributes(false)}>
-          <Save className="h-4 w-4 mr-2" />
-          Save Attributes
-        </Button>
-        
-        <Button type="button" onClick={() => handleSaveAttributes(true)} disabled={isLoading}>
-          {isLoading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            <>
-              Save & Continue
-              <ChevronRight className="ml-2 h-4 w-4" />
-            </>
-          )}
-        </Button>
+      {/* Action buttons */}
+      <div className="flex justify-between items-center pt-6 border-t">
+        <div>
+          <p className="text-sm text-muted-foreground">
+            {attributeValues.filter(attr => {
+              const hasValue = attr.value !== null && attr.value !== '' && 
+                               (!Array.isArray(attr.value) || attr.value.length > 0);
+              const hasSelectedOptions = attr.selectedOptions && attr.selectedOptions.length > 0;
+              const hasTextValue = attr.textValue && attr.textValue.trim() !== '';
+              
+              return hasValue || hasSelectedOptions || hasTextValue;
+            }).length} attribute{attributeValues.length !== 1 ? 's' : ''} configured
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => handleSaveAttributes(false)}
+            disabled={isLoading || isSubmitting}
+          >
+            {(isLoading || isSubmitting) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Save
+          </Button>
+          <Button 
+            onClick={() => handleSaveAttributes(true)}
+            disabled={isLoading || isSubmitting}
+          >
+            {(isLoading || isSubmitting) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Save & Next
+          </Button>
+        </div>
       </div>
     </div>
   );
