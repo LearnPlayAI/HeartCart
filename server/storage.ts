@@ -5570,6 +5570,9 @@ export class DatabaseStorage implements IStorage {
 
   async deleteProductDraft(id: number): Promise<boolean> {
     try {
+      // Import dynamically to avoid circular dependencies
+      const { cleanupOrphanedDraftImages } = await import('./clean-orphaned-images');
+      
       // Get the draft first to access the image object keys
       const draft = await this.getProductDraft(id);
       
@@ -5578,6 +5581,11 @@ export class DatabaseStorage implements IStorage {
         throw new Error(`Draft with ID ${id} not found`);
       }
       
+      // First, clean up any orphaned images for this draft that may not be tracked in the database
+      logger.info(`Running orphaned image cleanup for draft ${id} before deletion`);
+      const cleanupResult = await cleanupOrphanedDraftImages(id);
+      logger.info(`Orphaned image cleanup results: ${JSON.stringify(cleanupResult)}`);
+      
       // Delete from database first
       const result = await db
         .delete(productDrafts)
@@ -5585,14 +5593,14 @@ export class DatabaseStorage implements IStorage {
       
       logger.debug(`Deleted draft from database, ID: ${id}`);
       
-      // Delete images from object storage if needed
+      // Delete tracked images from object storage if needed
       if (draft.imageObjectKeys && draft.imageObjectKeys.length > 0) {
         const deletePromises = [];
         
         for (const objectKey of draft.imageObjectKeys) {
           if (objectKey && objectKey !== 'undefined' && objectKey.trim() !== '') {
             try {
-              logger.debug(`Deleting image: ${objectKey}`);
+              logger.debug(`Deleting tracked image: ${objectKey}`);
               // Add each delete operation to our promises array
               deletePromises.push(
                 objectStore.deleteFile(objectKey)
@@ -5618,9 +5626,63 @@ export class DatabaseStorage implements IStorage {
         
         // Wait for all image deletions to complete or fail
         await Promise.allSettled(deletePromises);
-        logger.debug(`Completed image deletion for draft ${id}`);
+        logger.debug(`Completed tracked image deletion for draft ${id}`);
       } else {
-        logger.debug(`No images to delete for draft ${id}`);
+        logger.debug(`No tracked images to delete for draft ${id}`);
+      }
+      
+      // Finally, make one more pass to clean up any remaining files in this draft's directory
+      logger.info(`Checking for any remaining files in drafts/${id}/...`);
+      try {
+        const draftPrefix = `drafts/${id}/`;
+        
+        // Get direct listing of any remaining files using raw object store client
+        const rawResult = await objectStore.getClient().list("");
+        if ('err' in rawResult || !rawResult.value || !Array.isArray(rawResult.value)) {
+          logger.error(`Error listing object store files: ${
+            'err' in rawResult ? JSON.stringify(rawResult.err) : 'Unknown error'
+          }`);
+        } else {
+          // Find any remaining files in this draft's directory
+          const remainingFiles: string[] = [];
+          
+          for (const obj of rawResult.value) {
+            if (obj && typeof obj === 'object') {
+              let objectKey = null;
+              // Try to extract the key/name property
+              if ('key' in obj && obj.key && typeof obj.key === 'string') {
+                objectKey = obj.key;
+              } else if ('name' in obj && obj.name && typeof obj.name === 'string') {
+                objectKey = obj.name;
+              }
+              
+              // If we found a key that matches our draft prefix, delete it
+              if (objectKey && objectKey.startsWith(draftPrefix)) {
+                remainingFiles.push(objectKey);
+                logger.info(`Found remaining file to delete: ${objectKey}`);
+                try {
+                  await objectStore.deleteFile(objectKey);
+                  logger.debug(`Successfully deleted remaining file: ${objectKey}`);
+                } catch (deleteError) {
+                  logger.error(`Failed to delete remaining file: ${objectKey}`, { 
+                    error: deleteError instanceof Error ? deleteError.message : String(deleteError)
+                  });
+                }
+              }
+            }
+          }
+          
+          if (remainingFiles.length > 0) {
+            logger.info(`Deleted ${remainingFiles.length} remaining files for draft ${id}`);
+          } else {
+            logger.info(`No remaining files found for draft ${id}`);
+          }
+        }
+      } catch (finalCleanupError) {
+        logger.error(`Error in final cleanup for draft ${id}`, { 
+          error: finalCleanupError instanceof Error ? finalCleanupError.message : String(finalCleanupError)
+        });
+        // Don't throw - this is best-effort cleanup
       }
       
       return true;
