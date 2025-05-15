@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -37,6 +37,7 @@ export const SEOStep: React.FC<SEOStepProps> = ({
 }) => {
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
+  const [productUrl, setProductUrl] = useState<string>('');
   
   // AI suggestion states
   const [isGeneratingSuggestions, setIsGeneratingSuggestions] = useState(false);
@@ -47,6 +48,25 @@ export const SEOStep: React.FC<SEOStepProps> = ({
     keywords: string;
   } | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
+  
+  // Generate product URL for canonical URL
+  useEffect(() => {
+    // Get base URL (will be current domain in production)
+    const baseUrl = window.location.origin;
+    
+    // Determine the URL path
+    let productPath = '';
+    if (draft.slug) {
+      productPath = `/products/${draft.slug}`;
+    } else if (draft.id) {
+      productPath = `/products/${draft.id}`;
+    }
+    
+    // Set the full canonical URL if we have a path
+    if (productPath) {
+      setProductUrl(`${baseUrl}${productPath}`);
+    }
+  }, [draft.id, draft.slug]);
   
   // Get category info for AI context
   const { data: categoryData } = useQuery({
@@ -69,6 +89,13 @@ export const SEOStep: React.FC<SEOStepProps> = ({
       canonicalUrl: draft.canonicalUrl || ''
     }
   });
+  
+  // Update canonical URL when product URL is generated
+  useEffect(() => {
+    if (productUrl && !draft.canonicalUrl) {
+      form.setValue('canonicalUrl', productUrl);
+    }
+  }, [productUrl, draft.canonicalUrl]);
   
   // Generate SEO suggestions using AI
   const generateSEOSuggestions = async () => {
@@ -281,22 +308,27 @@ export const SEOStep: React.FC<SEOStepProps> = ({
                 )}
               />
               
-              {/* Canonical URL */}
+              {/* Canonical URL - Auto-generated */}
               <FormField
                 control={form.control}
                 name="canonicalUrl"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Canonical URL</FormLabel>
+                    <FormLabel className="flex items-center gap-2">
+                      Canonical URL
+                      <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">Auto-generated</span>
+                    </FormLabel>
                     <FormControl>
                       <Input
                         {...field}
-                        placeholder="Enter canonical URL"
+                        placeholder="Auto-generated from product URL"
                         value={field.value || ''}
+                        className="bg-muted text-muted-foreground"
+                        readOnly
                       />
                     </FormControl>
                     <FormDescription>
-                      Use this if the product appears on multiple URLs
+                      This URL is automatically generated from your product slug/ID
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
