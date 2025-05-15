@@ -5331,12 +5331,12 @@ export class DatabaseStorage implements IStorage {
         supplier: draft.supplierId ? (await this.getSupplier(draft.supplierId))?.name : null,
         weight: draft.weight ? parseFloat(draft.weight) : null,
         dimensions: draft.dimensions,
-        // Convert Date timestamps to text strings for storage in products table
+        // Use existing string dates - already in proper SAST format
         specialSaleText: draft.specialSaleText,
-        specialSaleStart: draft.specialSaleStart ? draft.specialSaleStart.toISOString() : null,
-        specialSaleEnd: draft.specialSaleEnd ? draft.specialSaleEnd.toISOString() : null,
+        specialSaleStart: draft.specialSaleStart, // Already stored as string in SAST format
+        specialSaleEnd: draft.specialSaleEnd, // Already stored as string in SAST format
         isFlashDeal: draft.isFlashDeal || false,
-        flashDealEnd: draft.flashDealEnd ? draft.flashDealEnd.toISOString() : null,
+        flashDealEnd: draft.flashDealEnd, // Already stored as string in SAST format
         // Additional fields
         brand: draft.brand,
         tags: draft.metaKeywords ? [draft.metaKeywords] : [],
