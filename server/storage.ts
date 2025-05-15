@@ -5649,20 +5649,98 @@ export class DatabaseStorage implements IStorage {
       }
       
       // Get all product attributes
-      const attributes = await this.getProductAttributes(productId);
+      const productAttributes = await this.getProductAttributes(productId);
+      
+      // Map attribute values to the format expected by the draft
+      const mappedAttributes = productAttributes.map(pa => ({
+        attributeId: pa.attributeId,
+        value: pa.textValue || (Array.isArray(pa.selectedOptions) && pa.selectedOptions.length > 0 
+          ? pa.selectedOptions 
+          : null),
+        attributeName: pa.attribute?.name || "",
+        attributeDisplayName: pa.overrideDisplayName || pa.attribute?.displayName || "",
+        attributeType: pa.attribute?.attributeType || "text",
+        isRequired: !!pa.isRequired,
+        sortOrder: pa.sortOrder || 0,
+        overrideDisplayName: pa.overrideDisplayName || null,
+        overrideDescription: pa.overrideDescription || null
+      }));
       
       // Get all product images
       const images = await this.getProductImages(productId);
+      
+      // Prepare image mappings for copying
+      const imageFileMappings: Array<{sourceKey: string, destinationKey: string}> = [];
+      const newImageObjectKeys: string[] = [];
+      
+      // Process each image for copying
+      for (let i = 0; i < images.length; i++) {
+        const image = images[i];
+        if (!image.objectKey) continue;
+        
+        // Generate new draft image key
+        const fileName = path.basename(image.objectKey);
+        const draftKey = path.join(
+          STORAGE_FOLDERS.DRAFTS,
+          `draft_${Date.now()}_${i}`,
+          fileName
+        );
+        
+        // Add to mappings for bulk copy operation
+        imageFileMappings.push({
+          sourceKey: image.objectKey,
+          destinationKey: draftKey
+        });
+        
+        // Track new keys for database reference
+        newImageObjectKeys.push(draftKey);
+      }
+      
+      // Copy all images in parallel if there are any to copy
+      let copiedImageKeys: string[] = [];
+      if (imageFileMappings.length > 0) {
+        copiedImageKeys = await objectStore.copyFiles(imageFileMappings);
+        
+        // Log any failures
+        if (copiedImageKeys.length < imageFileMappings.length) {
+          logger.warn('Not all product images were copied successfully', {
+            productId,
+            totalImages: imageFileMappings.length,
+            successfulCopies: copiedImageKeys.length
+          });
+        }
+      }
+      
+      // Create image URLs from the copied image keys
+      const imageUrls = copiedImageKeys.map(key => objectStore.getPublicUrl(key));
       
       // Prepare draft data
       const draftData: Partial<InsertProductDraft> = {
         name: product.name,
         slug: product.slug,
         createdBy: userId || 0, // Use provided userId or default to 0 (system)
+        attributes: JSON.stringify(mappedAttributes),
+        imageUrls: JSON.stringify(imageUrls),
+        imageObjectKeys: JSON.stringify(copiedImageKeys),
+        mainImageIndex: images.length > 0 ? product.mainImageIndex || 0 : null,
         description: product.description,
         // Map the product price fields to draft price fields
         regularPrice: product.price,
         costPrice: product.costPrice,
+        // SEO information
+        metaTitle: product.metaTitle || product.name,
+        metaDescription: product.metaDescription,
+        keywords: product.keywords,
+        // Copy source product info for reference
+        sourceProductId: productId,
+        // Additional data fields
+        brand: product.brand,
+        sku: product.sku,
+        barcode: product.barcode,
+        weight: product.weight,
+        dimensions: product.dimensions,
+        // Status as draft until published
+        status: 'draft',
         salePrice: product.salePrice,
         discountLabel: product.discountLabel,
         // Set category, supplier, catalog
