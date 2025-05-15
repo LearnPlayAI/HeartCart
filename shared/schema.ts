@@ -35,6 +35,9 @@ export const categories = pgTable("categories", {
   parentId: integer("parent_id"),
   level: integer("level").default(0).notNull(),
   displayOrder: integer("display_order").default(0).notNull(),
+  // Added timestamp fields to match database structure
+  createdAt: text("created_at").default(String(new Date().toISOString())).notNull(),
+  updatedAt: text("updated_at").default(String(new Date().toISOString())).notNull(),
 });
 
 // Relations will be defined after all tables are created
@@ -609,6 +612,11 @@ export const productDrafts = pgTable("product_drafts", {
   
   // Change history
   changeHistory: jsonb("change_history").default('[]'),
+  
+  // Additional fields found in database but missing from schema
+  selectedAttributes: jsonb("selected_attributes").default('[]'),
+  aiSuggestions: jsonb("ai_suggestions").default('{}'),
+  discountData: jsonb("discount_data").default('{}'),
 }, (table) => {
   return {
     originalProductIdx: index("idx_product_drafts_original_product").on(table.originalProductId),
@@ -632,6 +640,10 @@ export const insertProductDraftSchema = createInsertSchema(productDrafts, {
   attributesData: z.any().optional(),
   completedSteps: z.array(z.string()).optional(),
   changeHistory: z.any().optional(),
+  // Added fields for the missing database columns
+  selectedAttributes: z.any().optional(),
+  aiSuggestions: z.any().optional(),
+  discountData: z.any().optional(),
 }).omit({ 
   id: true 
 });
