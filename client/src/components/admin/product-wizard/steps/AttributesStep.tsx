@@ -774,10 +774,96 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
                         </Badge>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>This attribute is required for products in the {draft.categoryName} category</p>
+                        <p>This attribute is required for products in this category</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
+                )}
+                
+                {/* Show Manage Options button for select/multiselect attributes */}
+                {(attribute.attributeType === 'select' || attribute.attributeType === 'multiselect') && (
+                  <Dialog open={currentAttributeId === attribute.attributeId && isManagingOptions} onOpenChange={(open) => {
+                    if (!open) {
+                      setIsManagingOptions(false);
+                      setCurrentAttributeId(null);
+                    }
+                  }}>
+                    <DialogTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="ml-2"
+                        onClick={() => {
+                          setCurrentAttributeId(attribute.attributeId);
+                          setIsManagingOptions(true);
+                          // Make sure options are loaded
+                          if ((attribute.options || []).length === 0) {
+                            preloadOptions(attribute.attributeId);
+                          }
+                        }}
+                      >
+                        <span className="text-xs">Manage Options</span>
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>Manage {attribute.displayName} Options</DialogTitle>
+                        <DialogDescription>
+                          Select which options will be available to customers for this product.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="max-h-[400px] overflow-y-auto py-4">
+                        {(attribute.options || []).length === 0 ? (
+                          <div className="text-center text-gray-500 py-2">
+                            <span>No options available yet</span>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            {(attribute.options || []).map(option => {
+                              const isSelected = attribute.selectedOptions?.includes(option.id) || false;
+                              return (
+                                <div key={option.id} className="flex items-center space-x-2 p-2 rounded hover:bg-muted/20">
+                                  <Checkbox 
+                                    id={`dialog-option-${option.id}`} 
+                                    checked={isSelected}
+                                    onCheckedChange={(checked) => {
+                                      handleOptionSelect(attribute.attributeId, option.id, checked === true);
+                                    }}
+                                  />
+                                  <Label 
+                                    htmlFor={`dialog-option-${option.id}`}
+                                    className={`font-normal flex-grow cursor-pointer ${isSelected ? 'text-primary font-medium' : ''}`}
+                                  >
+                                    {option.displayValue}
+                                  </Label>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex justify-between">
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            setCurrentAttributeId(attribute.attributeId);
+                            setNewOptionData({ value: '', displayValue: '' });
+                            setIsAddingOption(true);
+                            setIsManagingOptions(false);
+                          }}
+                        >
+                          <Plus className="w-3 h-3 mr-1" />
+                          <span className="text-xs">Add New Option</span>
+                        </Button>
+                        <Button onClick={() => {
+                          setIsManagingOptions(false);
+                          setCurrentAttributeId(null);
+                        }}>Done</Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                 )}
                 
                 {/* Info toggle button */}
