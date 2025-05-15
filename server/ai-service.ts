@@ -532,7 +532,7 @@ export async function optimizeSEO(
           // Validate each suggestion has the required properties
           return suggestions.map(suggestion => ({
             title: suggestion.title || '',
-            metaDescription: suggestion.metaDescription || '',
+            metaDescription: suggestion.metaDescription ? suggestion.metaDescription.slice(0, 160) : '',
             keywords: Array.isArray(suggestion.keywords) ? suggestion.keywords : [],
             score: typeof suggestion.score === 'number' ? suggestion.score : 0.5,
             tips: Array.isArray(suggestion.tips) ? suggestion.tips : []
@@ -543,7 +543,7 @@ export async function optimizeSEO(
       // Fallback: return a default suggestion based on existing data
       return [{
         title: currentTitle || `${productName} | Shop Online`,
-        metaDescription: currentDescription || `Buy ${productName} online. Fast delivery across South Africa.`,
+        metaDescription: currentDescription ? currentDescription.slice(0, 160) : `Buy ${productName} online. Fast delivery across South Africa.`.slice(0, 160),
         keywords: currentKeywords || [productName.toLowerCase()],
         score: 0.5,
         tips: ['Add more specific keywords', 'Include benefits in description']
