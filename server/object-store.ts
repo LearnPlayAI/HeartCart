@@ -502,19 +502,58 @@ class ObjectStoreService {
   
   /**
    * Check if a file exists in Object Storage
+   * This enhanced version uses multiple techniques to accurately check for file existence
    */
   async exists(objectKey: string): Promise<boolean> {
     await this.initialize();
     
+    console.log(`Checking if file exists: ${objectKey}`);
+    
     try {
+      // First try the direct exists method
       const existsResult = await this.objectStore.exists(objectKey);
       
-      if ('err' in existsResult) {
-        console.error(`Error checking existence of ${objectKey}:`, existsResult.err);
-        return false;
+      if (!('err' in existsResult) && existsResult.value === true) {
+        console.log(`Direct exists check confirmed file exists: ${objectKey}`);
+        return true;
       }
       
-      return existsResult.value;
+      // If direct check fails, try listing the folder and checking the results
+      // This is necessary because the object store API might use 'name' instead of 'key'
+      const objectPathParts = objectKey.split('/');
+      const objectName = objectPathParts.pop() || '';
+      const folderPath = objectPathParts.join('/');
+      
+      console.log(`Fallback existence check using list on folder: ${folderPath}`);
+      
+      const listResult = await this.objectStore.list(folderPath);
+      
+      if (!('err' in listResult) && listResult.value && Array.isArray(listResult.value)) {
+        // Check each object in the listing
+        for (const obj of listResult.value) {
+          if (obj && typeof obj === 'object') {
+            let foundKey = null;
+            
+            // Try key property first
+            if ('key' in obj && obj.key && typeof obj.key === 'string') {
+              foundKey = obj.key as string;
+            } 
+            // Then try name property 
+            else if ('name' in obj && obj.name && typeof obj.name === 'string') {
+              foundKey = obj.name as string;
+            }
+            
+            // If we found a matching key/name
+            if (foundKey === objectKey) {
+              console.log(`File found in listing: ${objectKey}`);
+              return true;
+            }
+          }
+        }
+      }
+      
+      console.log(`File not found after checking listing: ${objectKey}`);
+      return false;
     } catch (error) {
       console.error(`Error checking if ${objectKey} exists:`, error);
       return false;
@@ -541,9 +580,9 @@ class ObjectStoreService {
       let contentLength: number | undefined;
       
       try {
-        // Check if exists and try to get size information
-        const existsResult = await this.objectStore.exists(objectKey);
-        if ('value' in existsResult && existsResult.value) {
+        // Use our enhanced exists method for reliable file existence check
+        const fileExists = await this.exists(objectKey);
+        if (fileExists) {
           // For Replit object storage, we may not have direct size info
           // But we can get file data and check its length
           const downloadResult = await this.objectStore.downloadAsBytes(objectKey);
