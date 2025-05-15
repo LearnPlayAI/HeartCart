@@ -512,9 +512,8 @@ export default function registerProductDraftRoutes(router: Router) {
         throw new BadRequestError("Product price is required");
       }
       
-      // Publish the draft using our fixed implementation
-      const { publishProductDraft } = require('./publishProductDraft');
-      const product = await publishProductDraft(draftId);
+      // Publish the draft
+      const product = await storage.publishProductDraft(draftId);
       sendSuccess(res, product);
     })
   );

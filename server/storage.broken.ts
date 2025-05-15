@@ -5617,7 +5617,6 @@ export class DatabaseStorage implements IStorage {
       throw error;
     }
   }
-  }
 
   /**
    * Creates a new draft from an existing product for editing
