@@ -415,15 +415,17 @@ export const orderItemsRelations = relations(orderItems, ({ one }) => ({
 // Cart Items table
 export const cartItems = pgTable("cart_items", {
   id: serial("id").primaryKey(),
-  sessionId: varchar("session_id", { length: 255 }).notNull(),
+  userId: integer("user_id").references(() => users.id),
   productId: integer("product_id").references(() => products.id).notNull(),
   quantity: integer("quantity").default(1).notNull(),
-  selectedOptions: jsonb("selected_options"),
+  combinationHash: text("combination_hash"),
+  combinationId: integer("combination_id"),
+  selectedAttributes: jsonb("selected_attributes").default({}),
+  priceAdjustment: doublePrecision("price_adjustment").default(0),
+  discountData: jsonb("discount_data"),
+  totalDiscount: doublePrecision("total_discount").default(0),
+  itemPrice: doublePrecision("item_price"),
   createdAt: text("created_at").default(() => formatCurrentDateSAST()).notNull(),
-}, (table) => {
-  return {
-    sessionProductUnique: unique().on(table.sessionId, table.productId),
-  };
 });
 
 // Cart Items relations
@@ -431,6 +433,10 @@ export const cartItemsRelations = relations(cartItems, ({ one }) => ({
   product: one(products, {
     fields: [cartItems.productId],
     references: [products.id],
+  }),
+  user: one(users, {
+    fields: [cartItems.userId],
+    references: [users.id],
   }),
 }));
 
