@@ -5466,35 +5466,60 @@ export class DatabaseStorage implements IStorage {
       // Get the draft first to access the image object keys
       const draft = await this.getProductDraft(id);
       
-      // Delete from database
+      if (!draft) {
+        logger.error(`Draft not found when trying to delete: ${id}`);
+        throw new Error(`Draft with ID ${id} not found`);
+      }
+      
+      // Delete from database first
       const result = await db
         .delete(productDrafts)
         .where(eq(productDrafts.id, id));
       
+      logger.debug(`Deleted draft from database, ID: ${id}`);
+      
       // Delete images from object storage if needed
-      if (draft?.imageObjectKeys && draft.imageObjectKeys.length > 0) {
+      if (draft.imageObjectKeys && draft.imageObjectKeys.length > 0) {
+        const deletePromises = [];
+        
         for (const objectKey of draft.imageObjectKeys) {
-          if (objectKey && objectKey !== 'undefined') {
+          if (objectKey && objectKey !== 'undefined' && objectKey.trim() !== '') {
             try {
-              // Delete in the background, don't wait
-              objectStore.deleteFile(objectKey).catch(error => {
-                logger.error('Error deleting image from object storage', { error, objectKey });
-              });
+              logger.debug(`Deleting image: ${objectKey}`);
+              // Add each delete operation to our promises array
+              deletePromises.push(
+                objectStore.deleteFile(objectKey)
+                  .catch(error => {
+                    logger.error('Error deleting image from object storage', { 
+                      error: error.message || String(error), 
+                      objectKey 
+                    });
+                    // Don't throw - we want to continue with other images if one fails
+                    return null;
+                  })
+              );
             } catch (deleteError) {
               // Log but don't fail if image deletion fails
               logger.error('Failed to delete draft image', { 
                 draftId: id, 
                 objectKey, 
-                error: deleteError 
+                error: deleteError instanceof Error ? deleteError.message : String(deleteError)
               });
             }
           }
         }
+        
+        // Wait for all image deletions to complete or fail
+        await Promise.allSettled(deletePromises);
+        logger.debug(`Completed image deletion for draft ${id}`);
+      } else {
+        logger.debug(`No images to delete for draft ${id}`);
       }
       
       return true;
     } catch (error) {
-      logger.error('Error deleting product draft', { error, id });
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error(`Error deleting product draft ${id}: ${errorMessage}`);
       throw error;
     }
   }

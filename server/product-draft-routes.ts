@@ -482,8 +482,16 @@ export default function registerProductDraftRoutes(router: Router) {
         throw new BadRequestError("You don't have permission to delete this draft");
       }
       
-      await storage.deleteProductDraft(draftId);
-      sendSuccess(res, { success: true });
+      console.log(`Attempting to delete draft with ID ${draftId}`);
+      
+      try {
+        const result = await storage.deleteProductDraft(draftId);
+        console.log(`Draft deletion result:`, result);
+        sendSuccess(res, { success: true, message: 'Draft deleted successfully' });
+      } catch (deleteError) {
+        console.error(`Failed to delete draft ${draftId}:`, deleteError);
+        throw deleteError;
+      }
     })
   );
 

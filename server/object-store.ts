@@ -561,10 +561,25 @@ class ObjectStoreService {
    * Delete a file from Object Storage
    */
   async deleteFile(objectKey: string): Promise<void> {
+    if (!objectKey || objectKey === 'undefined') {
+      console.log(`Skipping delete for invalid objectKey: "${objectKey}"`);
+      return;
+    }
+    
+    console.log(`Starting delete operation for: ${objectKey}`);
     await this.initialize();
     
     try {
+      // First check if file exists
+      const exists = await this.exists(objectKey);
+      if (!exists) {
+        console.log(`File does not exist, skipping delete: ${objectKey}`);
+        return;
+      }
+      
+      console.log(`File exists, attempting to delete: ${objectKey}`);
       const result = await this.objectStore.delete(objectKey);
+      console.log(`Delete result:`, result);
       
       if ('err' in result && result.err) {
         console.error(`Error deleting ${objectKey}:`, result.err);
@@ -572,9 +587,13 @@ class ObjectStoreService {
           JSON.stringify(result.err) : String(result.err);
         throw new Error(`Failed to delete file: ${errorMessage}`);
       }
+      
+      console.log(`Successfully deleted file: ${objectKey}`);
     } catch (error) {
       console.error(`Failed to delete ${objectKey}:`, error);
-      throw new Error(`Delete operation failed: ${error instanceof Error ? error.message : String(error)}`);
+      // Don't throw the error, just log it - we want the delete draft operation to succeed
+      // even if image deletion fails
+      console.error(`Delete operation failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
   
