@@ -130,23 +130,22 @@ export const SEOStep: React.FC<SEOStepProps> = ({ draft, onSave, isLoading = fal
       }
 
       // API request to generate SEO suggestions
-      const response = await apiRequest('/api/ai/optimize-seo', {
-        method: 'POST',
-        data: {
-          productName,
-          productDescription,
-          categoryName,
-          currentTitle: formValues.metaTitle,
-          currentDescription: formValues.metaDescription,
-          currentKeywords
-        }
+      const response = await apiRequest('POST', '/api/ai/optimize-seo', {
+        productName,
+        productDescription,
+        categoryName,
+        currentTitle: formValues.metaTitle,
+        currentDescription: formValues.metaDescription,
+        currentKeywords
       });
 
-      if (response.success && response.data.suggestions) {
-        setSeoSuggestions(response.data.suggestions);
+      const responseData = await response.json();
+      
+      if (responseData.success && responseData.data?.suggestions) {
+        setSeoSuggestions(responseData.data.suggestions);
         setShowSEODialog(true);
       } else {
-        throw new Error(response.error?.message || 'Failed to generate SEO suggestions');
+        throw new Error(responseData.error?.message || 'Failed to generate SEO suggestions');
       }
     } catch (error) {
       console.error('Error generating SEO suggestions:', error);

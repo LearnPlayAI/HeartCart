@@ -17,7 +17,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import BasicInfoStep from './steps/BasicInfoStep';
+import { BasicInfoStep } from './steps/BasicInfoStep';
 import ProductImagesStep from './steps/ProductImagesStep';
 import { AdditionalInfoStep } from './steps/AdditionalInfoStep';
 import { SEOStep } from './steps/SEOStep';
@@ -316,7 +316,7 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ editMode = false, 
       const defaultSupplierId = suppliersData?.data?.[0]?.id || null;
       
       // Create initial draft data
-      const initialData = {
+      const initialData: Partial<ProductDraft> = {
         name: '',
         description: '',
         slug: '',
@@ -340,6 +340,13 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ editMode = false, 
         flashDealEnd: null,
         dimensions: '',
         weight: '',
+        // SEO fields
+        metaTitle: null,
+        metaDescription: null,
+        metaKeywords: null,
+        canonicalUrl: null,
+        // System fields
+        originalProductId: productId || null,
         catalogId: defaultCatalogId,
         supplierId: defaultSupplierId,
         completedSteps: [],
@@ -347,15 +354,13 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ editMode = false, 
         wizardProgress: {
           "basic-info": false, 
           "images": false, 
-          "additional-info": false, 
+          "additional-info": false,
+          "seo": false,
           "review": false
         }
       };
       
-      // If in edit mode, use the existing product ID
-      if (editMode && productId) {
-        initialData.originalProductId = productId;
-      }
+      // originalProductId is already set in the initialData
       
       createDraftMutation.mutate(initialData);
     }
