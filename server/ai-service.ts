@@ -1,18 +1,117 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenerativeAI, Part } from '@google/generative-ai';
+import axios from 'axios';
 
 // Initialize the Gemini API
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash', generationConfig: { temperature: 0.7 } });
 
 /**
- * Generates product description suggestions based on product name and optional category
+ * Helper function to convert image URLs to base64 for Gemini API
+ */
+async function imageUrlToBase64(imageUrl: string): Promise<string | null> {
+  try {
+    const response = await axios.get(imageUrl, {
+      responseType: 'arraybuffer',
+    });
+    
+    const contentType = response.headers['content-type'] || 'image/jpeg';
+    const base64 = Buffer.from(response.data, 'binary').toString('base64');
+    
+    return `data:${contentType};base64,${base64}`;
+  } catch (error) {
+    console.error('Error converting image URL to base64:', error);
+    return null;
+  }
+}
+
+/**
+ * Analyzes a product image using Gemini vision capabilities
+ */
+export async function analyzeProductImage(imageUrl: string): Promise<{
+  suggestedKeywords: string[];
+  colorPalette: string[];
+  detectedObjects: string[];
+  styleDescription: string;
+  targetAudience: string;
+}> {
+  try {
+    // Convert the image URL to base64 for the Gemini API
+    const imageData = await imageUrlToBase64(imageUrl);
+    if (!imageData) {
+      throw new Error('Failed to process image');
+    }
+
+    const promptText = `
+    Analyze this product image in detail. Based on what you see, provide the following information:
+    
+    1. Suggested keywords (5-7 keyword phrases that describe this product)
+    2. Color palette (list the main colors visible in the product)
+    3. Detected objects (list the main objects or components visible)
+    4. Style description (describe the style, design, or aesthetic of the product in 1-2 sentences)
+    5. Target audience (who would likely use this product?)
+    
+    Format your response as a JSON object with these keys: suggestedKeywords (array), colorPalette (array), detectedObjects (array), styleDescription (string), targetAudience (string).
+    
+    Only return the JSON object without any additional text.`;
+
+    // Create the image part
+    const imagePart: Part = {
+      inlineData: {
+        data: imageData.split(',')[1],
+        mimeType: imageData.split(';')[0].split(':')[1]
+      }
+    };
+
+    // Send request to Gemini with text prompt and image
+    const result = await model.generateContent([promptText, imagePart]);
+    const text = result.response.text();
+    
+    try {
+      // Extract the JSON object from the response
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const analysis = JSON.parse(jsonMatch[0]);
+        
+        return {
+          suggestedKeywords: Array.isArray(analysis.suggestedKeywords) ? analysis.suggestedKeywords : [],
+          colorPalette: Array.isArray(analysis.colorPalette) ? analysis.colorPalette : [],
+          detectedObjects: Array.isArray(analysis.detectedObjects) ? analysis.detectedObjects : [],
+          styleDescription: analysis.styleDescription || '',
+          targetAudience: analysis.targetAudience || ''
+        };
+      }
+      
+      // Fallback when JSON extraction fails
+      return {
+        suggestedKeywords: [],
+        colorPalette: [],
+        detectedObjects: [],
+        styleDescription: '',
+        targetAudience: ''
+      };
+    } catch (error) {
+      console.error('Error parsing AI image analysis response as JSON:', error);
+      throw new Error('Failed to parse image analysis results');
+    }
+  } catch (error) {
+    console.error('Error analyzing product image:', error);
+    throw new Error('Failed to analyze product image');
+  }
+}
+
+/**
+ * Generates product description suggestions based on product name, images, and optional category
  */
 export async function generateProductDescription(
   productName: string,
   categoryName?: string,
-  keyPoints?: string[]
+  keyPoints?: string[],
+  imageUrls?: string[]
 ): Promise<string[]> {
   try {
+    // Build prompt parts including images if available
+    const parts: Part[] = [];
+    
     let promptText = `Generate 3 distinct, persuasive, and compelling product descriptions for a South African e-commerce website for: "${productName}"`;
     
     if (categoryName) {
@@ -25,14 +124,59 @@ export async function generateProductDescription(
       promptText += ` Focus on these key points: ${keyPoints.join(', ')}.`;
     }
 
-    promptText += `
-    Format your response as a JSON array of strings, with each element containing one description.
-    Example:
-    ["Description 1 text here", "Description 2 text here", "Description 3 text here"]
-    
-    Do not include any other text or explanation, only the JSON array with 3 descriptions.`;
+    // Add image analysis if images are provided
+    if (imageUrls && imageUrls.length > 0) {
+      promptText += ` Use details from the attached product images in your descriptions.`;
+      
+      // Process up to 3 images maximum to avoid token limits
+      const imagesToProcess = imageUrls.slice(0, 3);
+      
+      // Add the prompt text as the first part
+      parts.push({ text: promptText });
+      
+      // Add each image as a part
+      for (const imageUrl of imagesToProcess) {
+        if (imageUrl && !imageUrl.includes('undefined')) {
+          try {
+            const imageData = await imageUrlToBase64(imageUrl);
+            if (imageData) {
+              parts.push({
+                inlineData: {
+                  data: imageData.split(',')[1],
+                  mimeType: imageData.split(';')[0].split(':')[1]
+                }
+              });
+            }
+          } catch (error) {
+            console.error(`Error processing image ${imageUrl}:`, error);
+            // Continue with other images
+          }
+        }
+      }
+      
+      // Add formatting instructions as the last part
+      parts.push({
+        text: `
+        Format your response as a JSON array of strings, with each element containing one description.
+        Example:
+        ["Description 1 text here", "Description 2 text here", "Description 3 text here"]
+        
+        Do not include any other text or explanation, only the JSON array with 3 descriptions.`
+      });
+    } else {
+      // No images provided, just use text prompt
+      promptText += `
+      Format your response as a JSON array of strings, with each element containing one description.
+      Example:
+      ["Description 1 text here", "Description 2 text here", "Description 3 text here"]
+      
+      Do not include any other text or explanation, only the JSON array with 3 descriptions.`;
+      
+      parts.push({ text: promptText });
+    }
 
-    const result = await model.generateContent(promptText);
+    // Generate content with all the parts
+    const result = await model.generateContent(parts);
     const text = result.response.text();
     
     try {
@@ -54,14 +198,18 @@ export async function generateProductDescription(
 }
 
 /**
- * Generates product tags based on product information
+ * Generates product tags based on product information and optionally images
  */
 export async function generateProductTags(
   productName: string,
   productDescription?: string,
-  categoryName?: string
+  categoryName?: string,
+  imageUrls?: string[]
 ): Promise<string[]> {
   try {
+    // Build prompt parts including images if available
+    const parts: Part[] = [];
+    
     let promptText = `Generate 10-15 relevant, search-optimized tags for a South African e-commerce product: "${productName}"`;
     
     if (categoryName) {
@@ -72,21 +220,74 @@ export async function generateProductTags(
       promptText += `. The product description is: "${productDescription}"`;
     }
     
-    promptText += `
-    The tags should be specific, relevant to South African shoppers, and optimized for search.
-    Include a mix of:
-    - Product type tags
-    - Feature tags
-    - Benefit tags
-    - Occasion tags (if applicable)
-    - Seasonal tags (if applicable)
-    
-    Format your response as a JSON array of strings, with each tag as a separate element.
-    Example: ["tag1", "tag2", "tag3", ...]
-    
-    Do not include any other text or explanation, only the JSON array with tags.`;
+    // Add image analysis if images are provided
+    if (imageUrls && imageUrls.length > 0) {
+      promptText += `. Use details from the attached product images to generate relevant tags.`;
+      
+      // Process up to 2 images maximum to avoid token limits
+      const imagesToProcess = imageUrls.slice(0, 2);
+      
+      // Add the prompt text as the first part
+      parts.push({ text: promptText });
+      
+      // Add each image as a part
+      for (const imageUrl of imagesToProcess) {
+        if (imageUrl && !imageUrl.includes('undefined')) {
+          try {
+            const imageData = await imageUrlToBase64(imageUrl);
+            if (imageData) {
+              parts.push({
+                inlineData: {
+                  data: imageData.split(',')[1],
+                  mimeType: imageData.split(';')[0].split(':')[1]
+                }
+              });
+            }
+          } catch (error) {
+            console.error(`Error processing image ${imageUrl}:`, error);
+            // Continue with other images
+          }
+        }
+      }
+      
+      // Add formatting instructions as the last part
+      parts.push({
+        text: `
+        The tags should be specific, relevant to South African shoppers, and optimized for search.
+        Include a mix of:
+        - Product type tags
+        - Feature tags
+        - Benefit tags
+        - Color and material tags (from the images)
+        - Occasion tags (if applicable)
+        - Seasonal tags (if applicable)
+        
+        Format your response as a JSON array of strings, with each tag as a separate element.
+        Example: ["tag1", "tag2", "tag3", ...]
+        
+        Do not include any other text or explanation, only the JSON array with tags.`
+      });
+    } else {
+      // No images provided, just use text prompt
+      promptText += `
+      The tags should be specific, relevant to South African shoppers, and optimized for search.
+      Include a mix of:
+      - Product type tags
+      - Feature tags
+      - Benefit tags
+      - Occasion tags (if applicable)
+      - Seasonal tags (if applicable)
+      
+      Format your response as a JSON array of strings, with each tag as a separate element.
+      Example: ["tag1", "tag2", "tag3", ...]
+      
+      Do not include any other text or explanation, only the JSON array with tags.`;
+      
+      parts.push({ text: promptText });
+    }
 
-    const result = await model.generateContent(promptText);
+    // Generate content with all the parts
+    const result = await model.generateContent(parts);
     const text = result.response.text();
     
     try {
@@ -110,19 +311,23 @@ export async function generateProductTags(
 }
 
 /**
- * Generates SEO content for a product
+ * Generates SEO content for a product with optional image analysis
  */
 export async function generateSEO(
   productName: string,
   productDescription: string,
   categoryName: string,
-  attributes: any[] = []
+  attributes: any[] = [],
+  imageUrls?: string[]
 ): Promise<{
   title: string;
   description: string;
   keywords: string;
 }> {
   try {
+    // Build prompt parts including images if available
+    const parts: Part[] = [];
+    
     // Extract attribute values for context
     const attributeDetails = attributes
       .filter(attr => attr.value && attr.value !== '')
@@ -143,23 +348,75 @@ export async function generateSEO(
       promptText += `. The product has these attributes: ${attributeDetails}`;
     }
     
-    promptText += `
-    Generate the following SEO elements tailored for the South African market:
-    1. Meta Title (50-60 characters including the product name and main keywords)
-    2. Meta Description (150-160 characters with a compelling reason to click and a call to action)
-    3. Meta Keywords (10-12 relevant keyword phrases, comma-separated)
-    
-    Format your response as a single JSON object with the fields: title, description, and keywords.
-    Example:
-    {
-      "title": "Product Name - Key Feature | Brand Name",
-      "description": "Shop our [Product Name] with [key benefit]. Perfect for [use case] with [special feature]. Free delivery in South Africa. Shop now & save!",
-      "keywords": "product name, key feature, south africa, online shop, best price, category, specific feature, specific benefit"
+    // Add image analysis if images are provided
+    if (imageUrls && imageUrls.length > 0) {
+      promptText += `. Use details from the attached product images to enhance SEO content.`;
+      
+      // Process just 1 image for SEO to avoid token limits
+      const imagesToProcess = imageUrls.slice(0, 1);
+      
+      // Add the prompt text as the first part
+      parts.push({ text: promptText });
+      
+      // Add the image as a part
+      for (const imageUrl of imagesToProcess) {
+        if (imageUrl && !imageUrl.includes('undefined')) {
+          try {
+            const imageData = await imageUrlToBase64(imageUrl);
+            if (imageData) {
+              parts.push({
+                inlineData: {
+                  data: imageData.split(',')[1],
+                  mimeType: imageData.split(';')[0].split(':')[1]
+                }
+              });
+            }
+          } catch (error) {
+            console.error(`Error processing image ${imageUrl}:`, error);
+          }
+        }
+      }
+      
+      // Add formatting instructions as the last part
+      parts.push({
+        text: `
+        Generate the following SEO elements tailored for the South African market:
+        1. Meta Title (50-60 characters including the product name and main keywords)
+        2. Meta Description (150-160 characters with a compelling reason to click and a call to action)
+        3. Meta Keywords (10-12 relevant keyword phrases, comma-separated)
+        
+        Format your response as a single JSON object with the fields: title, description, and keywords.
+        Example:
+        {
+          "title": "Product Name - Key Feature | Brand Name",
+          "description": "Shop our [Product Name] with [key benefit]. Perfect for [use case] with [special feature]. Free delivery in South Africa. Shop now & save!",
+          "keywords": "product name, key feature, south africa, online shop, best price, category, specific feature, specific benefit"
+        }
+        
+        Do not include any other text or explanation, only the JSON object with the SEO elements.`
+      });
+    } else {
+      // No images provided, just use text prompt
+      promptText += `
+      Generate the following SEO elements tailored for the South African market:
+      1. Meta Title (50-60 characters including the product name and main keywords)
+      2. Meta Description (150-160 characters with a compelling reason to click and a call to action)
+      3. Meta Keywords (10-12 relevant keyword phrases, comma-separated)
+      
+      Format your response as a single JSON object with the fields: title, description, and keywords.
+      Example:
+      {
+        "title": "Product Name - Key Feature | Brand Name",
+        "description": "Shop our [Product Name] with [key benefit]. Perfect for [use case] with [special feature]. Free delivery in South Africa. Shop now & save!",
+        "keywords": "product name, key feature, south africa, online shop, best price, category, specific feature, specific benefit"
+      }
+      
+      Do not include any other text or explanation, only the JSON object with the SEO elements.`;
+      
+      parts.push({ text: promptText });
     }
-    
-    Do not include any other text or explanation, only the JSON object with the SEO elements.`;
 
-    const result = await model.generateContent(promptText);
+    const result = await model.generateContent(parts);
     const text = result.response.text();
     
     try {
