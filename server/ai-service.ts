@@ -110,8 +110,86 @@ export async function generateProductTags(
 }
 
 /**
- * Generates SEO optimization suggestions
+ * Generates SEO content for a product
  */
+export async function generateSEO(
+  productName: string,
+  productDescription: string,
+  categoryName: string,
+  attributes: any[] = []
+): Promise<{
+  title: string;
+  description: string;
+  keywords: string;
+}> {
+  try {
+    // Extract attribute values for context
+    const attributeDetails = attributes
+      .filter(attr => attr.value && attr.value !== '')
+      .map(attr => `${attr.name}: ${attr.value}`)
+      .join(', ');
+    
+    let promptText = `Generate SEO content for a South African e-commerce product: "${productName}"`;
+    
+    if (categoryName) {
+      promptText += ` in the category "${categoryName}"`;
+    }
+    
+    if (productDescription) {
+      promptText += `. The product description is: "${productDescription}"`;
+    }
+    
+    if (attributeDetails) {
+      promptText += `. The product has these attributes: ${attributeDetails}`;
+    }
+    
+    promptText += `
+    Generate the following SEO elements tailored for the South African market:
+    1. Meta Title (50-60 characters including the product name and main keywords)
+    2. Meta Description (150-160 characters with a compelling reason to click and a call to action)
+    3. Meta Keywords (10-12 relevant keyword phrases, comma-separated)
+    
+    Format your response as a single JSON object with the fields: title, description, and keywords.
+    Example:
+    {
+      "title": "Product Name - Key Feature | Brand Name",
+      "description": "Shop our [Product Name] with [key benefit]. Perfect for [use case] with [special feature]. Free delivery in South Africa. Shop now & save!",
+      "keywords": "product name, key feature, south africa, online shop, best price, category, specific feature, specific benefit"
+    }
+    
+    Do not include any other text or explanation, only the JSON object with the SEO elements.`;
+
+    const result = await model.generateContent(promptText);
+    const text = result.response.text();
+    
+    try {
+      // Extract the JSON object from the response
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const seoContent = JSON.parse(jsonMatch[0]);
+        return {
+          title: seoContent.title || productName,
+          description: seoContent.description || `Shop ${productName} online. Fast shipping across South Africa.`,
+          keywords: seoContent.keywords || productName.toLowerCase()
+        };
+      }
+      
+      // Fallback when JSON extraction fails
+      return {
+        title: `${productName} | Shop Online`,
+        description: `Buy ${productName} online. Fast delivery across South Africa.`,
+        keywords: `${productName.toLowerCase()}, ${categoryName.toLowerCase()}, south africa, shop online`
+      };
+    } catch (error) {
+      console.error('Error parsing AI response as JSON:', error);
+      throw new Error('Failed to parse SEO content');
+    }
+  } catch (error) {
+    console.error('Error generating SEO content:', error);
+    throw new Error('Failed to generate SEO content');
+  }
+}
+
 export async function optimizeSEO(
   productName: string,
   productDescription: string,

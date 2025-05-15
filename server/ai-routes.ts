@@ -1,6 +1,6 @@
 import express, { Request, Response } from 'express';
 import asyncHandler from 'express-async-handler';
-import { generateProductDescription, generateProductTags, optimizeSEO } from './ai-service';
+import { generateProductDescription, generateProductTags, optimizeSEO, generateSEO } from './ai-service';
 import { isAuthenticated } from './auth-middleware';
 
 const router = express.Router();
@@ -113,6 +113,47 @@ router.post('/optimize-seo', isAuthenticated, asyncHandler(async (req: Request, 
       success: false,
       error: {
         message: error instanceof Error ? error.message : 'Failed to optimize SEO'
+      }
+    });
+  }
+}));
+
+// API route for generating SEO content
+router.post('/generate-seo', isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
+  const { 
+    productName, 
+    productDescription, 
+    categoryName,
+    attributes
+  } = req.body;
+
+  if (!productName) {
+    return res.status(400).json({
+      success: false,
+      error: {
+        message: 'Product name is required'
+      }
+    });
+  }
+
+  try {
+    const seoContent = await generateSEO(
+      productName, 
+      productDescription || '', 
+      categoryName || '',
+      attributes || []
+    );
+    
+    res.json({
+      success: true,
+      data: seoContent
+    });
+  } catch (error) {
+    console.error('Error generating SEO content:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: error instanceof Error ? error.message : 'Failed to generate SEO content'
       }
     });
   }
