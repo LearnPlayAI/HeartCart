@@ -1065,26 +1065,34 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
               </TooltipProvider>
             </div>
             <div className="flex flex-wrap gap-3 mb-3">
-              {attribute.options && Array.isArray(attribute.options) && attribute.options.length > 0 ? 
-                attribute.options.map((option) => {
-                  const colorCode = option.metadata?.colorCode || '#CCCCCC';
-                  const isSelected = selectedOptions.includes(option.id);
-                  return (
-                    <div 
-                      key={option.id} 
-                      className={`
-                        w-8 h-8 rounded-full cursor-pointer border-2 flex items-center justify-center
-                        ${isSelected ? 'border-primary' : 'border-gray-200'}
-                      `}
-                      style={{ backgroundColor: colorCode }}
-                      onClick={() => handleOptionSelection(attribute.id, option.id, !isSelected)}
-                      title={option.displayValue}
-                    >
-                      {isSelected && <div className="w-2 h-2 bg-white rounded-full" />}
-                    </div>
-                  );
-                })
-              : <div className="text-sm text-muted-foreground">No color options available</div>}
+              {(() => {
+                // Get options either from loaded map or from attribute
+                const options = loadedOptionsMap[attribute.id] || 
+                  (attribute.options && Array.isArray(attribute.options) ? attribute.options : []);
+                
+                if (options.length > 0) {
+                  return options.map((option) => {
+                    const colorCode = option.metadata?.colorCode || '#CCCCCC';
+                    const isSelected = selectedOptions.includes(option.id);
+                    return (
+                      <div 
+                        key={option.id} 
+                        className={`
+                          w-8 h-8 rounded-full cursor-pointer border-2 flex items-center justify-center
+                          ${isSelected ? 'border-primary' : 'border-gray-200'}
+                        `}
+                        style={{ backgroundColor: colorCode }}
+                        onClick={() => handleOptionSelection(attribute.id, option.id, !isSelected)}
+                        title={option.displayValue}
+                      >
+                        {isSelected && <div className="w-2 h-2 bg-white rounded-full" />}
+                      </div>
+                    );
+                  });
+                } else {
+                  return <div className="text-sm text-muted-foreground">No color options available</div>;
+                }
+              })()}
             </div>
             {hasError && (
               <p className="text-sm text-red-500">{validationErrors[`attribute-${attribute.id}`][0]}</p>
