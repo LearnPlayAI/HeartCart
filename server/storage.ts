@@ -4841,20 +4841,6 @@ export class DatabaseStorage implements IStorage {
     try {
       const drafts = await db
         .select()
-        .from(productDrafts)
-        .orderBy(desc(productDrafts.updatedAt));
-      
-      return drafts;
-    } catch (error) {
-      logger.error('Error getting all product drafts', { error });
-      throw error;
-    }
-  }
-  
-  async getAllDrafts(): Promise<ProductDraft[]> {
-    try {
-      const drafts = await db
-        .select()
         .from(productDrafts);
       
       return drafts;
