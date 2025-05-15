@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Plus, Search, Tag, Save, X, ChevronRight, ChevronDown, Info, AlertTriangle } from 'lucide-react';
+import { Loader2, Plus, Search, Tag, Save, X, ChevronRight, ChevronDown, Info, AlertTriangle, Wand2 } from 'lucide-react';
 import type { ProductDraft } from '../ProductWizard';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -83,6 +83,13 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
   const [activeTab, setActiveTab] = useState('attributes');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string[]>>({});
+  
+  // Tags management
+  const [productTags, setProductTags] = useState<string[]>(draft.tags || []);
+  const [aiTagSuggestions, setAiTagSuggestions] = useState<string[]>([]);
+  const [isGeneratingTags, setIsGeneratingTags] = useState(false);
+  const [aiTagError, setAiTagError] = useState<string | null>(null);
+  const [customTag, setCustomTag] = useState('');
 
   // Fetch all attributes
   const { data: attributesData, isLoading: isLoadingAttributes } = useQuery({

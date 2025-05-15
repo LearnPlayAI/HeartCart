@@ -128,6 +128,7 @@ export interface ProductDraft {
   metaDescription: string | null;
   metaKeywords: string | null;
   canonicalUrl: string | null;
+  tags?: string[];
   
   // Publication information
   publishedAt?: Date | null;
@@ -424,6 +425,7 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ draftId, initialDa
         metaDescription: null,
         metaKeywords: null,
         canonicalUrl: null,
+        tags: [],
         // System fields
         originalProductId: null,
         catalogId: defaultCatalogId,
