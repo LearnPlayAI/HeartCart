@@ -51,22 +51,23 @@ export const SEOStep: React.FC<SEOStepProps> = ({
   
   // Generate product URL for canonical URL
   useEffect(() => {
-    // Get base URL (will be current domain in production)
-    const baseUrl = window.location.origin;
-    
-    // Determine the URL path
-    let productPath = '';
-    if (draft.slug) {
-      productPath = `/products/${draft.slug}`;
-    } else if (draft.id) {
-      productPath = `/products/${draft.id}`;
+    // Only set canonical URL for published products
+    if (draft.originalProductId || (draft.draftStatus === 'published' && draft.isActive)) {
+      // Get the product ID (either the original product ID or the draft ID if it's published)
+      const productId = draft.originalProductId || draft.id;
+      
+      // Use the production domain
+      const baseUrl = 'https://www.teemeyou.shop';
+      
+      // Create the canonical URL in the format https://www.teemeyou.shop/product/id/{productId}
+      if (productId) {
+        setProductUrl(`${baseUrl}/product/id/${productId}`);
+      }
+    } else {
+      // Clear the URL if the product is not published
+      setProductUrl('');
     }
-    
-    // Set the full canonical URL if we have a path
-    if (productPath) {
-      setProductUrl(`${baseUrl}${productPath}`);
-    }
-  }, [draft.id, draft.slug]);
+  }, [draft.id, draft.originalProductId, draft.draftStatus, draft.isActive]);
   
   // Get category info for AI context
   const { data: categoryData } = useQuery({
@@ -321,14 +322,16 @@ export const SEOStep: React.FC<SEOStepProps> = ({
                     <FormControl>
                       <Input
                         {...field}
-                        placeholder="Auto-generated from product URL"
+                        placeholder={productUrl ? "Auto-generated from product URL" : "Available after product is published"}
                         value={field.value || ''}
                         className="bg-muted text-muted-foreground"
                         readOnly
                       />
                     </FormControl>
                     <FormDescription>
-                      This URL is automatically generated from your product slug/ID
+                      {productUrl 
+                        ? "This URL is automatically generated for your published product" 
+                        : "The canonical URL will be available once the product is published and active"}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
