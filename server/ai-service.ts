@@ -218,6 +218,7 @@ export async function generateProductTags(
     
     if (productDescription) {
       promptText += `. The product description is: "${productDescription}"`;
+      promptText += `. IMPORTANT: Carefully analyze the product description to extract key phrases, features, materials, and benefits to use as tags.`;
     }
     
     // Add image analysis if images are provided
@@ -342,6 +343,8 @@ export async function generateSEO(
     
     if (productDescription) {
       promptText += `. The product description is: "${productDescription}"`;
+      // Add explicit instruction to use the product description for all SEO elements
+      promptText += `. IMPORTANT: Use this product description as the primary source for generating ALL SEO elements. The meta title should include key phrases from the description, the meta description should be a 160-character summary of the main selling points from the description, and the keywords should be derived from terminology and features mentioned in the description.`;
     }
     
     if (attributeDetails) {
@@ -433,13 +436,17 @@ export async function generateSEO(
       
       // Fallback when JSON extraction fails
       return {
-        title: `${productName} | Shop Online`,
-        description: `Buy ${productName} online. Fast delivery across South Africa.`.slice(0, 160),
-        keywords: `${productName.toLowerCase()}, ${categoryName.toLowerCase()}, south africa, shop online`
+        title: productName,
+        description: `Shop ${productName} online. Fast shipping across South Africa.`.slice(0, 160),
+        keywords: productName.toLowerCase()
       };
     } catch (error) {
       console.error('Error parsing AI response as JSON:', error);
-      throw new Error('Failed to parse SEO content');
+      return {
+        title: productName,
+        description: `Shop ${productName} online. Fast shipping across South Africa.`.slice(0, 160),
+        keywords: productName.toLowerCase()
+      };
     }
   } catch (error) {
     console.error('Error generating SEO content:', error);
@@ -447,113 +454,93 @@ export async function generateSEO(
   }
 }
 
+/**
+ * Optimizes existing SEO content using AI
+ */
 export async function optimizeSEO(
   productName: string,
   productDescription: string,
-  categoryName?: string,
-  currentTitle?: string | null,
-  currentDescription?: string | null,
-  currentKeywords?: string[]
-): Promise<Array<{
+  existingTitle: string,
+  existingDescription: string,
+  existingKeywords: string,
+  categoryName?: string
+): Promise<{
   title: string;
-  metaDescription: string;
-  keywords: string[];
-  score: number;
-  tips: string[];
-}>> {
+  description: string;
+  keywords: string;
+}> {
   try {
-    let promptText = `Generate 3 SEO-optimized metadata suggestions for a South African e-commerce product: "${productName}"`;
-    
-    if (categoryName) {
-      promptText += ` in the category "${categoryName}"`;
-    }
-    
-    if (productDescription) {
-      promptText += `. The product description is: "${productDescription}"`;
-    }
-
-    if (currentTitle) {
-      promptText += `. Current meta title: "${currentTitle}"`;
-    }
-
-    if (currentDescription) {
-      promptText += `. Current meta description: "${currentDescription}"`;
-    }
-
-    if (currentKeywords && currentKeywords.length > 0) {
-      promptText += `. Current keywords: ${currentKeywords.join(', ')}`;
-    }
-    
-    promptText += `
-    For each suggestion, provide:
-    1. Meta Title (50-65 characters, include primary keyword)
-    2. Meta Description (EXACTLY 150-160 characters maximum, no more! Include a compelling reason to click and a call to action)
-    3. Keywords (10-15 relevant keywords/phrases, comma-separated)
-    4. SEO score (0.0-1.0 representing how well optimized this suggestion is)
-    5. Tips (2-3 bullet points explaining the strengths of this metadata or how to improve it further)
-    
-    Format your response as a JSON array with 3 objects, each containing the fields: title, metaDescription, keywords (as array), score, and tips (as array).
-    Example:
-    [
-      {
-        "title": "Example Title with Keywords | Brand",
-        "metaDescription": "Example description with benefits, features and a call to action. Includes keywords naturally.",
-        "keywords": ["keyword1", "keyword2", "keyword phrase", "..."],
-        "score": 0.85,
-        "tips": ["Tip explanation 1", "Tip explanation 2"]
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-1.5-flash',
+      generationConfig: {
+        temperature: 0.2, // Lower temperature for more consistent results
+        topK: 40,
+        topP: 0.95,
+        maxOutputTokens: 1024,
       },
-      {
-        "title": "Another Example Title | Brand",
-        "metaDescription": "Different description approach focusing on different aspects.",
-        "keywords": ["keyword1", "different keyword", "..."],
-        "score": 0.9,
-        "tips": ["Tip explanation 1", "Different tip 2"]
-      },
-      {
-        "title": "Third Example Title Variation | Brand",
-        "metaDescription": "Third variation with different approach.",
-        "keywords": ["primary keyword", "different variations", "..."],
-        "score": 0.78,
-        "tips": ["Different tip 1", "Different tip 2"]
-      }
-    ]
+    });
+
+    const promptText = `
+    Optimize the following SEO elements for a South African e-commerce product: "${productName}"
     
-    Do not include any other text or explanation, only the JSON array with 3 suggestions.`;
+    Product Description: "${productDescription}"
+    
+    Current SEO Elements:
+    - Title: "${existingTitle}"
+    - Description: "${existingDescription}"
+    - Keywords: "${existingKeywords}"
+    
+    ${categoryName ? `The product is in the category: "${categoryName}"` : ''}
+    
+    IMPORTANT: Use the product description as the primary source for optimizing ALL SEO elements. Extract key phrases and selling points from the description.
+    
+    Please improve these elements with the following guidelines:
+    1. Meta Title (50-60 characters, include product name and main keywords)
+    2. Meta Description (EXACTLY 150-160 characters maximum, include a compelling reason to click and call to action)
+    3. Meta Keywords (10-12 relevant keyword phrases, comma-separated)
+    
+    Format your response as a single JSON object with the fields: title, description, and keywords.
+    For example:
+    {
+      "title": "Product Name - Key Feature | Brand Name",
+      "description": "Shop our [Product Name] with [key benefit]. Perfect for [use case] with [special feature]. Free delivery in South Africa. Shop now & save!",
+      "keywords": "product name, key feature, south africa, online shop, best price, category, specific feature, specific benefit"
+    }
+    
+    Do not include any other text or explanation, only the JSON object with the SEO elements.
+    `;
 
     const result = await model.generateContent(promptText);
     const text = result.response.text();
     
     try {
-      // Extract the JSON array from the response
-      const jsonMatch = text.match(/\[[\s\S]*\]/);
+      // Extract the JSON object from the response
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        const suggestions = JSON.parse(jsonMatch[0]);
-        if (Array.isArray(suggestions) && suggestions.length > 0) {
-          // Validate each suggestion has the required properties
-          return suggestions.map(suggestion => ({
-            title: suggestion.title || '',
-            metaDescription: suggestion.metaDescription || '',
-            keywords: Array.isArray(suggestion.keywords) ? suggestion.keywords : [],
-            score: typeof suggestion.score === 'number' ? suggestion.score : 0.5,
-            tips: Array.isArray(suggestion.tips) ? suggestion.tips : []
-          }));
-        }
+        const seoContent = JSON.parse(jsonMatch[0]);
+        return {
+          title: seoContent.title || existingTitle || productName,
+          description: seoContent.description ? seoContent.description.slice(0, 160) : existingDescription,
+          keywords: seoContent.keywords || existingKeywords || productName.toLowerCase()
+        };
       }
       
-      // Fallback: return a default suggestion based on existing data
-      return [{
-        title: currentTitle || `${productName} | Shop Online`,
-        metaDescription: currentDescription || `Buy ${productName} online. Fast delivery across South Africa.`,
-        keywords: currentKeywords || [productName.toLowerCase()],
-        score: 0.5,
-        tips: ['Add more specific keywords', 'Include benefits in description']
-      }];
+      // Fallback when JSON extraction fails
+      return {
+        title: existingTitle || productName,
+        description: existingDescription || `Shop ${productName} online. Fast shipping across South Africa.`.slice(0, 160),
+        keywords: existingKeywords || productName.toLowerCase()
+      };
     } catch (error) {
       console.error('Error parsing AI response as JSON:', error);
-      throw new Error('Failed to parse SEO optimization suggestions');
+      return {
+        title: existingTitle || productName,
+        description: existingDescription || `Shop ${productName} online. Fast shipping across South Africa.`.slice(0, 160),
+        keywords: existingKeywords || productName.toLowerCase()
+      };
     }
   } catch (error) {
-    console.error('Error generating SEO optimization:', error);
-    throw new Error('Failed to generate SEO optimization suggestions');
+    console.error('Error optimizing SEO content:', error);
+    throw new Error('Failed to optimize SEO content');
   }
 }

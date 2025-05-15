@@ -347,7 +347,7 @@ export const SEOStep: React.FC<SEOStepProps> = ({
                     {/* This form message is intentionally empty to prevent validation errors */}
                     <div className="min-h-[20px]">
                       {field.value && field.value.length > 0 && !field.value.startsWith('http') && (
-                        <FormMessage forceShow className="hidden" />
+                        <p className="text-sm text-destructive hidden">Invalid URL format</p>
                       )}
                     </div>
                   </FormItem>
