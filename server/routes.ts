@@ -8,6 +8,7 @@ import crypto from "crypto";
 import { cleanupOrphanedDraftImages, cleanupAllOrphanedDraftImages } from "./clean-orphaned-images";
 // Import AI routes separately
 import aiRouter from "./ai-routes";
+import debugRoutes from "./debug-routes";
 import { imageService, THUMBNAIL_SIZES } from "./image-service";
 import { 
   insertCartItemSchema, 
@@ -5312,6 +5313,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register file browser routes for object storage management
   app.use('/api/file-browser', fileBrowserRoutes);
+  
+  // Register debug routes for direct testing
+  app.use('/debug', debugRoutes);
   
   // Cleanup utilities for orphaned images - TEMPORARY ROUTES FOR TESTING
   app.get('/api/admin/cleanup/draft-images/:draftId', asyncHandler(async (req: Request, res: Response) => {
