@@ -129,8 +129,7 @@ export const SEOStep: React.FC<SEOStepProps> = ({ draft, onSave, isLoading = fal
         currentKeywords = formValues.metaKeywords.split(',').map(k => k.trim());
       }
 
-      // API request to generate SEO suggestions - use a mock response for now
-      // TODO: Replace with actual API call when backend is ready
+      // API request to generate SEO suggestions
       console.log('Generating SEO suggestions for:', {
         productName,
         productDescription,
@@ -140,35 +139,17 @@ export const SEOStep: React.FC<SEOStepProps> = ({ draft, onSave, isLoading = fal
         currentKeywords
       });
       
-      // Mock response for development
-      const responseData = {
-        success: true,
-        data: {
-          suggestions: [
-            {
-              title: `${productName} | Premium Quality | Shop Online`,
-              metaDescription: `Buy ${productName} with fast delivery across South Africa. Premium quality, great prices, and exceptional customer service.`,
-              keywords: ["premium", productName.toLowerCase(), "south africa", "online shopping", "quality", "fast delivery"],
-              score: 0.85,
-              tips: ["Title includes product name and brand value", "Description includes a call to action"]
-            },
-            {
-              title: `${productName} | Best Price Guaranteed | Free Shipping`,
-              metaDescription: `Shop ${productName} online with free shipping in South Africa. Best price guaranteed with our price-match promise.`,
-              keywords: ["best price", productName.toLowerCase(), "free shipping", "south africa", "price match", "online"],
-              score: 0.78,
-              tips: ["Emphasizes value proposition", "Include more specific product features"]
-            },
-            {
-              title: `${productName} | Authentic Products | Fast Delivery`,
-              metaDescription: `Order ${productName} today - 100% authentic products with nationwide delivery. Shop securely with easy returns.`,
-              keywords: ["authentic", productName.toLowerCase(), "nationwide delivery", "secure shopping", "easy returns"],
-              score: 0.92,
-              tips: ["Highlights trust factors", "Clear call to action"]
-            }
-          ]
-        }
-      };
+      // Make actual API call
+      const response = await apiRequest('POST', '/api/ai/optimize-seo', {
+        productName,
+        productDescription,
+        categoryName,
+        currentTitle: formValues.metaTitle,
+        currentDescription: formValues.metaDescription,
+        currentKeywords
+      });
+      
+      const responseData = await response.json();
       
       if (responseData.success && responseData.data?.suggestions) {
         setSeoSuggestions(responseData.data.suggestions);
