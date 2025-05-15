@@ -274,9 +274,17 @@ const ProductDetailView = ({
         const attrId = value.attributeId;
         const selectedOptionId = selectedAttributes[attrId];
         
-        return selectedOptionId && 
-          (value.attributeOptionId === parseInt(selectedOptionId) || 
-           value.valueText === selectedOptionId);
+        if (!selectedOptionId) return false;
+        
+        // Check if the selected option ID is in the comma-separated valueText
+        if (value.valueText && value.valueText.includes(',')) {
+          const availableOptions = value.valueText.split(',');
+          return availableOptions.includes(selectedOptionId);
+        }
+        
+        // Otherwise check for direct matches
+        return value.attributeOptionId === parseInt(selectedOptionId) || 
+               value.valueText === selectedOptionId;
       });
       
       // No price adjustments based on attributes as per requirements
@@ -675,7 +683,7 @@ const ProductDetailView = ({
             <Separator className="my-4" />
             
             {/* Attribute Selection */}
-            {productAttributes && productAttributes.length > 0 && attributeOptions && (
+            {productAttributes && productAttributes.length > 0 && attributeOptions && attributeValues && (
               <div className="space-y-4 mb-6">
                 <h3 className="text-lg font-semibold">Product Options</h3>
                 
@@ -686,11 +694,30 @@ const ProductDetailView = ({
                   // Skip if no options available
                   if (options.length === 0 && attribute.type !== 'text') return null;
                   
+                  // Find available options for this attribute from the attribute values
+                  const attrValue = attributeValues.find(val => val.attributeId === attribute.id);
+                  let availableOptionValues: string[] = [];
+                  
+                  if (attrValue && attrValue.valueText) {
+                    // Split the comma-separated values
+                    availableOptionValues = attrValue.valueText.split(',');
+                  }
+                  
+                  // Filter options to only show those in the availableOptionValues array
+                  const filteredOptions = options.filter(option => 
+                    availableOptionValues.length === 0 || 
+                    availableOptionValues.includes(option.value) || 
+                    availableOptionValues.includes(option.id.toString())
+                  );
+                  
+                  // Skip if no filtered options are available
+                  if (filteredOptions.length === 0 && attribute.type !== 'text') return null;
+                  
                   return (
                     <div key={attribute.id} className="space-y-2">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center">
-                          <label className="font-medium text-sm">{attribute.name}</label>
+                          <label className="font-medium text-sm">{attribute.displayName || attribute.name}</label>
                           {attribute.isRequired && (
                             <span className="text-red-500 ml-1">*</span>
                           )}
@@ -719,11 +746,11 @@ const ProductDetailView = ({
                           onValueChange={value => handleAttributeChange(attribute.id, value)}
                         >
                           <SelectTrigger className="w-full">
-                            <SelectValue placeholder={`Select ${attribute.name}`} />
+                            <SelectValue placeholder={`Select ${attribute.displayName || attribute.name}`} />
                           </SelectTrigger>
                           <SelectContent>
-                            {options.map(option => (
-                              <SelectItem key={option.id} value={option.id.toString()}>
+                            {filteredOptions.map(option => (
+                              <SelectItem key={option.id} value={option.value}>
                                 {option.displayValue || option.value}
                                 {option.priceAdjustment && parseFloat(option.priceAdjustment) !== 0 && (
                                   <span className="ml-2 text-sm text-gray-500">
