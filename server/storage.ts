@@ -4927,7 +4927,13 @@ export class DatabaseStorage implements IStorage {
             taxable: draftData.taxable !== undefined ? draftData.taxable : existingDraft.taxable,
             taxClass: draftData.taxClass || existingDraft.taxClass,
             supplierId: draftData.supplierId,
-            catalogId: draftData.catalogId
+            catalogId: draftData.catalogId,
+            // Add pricing fields to basic-info step as well
+            regularPrice: draftData.regularPrice !== undefined ? draftData.regularPrice : existingDraft.regularPrice,
+            salePrice: draftData.salePrice !== undefined ? draftData.salePrice : existingDraft.salePrice,
+            costPrice: draftData.costPrice !== undefined ? draftData.costPrice : existingDraft.costPrice,
+            onSale: draftData.onSale !== undefined ? draftData.onSale : existingDraft.onSale,
+            stockLevel: draftData.stockLevel !== undefined ? draftData.stockLevel : existingDraft.stockLevel
           };
           break;
           
