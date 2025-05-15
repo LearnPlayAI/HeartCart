@@ -1,434 +1,478 @@
-import React from 'react';
-import { useProductWizardContext } from '../context';
-import { CalendarIcon } from 'lucide-react';
-import { format } from 'date-fns';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch';
-import { Checkbox } from '@/components/ui/checkbox';
-import {
-  Form,
+import React, { useState } from 'react';
+import { 
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { 
   FormField,
   FormItem,
   FormLabel,
   FormControl,
   FormDescription,
-  FormMessage
+  FormMessage,
+  Form
 } from '@/components/ui/form';
-import { cn } from '@/lib/utils';
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { 
+  Popover,
+  PopoverContent,
+  PopoverTrigger
+} from '@/components/ui/popover';
+import { Switch } from '@/components/ui/switch';
 import { Calendar } from '@/components/ui/calendar';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { format } from 'date-fns';
+import { CalendarIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { ProductDraft } from '../ProductWizard';
 
-// Define validation schema
-const salesPromotionsSchema = z.object({
-  regularPrice: z.coerce.number().min(0, "Price must be 0 or greater"),
+interface SalesPromotionsStepProps {
+  draft: ProductDraft;
+  onSave: (data: Partial<ProductDraft>, advanceToNext?: boolean) => void;
+  isLoading?: boolean;
+}
+
+// Validation schema for sales and promotions
+const formSchema = z.object({
   onSale: z.boolean().default(false),
-  salePrice: z.coerce.number().min(0, "Sale price must be 0 or greater").nullable().optional(),
-  discountLabel: z.string().optional(),
-  specialSaleText: z.string().optional(),
+  regularPrice: z.coerce.number().min(0, "Regular price must be a positive number"),
+  salePrice: z.coerce.number().min(0, "Sale price must be a positive number").nullable().optional(),
+  discountLabel: z.string().nullable().optional(),
+  specialSaleText: z.string().nullable().optional(),
   specialSaleStart: z.date().nullable().optional(),
   specialSaleEnd: z.date().nullable().optional(),
   isFlashDeal: z.boolean().default(false),
-  flashDealEnd: z.date().nullable().optional(),
+  flashDealEnd: z.date().nullable().optional()
+}).refine(data => {
+  // If onSale is true, salePrice must be provided and less than regularPrice
+  if (data.onSale) {
+    return !!data.salePrice && data.salePrice < data.regularPrice;
+  }
+  return true;
+}, {
+  message: "Sale price must be provided and less than regular price",
+  path: ["salePrice"]
+}).refine(data => {
+  // If special sale text is provided, dates must be provided
+  if (data.specialSaleText) {
+    return !!data.specialSaleStart && !!data.specialSaleEnd;
+  }
+  return true;
+}, {
+  message: "Special sale start and end dates are required when special sale text is provided",
+  path: ["specialSaleStart"]
+}).refine(data => {
+  // If special sale dates are provided, end must be after start
+  if (data.specialSaleStart && data.specialSaleEnd) {
+    return data.specialSaleEnd > data.specialSaleStart;
+  }
+  return true;
+}, {
+  message: "Special sale end date must be after start date",
+  path: ["specialSaleEnd"]
+}).refine(data => {
+  // If flash deal is enabled, end date must be provided
+  if (data.isFlashDeal) {
+    return !!data.flashDealEnd;
+  }
+  return true;
+}, {
+  message: "Flash deal end date is required when flash deal is enabled",
+  path: ["flashDealEnd"]
 });
 
-type SalesPromotionsFormValues = z.infer<typeof salesPromotionsSchema>;
-
-export function SalesPromotionsStep() {
-  const { state, setField } = useProductWizardContext();
-
-  const handleDateChange = (field: 'specialSaleStart' | 'specialSaleEnd' | 'flashDealEnd', date: Date | undefined | null) => {
-    if (date) {
-      // If there's a valid date, convert to ISO string
-      setField(field, date.toISOString());
-    } else {
-      // If date is undefined or null, set field to null
-      setField(field, null);
-    }
-  };
+export const SalesPromotionsStep: React.FC<SalesPromotionsStepProps> = ({ 
+  draft, 
+  onSave,
+  isLoading = false
+}) => {
+  const [saving, setSaving] = useState(false);
   
-  // Ensure default values to prevent null errors
-  const {
-    regularPrice = 0,
-    onSale = false,
-    salePrice = null,
-    discountLabel = '',
-    specialSaleText = '',
-    specialSaleStart = null,
-    specialSaleEnd = null,
-    isFlashDeal = false,
-    flashDealEnd = null,
-  } = state || {};
-  
-  // Initialize form
-  const form = useForm<SalesPromotionsFormValues>({
-    resolver: zodResolver(salesPromotionsSchema),
+  // Initialize form with draft data
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
-      regularPrice,
-      onSale,
-      salePrice,
-      discountLabel,
-      specialSaleText,
-      specialSaleStart: specialSaleStart ? new Date(specialSaleStart) : null,
-      specialSaleEnd: specialSaleEnd ? new Date(specialSaleEnd) : null,
-      isFlashDeal,
-      flashDealEnd: flashDealEnd ? new Date(flashDealEnd) : null,
+      onSale: draft.onSale || false,
+      regularPrice: draft.regularPrice || 0,
+      salePrice: draft.salePrice || null,
+      discountLabel: draft.discountLabel || null,
+      specialSaleText: draft.specialSaleText || null,
+      specialSaleStart: draft.specialSaleStart ? new Date(draft.specialSaleStart) : null,
+      specialSaleEnd: draft.specialSaleEnd ? new Date(draft.specialSaleEnd) : null,
+      isFlashDeal: draft.isFlashDeal || false,
+      flashDealEnd: draft.flashDealEnd ? new Date(draft.flashDealEnd) : null
     }
   });
 
-  // Handle form submission
-  const onSubmit = (values: SalesPromotionsFormValues) => {
-    // Update all fields in context
-    Object.entries(values).forEach(([key, value]) => {
-      // Convert dates to ISO strings for storage
-      if (value instanceof Date) {
-        // Store dates as ISO strings
-        setField(key as any, value.toISOString());
-      } else if (key === 'specialSaleStart' || key === 'specialSaleEnd' || key === 'flashDealEnd') {
-        // Handle null date values properly
-        setField(key as any, value === null ? null : value);
-      } else {
-        // Handle other values
-        setField(key as any, value);
-      }
-    });
+  // Calculate the discount percentage
+  const calculateDiscountPercentage = () => {
+    const regularPrice = form.watch('regularPrice');
+    const salePrice = form.watch('salePrice');
     
-    // Make step complete
-    setField('salesPromotionsComplete', true);
+    if (regularPrice && salePrice && regularPrice > 0) {
+      const discountPercentage = ((regularPrice - salePrice) / regularPrice) * 100;
+      return Math.round(discountPercentage);
+    }
+    
+    return 0;
+  };
+
+  // Handle form submission
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    setSaving(true);
+    try {
+      // Convert dates to ISO strings for API
+      const formattedValues = {
+        ...values,
+        specialSaleStart: values.specialSaleStart ? values.specialSaleStart.toISOString() : null,
+        specialSaleEnd: values.specialSaleEnd ? values.specialSaleEnd.toISOString() : null,
+        flashDealEnd: values.flashDealEnd ? values.flashDealEnd.toISOString() : null
+      };
+      
+      await onSave(formattedValues, true);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <h3 className="text-lg font-medium">Sales & Promotions</h3>
-        <p className="text-sm text-muted-foreground">
-          Configure special sales, discounts, and promotional deals for this product.
-        </p>
-
+    <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Regular Pricing</CardTitle>
-          <CardDescription>Basic pricing information for the product</CardDescription>
+          <CardTitle>Sales & Promotions</CardTitle>
+          <CardDescription>
+            Configure sales pricing and promotional features for this product
+          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <FormField
-              control={form.control}
-              name="regularPrice"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Regular Price (R)</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      placeholder="0.00"
-                      {...field}
-                      onChange={(e) => {
-                        field.onChange(parseFloat(e.target.value));
-                        setField('regularPrice', parseFloat(e.target.value));
-                      }}
-                      min={0}
-                      step={0.01}
-                    />
-                  </FormControl>
-                  <FormDescription>The standard retail price of the product</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="onSale"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                  <FormControl>
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={(checked) => {
-                        field.onChange(checked);
-                        setField('onSale', checked);
-                      }}
-                    />
-                  </FormControl>
-                  <div className="space-y-1 leading-none">
-                    <FormLabel>On Sale</FormLabel>
-                    <FormDescription>
-                      Display the product on sale with a discount
-                    </FormDescription>
-                  </div>
-                </FormItem>
-              )}
-            />
-          </div>
-
-          {form.watch('onSale') && (
-            <FormField
-              control={form.control}
-              name="salePrice"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Sale Price (R)</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      placeholder="0.00"
-                      {...field}
-                      value={field.value || ''}
-                      onChange={(e) => {
-                        const value = e.target.value === '' ? null : parseFloat(e.target.value);
-                        field.onChange(value);
-                        setField('salePrice', value);
-                      }}
-                      min={0}
-                      step={0.01}
-                    />
-                  </FormControl>
-                  <FormDescription>The discounted price of the product</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Special Sale</CardTitle>
-          <CardDescription>Configure a time-limited special sale for this product</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <FormField
-            control={form.control}
-            name="discountLabel"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Discount Label</FormLabel>
-                <FormControl>
-                  <Input
-                    type="text"
-                    placeholder="e.g., 20% OFF"
-                    {...field}
-                    value={field.value || ''}
-                    onChange={(e) => {
-                      field.onChange(e.target.value);
-                      setField('discountLabel', e.target.value);
-                    }}
-                  />
-                </FormControl>
-                <FormDescription>Display this label on the product (optional)</FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="specialSaleText"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Special Sale Text</FormLabel>
-                <FormControl>
-                  <Input
-                    type="text"
-                    placeholder="e.g., Summer Sale"
-                    {...field}
-                    value={field.value || ''}
-                    onChange={(e) => {
-                      field.onChange(e.target.value);
-                      setField('specialSaleText', e.target.value);
-                    }}
-                  />
-                </FormControl>
-                <FormDescription>Promotional text to display on the product</FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {form.watch('specialSaleText') && (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <CardContent>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              {/* On Sale Toggle */}
               <FormField
                 control={form.control}
-                name="specialSaleStart"
+                name="onSale"
                 render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Special Sale Start Date</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value ? (
-                              format(new Date(field.value), 'PPP')
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value ? new Date(field.value) : undefined}
-                          onSelect={(date) => {
-                            const dateValue = date || null;
-                            field.onChange(dateValue);
-                            handleDateChange('specialSaleStart', dateValue);
-                          }}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormDescription>
-                      When the special sale starts
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="specialSaleEnd"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Special Sale End Date</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value ? (
-                              format(new Date(field.value), 'PPP')
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value ? new Date(field.value) : undefined}
-                          onSelect={(date) => {
-                            const dateValue = date || null;
-                            field.onChange(dateValue);
-                            handleDateChange('specialSaleEnd', dateValue);
-                          }}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormDescription>
-                      When the special sale ends
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Flash Deal</CardTitle>
-          <CardDescription>Set up a time-limited flash deal with a countdown timer</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <FormField
-            control={form.control}
-            name="isFlashDeal"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                <FormControl>
-                  <Checkbox
-                    checked={field.value}
-                    onCheckedChange={(checked) => {
-                      field.onChange(checked);
-                      setField('isFlashDeal', checked);
-                    }}
-                  />
-                </FormControl>
-                <div className="space-y-1 leading-none">
-                  <FormLabel>Enable Flash Deal</FormLabel>
-                  <FormDescription>
-                    Display a countdown timer for this product
-                  </FormDescription>
-                </div>
-              </FormItem>
-            )}
-          />
-
-          {form.watch('isFlashDeal') && (
-            <FormField
-              control={form.control}
-              name="flashDealEnd"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Flash Deal End Date & Time</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {field.value ? (
-                            format(new Date(field.value), 'PPP')
-                          ) : (
-                            <span>Pick a date</span>
-                          )}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value ? new Date(field.value) : undefined}
-                        onSelect={(date) => {
-                          const dateValue = date || null;
-                          field.onChange(dateValue);
-                          handleDateChange('flashDealEnd', dateValue);
-                        }}
-                        initialFocus
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">On Sale</FormLabel>
+                      <FormDescription>
+                        Mark this product as being on sale with a discounted price
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
                       />
-                    </PopoverContent>
-                  </Popover>
-                  <FormDescription>
-                    When the flash deal ends
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid gap-4 md:grid-cols-2">
+                {/* Regular Price */}
+                <FormField
+                  control={form.control}
+                  name="regularPrice"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Regular Price</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          step="0.01"
+                          placeholder="0.00" 
+                          {...field}
+                          onChange={(e) => {
+                            field.onChange(e.target.valueAsNumber || 0);
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                {/* Sale Price (conditionally shown) */}
+                {form.watch('onSale') && (
+                  <FormField
+                    control={form.control}
+                    name="salePrice"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Sale Price</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            step="0.01"
+                            placeholder="0.00" 
+                            {...field}
+                            value={field.value || ''}
+                            onChange={(e) => {
+                              field.onChange(e.target.valueAsNumber || null);
+                            }}
+                          />
+                        </FormControl>
+                        {form.watch('onSale') && 
+                          form.watch('salePrice') && 
+                          form.watch('regularPrice') > 0 && (
+                          <FormDescription>
+                            {calculateDiscountPercentage()}% discount from regular price
+                          </FormDescription>
+                        )}
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+              </div>
+
+              {/* Discount Label */}
+              {form.watch('onSale') && (
+                <FormField
+                  control={form.control}
+                  name="discountLabel"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Discount Label</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Example: 'Summer Sale' or '20% Off'" 
+                          {...field}
+                          value={field.value || ''}
+                          onChange={(e) => field.onChange(e.target.value || null)}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        This label will be displayed with the product
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               )}
-            />
-          )}
+
+              <div className="border-t pt-4 mt-4">
+                <h3 className="text-lg font-medium">Special Sale Period</h3>
+                <p className="text-sm text-gray-500 mb-4">
+                  Set a limited time period for special promotions
+                </p>
+
+                {/* Special Sale Text */}
+                <FormField
+                  control={form.control}
+                  name="specialSaleText"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Special Sale Text</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Example: 'Black Friday Special Offer'" 
+                          {...field}
+                          value={field.value || ''}
+                          onChange={(e) => field.onChange(e.target.value || null)}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Will be displayed as a special promotional message
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Special Sale Date Range */}
+                {form.watch('specialSaleText') && (
+                  <div className="grid gap-4 md:grid-cols-2 mt-4">
+                    <FormField
+                      control={form.control}
+                      name="specialSaleStart"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                          <FormLabel>Start Date</FormLabel>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant={"outline"}
+                                  className={cn(
+                                    "w-full pl-3 text-left font-normal",
+                                    !field.value && "text-muted-foreground"
+                                  )}
+                                >
+                                  {field.value ? (
+                                    format(field.value, "PPP")
+                                  ) : (
+                                    <span>Pick a date</span>
+                                  )}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={field.value || undefined}
+                                onSelect={field.onChange}
+                                disabled={(date) =>
+                                  date < new Date(new Date().setHours(0, 0, 0, 0))
+                                }
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="specialSaleEnd"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                          <FormLabel>End Date</FormLabel>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant={"outline"}
+                                  className={cn(
+                                    "w-full pl-3 text-left font-normal",
+                                    !field.value && "text-muted-foreground"
+                                  )}
+                                >
+                                  {field.value ? (
+                                    format(field.value, "PPP")
+                                  ) : (
+                                    <span>Pick a date</span>
+                                  )}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={field.value || undefined}
+                                onSelect={field.onChange}
+                                disabled={(date) =>
+                                  date < (form.watch('specialSaleStart') || new Date())
+                                }
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                )}
+              </div>
+              
+              <div className="border-t pt-4 mt-4">
+                <h3 className="text-lg font-medium">Flash Deal</h3>
+                
+                {/* Flash Deal Toggle */}
+                <FormField
+                  control={form.control}
+                  name="isFlashDeal"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 mt-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">Enable Flash Deal</FormLabel>
+                        <FormDescription>
+                          Mark as a limited-time flash deal with countdown timer
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                
+                {/* Flash Deal End Date */}
+                {form.watch('isFlashDeal') && (
+                  <FormField
+                    control={form.control}
+                    name="flashDealEnd"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col mt-4">
+                        <FormLabel>Deal Ends On</FormLabel>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant={"outline"}
+                                className={cn(
+                                  "w-full pl-3 text-left font-normal",
+                                  !field.value && "text-muted-foreground"
+                                )}
+                              >
+                                {field.value ? (
+                                  format(field.value, "PPP 'at' p")
+                                ) : (
+                                  <span>Pick a date</span>
+                                )}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={field.value || undefined}
+                              onSelect={field.onChange}
+                              disabled={(date) =>
+                                date < new Date(new Date().setHours(0, 0, 0, 0))
+                              }
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <FormDescription>
+                          The flash deal will automatically end at this date and time
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+              </div>
+
+              <div className="flex justify-end space-x-4 pt-4">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => onSave(form.getValues(), false)}
+                  disabled={saving || isLoading}
+                >
+                  Save
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={saving || isLoading}
+                >
+                  Save & Continue
+                </Button>
+              </div>
+            </form>
+          </Form>
         </CardContent>
       </Card>
-      </form>
-    </Form>
+    </div>
   );
-}
+};
+
+export default SalesPromotionsStep;

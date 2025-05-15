@@ -231,17 +231,8 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, isL
     });
   };
   
-  // Complete the handleSalePriceChange function
-  const handleSalePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const salePrice = parseFloat(e.target.value);
-    const regularPrice = form.getValues('regularPrice');
-    
-    if (!isNaN(salePrice) && salePrice > 0 && salePrice < regularPrice) {
-      form.setValue('onSale', true);
-    } else {
-      form.setValue('onSale', false);
-    }
-  };
+  // Handle sale price changes
+  // This function is already defined earlier, removing duplicate
 
   // Need to add state variables for AI descriptions
   const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
