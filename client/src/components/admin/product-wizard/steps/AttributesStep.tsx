@@ -761,11 +761,13 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
                 <SelectValue placeholder={`Select ${attribute.displayName.toLowerCase()}`} />
               </SelectTrigger>
               <SelectContent>
-                {attribute.options.map((option) => (
-                  <SelectItem key={option.id} value={option.id.toString()}>
-                    {option.displayValue}
-                  </SelectItem>
-                ))}
+                {attribute.options && Array.isArray(attribute.options) ? 
+                  attribute.options.map((option) => (
+                    <SelectItem key={option.id} value={option.id.toString()}>
+                      {option.displayValue}
+                    </SelectItem>
+                  ))
+                : <SelectItem value="no-options">No options available</SelectItem>}
               </SelectContent>
             </Select>
             {hasError && (
@@ -818,13 +820,15 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
                 <SelectValue placeholder={`Add ${attribute.displayName.toLowerCase()}`} />
               </SelectTrigger>
               <SelectContent>
-                {attribute.options
-                  .filter(option => !selectedOptions.includes(option.id))
-                  .map((option) => (
-                    <SelectItem key={option.id} value={option.id.toString()}>
-                      {option.displayValue}
-                    </SelectItem>
-                  ))
+                {attribute.options && Array.isArray(attribute.options) ? 
+                  attribute.options
+                    .filter(option => !selectedOptions.includes(option.id))
+                    .map((option) => (
+                      <SelectItem key={option.id} value={option.id.toString()}>
+                        {option.displayValue}
+                      </SelectItem>
+                    ))
+                  : <SelectItem value="no-options">No options available</SelectItem>
                 }
               </SelectContent>
             </Select>
@@ -854,10 +858,11 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
               </TooltipProvider>
             </div>
             <div className="flex flex-wrap gap-3 mb-3">
-              {attribute.options.map((option) => {
-                const colorCode = option.metadata?.colorCode || '#CCCCCC';
-                const isSelected = selectedOptions.includes(option.id);
-                return (
+              {attribute.options && Array.isArray(attribute.options) ? 
+                attribute.options.map((option) => {
+                  const colorCode = option.metadata?.colorCode || '#CCCCCC';
+                  const isSelected = selectedOptions.includes(option.id);
+                  return (
                   <div 
                     key={option.id} 
                     className={`
