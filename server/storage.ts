@@ -1226,21 +1226,19 @@ export class DatabaseStorage implements IStorage {
   /**
    * Deletes a product draft
    */
-  async deleteProductDraft(userId: number, draftId: string): Promise<boolean> {
+  // This older version of deleteProductDraft is deprecated
+  // Using the new version with numeric ID below
+  async deleteProductDraftLegacy(userId: number, draftId: string): Promise<boolean> {
+    logger.warn('Using deprecated deleteProductDraftLegacy method');
+    if (!isNaN(Number(draftId))) {
+      // Convert to the new style call
+      return this.deleteProductDraft(Number(draftId));
+    }
     try {
-      await db
-        .delete(productDrafts)
-        .where(
-          and(
-            eq(productDrafts.userId, userId),
-            eq(productDrafts.draftId, draftId)
-          )
-        );
-      
-      return true;
+      throw new Error('Deprecated method - use deleteProductDraft(id: number) instead');
     } catch (error) {
-      logger.error('Error deleting product draft', { userId, draftId, error });
-      throw new Error(`Failed to delete product draft: ${error instanceof Error ? error.message : String(error)}`);
+      logger.error('Error in deprecated deleteProductDraftLegacy', { userId, draftId, error });
+      throw error;
     }
   }
 
@@ -5053,7 +5051,7 @@ export class DatabaseStorage implements IStorage {
       
       // Delete the image from object storage in the background
       if (objectKey) {
-        objectStore.deleteObject(objectKey).catch(error => {
+        objectStore.deleteFile(objectKey).catch(error => {
           logger.error('Error deleting image from object storage', { error, objectKey });
         });
       }

@@ -1127,37 +1127,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     })
   );
   
-  // Delete a draft
-  app.delete(
-    "/api/products/wizard/drafts/:draftId",
-    isAuthenticated,
-    asyncHandler(async (req: Request, res: Response) => {
-      const user = req.user as any;
-      const { draftId } = req.params;
-      
-      // Check if user is admin
-      if (user.role !== 'admin') {
-        throw new ForbiddenError("Only administrators can delete product drafts");
-      }
-      
-      try {
-        await storage.deleteProductDraft(user.id, draftId);
-        
-        res.json({
-          success: true,
-          message: "Draft deleted successfully"
-        });
-      } catch (error) {
-        logger.error('Error deleting product draft:', { error, userId: user.id, draftId });
-        
-        throw new AppError(
-          "An error occurred while deleting the draft. Please try again.",
-          ErrorCode.INTERNAL_SERVER_ERROR,
-          500
-        );
-      }
-    })
-  );
+  // Delete a draft route is now handled by product-draft-routes.ts
 
   // PRODUCT ATTRIBUTE ROUTES - Removed as part of attribute system redesign
 
@@ -5315,29 +5285,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST /api/product-drafts endpoint is now handled by product-draft-routes.ts
   // The conflict between implementations has been resolved by removing this duplicate endpoint
   
-  // Delete a product draft
-  app.delete("/api/product-drafts/:draftId", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
-    const user = req.user as any;
-    const draftId = req.params.draftId;
-    
-    try {
-      // Ensure draft exists and belongs to user
-      const draft = await storage.getProductDraft(user.id, draftId);
-      
-      if (!draft) {
-        throw new NotFoundError("Product draft not found", "draft");
-      }
-      
-      const success = await storage.deleteProductDraft(user.id, draftId);
-      
-      res.json({
-        success: true,
-        data: { deleted: success }
-      });
-    } catch (error) {
-      handleApiError(error, res);
-    }
-  }));
+  // Delete a product draft route is now handled by product-draft-routes.ts
 
   // Register new attribute system routes
   registerAttributeRoutes(app);
