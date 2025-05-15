@@ -183,20 +183,20 @@ export const productImagesRelations = relations(productImages, ({ one }) => ({
 export const productDrafts = pgTable("product_drafts", {
   id: serial("id").primaryKey(),
   originalProductId: integer("original_product_id").references(() => products.id),
-  draftStatus: text("draft_status").default("draft").notNull(),
+  draftStatus: text("draft_status").notNull(),
   createdBy: integer("created_by").references(() => users.id),
-  createdAt: text("created_at").default(() => formatCurrentDateSAST()).notNull(),
-  lastModified: text("last_modified").default(() => formatCurrentDateSAST()),
+  createdAt: text("created_at"),
+  lastModified: text("last_modified"),
   
   // Basic product info
-  name: text("name").notNull(),
-  slug: text("slug").notNull(),
+  name: text("name"),
+  slug: text("slug"),
   sku: text("sku"),
   description: text("description"),
   brand: text("brand"),
   categoryId: integer("category_id").references(() => categories.id),
-  isActive: boolean("is_active").default(false),
-  isFeatured: boolean("is_featured").default(false),
+  isActive: boolean("is_active"),
+  isFeatured: boolean("is_featured"),
   supplierId: integer("supplier_id").references(() => suppliers.id),
   catalogId: integer("catalog_id").references(() => catalogs.id),
   
@@ -204,14 +204,14 @@ export const productDrafts = pgTable("product_drafts", {
   costPrice: numeric("cost_price"),
   regularPrice: numeric("regular_price"),
   salePrice: numeric("sale_price"),
-  onSale: boolean("on_sale").default(false),
+  onSale: boolean("on_sale"),
   markupPercentage: integer("markup_percentage"),
   minimumPrice: numeric("minimum_price"),
   
   // Inventory fields
-  stockLevel: integer("stock_level").default(0),
-  lowStockThreshold: integer("low_stock_threshold").default(5),
-  backorderEnabled: boolean("backorder_enabled").default(false),
+  stockLevel: integer("stock_level"),
+  lowStockThreshold: integer("low_stock_threshold"),
+  backorderEnabled: boolean("backorder_enabled"),
   weight: text("weight"),
   dimensions: text("dimensions"),
   
@@ -225,7 +225,7 @@ export const productDrafts = pgTable("product_drafts", {
   specialSaleText: text("special_sale_text"),
   specialSaleStart: text("special_sale_start"),
   specialSaleEnd: text("special_sale_end"),
-  isFlashDeal: boolean("is_flash_deal").default(false),
+  isFlashDeal: boolean("is_flash_deal"),
   flashDealEnd: text("flash_deal_end"),
   
   // SEO fields
@@ -237,7 +237,7 @@ export const productDrafts = pgTable("product_drafts", {
   // Additional fields
   taxable: boolean("taxable"),
   taxClass: text("tax_class"),
-  wizardProgress: jsonb("wizard_progress").default({}),
+  wizardProgress: jsonb("wizard_progress"),
   attributes: jsonb("attributes"),
   attributesData: jsonb("attributes_data"),
   publishedAt: text("published_at"),
@@ -251,11 +251,7 @@ export const productDrafts = pgTable("product_drafts", {
   completedSteps: text("completed_steps").array(),
   version: integer("version"),
   changeHistory: jsonb("change_history"),
-  
-  // Selected attributes (will be stored as relations when published)
-  selectedAttributes: jsonb("selected_attributes").default({}),
-  
-  // AI-generated suggestions
+  selectedAttributes: jsonb("selected_attributes"),
   aiSuggestions: jsonb("ai_suggestions"),
   discountData: jsonb("discount_data"),
 });
@@ -267,17 +263,17 @@ export const aiRecommendations = pgTable("ai_recommendations", {
   productIds: integer("product_ids").array(),
   reason: text("reason"),
   aiResponse: jsonb("ai_response"),
-  createdAt: text("created_at").default(() => formatCurrentDateSAST()).notNull(),
+  createdAt: text("created_at"),
 });
 
 // Pricing settings table for category-specific markup percentages
 export const pricing = pgTable("pricing", {
   id: serial("id").primaryKey(),
   categoryId: integer("category_id").references(() => categories.id),
-  markupPercentage: integer("markup_percentage").notNull().default(50),
+  markupPercentage: integer("markup_percentage").notNull(),
   description: text("description"),
-  createdAt: text("created_at").default(() => formatCurrentDateSAST()).notNull(),
-  updatedAt: text("updated_at").default(() => formatCurrentDateSAST()).notNull(),
+  createdAt: text("created_at"),
+  updatedAt: text("updated_at"),
 }, (table) => {
   return {
     categoryUnique: unique().on(table.categoryId),
@@ -529,6 +525,8 @@ export const insertBatchUploadSchema = createInsertSchema(batchUploads).omit({ i
 export const insertBatchUploadErrorSchema = createInsertSchema(batchUploadErrors).omit({ id: true });
 export const insertSupplierSchema = createInsertSchema(suppliers).omit({ id: true });
 export const insertCatalogSchema = createInsertSchema(catalogs).omit({ id: true });
+export const insertPricingSchema = createInsertSchema(pricing).omit({ id: true });
+export const insertAiRecommendationSchema = createInsertSchema(aiRecommendations).omit({ id: true });
 
 // ========== TypeScript Types ==========
 // These are used to enforce type safety in our application code
