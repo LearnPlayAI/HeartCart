@@ -5355,12 +5355,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const draftPrefix = `drafts/${draftId}/`;
     
     try {
+      // First try listing with our original approach
       const files = await objectStore.listFiles(draftPrefix);
+      
+      // If that fails, try a direct client access approach
+      let directListFiles: string[] = [];
+      if (files.length === 0) {
+        logger.info(`TEST: Attempting direct list for draft ${draftId}`);
+        try {
+          const client = objectStore.getClient();
+          if (client) {
+            const result = await client.list(draftPrefix);
+            console.log("Direct list result:", JSON.stringify(result));
+            if (result && result.value && Array.isArray(result.value)) {
+              directListFiles = result.value
+                .filter(obj => obj !== null && typeof obj === 'object')
+                .map(obj => {
+                  console.log("Object entry:", JSON.stringify(obj));
+                  return obj.key || null;
+                })
+                .filter(key => key !== null);
+              logger.info(`TEST: Direct list found ${directListFiles.length} files`);
+            }
+          }
+        } catch (innerError) {
+          logger.error(`TEST: Error in direct list for draft ${draftId}`, { innerError });
+        }
+      }
+      
+      // Final approach - try parent prefix
+      let parentListFiles: string[] = [];
+      if (files.length === 0 && directListFiles.length === 0) {
+        logger.info(`TEST: Attempting parent folder list for draft ${draftId}`);
+        try {
+          const client = objectStore.getClient();
+          if (client) {
+            const result = await client.list('drafts/');
+            console.log("Parent list result:", JSON.stringify(result));
+            if (result && result.value && Array.isArray(result.value)) {
+              parentListFiles = result.value
+                .filter(obj => obj !== null && typeof obj === 'object' && obj.key)
+                .map(obj => {
+                  return obj.key || null;
+                })
+                .filter(key => key !== null && key.includes(`/${draftId}/`));
+              logger.info(`TEST: Parent list found ${parentListFiles.length} matching files`);
+            }
+          }
+        } catch (innerError) {
+          logger.error(`TEST: Error in parent list for draft ${draftId}`, { innerError });
+        }
+      }
+      
       return res.json({
         success: true,
         draftId,
         count: files.length,
-        files
+        files,
+        directListCount: directListFiles.length,
+        directListFiles,
+        parentListCount: parentListFiles.length,
+        parentListFiles
       });
     } catch (error) {
       logger.error(`TEST: Error listing files for draft ${draftId}`, { error });

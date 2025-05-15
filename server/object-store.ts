@@ -826,6 +826,16 @@ class ObjectStoreService {
   }
   
   /**
+   * Get the raw object store client (for direct operations)
+   */
+  getClient(): any {
+    if (!this.objectStore) {
+      throw new Error('Object store client not initialized');
+    }
+    return this.objectStore;
+  }
+  
+  /**
    * Get a public URL for a file
    */
   /**
