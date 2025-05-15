@@ -20,6 +20,7 @@ import {
 import { BasicInfoStep } from './steps/BasicInfoStep';
 import ProductImagesStep from './steps/ProductImagesStep';
 import { AdditionalInfoStep } from './steps/AdditionalInfoStep';
+import { AttributesStep } from './steps/AttributesStep';
 import { SEOStep } from './steps/SEOStep';
 import { ReviewAndSaveStep } from './steps/ReviewAndSaveStep';
 
@@ -28,7 +29,9 @@ const WIZARD_STEPS = [
   { id: 'basic-info', label: 'Basic Info', component: BasicInfoStep },
   { id: 'images', label: 'Images', component: ProductImagesStep },
   { id: 'additional-info', label: 'Additional Info', component: AdditionalInfoStep },
+  { id: 'attributes', label: 'Attributes', component: AttributesStep },
   { id: 'seo', label: 'SEO', component: SEOStep },
+  { id: 'sales-promotions', label: 'Sales & Promotions', component: AdditionalInfoStep }, // Temporary using AdditionalInfoStep until SalesPromotionsStep is implemented
   { id: 'review', label: 'Review & Save', component: ReviewAndSaveStep },
 ];
 
@@ -37,8 +40,10 @@ const STEP_MAP = {
   'basic-info': 0,
   'images': 1,
   'additional-info': 2,
-  'seo': 3,
-  'review': 4
+  'attributes': 3,
+  'seo': 4,
+  'sales-promotions': 5,
+  'review': 6
 };
 
 export interface ProductDraft {
@@ -90,7 +95,7 @@ export interface ProductDraft {
   supplierId: number | null;
 }
 
-export type ProductDraftStep = 'basic-info' | 'images' | 'additional-info' | 'seo' | 'review';
+export type ProductDraftStep = 'basic-info' | 'images' | 'additional-info' | 'attributes' | 'seo' | 'sales-promotions' | 'review';
 
 interface ProductWizardProps {
   editMode?: boolean;
@@ -355,7 +360,9 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ editMode = false, 
           "basic-info": false, 
           "images": false, 
           "additional-info": false,
+          "attributes": false,
           "seo": false,
+          "sales-promotions": false,
           "review": false
         }
       };
@@ -464,7 +471,7 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ editMode = false, 
       <Tabs value={currentStep} onValueChange={handleStepChange} className="w-full">
         {/* Mobile-optimized TabsList - scrollable on small screens */}
         <div className="overflow-x-auto pb-2 -mx-6 px-6">
-          <TabsList className="grid grid-cols-5 mb-6 min-w-[600px] md:min-w-0">
+          <TabsList className="grid grid-cols-7 mb-6 min-w-[700px] md:min-w-0">
             {WIZARD_STEPS.map((step) => (
               <TabsTrigger 
                 key={step.id} 
