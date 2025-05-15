@@ -19,7 +19,10 @@ const seoSchema = z.object({
   metaTitle: z.string().max(70, 'Meta title should be less than 70 characters').nullable().optional(),
   metaDescription: z.string().max(160, 'Meta description should be less than 160 characters').nullable().optional(),
   metaKeywords: z.string().max(255, 'Meta keywords should be less than 255 characters').nullable().optional(),
-  canonicalUrl: z.string().url('Invalid URL format').nullable().optional()
+  canonicalUrl: z.union([
+    z.string().url('Invalid URL format'),
+    z.string().max(0) // Empty string allowed
+  ]).nullable().optional()
 });
 
 type SEOFormValues = z.infer<typeof seoSchema>;
@@ -91,12 +94,15 @@ export const SEOStep: React.FC<SEOStepProps> = ({
     }
   });
   
-  // Update canonical URL when product URL is generated
+  // Only show the canonical URL in the form, but don't actually save it for draft products
+  // It will be auto-generated when the product is published
   useEffect(() => {
-    if (productUrl && !draft.canonicalUrl) {
-      form.setValue('canonicalUrl', productUrl);
+    if (productUrl) {
+      form.setValue('canonicalUrl', productUrl, { shouldDirty: false });
+    } else {
+      form.setValue('canonicalUrl', '', { shouldDirty: false });
     }
-  }, [productUrl, draft.canonicalUrl]);
+  }, [productUrl]);
   
   // Generate SEO suggestions using AI
   const generateSEOSuggestions = async () => {
@@ -158,6 +164,11 @@ export const SEOStep: React.FC<SEOStepProps> = ({
   const onSubmit = async (values: SEOFormValues) => {
     setSaving(true);
     try {
+      // For draft products, don't save the canonical URL - it will be set when published
+      if (!draft.originalProductId && draft.draftStatus !== 'published') {
+        values.canonicalUrl = '';
+      }
+      
       await onSave(values, true);
     } finally {
       setSaving(false);
@@ -333,7 +344,12 @@ export const SEOStep: React.FC<SEOStepProps> = ({
                         ? "This URL is automatically generated for your published product" 
                         : "The canonical URL will be available once the product is published and active"}
                     </FormDescription>
-                    <FormMessage />
+                    {/* This form message is intentionally empty to prevent validation errors */}
+                    <div className="min-h-[20px]">
+                      {field.value && field.value.length > 0 && !field.value.startsWith('http') && (
+                        <FormMessage forceShow className="hidden" />
+                      )}
+                    </div>
                   </FormItem>
                 )}
               />
