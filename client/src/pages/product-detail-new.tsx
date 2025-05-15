@@ -198,15 +198,9 @@ const ProductDetailView = ({
   });
   const productAttributes = productAttributesResponse?.success ? productAttributesResponse.data : [];
   
-  // Get product attribute options - endpoint was changed during attribute system redesign
-  const { 
-    data: attributeOptionsResponse,
-    error: attributeOptionsError
-  } = useQuery<StandardApiResponse<{ [key: number]: ProductAttributeOption[] }>>({
-    queryKey: [`/api/categories/${product?.categoryId}/attributes`],
-    enabled: !!product?.id && !!product?.categoryId,
-  });
-  const attributeOptions = attributeOptionsResponse?.success ? attributeOptionsResponse.data : {};
+  // We no longer use category-based attributes
+  // Don't use /api/categories/${product?.categoryId}/attributes endpoint
+  // Instead, just rely on the product-specific attributes from the product attributes endpoint
   
   // Get product attribute values for combinations
   const { 
@@ -683,7 +677,7 @@ const ProductDetailView = ({
             <Separator className="my-4" />
             
             {/* Attribute Selection */}
-            {productAttributes && productAttributes.length > 0 && attributeOptions && attributeValues && (
+            {productAttributes && productAttributes.length > 0 && attributeValues && (
               <div className="space-y-4 mb-6">
                 <h3 className="text-lg font-semibold">Product Options</h3>
                 
@@ -700,28 +694,18 @@ const ProductDetailView = ({
                     availableOptionValues = attrValue.valueText.split(',');
                   }
                   
-                  // Get options for this attribute - the structure is different from what we expected
-                  // Need to lookup in the attributeOptions object using the attribute.name to find the right key
-                  // Or iterate through all keys and find the matching options
-                  let options: ProductAttributeOption[] = [];
-                  Object.keys(attributeOptions).forEach(key => {
-                    // Try to find options that match our available values
-                    const optionsForKey = attributeOptions[parseInt(key)] || [];
-                    if (optionsForKey.length > 0) {
-                      // Check if any of these options match our available values
-                      const matchingOptions = optionsForKey.filter(option => 
-                        availableOptionValues.length === 0 || 
+                  // We'll use the options directly from the productAttributes
+                  const options = attribute.options || [];
+                  
+                  // Filter options based on available values if needed
+                  const filteredOptions = availableOptionValues.length > 0 
+                    ? options.filter(option => 
                         availableOptionValues.includes(option.value) || 
-                        availableOptionValues.includes(option.id.toString())
-                      );
-                      if (matchingOptions.length > 0) {
-                        options = [...options, ...matchingOptions];
-                      }
-                    }
-                  });
+                        availableOptionValues.includes(option.id.toString()))
+                    : options;
                   
                   // Skip if no options available
-                  if (options.length === 0 && attribute.type !== 'text') return null;
+                  if (filteredOptions.length === 0 && attribute.type !== 'text') return null;
                   
                   return (
                     <div key={attributeId} className="space-y-2">
@@ -759,7 +743,7 @@ const ProductDetailView = ({
                             <SelectValue placeholder={`Select ${attribute.displayName || attribute.name}`} />
                           </SelectTrigger>
                           <SelectContent>
-                            {options.map(option => (
+                            {filteredOptions.map(option => (
                               <SelectItem key={option.id} value={option.value}>
                                 {option.displayValue || option.value}
                                 {option.priceAdjustment && parseFloat(option.priceAdjustment) !== 0 && (
