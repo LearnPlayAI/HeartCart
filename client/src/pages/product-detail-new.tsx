@@ -201,6 +201,9 @@ const ProductDetailView = ({
   // We no longer use category-based attributes
   // Don't use /api/categories/${product?.categoryId}/attributes endpoint
   // Instead, just rely on the product-specific attributes from the product attributes endpoint
+  // Define empty attributeOptions and attributeOptionsError to avoid reference errors
+  const attributeOptions = {};
+  const attributeOptionsError = null;
   
   // Get product attribute values for combinations
   const { 
@@ -231,13 +234,11 @@ const ProductDetailView = ({
     if (productAttributesError) {
       console.error('Error fetching product attributes:', productAttributesError);
     }
-    if (attributeOptionsError) {
-      console.error('Error fetching attribute options:', attributeOptionsError);
-    }
+    // We no longer use attributeOptionsError since we removed that query
     if (attributeValuesError) {
       console.error('Error fetching attribute values:', attributeValuesError);
     }
-  }, [relatedProductsError, productAttributesError, attributeOptionsError, attributeValuesError, toast]);
+  }, [relatedProductsError, productAttributesError, attributeValuesError, toast]);
   
   // Effect to set initial image on component mount or when product changes
   useEffect(() => {
