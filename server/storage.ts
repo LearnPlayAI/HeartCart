@@ -5583,9 +5583,10 @@ export class DatabaseStorage implements IStorage {
       }
       
       // Prepare the update data
+      const now = new Date().toISOString();
       const updateData: Partial<ProductDraft> = {
         draftStatus: status,
-        lastModified: new Date()
+        lastModified: now
       };
       
       // Add additional information based on status
@@ -5596,7 +5597,7 @@ export class DatabaseStorage implements IStorage {
       // Update the change history if available
       if (draft.changeHistory) {
         const changeEntry = {
-          timestamp: new Date(),
+          timestamp: now,
           fromStatus: draft.draftStatus,
           toStatus: status,
           note: note || null

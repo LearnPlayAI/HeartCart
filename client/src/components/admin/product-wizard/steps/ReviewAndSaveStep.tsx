@@ -311,7 +311,7 @@ export const ReviewAndSaveStep: React.FC<ReviewAndSaveStepProps> = ({
             <div className="space-y-2">
               <h4 className="text-sm font-medium">Select New Status</h4>
               <Select
-                onValueChange={(value) => confirmStatusChange(value as ProductDraftStatus)}
+                onValueChange={(value) => setReviewNote(value === 'ready_to_publish' ? 'Product is ready to be published' : '')}
                 defaultValue={draft.draftStatus || 'draft'}
               >
                 <SelectTrigger className="w-full">
@@ -353,12 +353,15 @@ export const ReviewAndSaveStep: React.FC<ReviewAndSaveStepProps> = ({
               Cancel
             </Button>
             <Button 
-              onClick={() => confirmStatusChange(draft.draftStatus === 'draft' ? 'in_review' : 'ready_to_publish')} 
+              onClick={() => updateStatusMutation.mutate({ 
+                status: 'ready_to_publish',
+                note: reviewNote
+              })}
               disabled={isUpdatingStatus}
               className="gap-2"
             >
               {isUpdatingStatus && <Loader2 className="h-4 w-4 animate-spin" />}
-              Update Status
+              Set as Ready to Publish
             </Button>
           </DialogFooter>
         </DialogContent>
