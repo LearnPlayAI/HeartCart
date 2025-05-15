@@ -675,32 +675,88 @@ class ObjectStoreService {
     await this.initialize();
     
     try {
-      // List all objects with the given prefix
-      const result = await this.objectStore.list(prefix);
+      // Normalize the prefix (remove trailing slashes, etc.)
+      const normalizedPrefix = prefix.trim().replace(/\/+$/, '');
       
-      if ('err' in result && result.err) {
-        console.error(`Error listing files with prefix ${prefix}:`, result.err);
-        const errorMessage = typeof result.err === 'object' ? 
-          JSON.stringify(result.err) : String(result.err);
-        throw new Error(`Failed to list files: ${errorMessage}`);
-      }
+      console.log(`Listing files with prefix: ${normalizedPrefix}`);
+      
+      // List all objects with the given prefix
+      const result = await this.objectStore.list(normalizedPrefix);
       
       // Extract keys from the result objects
       const keys: string[] = [];
       
       // Process object keys
-      if (result.value && Array.isArray(result.value)) {
-        for (const obj of result.value) {
-          if (obj && typeof obj === 'object' && 'key' in obj) {
-            keys.push(obj.key as string);
+      if (!('err' in result) || !result.err) {
+        if (result.value && Array.isArray(result.value)) {
+          for (const obj of result.value) {
+            if (obj && typeof obj === 'object' && 'key' in obj) {
+              const key = obj.key as string;
+              keys.push(key);
+            }
+          }
+        }
+      } else {
+        console.error(`Error listing files with prefix ${normalizedPrefix}:`, result.err);
+      }
+      
+      // If we got no results but prefix doesn't end with a slash, try with a slash
+      if (keys.length === 0 && !normalizedPrefix.endsWith('/')) {
+        const prefixWithSlash = `${normalizedPrefix}/`;
+        console.log(`No results found. Retrying with slash: ${prefixWithSlash}`);
+        
+        const retryResult = await this.objectStore.list(prefixWithSlash);
+        
+        if (!('err' in retryResult) || !retryResult.err) {
+          if (retryResult.value && Array.isArray(retryResult.value)) {
+            for (const obj of retryResult.value) {
+              if (obj && typeof obj === 'object' && 'key' in obj) {
+                const key = obj.key as string;
+                keys.push(key);
+              }
+            }
           }
         }
       }
       
+      // If we're looking for a pattern (prefix doesn't end with slash), check if files start with the pattern
+      if (!normalizedPrefix.endsWith('/')) {
+        // List files at the parent folder level to find files with similar names
+        const lastSlashIndex = normalizedPrefix.lastIndexOf('/');
+        if (lastSlashIndex > 0) {
+          const parentFolder = normalizedPrefix.substring(0, lastSlashIndex);
+          const filePattern = normalizedPrefix.substring(lastSlashIndex + 1);
+          
+          if (filePattern.length > 0) {
+            console.log(`Looking for pattern matches in parent folder ${parentFolder} with pattern ${filePattern}`);
+            
+            const parentResult = await this.objectStore.list(parentFolder);
+            
+            if (!('err' in parentResult) || !parentResult.err) {
+              if (parentResult.value && Array.isArray(parentResult.value)) {
+                for (const obj of parentResult.value) {
+                  if (obj && typeof obj === 'object' && 'key' in obj) {
+                    const key = obj.key as string;
+                    const fileName = key.substring(key.lastIndexOf('/') + 1);
+                    
+                    // If the filename starts with our pattern and it's not already in our list
+                    if (fileName.startsWith(filePattern) && !keys.includes(key)) {
+                      keys.push(key);
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      
+      console.log(`Found ${keys.length} files with prefix ${normalizedPrefix}`);
       return keys;
     } catch (error) {
       console.error(`Failed to list files with prefix ${prefix}:`, error);
-      throw new Error(`List operation failed: ${error instanceof Error ? error.message : String(error)}`);
+      // Return empty array instead of throwing
+      return [];
     }
   }
   
