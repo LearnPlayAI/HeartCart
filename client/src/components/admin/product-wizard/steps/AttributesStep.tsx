@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -102,16 +102,15 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
         // Refetch the options for this attribute
         console.log("Refetching options after creation");
         
-        // Fetch the options manually to ensure we have the latest
-        console.log("Fetching options for attribute ID:", currentAttributeId);
-        const optionsResponse = await fetch(`/api/attributes/${currentAttributeId}/options`);
-        const optionsResult = await optionsResponse.json();
+        // We no longer need to manually fetch options - we'll use React Query invalidation instead
         
-        console.log("Options direct fetch response:", optionsResult);
+        // Invalidate the options query
+        queryClient.invalidateQueries({ 
+          queryKey: ['/api/attributes', String(currentAttributeId), 'options'] 
+        });
         
-        // Find the attribute in our local data
-        console.log("Selected attribute:", attribute.name, "(ID:", currentAttributeId, ")");
-        console.log("Options loaded:", optionsResult.data || []);
+        // Also invalidate the main attributes query to update the options in the attributes list
+        queryClient.invalidateQueries({ queryKey: ['/api/attributes'] });
         
         // Reset form and close dialog
         setNewOptionData({
@@ -128,19 +127,21 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
           variant: "default"
         });
         
-        // Force a manual refetch of the attribute's options
-        const manualRefetch = async () => {
-          console.log("Manual refetch of options for attribute:", currentAttributeId);
-          const refreshOptions = await fetch(`/api/attributes/${currentAttributeId}/options`);
-          const refreshData = await refreshOptions.json();
-          console.log("Options direct fetch response:", refreshData);
-          console.log("Options loaded:", refreshData.data || []);
-          
-          // Refresh all attributes after option creation
-          fetchAllAttributes();
-        };
+        // Invalidate attribute queries to trigger a refetch
+        queryClient.invalidateQueries({ queryKey: ['/api/attributes'] });
         
-        manualRefetch();
+        // Also invalidate specific attribute and options queries
+        if (currentAttributeId) {
+          // Invalidate the specific attribute query
+          queryClient.invalidateQueries({ 
+            queryKey: ['/api/attributes', currentAttributeId.toString()]
+          });
+          
+          // Invalidate the options for this attribute
+          queryClient.invalidateQueries({ 
+            queryKey: ['/api/attributes', currentAttributeId.toString(), 'options']
+          });
+        }
       } else {
         const errorData = await response.json();
         console.error("Error creating option:", errorData);
@@ -282,6 +283,9 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
     onSave({ tags });
   };
 
+  // Get the query client for cache invalidation
+  const queryClient = useQueryClient();
+  
   // Fetch all attributes
   const { data: attributesData, isLoading: isLoadingAttributes } = useQuery({
     queryKey: ['/api/attributes'],
@@ -1637,7 +1641,7 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
             <Button variant="outline" onClick={() => setShowAddOptionDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={handleCreateAttributeOption} disabled={!newOptionData.value}>
+            <Button onClick={handleCreateAttributeOption} disabled={!newOptionData.value || !currentAttributeId}>
               Create Option
             </Button>
           </DialogFooter>
