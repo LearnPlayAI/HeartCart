@@ -470,19 +470,43 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
       if (response.ok) {
         const newOption = await response.json();
         if (newOption.success && newOption.data) {
-          // Add to local cache
-          const attribute = attributesCache[currentAttributeId];
-          if (attribute) {
-            attribute.options = [...(attribute.options || []), newOption.data];
-            setAttributesCache({...attributesCache});
+          // Update the attributesCache with a fresh copy to avoid reference issues
+          const updatedCache = {...attributesCache};
+          if (!updatedCache[currentAttributeId]) {
+            updatedCache[currentAttributeId] = {
+              ...currentAttribute,
+              options: []
+            };
           }
+          
+          updatedCache[currentAttributeId].options = [
+            ...(updatedCache[currentAttributeId].options || []),
+            newOption.data
+          ];
+          setAttributesCache(updatedCache);
+          
+          // Update attributeValues to make sure the UI reflects the new option
+          setAttributeValues(prevValues => {
+            return prevValues.map(attrValue => {
+              if (attrValue.attributeId === currentAttributeId) {
+                return {
+                  ...attrValue,
+                  options: [...(attrValue.options || []), newOption.data]
+                };
+              }
+              return attrValue;
+            });
+          });
           
           // Clear form, close dialog
           setNewOptionData({ value: '', displayValue: '' });
           setIsAddingOption(false);
           
-          // Invalidate related queries
+          // Invalidate related queries to ensure fresh data on next load
           queryClient.invalidateQueries({ queryKey: [`/api/attributes/${currentAttributeId}/options`] });
+          
+          // Force refresh all attributes data to ensure consistency
+          queryClient.invalidateQueries({ queryKey: ['/api/attributes'] });
           
           // Show success message
           toast({
