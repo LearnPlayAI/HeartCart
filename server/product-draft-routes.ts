@@ -327,7 +327,7 @@ export default function registerProductDraftRoutes(router: Router) {
           processedBuffer,
           file.originalname,
           draftId,
-          { contentType: file.mimetype }
+          file.mimetype
         );
         
         // Return image info
