@@ -685,11 +685,29 @@ export default function registerProductDraftRoutes(router: Router) {
       const draftId = parseInt(req.params.id);
       const { status, note } = req.body;
       
+      logger.debug('Status update request received', {
+        draftId,
+        status,
+        hasNote: !!note,
+        userId: req.user?.id
+      });
+      
       const draft = await storage.getProductDraft(draftId);
       
       if (!draft) {
+        logger.warn('Draft not found during status update', { draftId });
         throw new NotFoundError("Product draft not found");
       }
+      
+      // Enhanced debugging for draft object
+      logger.debug('Draft retrieved for status update', {
+        draftId: draft.id,
+        currentStatus: draft.draftStatus,
+        newStatus: status,
+        completedSteps: draft.completedSteps,
+        hasChangeHistory: !!draft.changeHistory,
+        changeHistoryType: draft.changeHistory ? typeof draft.changeHistory : 'undefined'
+      });
       
       // Check if user has permission to update this draft
       if (draft.createdBy !== req.user?.id && req.user?.role !== 'admin') {
@@ -699,20 +717,46 @@ export default function registerProductDraftRoutes(router: Router) {
       // Perform status-specific validations
       if (status === 'ready_to_publish') {
         // Perform validation to ensure the draft is complete enough to be published
+        logger.debug('Validating draft before status change to ready_to_publish', { draftId });
+        
         const validationResult = await storage.validateProductDraft(draftId);
         
         if (!validationResult.isValid) {
+          logger.warn('Draft validation failed during status change', {
+            draftId,
+            errors: validationResult.errors
+          });
+          
           return sendSuccess(res, {
             success: false,
             message: "Draft validation failed",
             errors: validationResult.errors
           });
         }
+        
+        logger.debug('Draft validation passed for status change', { draftId });
       }
       
       try {
+        // Detailed pre-update logging
+        logger.debug('About to update product draft status', {
+          draftId,
+          fromStatus: draft.draftStatus,
+          toStatus: status,
+          note: note || null,
+          changeHistoryBefore: draft.changeHistory
+        });
+        
         // Update the draft status
         const updatedDraft = await storage.updateProductDraftStatus(draftId, status, note);
+        
+        // Detailed post-update logging
+        logger.debug('Draft status updated successfully', {
+          draftId: updatedDraft.id,
+          newStatus: updatedDraft.draftStatus,
+          hasChangeHistory: !!updatedDraft.changeHistory,
+          changeHistoryLength: updatedDraft.changeHistory ? updatedDraft.changeHistory.length : 0
+        });
         
         // Log the status change
         logger.info(`Product draft status updated`, {
@@ -724,12 +768,19 @@ export default function registerProductDraftRoutes(router: Router) {
         
         sendSuccess(res, updatedDraft);
       } catch (error) {
+        // Enhanced error logging
         logger.error(`Error updating product draft status in route handler`, {
           error,
           draftId,
           status,
           errorName: error.name,
-          errorMessage: error.message
+          errorMessage: error.message,
+          errorStack: error.stack,
+          draftBeforeUpdate: draft ? {
+            id: draft.id,
+            status: draft.draftStatus,
+            changeHistoryType: draft.changeHistory ? typeof draft.changeHistory : 'undefined'
+          } : 'not available'
         });
         throw error;
       }
