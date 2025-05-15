@@ -21,6 +21,7 @@ import { db } from "./db";
 import { eq, like, and, desc, asc, sql, inArray, isNull, not, or, SQL, count } from "drizzle-orm";
 import { objectStore, STORAGE_FOLDERS } from "./object-store";
 import { logger } from "./logger";
+import path from "path";
 
 export interface IStorage {
   // User operations
@@ -5701,18 +5702,21 @@ export class DatabaseStorage implements IStorage {
         mainImageIndex: 0
       };
       
-      // Add image data
+      // Add image data and prepare for image copying
       if (images && Array.isArray(images)) {
         const imageUrls: string[] = [];
         const imageObjectKeys: string[] = [];
+        const newObjectKeys: string[] = [];
         let mainImageIndex = 0;
         
+        // First, populate the image data arrays
         images.forEach((image, index) => {
           if (image.imageUrl) imageUrls.push(image.imageUrl);
           if (image.objectKey) imageObjectKeys.push(image.objectKey);
           if (image.isMainImage) mainImageIndex = index;
         });
         
+        // Set the initial image data in the draft
         draftData.imageUrls = imageUrls;
         draftData.imageObjectKeys = imageObjectKeys;
         draftData.mainImageIndex = mainImageIndex;
@@ -5723,6 +5727,41 @@ export class DatabaseStorage implements IStorage {
         .insert(productDrafts)
         .values(draftData)
         .returning();
+        
+      // Copy product images to draft folder if there are image object keys
+      if (draftData.imageObjectKeys && draftData.imageObjectKeys.length > 0) {
+        try {
+          // Create mappings for image copying
+          const imageMappings = draftData.imageObjectKeys.map((sourceKey, index) => {
+            // Generate destination path in the drafts folder
+            const filename = path.basename(sourceKey);
+            const destinationKey = `${STORAGE_FOLDERS.DRAFTS}/${newDraft.id}/${filename}`;
+            
+            return {
+              sourceKey,
+              destinationKey
+            };
+          });
+          
+          // Copy images in parallel using the bulk copy method
+          const copiedImageKeys = await objectStore.copyFiles(imageMappings);
+          
+          // Update the draft with the new image object keys if any were copied
+          if (copiedImageKeys.length > 0) {
+            await transaction
+              .update(productDrafts)
+              .set({ imageObjectKeys: copiedImageKeys })
+              .where(eq(productDrafts.id, newDraft.id));
+              
+            // Also update our local copy of the draft data
+            newDraft.imageObjectKeys = copiedImageKeys;
+          }
+        } catch (error) {
+          console.error('Error copying product images to draft:', error);
+          // We won't fail the entire transaction if image copying fails
+          // The draft will still be created with the original image URLs
+        }
+      }
       
       if (!newDraft) {
         await transaction.rollback();
