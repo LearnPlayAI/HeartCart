@@ -9,6 +9,7 @@ import sharp from 'sharp'; // For image processing
 export const STORAGE_FOLDERS = {
   PRODUCTS: 'products',
   PRODUCT_IMAGES: 'product_images',
+  DRAFTS: 'drafts',
   CATEGORIES: 'categories',
   SUPPLIERS: 'suppliers',
   CATALOGS: 'catalogs',
@@ -177,6 +178,42 @@ class ObjectStoreService {
   }
   
   /**
+   * Upload a product draft image with the proper folder structure
+   * Path: /root/drafts/{draftId}/{filename}
+   */
+  async uploadDraftImage(
+    buffer: Buffer,
+    filename: string,
+    draftId: number,
+    contentType?: string
+  ): Promise<{ url: string; objectKey: string }> {
+    await this.initialize();
+    
+    // Generate a unique filename to avoid collisions
+    const uniqueId = new Date().getTime() + '-' + Math.random().toString(36).substring(2, 15);
+    const extension = path.extname(filename).toLowerCase();
+    const baseName = path.basename(filename, extension);
+    const uniqueFilename = `${baseName}-${uniqueId}${extension}`;
+    
+    // Create the correct path structure: /root/drafts/{draftId}/image1.xxx
+    const objectKey = `${STORAGE_FOLDERS.DRAFTS}/${draftId}/${uniqueFilename}`;
+    
+    try {
+      await this.uploadFromBuffer(objectKey, buffer, {
+        contentType: contentType || this.detectContentType(filename)
+      });
+      
+      return {
+        url: this.getPublicUrl(objectKey),
+        objectKey
+      };
+    } catch (error) {
+      console.error(`Failed to upload draft image ${filename}:`, error);
+      throw new Error(`Draft image upload failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+  
+  /**
    * Upload a file directly to a product's folder
    */
   async uploadProductFile(
@@ -201,6 +238,60 @@ class ObjectStoreService {
     } catch (error) {
       console.error(`Failed to upload product file ${filename}:`, error);
       throw new Error(`Product file upload failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+  
+  /**
+   * Move a draft image to its final product location when publishing
+   * Format: /root/{supplier_supplierId}/{catalog_catalogId}/{product_productId}/image1.xxx
+   */
+  async moveDraftImageToProduct(
+    sourceKey: string,
+    productId: number,
+    supplierId: number,
+    catalogId: number,
+    newFilename: string
+  ): Promise<{ url: string; objectKey: string }> {
+    await this.initialize();
+    
+    // Create the destination path
+    const destObjectKey = `${STORAGE_FOLDERS.SUPPLIERS}/${supplierId}/${STORAGE_FOLDERS.CATALOGS}/${catalogId}/${STORAGE_FOLDERS.PRODUCTS}/${productId}/${newFilename}`;
+    
+    try {
+      // Check if the source file exists
+      const sourceExists = await this.exists(sourceKey);
+      if (!sourceExists) {
+        throw new Error(`Source file does not exist: ${sourceKey}`);
+      }
+      
+      // Read the source file
+      const { data } = await this.objectStore.download(sourceKey);
+      if (!data) {
+        throw new Error(`Failed to download source file: ${sourceKey}`);
+      }
+      
+      // Determine content type
+      const contentType = this.detectContentType(newFilename);
+      
+      // Upload to the new location
+      await this.uploadFromBuffer(destObjectKey, data, { contentType });
+      
+      // Verify the destination file exists
+      const destExists = await this.exists(destObjectKey);
+      if (!destExists) {
+        throw new Error(`Failed to copy file to destination: ${destObjectKey}`);
+      }
+      
+      // Delete the source file (draft image)
+      await this.objectStore.delete(sourceKey);
+      
+      return {
+        url: this.getPublicUrl(destObjectKey),
+        objectKey: destObjectKey
+      };
+    } catch (error) {
+      console.error(`Failed to move draft image to product location: ${error}`);
+      throw new Error(`Image move failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
   

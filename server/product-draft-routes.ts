@@ -310,21 +310,29 @@ export default function registerProductDraftRoutes(router: Router) {
       const currentImageUrls = draft.imageUrls || [];
       const currentImageObjectKeys = draft.imageObjectKeys || [];
       
-      // Upload new images to object store
+      // Upload new images to object store with the correct draft folder structure
       const imagePromises = files.map(async (file) => {
-        const extension = path.extname(file.originalname).toLowerCase();
-        const objectKey = `${STORAGE_FOLDERS.PRODUCT_IMAGES}/${uuidv4()}${extension}`;
+        // Process the image to optimize it
+        const processedBuffer = await objectStore.processImage(file.buffer, {
+          width: 1200,
+          height: 1200,
+          fit: 'inside',
+          withoutEnlargement: true,
+          quality: 85,
+          autoRotate: true
+        });
         
-        // Upload to object store
-        const uploadResult = await objectStore.uploadFromBuffer(
-          objectKey, 
-          file.buffer, 
+        // Upload to object store with the proper draft path structure: /root/drafts/{draftId}/image.xxx
+        const uploadResult = await objectStore.uploadDraftImage(
+          processedBuffer,
+          file.originalname,
+          draftId,
           { contentType: file.mimetype }
         );
         
         // Return image info
         return {
-          imageUrl: uploadResult.publicUrl,
+          imageUrl: uploadResult.url,
           objectKey: uploadResult.objectKey
         };
       });
