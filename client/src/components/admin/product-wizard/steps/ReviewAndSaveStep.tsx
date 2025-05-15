@@ -236,10 +236,17 @@ export const ReviewAndSaveStep: React.FC<ReviewAndSaveStepProps> = ({
     }
   };
   
-  // Format price display
-  const formatPrice = (price: number | null | undefined) => {
+  // Format price display - handles both number and string values
+  const formatPrice = (price: number | string | null | undefined) => {
     if (price === null || price === undefined) return 'Not set';
-    return `R ${price.toFixed(2)}`;
+    
+    // Convert string prices to numbers
+    const numericPrice = typeof price === 'string' ? parseFloat(price) : price;
+    
+    // Check if conversion was successful and it's a valid number
+    if (isNaN(numericPrice)) return 'Not set';
+    
+    return `R ${numericPrice.toFixed(2)}`;
   };
   
   // Get validation status and publish readiness
