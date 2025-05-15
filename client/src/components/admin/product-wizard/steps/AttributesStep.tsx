@@ -520,8 +520,10 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
         errors[attr.attributeId] = `${attr.displayName} is required`;
       }
       
-      // Select/multiselect attributes must have selected options
-      if ((attr.attributeType === 'select' || attr.attributeType === 'multiselect') && 
+      // Select/multiselect attributes must have selected options only if they're applied to the product
+      // AND marked as required for customers
+      if (attr.isAppliedToProduct && attr.isRequired && 
+          (attr.attributeType === 'select' || attr.attributeType === 'multiselect') && 
           (!attr.selectedOptions || attr.selectedOptions.length === 0)) {
         errors[attr.attributeId] = `Please select at least one option for ${attr.displayName}`;
       }
@@ -792,7 +794,7 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        className="ml-2"
+                        className={`ml-2 ${attribute.isRequired && (!attribute.selectedOptions || attribute.selectedOptions.length === 0) ? 'border-amber-500 bg-amber-50 hover:bg-amber-100' : ''}`}
                         onClick={() => {
                           setCurrentAttributeId(attribute.attributeId);
                           setIsManagingOptions(true);
@@ -802,7 +804,13 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
                           }
                         }}
                       >
-                        <span className="text-xs">Manage Options</span>
+                        <span className="text-xs">
+                          {attribute.isRequired && (!attribute.selectedOptions || attribute.selectedOptions.length === 0) 
+                            ? 'Select Options (Required)' 
+                            : (attribute.selectedOptions && attribute.selectedOptions.length > 0) 
+                              ? `${attribute.selectedOptions.length} Options Selected`
+                              : 'Manage Options'}
+                        </span>
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-md">
