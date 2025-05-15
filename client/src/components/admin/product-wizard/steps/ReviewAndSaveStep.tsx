@@ -1,317 +1,422 @@
-import React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Loader2, CheckCircle, AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Loader2, Check, X, AlertTriangle, Save } from 'lucide-react';
-import { format } from 'date-fns';
-import { ProductDraft } from '../ProductWizard';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { formatCurrency } from '@/lib/utils';
+import type { ProductDraft } from '../ProductWizard';
 
 interface ReviewAndSaveStepProps {
   draft: ProductDraft;
-  onSave: (data: any) => void;
-  isLoading: boolean;
+  onSave: (data: Partial<ProductDraft>, advanceToNext?: boolean) => void;
+  isLoading?: boolean;
 }
 
-export const ReviewAndSaveStep: React.FC<ReviewAndSaveStepProps> = ({ draft, onSave, isLoading }) => {
+export const ReviewAndSaveStep: React.FC<ReviewAndSaveStepProps> = ({ 
+  draft, 
+  onSave, 
+  isLoading = false 
+}) => {
   const { toast } = useToast();
-  
-  // Get categories for displaying category name
-  const { data: categoriesData } = useQuery({
-    queryKey: ['/api/categories'],
+  const queryClient = useQueryClient();
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<{
+    step: string;
+    errors: string[];
+  }[]>([]);
+
+  // Fetch category name if available
+  const { data: categoryData } = useQuery({
+    queryKey: ['/api/categories', draft.categoryId],
     queryFn: async () => {
-      const response = await apiRequest('GET', '/api/categories');
+      if (!draft.categoryId) return { success: true, data: null };
+      const response = await apiRequest('GET', `/api/categories/${draft.categoryId}`);
       return response.json();
     },
+    enabled: !!draft.categoryId
   });
-  
-  // Get attributes for displaying attribute names
-  const { data: attributesData } = useQuery({
-    queryKey: ['/api/product-attributes'],
-    queryFn: async () => {
-      const response = await apiRequest('GET', '/api/product-attributes');
-      return response.json();
-    },
-  });
-  
-  // Check if all required steps are completed
-  const requiredSteps = ['basic-info', 'images'];
-  const incompleteSteps = requiredSteps.filter(step => !draft.completedSteps?.includes(step));
-  
-  // Get category name
-  const getCategoryName = (categoryId: number | null) => {
-    if (!categoryId) return 'None';
-    const category = categoriesData?.data?.find((cat: any) => cat.id === categoryId);
-    return category ? category.name : 'Unknown';
-  };
-  
-  // Get attribute name and value display
-  const getAttributeDisplay = (attributeId: number, value: string | string[] | null) => {
-    if (!attributesData?.data) return { name: 'Loading...', value: value?.toString() || 'None' };
-    
-    const attribute = attributesData.data.find((attr: any) => attr.id === attributeId);
-    if (!attribute) return { name: 'Unknown', value: value?.toString() || 'None' };
-    
-    // Format the value based on attribute type
-    let formattedValue: string;
-    if (Array.isArray(value)) {
-      formattedValue = value.join(', ');
-    } else if (value === null) {
-      formattedValue = 'None';
-    } else {
-      formattedValue = value;
+
+  // Validate the draft before publishing
+  const validateDraft = async () => {
+    try {
+      const response = await apiRequest('POST', `/api/product-drafts/${draft.id}/validate`, {});
+      const data = await response.json();
+      
+      if (data.success) {
+        setValidationErrors([]);
+        return true;
+      } else {
+        setValidationErrors(data.errors || []);
+        return false;
+      }
+    } catch (error) {
+      toast({
+        title: 'Validation Error',
+        description: 'Could not validate the product draft',
+        variant: 'destructive'
+      });
+      return false;
     }
-    
-    return { name: attribute.displayName || attribute.name, value: formattedValue };
   };
-  
-  // Handle the final save action
-  const handleSave = () => {
-    // The save action is the same as for other steps, just pass an empty object
-    // The actual publishing will be handled by the parent component
-    onSave({});
+
+  // Publish draft mutation
+  const publishMutation = useMutation({
+    mutationFn: async () => {
+      setIsPublishing(true);
+      
+      // First validate the draft
+      const isValid = await validateDraft();
+      if (!isValid) {
+        throw new Error('Draft validation failed');
+      }
+      
+      // If valid, proceed with publishing
+      const response = await apiRequest('POST', `/api/product-drafts/${draft.id}/publish`, {});
+      return response.json();
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        // Invalidate queries to refresh data
+        queryClient.invalidateQueries({ queryKey: ['/api/product-drafts'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/products'] });
+        
+        toast({
+          title: 'Product Published',
+          description: 'Your product has been published successfully',
+        });
+        
+        // Redirect to the product list page after successful publish
+        window.location.href = '/admin/products';
+      } else {
+        throw new Error(data.error?.message || 'Failed to publish product');
+      }
+    },
+    onError: (error) => {
+      toast({
+        title: 'Publishing Failed',
+        description: error instanceof Error ? error.message : 'Failed to publish product',
+        variant: 'destructive'
+      });
+    },
+    onSettled: () => {
+      setIsPublishing(false);
+    }
+  });
+
+  // Save as draft mutation
+  const saveDraftMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('PATCH', `/api/product-drafts/${draft.id}`, {
+        draftStatus: 'saved'
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        // Invalidate draft queries to refresh data
+        queryClient.invalidateQueries({ queryKey: ['/api/product-drafts'] });
+        
+        toast({
+          title: 'Draft Saved',
+          description: 'Your product draft has been saved',
+        });
+      } else {
+        throw new Error(data.error?.message || 'Failed to save draft');
+      }
+    },
+    onError: (error) => {
+      toast({
+        title: 'Saving Failed',
+        description: error instanceof Error ? error.message : 'Failed to save draft',
+        variant: 'destructive'
+      });
+    }
+  });
+
+  // Handle draft publishing
+  const handlePublish = async () => {
+    publishMutation.mutate();
+  };
+
+  // Handle saving as draft
+  const handleSaveAsDraft = async () => {
+    saveDraftMutation.mutate();
+  };
+
+  // Get the category name
+  const getCategoryName = () => {
+    if (draft.category) return draft.category.name;
+    if (categoryData?.success && categoryData.data) return categoryData.data.name;
+    return 'None';
+  };
+
+  // Format date function
+  const formatDate = (dateStr: string | Date | null) => {
+    if (!dateStr) return 'N/A';
+    const date = typeof dateStr === 'string' ? new Date(dateStr) : dateStr;
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
   };
 
   return (
-    <Card>
-      <CardContent className="p-6">
-        <div className="space-y-6">
-          {/* Validation summary */}
-          {incompleteSteps.length > 0 ? (
-            <div className="bg-amber-50 border border-amber-200 rounded-md p-4 mb-6">
-              <div className="flex items-start">
-                <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 mr-3" />
-                <div>
-                  <h3 className="text-amber-800 font-medium">Please complete the following steps:</h3>
-                  <ul className="mt-2 list-disc list-inside text-amber-700">
-                    {incompleteSteps.map(step => (
-                      <li key={step}>{
-                        step === 'basic-info' ? 'Basic Information' : 
-                        step === 'images' ? 'Product Images' : 
-                        step === 'additional-info' ? 'Additional Information' : 
-                        step
-                      }</li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="bg-green-50 border border-green-200 rounded-md p-4 mb-6">
-              <div className="flex items-center">
-                <Check className="h-5 w-5 text-green-600 mr-3" />
-                <p className="text-green-800 font-medium">All required steps are completed! Review the information below and submit.</p>
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Review Your Product</CardTitle>
+          <CardDescription>
+            Please review all product information before publishing
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Validation errors display */}
+          {validationErrors.length > 0 && (
+            <div className="bg-destructive/10 border border-destructive rounded-md p-4 mb-6">
+              <h3 className="text-destructive font-medium mb-2 flex items-center">
+                <AlertCircle className="h-5 w-5 mr-2" />
+                Please fix the following issues before publishing
+              </h3>
+              <div className="space-y-2">
+                {validationErrors.map((error, index) => (
+                  <div key={index} className="pl-4 border-l-2 border-destructive">
+                    <p className="font-medium">{error.step}</p>
+                    <ul className="list-disc list-inside pl-2 text-sm">
+                      {error.errors.map((err, i) => (
+                        <li key={i}>{err}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
               </div>
             </div>
           )}
-          
-          {/* Basic Information */}
-          <div>
-            <h3 className="text-lg font-medium mb-4">Basic Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm font-medium text-gray-500">Product Name</p>
-                <p className="text-base">{draft.name || 'Not specified'}</p>
-              </div>
-              
-              <div>
-                <p className="text-sm font-medium text-gray-500">Slug</p>
-                <p className="text-base">{draft.slug || 'Not specified'}</p>
-              </div>
-              
-              <div>
-                <p className="text-sm font-medium text-gray-500">Category</p>
-                <p className="text-base">{getCategoryName(draft.categoryId)}</p>
-              </div>
-              
-              <div>
-                <p className="text-sm font-medium text-gray-500">Stock Level</p>
-                <p className="text-base">{draft.stockLevel !== null ? draft.stockLevel : 'Not specified'}</p>
-              </div>
-              
-              <div>
-                <p className="text-sm font-medium text-gray-500">Regular Price</p>
-                <p className="text-base">
-                  {draft.regularPrice !== null ? `$${draft.regularPrice.toFixed(2)}` : 'Not specified'}
-                </p>
-              </div>
-              
-              <div>
-                <p className="text-sm font-medium text-gray-500">Sale Price</p>
-                <p className="text-base">
-                  {draft.salePrice !== null ? `$${draft.salePrice.toFixed(2)}` : 'Not applicable'}
-                </p>
-              </div>
-              
-              <div>
-                <p className="text-sm font-medium text-gray-500">Status</p>
-                <Badge className={draft.isActive ? "bg-green-100 text-green-800" : ""}>
-                  {draft.isActive ? 'Active' : 'Inactive'}
-                </Badge>
-              </div>
-              
-              <div>
-                <p className="text-sm font-medium text-gray-500">Featured</p>
-                <Badge className={draft.isFeatured ? "bg-green-100 text-green-800" : ""}>
-                  {draft.isFeatured ? 'Yes' : 'No'}
-                </Badge>
-              </div>
-            </div>
-            
-            <div className="mt-4">
-              <p className="text-sm font-medium text-gray-500">Description</p>
-              <p className="text-base whitespace-pre-wrap">{draft.description || 'No description provided'}</p>
-            </div>
-          </div>
-          
-          <Separator />
-          
-          {/* Images */}
-          <div>
-            <h3 className="text-lg font-medium mb-4">Product Images</h3>
-            {draft.imageUrls && draft.imageUrls.length > 0 ? (
-              <div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                  {draft.imageUrls.map((url, index) => (
-                    <div 
-                      key={index} 
-                      className={`relative border rounded-md overflow-hidden ${
-                        index === draft.mainImageIndex ? 'border-primary ring-2 ring-primary' : 'border-gray-200'
-                      }`}
-                    >
-                      <img 
-                        src={url} 
-                        alt={`Product image ${index + 1}`} 
-                        className="w-full h-24 object-cover"
-                      />
-                      {index === draft.mainImageIndex && (
-                        <div className="absolute top-2 left-2 bg-primary text-white px-2 py-0.5 rounded text-xs">
-                          Main
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-                <p className="text-sm text-gray-500 mt-2">Total images: {draft.imageUrls.length}</p>
-              </div>
-            ) : (
-              <p className="text-yellow-600">No images have been added</p>
-            )}
-          </div>
-          
-          <Separator />
-          
-          {/* Additional Information */}
-          <div>
-            <h3 className="text-lg font-medium mb-4">Additional Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm font-medium text-gray-500">Dimensions</p>
-                <p className="text-base">{draft.dimensions || 'Not specified'}</p>
-              </div>
-              
-              <div>
-                <p className="text-sm font-medium text-gray-500">Weight</p>
-                <p className="text-base">{draft.weight || 'Not specified'}</p>
-              </div>
-              
-              {draft.discountLabel && (
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Discount Label</p>
-                  <p className="text-base">{draft.discountLabel}</p>
-                </div>
-              )}
-              
-              {draft.specialSaleText && (
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Special Sale</p>
-                  <p className="text-base">{draft.specialSaleText}</p>
-                </div>
-              )}
-              
-              {draft.specialSaleStart && (
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Sale Start Date</p>
-                  <p className="text-base">{format(new Date(draft.specialSaleStart), 'PPP')}</p>
-                </div>
-              )}
-              
-              {draft.specialSaleEnd && (
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Sale End Date</p>
-                  <p className="text-base">{format(new Date(draft.specialSaleEnd), 'PPP')}</p>
-                </div>
-              )}
-              
-              {draft.isFlashDeal && (
-                <>
+
+          {/* Basic Info Section */}
+          <Accordion type="single" collapsible defaultValue="basic-info" className="w-full">
+            <AccordionItem value="basic-info">
+              <AccordionTrigger className="font-medium">
+                Basic Information
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-2">
                   <div>
-                    <p className="text-sm font-medium text-gray-500">Flash Deal</p>
-                    <Badge className="bg-yellow-100 text-yellow-800">Yes</Badge>
+                    <Label className="text-muted-foreground">Product Name</Label>
+                    <p className="font-medium">{draft.name}</p>
                   </div>
-                  
-                  {draft.flashDealEnd && (
+                  <div>
+                    <Label className="text-muted-foreground">Product Slug</Label>
+                    <p className="font-medium">{draft.slug}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Category</Label>
+                    <p className="font-medium">{getCategoryName()}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Status</Label>
+                    <p className="font-medium">
+                      {draft.isActive ? (
+                        <Badge variant="default">Active</Badge>
+                      ) : (
+                        <Badge variant="outline">Inactive</Badge>
+                      )}
+                      {draft.isFeatured && (
+                        <Badge variant="secondary" className="ml-2">Featured</Badge>
+                      )}
+                    </p>
+                  </div>
+                  <div className="col-span-1 md:col-span-2">
+                    <Label className="text-muted-foreground">Description</Label>
+                    <p className="text-sm whitespace-pre-wrap">{draft.description || 'No description provided'}</p>
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+            
+            {/* Pricing Section */}
+            <AccordionItem value="pricing">
+              <AccordionTrigger className="font-medium">
+                Pricing Information
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-2">
+                  <div>
+                    <Label className="text-muted-foreground">Regular Price</Label>
+                    <p className="font-medium">{formatCurrency(draft.regularPrice || 0)}</p>
+                  </div>
+                  {draft.onSale && (
                     <div>
-                      <p className="text-sm font-medium text-gray-500">Flash Deal End Date</p>
-                      <p className="text-base">{format(new Date(draft.flashDealEnd), 'PPP')}</p>
+                      <Label className="text-muted-foreground">Sale Price</Label>
+                      <p className="font-medium text-green-600">{formatCurrency(draft.salePrice || 0)}</p>
                     </div>
                   )}
-                </>
-              )}
-            </div>
-          </div>
-          
-          <Separator />
-          
-          {/* Attributes */}
-          {draft.attributes && draft.attributes.length > 0 && (
-            <>
-              <div>
-                <h3 className="text-lg font-medium mb-4">Product Attributes</h3>
-                <div className="space-y-3">
-                  {draft.attributes.map((attr, index) => {
-                    const { name, value } = getAttributeDisplay(attr.attributeId, attr.value);
-                    return (
-                      <div key={index} className="flex items-start py-2 border-b border-gray-100">
-                        <div className="w-1/3 font-medium">{name}</div>
-                        <div className="w-2/3">{value}</div>
-                      </div>
-                    );
-                  })}
+                  <div>
+                    <Label className="text-muted-foreground">Cost Price</Label>
+                    <p className="font-medium">{formatCurrency(draft.costPrice || 0)}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">On Sale</Label>
+                    <p className="font-medium">{draft.onSale ? 'Yes' : 'No'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Stock Level</Label>
+                    <p className="font-medium">{draft.stockLevel !== null ? draft.stockLevel : 'Not tracked'}</p>
+                  </div>
                 </div>
-              </div>
-              <Separator />
-            </>
-          )}
-          
-          {/* Summary & Save */}
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="text-lg font-medium mb-2">Ready to Publish?</h3>
-            <p className="text-gray-600 mb-4">
-              {draft.originalProductId 
-                ? 'This will update the existing product with the information above.' 
-                : 'This will create a new product with the information above.'}
-            </p>
+              </AccordionContent>
+            </AccordionItem>
             
-            <div className="flex justify-end">
-              <Button
-                type="button"
-                onClick={handleSave}
-                disabled={isLoading || incompleteSteps.length > 0}
-                size="lg"
-              >
-                {isLoading && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
-                <Save className="mr-2 h-5 w-5" />
-                {draft.originalProductId ? 'Update Product' : 'Create Product'}
-              </Button>
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+            {/* Images Section */}
+            <AccordionItem value="images">
+              <AccordionTrigger className="font-medium">
+                Images ({draft.imageUrls.length})
+              </AccordionTrigger>
+              <AccordionContent>
+                {draft.imageUrls.length > 0 ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 p-2">
+                    {draft.imageUrls.map((url, index) => (
+                      <div key={index} className="relative rounded-md overflow-hidden aspect-square border">
+                        <img 
+                          src={url} 
+                          alt={`Product image ${index + 1}`} 
+                          className="object-cover w-full h-full"
+                        />
+                        {index === draft.mainImageIndex && (
+                          <div className="absolute top-2 right-2">
+                            <Badge className="bg-primary">Main</Badge>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground italic p-2">No images added</p>
+                )}
+              </AccordionContent>
+            </AccordionItem>
+            
+            {/* Attributes Section */}
+            <AccordionItem value="attributes">
+              <AccordionTrigger className="font-medium">
+                Attributes ({draft.attributes.length})
+              </AccordionTrigger>
+              <AccordionContent>
+                {draft.attributes.length > 0 ? (
+                  <div className="space-y-2 p-2">
+                    {draft.attributes.map((attr, index) => (
+                      <div key={index} className="flex flex-col sm:flex-row sm:items-center justify-between border-b pb-2">
+                        <div className="font-medium">{attr.attributeId}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {Array.isArray(attr.value) 
+                            ? attr.value.join(', ') 
+                            : attr.value !== null 
+                              ? String(attr.value) 
+                              : 'Not set'}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground italic p-2">No attributes added</p>
+                )}
+              </AccordionContent>
+            </AccordionItem>
+            
+            {/* SEO Section */}
+            <AccordionItem value="seo">
+              <AccordionTrigger className="font-medium">
+                SEO Information
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4 p-2">
+                  <div>
+                    <Label className="text-muted-foreground">Meta Title</Label>
+                    <p className="font-medium">{draft.metaTitle || draft.name || 'Not set'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Meta Description</Label>
+                    <p className="text-sm">{draft.metaDescription || 'Not set'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Meta Keywords</Label>
+                    <p className="text-sm">{draft.metaKeywords || 'Not set'}</p>
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+            
+            {/* Sales & Promotions Section */}
+            <AccordionItem value="promotions">
+              <AccordionTrigger className="font-medium">
+                Sales & Promotions
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-2">
+                  {draft.discountLabel && (
+                    <div>
+                      <Label className="text-muted-foreground">Discount Label</Label>
+                      <p className="font-medium">{draft.discountLabel}</p>
+                    </div>
+                  )}
+                  
+                  {draft.specialSaleText && (
+                    <div>
+                      <Label className="text-muted-foreground">Special Sale Text</Label>
+                      <p className="font-medium">{draft.specialSaleText}</p>
+                    </div>
+                  )}
+                  
+                  {draft.specialSaleStart && (
+                    <div>
+                      <Label className="text-muted-foreground">Special Sale Period</Label>
+                      <p className="font-medium">
+                        {formatDate(draft.specialSaleStart)} to {formatDate(draft.specialSaleEnd)}
+                      </p>
+                    </div>
+                  )}
+                  
+                  {draft.isFlashDeal && (
+                    <div>
+                      <Label className="text-muted-foreground">Flash Deal Ends</Label>
+                      <p className="font-medium">{formatDate(draft.flashDealEnd)}</p>
+                    </div>
+                  )}
+                  
+                  {!draft.discountLabel && !draft.specialSaleText && !draft.specialSaleStart && !draft.isFlashDeal && (
+                    <p className="text-muted-foreground italic">No promotions configured</p>
+                  )}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </CardContent>
+        <CardFooter className="flex flex-col sm:flex-row gap-3 justify-end border-t pt-6">
+          <Button
+            variant="outline"
+            onClick={handleSaveAsDraft}
+            disabled={saveDraftMutation.isPending}
+          >
+            {saveDraftMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Save as Draft
+          </Button>
+          <Button
+            onClick={handlePublish}
+            disabled={isPublishing || publishMutation.isPending}
+            className="gap-2"
+          >
+            {(isPublishing || publishMutation.isPending) && <Loader2 className="h-4 w-4 animate-spin" />}
+            Publish Product
+          </Button>
+        </CardFooter>
+      </Card>
+    </div>
   );
 };
 

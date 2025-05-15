@@ -1,74 +1,28 @@
 import React, { useState } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useToast } from '@/hooks/use-toast';
-import { apiRequest, queryClient } from '@/lib/queryClient';
-
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
-import { Loader2, Wand2, Star, StarHalf } from 'lucide-react';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Loader2, Wand2, Save, RefreshCw } from 'lucide-react';
+import type { ProductDraft } from '../ProductWizard';
 
-import { ProductDraft } from '../ProductWizard';
-
-// Define validation schema
-const seoFormSchema = z.object({
-  metaTitle: z.string().max(65, 'Meta title should be 65 characters or less').optional().nullable(),
-  metaDescription: z.string().max(160, 'Meta description should be 160 characters or less').optional().nullable(),
-  metaKeywords: z.string().optional().nullable(),
-  canonicalUrl: z.string().url('Invalid URL format').optional().nullable(),
+// Define SEO form schema
+const seoSchema = z.object({
+  metaTitle: z.string().max(70, 'Meta title should be less than 70 characters').nullable().optional(),
+  metaDescription: z.string().max(160, 'Meta description should be less than 160 characters').nullable().optional(),
+  metaKeywords: z.string().max(255, 'Meta keywords should be less than 255 characters').nullable().optional(),
+  canonicalUrl: z.string().url('Invalid URL format').nullable().optional()
 });
 
-type SeoFormValues = z.infer<typeof seoFormSchema>;
-
-// Define SEO suggestion type
-interface SeoSuggestion {
-  title: string;
-  metaDescription: string;
-  keywords: string[];
-  score: number;
-  tips: string[];
-}
+type SEOFormValues = z.infer<typeof seoSchema>;
 
 interface SEOStepProps {
   draft: ProductDraft;
@@ -76,255 +30,178 @@ interface SEOStepProps {
   isLoading?: boolean;
 }
 
-export const SEOStep: React.FC<SEOStepProps> = ({ draft, onSave, isLoading = false }) => {
+export const SEOStep: React.FC<SEOStepProps> = ({ 
+  draft, 
+  onSave, 
+  isLoading = false 
+}) => {
   const { toast } = useToast();
-  const [isGeneratingSEO, setIsGeneratingSEO] = useState(false);
-  const [showSEODialog, setShowSEODialog] = useState(false);
-  const [seoError, setSeoError] = useState<string | null>(null);
-  const [seoSuggestions, setSeoSuggestions] = useState<SeoSuggestion[]>([]);
-
-  // Initialize form with draft values
-  const form = useForm<SeoFormValues>({
-    resolver: zodResolver(seoFormSchema),
+  const [saving, setSaving] = useState(false);
+  
+  // AI suggestion states
+  const [isGeneratingSuggestions, setIsGeneratingSuggestions] = useState(false);
+  const [showAiDialog, setShowAiDialog] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState<{
+    title: string;
+    description: string;
+    keywords: string;
+  } | null>(null);
+  const [aiError, setAiError] = useState<string | null>(null);
+  
+  // Get category info for AI context
+  const { data: categoryData } = useQuery({
+    queryKey: ['/api/categories', draft.categoryId],
+    queryFn: async () => {
+      if (!draft.categoryId) return { success: true, data: null };
+      const response = await apiRequest('GET', `/api/categories/${draft.categoryId}`);
+      return response.json();
+    },
+    enabled: !!draft.categoryId
+  });
+  
+  // Setup form
+  const form = useForm<SEOFormValues>({
+    resolver: zodResolver(seoSchema),
     defaultValues: {
-      metaTitle: draft.metaTitle || '',
+      metaTitle: draft.metaTitle || draft.name || '',
       metaDescription: draft.metaDescription || '',
       metaKeywords: draft.metaKeywords || '',
-      canonicalUrl: draft.canonicalUrl || '',
-    },
+      canonicalUrl: draft.canonicalUrl || ''
+    }
   });
-
-  // Handle form submission
-  const onSubmit = (data: SeoFormValues) => {
-    onSave(data);
-  };
-
-  // Handle 'Save & Next' button
-  const handleSaveAndNext = () => {
-    form.handleSubmit((data) => {
-      onSave(data, true);
-    })();
-  };
-
+  
   // Generate SEO suggestions using AI
   const generateSEOSuggestions = async () => {
+    setIsGeneratingSuggestions(true);
+    setAiError(null);
+    
     try {
-      setIsGeneratingSEO(true);
-      setSeoError(null);
-
-      // Get current form and draft values
-      const formValues = form.getValues();
-      const productName = draft.name;
-      const productDescription = draft.description || '';
-
-      // Get category name if available
-      let categoryName = '';
-      if (draft.categoryId && draft.category?.name) {
-        categoryName = draft.category.name;
-      }
-
-      // Format current keywords
-      let currentKeywords: string[] = [];
-      if (formValues.metaKeywords) {
-        currentKeywords = formValues.metaKeywords.split(',').map(k => k.trim());
-      }
-
-      // API request to generate SEO suggestions
-      console.log('Generating SEO suggestions for:', {
-        productName,
-        productDescription,
+      const categoryName = categoryData?.data?.name || 'Unknown';
+      
+      const response = await apiRequest('POST', '/api/ai/generate-seo', {
+        productName: draft.name,
+        productDescription: draft.description || '',
         categoryName,
-        currentTitle: formValues.metaTitle,
-        currentDescription: formValues.metaDescription,
-        currentKeywords
+        attributes: draft.attributes
       });
       
-      // Make actual API call
-      const response = await apiRequest('POST', '/api/ai/optimize-seo', {
-        productName,
-        productDescription,
-        categoryName,
-        currentTitle: formValues.metaTitle,
-        currentDescription: formValues.metaDescription,
-        currentKeywords
-      });
+      const data = await response.json();
       
-      const responseData = await response.json();
-      
-      if (responseData.success && responseData.data?.suggestions) {
-        setSeoSuggestions(responseData.data.suggestions);
-        setShowSEODialog(true);
+      if (data.success && data.data) {
+        setAiSuggestions(data.data);
+        setShowAiDialog(true);
       } else {
-        throw new Error('Failed to generate SEO suggestions');
+        throw new Error(data.error?.message || 'Failed to generate SEO suggestions');
       }
     } catch (error) {
-      console.error('Error generating SEO suggestions:', error);
-      const errorMessage = error instanceof Error
-        ? error.message
-        : 'Something went wrong. Please try again.';
-
-      setSeoError(errorMessage);
+      setAiError(error instanceof Error ? error.message : 'Failed to generate SEO suggestions');
       toast({
-        title: 'AI Generation Failed',
-        description: errorMessage,
+        title: 'SEO Generation Failed',
+        description: error instanceof Error ? error.message : 'Failed to generate SEO suggestions',
         variant: 'destructive'
       });
     } finally {
-      setIsGeneratingSEO(false);
+      setIsGeneratingSuggestions(false);
     }
   };
-
-  // Apply selected SEO suggestion
-  const applySEOSuggestion = (suggestion: SeoSuggestion) => {
-    form.setValue('metaTitle', suggestion.title);
-    form.setValue('metaDescription', suggestion.metaDescription);
-    form.setValue('metaKeywords', suggestion.keywords.join(', '));
-
-    setShowSEODialog(false);
-
-    toast({
-      title: 'SEO Data Applied',
-      description: 'The AI-generated SEO data has been applied.'
-    });
-  };
-
-  // Render SEO score stars
-  const renderSeoScore = (score: number) => {
-    // Convert score from 0-1 to 0-5 stars
-    const normalizedScore = Math.min(Math.max(score * 5, 0), 5);
-    const fullStars = Math.floor(normalizedScore);
-    const hasHalfStar = normalizedScore - fullStars >= 0.5;
+  
+  // Apply AI suggestion
+  const applySEOSuggestion = () => {
+    if (!aiSuggestions) return;
     
-    return (
-      <div className="flex">
-        {[...Array(fullStars)].map((_, i) => (
-          <Star key={`full-${i}`} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-        ))}
-        {hasHalfStar && <StarHalf className="w-4 h-4 fill-yellow-400 text-yellow-400" />}
-        {[...Array(5 - fullStars - (hasHalfStar ? 1 : 0))].map((_, i) => (
-          <Star key={`empty-${i}`} className="w-4 h-4 text-gray-300" />
-        ))}
-      </div>
-    );
+    form.setValue('metaTitle', aiSuggestions.title);
+    form.setValue('metaDescription', aiSuggestions.description);
+    form.setValue('metaKeywords', aiSuggestions.keywords);
+    
+    setShowAiDialog(false);
   };
-
+  
+  // Handle form submission
+  const onSubmit = async (values: SEOFormValues) => {
+    setSaving(true);
+    try {
+      await onSave(values, true);
+    } finally {
+      setSaving(false);
+    }
+  };
+  
   return (
     <>
-      {/* SEO Suggestions Dialog */}
-      <Dialog open={showSEODialog} onOpenChange={setShowSEODialog}>
+      {/* AI SEO Suggestions Dialog */}
+      <Dialog open={showAiDialog} onOpenChange={setShowAiDialog}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>AI-Generated SEO Suggestions</DialogTitle>
             <DialogDescription>
-              Choose one of the suggestions below or close to keep your current SEO data.
+              Review the AI generated SEO content and apply it if suitable
             </DialogDescription>
           </DialogHeader>
-
-          <div className="mt-4 max-h-[400px] overflow-y-auto space-y-4">
-            {seoSuggestions.map((suggestion, index) => (
-              <Card key={index} className="shadow-sm hover:shadow transition-shadow">
-                <CardHeader className="pb-2">
-                  <div className="flex justify-between items-center">
-                    <CardTitle className="text-base">Option {index + 1}</CardTitle>
-                    <div className="flex items-center">
-                      <span className="text-xs text-muted-foreground mr-1">Score:</span>
-                      {renderSeoScore(suggestion.score)}
-                    </div>
-                  </div>
-                  <CardDescription className="text-sm line-clamp-1">{suggestion.title}</CardDescription>
-                </CardHeader>
-                <CardContent className="py-2">
-                  <div className="space-y-3">
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Meta Title:</Label>
-                      <p className="text-sm">{suggestion.title}</p>
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Meta Description:</Label>
-                      <p className="text-sm">{suggestion.metaDescription}</p>
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Keywords:</Label>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {suggestion.keywords.map((keyword, i) => (
-                          <Badge key={i} variant="outline" className="text-xs">{keyword}</Badge>
-                        ))}
-                      </div>
-                    </div>
-                    {suggestion.tips.length > 0 && (
-                      <Accordion type="single" collapsible className="w-full">
-                        <AccordionItem value="tips">
-                          <AccordionTrigger className="text-xs py-1">
-                            Improvement Tips
-                          </AccordionTrigger>
-                          <AccordionContent>
-                            <ul className="text-xs list-disc pl-4 space-y-1">
-                              {suggestion.tips.map((tip, i) => (
-                                <li key={i}>{tip}</li>
-                              ))}
-                            </ul>
-                          </AccordionContent>
-                        </AccordionItem>
-                      </Accordion>
-                    )}
-                  </div>
-                </CardContent>
-                <CardFooter className="pt-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="ml-auto"
-                    onClick={() => applySEOSuggestion(suggestion)}
-                  >
-                    Use This SEO Data
-                  </Button>
-                </CardFooter>
-              </Card>
-            ))}
-          </div>
-
+          
+          {aiSuggestions && (
+            <div className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium">Meta Title</h3>
+                <p className="text-sm p-3 bg-secondary rounded-md">{aiSuggestions.title}</p>
+              </div>
+              
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium">Meta Description</h3>
+                <p className="text-sm p-3 bg-secondary rounded-md">{aiSuggestions.description}</p>
+              </div>
+              
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium">Meta Keywords</h3>
+                <p className="text-sm p-3 bg-secondary rounded-md">{aiSuggestions.keywords}</p>
+              </div>
+            </div>
+          )}
+          
           <DialogFooter className="flex items-center justify-between mt-4">
             <div>
-              {seoError && (
-                <p className="text-sm text-destructive">{seoError}</p>
+              {aiError && (
+                <p className="text-sm text-destructive">{aiError}</p>
               )}
             </div>
-            <Button variant="secondary" onClick={() => setShowSEODialog(false)}>Cancel</Button>
+            <div className="flex gap-2">
+              <Button variant="secondary" onClick={() => setShowAiDialog(false)}>Cancel</Button>
+              <Button onClick={applySEOSuggestion}>Apply Suggestions</Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
+    
       <Card>
-        <CardContent className="p-4 sm:p-6">
-          <div className="flex justify-between items-center mb-6">
+        <CardHeader>
+          <div className="flex justify-between items-center">
             <div>
-              <h3 className="text-lg font-semibold">Search Engine Optimization</h3>
-              <p className="text-sm text-muted-foreground">
-                Optimize your product for search engines to improve visibility
-              </p>
+              <CardTitle>Search Engine Optimization</CardTitle>
+              <CardDescription>
+                Optimize your product for search engines
+              </CardDescription>
             </div>
             <Button
-              type="button"
               variant="outline"
               size="sm"
-              className="h-9 gap-1"
+              className="h-8 gap-1"
               onClick={generateSEOSuggestions}
-              disabled={isGeneratingSEO || !draft.name}
+              disabled={isGeneratingSuggestions || !draft.name}
             >
-              {isGeneratingSEO ? (
+              {isGeneratingSuggestions ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-3 w-3 animate-spin" />
                   <span>Generating...</span>
                 </>
               ) : (
                 <>
-                  <Wand2 className="h-4 w-4" />
-                  <span>AI Generate SEO</span>
+                  <Wand2 className="h-3 w-3" />
+                  <span>AI Generate</span>
                 </>
               )}
             </Button>
           </div>
-
+        </CardHeader>
+        <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6">
               {/* Meta Title */}
@@ -333,69 +210,45 @@ export const SEOStep: React.FC<SEOStepProps> = ({ draft, onSave, isLoading = fal
                 name="metaTitle"
                 render={({ field }) => (
                   <FormItem>
-                    <div className="flex justify-between items-center">
-                      <FormLabel>Meta Title</FormLabel>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger className="text-xs text-muted-foreground">
-                            {field.value?.length || 0}/65
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Recommended: 50-65 characters</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
+                    <FormLabel>Meta Title</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
-                        placeholder="e.g., Premium Wireless Headphones with Active Noise Cancellation"
+                        placeholder="Enter meta title"
                         value={field.value || ''}
                       />
                     </FormControl>
+                    <FormDescription>
+                      {field.value ? field.value.length : 0}/70 characters recommended
+                    </FormDescription>
                     <FormMessage />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Appears as the title in search engine results. Include your primary keyword.
-                    </p>
                   </FormItem>
                 )}
               />
-
+              
               {/* Meta Description */}
               <FormField
                 control={form.control}
                 name="metaDescription"
                 render={({ field }) => (
                   <FormItem>
-                    <div className="flex justify-between items-center">
-                      <FormLabel>Meta Description</FormLabel>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger className="text-xs text-muted-foreground">
-                            {field.value?.length || 0}/160
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Recommended: 120-160 characters</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
+                    <FormLabel>Meta Description</FormLabel>
                     <FormControl>
                       <Textarea
                         {...field}
-                        placeholder="Brief, compelling description of your product that encourages clicks from search results"
-                        className="min-h-[80px]"
+                        placeholder="Enter meta description"
                         value={field.value || ''}
+                        className="min-h-[80px]"
                       />
                     </FormControl>
+                    <FormDescription>
+                      {field.value ? field.value.length : 0}/160 characters recommended
+                    </FormDescription>
                     <FormMessage />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      This appears below the title in search results. Include key benefits and a call to action.
-                    </p>
                   </FormItem>
                 )}
               />
-
+              
               {/* Meta Keywords */}
               <FormField
                 control={form.control}
@@ -406,18 +259,18 @@ export const SEOStep: React.FC<SEOStepProps> = ({ draft, onSave, isLoading = fal
                     <FormControl>
                       <Input
                         {...field}
-                        placeholder="e.g., wireless headphones, noise cancellation, premium audio"
+                        placeholder="Enter keywords separated by commas"
                         value={field.value || ''}
                       />
                     </FormControl>
+                    <FormDescription>
+                      Add relevant keywords separated by commas
+                    </FormDescription>
                     <FormMessage />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Comma-separated list of keywords. Less important for SEO now, but still useful for internal search.
-                    </p>
                   </FormItem>
                 )}
               />
-
+              
               {/* Canonical URL */}
               <FormField
                 control={form.control}
@@ -428,34 +281,26 @@ export const SEOStep: React.FC<SEOStepProps> = ({ draft, onSave, isLoading = fal
                     <FormControl>
                       <Input
                         {...field}
-                        placeholder="https://yourdomain.com/products/product-name"
+                        placeholder="Enter canonical URL"
                         value={field.value || ''}
                       />
                     </FormControl>
+                    <FormDescription>
+                      Use this if the product appears on multiple URLs
+                    </FormDescription>
                     <FormMessage />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      If this product appears on multiple URLs, specify the preferred one to prevent duplicate content issues.
-                    </p>
                   </FormItem>
                 )}
               />
-
-              <div className="flex justify-end pt-4 space-x-2">
-                <Button
-                  type="submit"
-                  disabled={isLoading}
+              
+              <div className="flex justify-end pt-2">
+                <Button 
+                  type="submit" 
+                  disabled={isLoading || saving}
+                  className="gap-2"
                 >
-                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Save
-                </Button>
-                <Button
-                  type="button"
-                  onClick={handleSaveAndNext}
-                  disabled={isLoading}
-                  variant="default"
-                >
-                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Save & Next
+                  {(isLoading || saving) && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Save & Continue
                 </Button>
               </div>
             </form>
