@@ -5738,12 +5738,12 @@ export class DatabaseStorage implements IStorage {
         throw new Error(`Product draft with ID ${id} not found`);
       }
       
-      // Prepare the update data - Format date as text string in SAST timezone format
+      // Prepare the update data - Format date as text string in ISO format
       // Using the proper string format (YYYY-MM-DDTHH:mm:ss.sssZ) for consistency
       const now = new Date().toISOString();
       const updateData: Partial<ProductDraft> = {
         draftStatus: status,
-        lastModified: now
+        lastModified: now // Storing as a string, not a Date object
       };
       
       // Add additional information based on status
@@ -5768,17 +5768,28 @@ export class DatabaseStorage implements IStorage {
         // Process existing history to ensure all timestamps are strings
         let currentHistory = [];
         if (draft.changeHistory) {
-          currentHistory = (draft.changeHistory as any[]).map(entry => {
-            // Make sure all existing timestamps are strings
-            return {
-              ...entry,
-              timestamp: typeof entry.timestamp === 'string' 
-                ? entry.timestamp 
-                : (entry.timestamp instanceof Date 
-                    ? entry.timestamp.toISOString() 
-                    : new Date().toISOString())
-            };
-          });
+          // Handle different formats of changeHistory
+          if (Array.isArray(draft.changeHistory)) {
+            currentHistory = (draft.changeHistory as any[]).map(entry => {
+              // Make sure all existing timestamps are strings
+              return {
+                ...entry,
+                timestamp: typeof entry.timestamp === 'string' 
+                  ? entry.timestamp 
+                  : (entry.timestamp instanceof Date 
+                      ? entry.timestamp.toISOString() 
+                      : new Date().toISOString())
+              };
+            });
+          } else {
+            // If changeHistory is not an array (could be object or null), 
+            // initialize to empty array
+            logger.warn('Change history is not an array', {
+              type: typeof draft.changeHistory,
+              changeHistory: draft.changeHistory
+            });
+            currentHistory = [];
+          }
         }
         
         // Add new entry to history
@@ -5804,6 +5815,17 @@ export class DatabaseStorage implements IStorage {
       
       // Update the database record
       try {
+        // Extra validation to ensure all data is in the correct format
+        if (updateData.changeHistory) {
+          // Ensure changeHistory is always a proper array of objects with string timestamps
+          updateData.changeHistory = JSON.parse(JSON.stringify(updateData.changeHistory));
+          logger.debug('Change history sanitized', { 
+            changeHistoryType: typeof updateData.changeHistory,
+            isArray: Array.isArray(updateData.changeHistory)
+          });
+        }
+        
+        // Perform the database update
         const [updatedDraft] = await db
           .update(productDrafts)
           .set(updateData)
@@ -5814,6 +5836,12 @@ export class DatabaseStorage implements IStorage {
           throw new Error(`Failed to update status for draft ${id}`);
         }
         
+        logger.debug('Draft successfully updated', {
+          id: updatedDraft.id,
+          newStatus: updatedDraft.draftStatus,
+          lastModified: updatedDraft.lastModified
+        });
+        
         return updatedDraft;
       } catch (dbError) {
         // More detailed error for database operations
@@ -5822,7 +5850,14 @@ export class DatabaseStorage implements IStorage {
           id, 
           status,
           errorName: dbError.name,
-          errorMessage: dbError.message
+          errorMessage: dbError.message,
+          errorStack: dbError.stack,
+          updateData: {
+            draftStatus: updateData.draftStatus,
+            lastModifiedType: typeof updateData.lastModified,
+            changeHistoryType: updateData.changeHistory ? typeof updateData.changeHistory : 'undefined',
+            changeHistoryIsArray: updateData.changeHistory ? Array.isArray(updateData.changeHistory) : false
+          }
         });
         throw dbError;
       }
