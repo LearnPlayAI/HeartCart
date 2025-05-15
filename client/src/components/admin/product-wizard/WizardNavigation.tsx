@@ -15,7 +15,8 @@ import {
   ChevronLeftIcon, 
   ChevronRightIcon, 
   AlertCircleIcon, 
-  LoaderIcon
+  LoaderIcon,
+  TagIcon
 } from 'lucide-react';
 
 // Possible step statuses
@@ -41,6 +42,7 @@ export function WizardNavigation({ onComplete }: WizardNavigationProps) {
     { id: 'basic-info', label: 'Basic Info' },
     { id: 'images', label: 'Images' },
     { id: 'additional-info', label: 'Additional Info' },
+    { id: 'attributes', label: 'Attributes' },
     { id: 'seo', label: 'SEO' },
     { id: 'sales-promotions', label: 'Sales & Promotions' },
     { id: 'review', label: 'Review & Save' }
