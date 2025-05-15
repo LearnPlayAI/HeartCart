@@ -4873,6 +4873,27 @@ export class DatabaseStorage implements IStorage {
       wizardProgress[step] = true;
       updateData.wizardProgress = wizardProgress;
       
+      // Update completed steps array if not already included
+      let completedSteps = existingDraft.completedSteps || [];
+      if (!completedSteps.includes(step)) {
+        completedSteps = [...completedSteps, step];
+        updateData.completedSteps = completedSteps;
+      }
+      
+      // Track changes for version history
+      const changeHistory = existingDraft.changeHistory || [];
+      const changeRecord = {
+        timestamp: new Date(),
+        userId: existingDraft.createdBy,
+        step: step,
+        fields: Object.keys(data),
+        notes: `Updated ${step} step`
+      };
+      updateData.changeHistory = [...changeHistory, changeRecord];
+      
+      // Increment version
+      updateData.version = (existingDraft.version || 1) + 1;
+      
       // Update specific fields based on the step
       switch(step) {
         case 'basic-info':
@@ -4888,7 +4909,8 @@ export class DatabaseStorage implements IStorage {
             isFeatured: data.isFeatured !== undefined ? data.isFeatured : existingDraft.isFeatured,
             taxable: data.taxable !== undefined ? data.taxable : existingDraft.taxable,
             taxClass: data.taxClass || existingDraft.taxClass,
-            supplierId: data.supplierId
+            supplierId: data.supplierId,
+            catalogId: data.catalogId
           };
           break;
           
@@ -4905,9 +4927,28 @@ export class DatabaseStorage implements IStorage {
             stockLevel: data.stockLevel !== undefined ? data.stockLevel : existingDraft.stockLevel,
             lowStockThreshold: data.lowStockThreshold !== undefined ? data.lowStockThreshold : existingDraft.lowStockThreshold,
             backorderEnabled: data.backorderEnabled !== undefined ? data.backorderEnabled : existingDraft.backorderEnabled,
+            freeShipping: data.freeShipping !== undefined ? data.freeShipping : existingDraft.freeShipping,
+            shippingClass: data.shippingClass || existingDraft.shippingClass
+          };
+          break;
+          
+        case 'attributes':
+          // For the new attributes step, specifically handling attributesData
+          updateData = {
+            ...updateData,
+            attributes: data.attributes || existingDraft.attributes,
+            attributesData: data.attributesData || existingDraft.attributesData
+          };
+          break;
+          
+        case 'seo':
+          updateData = {
+            ...updateData,
             metaTitle: data.metaTitle,
             metaDescription: data.metaDescription,
-            metaKeywords: data.metaKeywords
+            metaKeywords: data.metaKeywords,
+            canonicalUrl: data.canonicalUrl,
+            hasAISeo: data.hasAISeo !== undefined ? data.hasAISeo : existingDraft.hasAISeo
           };
           break;
           
@@ -4919,12 +4960,23 @@ export class DatabaseStorage implements IStorage {
             salePrice: data.salePrice !== undefined ? data.salePrice : existingDraft.salePrice,
             onSale: data.onSale !== undefined ? data.onSale : existingDraft.onSale,
             markupPercentage: data.markupPercentage !== undefined ? data.markupPercentage : existingDraft.markupPercentage,
+            minimumPrice: data.minimumPrice !== undefined ? data.minimumPrice : existingDraft.minimumPrice,
             discountLabel: data.discountLabel,
             specialSaleText: data.specialSaleText,
             specialSaleStart: data.specialSaleStart,
             specialSaleEnd: data.specialSaleEnd,
             isFlashDeal: data.isFlashDeal !== undefined ? data.isFlashDeal : existingDraft.isFlashDeal,
             flashDealEnd: data.flashDealEnd
+          };
+          break;
+          
+        case 'review':
+          // For final review step, update any review-related fields
+          updateData = {
+            ...updateData,
+            draftStatus: data.draftStatus || existingDraft.draftStatus,
+            // If marked as 'ready', set the time for tracking purposes
+            ...(data.draftStatus === 'ready' && { publishedAt: new Date() })
           };
           break;
           
