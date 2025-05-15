@@ -531,15 +531,15 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, isL
                     <Select
                       onValueChange={(value) => field.onChange(Number(value))}
                       value={field.value?.toString() || undefined}
-                      disabled={!watchSupplierId || isCatalogsLoading}
+                      disabled={!(watchSupplierId || draft.supplierId) || isCatalogsLoading}
                     >
                       <FormControl>
                         <SelectTrigger className="h-9 sm:h-10">
-                          <SelectValue placeholder={watchSupplierId ? "Select a catalog" : "Select a supplier first"} />
+                          <SelectValue placeholder={watchSupplierId || draft.supplierId ? "Select a catalog" : "Select a supplier first"} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {!watchSupplierId ? (
+                        {!(watchSupplierId || draft.supplierId) ? (
                           <div className="flex items-center justify-center p-2">
                             <span className="text-muted-foreground">Please select a supplier first</span>
                           </div>
@@ -553,11 +553,22 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, isL
                             <span className="text-muted-foreground">No catalogs found for this supplier</span>
                           </div>
                         ) : (
-                          catalogsData?.data?.map((catalog: any) => (
-                            <SelectItem key={catalog.id} value={catalog.id.toString()}>
-                              {catalog.name}
-                            </SelectItem>
-                          ))
+                          // Here we handle the catalog selection from the database
+                          <>
+                            {catalogsData?.data?.map((catalog: any) => (
+                              <SelectItem key={catalog.id} value={catalog.id.toString()}>
+                                {catalog.name}
+                              </SelectItem>
+                            ))}
+                            {/* Display a special option if the saved catalog ID isn't in the returned list */}
+                            {field.value && 
+                             !catalogsData?.data?.some((c: any) => c.id === field.value) && 
+                             field.value !== 0 && (
+                              <SelectItem value={field.value.toString()}>
+                                Catalog ID: {field.value} (Not Found)
+                              </SelectItem>
+                            )}
+                          </>
                         )}
                       </SelectContent>
                     </Select>
