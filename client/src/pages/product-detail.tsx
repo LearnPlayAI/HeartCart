@@ -680,7 +680,7 @@ const ProductDetailContent = ({
                 <div className="space-y-2">
                   <div className="flex justify-between py-2 border-b">
                     <span className="font-medium">Brand</span>
-                    <span>{product.supplier || 'Unknown'}</span>
+                    <span>{product.brand || 'Unknown'}</span>
                   </div>
                   <div className="flex justify-between py-2 border-b">
                     <span className="font-medium">Category</span>

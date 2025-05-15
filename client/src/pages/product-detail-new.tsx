@@ -670,12 +670,7 @@ const ProductDetailView = ({
               )}
             </div>
             
-            {/* Supplier */}
-            {product.supplier && (
-              <div className="text-sm text-gray-500">
-                Supplier: <span className="font-medium">{product.supplier}</span>
-              </div>
-            )}
+            {/* Product code or SKU could go here instead */}
             
             <Separator className="my-4" />
             
