@@ -254,7 +254,7 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
     
     const allAttributes = attributesData.data || [];
     const requiredAttrIds = new Set(
-      requiredAttributesData?.success ? 
+      requiredAttributesData?.success && requiredAttributesData?.data ? 
         (requiredAttributesData.data || []).map((attr: any) => attr.attributeId) : 
         []
     );
@@ -528,7 +528,7 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
     
     // Get required attributes
     const requiredAttrIds = new Set(
-      requiredAttributesData?.success ? 
+      requiredAttributesData?.success && requiredAttributesData?.data ? 
         (requiredAttributesData.data || []).map((attr: any) => attr.attributeId) : 
         []
     );
@@ -620,7 +620,7 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
 
   // Check if an attribute is required
   const isAttributeRequired = (attributeId: number) => {
-    if (!requiredAttributesData?.success) return false;
+    if (!requiredAttributesData?.success || !requiredAttributesData?.data) return false;
     
     return (requiredAttributesData.data || []).some(
       (attr: any) => attr.attributeId === attributeId
