@@ -5340,6 +5340,143 @@ export async function registerRoutes(app: Express): Promise<Server> {
       data: result
     });
   }));
+  
+  // DIRECT TEST ENDPOINTS - FOR DEVELOPMENT TESTING ONLY
+  // These endpoints bypass authentication for direct testing of image operations
+  
+  // Test endpoint to list files in a draft folder
+  app.get('/test/list/:draftId', asyncHandler(async (req: Request, res: Response) => {
+    const draftId = parseInt(req.params.draftId);
+    if (isNaN(draftId)) {
+      return res.status(400).json({ success: false, error: 'Invalid draft ID' });
+    }
+    
+    logger.info(`TEST: Listing files for draft ${draftId}`);
+    const draftPrefix = `drafts/${draftId}/`;
+    
+    try {
+      const files = await objectStore.listFiles(draftPrefix);
+      return res.json({
+        success: true,
+        draftId,
+        count: files.length,
+        files
+      });
+    } catch (error) {
+      logger.error(`TEST: Error listing files for draft ${draftId}`, { error });
+      return res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  }));
+  
+  // Test endpoint to delete a specific file
+  app.get('/test/delete/:objectKey(*)', asyncHandler(async (req: Request, res: Response) => {
+    const objectKey = req.params.objectKey;
+    
+    logger.info(`TEST: Direct delete attempt for ${objectKey}`);
+    
+    try {
+      // First check if the file exists
+      const existsBefore = await objectStore.exists(objectKey);
+      
+      if (!existsBefore) {
+        return res.json({
+          success: true,
+          message: `File does not exist: ${objectKey}`,
+          existed: false
+        });
+      }
+      
+      // Attempt to delete the file
+      await objectStore.deleteFile(objectKey);
+      
+      // Verify deletion
+      const existsAfter = await objectStore.exists(objectKey);
+      
+      return res.json({
+        success: !existsAfter,
+        objectKey,
+        existedBefore: existsBefore,
+        existsAfter: existsAfter,
+        message: existsAfter ? 'Failed to delete file' : 'File successfully deleted'
+      });
+    } catch (error) {
+      logger.error(`TEST: Error deleting file ${objectKey}`, { error });
+      return res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  }));
+  
+  // Test endpoint to cleanup orphaned draft images
+  app.get('/test/cleanup/:draftId', asyncHandler(async (req: Request, res: Response) => {
+    const draftId = parseInt(req.params.draftId);
+    if (isNaN(draftId)) {
+      return res.status(400).json({ success: false, error: 'Invalid draft ID' });
+    }
+    
+    logger.info(`TEST: Cleaning up orphaned images for draft ${draftId}`);
+    
+    try {
+      const result = await cleanupOrphanedDraftImages(draftId);
+      return res.json({
+        success: true,
+        data: result
+      });
+    } catch (error) {
+      logger.error(`TEST: Error cleaning up draft ${draftId}`, { error });
+      return res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  }));
+  
+  // Test endpoint to get detailed draft info
+  app.get('/test/draft/:draftId', asyncHandler(async (req: Request, res: Response) => {
+    const draftId = parseInt(req.params.draftId);
+    if (isNaN(draftId)) {
+      return res.status(400).json({ success: false, error: 'Invalid draft ID' });
+    }
+    
+    logger.info(`TEST: Getting details for draft ${draftId}`);
+    
+    try {
+      const draft = await storage.getProductDraft(draftId);
+      
+      if (!draft) {
+        return res.status(404).json({
+          success: false,
+          error: `Draft ${draftId} not found`
+        });
+      }
+      
+      // Get detailed draft info
+      return res.json({
+        success: true,
+        draftId,
+        draft: {
+          ...draft,
+          imageCount: draft.imageUrls?.length || 0,
+          imageObjectKeyCount: draft.imageObjectKeys?.length || 0,
+          images: draft.imageUrls?.map((url, index) => ({
+            url,
+            objectKey: draft.imageObjectKeys?.[index] || null,
+            isMain: draft.mainImageIndex === index
+          }))
+        }
+      });
+    } catch (error) {
+      logger.error(`TEST: Error getting draft ${draftId}`, { error });
+      return res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  }));
 
   const httpServer = createServer(app);
   return httpServer;
