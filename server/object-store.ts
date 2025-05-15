@@ -178,6 +178,26 @@ class ObjectStoreService {
   }
   
   /**
+   * Sanitize a filename for safe use in URLs and object storage
+   * Converts spaces to hyphens and removes special characters
+   */
+  sanitizeFilename(filename: string): string {
+    // First, get the base name and extension
+    const extension = path.extname(filename).toLowerCase();
+    const baseName = path.basename(filename, extension);
+    
+    // Replace spaces and unsafe characters with hyphens, remove consecutive hyphens
+    const sanitizedBaseName = baseName
+      .replace(/[^a-zA-Z0-9-_.]/g, '-') // Replace unsafe chars with hyphens
+      .replace(/\s+/g, '-')             // Replace spaces with hyphens
+      .replace(/-+/g, '-')              // Replace multiple hyphens with a single one
+      .replace(/^-|-$/g, '')            // Remove leading and trailing hyphens
+      .trim();
+    
+    return sanitizedBaseName + extension;
+  }
+
+  /**
    * Upload a product draft image with the proper folder structure
    * Path: /root/drafts/{draftId}/{filename}
    */
@@ -189,10 +209,13 @@ class ObjectStoreService {
   ): Promise<{ url: string; objectKey: string }> {
     await this.initialize();
     
+    // Sanitize the filename first
+    const sanitizedFilename = this.sanitizeFilename(filename);
+    
     // Generate a unique filename to avoid collisions
     const uniqueId = new Date().getTime() + '-' + Math.random().toString(36).substring(2, 15);
-    const extension = path.extname(filename).toLowerCase();
-    const baseName = path.basename(filename, extension);
+    const extension = path.extname(sanitizedFilename).toLowerCase();
+    const baseName = path.basename(sanitizedFilename, extension);
     const uniqueFilename = `${baseName}-${uniqueId}${extension}`;
     
     // Create the correct path structure: /root/drafts/{draftId}/image1.xxx
@@ -224,7 +247,10 @@ class ObjectStoreService {
   ): Promise<{ url: string; objectKey: string }> {
     await this.initialize();
     
-    const objectKey = `${STORAGE_FOLDERS.PRODUCTS}/${productId}/${filename}`;
+    // Sanitize the filename first
+    const sanitizedFilename = this.sanitizeFilename(filename);
+    
+    const objectKey = `${STORAGE_FOLDERS.PRODUCTS}/${productId}/${sanitizedFilename}`;
     
     try {
       await this.uploadFromBuffer(objectKey, buffer, {
@@ -254,8 +280,11 @@ class ObjectStoreService {
   ): Promise<{ url: string; objectKey: string }> {
     await this.initialize();
     
+    // Sanitize the new filename first
+    const sanitizedFilename = this.sanitizeFilename(newFilename);
+    
     // Create the destination path
-    const destObjectKey = `${STORAGE_FOLDERS.SUPPLIERS}/${supplierId}/${STORAGE_FOLDERS.CATALOGS}/${catalogId}/${STORAGE_FOLDERS.PRODUCTS}/${productId}/${newFilename}`;
+    const destObjectKey = `${STORAGE_FOLDERS.SUPPLIERS}/${supplierId}/${STORAGE_FOLDERS.CATALOGS}/${catalogId}/${STORAGE_FOLDERS.PRODUCTS}/${productId}/${sanitizedFilename}`;
     
     try {
       // Check if the source file exists
@@ -271,7 +300,7 @@ class ObjectStoreService {
       }
       
       // Determine content type
-      const contentType = this.detectContentType(newFilename);
+      const contentType = this.detectContentType(sanitizedFilename);
       
       // Upload to the new location
       await this.uploadFromBuffer(destObjectKey, data, { contentType });
