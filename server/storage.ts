@@ -161,6 +161,7 @@ export interface IStorage {
   getProductDraft(id: number): Promise<ProductDraft | undefined>;
   getProductDraftByOriginalId(originalProductId: number): Promise<ProductDraft | undefined>;
   getUserProductDrafts(userId: number): Promise<ProductDraft[]>;
+  getAllDrafts(): Promise<ProductDraft[]>;
   updateProductDraft(id: number, data: Partial<InsertProductDraft>): Promise<ProductDraft | undefined>;
   updateProductDraftWizardStep(id: number, step: string, data: any): Promise<ProductDraft | undefined>;
   updateProductDraftImages(id: number, imageUrls: string[], imageObjectKeys: string[], mainImageIndex?: number): Promise<ProductDraft | undefined>;
@@ -4828,6 +4829,19 @@ export class DatabaseStorage implements IStorage {
       return drafts;
     } catch (error) {
       logger.error('Error getting user product drafts', { error, userId });
+      throw error;
+    }
+  }
+  
+  async getAllDrafts(): Promise<ProductDraft[]> {
+    try {
+      const drafts = await db
+        .select()
+        .from(productDrafts);
+      
+      return drafts;
+    } catch (error) {
+      logger.error('Error getting all product drafts', { error });
       throw error;
     }
   }
