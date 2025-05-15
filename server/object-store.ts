@@ -305,10 +305,16 @@ class ObjectStoreService {
       }
       
       // Read the source file
-      const { data } = await this.objectStore.download(sourceKey);
-      if (!data) {
+      const downloadResult = await this.objectStore.downloadAsBytes(sourceKey);
+      if ('err' in downloadResult && downloadResult.err) {
+        const errorMessage = typeof downloadResult.err === 'object' ? 
+          JSON.stringify(downloadResult.err) : String(downloadResult.err);
+        throw new Error(`Failed to download source file: ${errorMessage}`);
+      }
+      if (!downloadResult.value) {
         throw new Error(`Failed to download source file: ${sourceKey}`);
       }
+      const data = downloadResult.value;
       
       // Determine content type
       const contentType = this.detectContentType(sanitizedFilename);
