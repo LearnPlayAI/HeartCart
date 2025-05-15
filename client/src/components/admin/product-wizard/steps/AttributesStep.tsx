@@ -555,11 +555,6 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
     const attrDetails = getAllAttributes().find(a => a.id === attributeId);
     const type = attribute.attributeType || (attrDetails?.attributeType || 'text');
     
-    // Only render the input if the attribute is applied to this product
-    if (!attribute.isAppliedToProduct) {
-      return null;
-    }
-    
     // If this is a select or multiselect attribute but options aren't loaded yet,
     // fetch them now
     if ((type === 'select' || type === 'multiselect') && 
@@ -844,17 +839,18 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
             </div>
           </div>
           
-          {/* Attribute input field (only shown if applied to product) */}
-          {attribute.isAppliedToProduct && (
-            <div className="mt-2">
-              {renderAttributeInput(attribute)}
-              
-              {/* Error message */}
-              {hasError && (
-                <p className="text-red-500 text-sm mt-1">{validationErrors[attribute.attributeId]}</p>
-              )}
-            </div>
-          )}
+          {/* Always show the input controls for select/multiselect to allow option selection */}
+          <div className="mt-2">
+            {/* For attributes that are not select/multiselect, only show input when applied */}
+            {(attribute.attributeType === 'select' || attribute.attributeType === 'multiselect' || attribute.isAppliedToProduct) && 
+              renderAttributeInput(attribute)
+            }
+            
+            {/* Error message */}
+            {hasError && (
+              <p className="text-red-500 text-sm mt-1">{validationErrors[attribute.attributeId]}</p>
+            )}
+          </div>}
         </div>
       </div>
     );
