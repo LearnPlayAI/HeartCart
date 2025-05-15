@@ -4995,6 +4995,19 @@ export class DatabaseStorage implements IStorage {
         case 'sales-promotions':
         case 5: // Handle numeric equivalent
           // For sales promotions step, ensure date fields are stored as strings
+          // Also ensure explicitly that the fields shown in red boxes in the UI are processed properly
+          
+          // Log incoming data for debugging
+          logger.debug(`Incoming sales promotions data:`, {
+            draftId: id,
+            discountLabel: draftData.discountLabel,
+            specialSaleText: draftData.specialSaleText,
+            specialSaleStart: draftData.specialSaleStart,
+            specialSaleEnd: draftData.specialSaleEnd,
+            isFlashDeal: draftData.isFlashDeal,
+            flashDealEnd: draftData.flashDealEnd
+          });
+          
           updateData = {
             ...updateData,
             costPrice: draftData.costPrice !== undefined ? draftData.costPrice : existingDraft.costPrice,
@@ -5003,7 +5016,13 @@ export class DatabaseStorage implements IStorage {
             onSale: draftData.onSale !== undefined ? draftData.onSale : existingDraft.onSale,
             markupPercentage: draftData.markupPercentage !== undefined ? draftData.markupPercentage : existingDraft.markupPercentage,
             minimumPrice: draftData.minimumPrice !== undefined ? draftData.minimumPrice : existingDraft.minimumPrice,
-            discountLabel: draftData.discountLabel !== undefined ? draftData.discountLabel : existingDraft.discountLabel,
+            
+            // Explicitly handle the fields shown in red boxes in the UI
+            // If onSale is false, discountLabel should be null
+            discountLabel: draftData.onSale === false ? null : 
+                          (draftData.discountLabel !== undefined ? draftData.discountLabel : existingDraft.discountLabel),
+                          
+            // Special sale text should always be stored as provided
             specialSaleText: draftData.specialSaleText !== undefined ? draftData.specialSaleText : existingDraft.specialSaleText,
             
             // Store dates as strings for SAST timezone correctness (not as Date objects)
@@ -5019,6 +5038,7 @@ export class DatabaseStorage implements IStorage {
                   : (draftData.specialSaleEnd ? draftData.specialSaleEnd.toString() : null))
               : existingDraft.specialSaleEnd,
               
+            // Flash deal flag should always be stored as provided
             isFlashDeal: draftData.isFlashDeal !== undefined ? draftData.isFlashDeal : existingDraft.isFlashDeal,
             
             flashDealEnd: draftData.flashDealEnd !== undefined 
@@ -5033,7 +5053,7 @@ export class DatabaseStorage implements IStorage {
           };
           
           // Add debug logging
-          logger.debug(`Sales promotions step update:`, {
+          logger.debug(`Sales promotions step update processed:`, {
             step: step,
             draftId: id,
             data: {

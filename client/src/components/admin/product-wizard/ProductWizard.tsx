@@ -284,8 +284,8 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ draftId, initialDa
       
       // Format the data according to server validation schema
       const requestData = {
-        draftData: stepData,
         step: STEP_MAP[step], // Convert string step to number (0-6)
+        draftData: stepData
       };
       
       console.log(`Updating step ${step} (${STEP_MAP[step]}) with data:`, requestData);
@@ -295,7 +295,14 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ draftId, initialDa
         console.log(`Sales promotions data being sent:`, {
           step: step,
           stepNumber: STEP_MAP[step],
-          data: stepData
+          data: stepData,
+          // Add explicit logging for the fields that were not persisting
+          discountLabel: stepData.discountLabel,
+          specialSaleText: stepData.specialSaleText,
+          specialSaleStart: stepData.specialSaleStart,
+          specialSaleEnd: stepData.specialSaleEnd,
+          isFlashDeal: stepData.isFlashDeal,
+          flashDealEnd: stepData.flashDealEnd
         });
       }
       

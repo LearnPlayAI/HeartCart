@@ -181,9 +181,13 @@ export const SalesPromotionsStep: React.FC<SalesPromotionsStepProps> = ({
           salePrice: null,
           discountLabel: null
         }),
+        // Ensure all fields are explicitly included, including the ones in red boxes in the UI
+        discountLabel: values.onSale ? values.discountLabel : null,
+        specialSaleText: values.specialSaleText || null,
         // Convert date objects to text strings in SAST format
         specialSaleStart: formatDateToSASTString(values.specialSaleStart),
         specialSaleEnd: formatDateToSASTString(values.specialSaleEnd),
+        isFlashDeal: values.isFlashDeal || false,
         flashDealEnd: formatDateToSASTString(values.flashDealEnd)
       } as Partial<ProductDraft>;
       
