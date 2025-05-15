@@ -64,6 +64,101 @@ interface AttributesStepProps {
 }
 
 export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, isLoading = false }) => {
+  // Define the function to create a new attribute option
+  const handleCreateAttributeOption = async () => {
+    if (!currentAttributeId || !newOptionData.value) {
+      return;
+    }
+    
+    try {
+      const attribute = getAllAttributes().find(a => a.id === currentAttributeId);
+      if (!attribute) return;
+      
+      const isColor = attribute.attributeType === 'color';
+      
+      // Prepare option data
+      const optionData = {
+        value: newOptionData.value,
+        displayValue: newOptionData.displayValue || newOptionData.value,
+        sortOrder: (attribute.options?.length || 0),
+        attributeId: currentAttributeId,
+        ...(isColor ? { metadata: { colorCode: newOptionData.colorCode } } : {})
+      };
+      
+      console.log("Creating option with payload:", optionData);
+      
+      // Send request to create a new option
+      const response = await fetch(`/api/attributes/${currentAttributeId}/options`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(optionData)
+      });
+      
+      if (response.ok) {
+        console.log("Successfully created option");
+        
+        // Refetch the options for this attribute
+        console.log("Refetching options after creation");
+        
+        // Fetch the options manually to ensure we have the latest
+        console.log("Fetching options for attribute ID:", currentAttributeId);
+        const optionsResponse = await fetch(`/api/attributes/${currentAttributeId}/options`);
+        const optionsResult = await optionsResponse.json();
+        
+        console.log("Options direct fetch response:", optionsResult);
+        
+        // Find the attribute in our local data
+        console.log("Selected attribute:", attribute.name, "(ID:", currentAttributeId, ")");
+        console.log("Options loaded:", optionsResult.data || []);
+        
+        // Reset form and close dialog
+        setNewOptionData({
+          value: '',
+          displayValue: '',
+          colorCode: '#CCCCCC'
+        });
+        setShowAddOptionDialog(false);
+        
+        // Show success toast
+        toast({
+          title: "Option Added",
+          description: `Successfully added ${newOptionData.displayValue || newOptionData.value} to ${attribute.displayName}`,
+          variant: "default"
+        });
+        
+        // Force a manual refetch of the attribute's options
+        const manualRefetch = async () => {
+          console.log("Manual refetch of options for attribute:", currentAttributeId);
+          const refreshOptions = await fetch(`/api/attributes/${currentAttributeId}/options`);
+          const refreshData = await refreshOptions.json();
+          console.log("Options direct fetch response:", refreshData);
+          console.log("Options loaded:", refreshData.data || []);
+          
+          // Refresh all attributes after option creation
+          fetchAllAttributes();
+        };
+        
+        manualRefetch();
+      } else {
+        const errorData = await response.json();
+        console.error("Error creating option:", errorData);
+        toast({
+          title: "Error Adding Option",
+          description: errorData.error || "Failed to add option",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Error creating option:", error);
+      toast({
+        title: "Error Adding Option",
+        description: "An unexpected error occurred",
+        variant: "destructive"
+      });
+    }
+  };
   const { toast } = useToast();
   const [attributeValues, setAttributeValues] = useState<AttributeValue[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -1584,3 +1679,5 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
     </div>
   );
 };
+
+// Removed the function at the end of component to prevent syntax errors
