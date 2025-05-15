@@ -139,7 +139,9 @@ export const products = pgTable("products", {
   requiredAttributeIds: integer("required_attribute_ids").array(),
   
   // Schema-only columns made nullable
-  updatedAt: text("updated_at"),
+  // Note: updated_at column doesn't exist in the actual database table
+  // Keep this commented out to avoid errors
+  // updatedAt: text("updated_at"),
   sku: text("sku"),
 });
 

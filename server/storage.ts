@@ -2728,11 +2728,11 @@ export class DatabaseStorage implements IStorage {
       
       try {
         // Update all existing products in the list to the new status
+        // Note: products table doesn't have updated_at column, only created_at
         await db
           .update(products)
           .set({ 
-            isActive,
-            updatedAt: new Date() 
+            isActive
           })
           .where(inArray(products.id, existingIds));
           
