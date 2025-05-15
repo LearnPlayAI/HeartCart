@@ -234,11 +234,7 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, isL
   // Handle sale price changes
   // This function is already defined earlier, removing duplicate
 
-  // Need to add state variables for AI descriptions
-  const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
-  const [aiDescriptionSuggestions, setAiDescriptionSuggestions] = useState<string[]>([]);
-  const [showAiDialog, setShowAiDialog] = useState(false);
-  const [aiError, setAiError] = useState<string | null>(null);
+  // State variables for AI descriptions are already declared above
 
   return (
     <>

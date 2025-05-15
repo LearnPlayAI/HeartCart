@@ -127,12 +127,13 @@ export const SalesPromotionsStep: React.FC<SalesPromotionsStepProps> = ({
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setSaving(true);
     try {
-      // Convert dates to ISO strings for API
-      const formattedValues = {
+      // Convert dates for API - the ProductDraft interface expects Date objects
+      const formattedValues: Partial<ProductDraft> = {
         ...values,
-        specialSaleStart: values.specialSaleStart ? values.specialSaleStart.toISOString() : null,
-        specialSaleEnd: values.specialSaleEnd ? values.specialSaleEnd.toISOString() : null,
-        flashDealEnd: values.flashDealEnd ? values.flashDealEnd.toISOString() : null
+        // These are stored as Date objects in the ProductDraft interface but serialized to ISO strings in the API
+        specialSaleStart: values.specialSaleStart || null,
+        specialSaleEnd: values.specialSaleEnd || null,
+        flashDealEnd: values.flashDealEnd || null
       };
       
       await onSave(formattedValues, true);

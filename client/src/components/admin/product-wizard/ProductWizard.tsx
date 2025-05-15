@@ -22,6 +22,7 @@ import ProductImagesStep from './steps/ProductImagesStep';
 import { AdditionalInfoStep } from './steps/AdditionalInfoStep';
 import { AttributesStep } from './steps/AttributesStep';
 import { SEOStep } from './steps/SEOStep';
+import { SalesPromotionsStep } from './steps/SalesPromotionsStep';
 import { ReviewAndSaveStep } from './steps/ReviewAndSaveStep';
 
 // Define the steps in the wizard
@@ -31,7 +32,7 @@ const WIZARD_STEPS = [
   { id: 'additional-info', label: 'Additional Info', component: AdditionalInfoStep },
   { id: 'attributes', label: 'Attributes', component: AttributesStep },
   { id: 'seo', label: 'SEO', component: SEOStep },
-  { id: 'sales-promotions', label: 'Sales & Promotions', component: AdditionalInfoStep }, // Temporary using AdditionalInfoStep until SalesPromotionsStep is implemented
+  { id: 'sales-promotions', label: 'Sales & Promotions', component: SalesPromotionsStep },
   { id: 'review', label: 'Review & Save', component: ReviewAndSaveStep },
 ];
 
