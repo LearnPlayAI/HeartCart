@@ -6753,27 +6753,36 @@ export class DatabaseStorage implements IStorage {
       if (draft.imageUrls && draft.imageUrls.length > 0) {
         // Just extract the image object keys from image URLs if needed
         // The image path contains supplier and catalog info already
-        const imageObjectKeys =
-          draft.imageObjectKeys ||
-          (draft.imageUrls
-            .map((url) => {
-              const urlParts = url.split("/");
-              const lastSegment = urlParts[urlParts.length - 1];
-              const draftId = draft.id.toString();
-
-              // Try to find the correct path in the URL
-              for (let i = 0; i < urlParts.length; i++) {
-                if (urlParts[i] === draftId && i > 0) {
-                  // Format is now /supplier/catalog/draftId/filename.jpg
-                  const supplierName = urlParts[i - 2] || "unknown-supplier";
-                  const catalogName = urlParts[i - 1] || "catalog-0";
-                  return `${supplierName}/${catalogName}/${draftId}/${lastSegment}`;
-                }
-              }
-
-              return null;
-            })
-            .filter(Boolean) as string[]);
+        // Create an array to store extracted object keys from URLs
+        const extractedObjectKeys: string[] = [];
+        
+        // Process each image URL to extract object keys
+        for (const url of draft.imageUrls) {
+          if (!url) continue;
+          
+          const urlParts = url.split("/");
+          const lastSegment = urlParts[urlParts.length - 1];
+          const draftId = draft.id.toString();
+          
+          // Try to find the correct path in the URL
+          let objectKey: string | null = null;
+          for (let i = 0; i < urlParts.length; i++) {
+            if (urlParts[i] === draftId && i > 0) {
+              // Format is now /supplier/catalog/draftId/filename.jpg
+              const supplierName = urlParts[i - 2] || "unknown-supplier";
+              const catalogName = urlParts[i - 1] || "catalog-0";
+              objectKey = `${supplierName}/${catalogName}/${draftId}/${lastSegment}`;
+              break;
+            }
+          }
+          
+          if (objectKey) {
+            extractedObjectKeys.push(objectKey);
+          }
+        }
+        
+        // Use extracted keys or fall back to empty array
+        const imageObjectKeys = extractedObjectKeys;
 
         // Use draft data directly for path construction
         const supplierName = draft.supplier || "unknown-supplier";
