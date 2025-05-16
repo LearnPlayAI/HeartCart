@@ -201,51 +201,13 @@ export default function registerProductDraftRoutes(router: Router) {
       }
       
       try {
-        // First check if the product exists
-        const product = await storage.getProductById(productId);
-        if (!product) {
-          throw new NotFoundError(`Product with ID ${productId} not found`);
-        }
-        
-        // Check if a draft already exists for this product
-        const existingDraft = await db
-          .select()
-          .from(productDrafts)
-          .where(
-            and(
-              eq(productDrafts.originalProductId, productId),
-              not(eq(productDrafts.draftStatus, 'published'))
-            )
-          )
-          .limit(1);
-          
-        if (existingDraft.length > 0) {
-          logger.info("Returning existing draft for product", {
-            productId,
-            draftId: existingDraft[0].id,
-            draftStatus: existingDraft[0].draftStatus
-          });
-          return sendSuccess(res, existingDraft[0]);
-        }
-          
         // Create draft from existing product
         const draft = await storage.createDraftFromProduct(productId, userId);
         
         sendSuccess(res, draft);
       } catch (error) {
-        if (error instanceof Error) {
-          logger.error("Error creating draft from product", { 
-            errorMessage: error.message, 
-            errorName: error.name,
-            errorStack: error.stack,
-            productId
-          });
-        } else {
-          logger.error("Unknown error creating draft from product", { error, productId });
-        }
-        
-        // Send the actual error message to the client for better debugging
-        throw new BadRequestError(`Failed to create draft: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        logger.error("Error creating draft from product", { error, productId });
+        throw new BadRequestError("Failed to create draft from product");
       }
     })
   );

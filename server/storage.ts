@@ -1617,7 +1617,7 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       logger.error("Error saving product draft", { userId, draftId, error });
       throw new Error(
-        `Failed to save product draft: ${error instanceof Error ? error.message : String(error)}`
+        `Failed to save product draft: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
   }
@@ -5689,7 +5689,7 @@ export class DatabaseStorage implements IStorage {
         return existingDraft[0];
       }
 
-      // Get the product details with all related data
+      // Get the product details
       const product = await this.getProductById(productId);
       if (!product) {
         throw new Error(`Product with ID ${productId} not found`);
@@ -5697,11 +5697,6 @@ export class DatabaseStorage implements IStorage {
       
       // Get product images
       const productImages = await this.getProductImages(productId);
-      logger.debug("Retrieved product images", {
-        productId,
-        imageCount: productImages.length,
-        hasMainImage: productImages.some(img => img.isMain === true)
-      });
       
       // Get product attributes
       const productAttributes = await this.getProductAttributes(productId);
@@ -5709,247 +5704,69 @@ export class DatabaseStorage implements IStorage {
       const nowDate = new Date();
       const now = nowDate.toISOString(); // Convert Date to ISO string for database storage
       
-      // Organize images properly as per the documentation
-      // Main image should be the first in the array (index 0)
-      const imageUrls: string[] = [];
-      const objectKeys: string[] = [];
-      let mainImageIndex = 0;
-      
-      // First, try to get the main image from the product_images table
-      const mainImageFromTable = productImages.find(img => img.isMain === true);
-      
-      // If main image exists in product, add it first
-      if (product.imageUrl) {
-        imageUrls.push(product.imageUrl);
-        objectKeys.push(product.originalImageObjectKey || '');
-      }
-      
-      // Add all images from product_images table (skipping the main one if already added)
-      productImages.forEach((img, index) => {
-        // Skip main image if we already added it from product.imageUrl
-        if (img.isMain && product.imageUrl === img.url) {
-          return;
-        }
-        
-        // Otherwise add the image
-        imageUrls.push(img.url);
-        objectKeys.push(img.objectKey || '');
-        
-        // Update main image index if this is the main image
-        if (img.isMain) {
-          mainImageIndex = imageUrls.length - 1;
-        }
-      });
-      
-      // Map product attributes to draft format
-      const attributes = productAttributes.map(attr => ({
-        attributeId: attr.attributeId,
-        value: attr.textValue || (Array.isArray(attr.selectedOptions) && attr.selectedOptions.length > 0 
-          ? attr.selectedOptions 
-          : []),
-        attributeName: attr.attribute?.name || "",
-        attributeDisplayName: attr.attribute?.displayName || "",
-        attributeType: attr.attribute?.attributeType || "text",
-        isRequired: !!attr.isRequired,
-        sortOrder: attr.sortOrder || 0
-      }));
-      
-      // Create the draft object
-      const draftData = {
-        originalProductId: productId,
-        createdBy: userId,
-        draftStatus: 'draft',
-        name: product.name,
-        slug: product.slug,
-        sku: product.sku,
+      // Map product data to draft data structure
+      const draftData: Omit<InsertProductDraft, "id"> = {
+        // Basic info
+        name: product.name || "",
+        slug: product.slug || this.generateSlug(product.name || "product"),
         description: product.description,
         brand: product.brand,
-        categoryId: product.categoryId,
-        isActive: product.isActive,
-        isFeatured: product.isFeatured,
-        catalogId: product.catalogId,
-        costPrice: product.costPrice,
-        regularPrice: product.price,
+        isActive: product.isActive ?? true,
+        
+        // Pricing info
+        price: product.price || 0,
+        costPrice: product.costPrice || 0,
         salePrice: product.salePrice,
-        onSale: !!product.salePrice && product.salePrice < product.price,
-        stockLevel: product.stock,
-        lowStockThreshold: product.lowStockThreshold || 5,
-        backorderEnabled: product.backorderEnabled || false,
-        imageUrls: imageUrls,
-        imageObjectKeys: objectKeys,
-        mainImageIndex: mainImageIndex,
-        attributes: attributes,
-        supplierId: product.supplierId,
+        tax: product.tax,
+        
+        // Inventory info
+        stock: product.stock || 0,
+        minimumOrderQuantity: product.minimumOrderQuantity || 1,
+        
+        // Product details
         weight: product.weight,
         dimensions: product.dimensions,
-        discountLabel: product.discountLabel,
-        specialSaleText: product.specialSaleText,
-        specialSaleStart: product.specialSaleStart ? new Date(product.specialSaleStart) : null,
-        specialSaleEnd: product.specialSaleEnd ? new Date(product.specialSaleEnd) : null,
-        isFlashDeal: product.isFlashDeal,
-        flashDealEnd: product.flashDealEnd ? new Date(product.flashDealEnd) : null,
-        taxable: product.taxable !== false,
-        taxClass: product.taxClass,
+        shippingTime: product.shippingTime,
+        
+        // Flash deal settings
+        isFlashDeal: product.isFlashDeal || false,
+        flashDealStart: product.flashDealStart ? product.flashDealStart.toString() : null,
+        flashDealEnd: product.flashDealEnd ? product.flashDealEnd.toString() : null,
+        
+        // Relationships
+        categoryId: product.categoryId,
+        supplierId: product.supplierId,
+        
+        // Meta data
         metaTitle: product.metaTitle,
         metaDescription: product.metaDescription,
-        metaKeywords: product.metaKeywords,
-        createdAt: nowDate,
-        lastModified: nowDate,
-        completedSteps: ['basic-info', 'images', 'additional-info', 'attributes', 'seo', 'sales-promotions'],
-        wizardProgress: {
-          'basic-info': true,
-          'images': true,
-          'additional-info': true,
-          'attributes': true,
-          'seo': true,
-          'sales-promotions': true,
-          'review': false
-        }
-      };
-      
-      // Insert the draft into the database
-      const [newDraft] = await db
-        .insert(productDrafts)
-        .values(draftData)
-        .returning();
-      
-      logger.info("Created new draft from existing product", {
-        productId,
-        draftId: newDraft.id,
-        userId
-      });
-      
-      return newDraft;
-    } catch (error) {
-      logger.error("Error creating draft from product", {
-        error,
-        productId,
-        userId
-      });
-      throw error;
-    }
-  }
-        // Skip if it's the main image and we already added it
-        if (img.isMain && product.imageUrl && img.url === product.imageUrl) {
-          return;
-        }
-        
-        // If this is a main image and we haven't set a main image yet, update the mainImageIndex
-        if (img.isMain && mainImageIndex === 0 && imageUrls.length > 0) {
-          mainImageIndex = imageUrls.length;
-        }
-        
-        imageUrls.push(img.url || '');
-        objectKeys.push(img.objectKey || '');
-      });
-      
-      // If there are no images from the product_images table but we have additionalImages from the product
-      if (productImages.length === 0 && product.additionalImages && Array.isArray(product.additionalImages)) {
-        product.additionalImages.forEach((url) => {
-          imageUrls.push(url);
-          objectKeys.push(''); // No object key available for these
-        });
-      }
-      
-      // Map product attributes to the correct format for the draft
-      const mappedAttributes = productAttributes.map(attr => ({
-        attributeId: attr.attributeId,
-        valueText: attr.textValue || '',
-        selectedOptions: attr.selectedOptions || []
-      }));
-      
-      // Map product data to draft data structure according to the documentation
-      const draftData = {
-        // Link to original product
-        originalProductId: productId,
-        
-        // Basic info
-        name: product.name || '',
-        slug: product.slug || this.generateSlug(product.name || 'product'),
-        sku: product.sku || '',
-        description: product.description || '',
-        brand: product.brand || '',
-        
-        // Product relationships
-        categoryId: product.categoryId,
-        supplierId: product.supplier ? parseInt(product.supplier) : null,
-        catalogId: product.catalogId,
-        
-        // Status flags
-        isActive: product.isActive ?? true,
-        isFeatured: product.isFeatured ?? false,
-        
-        // Pricing information
-        costPrice: product.costPrice || 0,
-        regularPrice: product.price || 0,
-        salePrice: product.salePrice || null,
-        onSale: product.salePrice !== null && product.salePrice > 0,
-        markupPercentage: product.markup || 0,
-        minimumPrice: product.minimumPrice || 0,
-        
-        // Inventory settings
-        stockLevel: product.stock || 0,
-        lowStockThreshold: product.lowStockThreshold || 5,
-        backorderEnabled: product.backorderEnabled ?? false,
-        
-        // Discounts and promotions
-        discountLabel: product.discountLabel || '',
-        specialSaleText: product.specialSaleText || '',
-        specialSaleStart: product.specialSaleStart || null,
-        specialSaleEnd: product.specialSaleEnd || null,
-        isFlashDeal: product.isFlashDeal ?? false,
-        flashDealEnd: product.flashDealEnd || null,
+        tagIds: product.tagIds || [], // Changed from tags to tagIds
         
         // Images
-        imageUrls: imageUrls,
-        imageObjectKeys: objectKeys, // Using the correct column name from the schema
-        mainImageIndex: mainImageIndex,
+        imageUrls: productImages.map(img => img.url || ""),
+        objectKeys: productImages.map(img => img.objectKey || ""), // Changed from imageObjectKeys to objectKeys
+        mainImageIndex: productImages.findIndex(img => img.isMain === true),
         
-        // Attributes
-        attributes: mappedAttributes,
-        
-        // Shipping and product details
-        weight: product.weight ? product.weight.toString() : '',
-        dimensions: product.dimensions || '',
-        freeShipping: product.freeShipping ?? false,
-        shippingClass: product.shippingClass || '',
-        
-        // SEO metadata
-        metaTitle: product.metaTitle || product.name || '',
-        metaDescription: product.metaDescription || product.description?.substring(0, 160) || '',
-        metaKeywords: product.metaKeywords || '',
-        canonicalUrl: product.canonicalUrl || '',
+        // Attributes 
+        attributes: productAttributes.map(attr => ({
+          attributeId: attr.attributeId,
+          valueText: attr.textValue || "",
+          selectedOptions: attr.selectedOptions || []
+        })),
         
         // Draft specific fields
-        draftStatus: 'draft',
+        draftStatus: "draft",
         createdBy: userId,
         createdAt: now,
         lastModified: now,
+        originalProductId: productId, // Link to original product
         
-        // Product wizard progress
-        wizardProgress: {
-          basicInfo: true,
-          images: imageUrls.length > 0,
-          pricing: true,
-          attributes: mappedAttributes.length > 0,
-          seo: true
-        },
-        
-        // Status tracking
-        completedSteps: ['basicInfo', 'pricing', 'seo'],
-        version: 1,
-        
-        // AI features status
-        hasAiDescription: false, 
-        hasAiSeo: false,
-        
-        // Change history
+        // Other fields with defaults
         changeHistory: [{
-          timestamp: now,
+          timestamp: now, // Using the ISO string we created earlier
           fromStatus: null,
-          toStatus: 'draft',
-          note: 'Created from existing product',
-          userId: userId
+          toStatus: "draft",
+          note: "Created from existing product"
         }]
       };
 
@@ -5968,17 +5785,7 @@ export class DatabaseStorage implements IStorage {
       
       return draft;
     } catch (error) {
-      // More detailed error logging
-      if (error instanceof Error) {
-        logger.error("Error creating draft from product", { 
-          errorMessage: error.message,
-          errorName: error.name,
-          errorStack: error.stack,
-          productId 
-        });
-      } else {
-        logger.error("Unknown error creating draft from product", { error, productId });
-      }
+      logger.error("Error creating draft from product", { error, productId });
       throw error;
     }
   }

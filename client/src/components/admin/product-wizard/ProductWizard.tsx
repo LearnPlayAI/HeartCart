@@ -220,17 +220,8 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ draftId, initialDa
       };
       
       console.log('API Request: POST /api/product-drafts', requestData);
-      try {
-        const response = await apiRequest('POST', '/api/product-drafts', requestData);
-        const data = await response.json();
-        if (!data.success) {
-          throw new Error(data.message || 'Failed to create product draft');
-        }
-        return data;
-      } catch (error) {
-        console.error('Error in createDraftMutation:', error);
-        throw error;
-      }
+      const response = await apiRequest('POST', '/api/product-drafts', requestData);
+      return response.json();
     },
     onSuccess: (data) => {
       if (data.success && data.data && data.data.id) {
