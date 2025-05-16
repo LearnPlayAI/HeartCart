@@ -207,7 +207,7 @@ export default function registerProductDraftRoutes(router: Router) {
         sendSuccess(res, draft);
       } catch (error) {
         logger.error("Error creating draft from product", { error, productId });
-        throw new InternalServerError("Failed to create draft from product");
+        throw new BadRequestError("Failed to create draft from product");
       }
     })
   );
