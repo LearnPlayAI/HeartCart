@@ -637,8 +637,52 @@ export default function CatalogProducts() {
     navigate(`/admin/catalogs/${catalogId}/products/wizard`);
   };
 
-  const handleEditProduct = (product: Product) => {
-    navigate(`/admin/products/${product.id}/edit`);
+  // Create draft from existing product and redirect to wizard
+  const handleEditProduct = async (product: Product) => {
+    try {
+      // Show loading toast while creating draft
+      const loadingToast = toast({
+        title: "Creating product draft",
+        description: "Please wait while we prepare the product for editing...",
+      });
+      
+      // Call API to create a draft from the existing product
+      const response = await apiRequest(
+        "POST", 
+        `/api/product-drafts/from-product/${product.id}`
+      );
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || "Failed to create product draft");
+      }
+      
+      // Get the draft data
+      const result = await response.json();
+      
+      // Dismiss loading toast
+      toast.dismiss(loadingToast);
+      
+      if (result.success && result.data) {
+        // Success toast
+        toast({
+          title: "Draft created",
+          description: "You can now edit the product in the wizard.",
+        });
+        
+        // Navigate to product wizard with the draft ID
+        navigate(`/admin/product-wizard/${result.data.id}`);
+      } else {
+        throw new Error("Invalid response from server");
+      }
+    } catch (error) {
+      console.error("Error creating product draft:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create product draft",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleDeleteClick = (product: Product) => {

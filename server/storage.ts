@@ -333,6 +333,7 @@ export interface IStorage {
 
   // Product draft operations for database-centric approach
   createProductDraft(draft: InsertProductDraft): Promise<ProductDraft>;
+  createDraftFromProduct(productId: number, userId: number): Promise<ProductDraft>;
   getProductDraft(id: number): Promise<ProductDraft | undefined>;
   getProductDraftByOriginalId(
     originalProductId: number,
