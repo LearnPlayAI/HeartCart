@@ -6459,15 +6459,17 @@ export class DatabaseStorage implements IStorage {
         supplierId: draft.supplierId,
         catalogId: draft.catalogId,
 
-        // Pricing information
+        // Pricing information - ensure proper numeric conversions from decimal to double
         price: draft.regularPrice ? parseFloat(String(draft.regularPrice)) : 0,
         costPrice: draft.costPrice ? parseFloat(String(draft.costPrice)) : 0,
         salePrice: draft.salePrice ? parseFloat(String(draft.salePrice)) : null,
         onSale: draft.onSale || false,
         discount: discountValue, // Use the processed integer discount value
         discountLabel: draft.discountLabel,
-        markupPercentage: draft.markupPercentage,
-        minimumPrice: draft.minimumPrice,
+        markupPercentage: draft.markupPercentage ? 
+          typeof draft.markupPercentage === 'string' ? 
+            parseInt(draft.markupPercentage, 10) : draft.markupPercentage : null,
+        minimumPrice: draft.minimumPrice ? parseFloat(String(draft.minimumPrice)) : null,
 
         // Set the main image URL if available
         imageUrl:
@@ -6502,29 +6504,46 @@ export class DatabaseStorage implements IStorage {
         // Product attributes and specifications
         supplier: supplierName,
         brand: draft.brand,
-        weight: draft.weight ? parseFloat(String(draft.weight)) : null,
+        weight: draft.weight ? 
+          (typeof draft.weight === 'string' ? 
+            parseFloat(draft.weight) : 
+            typeof draft.weight === 'number' ? 
+              draft.weight : null) : null,
         dimensions: draft.dimensions,
 
         // Required attributes
         requiredAttributeIds: requiredAttributes,
 
-        // Discount information - use numeric value for integer field
-        discount: discountValue,
+        // Discount value already set above, no need to duplicate
 
-        // Sales promotion data
+        // Sales promotion data - ensure proper date format conversion (timestamp → ISO string)
         specialSaleText: draft.specialSaleText,
         specialSaleStart: draft.specialSaleStart
-          ? draft.specialSaleStart.toISOString()
+          ? (draft.specialSaleStart instanceof Date 
+             ? draft.specialSaleStart.toISOString() 
+             : typeof draft.specialSaleStart === 'string' 
+               ? draft.specialSaleStart 
+               : String(draft.specialSaleStart))
           : null,
         specialSaleEnd: draft.specialSaleEnd
-          ? draft.specialSaleEnd.toISOString()
+          ? (draft.specialSaleEnd instanceof Date 
+             ? draft.specialSaleEnd.toISOString() 
+             : typeof draft.specialSaleEnd === 'string' 
+               ? draft.specialSaleEnd 
+               : String(draft.specialSaleEnd))
           : null,
         isFlashDeal: draft.isFlashDeal || false,
         flashDealEnd: draft.flashDealEnd
-          ? draft.flashDealEnd.toISOString()
+          ? (draft.flashDealEnd instanceof Date 
+             ? draft.flashDealEnd.toISOString() 
+             : typeof draft.flashDealEnd === 'string' 
+               ? draft.flashDealEnd 
+               : String(draft.flashDealEnd))
           : null,
-        hasSpecialSale: draft.hasSpecialSale || false,
-        hasDynamicPricing: draft.hasDynamicPricing || false,
+        // These fields don't exist in the products table schema but are in product_drafts
+        // Remove them to avoid errors
+        // hasSpecialSale: draft.hasSpecialSale || false,
+        // hasDynamicPricing: draft.hasDynamicPricing || false,
 
         // Categorization and grouping
         tags: draft.metaKeywords
