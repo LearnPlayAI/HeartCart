@@ -6506,13 +6506,38 @@ export class DatabaseStorage implements IStorage {
 
       // Handle existing product (update) vs. new product (insert)
       let product: Product;
+      
+      // First check if a product with this name/slug already exists
+      // This prevents duplicate products when publishing
+      let existingProductId = draft.originalProductId;
+      
+      if (!existingProductId) {
+        // Check if product exists by name and catalog
+        const existingProducts = await db
+          .select()
+          .from(products)
+          .where(and(
+            eq(products.name, draft.name || ""),
+            draft.catalogId ? eq(products.catalogId, draft.catalogId) : undefined
+          ))
+          .limit(1);
+          
+        if (existingProducts.length > 0) {
+          existingProductId = existingProducts[0].id;
+          logger.info(`Found existing product with matching name and catalog. Using product ID ${existingProductId} for update instead of creating new product.`, {
+            draftId: id,
+            existingProductId,
+            draftName: draft.name
+          });
+        }
+      }
 
-      if (draft.originalProductId) {
+      if (existingProductId) {
         // Update existing product
         const [updatedProduct] = await db
           .update(products)
           .set(productData)
-          .where(eq(products.id, draft.originalProductId))
+          .where(eq(products.id, existingProductId))
           .returning();
 
         product = updatedProduct;
