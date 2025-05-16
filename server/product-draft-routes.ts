@@ -201,6 +201,33 @@ export default function registerProductDraftRoutes(router: Router) {
       }
       
       try {
+        // First check if the product exists
+        const product = await storage.getProductById(productId);
+        if (!product) {
+          throw new NotFoundError(`Product with ID ${productId} not found`);
+        }
+        
+        // Check if a draft already exists for this product
+        const existingDraft = await db
+          .select()
+          .from(productDrafts)
+          .where(
+            and(
+              eq(productDrafts.originalProductId, productId),
+              not(eq(productDrafts.draftStatus, 'published'))
+            )
+          )
+          .limit(1);
+          
+        if (existingDraft.length > 0) {
+          logger.info("Returning existing draft for product", {
+            productId,
+            draftId: existingDraft[0].id,
+            draftStatus: existingDraft[0].draftStatus
+          });
+          return sendSuccess(res, existingDraft[0]);
+        }
+          
         // Create draft from existing product
         const draft = await storage.createDraftFromProduct(productId, userId);
         

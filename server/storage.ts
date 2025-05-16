@@ -5726,6 +5726,109 @@ export class DatabaseStorage implements IStorage {
       
       // Add all images from product_images table (skipping the main one if already added)
       productImages.forEach((img, index) => {
+        // Skip main image if we already added it from product.imageUrl
+        if (img.isMain && product.imageUrl === img.url) {
+          return;
+        }
+        
+        // Otherwise add the image
+        imageUrls.push(img.url);
+        objectKeys.push(img.objectKey || '');
+        
+        // Update main image index if this is the main image
+        if (img.isMain) {
+          mainImageIndex = imageUrls.length - 1;
+        }
+      });
+      
+      // Map product attributes to draft format
+      const attributes = productAttributes.map(attr => ({
+        attributeId: attr.attributeId,
+        value: attr.textValue || (Array.isArray(attr.selectedOptions) && attr.selectedOptions.length > 0 
+          ? attr.selectedOptions 
+          : []),
+        attributeName: attr.attribute?.name || "",
+        attributeDisplayName: attr.attribute?.displayName || "",
+        attributeType: attr.attribute?.attributeType || "text",
+        isRequired: !!attr.isRequired,
+        sortOrder: attr.sortOrder || 0
+      }));
+      
+      // Create the draft object
+      const draftData = {
+        originalProductId: productId,
+        createdBy: userId,
+        draftStatus: 'draft',
+        name: product.name,
+        slug: product.slug,
+        sku: product.sku,
+        description: product.description,
+        brand: product.brand,
+        categoryId: product.categoryId,
+        isActive: product.isActive,
+        isFeatured: product.isFeatured,
+        catalogId: product.catalogId,
+        costPrice: product.costPrice,
+        regularPrice: product.price,
+        salePrice: product.salePrice,
+        onSale: !!product.salePrice && product.salePrice < product.price,
+        stockLevel: product.stock,
+        lowStockThreshold: product.lowStockThreshold || 5,
+        backorderEnabled: product.backorderEnabled || false,
+        imageUrls: imageUrls,
+        imageObjectKeys: objectKeys,
+        mainImageIndex: mainImageIndex,
+        attributes: attributes,
+        supplierId: product.supplierId,
+        weight: product.weight,
+        dimensions: product.dimensions,
+        discountLabel: product.discountLabel,
+        specialSaleText: product.specialSaleText,
+        specialSaleStart: product.specialSaleStart ? new Date(product.specialSaleStart) : null,
+        specialSaleEnd: product.specialSaleEnd ? new Date(product.specialSaleEnd) : null,
+        isFlashDeal: product.isFlashDeal,
+        flashDealEnd: product.flashDealEnd ? new Date(product.flashDealEnd) : null,
+        taxable: product.taxable !== false,
+        taxClass: product.taxClass,
+        metaTitle: product.metaTitle,
+        metaDescription: product.metaDescription,
+        metaKeywords: product.metaKeywords,
+        createdAt: nowDate,
+        lastModified: nowDate,
+        completedSteps: ['basic-info', 'images', 'additional-info', 'attributes', 'seo', 'sales-promotions'],
+        wizardProgress: {
+          'basic-info': true,
+          'images': true,
+          'additional-info': true,
+          'attributes': true,
+          'seo': true,
+          'sales-promotions': true,
+          'review': false
+        }
+      };
+      
+      // Insert the draft into the database
+      const [newDraft] = await db
+        .insert(productDrafts)
+        .values(draftData)
+        .returning();
+      
+      logger.info("Created new draft from existing product", {
+        productId,
+        draftId: newDraft.id,
+        userId
+      });
+      
+      return newDraft;
+    } catch (error) {
+      logger.error("Error creating draft from product", {
+        error,
+        productId,
+        userId
+      });
+      throw error;
+    }
+  }
         // Skip if it's the main image and we already added it
         if (img.isMain && product.imageUrl && img.url === product.imageUrl) {
           return;
