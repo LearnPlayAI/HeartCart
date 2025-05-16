@@ -1617,7 +1617,7 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       logger.error("Error saving product draft", { userId, draftId, error });
       throw new Error(
-        `Failed to save product draft: ${error instanceof Error ? error.message : String(error)}`,
+        `Failed to save product draft: ${error instanceof Error ? error.message : String(error)}`
       );
     }
   }
