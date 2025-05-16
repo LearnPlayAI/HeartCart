@@ -206,8 +206,19 @@ export default function registerProductDraftRoutes(router: Router) {
         
         sendSuccess(res, draft);
       } catch (error) {
-        logger.error("Error creating draft from product", { error, productId });
-        throw new BadRequestError("Failed to create draft from product");
+        if (error instanceof Error) {
+          logger.error("Error creating draft from product", { 
+            errorMessage: error.message, 
+            errorName: error.name,
+            errorStack: error.stack,
+            productId
+          });
+        } else {
+          logger.error("Unknown error creating draft from product", { error, productId });
+        }
+        
+        // Send the actual error message to the client for better debugging
+        throw new BadRequestError(`Failed to create draft: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     })
   );

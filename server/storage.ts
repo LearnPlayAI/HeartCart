@@ -5865,7 +5865,17 @@ export class DatabaseStorage implements IStorage {
       
       return draft;
     } catch (error) {
-      logger.error("Error creating draft from product", { error, productId });
+      // More detailed error logging
+      if (error instanceof Error) {
+        logger.error("Error creating draft from product", { 
+          errorMessage: error.message,
+          errorName: error.name,
+          errorStack: error.stack,
+          productId 
+        });
+      } else {
+        logger.error("Unknown error creating draft from product", { error, productId });
+      }
       throw error;
     }
   }
