@@ -5701,7 +5701,8 @@ export class DatabaseStorage implements IStorage {
       // Get product attributes
       const productAttributes = await this.getProductAttributes(productId);
       
-      const now = new Date();
+      const nowDate = new Date();
+      const now = nowDate.toISOString(); // Convert Date to ISO string for database storage
       
       // Map product data to draft data structure
       const draftData: Omit<InsertProductDraft, "id"> = {
@@ -5729,8 +5730,8 @@ export class DatabaseStorage implements IStorage {
         
         // Flash deal settings
         isFlashDeal: product.isFlashDeal || false,
-        flashDealStart: product.flashDealStart,
-        flashDealEnd: product.flashDealEnd,
+        flashDealStart: product.flashDealStart ? product.flashDealStart.toString() : null,
+        flashDealEnd: product.flashDealEnd ? product.flashDealEnd.toString() : null,
         
         // Relationships
         categoryId: product.categoryId,
@@ -5762,7 +5763,7 @@ export class DatabaseStorage implements IStorage {
         
         // Other fields with defaults
         changeHistory: [{
-          timestamp: now.toISOString(),
+          timestamp: now, // Using the ISO string we created earlier
           fromStatus: null,
           toStatus: "draft",
           note: "Created from existing product"

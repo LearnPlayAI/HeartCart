@@ -189,17 +189,26 @@ export default function registerProductDraftRoutes(router: Router) {
       }),
     }),
     asyncHandler(async (req, res) => {
-      const productId = req.params.productId;
+      const productId = parseInt(req.params.productId, 10);
       const userId = req.user?.id;
       
       if (!userId) {
         throw new BadRequestError("User ID is required");
       }
       
-      // Create draft from existing product
-      const draft = await storage.createDraftFromProduct(productId, userId);
+      if (isNaN(productId)) {
+        throw new BadRequestError("Invalid product ID");
+      }
       
-      sendSuccess(res, draft);
+      try {
+        // Create draft from existing product
+        const draft = await storage.createDraftFromProduct(productId, userId);
+        
+        sendSuccess(res, draft);
+      } catch (error) {
+        logger.error("Error creating draft from product", { error, productId });
+        throw new InternalServerError("Failed to create draft from product");
+      }
     })
   );
 
