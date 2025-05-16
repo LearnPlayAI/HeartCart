@@ -6800,9 +6800,9 @@ export class DatabaseStorage implements IStorage {
                 // Save product image record with the original URL
                 await db.insert(productImages).values({
                   productId: product.id,
-                  url: imageUrl,  // Fix: using 'url' instead of 'imageUrl'
+                  url: imageUrl,  // Correct column name 'url'
                   objectKey: newObjectKey,
-                  isMainImage: i === (draft.mainImageIndex || 0),
+                  isMain: i === (draft.mainImageIndex || 0), // Fix: using 'isMain' instead of 'isMainImage'
                   sortOrder: i,
                 });
               }
@@ -6812,9 +6812,9 @@ export class DatabaseStorage implements IStorage {
             // Save product image record with the same locations
             await db.insert(productImages).values({
               productId: product.id,
-              url: newImageUrl, // Fix: using correct column name 'url' instead of 'imageUrl'
+              url: newImageUrl, // Use the correct column name 'url'
               objectKey: newObjectKey,
-              isMainImage: i === (draft.mainImageIndex || 0),
+              isMain: i === (draft.mainImageIndex || 0), // Fix: using 'isMain' instead of 'isMainImage'
               sortOrder: i,
             });
 
