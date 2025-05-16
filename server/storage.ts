@@ -6880,15 +6880,12 @@ export class DatabaseStorage implements IStorage {
         }
       }
 
-      // Clean up the draft images - do this after all data has been published successfully
-      if (imageObjectKeys && imageObjectKeys.length > 0) {
-        // With the new image path strategy, we don't need to delete the draft images
-        // because they're already in their final location and we're reusing them
-        logger.debug("Skipping draft image deletion with new path strategy", {
-          draftId: draft.id,
-          imageCount: imageObjectKeys.length,
-        });
-      }
+      // With the new image path strategy, we don't need to delete the draft images
+      // because they're already in their final location and we're reusing them
+      logger.debug("Skipping draft image deletion with new path strategy", {
+        draftId: draft.id,
+        imageCount: draft.imageUrls?.length || 0,
+      });
 
       // Delete the draft
       await this.deleteProductDraft(id);
