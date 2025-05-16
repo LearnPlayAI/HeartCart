@@ -5739,8 +5739,70 @@ export class DatabaseStorage implements IStorage {
       }));
       
       // Create draft data with correct field names and data types matching the product_drafts table
+      // Extract all possible tags from the product
+      const tagsArray = product.tags ? 
+        (typeof product.tags === 'string' ? 
+          JSON.parse(product.tags) : 
+          (Array.isArray(product.tags) ? product.tags : [])) 
+        : [];
+      
+      // Get all the image URLs and keys from both the main product and the product_images table
+      const allImageUrls: string[] = [];
+      const allObjectKeys: string[] = [];
+      
+      // Add images from product_images table
+      if (productImages && productImages.length > 0) {
+        productImages.forEach(img => {
+          if (img.url) allImageUrls.push(img.url);
+          if (img.objectKey) allObjectKeys.push(img.objectKey);
+        });
+      }
+      
+      // If no images were added, check if there's a main image URL on the product
+      if (allImageUrls.length === 0 && product.imageUrl) {
+        allImageUrls.push(product.imageUrl);
+        if (product.originalImageObjectKey) {
+          allObjectKeys.push(product.originalImageObjectKey);
+        }
+      }
+      
+      // If there are still no images but there are additional images, add those
+      if (allImageUrls.length === 0 && product.additionalImages) {
+        const additionalImgs = Array.isArray(product.additionalImages) ? 
+          product.additionalImages : 
+          (typeof product.additionalImages === 'string' ? 
+            JSON.parse(product.additionalImages) : 
+            []);
+        
+        additionalImgs.forEach((url: string) => {
+          allImageUrls.push(url);
+          allObjectKeys.push(''); // No object keys for additional images typically
+        });
+      }
+      
+      // Make sure we have the same number of URLs and keys
+      while (allObjectKeys.length < allImageUrls.length) {
+        allObjectKeys.push('');
+      }
+      
+      // Define which attributes are required
+      const requiredAttributeIds = product.requiredAttributeIds ? 
+        (typeof product.requiredAttributeIds === 'string' ? 
+          JSON.parse(product.requiredAttributeIds) : 
+          product.requiredAttributeIds) 
+        : [];
+      
+      // Log some key info for debugging
+      logger.debug("Creating draft with data", { 
+        productId, 
+        supplierValue: product.supplier,
+        userId,
+        imageCount: allImageUrls.length,
+        attributeCount: mappedAttributes.length
+      });
+      
       const draftData = {
-        // Link to original product
+        // Link to original product (with fallback value)
         original_product_id: productId,
         
         // Basic info - these match the column names in product_drafts
@@ -5751,19 +5813,19 @@ export class DatabaseStorage implements IStorage {
         brand: product.brand || '',
         
         // Product relationships - match column names
-        category_id: product.categoryId,
-        supplier_id: product.supplierId || null,
-        catalog_id: product.catalogId,
+        category_id: product.categoryId || null,
+        supplier_id: product.supplierId || (product.supplier ? parseInt(product.supplier) : null),
+        catalog_id: product.catalogId || null,
         
-        // Status flags - match column names
+        // Status flags - match column names (using triple equals to avoid null/undefined issues)
         is_active: product.isActive === true,
         is_featured: product.isFeatured === true,
         
         // Pricing information - ensure numeric types
-        cost_price: product.costPrice || 0,
+        cost_price: product.costPrice || product.cost_price || 0,
         regular_price: product.price || 0,
         sale_price: product.salePrice || null,
-        on_sale: product.salePrice !== null && product.salePrice > 0,
+        on_sale: product.salePrice ? true : false,
         markup_percentage: product.markup || 0,
         minimum_price: product.minimumPrice || 0,
         
@@ -5775,30 +5837,47 @@ export class DatabaseStorage implements IStorage {
         // Discounts and promotions - ensure text for dates
         discount_label: product.discountLabel || '',
         special_sale_text: product.specialSaleText || '',
-        special_sale_start: product.specialSaleStart ? product.specialSaleStart.toString() : null,
-        special_sale_end: product.specialSaleEnd ? product.specialSaleEnd.toString() : null,
+        special_sale_start: product.specialSaleStart ? 
+          (typeof product.specialSaleStart === 'string' ? 
+            product.specialSaleStart : 
+            product.specialSaleStart.toString()) 
+          : null,
+        special_sale_end: product.specialSaleEnd ? 
+          (typeof product.specialSaleEnd === 'string' ? 
+            product.specialSaleEnd : 
+            product.specialSaleEnd.toString()) 
+          : null,
         is_flash_deal: product.isFlashDeal === true,
-        flash_deal_end: product.flashDealEnd ? product.flashDealEnd.toString() : null,
+        flash_deal_end: product.flashDealEnd ? 
+          (typeof product.flashDealEnd === 'string' ? 
+            product.flashDealEnd : 
+            product.flashDealEnd.toString()) 
+          : null,
         
-        // Images - using arrays
-        image_urls: imageUrls,
-        image_object_keys: imageObjectKeys,
+        // Images - using arrays - using the comprehensive image arrays we built above
+        image_urls: allImageUrls,
+        image_object_keys: allObjectKeys,
         main_image_index: mainImageIndex,
         
-        // Attributes - using jsonb
-        attributes: mappedAttributes,
+        // Attributes - using jsonb - ensure we have a valid array
+        attributes: mappedAttributes || [],
         
         // Shipping and product details
         weight: product.weight ? product.weight.toString() : '',
         dimensions: product.dimensions || '',
         free_shipping: product.freeShipping === true,
-        shipping_class: product.shippingClass || '',
+        shipping_class: product.shippingClass || 'standard',
         
         // SEO metadata
         meta_title: product.metaTitle || product.name || '',
-        meta_description: product.metaDescription || product.description?.substring(0, 160) || '',
-        meta_keywords: product.metaKeywords || '',
+        meta_description: product.metaDescription || 
+          (product.description ? product.description.substring(0, 160) : ''),
+        meta_keywords: product.metaKeywords || (tagsArray.length > 0 ? tagsArray.join(', ') : ''),
         canonical_url: product.canonicalUrl || '',
+        
+        // Tax information
+        taxable: product.taxable !== false, // Default to true
+        tax_class: product.taxClass || 'standard',
         
         // Draft specific fields
         draft_status: 'draft',
@@ -5809,10 +5888,11 @@ export class DatabaseStorage implements IStorage {
         // Product wizard progress - using jsonb
         wizard_progress: {
           basicInfo: true,
-          images: imageUrls.length > 0,
+          images: allImageUrls.length > 0,
           pricing: true, 
           attributes: mappedAttributes.length > 0,
-          seo: true
+          seo: true,
+          review: false
         },
         
         // Status tracking - using array
@@ -5822,6 +5902,9 @@ export class DatabaseStorage implements IStorage {
         // AI features status
         has_ai_description: false,
         has_ai_seo: false,
+        
+        // Customer selection attributes
+        selected_attributes: requiredAttributeIds,
         
         // Change history - using jsonb
         change_history: [{
