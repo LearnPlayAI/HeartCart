@@ -6842,9 +6842,9 @@ export class DatabaseStorage implements IStorage {
             if (imageUrl) {
               await db.insert(productImages).values({
                 productId: product.id,
-                url: imageUrl, // Fix: 'url' is the correct column name, not 'imageUrl'
+                url: imageUrl, // 'url' is the correct column name
                 objectKey: sourceObjectKey,
-                isMainImage: i === (draft.mainImageIndex || 0),
+                isMain: i === (draft.mainImageIndex || 0), // Fix: 'isMain' is the correct column name, not 'isMainImage'
                 sortOrder: i,
               });
             } else {
