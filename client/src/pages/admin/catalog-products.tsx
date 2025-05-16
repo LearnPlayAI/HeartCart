@@ -639,9 +639,13 @@ export default function CatalogProducts() {
 
   // Create draft from existing product and redirect to wizard
   const handleEditProduct = async (product: Product) => {
+    // Create a fixed toast ID to reference for updates
+    const toastId = "create-draft-toast";
+    
     try {
-      // Show loading toast while creating draft
-      const loadingToast = toast({
+      // Show loading toast with the fixed ID
+      toast({
+        id: toastId,
         title: "Creating product draft",
         description: "Please wait while we prepare the product for editing...",
       });
@@ -660,12 +664,10 @@ export default function CatalogProducts() {
       // Get the draft data
       const result = await response.json();
       
-      // Dismiss loading toast
-      toast.dismiss(loadingToast);
-      
       if (result.success && result.data) {
-        // Success toast
+        // Success toast - replaces the loading toast by using same ID
         toast({
+          id: toastId,
           title: "Draft created",
           description: "You can now edit the product in the wizard.",
         });
@@ -677,9 +679,12 @@ export default function CatalogProducts() {
       }
     } catch (error) {
       console.error("Error creating product draft:", error);
+      
+      // Error toast - replaces the loading toast
       toast({
+        id: toastId,
         title: "Error",
-        description: error.message || "Failed to create product draft",
+        description: error instanceof Error ? error.message : "Failed to create product draft",
         variant: "destructive",
       });
     }
