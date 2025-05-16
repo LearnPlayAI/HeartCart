@@ -6418,12 +6418,33 @@ export class DatabaseStorage implements IStorage {
       // The products table has an integer 'discount' field, not a JSON field
       // Extract numeric discount value if available, otherwise use 0
       let discountValue = 0;
+
+      // Debug the discount data
+      console.log("Publishing draft, discount data:", JSON.stringify({
+        discount: draft.discount,
+        discountData: draft.discountData
+      }));
+      
+      // Check both discount and discountData fields (since schema shows discountData is the JSON field)
       if (draft.discount) {
         if (typeof draft.discount === 'number') {
           discountValue = draft.discount;
         } else if (typeof draft.discount === 'object' && draft.discount.value) {
           // Try to extract numeric value from discount object
           discountValue = parseInt(String(draft.discount.value), 10) || 0;
+        }
+      } else if (draft.discountData) {
+        // Try to extract from discountData JSON field
+        try {
+          const discountObj = typeof draft.discountData === 'string' 
+            ? JSON.parse(draft.discountData)
+            : draft.discountData;
+            
+          if (discountObj && discountObj.value) {
+            discountValue = parseInt(String(discountObj.value), 10) || 0;
+          }
+        } catch (e) {
+          console.error("Error parsing discount data:", e);
         }
       }
 
