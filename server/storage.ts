@@ -5656,6 +5656,138 @@ export class DatabaseStorage implements IStorage {
       throw error;
     }
   }
+  
+  /**
+   * Create a product draft from an existing product
+   * @param productId The ID of the existing product to create a draft from
+   * @param userId User ID of the creator
+   * @returns The created draft based on the existing product
+   */
+  async createDraftFromProduct(
+    productId: number,
+    userId: number
+  ): Promise<ProductDraft> {
+    try {
+      // First check if there's already a draft for this product that isn't published
+      const existingDraft = await db
+        .select()
+        .from(productDrafts)
+        .where(
+          and(
+            eq(productDrafts.originalProductId, productId),
+            not(eq(productDrafts.draftStatus, 'published'))
+          )
+        )
+        .limit(1);
+      
+      if (existingDraft.length > 0) {
+        logger.info("Found existing draft for product", {
+          productId,
+          draftId: existingDraft[0].id,
+          draftStatus: existingDraft[0].draftStatus
+        });
+        return existingDraft[0];
+      }
+
+      // Get the product details
+      const product = await this.getProductById(productId);
+      if (!product) {
+        throw new Error(`Product with ID ${productId} not found`);
+      }
+      
+      // Get product images
+      const productImages = await this.getProductImages(productId);
+      
+      // Get product attributes
+      const productAttributes = await this.getProductAttributes(productId);
+      
+      const now = new Date();
+      
+      // Map product data to draft data structure
+      const draftData: Omit<InsertProductDraft, "id"> = {
+        // Basic info
+        name: product.name || "",
+        slug: product.slug || this.generateSlug(product.name || "product"),
+        description: product.description,
+        brand: product.brand,
+        isActive: product.isActive ?? true,
+        
+        // Pricing info
+        price: product.price || 0,
+        costPrice: product.costPrice || 0,
+        salePrice: product.salePrice,
+        tax: product.tax,
+        
+        // Inventory info
+        stock: product.stock || 0,
+        minimumOrderQuantity: product.minimumOrderQuantity || 1,
+        
+        // Product details
+        weight: product.weight,
+        dimensions: product.dimensions,
+        shippingTime: product.shippingTime,
+        
+        // Flash deal settings
+        isFlashDeal: product.isFlashDeal || false,
+        flashDealStart: product.flashDealStart,
+        flashDealEnd: product.flashDealEnd,
+        
+        // Relationships
+        categoryId: product.categoryId,
+        supplierId: product.supplierId,
+        
+        // Meta data
+        metaTitle: product.metaTitle,
+        metaDescription: product.metaDescription,
+        tags: product.tags || [],
+        
+        // Images
+        imageUrls: productImages.map(img => img.url || ""),
+        imageObjectKeys: productImages.map(img => img.objectKey || ""),
+        mainImageIndex: productImages.findIndex(img => img.isMain === true),
+        
+        // Attributes 
+        attributes: productAttributes.map(attr => ({
+          attributeId: attr.attributeId,
+          valueText: attr.textValue || "",
+          selectedOptions: attr.selectedOptions || []
+        })),
+        
+        // Draft specific fields
+        draftStatus: "draft",
+        createdBy: userId,
+        createdAt: now,
+        lastModified: now,
+        originalProductId: productId, // Link to original product
+        
+        // Other fields with defaults
+        changeHistory: [{
+          timestamp: now.toISOString(),
+          fromStatus: null,
+          toStatus: "draft",
+          note: "Created from existing product"
+        }]
+      };
+
+      // Insert the draft into the database
+      const [draft] = await db
+        .insert(productDrafts)
+        .values(draftData)
+        .returning();
+      
+      logger.info("Created draft from existing product", {
+        productId,
+        draftId: draft.id,
+        name: draft.name,
+        userId
+      });
+      
+      return draft;
+    } catch (error) {
+      logger.error("Error creating draft from product", { error, productId });
+      throw error;
+    }
+  }
 
   async getUserProductDrafts(userId: number): Promise<ProductDraft[]> {
     try {
