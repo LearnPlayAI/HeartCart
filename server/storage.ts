@@ -6471,12 +6471,13 @@ export class DatabaseStorage implements IStorage {
             parseInt(draft.markupPercentage, 10) : draft.markupPercentage : null,
         minimumPrice: draft.minimumPrice ? parseFloat(String(draft.minimumPrice)) : null,
 
-        // Set the main image URL if available
+        // Set the main image URL in the products table "image_url" column
         imageUrl:
           draft.imageUrls && draft.imageUrls.length > 0
             ? draft.imageUrls[draft.mainImageIndex || 0]
             : null,
-        // Set additional images
+        // Set additional images in the products table "additional_images" column
+        // This is a string[] array of non-main image URLs
         additionalImages:
           draft.imageUrls && draft.imageUrls.length > 1
             ? draft.imageUrls.filter(
