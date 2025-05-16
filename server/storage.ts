@@ -6897,8 +6897,54 @@ export class DatabaseStorage implements IStorage {
         imageCount: draft.imageUrls?.length || 0,
       });
 
-      // Delete the draft
-      await this.deleteProductDraft(id);
+      // Instead of deleting the draft, update its status to 'published'
+      // This ensures we keep draft records even after publishing
+      const now = new Date();
+      const updateData: Partial<ProductDraft> = {
+        draftStatus: 'published',
+        lastModified: now,
+        publishedAt: now.toISOString(), // Record when it was published
+      };
+
+      // Add to change history
+      if (!draft.changeHistory) {
+        updateData.changeHistory = [];
+      }
+
+      // Create the new change entry
+      const changeEntry = {
+        timestamp: now.toISOString(),
+        fromStatus: draft.draftStatus,
+        toStatus: 'published',
+        note: 'Published to store',
+      };
+
+      try {
+        // Process existing history
+        let currentHistory = [];
+        if (draft.changeHistory && Array.isArray(draft.changeHistory)) {
+          currentHistory = draft.changeHistory;
+        }
+        // Add new entry
+        updateData.changeHistory = [...currentHistory, changeEntry];
+      } catch (historyError) {
+        logger.error("Error updating draft history during publish", {
+          error: historyError,
+          draftId: id,
+        });
+        // Continue even if history update fails
+      }
+
+      // Update the draft instead of deleting it
+      await db
+        .update(productDrafts)
+        .set(updateData)
+        .where(eq(productDrafts.id, id));
+
+      logger.info("Updated product draft status to published", {
+        draftId: id,
+        productId: product.id
+      });
 
       return product;
     } catch (error) {

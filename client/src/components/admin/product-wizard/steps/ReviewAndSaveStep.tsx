@@ -154,13 +154,31 @@ export const ReviewAndSaveStep: React.FC<ReviewAndSaveStepProps> = ({
           variant: 'default',
         });
         
-        // Update the status to published
-        updateStatusMutation.mutate({ status: 'published' });
-        
-        // Redirect to product view or product listing
-        setTimeout(() => {
-          window.location.href = `/admin/products/${data.data.id}`;
-        }, 1000);
+        // Update the status to published WITHOUT redirecting away from this page
+        updateStatusMutation.mutate({ 
+          status: 'published' 
+        }, {
+          // Override the onSuccess handler to avoid duplicate status update toasts
+          onSuccess: () => {
+            // Redirect to product management page with published tab active
+            setTimeout(() => {
+              // This is the correct URL format for the product management page
+              window.location.href = `/admin/product-management?tab=published`;
+            }, 1000);
+          },
+          onError: () => {
+            // If status update fails, still redirect but show a warning
+            toast({
+              title: 'Partial Success',
+              description: 'Product was published but status update failed. You may need to refresh.',
+              variant: 'warning',
+            });
+            
+            setTimeout(() => {
+              window.location.href = `/admin/product-management?tab=published`;
+            }, 1000);
+          }
+        });
       } else {
         toast({
           title: 'Publication Failed',
