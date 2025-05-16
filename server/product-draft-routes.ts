@@ -20,6 +20,7 @@ import { v4 as uuidv4 } from "uuid";
 import { db } from "./db";
 import { sql } from "drizzle-orm";
 import { ProductDraft } from "@shared/schema";
+import { z } from "zod";
 
 // Configure multer for in-memory storage (we'll upload to Replit Object Store)
 const upload = multer({ 
@@ -172,6 +173,33 @@ export default function registerProductDraftRoutes(router: Router) {
         });
         throw error;
       }
+    })
+  );
+
+  /**
+   * Create a draft from an existing product
+   * POST /api/product-drafts/from-product/:productId
+   */
+  router.post(
+    "/api/product-drafts/from-product/:productId",
+    isAuthenticated,
+    validateRequest({
+      params: z.object({
+        productId: z.string().transform((val) => parseInt(val, 10)),
+      }),
+    }),
+    asyncHandler(async (req, res) => {
+      const productId = req.params.productId;
+      const userId = req.user?.id;
+      
+      if (!userId) {
+        throw new BadRequestError("User ID is required");
+      }
+      
+      // Create draft from existing product
+      const draft = await storage.createDraftFromProduct(productId, userId);
+      
+      sendSuccess(res, draft);
     })
   );
 
