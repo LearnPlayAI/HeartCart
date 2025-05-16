@@ -6781,7 +6781,7 @@ export class DatabaseStorage implements IStorage {
                 // Save product image record with the original URL
                 await db.insert(productImages).values({
                   productId: product.id,
-                  imageUrl: imageUrl,
+                  url: imageUrl,  // Fix: using 'url' instead of 'imageUrl'
                   objectKey: newObjectKey,
                   isMainImage: i === (draft.mainImageIndex || 0),
                   sortOrder: i,
@@ -6793,7 +6793,7 @@ export class DatabaseStorage implements IStorage {
             // Save product image record with the same locations
             await db.insert(productImages).values({
               productId: product.id,
-              imageUrl: newImageUrl,
+              url: newImageUrl, // Fix: using correct column name 'url' instead of 'imageUrl'
               objectKey: newObjectKey,
               isMainImage: i === (draft.mainImageIndex || 0),
               sortOrder: i,
@@ -6823,7 +6823,7 @@ export class DatabaseStorage implements IStorage {
             if (imageUrl) {
               await db.insert(productImages).values({
                 productId: product.id,
-                imageUrl: imageUrl,
+                url: imageUrl, // Fix: 'url' is the correct column name, not 'imageUrl'
                 objectKey: sourceObjectKey,
                 isMainImage: i === (draft.mainImageIndex || 0),
                 sortOrder: i,
