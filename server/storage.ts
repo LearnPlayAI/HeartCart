@@ -6464,6 +6464,7 @@ export class DatabaseStorage implements IStorage {
         costPrice: draft.costPrice ? parseFloat(String(draft.costPrice)) : 0,
         salePrice: draft.salePrice ? parseFloat(String(draft.salePrice)) : null,
         onSale: draft.onSale || false,
+        discount: discountValue, // Use the processed integer discount value
         discountLabel: draft.discountLabel,
         markupPercentage: draft.markupPercentage,
         minimumPrice: draft.minimumPrice,
