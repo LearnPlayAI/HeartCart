@@ -5740,11 +5740,11 @@ export class DatabaseStorage implements IStorage {
         // Meta data
         metaTitle: product.metaTitle,
         metaDescription: product.metaDescription,
-        tags: product.tags || [],
+        tagIds: product.tagIds || [], // Changed from tags to tagIds
         
         // Images
         imageUrls: productImages.map(img => img.url || ""),
-        imageObjectKeys: productImages.map(img => img.objectKey || ""),
+        objectKeys: productImages.map(img => img.objectKey || ""), // Changed from imageObjectKeys to objectKeys
         mainImageIndex: productImages.findIndex(img => img.isMain === true),
         
         // Attributes 
