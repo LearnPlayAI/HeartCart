@@ -5689,7 +5689,7 @@ export class DatabaseStorage implements IStorage {
         return existingDraft[0];
       }
 
-      // Get the product details
+      // Get the product details with all related data
       const product = await this.getProductById(productId);
       if (!product) {
         throw new Error(`Product with ID ${productId} not found`);
@@ -5697,6 +5697,11 @@ export class DatabaseStorage implements IStorage {
       
       // Get product images
       const productImages = await this.getProductImages(productId);
+      logger.debug("Retrieved product images", {
+        productId,
+        imageCount: productImages.length,
+        hasMainImage: productImages.some(img => img.isMain === true)
+      });
       
       // Get product attributes
       const productAttributes = await this.getProductAttributes(productId);
@@ -5704,69 +5709,144 @@ export class DatabaseStorage implements IStorage {
       const nowDate = new Date();
       const now = nowDate.toISOString(); // Convert Date to ISO string for database storage
       
-      // Map product data to draft data structure
-      const draftData: Omit<InsertProductDraft, "id"> = {
+      // Organize images properly as per the documentation
+      // Main image should be the first in the array (index 0)
+      const imageUrls: string[] = [];
+      const objectKeys: string[] = [];
+      let mainImageIndex = 0;
+      
+      // First, try to get the main image from the product_images table
+      const mainImageFromTable = productImages.find(img => img.isMain === true);
+      
+      // If main image exists in product, add it first
+      if (product.imageUrl) {
+        imageUrls.push(product.imageUrl);
+        objectKeys.push(product.originalImageObjectKey || '');
+      }
+      
+      // Add all images from product_images table (skipping the main one if already added)
+      productImages.forEach((img, index) => {
+        // Skip if it's the main image and we already added it
+        if (img.isMain && product.imageUrl && img.url === product.imageUrl) {
+          return;
+        }
+        
+        // If this is a main image and we haven't set a main image yet, update the mainImageIndex
+        if (img.isMain && mainImageIndex === 0 && imageUrls.length > 0) {
+          mainImageIndex = imageUrls.length;
+        }
+        
+        imageUrls.push(img.url || '');
+        objectKeys.push(img.objectKey || '');
+      });
+      
+      // If there are no images from the product_images table but we have additionalImages from the product
+      if (productImages.length === 0 && product.additionalImages && Array.isArray(product.additionalImages)) {
+        product.additionalImages.forEach((url) => {
+          imageUrls.push(url);
+          objectKeys.push(''); // No object key available for these
+        });
+      }
+      
+      // Map product attributes to the correct format for the draft
+      const mappedAttributes = productAttributes.map(attr => ({
+        attributeId: attr.attributeId,
+        valueText: attr.textValue || '',
+        selectedOptions: attr.selectedOptions || []
+      }));
+      
+      // Map product data to draft data structure according to the documentation
+      const draftData = {
+        // Link to original product
+        originalProductId: productId,
+        
         // Basic info
-        name: product.name || "",
-        slug: product.slug || this.generateSlug(product.name || "product"),
-        description: product.description,
-        brand: product.brand,
-        isActive: product.isActive ?? true,
+        name: product.name || '',
+        slug: product.slug || this.generateSlug(product.name || 'product'),
+        sku: product.sku || '',
+        description: product.description || '',
+        brand: product.brand || '',
         
-        // Pricing info
-        price: product.price || 0,
-        costPrice: product.costPrice || 0,
-        salePrice: product.salePrice,
-        tax: product.tax,
-        
-        // Inventory info
-        stock: product.stock || 0,
-        minimumOrderQuantity: product.minimumOrderQuantity || 1,
-        
-        // Product details
-        weight: product.weight,
-        dimensions: product.dimensions,
-        shippingTime: product.shippingTime,
-        
-        // Flash deal settings
-        isFlashDeal: product.isFlashDeal || false,
-        flashDealStart: product.flashDealStart ? product.flashDealStart.toString() : null,
-        flashDealEnd: product.flashDealEnd ? product.flashDealEnd.toString() : null,
-        
-        // Relationships
+        // Product relationships
         categoryId: product.categoryId,
-        supplierId: product.supplierId,
+        supplierId: product.supplier ? parseInt(product.supplier) : null,
+        catalogId: product.catalogId,
         
-        // Meta data
-        metaTitle: product.metaTitle,
-        metaDescription: product.metaDescription,
-        tagIds: product.tagIds || [], // Changed from tags to tagIds
+        // Status flags
+        isActive: product.isActive ?? true,
+        isFeatured: product.isFeatured ?? false,
+        
+        // Pricing information
+        costPrice: product.costPrice || 0,
+        regularPrice: product.price || 0,
+        salePrice: product.salePrice || null,
+        onSale: product.salePrice !== null && product.salePrice > 0,
+        markupPercentage: product.markup || 0,
+        minimumPrice: product.minimumPrice || 0,
+        
+        // Inventory settings
+        stockLevel: product.stock || 0,
+        lowStockThreshold: product.lowStockThreshold || 5,
+        backorderEnabled: product.backorderEnabled ?? false,
+        
+        // Discounts and promotions
+        discountLabel: product.discountLabel || '',
+        specialSaleText: product.specialSaleText || '',
+        specialSaleStart: product.specialSaleStart || null,
+        specialSaleEnd: product.specialSaleEnd || null,
+        isFlashDeal: product.isFlashDeal ?? false,
+        flashDealEnd: product.flashDealEnd || null,
         
         // Images
-        imageUrls: productImages.map(img => img.url || ""),
-        objectKeys: productImages.map(img => img.objectKey || ""), // Changed from imageObjectKeys to objectKeys
-        mainImageIndex: productImages.findIndex(img => img.isMain === true),
+        imageUrls: imageUrls,
+        imageObjectKeys: objectKeys, // Using the correct column name from the schema
+        mainImageIndex: mainImageIndex,
         
-        // Attributes 
-        attributes: productAttributes.map(attr => ({
-          attributeId: attr.attributeId,
-          valueText: attr.textValue || "",
-          selectedOptions: attr.selectedOptions || []
-        })),
+        // Attributes
+        attributes: mappedAttributes,
+        
+        // Shipping and product details
+        weight: product.weight ? product.weight.toString() : '',
+        dimensions: product.dimensions || '',
+        freeShipping: product.freeShipping ?? false,
+        shippingClass: product.shippingClass || '',
+        
+        // SEO metadata
+        metaTitle: product.metaTitle || product.name || '',
+        metaDescription: product.metaDescription || product.description?.substring(0, 160) || '',
+        metaKeywords: product.metaKeywords || '',
+        canonicalUrl: product.canonicalUrl || '',
         
         // Draft specific fields
-        draftStatus: "draft",
+        draftStatus: 'draft',
         createdBy: userId,
         createdAt: now,
         lastModified: now,
-        originalProductId: productId, // Link to original product
         
-        // Other fields with defaults
+        // Product wizard progress
+        wizardProgress: {
+          basicInfo: true,
+          images: imageUrls.length > 0,
+          pricing: true,
+          attributes: mappedAttributes.length > 0,
+          seo: true
+        },
+        
+        // Status tracking
+        completedSteps: ['basicInfo', 'pricing', 'seo'],
+        version: 1,
+        
+        // AI features status
+        hasAiDescription: false, 
+        hasAiSeo: false,
+        
+        // Change history
         changeHistory: [{
-          timestamp: now, // Using the ISO string we created earlier
+          timestamp: now,
           fromStatus: null,
-          toStatus: "draft",
-          note: "Created from existing product"
+          toStatus: 'draft',
+          note: 'Created from existing product',
+          userId: userId
         }]
       };
 
