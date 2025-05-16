@@ -6563,6 +6563,25 @@ export class DatabaseStorage implements IStorage {
           });
         }
       }
+      
+      // Before publishing, first clean up any existing product images to avoid duplication
+      if (existingProductId) {
+        try {
+          // Delete existing product images to avoid duplicates
+          await db
+            .delete(productImages)
+            .where(eq(productImages.productId, existingProductId));
+            
+          logger.debug("Deleted existing product images before publishing", {
+            productId: existingProductId
+          });
+        } catch (deleteError) {
+          logger.error("Error deleting existing product images", {
+            error: deleteError,
+            productId: existingProductId
+          });
+        }
+      }
 
       if (existingProductId) {
         // Update existing product
