@@ -5697,79 +5697,147 @@ export class DatabaseStorage implements IStorage {
       
       // Get product images
       const productImages = await this.getProductImages(productId);
+      logger.debug("Retrieved product images", {
+        productId,
+        imageCount: productImages.length,
+        hasMainImage: productImages.some(img => img.isMain === true)
+      });
       
       // Get product attributes
       const productAttributes = await this.getProductAttributes(productId);
       
-      const nowDate = new Date();
-      const now = nowDate.toISOString(); // Convert Date to ISO string for database storage
+      // Convert Date to ISO string for database storage - product_drafts uses text for date storage
+      const now = new Date().toISOString();
       
-      // Map product data to draft data structure
-      const draftData: Omit<InsertProductDraft, "id"> = {
-        // Basic info
-        name: product.name || "",
-        slug: product.slug || this.generateSlug(product.name || "product"),
-        description: product.description,
-        brand: product.brand,
-        isActive: product.isActive ?? true,
+      // Organize images properly
+      const imageUrls: string[] = [];
+      const imageObjectKeys: string[] = [];
+      let mainImageIndex = 0;
+      
+      // Process images - handle the main image first
+      const mainImage = productImages.find(img => img.isMain === true);
+      if (mainImage) {
+        imageUrls.push(mainImage.url || '');
+        imageObjectKeys.push(mainImage.objectKey || '');
+        mainImageIndex = 0; // Main image is at index 0
+      }
+      
+      // Add the rest of the images
+      productImages.forEach(img => {
+        // Skip the main image as we've already added it
+        if (img.isMain !== true) {
+          imageUrls.push(img.url || '');
+          imageObjectKeys.push(img.objectKey || '');
+        }
+      });
+      
+      // Map attributes to the correct format for the draft
+      const mappedAttributes = productAttributes.map(attr => ({
+        attributeId: attr.attributeId,
+        valueText: attr.textValue || '',
+        selectedOptions: attr.selectedOptions || []
+      }));
+      
+      // Create draft data with correct field names and data types matching the product_drafts table
+      const draftData = {
+        // Link to original product
+        original_product_id: productId,
         
-        // Pricing info
-        price: product.price || 0,
-        costPrice: product.costPrice || 0,
-        salePrice: product.salePrice,
-        tax: product.tax,
+        // Basic info - these match the column names in product_drafts
+        name: product.name || '',
+        slug: product.slug || this.generateSlug(product.name || 'product'),
+        sku: product.sku || '',
+        description: product.description || '',
+        brand: product.brand || '',
         
-        // Inventory info
-        stock: product.stock || 0,
-        minimumOrderQuantity: product.minimumOrderQuantity || 1,
+        // Product relationships - match column names
+        category_id: product.categoryId,
+        supplier_id: product.supplierId || null,
+        catalog_id: product.catalogId,
         
-        // Product details
-        weight: product.weight,
-        dimensions: product.dimensions,
-        shippingTime: product.shippingTime,
+        // Status flags - match column names
+        is_active: product.isActive === true,
+        is_featured: product.isFeatured === true,
         
-        // Flash deal settings
-        isFlashDeal: product.isFlashDeal || false,
-        flashDealStart: product.flashDealStart ? product.flashDealStart.toString() : null,
-        flashDealEnd: product.flashDealEnd ? product.flashDealEnd.toString() : null,
+        // Pricing information - ensure numeric types
+        cost_price: product.costPrice || 0,
+        regular_price: product.price || 0,
+        sale_price: product.salePrice || null,
+        on_sale: product.salePrice !== null && product.salePrice > 0,
+        markup_percentage: product.markup || 0,
+        minimum_price: product.minimumPrice || 0,
         
-        // Relationships
-        categoryId: product.categoryId,
-        supplierId: product.supplierId,
+        // Inventory settings
+        stock_level: product.stock || 0,
+        low_stock_threshold: product.lowStockThreshold || 5,
+        backorder_enabled: product.backorderEnabled === true,
         
-        // Meta data
-        metaTitle: product.metaTitle,
-        metaDescription: product.metaDescription,
-        tagIds: product.tagIds || [], // Changed from tags to tagIds
+        // Discounts and promotions - ensure text for dates
+        discount_label: product.discountLabel || '',
+        special_sale_text: product.specialSaleText || '',
+        special_sale_start: product.specialSaleStart ? product.specialSaleStart.toString() : null,
+        special_sale_end: product.specialSaleEnd ? product.specialSaleEnd.toString() : null,
+        is_flash_deal: product.isFlashDeal === true,
+        flash_deal_end: product.flashDealEnd ? product.flashDealEnd.toString() : null,
         
-        // Images
-        imageUrls: productImages.map(img => img.url || ""),
-        objectKeys: productImages.map(img => img.objectKey || ""), // Changed from imageObjectKeys to objectKeys
-        mainImageIndex: productImages.findIndex(img => img.isMain === true),
+        // Images - using arrays
+        image_urls: imageUrls,
+        image_object_keys: imageObjectKeys,
+        main_image_index: mainImageIndex,
         
-        // Attributes 
-        attributes: productAttributes.map(attr => ({
-          attributeId: attr.attributeId,
-          valueText: attr.textValue || "",
-          selectedOptions: attr.selectedOptions || []
-        })),
+        // Attributes - using jsonb
+        attributes: mappedAttributes,
+        
+        // Shipping and product details
+        weight: product.weight ? product.weight.toString() : '',
+        dimensions: product.dimensions || '',
+        free_shipping: product.freeShipping === true,
+        shipping_class: product.shippingClass || '',
+        
+        // SEO metadata
+        meta_title: product.metaTitle || product.name || '',
+        meta_description: product.metaDescription || product.description?.substring(0, 160) || '',
+        meta_keywords: product.metaKeywords || '',
+        canonical_url: product.canonicalUrl || '',
         
         // Draft specific fields
-        draftStatus: "draft",
-        createdBy: userId,
-        createdAt: now,
-        lastModified: now,
-        originalProductId: productId, // Link to original product
+        draft_status: 'draft',
+        created_by: userId,
+        created_at: now,
+        last_modified: now,
         
-        // Other fields with defaults
-        changeHistory: [{
-          timestamp: now, // Using the ISO string we created earlier
+        // Product wizard progress - using jsonb
+        wizard_progress: {
+          basicInfo: true,
+          images: imageUrls.length > 0,
+          pricing: true, 
+          attributes: mappedAttributes.length > 0,
+          seo: true
+        },
+        
+        // Status tracking - using array
+        completed_steps: ['basicInfo', 'pricing', 'seo'],
+        version: 1,
+        
+        // AI features status
+        has_ai_description: false,
+        has_ai_seo: false,
+        
+        // Change history - using jsonb
+        change_history: [{
+          timestamp: now,
           fromStatus: null,
-          toStatus: "draft",
-          note: "Created from existing product"
+          toStatus: 'draft',
+          note: 'Created from existing product',
+          userId: userId
         }]
       };
 
+      logger.debug("Attempting to insert draft with data", { 
+        draftStatus: draftData.draft_status,
+        fields: Object.keys(draftData).length
+      });
+      
       // Insert the draft into the database
       const [draft] = await db
         .insert(productDrafts)
@@ -5779,8 +5847,7 @@ export class DatabaseStorage implements IStorage {
       logger.info("Created draft from existing product", {
         productId,
         draftId: draft.id,
-        name: draft.name,
-        userId
+        name: draft.name
       });
       
       return draft;
