@@ -873,6 +873,21 @@ export default function registerProductDraftRoutes(router: Router) {
         throw new BadRequestError("Valid product ID is required");
       }
 
+      // Step 1: Check if a draft already exists for this product
+      console.log(`Checking for existing draft for product ID: ${productId}`);
+      const existingDraft = await storage.getProductDraftByOriginalId(productId);
+      
+      if (existingDraft) {
+        console.log(`Found existing draft with ID: ${existingDraft.id}`);
+        return sendSuccess(res, { 
+          draftId: existingDraft.id,
+          message: "Using existing draft for product editing"
+        });
+      }
+
+      // Step 2: No draft exists, create a new one by copying from published product
+      console.log(`No existing draft found, creating new draft for product ID: ${productId}`);
+      
       // Get the published product (including inactive categories since we need to edit existing products)
       let product;
       try {
