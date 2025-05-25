@@ -6842,9 +6842,9 @@ export class DatabaseStorage implements IStorage {
           ? draft.metaKeywords.split(",").map((tag) => tag.trim())
           : [],
 
-        // Timestamps as ISO strings for text fields
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        // Timestamps - use Date objects, not strings for PostgreSQL timestamp fields
+        createdAt: new Date(),
+        updatedAt: new Date(),
       };
 
       // Handle existing product (update) vs. new product (insert)
