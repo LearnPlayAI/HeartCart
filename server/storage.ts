@@ -6808,29 +6808,29 @@ export class DatabaseStorage implements IStorage {
 
         // Discount value already set above, no need to duplicate
 
-        // Sales promotion data - ensure proper date format conversion (timestamp → ISO string)
+        // Sales promotion data - convert strings to Date objects for PostgreSQL timestamp fields
         specialSaleText: draft.specialSaleText,
         specialSaleStart: draft.specialSaleStart
           ? (draft.specialSaleStart instanceof Date 
-             ? draft.specialSaleStart.toISOString() 
+             ? draft.specialSaleStart 
              : typeof draft.specialSaleStart === 'string' 
-               ? draft.specialSaleStart 
-               : String(draft.specialSaleStart))
+               ? new Date(draft.specialSaleStart)
+               : new Date(String(draft.specialSaleStart)))
           : null,
         specialSaleEnd: draft.specialSaleEnd
           ? (draft.specialSaleEnd instanceof Date 
-             ? draft.specialSaleEnd.toISOString() 
+             ? draft.specialSaleEnd 
              : typeof draft.specialSaleEnd === 'string' 
-               ? draft.specialSaleEnd 
-               : String(draft.specialSaleEnd))
+               ? new Date(draft.specialSaleEnd)
+               : new Date(String(draft.specialSaleEnd)))
           : null,
         isFlashDeal: draft.isFlashDeal || false,
         flashDealEnd: draft.flashDealEnd
           ? (draft.flashDealEnd instanceof Date 
-             ? draft.flashDealEnd.toISOString() 
+             ? draft.flashDealEnd 
              : typeof draft.flashDealEnd === 'string' 
-               ? draft.flashDealEnd 
-               : String(draft.flashDealEnd))
+               ? new Date(draft.flashDealEnd)
+               : new Date(String(draft.flashDealEnd)))
           : null,
         // These fields don't exist in the products table schema but are in product_drafts
         // Remove them to avoid errors
