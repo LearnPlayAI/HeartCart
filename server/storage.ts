@@ -3204,15 +3204,20 @@ export class DatabaseStorage implements IStorage {
         // Continue with deletion
       }
 
-      // Delete product attribute values
+      // Delete all draft records for this product
       try {
-        await db
-          .delete(productAttributeValues)
-          .where(eq(productAttributeValues.productId, id));
-        logger.debug(`Deleted product attribute values`, { productId: id });
-      } catch (valuesError) {
-        logger.error(`Error deleting product attribute values`, {
-          error: valuesError,
+        const deletedDrafts = await db
+          .delete(productDrafts)
+          .where(eq(productDrafts.originalProductId, id))
+          .returning();
+        
+        logger.debug(`Deleted product drafts`, { 
+          productId: id, 
+          draftsDeleted: deletedDrafts.length 
+        });
+      } catch (draftsError) {
+        logger.error(`Error deleting product drafts`, {
+          error: draftsError,
           productId: id,
         });
         // Continue with deletion
@@ -5864,8 +5869,7 @@ export class DatabaseStorage implements IStorage {
         allObjectKeys.push('');
       }
       
-      // Determine main image index (first image from product_images table or 0)
-      const mainImageIndex = allImageUrls.length > 0 ? 0 : 0;
+      // Main image index already determined above
       
       // Log some key info for debugging
       logger.debug("Creating draft with data", { 
