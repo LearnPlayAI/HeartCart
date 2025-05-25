@@ -127,7 +127,9 @@ export const ReviewAndSaveStep: React.FC<ReviewAndSaveStepProps> = ({
         
         // IMPORTANT: Refetch validation when status changes to ensure publish button state is correct
         queryClient.invalidateQueries({ queryKey: ['/api/product-drafts/validate', draft.id] });
-        refetchValidation();
+        setTimeout(() => {
+          refetchValidation();
+        }, 100);
         
         // Force invalidate the draft dashboard queries specifically
         queryClient.invalidateQueries({ queryKey: ['/api/product-drafts'] });
@@ -302,6 +304,11 @@ export const ReviewAndSaveStep: React.FC<ReviewAndSaveStepProps> = ({
   // Get validation status and publish readiness
   const isValid = validationData?.data?.isValid || false;
   const hasImages = draft.imageUrls && draft.imageUrls.length > 0;
+  
+  // Debug: Log validation status to help troubleshoot
+  console.log('Validation Data:', validationData);
+  console.log('Is Valid:', isValid);
+  console.log('Draft Status:', draft.draftStatus);
   
   return (
     <>
