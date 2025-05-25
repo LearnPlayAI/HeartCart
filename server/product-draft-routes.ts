@@ -823,4 +823,77 @@ export default function registerProductDraftRoutes(router: Router) {
       }
     })
   );
+
+  /**
+   * Create a draft from an existing published product for editing
+   * POST /api/product-drafts/create-from-published/:productId
+   */
+  router.post(
+    "/api/product-drafts/create-from-published/:productId",
+    isAuthenticated,
+    asyncHandler(async (req, res) => {
+      const productId = parseInt(req.params.productId);
+      const userId = req.user?.id;
+
+      if (!userId) {
+        throw new BadRequestError("Authentication required");
+      }
+
+      if (!productId || isNaN(productId)) {
+        throw new BadRequestError("Valid product ID is required");
+      }
+
+      // Get the published product
+      const product = await storage.getProduct(productId);
+      if (!product) {
+        throw new NotFoundError("Published product not found");
+      }
+
+      // Create a draft based on the published product
+      const draftData = {
+        originalProductId: productId,
+        name: product.name,
+        slug: product.slug,
+        description: product.description,
+        categoryId: product.categoryId,
+        supplierId: product.supplierId,
+        catalogId: product.catalogId,
+        regularPrice: product.price,
+        costPrice: product.costPrice,
+        salePrice: product.salePrice,
+        brand: product.brand,
+        isActive: product.isActive,
+        isFeatured: product.isFeatured,
+        imageUrls: product.imageUrl ? [product.imageUrl] : [],
+        imageObjectKeys: product.imageObjectKey ? [product.imageObjectKey] : [],
+        mainImageIndex: 0,
+        sku: product.sku,
+        stock: product.stock,
+        weight: product.weight,
+        length: product.length,
+        width: product.width,
+        height: product.height,
+        metaTitle: product.metaTitle,
+        metaDescription: product.metaDescription,
+        metaKeywords: product.metaKeywords,
+        seoDescription: product.seoDescription,
+        tags: product.tags,
+        createdBy: userId,
+        draftStatus: 'draft' as const
+      };
+
+      const draft = await storage.createProductDraft(draftData);
+      
+      logger.info("Created draft from published product", {
+        productId,
+        draftId: draft.id,
+        userId
+      });
+
+      sendSuccess(res, { 
+        draftId: draft.id,
+        message: "Draft created successfully from published product" 
+      });
+    })
+  );
 }
