@@ -873,8 +873,11 @@ export default function registerProductDraftRoutes(router: Router) {
         throw new BadRequestError("Valid product ID is required");
       }
 
-      // Get the published product
-      const product = await storage.getProductById(productId);
+      // Get the published product (including inactive categories since we need to edit existing products)
+      const product = await storage.getProductById(productId, { 
+        includeInactive: true, 
+        includeCategoryInactive: true 
+      });
       if (!product) {
         throw new NotFoundError("Published product not found");
       }
