@@ -125,6 +125,10 @@ export const ReviewAndSaveStep: React.FC<ReviewAndSaveStepProps> = ({
         queryClient.invalidateQueries({ queryKey: ['/api/product-drafts'] });
         queryClient.invalidateQueries({ queryKey: ['/api/admin/drafts'] });
         
+        // Force invalidate the draft dashboard queries specifically
+        queryClient.invalidateQueries({ queryKey: ['/api/product-drafts'] });
+        queryClient.refetchQueries({ queryKey: ['/api/product-drafts'] });
+        
         // Also trigger a refetch of the current component's data if passed in as a prop
         if (typeof onSave === 'function') {
           // Force a re-render by calling onSave with current data
@@ -168,12 +172,21 @@ export const ReviewAndSaveStep: React.FC<ReviewAndSaveStepProps> = ({
           variant: 'default',
         });
         
+        // Invalidate all queries immediately to update UI
+        queryClient.invalidateQueries({ queryKey: ['/api/product-drafts'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/product-drafts', draft.id] });
+        queryClient.refetchQueries({ queryKey: ['/api/product-drafts'] });
+        
         // Update the status to published WITHOUT redirecting away from this page
         updateStatusMutation.mutate({ 
           status: 'published' 
         }, {
           // Override the onSuccess handler to avoid duplicate status update toasts
           onSuccess: () => {
+            // Additional cache invalidation after status update
+            queryClient.invalidateQueries({ queryKey: ['/api/product-drafts'] });
+            queryClient.refetchQueries({ queryKey: ['/api/product-drafts'] });
+            
             // Redirect to product management page with published tab active
             setTimeout(() => {
               // This is the correct URL format for the product management page
