@@ -75,8 +75,8 @@ export async function publishProductDraft(draftId: number): Promise<PublicationR
         minimumOrder: draft.minimumOrder || null,
         discountLabel: draft.discountLabel,
         specialSaleText: draft.specialSaleText,
-        specialSaleStart: draft.specialSaleStart ? new Date(draft.specialSaleStart) : null,
-        specialSaleEnd: draft.specialSaleEnd ? new Date(draft.specialSaleEnd) : null,
+        specialSaleStart: draft.specialSaleStart || null,
+        specialSaleEnd: draft.specialSaleEnd || null,
         requiredAttributeIds: draft.selectedAttributes ? 
           Object.keys(draft.selectedAttributes).map(id => parseInt(id)).filter(id => !isNaN(id)) : []
       };
@@ -126,7 +126,7 @@ export async function publishProductDraft(draftId: number): Promise<PublicationR
             objectKey: objectKey,
             isMain: i === (draft.mainImageIndex || 0),
             sortOrder: i,
-            createdAt: new Date(),
+            createdAt: new Date().toISOString(),
             hasBgRemoved: false,
             bgRemovedUrl: null,
             bgRemovedObjectKey: null

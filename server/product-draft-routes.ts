@@ -5,7 +5,7 @@ import { isAdmin, isAuthenticated } from "./auth-middleware";
 import { validateRequest } from "./validation-middleware";
 import { logger } from "./logger";
 import { sendSuccess } from "./api-response";
-import { publishProductDraft } from "./product-publication-atomic";
+import { publishProductDraft } from "./product-publication-simple";
 import multer from "multer";
 import { 
   createProductDraftSchema, 
