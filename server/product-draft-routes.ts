@@ -549,7 +549,7 @@ export default function registerProductDraftRoutes(router: Router) {
           sale_price: draft.salePrice ? parseFloat(String(draft.salePrice)) : null,
           discount: draft.discount ? parseInt(String(draft.discount)) : null,
           image_url: draft.imageUrls && draft.imageUrls.length > 0 ? draft.imageUrls[0] : null,
-          additional_images: draft.imageUrls && draft.imageUrls.length > 1 ? draft.imageUrls.slice(1) : null,
+          additional_images: draft.imageUrls && draft.imageUrls.length > 1 ? draft.imageUrls.slice(1) : [],
           rating: null,
           review_count: null,
           sold_count: null,
@@ -573,16 +573,29 @@ export default function registerProductDraftRoutes(router: Router) {
           special_sale_start: draft.specialSaleStart || null,
           special_sale_end: draft.specialSaleEnd || null,
           required_attribute_ids: draft.selectedAttributes ? 
-            Object.keys(draft.selectedAttributes).map(id => parseInt(id)) : null
+            Object.keys(draft.selectedAttributes).map(id => parseInt(id)) : []
         };
 
-        // Simple direct insertion with only verified working columns
+        // Complete field mapping - save ALL product data to production tables
         const productResult = await db.execute(sql`
-          INSERT INTO products (name, slug, price, stock, is_active, is_featured, is_flash_deal)
-          VALUES (${draft.name}, ${draft.slug || `product-${Date.now()}`}, 
-                  ${parseFloat(String(draft.regularPrice))}, 
-                  ${parseInt(String(draft.stockLevel || 0))}, 
-                  true, false, false)
+          INSERT INTO products (
+            name, slug, description, category_id, price, sale_price, discount, 
+            image_url, additional_images, stock, is_active, is_featured, is_flash_deal,
+            supplier, free_shipping, weight, dimensions, brand, cost_price, catalog_id,
+            created_at, flash_deal_end, minimum_price, discount_label, special_sale_text,
+            special_sale_start, special_sale_end, required_attribute_ids
+          ) VALUES (
+            ${productData.name}, ${productData.slug}, ${productData.description}, 
+            ${productData.category_id}, ${productData.price}, ${productData.sale_price}, 
+            ${productData.discount}, ${productData.image_url}, ${productData.additional_images}, 
+            ${productData.stock}, ${productData.is_active}, ${productData.is_featured}, 
+            ${productData.is_flash_deal}, ${productData.supplier}, ${productData.free_shipping}, 
+            ${productData.weight}, ${productData.dimensions}, ${productData.brand}, 
+            ${productData.cost_price}, ${productData.catalog_id}, ${productData.created_at}, 
+            ${productData.flash_deal_end}, ${productData.minimum_price}, ${productData.discount_label}, 
+            ${productData.special_sale_text}, ${productData.special_sale_start}, 
+            ${productData.special_sale_end}, ${productData.required_attribute_ids}
+          )
           RETURNING id, name, price, slug
         `);
 
