@@ -532,29 +532,44 @@ export default function registerProductDraftRoutes(router: Router) {
       
       // Complete systematic mapping of all columns with proper data type conversions
       try {
-        // Map to exact database column names (snake_case)
+        // Map to exact database column names from products table
         const productData = {
           name: draft.name || 'Untitled Product',
           slug: draft.slug || `product-${Date.now()}`,
-          price: parseFloat(String(draft.regularPrice || 0)),
-          cost_price: parseFloat(String(draft.costPrice || 0)),
-          stock: parseInt(String(draft.stockLevel || 0)),
           description: draft.description || null,
           category_id: draft.categoryId || null,
+          price: parseFloat(String(draft.regularPrice || 0)),
           sale_price: draft.salePrice ? parseFloat(String(draft.salePrice)) : null,
           discount: draft.discount ? parseInt(String(draft.discount)) : null,
           image_url: draft.imageUrls && draft.imageUrls.length > 0 ? draft.imageUrls[0] : null,
           additional_images: draft.imageUrls && draft.imageUrls.length > 1 ? draft.imageUrls.slice(1) : [],
+          stock: parseInt(String(draft.stockLevel || 0)),
+          rating: null,
+          review_count: 0,
           is_active: Boolean(draft.isActive !== false),
           is_featured: Boolean(draft.isFeatured === true),
           is_flash_deal: Boolean(draft.isFlashDeal === true),
+          sold_count: 0,
           supplier: draft.supplierId ? String(draft.supplierId) : null,
           free_shipping: Boolean(draft.freeShipping === true),
           weight: draft.weight ? parseFloat(String(draft.weight)) : null,
-          imageUrls: draft.imageUrls || [],
-          imageObjectKeys: draft.imageObjectKeys || [],
-          mainImageIndex: draft.mainImageIndex || 0,
-          requiredAttributeIds: draft.selectedAttributes ? 
+          dimensions: draft.dimensions || null,
+          brand: draft.brand || null,
+          tags: draft.tags || [],
+          has_background_removed: false,
+          original_image_object_key: null,
+          cost_price: parseFloat(String(draft.costPrice || 0)),
+          catalog_id: draft.catalogId || null,
+          display_order: 999,
+          created_at: new Date().toISOString(),
+          flash_deal_end: draft.flashDealEnd || null,
+          minimum_price: null,
+          minimum_order: null,
+          discount_label: draft.discountLabel || null,
+          special_sale_text: draft.specialSaleText || null,
+          special_sale_start: draft.specialSaleStart || null,
+          special_sale_end: draft.specialSaleEnd || null,
+          required_attribute_ids: draft.selectedAttributes ? 
             Object.keys(draft.selectedAttributes).map(id => parseInt(id)) : []
         };
 
@@ -582,22 +597,32 @@ export default function registerProductDraftRoutes(router: Router) {
             .set({
               name: productData.name,
               slug: productData.slug,
-              price: productData.price,
-              cost_price: productData.cost_price,
-              stock: productData.stock,
               description: productData.description,
               category_id: productData.category_id,
+              price: productData.price,
               sale_price: productData.sale_price,
               discount: productData.discount,
               image_url: productData.image_url,
               additional_images: productData.additional_images,
+              stock: productData.stock,
               is_active: productData.is_active,
               is_featured: productData.is_featured,
               is_flash_deal: productData.is_flash_deal,
               supplier: productData.supplier,
               free_shipping: productData.free_shipping,
               weight: productData.weight,
-              updated_at: new Date()
+              dimensions: productData.dimensions,
+              brand: productData.brand,
+              tags: productData.tags,
+              cost_price: productData.cost_price,
+              catalog_id: productData.catalog_id,
+              display_order: productData.display_order,
+              flash_deal_end: productData.flash_deal_end,
+              discount_label: productData.discount_label,
+              special_sale_text: productData.special_sale_text,
+              special_sale_start: productData.special_sale_start,
+              special_sale_end: productData.special_sale_end,
+              required_attribute_ids: productData.required_attribute_ids
             })
             .where(eq(products.id, draft.originalProductId))
             .returning();
