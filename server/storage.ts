@@ -1323,6 +1323,50 @@ export class DatabaseStorage implements IStorage {
 
   async updateProduct(productId: number, productData: Partial<InsertProduct>): Promise<Product> {
     try {
+      // Use snake_case field names like the working createProductWithWizard method
+      const updateData = {
+        name: productData.name,
+        slug: productData.slug,
+        price: productData.price,
+        cost_price: productData.costPrice,
+        stock: productData.stock,
+        description: productData.description,
+        category_id: productData.categoryId,
+        catalog_id: productData.catalogId,
+        sale_price: productData.salePrice,
+        discount: productData.discount,
+        image_url: productData.imageUrl,
+        additional_images: productData.additionalImages || [],
+        is_active: productData.isActive,
+        is_featured: productData.isFeatured,
+        is_flash_deal: productData.isFlashDeal,
+        updated_at: new Date()
+      };
+
+      // Remove undefined values to avoid issues
+      const cleanUpdateData = Object.fromEntries(
+        Object.entries(updateData).filter(([_, value]) => value !== undefined)
+      );
+
+      const [updatedProduct] = await db
+        .update(products)
+        .set(cleanUpdateData)
+        .where(eq(products.id, productId))
+        .returning();
+
+      if (!updatedProduct) {
+        throw new Error(`Product with ID ${productId} not found`);
+      }
+
+      return updatedProduct;
+    } catch (error) {
+      console.error(`Error updating product ID ${productId}:`, error);
+      throw error;
+    }
+  }
+
+  async updateProductFromDraft(productId: number, productData: Partial<InsertProduct>): Promise<Product> {
+    try {
       const [updatedProduct] = await db
         .update(products)
         .set(productData)

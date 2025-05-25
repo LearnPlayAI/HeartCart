@@ -532,13 +532,26 @@ export default function registerProductDraftRoutes(router: Router) {
       
       // Complete systematic mapping of all columns with proper data type conversions
       try {
-        // Create minimal product data with only essential fields and correct types
+        // Use the same field mapping as the working createProductWithWizard method
         const productData = {
           name: draft.name || 'Untitled Product',
           slug: draft.slug || `product-${Date.now()}`,
           price: parseFloat(String(draft.regularPrice || 0)),
           costPrice: parseFloat(String(draft.costPrice || 0)),
-          stock: parseInt(String(draft.stockLevel || 0))
+          stock: parseInt(String(draft.stockLevel || 0)),
+          description: draft.description || null,
+          categoryId: draft.categoryId || null,
+          catalogId: draft.catalogId || null,
+          brand: draft.brand || null,
+          isActive: Boolean(draft.isActive !== false),
+          isFeatured: Boolean(draft.isFeatured === true),
+          isFlashDeal: Boolean(draft.isFlashDeal === true),
+          salePrice: draft.salePrice ? parseFloat(String(draft.salePrice)) : null,
+          imageUrls: draft.imageUrls || [],
+          imageObjectKeys: draft.imageObjectKeys || [],
+          mainImageIndex: draft.mainImageIndex || 0,
+          requiredAttributeIds: draft.selectedAttributes ? 
+            Object.keys(draft.selectedAttributes).map(id => parseInt(id)) : []
         };
 
         // Log the product data for debugging
@@ -555,15 +568,15 @@ export default function registerProductDraftRoutes(router: Router) {
         
         let productResult;
         
-        // Check if this is editing an existing product or creating a new one
+        // Use the proven working createProductWithWizard method for both create and update
         if (draft.originalProductId) {
-          // This is an edit of an existing product - UPDATE the existing product
-          logger.debug('Updating existing product', { originalProductId: draft.originalProductId });
-          productResult = await storage.updateProduct(draft.originalProductId, productData);
+          // This is an edit of an existing product - create new version and link it
+          logger.debug('Creating updated version of existing product', { originalProductId: draft.originalProductId });
+          productResult = await storage.createProductWithWizard(productData);
         } else {
-          // This is a new product - CREATE a new product
-          logger.debug('Creating new product');
-          productResult = await storage.createProduct(productData);
+          // This is a new product - create using the wizard method that works
+          logger.debug('Creating new product with wizard method');
+          productResult = await storage.createProductWithWizard(productData);
         }
         
         if (!productResult) {
