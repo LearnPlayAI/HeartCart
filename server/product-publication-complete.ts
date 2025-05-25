@@ -183,9 +183,9 @@ export async function publishProductDraftComplete(draftId: number): Promise<Publ
         metaKeywords: safeString(draft.metaKeywords),
         canonicalUrl: safeString(draft.canonicalUrl),
         
-        // Tags and Categories
-        tags: safeArray(draft.tags),
-        requiredAttributeIds: safeArray(draft.requiredAttributeIds),
+        // Tags and Categories - use defaults for missing fields
+        tags: [], // Field doesn't exist in drafts table
+        requiredAttributeIds: [], // Field doesn't exist in drafts table
         
         // Promotional and Special Pricing
         specialSaleText: safeString(draft.specialSaleText),
@@ -198,10 +198,10 @@ export async function publishProductDraftComplete(draftId: number): Promise<Publ
         reviewCount: 0,
         soldCount: 0,
         
-        // System Fields
-        displayOrder: draft.displayOrder ? safeInteger(draft.displayOrder) : 999,
-        hasBackgroundRemoved: safeBoolean(draft.hasBackgroundRemoved, false),
-        originalImageObjectKey: safeString(draft.originalImageObjectKey),
+        // System Fields - use defaults for missing fields
+        displayOrder: 999, // Field doesn't exist in drafts table, use default
+        hasBackgroundRemoved: false, // Field doesn't exist in drafts table, use default
+        originalImageObjectKey: null, // Field doesn't exist in drafts table, use default
         
         // Timestamp - let database handle this automatically
         // createdAt: draft.originalProductId ? undefined : new Date().toISOString(), // Only set for new products
