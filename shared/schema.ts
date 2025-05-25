@@ -139,7 +139,7 @@ export const productImages = pgTable("product_images", {
   id: serial("id").primaryKey(),
   productId: integer("product_id").references(() => products.id),
   url: text("url").notNull(),
-  objectKey: text("object_key"),  // Make nullable for temporary uploads
+  objectKey: text("object_key").notNull(),  // Required by database constraint
   isMain: boolean("is_main").default(false),
   hasBgRemoved: boolean("has_bg_removed").default(false),
   bgRemovedUrl: text("bg_removed_url"),

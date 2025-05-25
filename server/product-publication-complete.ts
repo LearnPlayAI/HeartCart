@@ -262,14 +262,37 @@ export async function publishProductDraftComplete(draftId: number): Promise<Publ
           await tx.delete(productImages).where(eq(productImages.productId, productResult.id));
 
           // Insert all images with proper order and main image designation
-          const imageInserts = draft.imageUrls.map((url, index) => ({
-            productId: productResult.id,
-            url: url, // Fix: Use 'url' field name as expected by database schema
-            altText: `${productResult.name} - Image ${index + 1}`,
-            displayOrder: index,
-            isMain: index === (draft.mainImageIndex || 0),
-            createdAt: new Date().toISOString()
-          }));
+          const imageInserts = draft.imageUrls
+            .map((url, index) => {
+              // Extract object key from URL path if it's a file URL
+              let objectKey = null;
+              if (url && url.includes('/api/files/')) {
+                // Extract the path after /api/files/ as the object key
+                const parts = url.split('/api/files/');
+                if (parts.length > 1) {
+                  objectKey = parts[1];
+                }
+              }
+              
+              // CRITICAL: Skip images without valid object keys to prevent constraint violations
+              if (!objectKey) {
+                logger.warn('Skipping image without valid object key', { url, index });
+                return null;
+              }
+              
+              return {
+                productId: productResult.id,
+                url: url,
+                objectKey: objectKey!, // REQUIRED: TypeScript knows this is not null due to filter above
+                isMain: index === (draft.mainImageIndex || 0),
+                hasBgRemoved: false,
+                bgRemovedUrl: null,
+                bgRemovedObjectKey: null,
+                sortOrder: index,
+                createdAt: new Date().toISOString()
+              };
+            })
+            .filter(Boolean) as any[]; // Remove null entries
 
           await tx.insert(productImages).values(imageInserts);
           logger.info('All product images processed successfully', { 
