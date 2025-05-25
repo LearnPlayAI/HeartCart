@@ -3576,7 +3576,7 @@ export class DatabaseStorage implements IStorage {
 
   async createSupplier(supplier: InsertSupplier): Promise<Supplier> {
     try {
-      const now = new Date();
+      const now = new Date().toISOString();
       const [newSupplier] = await db
         .insert(suppliers)
         .values({
