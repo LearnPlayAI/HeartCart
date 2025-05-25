@@ -6808,29 +6808,29 @@ export class DatabaseStorage implements IStorage {
 
         // Discount value already set above, no need to duplicate
 
-        // Sales promotion data - convert strings to Date objects for PostgreSQL timestamp fields
+        // Sales promotion data - convert to ISO strings for database storage
         specialSaleText: draft.specialSaleText,
         specialSaleStart: draft.specialSaleStart
           ? (draft.specialSaleStart instanceof Date 
-             ? draft.specialSaleStart 
+             ? draft.specialSaleStart.toISOString() 
              : typeof draft.specialSaleStart === 'string' 
-               ? new Date(draft.specialSaleStart)
-               : new Date(String(draft.specialSaleStart)))
+               ? draft.specialSaleStart
+               : String(draft.specialSaleStart))
           : null,
         specialSaleEnd: draft.specialSaleEnd
           ? (draft.specialSaleEnd instanceof Date 
-             ? draft.specialSaleEnd 
+             ? draft.specialSaleEnd.toISOString() 
              : typeof draft.specialSaleEnd === 'string' 
-               ? new Date(draft.specialSaleEnd)
-               : new Date(String(draft.specialSaleEnd)))
+               ? draft.specialSaleEnd
+               : String(draft.specialSaleEnd))
           : null,
         isFlashDeal: draft.isFlashDeal || false,
         flashDealEnd: draft.flashDealEnd
           ? (draft.flashDealEnd instanceof Date 
-             ? draft.flashDealEnd 
+             ? draft.flashDealEnd.toISOString() 
              : typeof draft.flashDealEnd === 'string' 
-               ? new Date(draft.flashDealEnd)
-               : new Date(String(draft.flashDealEnd)))
+               ? draft.flashDealEnd
+               : String(draft.flashDealEnd))
           : null,
         // These fields don't exist in the products table schema but are in product_drafts
         // Remove them to avoid errors
@@ -6842,9 +6842,9 @@ export class DatabaseStorage implements IStorage {
           ? draft.metaKeywords.split(",").map((tag) => tag.trim())
           : [],
 
-        // Timestamps - use Date objects, not strings for PostgreSQL timestamp fields
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        // Timestamps - convert to ISO strings for database storage
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       };
 
       // Handle existing product (update) vs. new product (insert)
