@@ -241,8 +241,8 @@ export const attributes = pgTable("attributes", {
   isSwatch: boolean("is_swatch").default(false), // Is this attribute shown as a swatch (color/texture)?
   displayInProductSummary: boolean("display_in_product_summary").default(false), // Show in product list summaries?
   sortOrder: integer("sort_order").default(0),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  createdAt: text("created_at").default(String(new Date().toISOString())).notNull(),
+  updatedAt: text("updated_at").default(String(new Date().toISOString())).notNull(),
 }, (table) => {
   return {
     nameUnique: unique().on(table.name),
@@ -257,8 +257,8 @@ export const attributeOptions = pgTable("attribute_options", {
   displayValue: varchar("display_value", { length: 255 }).notNull(),
   metadata: jsonb("metadata"), // Additional data like hex code for colors, image URL for texture, etc.
   sortOrder: integer("sort_order").default(0),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  createdAt: text("created_at").default(String(new Date().toISOString())).notNull(),
+  updatedAt: text("updated_at").default(String(new Date().toISOString())).notNull(),
 }, (table) => {
   return {
     attrOptionUnique: unique().on(table.attributeId, table.value),
