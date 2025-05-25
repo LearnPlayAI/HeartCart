@@ -1,6 +1,7 @@
 import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import DraftDashboard from '@/components/admin/product-management/DraftDashboard';
+import { PublishedProducts } from '@/components/admin/product-management/PublishedProducts';
 import { AdminLayout } from '@/components/admin/layout';
 
 const ProductManagementPage: React.FC = () => {
@@ -25,13 +26,7 @@ const ProductManagementPage: React.FC = () => {
           </TabsContent>
           
           <TabsContent value="published" className="space-y-4">
-            <div className="bg-muted/40 border rounded-lg p-8 text-center">
-              <h3 className="text-lg font-medium">Published Products View</h3>
-              <p className="text-muted-foreground mt-2">
-                This view will show all published products and their performance metrics.
-                Feature coming soon in a future update.
-              </p>
-            </div>
+            <PublishedProducts />
           </TabsContent>
         </Tabs>
       </div>
