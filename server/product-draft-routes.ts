@@ -532,47 +532,47 @@ export default function registerProductDraftRoutes(router: Router) {
       
       // Complete systematic mapping of all columns with proper data type conversions
       try {
-        // Map draft columns to products table with exact data type matching
+        // Map draft columns to products table with correct camelCase field names
         const productData = {
-          // Required NOT NULL fields
+          // Required NOT NULL fields with correct camelCase naming
           name: draft.name || 'Untitled Product',
           slug: draft.slug || `product-${Date.now()}`,
           price: parseFloat(String(draft.regularPrice || 0)),
+          costPrice: draft.costPrice ? parseFloat(String(draft.costPrice)) : 0,
           stock: parseInt(String(draft.stockLevel || 0)),
-          is_active: Boolean(draft.isActive !== false),
-          is_featured: Boolean(draft.isFeatured === true),
-          is_flash_deal: Boolean(draft.isFlashDeal === true),
+          isActive: Boolean(draft.isActive !== false),
+          isFeatured: Boolean(draft.isFeatured === true),
+          isFlashDeal: Boolean(draft.isFlashDeal === true),
           
-          // Optional fields with proper type conversions
+          // Optional fields with correct camelCase field names
           description: draft.description || null,
-          category_id: draft.categoryId || null,
-          sale_price: draft.salePrice ? parseFloat(String(draft.salePrice)) : null,
+          categoryId: draft.categoryId || null,
+          catalogId: draft.catalogId || null,
+          salePrice: draft.salePrice ? parseFloat(String(draft.salePrice)) : null,
           discount: draft.discount ? parseInt(String(draft.discount)) : null,
-          image_url: draft.imageUrls && draft.imageUrls.length > 0 ? draft.imageUrls[0] : null,
-          additional_images: draft.imageUrls && draft.imageUrls.length > 1 ? draft.imageUrls.slice(1) : [],
-          rating: null,
-          review_count: null,
-          sold_count: null,
+          imageUrl: draft.imageUrls && draft.imageUrls.length > 0 ? draft.imageUrls[0] : null,
+          additionalImages: draft.imageUrls && draft.imageUrls.length > 1 ? draft.imageUrls.slice(1) : [],
+          rating: 0,
+          reviewCount: 0,
+          soldCount: 0,
           supplier: draft.supplierId ? String(draft.supplierId) : null,
-          free_shipping: Boolean(draft.freeShipping === true),
+          freeShipping: Boolean(draft.freeShipping === true),
           weight: draft.weight ? parseFloat(String(draft.weight)) : null,
           dimensions: draft.dimensions || null,
           brand: draft.brand || null,
-          tags: null,
-          has_background_removed: false,
-          original_image_object_key: draft.imageObjectKeys && draft.imageObjectKeys.length > 0 ? draft.imageObjectKeys[0] : null,
-          cost_price: draft.costPrice ? parseFloat(String(draft.costPrice)) : null,
-          catalog_id: draft.catalogId || null,
-          display_order: null,
-          created_at: new Date().toISOString(),
-          flash_deal_end: draft.flashDealEnd || null,
-          minimum_price: draft.minimumPrice ? parseFloat(String(draft.minimumPrice)) : null,
-          minimum_order: null,
-          discount_label: draft.discountLabel || null,
-          special_sale_text: draft.specialSaleText || null,
-          special_sale_start: draft.specialSaleStart || null,
-          special_sale_end: draft.specialSaleEnd || null,
-          required_attribute_ids: draft.selectedAttributes ? 
+          tags: [],
+          hasBackgroundRemoved: false,
+          originalImageObjectKey: draft.imageObjectKeys && draft.imageObjectKeys.length > 0 ? draft.imageObjectKeys[0] : null,
+          displayOrder: 999,
+          createdAt: new Date().toISOString(),
+          flashDealEnd: draft.flashDealEnd || null,
+          minimumPrice: draft.minimumPrice ? parseFloat(String(draft.minimumPrice)) : null,
+          minimumOrder: 1,
+          discountLabel: draft.discountLabel || null,
+          specialSaleText: draft.specialSaleText || null,
+          specialSaleStart: draft.specialSaleStart || null,
+          specialSaleEnd: draft.specialSaleEnd || null,
+          requiredAttributeIds: draft.selectedAttributes ? 
             Object.keys(draft.selectedAttributes).map(id => parseInt(id)) : []
         };
 
