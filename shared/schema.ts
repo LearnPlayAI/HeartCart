@@ -202,8 +202,8 @@ export const suppliers = pgTable("suppliers", {
   logo: text("logo"),
   website: varchar("website", { length: 255 }),
   isActive: boolean("is_active").default(true).notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  createdAt: text("created_at").default(String(new Date().toISOString())).notNull(),
+  updatedAt: text("updated_at").default(String(new Date().toISOString())).notNull(),
 });
 
 // Catalogs table
@@ -216,10 +216,10 @@ export const catalogs = pgTable("catalogs", {
   isActive: boolean("is_active").default(true).notNull(),
   coverImage: text("cover_image"),
   tags: text("tags").array(),
-  startDate: timestamp("start_date", { withTimezone: true }),
-  endDate: timestamp("end_date", { withTimezone: true }),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  startDate: text("start_date"),
+  endDate: text("end_date"),
+  createdAt: text("created_at").default(String(new Date().toISOString())).notNull(),
+  updatedAt: text("updated_at").default(String(new Date().toISOString())).notNull(),
 });
 
 // =============================================================================
