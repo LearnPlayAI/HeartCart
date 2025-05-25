@@ -531,160 +531,32 @@ export default function registerProductDraftRoutes(router: Router) {
         throw new BadRequestError("Product price is required");
       }
       
-      // Complete systematic mapping of all columns with proper data type conversions
+      // Use the atomic publication service
       try {
-        // Map to exact database column names from products table
-        const productData = {
-          name: draft.name || 'Untitled Product',
-          slug: draft.slug || `product-${Date.now()}`,
-          description: draft.description || null,
-          category_id: draft.categoryId || null,
-          price: parseFloat(String(draft.regularPrice || 0)),
-          sale_price: draft.salePrice ? parseFloat(String(draft.salePrice)) : null,
-          discount: draft.discount ? parseInt(String(draft.discount)) : null,
-          image_url: draft.imageUrls && draft.imageUrls.length > 0 ? draft.imageUrls[0] : null,
-          additional_images: draft.imageUrls && draft.imageUrls.length > 1 ? draft.imageUrls.slice(1) : [],
-          stock: parseInt(String(draft.stockLevel || 0)),
-          rating: null,
-          review_count: 0,
-          is_active: Boolean(draft.isActive !== false),
-          is_featured: Boolean(draft.isFeatured === true),
-          is_flash_deal: Boolean(draft.isFlashDeal === true),
-          sold_count: 0,
-          supplier: draft.supplierId ? String(draft.supplierId) : null,
-          free_shipping: Boolean(draft.freeShipping === true),
-          weight: draft.weight ? parseFloat(String(draft.weight)) : null,
-          dimensions: draft.dimensions || null,
-          brand: draft.brand || null,
-          tags: draft.tags || [],
-          has_background_removed: false,
-          original_image_object_key: null,
-          cost_price: parseFloat(String(draft.costPrice || 0)),
-          catalog_id: draft.catalogId || null,
-          display_order: 999,
-          created_at: new Date().toISOString(),
-          flash_deal_end: draft.flashDealEnd || null,
-          minimum_price: null,
-          minimum_order: null,
-          discount_label: draft.discountLabel || null,
-          special_sale_text: draft.specialSaleText || null,
-          special_sale_start: draft.specialSaleStart || null,
-          special_sale_end: draft.specialSaleEnd || null,
-          required_attribute_ids: draft.selectedAttributes ? 
-            Object.keys(draft.selectedAttributes).map(id => parseInt(id)) : []
-        };
+        const result = await publishProductDraft(draftId);
 
-        // Log the product data for debugging
-        logger.debug('Product data being processed:', { 
-          productData, 
-          originalProductId: draft.originalProductId,
-          draftData: {
-            name: draft.name,
-            regularPrice: draft.regularPrice,
-            costPrice: draft.costPrice,
-            stockLevel: draft.stockLevel
-          }
-        });
-        
-        let productResult;
-        
-        if (draft.originalProductId) {
-          // This is an edit of an existing product - UPDATE the existing product
-          logger.debug('Updating existing product via SQL UPDATE', { originalProductId: draft.originalProductId });
-          
-          // Use direct database update for existing products
-          const [updatedProduct] = await db
-            .update(products)
-            .set({
-              name: productData.name,
-              slug: productData.slug,
-              description: productData.description,
-              category_id: productData.category_id,
-              price: productData.price,
-              sale_price: productData.sale_price,
-              discount: productData.discount,
-              image_url: productData.image_url,
-              additional_images: productData.additional_images,
-              stock: productData.stock,
-              is_active: productData.is_active,
-              is_featured: productData.is_featured,
-              is_flash_deal: productData.is_flash_deal,
-              supplier: productData.supplier,
-              free_shipping: productData.free_shipping,
-              weight: productData.weight,
-              dimensions: productData.dimensions,
-              brand: productData.brand,
-              tags: productData.tags,
-              cost_price: productData.cost_price,
-              catalog_id: productData.catalog_id,
-              display_order: productData.display_order,
-              flash_deal_end: productData.flash_deal_end,
-              discount_label: productData.discount_label,
-              special_sale_text: productData.special_sale_text,
-              special_sale_start: productData.special_sale_start,
-              special_sale_end: productData.special_sale_end,
-              required_attribute_ids: productData.required_attribute_ids
-            })
-            .where(eq(products.id, draft.originalProductId))
-            .returning();
-            
-          productResult = updatedProduct;
+        if (result.success) {
+          logger.info('Product published successfully via atomic service', { 
+            draftId, 
+            productId: result.productId,
+            publishedBy: req.user?.id 
+          });
+
+          sendSuccess(res, {
+            productId: result.productId,
+            draftId: draftId,
+            message: "Product published successfully"
+          });
         } else {
-          // This is a new product - CREATE using INSERT
-          logger.debug('Creating new product with wizard method');
-          productResult = await storage.createProductWithWizard(productData);
+          logger.error('Atomic publication failed', { 
+            draftId, 
+            error: result.error 
+          });
+
+          throw new BadRequestError(result.error || "Failed to publish product. Please try again.");
         }
-        
-        if (!productResult) {
-          throw new Error("Failed to save product");
-        }
-
-        // Add all product images with proper object_key mapping
-        if (draft.imageUrls && draft.imageUrls.length > 0) {
-          for (let i = 0; i < draft.imageUrls.length; i++) {
-            try {
-              const objectKey = draft.imageObjectKeys && draft.imageObjectKeys[i] ? 
-                draft.imageObjectKeys[i] : `image-${Date.now()}-${i}`;
-              
-              await db.execute(sql`
-                INSERT INTO product_images (
-                  product_id, url, object_key, is_main, sort_order, created_at,
-                  has_bg_removed, bg_removed_url, bg_removed_object_key
-                ) VALUES (
-                  ${newProduct.id}, ${draft.imageUrls[i]}, ${objectKey}, 
-                  ${i === (draft.mainImageIndex || 0)}, ${i}, ${new Date().toISOString()},
-                  false, null, null
-                )
-              `);
-            } catch (imageError) {
-              logger.warn("Failed to add image", { 
-                productId: newProduct.id, 
-                imageIndex: i,
-                error: imageError 
-              });
-            }
-          }
-        }
-
-        // Update draft status to published and set original product ID
-        await db.execute(sql`
-          UPDATE product_drafts 
-          SET draft_status = 'published',
-              original_product_id = ${newProduct.id},
-              published_at = ${new Date().toISOString()},
-              published_version = COALESCE(published_version, 0) + 1,
-              last_modified = ${new Date().toISOString()}
-          WHERE id = ${draftId}
-        `);
-
-        logger.info("Product published successfully", { 
-          productId: newProduct.id, 
-          draftId 
-        });
-
-        sendSuccess(res, newProduct);
       } catch (publishError) {
-        logger.error("Error publishing product", { error: publishError, draftId });
+        logger.error("Error in atomic publication", { error: publishError, draftId });
         throw new BadRequestError("Failed to publish product. Please try again.");
       }
     })

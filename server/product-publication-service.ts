@@ -66,27 +66,27 @@ function mapDraftToProduct(draft: any): DraftToProductMapping {
 
   // Calculate discount percentage from markup or direct discount
   let discountPercentage = null;
-  if (draft.sale_price && draft.regular_price && draft.sale_price < draft.regular_price) {
-    discountPercentage = Math.round(((draft.regular_price - draft.sale_price) / draft.regular_price) * 100);
-  } else if (draft.markup_percentage) {
-    discountPercentage = draft.markup_percentage;
+  if (draft.salePrice && draft.regularPrice && draft.salePrice < draft.regularPrice) {
+    discountPercentage = Math.round(((draft.regularPrice - draft.salePrice) / draft.regularPrice) * 100);
+  } else if (draft.markupPercentage) {
+    discountPercentage = draft.markupPercentage;
   }
 
   // Process images - first image becomes main, rest become additional
-  const imageUrls = draft.image_urls || [];
+  const imageUrls = draft.imageUrls || [];
   const mainImageUrl = imageUrls.length > 0 ? imageUrls[0] : null;
   const additionalImages = imageUrls.length > 1 ? imageUrls.slice(1) : [];
 
   // Extract supplier name/ID
   let supplierValue = null;
-  if (draft.supplier_id) {
-    supplierValue = String(draft.supplier_id);
+  if (draft.supplierId) {
+    supplierValue = String(draft.supplierId);
   }
 
   // Extract required attribute IDs
   let requiredAttributeIds: number[] = [];
-  if (draft.selected_attributes && typeof draft.selected_attributes === 'object') {
-    requiredAttributeIds = Object.keys(draft.selected_attributes).map(id => parseInt(id)).filter(id => !isNaN(id));
+  if (draft.selectedAttributes && typeof draft.selectedAttributes === 'object') {
+    requiredAttributeIds = Object.keys(draft.selectedAttributes).map(id => parseInt(id)).filter(id => !isNaN(id));
   }
 
   const productData: DraftToProductMapping = {
@@ -94,14 +94,14 @@ function mapDraftToProduct(draft: any): DraftToProductMapping {
     name: draft.name || 'Untitled Product',
     slug: draft.slug || `product-${Date.now()}`,
     description: draft.description || null,
-    category_id: draft.category_id || null,
+    category_id: draft.categoryId || null,
     
     // Pricing
-    price: parseFloat(String(draft.regular_price || 0)),
-    sale_price: draft.sale_price ? parseFloat(String(draft.sale_price)) : null,
+    price: parseFloat(String(draft.regularPrice || 0)),
+    sale_price: draft.salePrice ? parseFloat(String(draft.salePrice)) : null,
     discount: discountPercentage,
-    cost_price: parseFloat(String(draft.cost_price || 0)),
-    minimum_price: draft.minimum_price ? parseFloat(String(draft.minimum_price)) : null,
+    cost_price: parseFloat(String(draft.costPrice || 0)),
+    minimum_price: draft.minimumPrice ? parseFloat(String(draft.minimumPrice)) : null,
     
     // Images
     image_url: mainImageUrl,
@@ -180,8 +180,8 @@ export async function publishProductDraft(draftId: number): Promise<PublicationR
 
       logger.debug('Retrieved draft for publication', { 
         draftId, 
-        originalProductId: draft.original_product_id,
-        status: draft.draft_status 
+        originalProductId: draft.originalProductId,
+        status: draft.draftStatus 
       });
 
       // 2. Map ALL draft fields to product format
