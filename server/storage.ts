@@ -1321,6 +1321,25 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async updateProduct(productId: number, productData: Partial<InsertProduct>): Promise<Product> {
+    try {
+      const [updatedProduct] = await db
+        .update(products)
+        .set(productData)
+        .where(eq(products.id, productId))
+        .returning();
+      
+      if (!updatedProduct) {
+        throw new Error(`Product with ID ${productId} not found`);
+      }
+      
+      return updatedProduct;
+    } catch (error) {
+      console.error(`Error updating product ${productId}:`, error);
+      throw error;
+    }
+  }
+
   /**
    * Creates a product using the enhanced wizard fields and functionality
    * This method handles all the additional fields introduced in the new product wizard
