@@ -5728,26 +5728,31 @@ export class DatabaseStorage implements IStorage {
     userId: number
   ): Promise<ProductDraft> {
     try {
-      // First check if there's already a draft for this product that isn't published
+      // Check if there's already an active draft (not published) for this product
       const existingDraft = await db
         .select()
         .from(productDrafts)
         .where(
           and(
             eq(productDrafts.originalProductId, productId),
-            not(eq(productDrafts.draftStatus, 'published'))
+            eq(productDrafts.draftStatus, 'draft')
           )
         )
         .limit(1);
       
       if (existingDraft.length > 0) {
-        logger.info("Found existing draft for product", {
+        logger.info("Found existing draft for product - returning existing draft", {
           productId,
           draftId: existingDraft[0].id,
           draftStatus: existingDraft[0].draftStatus
         });
         return existingDraft[0];
       }
+      
+      logger.info("No existing draft found, creating new draft for editing", {
+        productId,
+        action: 'create_new_draft'
+      });
 
       // Get the product details
       const product = await this.getProductById(productId);
