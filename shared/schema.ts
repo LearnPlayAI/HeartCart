@@ -291,8 +291,8 @@ export const productAttributes = pgTable("product_attributes", {
   // and always ensure it's set to 0 in the application code
   priceAdjustment: decimal("price_adjustment", { precision: 10, scale: 2 }).default("0"),
   sortOrder: integer("sort_order").default(0),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  createdAt: text("created_at").default(String(new Date().toISOString())).notNull(),
+  updatedAt: text("updated_at").default(String(new Date().toISOString())).notNull(),
 }, (table) => {
   return {
     productAttrUnique: unique().on(table.productId, table.attributeId),
