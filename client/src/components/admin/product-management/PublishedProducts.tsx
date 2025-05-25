@@ -258,16 +258,25 @@ export const PublishedProducts: React.FC = () => {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem className="gap-2">
+                            <DropdownMenuItem 
+                              className="gap-2"
+                              onClick={() => window.open(`/products/${product.slug}`, '_blank')}
+                            >
                               <Eye className="h-4 w-4" />
                               View Product
                             </DropdownMenuItem>
-                            <DropdownMenuItem className="gap-2">
+                            <DropdownMenuItem 
+                              className="gap-2"
+                              onClick={() => window.location.href = `/admin/products/edit/${product.id}`}
+                            >
                               <Edit className="h-4 w-4" />
                               Edit Product
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="gap-2">
+                            <DropdownMenuItem 
+                              className="gap-2"
+                              onClick={() => window.open(`/products/${product.slug}`, '_blank')}
+                            >
                               <ExternalLink className="h-4 w-4" />
                               View in Store
                             </DropdownMenuItem>
