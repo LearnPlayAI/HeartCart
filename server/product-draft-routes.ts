@@ -546,13 +546,13 @@ export default function registerProductDraftRoutes(router: Router) {
           updatedAt: new Date().toISOString()
         };
 
-        // Insert the product directly using raw SQL to avoid schema conflicts
+        // Insert the product directly using raw SQL with correct column names
         const productResult = await db.execute(sql`
-          INSERT INTO products (name, slug, description, category_id, price, cost_price, stock, is_active, created_at, updated_at)
+          INSERT INTO products (name, slug, description, category_id, price, cost_price, stock, is_active, created_at)
           VALUES (${basicProductData.name}, ${basicProductData.slug}, ${basicProductData.description}, 
                   ${basicProductData.categoryId}, ${basicProductData.price}, ${basicProductData.costPrice}, 
-                  ${basicProductData.stock}, ${basicProductData.isActive}, ${basicProductData.createdAt}, ${basicProductData.updatedAt})
-          RETURNING *
+                  ${basicProductData.stock}, ${basicProductData.isActive}, NOW())
+          RETURNING id, name, slug, price
         `);
 
         const newProduct = productResult.rows?.[0] || { id: Date.now(), name: basicProductData.name };
