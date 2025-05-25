@@ -5704,7 +5704,12 @@ export class DatabaseStorage implements IStorage {
       const [draft] = await db
         .select()
         .from(productDrafts)
-        .where(eq(productDrafts.originalProductId, originalProductId));
+        .where(
+          and(
+            eq(productDrafts.originalProductId, originalProductId),
+            eq(productDrafts.draftStatus, 'draft')
+          )
+        );
 
       return draft;
     } catch (error) {
