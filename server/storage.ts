@@ -6652,36 +6652,30 @@ export class DatabaseStorage implements IStorage {
 
         // If slug exists and this is a new product (not updating an existing one)
         if (existingWithSlug[0]?.count > 0 && !draft.originalProductId) {
-          let slugCounter = 1;
-          let isUnique = false;
+          // Use timestamp-based uniqueness for reliable slug generation
+          const timestamp = Date.now();
+          const testSlug = `${uniqueSlug}-${timestamp}`;
+          
+          // Verify the timestamp-based slug is unique (should always be)
+          const existingWithTestSlug = await db
+            .select({ count: sql`count(*)` })
+            .from(products)
+            .where(eq(products.slug, testSlug));
 
-          // Try numbered variations until we find a unique slug
-          while (!isUnique && slugCounter < 100) {
-            // prevent infinite loops
-            const testSlug = `${uniqueSlug}-${slugCounter}`;
-
-            const existingWithTestSlug = await db
-              .select({ count: sql`count(*)` })
-              .from(products)
-              .where(eq(products.slug, testSlug));
-
-            if (existingWithTestSlug[0]?.count === 0) {
-              // Found a unique slug
-              uniqueSlug = testSlug;
-              isUnique = true;
-              logger.debug("Using unique slug variation", {
-                originalSlug: draft.slug,
-                uniqueSlug,
-              });
-            }
-
-            slugCounter++;
-          }
-
-          if (!isUnique) {
-            throw new Error(
-              `Could not generate a unique slug for "${draft.name}" after ${slugCounter} attempts`,
-            );
+          if (existingWithTestSlug[0]?.count === 0) {
+            uniqueSlug = testSlug;
+            logger.debug("Using timestamp-based unique slug", {
+              originalSlug: draft.slug,
+              uniqueSlug,
+            });
+          } else {
+            // Fallback with random string if timestamp somehow conflicts
+            const randomSuffix = Math.random().toString(36).substring(2, 8);
+            uniqueSlug = `${uniqueSlug}-${timestamp}-${randomSuffix}`;
+            logger.debug("Using timestamp+random unique slug", {
+              originalSlug: draft.slug,
+              uniqueSlug,
+            });
           }
         }
       }
@@ -6855,23 +6849,39 @@ export class DatabaseStorage implements IStorage {
       let existingProductId = draft.originalProductId;
       
       if (!existingProductId) {
-        // Check if product exists by name and catalog
-        const existingProducts = await db
+        // Check if product exists by slug first (most reliable)
+        let existingProducts = await db
           .select()
           .from(products)
-          .where(and(
-            eq(products.name, draft.name || ""),
-            draft.catalogId ? eq(products.catalogId, draft.catalogId) : undefined
-          ))
+          .where(eq(products.slug, uniqueSlug))
           .limit(1);
           
         if (existingProducts.length > 0) {
           existingProductId = existingProducts[0].id;
-          logger.info(`Found existing product with matching name and catalog. Using product ID ${existingProductId} for update instead of creating new product.`, {
+          logger.info(`Found existing product with matching slug. Using product ID ${existingProductId} for update instead of creating new product.`, {
             draftId: id,
             existingProductId,
-            draftName: draft.name
+            slug: uniqueSlug
           });
+        } else {
+          // If no slug match, check by name and catalog as fallback
+          existingProducts = await db
+            .select()
+            .from(products)
+            .where(and(
+              eq(products.name, draft.name || ""),
+              draft.catalogId ? eq(products.catalogId, draft.catalogId) : undefined
+            ))
+            .limit(1);
+            
+          if (existingProducts.length > 0) {
+            existingProductId = existingProducts[0].id;
+            logger.info(`Found existing product with matching name and catalog. Using product ID ${existingProductId} for update instead of creating new product.`, {
+              draftId: id,
+              existingProductId,
+              draftName: draft.name
+            });
+          }
         }
       }
       
