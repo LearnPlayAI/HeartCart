@@ -6948,10 +6948,6 @@ export class DatabaseStorage implements IStorage {
                   attributeId: attr.attributeId,
                   // Handle different attribute value types
                   textValue: typeof attr.value === "string" ? attr.value : null,
-                  numberValue:
-                    typeof attr.value === "number" ? attr.value : null,
-                  booleanValue:
-                    typeof attr.value === "boolean" ? attr.value : null,
                   // No selected options for scalar values
                   selectedOptions: null,
                   // Optional display name override
@@ -7017,10 +7013,8 @@ export class DatabaseStorage implements IStorage {
                   attributeId: attr.attributeId,
                   // Handle different attribute value types
                   textValue: typeof attr.value === "string" ? attr.value : null,
-                  numberValue:
-                    typeof attr.value === "number" ? attr.value : null,
-                  booleanValue:
-                    typeof attr.value === "boolean" ? attr.value : null,
+                  // numberValue:
+                  // booleanValue:
                   // No selected options for scalar values
                   selectedOptions: null,
                   // Optional display name override
