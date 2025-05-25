@@ -532,52 +532,26 @@ export default function registerProductDraftRoutes(router: Router) {
       
       // Complete systematic mapping of all columns with proper data type conversions
       try {
-        // Map draft columns to products table with correct camelCase field names for Drizzle ORM
+        // Create minimal product data with only essential fields and correct types
         const productData = {
-          // Required NOT NULL fields with camelCase naming for Drizzle
           name: draft.name || 'Untitled Product',
           slug: draft.slug || `product-${Date.now()}`,
           price: parseFloat(String(draft.regularPrice || 0)),
-          costPrice: draft.costPrice ? parseFloat(String(draft.costPrice)) : 0,
-          stock: parseInt(String(draft.stockLevel || 0)),
-          isActive: Boolean(draft.isActive !== false),
-          isFeatured: Boolean(draft.isFeatured === true),
-          isFlashDeal: Boolean(draft.isFlashDeal === true),
-          
-          // Optional fields with camelCase field names for Drizzle
-          description: draft.description || null,
-          categoryId: draft.categoryId || null,
-          catalogId: draft.catalogId || null,
-          salePrice: draft.salePrice ? parseFloat(String(draft.salePrice)) : null,
-          discount: draft.discount ? parseInt(String(draft.discount)) : null,
-          imageUrl: draft.imageUrls && draft.imageUrls.length > 0 ? draft.imageUrls[0] : null,
-          additionalImages: draft.imageUrls && draft.imageUrls.length > 1 ? draft.imageUrls.slice(1) : [],
-          rating: 0,
-          reviewCount: 0,
-          soldCount: 0,
-          supplier: draft.supplierId ? String(draft.supplierId) : null,
-          freeShipping: Boolean(draft.freeShipping === true),
-          weight: draft.weight ? parseFloat(String(draft.weight)) : null,
-          dimensions: draft.dimensions || null,
-          brand: draft.brand || null,
-          tags: [],
-          hasBackgroundRemoved: false,
-          originalImageObjectKey: draft.imageObjectKeys && draft.imageObjectKeys.length > 0 ? draft.imageObjectKeys[0] : null,
-          displayOrder: 999,
-          createdAt: new Date().toISOString(),
-          flashDealEnd: draft.flashDealEnd || null,
-          minimumPrice: draft.minimumPrice ? parseFloat(String(draft.minimumPrice)) : null,
-          minimumOrder: 1,
-          discountLabel: draft.discountLabel || null,
-          specialSaleText: draft.specialSaleText || null,
-          specialSaleStart: draft.specialSaleStart || null,
-          specialSaleEnd: draft.specialSaleEnd || null,
-          requiredAttributeIds: draft.selectedAttributes ? 
-            Object.keys(draft.selectedAttributes).map(id => parseInt(id)) : []
+          costPrice: parseFloat(String(draft.costPrice || 0)),
+          stock: parseInt(String(draft.stockLevel || 0))
         };
 
         // Log the product data for debugging
-        logger.debug('Product data being processed:', { productData, originalProductId: draft.originalProductId });
+        logger.debug('Product data being processed:', { 
+          productData, 
+          originalProductId: draft.originalProductId,
+          draftData: {
+            name: draft.name,
+            regularPrice: draft.regularPrice,
+            costPrice: draft.costPrice,
+            stockLevel: draft.stockLevel
+          }
+        });
         
         let productResult;
         
