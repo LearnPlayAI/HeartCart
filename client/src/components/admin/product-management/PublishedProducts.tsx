@@ -267,7 +267,25 @@ export const PublishedProducts: React.FC = () => {
                             </DropdownMenuItem>
                             <DropdownMenuItem 
                               className="gap-2"
-                              onClick={() => window.location.href = `/admin/product-wizard/${product.id}`}
+                              onClick={async () => {
+                                try {
+                                  // Create a draft from the published product for editing
+                                  const response = await apiRequest('POST', `/api/product-drafts/create-from-published/${product.id}`);
+                                  const result = await response.json();
+                                  
+                                  if (result.success && result.data?.draftId) {
+                                    // Navigate to wizard with the new draft ID
+                                    window.location.href = `/admin/product-wizard/${result.data.draftId}`;
+                                  } else {
+                                    // Fallback to direct product editing if API doesn't exist yet
+                                    window.location.href = `/admin/product-wizard/${product.id}`;
+                                  }
+                                } catch (error) {
+                                  console.error('Error creating draft:', error);
+                                  // Fallback to direct product editing
+                                  window.location.href = `/admin/product-wizard/${product.id}`;
+                                }
+                              }}
                             >
                               <Edit className="h-4 w-4" />
                               Edit Product
