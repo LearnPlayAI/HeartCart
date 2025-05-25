@@ -576,32 +576,11 @@ export default function registerProductDraftRoutes(router: Router) {
             Object.keys(draft.selectedAttributes).map(id => parseInt(id)) : []
         };
 
-        // Complete field mapping - save ALL product data to production tables
-        const productResult = await db.execute(sql`
-          INSERT INTO products (
-            name, slug, description, category_id, price, sale_price, discount, 
-            image_url, additional_images, stock, is_active, is_featured, is_flash_deal,
-            supplier, free_shipping, weight, dimensions, brand, cost_price, catalog_id,
-            created_at, flash_deal_end, minimum_price, discount_label, special_sale_text,
-            special_sale_start, special_sale_end, required_attribute_ids
-          ) VALUES (
-            ${productData.name}, ${productData.slug}, ${productData.description}, 
-            ${productData.category_id}, ${productData.price}, ${productData.sale_price}, 
-            ${productData.discount}, ${productData.image_url}, ${productData.additional_images}, 
-            ${productData.stock}, ${productData.is_active}, ${productData.is_featured}, 
-            ${productData.is_flash_deal}, ${productData.supplier}, ${productData.free_shipping}, 
-            ${productData.weight}, ${productData.dimensions}, ${productData.brand}, 
-            ${productData.cost_price}, ${productData.catalog_id}, ${productData.created_at}, 
-            ${productData.flash_deal_end}, ${productData.minimum_price}, ${productData.discount_label}, 
-            ${productData.special_sale_text}, ${productData.special_sale_start}, 
-            ${productData.special_sale_end}, ${productData.required_attribute_ids}
-          )
-          RETURNING id, name, price, slug
-        `);
-
-        const newProduct = productResult.rows?.[0];
+        // Use the existing product creation function from storage
+        const newProduct = await storage.createProduct(productData);
+        
         if (!newProduct) {
-          throw new Error("Failed to create product - no result returned");
+          throw new Error("Failed to create product using storage function");
         }
 
         // Add all product images with proper object_key mapping
@@ -631,10 +610,11 @@ export default function registerProductDraftRoutes(router: Router) {
           }
         }
 
-        // Update draft status to published and set published metadata
+        // Update draft status to published and set original product ID
         await db.execute(sql`
           UPDATE product_drafts 
           SET draft_status = 'published',
+              original_product_id = ${newProduct.id},
               published_at = ${new Date().toISOString()},
               published_version = COALESCE(published_version, 0) + 1,
               last_modified = ${new Date().toISOString()}
