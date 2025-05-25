@@ -168,10 +168,20 @@ export const DraftDashboard: React.FC = () => {
     deleteDraftMutation.mutate(draftId);
   };
   
-  // Filter drafts based on search query
-  const filteredDrafts = draftsData?.data?.filter((draft: ProductDraft) => 
-    !searchQuery || draft.name.toLowerCase().includes(searchQuery.toLowerCase())
-  ) || [];
+  // Filter drafts based on search query and exclude published products
+  const filteredDrafts = draftsData?.data?.filter((draft: ProductDraft) => {
+    // Exclude published products from the drafts view
+    if (draft.draftStatus === 'published') {
+      return false;
+    }
+    
+    // Apply search filter if query exists
+    if (searchQuery) {
+      return draft.name.toLowerCase().includes(searchQuery.toLowerCase());
+    }
+    
+    return true;
+  }) || [];
   
   // Get wizard step display name
   const getStepDisplayName = (stepKey: string) => {
