@@ -1,13 +1,12 @@
 /**
  * SIMPLE Working Product Publication Service
  * 
- * This service focuses on getting basic product publication working
- * without complex field mappings that are causing SQL errors.
+ * Ultra-minimal approach that just creates a basic product record.
+ * No complex mappings, no transactions, just basic insertion.
  */
 
 import { db } from "./db";
-import { products, productDrafts } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { logger } from "./logger";
 
 export interface PublicationResult {
@@ -16,108 +15,75 @@ export interface PublicationResult {
   error?: string;
 }
 
-/**
- * Publishes a product draft with minimal field mapping to avoid SQL errors
- */
 export async function publishProductDraft(draftId: number): Promise<PublicationResult> {
-  logger.info('Starting simple product publication', { draftId });
+  try {
+    logger.info('Starting SIMPLE product publication', { draftId });
 
-  return await db.transaction(async (tx) => {
-    try {
-      // 1. Get the draft
-      const [draft] = await tx
-        .select()
-        .from(productDrafts)
-        .where(eq(productDrafts.id, draftId));
+    // Get the draft with the simplest possible query
+    const draftRows = await db.execute(sql`
+      SELECT name, slug, description, category_id, regular_price, cost_price, 
+             sale_price, supplier_id, catalog_id, image_urls, is_active
+      FROM product_drafts 
+      WHERE id = ${draftId}
+    `);
 
-      if (!draft) {
-        throw new Error(`Draft ${draftId} not found`);
-      }
-
-      // 2. Create basic product data using only required fields
-      const productData = {
-        name: draft.name || 'Untitled Product',
-        slug: draft.slug || `product-${Date.now()}`,
-        description: draft.description,
-        categoryId: draft.categoryId,
-        price: parseFloat(String(draft.regularPrice || 0)),
-        salePrice: draft.salePrice ? parseFloat(String(draft.salePrice)) : null,
-        discount: draft.markupPercentage,
-        imageUrl: draft.imageUrls && draft.imageUrls.length > 0 ? draft.imageUrls[0] : null,
-        additionalImages: draft.imageUrls && draft.imageUrls.length > 1 ? draft.imageUrls.slice(1) : [],
-        stock: parseInt(String(draft.stockLevel || 0)),
-        rating: null,
-        reviewCount: 0,
-        isActive: Boolean(draft.isActive !== false),
-        isFeatured: Boolean(draft.isFeatured === true),
-        isFlashDeal: Boolean(draft.isFlashDeal === true),
-        soldCount: 0,
-        supplier: draft.supplierId ? String(draft.supplierId) : null,
-        freeShipping: Boolean(draft.freeShipping === true),
-        weight: draft.weight ? parseFloat(String(draft.weight)) : null,
-        dimensions: draft.dimensions,
-        brand: draft.brand,
-        tags: [],
-        hasBackgroundRemoved: false,
-        originalImageObjectKey: null,
-        costPrice: parseFloat(String(draft.costPrice || 0)),
-        catalogId: draft.catalogId,
-        displayOrder: 999
-      };
-
-      // 3. Create or update product
-      let productResult;
-      if (draft.originalProductId) {
-        // UPDATE existing product
-        const [updatedProduct] = await tx
-          .update(products)
-          .set(productData)
-          .where(eq(products.id, draft.originalProductId))
-          .returning();
-        productResult = updatedProduct;
-      } else {
-        // CREATE new product
-        const [newProduct] = await tx
-          .insert(products)
-          .values(productData)
-          .returning();
-        productResult = newProduct;
-      }
-
-      if (!productResult) {
-        throw new Error('Failed to create/update product');
-      }
-
-      // 4. Update draft status
-      await tx
-        .update(productDrafts)
-        .set({
-          draftStatus: 'published',
-          originalProductId: productResult.id,
-          publishedVersion: (draft.publishedVersion || 0) + 1
-        })
-        .where(eq(productDrafts.id, draftId));
-
-      logger.info('Product publication completed successfully', { 
-        draftId,
-        productId: productResult.id
-      });
-
-      return {
-        success: true,
-        productId: productResult.id
-      };
-
-    } catch (error) {
-      logger.error('Simple publication failed', { 
-        draftId, 
-        error: error instanceof Error ? error.message : String(error)
-      });
-
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error during publication'
-      };
+    if (!draftRows.rows[0]) {
+      return { success: false, error: 'Draft not found' };
     }
-  });
+
+    const draft = draftRows.rows[0] as any;
+    logger.info('Draft found, inserting product', { draftId, name: draft.name });
+
+    // Insert product with the absolute minimum required fields
+    const productRows = await db.execute(sql`
+      INSERT INTO products (name, slug, description, category_id, price, cost_price, sale_price, supplier, catalog_id, image_url, is_active, stock, rating, review_count, sold_count)
+      VALUES (
+        ${draft.name || 'New Product'},
+        ${draft.slug || `product-${Date.now()}`},
+        ${draft.description || ''},
+        ${draft.category_id || null},
+        ${parseFloat(draft.regular_price) || 0},
+        ${parseFloat(draft.cost_price) || 0},
+        ${draft.sale_price ? parseFloat(draft.sale_price) : null},
+        ${draft.supplier_id || null},
+        ${draft.catalog_id || null},
+        ${draft.image_urls && draft.image_urls[0] ? draft.image_urls[0] : null},
+        ${draft.is_active !== false},
+        0,
+        0,
+        0,
+        0
+      )
+      RETURNING id
+    `);
+
+    const productId = (productRows.rows[0] as any).id;
+    logger.info('Product created successfully', { productId });
+
+    // Update draft status
+    await db.execute(sql`
+      UPDATE product_drafts 
+      SET draft_status = 'published', original_product_id = ${productId}
+      WHERE id = ${draftId}
+    `);
+
+    logger.info('Publication completed successfully', { draftId, productId });
+
+    return {
+      success: true,
+      productId: productId
+    };
+
+  } catch (error) {
+    logger.error('Simple publication failed', { 
+      draftId, 
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    });
+
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Publication failed'
+    };
+  }
 }
