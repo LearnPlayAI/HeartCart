@@ -301,9 +301,8 @@ export async function publishProductDraftComplete(draftId: number): Promise<Publ
                 productId: productResult.id,
                 attributeId: parseInt(attributeId),
                 selectedOptions: selectedOptions,
-                textValue: null, // For now, focusing on option-based attributes
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString()
+                textValue: null // For now, focusing on option-based attributes
+                // Remove createdAt and updatedAt - let database handle these automatically
               });
             }
           }
