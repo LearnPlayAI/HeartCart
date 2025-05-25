@@ -432,33 +432,6 @@ router.get('/types', asyncHandler(async (req: Request, res: Response) => {
 function registerAttributeRoutes(app: Express) {
   app.use('/api/attributes', router);
   
-  // Add the missing filterable attributes endpoint for products
-  app.get('/api/products/filterable-attributes', asyncHandler(async (req: Request, res: Response) => {
-    try {
-      // Add cache control headers to ensure clients always get fresh data
-      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-      res.setHeader('Pragma', 'no-cache');
-      res.setHeader('Expires', '0');
-      
-      // Get all attributes that can be used for filtering products
-      const allAttributes = await storage.getAllAttributes();
-      
-      const filterableAttributes = await Promise.all(
-        allAttributes.map(async (attr) => {
-          const options = await storage.getAttributeOptions(attr.id);
-          return {
-            ...attr,
-            options: options || []
-          };
-        })
-      );
-      
-      sendSuccess(res, filterableAttributes);
-    } catch (error) {
-      sendError(res, 'Failed to retrieve filterable attributes', 500);
-    }
-  }));
-  
   // Additional API route for frontend to get all attribute options
   app.get('/api/attributes/all-options', asyncHandler(async (req: Request, res: Response) => {
     try {

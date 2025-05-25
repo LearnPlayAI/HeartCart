@@ -595,6 +595,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     })
   );
 
+  // Add filterable attributes route before generic :id routes to avoid conflicts
+  app.get('/api/products/filterable-attributes', asyncHandler(async (req: Request, res: Response) => {
+    try {
+      // Add cache control headers to ensure clients always get fresh data
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      
+      // Get all attributes that can be used for filtering products
+      const allAttributes = await storage.getAllAttributes();
+      
+      const filterableAttributes = await Promise.all(
+        allAttributes.map(async (attr) => {
+          const options = await storage.getAttributeOptions(attr.id);
+          return {
+            ...attr,
+            options: options || []
+          };
+        })
+      );
+      
+      res.json({
+        success: true,
+        data: filterableAttributes
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: {
+          message: 'Failed to retrieve filterable attributes'
+        }
+      });
+    }
+  }));
+
   // Specific route patterns must be defined before generic patterns with path parameters
   app.get(
     "/api/products/slug/:slug", 
