@@ -5798,59 +5798,69 @@ export class DatabaseStorage implements IStorage {
         selectedOptions: attr.selectedOptions || []
       }));
       
-      // Create draft data with correct field names and data types matching the product_drafts table
-      // Extract all possible tags from the product
+      // Create comprehensive draft data with ALL product fields properly mapped
+      
+      // Process tags array safely
       const tagsArray = product.tags ? 
-        (typeof product.tags === 'string' ? 
-          JSON.parse(product.tags) : 
-          (Array.isArray(product.tags) ? product.tags : [])) 
+        (Array.isArray(product.tags) ? 
+          product.tags : 
+          (typeof product.tags === 'string' ? 
+            JSON.parse(product.tags) : [])) 
         : [];
       
-      // Get all the image URLs and keys from both the main product and the product_images table
+      // Process additional images array safely
+      const additionalImagesArray = product.additionalImages ? 
+        (Array.isArray(product.additionalImages) ? 
+          product.additionalImages : 
+          (typeof product.additionalImages === 'string' ? 
+            JSON.parse(product.additionalImages) : [])) 
+        : [];
+      
+      // Process required attribute IDs safely
+      const requiredAttributeIds = product.requiredAttributeIds ? 
+        (Array.isArray(product.requiredAttributeIds) ? 
+          product.requiredAttributeIds : 
+          (typeof product.requiredAttributeIds === 'string' ? 
+            JSON.parse(product.requiredAttributeIds) : [])) 
+        : [];
+      
+      // Comprehensive image processing from all sources
       const allImageUrls: string[] = [];
       const allObjectKeys: string[] = [];
       
-      // Add images from product_images table
+      // 1. Add images from product_images table first (most reliable source)
       if (productImages && productImages.length > 0) {
         productImages.forEach(img => {
-          if (img.url) allImageUrls.push(img.url);
-          if (img.objectKey) allObjectKeys.push(img.objectKey);
+          if (img.url) {
+            allImageUrls.push(img.url);
+            allObjectKeys.push(img.objectKey || '');
+          }
         });
       }
       
-      // If no images were added, check if there's a main image URL on the product
+      // 2. If no images from product_images, check main image URL
       if (allImageUrls.length === 0 && product.imageUrl) {
         allImageUrls.push(product.imageUrl);
-        if (product.originalImageObjectKey) {
-          allObjectKeys.push(product.originalImageObjectKey);
-        }
+        allObjectKeys.push(product.originalImageObjectKey || '');
       }
       
-      // If there are still no images but there are additional images, add those
-      if (allImageUrls.length === 0 && product.additionalImages) {
-        const additionalImgs = Array.isArray(product.additionalImages) ? 
-          product.additionalImages : 
-          (typeof product.additionalImages === 'string' ? 
-            JSON.parse(product.additionalImages) : 
-            []);
-        
-        additionalImgs.forEach((url: string) => {
-          allImageUrls.push(url);
-          allObjectKeys.push(''); // No object keys for additional images typically
+      // 3. Add additional images if any
+      if (additionalImagesArray.length > 0) {
+        additionalImagesArray.forEach((url: string) => {
+          if (url && !allImageUrls.includes(url)) {
+            allImageUrls.push(url);
+            allObjectKeys.push(''); // Additional images typically don't have object keys
+          }
         });
       }
       
-      // Make sure we have the same number of URLs and keys
+      // Ensure arrays are same length
       while (allObjectKeys.length < allImageUrls.length) {
         allObjectKeys.push('');
       }
       
-      // Define which attributes are required
-      const requiredAttributeIds = product.requiredAttributeIds ? 
-        (typeof product.requiredAttributeIds === 'string' ? 
-          JSON.parse(product.requiredAttributeIds) : 
-          product.requiredAttributeIds) 
-        : [];
+      // Determine main image index (first image from product_images table or 0)
+      const mainImageIndex = allImageUrls.length > 0 ? 0 : 0;
       
       // Log some key info for debugging
       logger.debug("Creating draft with data", { 
@@ -5865,7 +5875,7 @@ export class DatabaseStorage implements IStorage {
         // Link to original product - use correct snake_case field names
         original_product_id: productId,
         
-        // Basic info
+        // Basic info - copy ALL product fields comprehensively
         name: product.name || '',
         slug: product.slug || this.generateSlug(product.name || 'product'),
         sku: product.sku || '',
@@ -5877,24 +5887,28 @@ export class DatabaseStorage implements IStorage {
         supplier_id: product.supplierId || (typeof product.supplier === 'string' && product.supplier !== '' ? parseInt(product.supplier) : null),
         catalog_id: product.catalogId,
         
-        // Status flags
+        // Status flags - preserve ALL status fields
         is_active: product.isActive === true,
         is_featured: product.isFeatured === true,
+        is_flash_deal: product.isFlashDeal === true,
         
-        // Pricing information
+        // Comprehensive pricing information - copy ALL pricing fields
         cost_price: product.costPrice || 0,
         regular_price: product.price || 0,
         sale_price: product.salePrice,
         on_sale: product.salePrice !== null && product.salePrice !== undefined && product.salePrice > 0,
-        markup_percentage: product.markup || 0,
+        markup_percentage: product.markup || product.discount || 0, // Handle both markup and discount fields
         minimum_price: product.minimumPrice,
         
-        // Inventory settings
+        // Inventory settings - copy ALL inventory fields
         stock_level: product.stock || 0,
         low_stock_threshold: product.lowStockThreshold || 5,
         backorder_enabled: product.backorderEnabled === true,
         
-        // Discounts and promotions
+        // Note: Performance metrics (rating, review_count, sold_count, display_order) 
+        // are not stored in product_drafts table - they stay with the published product
+        
+        // Discounts and promotions - copy ALL promotion fields
         discount_label: product.discountLabel || '',
         special_sale_text: product.specialSaleText || '',
         special_sale_start: product.specialSaleStart ? 
@@ -5907,38 +5921,46 @@ export class DatabaseStorage implements IStorage {
             product.specialSaleEnd.toISOString() : 
             product.specialSaleEnd.toString()) 
           : null,
-        is_flash_deal: product.isFlashDeal === true,
         flash_deal_end: product.flashDealEnd ? 
           (product.flashDealEnd instanceof Date ? 
             product.flashDealEnd.toISOString() : 
             product.flashDealEnd.toString()) 
           : null,
         
-        // Images
+        // Images - comprehensive image data
         image_urls: allImageUrls,
         image_object_keys: allObjectKeys,
         main_image_index: mainImageIndex,
         
-        // Attributes
+        // Attributes - comprehensive attribute data
         attributes: mappedAttributes || [],
         attributes_data: mappedAttributes || [],
         
-        // Shipping and product details
+        // Shipping and product details - copy ALL physical properties
         weight: product.weight ? product.weight.toString() : '',
         dimensions: product.dimensions || '',
         free_shipping: product.freeShipping === true,
         shipping_class: product.shippingClass || 'standard',
         
-        // SEO metadata
+        // Note: minimum_order is not in product_drafts table - stays with published product
+        
+        // SEO metadata - copy ALL SEO fields
         meta_title: product.metaTitle || product.name || '',
         meta_description: product.metaDescription || 
           (product.description ? product.description.substring(0, 160) : ''),
         meta_keywords: product.metaKeywords || (tagsArray.length > 0 ? tagsArray.join(', ') : ''),
         canonical_url: product.canonicalUrl || '',
         
-        // Tax information
+        // Tax information - copy ALL tax fields
         taxable: product.taxable !== false,
         tax_class: product.taxClass || 'standard',
+        
+        // Additional pricing fields
+        compare_at_price: product.compareAtPrice || null,
+        tax_rate_percentage: product.taxRatePercentage || null,
+        
+        // Product quality and processing flags
+        has_background_removed: product.hasBackgroundRemoved === true,
         
         // Draft specific fields
         draft_status: 'draft',
@@ -5967,8 +5989,8 @@ export class DatabaseStorage implements IStorage {
         has_ai_description: false,
         has_ai_seo: false,
         
-        // Customer selection attributes
-        selected_attributes: requiredAttributeIds || {},
+        // Customer selection attributes - preserve required attributes for customer selection
+        selected_attributes: requiredAttributeIds || [],
         
         // Change history
         change_history: [{
