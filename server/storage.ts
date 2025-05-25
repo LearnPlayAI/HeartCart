@@ -940,21 +940,17 @@ export class DatabaseStorage implements IStorage {
       }
 
       // Check category visibility if needed
-      if (!options?.includeCategoryInactive) {
+      if (!options?.includeCategoryInactive && product.categoryId) {
         try {
           const [category] = await db
             .select()
             .from(categories)
-            .where(
-              and(
-                eq(categories.id, product.categoryId),
-                eq(categories.isActive, true),
-              ),
-            );
+            .where(eq(categories.id, product.categoryId));
 
-          // If category doesn't exist or is inactive, return undefined
-          if (!category) {
-            return options?.includeInactive ? product : undefined;
+          // If category doesn't exist or is inactive, return undefined (unless we're including inactive products)
+          if (!category || !category.isActive) {
+            console.log(`Product ${id} has inactive category ${product.categoryId}, includeCategoryInactive: ${options?.includeCategoryInactive}`);
+            return undefined;
           }
         } catch (categoryError) {
           console.error(
