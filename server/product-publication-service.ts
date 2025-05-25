@@ -19,43 +19,43 @@ export interface PublicationResult {
 }
 
 export interface DraftToProductMapping {
-  // Core product fields
+  // Core product fields mapped to Drizzle camelCase
   name: string;
   slug: string;
   description: string | null;
-  category_id: number | null;
+  categoryId: number | null;
   price: number;
-  sale_price: number | null;
+  salePrice: number | null;
   discount: number | null;
-  image_url: string | null;
-  additional_images: string[];
+  imageUrl: string | null;
+  additionalImages: string[];
   stock: number;
   rating: number | null;
-  review_count: number;
-  is_active: boolean;
-  is_featured: boolean;
-  is_flash_deal: boolean;
-  sold_count: number;
+  reviewCount: number;
+  isActive: boolean;
+  isFeatured: boolean;
+  isFlashDeal: boolean;
+  soldCount: number;
   supplier: string | null;
-  free_shipping: boolean;
+  freeShipping: boolean;
   weight: number | null;
   dimensions: string | null;
   brand: string | null;
   tags: string[];
-  has_background_removed: boolean;
-  original_image_object_key: string | null;
-  cost_price: number;
-  catalog_id: number | null;
-  display_order: number;
-  created_at: string;
-  flash_deal_end: string | null;
-  minimum_price: number | null;
-  minimum_order: number | null;
-  discount_label: string | null;
-  special_sale_text: string | null;
-  special_sale_start: string | null;
-  special_sale_end: string | null;
-  required_attribute_ids: number[];
+  hasBackgroundRemoved: boolean;
+  originalImageObjectKey: string | null;
+  costPrice: number;
+  catalogId: number | null;
+  displayOrder: number;
+  createdAt: string;
+  flashDealEnd: string | null;
+  minimumPrice: number | null;
+  minimumOrder: number | null;
+  discountLabel: string | null;
+  specialSaleText: string | null;
+  specialSaleStart: string | null;
+  specialSaleEnd: string | null;
+  requiredAttributeIds: number[];
 }
 
 /**
@@ -94,14 +94,14 @@ function mapDraftToProduct(draft: any): DraftToProductMapping {
     name: draft.name || 'Untitled Product',
     slug: draft.slug || `product-${Date.now()}`,
     description: draft.description || null,
-    category_id: draft.categoryId || null,
+    categoryId: draft.categoryId || null,
     
     // Pricing
     price: parseFloat(String(draft.regularPrice || 0)),
-    sale_price: draft.salePrice ? parseFloat(String(draft.salePrice)) : null,
+    salePrice: draft.salePrice ? parseFloat(String(draft.salePrice)) : null,
     discount: discountPercentage,
-    cost_price: parseFloat(String(draft.costPrice || 0)),
-    minimum_price: draft.minimumPrice ? parseFloat(String(draft.minimumPrice)) : null,
+    costPrice: parseFloat(String(draft.costPrice || 0)),
+    minimumPrice: draft.minimumPrice ? parseFloat(String(draft.minimumPrice)) : null,
     
     // Images
     image_url: mainImageUrl,
@@ -189,21 +189,21 @@ export async function publishProductDraft(draftId: number): Promise<PublicationR
 
       // 3. Determine if this is CREATE or UPDATE
       let productResult;
-      if (draft.original_product_id) {
+      if (draft.originalProductId) {
         // UPDATE existing product
         logger.debug('Updating existing product', { 
-          originalProductId: draft.original_product_id,
+          originalProductId: draft.originalProductId,
           draftId 
         });
 
         const [updatedProduct] = await tx
           .update(products)
           .set(productData)
-          .where(eq(products.id, draft.original_product_id))
+          .where(eq(products.id, draft.originalProductId))
           .returning();
 
         if (!updatedProduct) {
-          throw new Error(`Failed to update product ${draft.original_product_id}`);
+          throw new Error(`Failed to update product ${draft.originalProductId}`);
         }
 
         productResult = updatedProduct;
@@ -213,7 +213,7 @@ export async function publishProductDraft(draftId: number): Promise<PublicationR
 
         const [newProduct] = await tx
           .insert(products)
-          .values(productData)
+          .values([productData])
           .returning();
 
         if (!newProduct) {
@@ -224,10 +224,10 @@ export async function publishProductDraft(draftId: number): Promise<PublicationR
       }
 
       // 4. Process product images
-      if (draft.image_urls && draft.image_urls.length > 0) {
+      if (draft.imageUrls && draft.imageUrls.length > 0) {
         logger.debug('Processing product images', { 
           productId: productResult.id,
-          imageCount: draft.image_urls.length 
+          imageCount: draft.imageUrls.length 
         });
 
         // Clear existing images for this product
@@ -236,15 +236,15 @@ export async function publishProductDraft(draftId: number): Promise<PublicationR
           .where(eq(productImages.productId, productResult.id));
 
         // Insert all images
-        for (let i = 0; i < draft.image_urls.length; i++) {
-          const objectKey = draft.image_object_keys && draft.image_object_keys[i] ? 
-            draft.image_object_keys[i] : `image-${Date.now()}-${i}`;
+        for (let i = 0; i < draft.imageUrls.length; i++) {
+          const objectKey = draft.imageObjectKeys && draft.imageObjectKeys[i] ? 
+            draft.imageObjectKeys[i] : `image-${Date.now()}-${i}`;
 
           await tx.insert(productImages).values({
             productId: productResult.id,
-            url: draft.image_urls[i],
+            url: draft.imageUrls[i],
             objectKey: objectKey,
-            isMain: i === (draft.main_image_index || 0),
+            isMain: i === (draft.mainImageIndex || 0),
             sortOrder: i,
             createdAt: new Date().toISOString(),
             hasBgRemoved: false,
