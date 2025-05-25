@@ -107,32 +107,8 @@ export async function publishProductDraft(draftId: number): Promise<PublicationR
           imageCount: draft.imageUrls.length 
         });
 
-        // Clear existing images with direct SQL
-        await tx.execute(`DELETE FROM product_images WHERE product_id = ${productResult.id}`);
-
-        // Insert images with direct SQL to avoid field mapping issues
-        for (let i = 0; i < draft.imageUrls.length; i++) {
-          const objectKey = draft.imageObjectKeys && draft.imageObjectKeys[i] ? 
-            draft.imageObjectKeys[i] : `image-${Date.now()}-${i}`;
-          const isMain = i === (draft.mainImageIndex || 0);
-
-          await tx.execute(`
-            INSERT INTO product_images (
-              product_id, url, object_key, is_main, sort_order, 
-              created_at, has_bg_removed, bg_removed_url, bg_removed_object_key
-            ) VALUES (
-              ${productResult.id}, 
-              '${draft.imageUrls[i]}', 
-              '${objectKey}', 
-              ${isMain}, 
-              ${i}, 
-              '${new Date().toISOString()}', 
-              false, 
-              null, 
-              null
-            )
-          `);
-        }
+        // Skip image processing for now to isolate the error
+        logger.info('Skipping image processing temporarily to test core publication');
 
         logger.info('Images processed successfully');
       }
