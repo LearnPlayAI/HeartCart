@@ -125,6 +125,10 @@ export const ReviewAndSaveStep: React.FC<ReviewAndSaveStepProps> = ({
         queryClient.invalidateQueries({ queryKey: ['/api/product-drafts'] });
         queryClient.invalidateQueries({ queryKey: ['/api/admin/drafts'] });
         
+        // IMPORTANT: Refetch validation when status changes to ensure publish button state is correct
+        queryClient.invalidateQueries({ queryKey: ['/api/product-drafts/validate', draft.id] });
+        refetchValidation();
+        
         // Force invalidate the draft dashboard queries specifically
         queryClient.invalidateQueries({ queryKey: ['/api/product-drafts'] });
         queryClient.refetchQueries({ queryKey: ['/api/product-drafts'] });
