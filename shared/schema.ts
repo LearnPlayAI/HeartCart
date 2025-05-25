@@ -532,8 +532,8 @@ export const productDrafts = pgTable("product_drafts", {
   originalProductId: integer("original_product_id").references(() => products.id),
   draftStatus: text("draft_status").default("draft").notNull(), // 'draft', 'review', 'ready', 'published'
   createdBy: integer("created_by").references(() => users.id),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  lastModified: timestamp("last_modified", { withTimezone: true }).defaultNow().notNull(),
+  createdAt: text("created_at").default(String(new Date().toISOString())).notNull(),
+  lastModified: text("last_modified").default(String(new Date().toISOString())).notNull(),
   
   // Basic product information
   name: text("name"),
@@ -579,10 +579,10 @@ export const productDrafts = pgTable("product_drafts", {
   // Promotions
   discountLabel: text("discount_label"),
   specialSaleText: text("special_sale_text"),
-  specialSaleStart: timestamp("special_sale_start", { withTimezone: true }),
-  specialSaleEnd: timestamp("special_sale_end", { withTimezone: true }),
+  specialSaleStart: text("special_sale_start"),
+  specialSaleEnd: text("special_sale_end"),
   isFlashDeal: boolean("is_flash_deal").default(false),
-  flashDealEnd: timestamp("flash_deal_end", { withTimezone: true }),
+  flashDealEnd: text("flash_deal_end"),
   
   // Tax information
   taxable: boolean("taxable").default(true),
@@ -595,7 +595,7 @@ export const productDrafts = pgTable("product_drafts", {
   canonicalUrl: text("canonical_url"),
   
   // Publication information
-  publishedAt: timestamp("published_at", { withTimezone: true }),
+  publishedAt: text("published_at"),
   publishedVersion: integer("published_version").default(1),
   
   // AI-generated content flags
