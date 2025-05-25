@@ -7076,8 +7076,8 @@ export class DatabaseStorage implements IStorage {
         // Use extracted keys or fall back to empty array
         const imageObjectKeys = extractedObjectKeys;
 
-        // Use draft data directly for path construction
-        const supplierName = draft.supplier || "unknown-supplier";
+        // Use draft data directly for path construction  
+        const supplierName = draft.supplierId ? String(draft.supplierId) : "unknown-supplier";
         const catalogName = `catalog-${draft.catalogId || 0}`;
         const categoryName = `category-${draft.categoryId || 0}`;
 
