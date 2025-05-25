@@ -322,19 +322,33 @@ export async function publishProductDraftComplete(draftId: number): Promise<Publ
       }
 
       // 5. Handle Product Attributes with complete relationship mapping
-      if (draft.selectedAttributes && Object.keys(draft.selectedAttributes).length > 0) {
-        logger.info('Processing product attributes with complete mapping', { 
-          productId: productResult.id,
-          attributeCount: Object.keys(draft.selectedAttributes).length 
-        });
-
+      if (draft.selectedAttributes) {
+        // Parse selectedAttributes if it's a JSON string
+        let parsedAttributes;
         try {
-          // Clear existing attributes for this product
-          await tx.delete(productAttributes).where(eq(productAttributes.productId, productResult.id));
+          parsedAttributes = typeof draft.selectedAttributes === 'string' 
+            ? JSON.parse(draft.selectedAttributes) 
+            : draft.selectedAttributes;
+        } catch (parseError) {
+          logger.warn('Failed to parse selectedAttributes', { selectedAttributes: draft.selectedAttributes, parseError });
+          parsedAttributes = {};
+        }
 
-          // Process each attribute with proper validation
-          const attributeInserts = [];
-          for (const [attributeId, selectedOptions] of Object.entries(draft.selectedAttributes)) {
+        if (parsedAttributes && Object.keys(parsedAttributes).length > 0) {
+          logger.info('Processing product attributes with complete mapping', { 
+            productId: productResult.id,
+            attributeCount: Object.keys(parsedAttributes).length,
+            rawAttributes: draft.selectedAttributes,
+            parsedAttributes: parsedAttributes
+          });
+
+          try {
+            // Clear existing attributes for this product
+            await tx.delete(productAttributes).where(eq(productAttributes.productId, productResult.id));
+
+            // Process each attribute with proper validation
+            const attributeInserts = [];
+            for (const [attributeId, selectedOptions] of Object.entries(parsedAttributes)) {
             if (Array.isArray(selectedOptions) && selectedOptions.length > 0) {
               attributeInserts.push({
                 productId: productResult.id,
@@ -351,10 +365,21 @@ export async function publishProductDraftComplete(draftId: number): Promise<Publ
             logger.info('All product attributes processed successfully', { 
               attributeCount: attributeInserts.length
             });
+            }
+          }
+
+          if (attributeInserts.length > 0) {
+            await tx.insert(productAttributes).values(attributeInserts);
+            logger.info('All product attributes processed successfully', { 
+              attributeCount: attributeInserts.length
+            });
+          } else {
+            logger.info('No valid product attributes to save');
           }
         } catch (error) {
           logger.warn('Attribute processing failed, continuing with product creation', { error });
           warnings.push('Product attributes could not be saved, but product was created successfully');
+        }
         }
       }
 
