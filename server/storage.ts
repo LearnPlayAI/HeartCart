@@ -5705,7 +5705,7 @@ export class DatabaseStorage implements IStorage {
         .select()
         .from(productDrafts)
         .where(eq(productDrafts.originalProductId, originalProductId))
-        .orderBy(productDrafts.lastModified);
+        .orderBy(desc(productDrafts.lastModified));
 
       return draft;
     } catch (error) {
@@ -5862,28 +5862,26 @@ export class DatabaseStorage implements IStorage {
       });
       
       const draftData = {
-        // 1. original_product_id - FIXED: Link to original product
+        // Link to original product - use correct snake_case field names
         original_product_id: productId,
         
-        // Basic info - these match the column names in product_drafts
+        // Basic info
         name: product.name || '',
         slug: product.slug || this.generateSlug(product.name || 'product'),
         sku: product.sku || '',
         description: product.description || '',
         brand: product.brand || '',
         
-        // 2. category_id - FIXED: Product relationships
+        // Product relationships
         category_id: product.categoryId,
-        // 10. supplier_id - FIXED: Handle supplier conversion properly
         supplier_id: product.supplierId || (typeof product.supplier === 'string' && product.supplier !== '' ? parseInt(product.supplier) : null),
-        // 20. catalog_id - FIXED: Product catalog relationship  
         catalog_id: product.catalogId,
         
-        // Status flags - match column names
+        // Status flags
         is_active: product.isActive === true,
         is_featured: product.isFeatured === true,
         
-        // 3,4,5,6,7. Pricing information - FIXED: ensure all pricing fields are captured
+        // Pricing information
         cost_price: product.costPrice || 0,
         regular_price: product.price || 0,
         sale_price: product.salePrice,
@@ -5896,7 +5894,7 @@ export class DatabaseStorage implements IStorage {
         low_stock_threshold: product.lowStockThreshold || 5,
         backorder_enabled: product.backorderEnabled === true,
         
-        // 11,12,13,14,15,16. Discounts and promotions - FIXED: ensure all promotion fields
+        // Discounts and promotions
         discount_label: product.discountLabel || '',
         special_sale_text: product.specialSaleText || '',
         special_sale_start: product.specialSaleStart ? 
@@ -5916,14 +5914,13 @@ export class DatabaseStorage implements IStorage {
             product.flashDealEnd.toString()) 
           : null,
         
-        // 8,9. Images - FIXED: using arrays with comprehensive image mapping
+        // Images
         image_urls: allImageUrls,
         image_object_keys: allObjectKeys,
         main_image_index: mainImageIndex,
         
-        // Attributes - using jsonb - ensure we have a valid array
+        // Attributes
         attributes: mappedAttributes || [],
-        // 21. attributes_data - FIXED: Additional attributes data
         attributes_data: mappedAttributes || [],
         
         // Shipping and product details
@@ -5932,7 +5929,7 @@ export class DatabaseStorage implements IStorage {
         free_shipping: product.freeShipping === true,
         shipping_class: product.shippingClass || 'standard',
         
-        // 17,18,19,22. SEO metadata - FIXED: ensure all SEO fields are populated
+        // SEO metadata
         meta_title: product.metaTitle || product.name || '',
         meta_description: product.metaDescription || 
           (product.description ? product.description.substring(0, 160) : ''),
@@ -5949,11 +5946,11 @@ export class DatabaseStorage implements IStorage {
         created_at: now,
         last_modified: now,
         
-        // 23. published_at - FIXED: Set to null for draft
+        // Publication fields
         published_at: null,
         published_version: null,
         
-        // Product wizard progress - using jsonb
+        // Product wizard progress
         wizard_progress: {
           'basic-info': true,
           'images': allImageUrls.length > 0,
@@ -5962,7 +5959,7 @@ export class DatabaseStorage implements IStorage {
           'review': false
         },
         
-        // Status tracking - using array
+        // Status tracking
         completed_steps: ['basic-info', 'images', 'additional-info', 'sales-promotions'],
         version: 1,
         
@@ -5970,17 +5967,23 @@ export class DatabaseStorage implements IStorage {
         has_ai_description: false,
         has_ai_seo: false,
         
-        // 24. selected_attributes - FIXED: Customer selection attributes from required_attribute_ids
+        // Customer selection attributes
         selected_attributes: requiredAttributeIds || {},
         
-        // Change history - using jsonb
+        // Change history
         change_history: [{
           timestamp: now,
           fromStatus: null,
           toStatus: 'draft',
           note: 'Created from existing product',
           userId: userId
-        }]
+        }],
+        
+        // AI suggestions
+        ai_suggestions: {},
+        
+        // Discount data
+        discount_data: {}
       };
 
       logger.debug("Attempting to insert draft with data", { 
