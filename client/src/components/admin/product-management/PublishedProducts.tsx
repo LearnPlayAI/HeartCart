@@ -260,14 +260,14 @@ export const PublishedProducts: React.FC = () => {
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                             <DropdownMenuItem 
                               className="gap-2"
-                              onClick={() => window.open(`/products/${product.slug}`, '_blank')}
+                              onClick={() => window.open(`/product/id/${product.id}`, '_blank')}
                             >
                               <Eye className="h-4 w-4" />
                               View Product
                             </DropdownMenuItem>
                             <DropdownMenuItem 
                               className="gap-2"
-                              onClick={() => window.location.href = `/admin/products/edit/${product.id}`}
+                              onClick={() => window.location.href = `/admin/product-wizard/${product.id}`}
                             >
                               <Edit className="h-4 w-4" />
                               Edit Product
@@ -275,7 +275,7 @@ export const PublishedProducts: React.FC = () => {
                             <DropdownMenuSeparator />
                             <DropdownMenuItem 
                               className="gap-2"
-                              onClick={() => window.open(`/products/${product.slug}`, '_blank')}
+                              onClick={() => window.open(`/product/id/${product.id}`, '_blank')}
                             >
                               <ExternalLink className="h-4 w-4" />
                               View in Store
