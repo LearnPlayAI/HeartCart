@@ -572,13 +572,39 @@ export default function registerProductDraftRoutes(router: Router) {
         
         let productResult;
         
-        // Use the proven working createProductWithWizard method for both create and update
         if (draft.originalProductId) {
-          // This is an edit of an existing product - create new version and link it
-          logger.debug('Creating updated version of existing product', { originalProductId: draft.originalProductId });
-          productResult = await storage.createProductWithWizard(productData);
+          // This is an edit of an existing product - UPDATE the existing product
+          logger.debug('Updating existing product via SQL UPDATE', { originalProductId: draft.originalProductId });
+          
+          // Use direct database update for existing products
+          const [updatedProduct] = await db
+            .update(products)
+            .set({
+              name: productData.name,
+              slug: productData.slug,
+              price: productData.price,
+              cost_price: productData.cost_price,
+              stock: productData.stock,
+              description: productData.description,
+              category_id: productData.category_id,
+              sale_price: productData.sale_price,
+              discount: productData.discount,
+              image_url: productData.image_url,
+              additional_images: productData.additional_images,
+              is_active: productData.is_active,
+              is_featured: productData.is_featured,
+              is_flash_deal: productData.is_flash_deal,
+              supplier: productData.supplier,
+              free_shipping: productData.free_shipping,
+              weight: productData.weight,
+              updated_at: new Date()
+            })
+            .where(eq(products.id, draft.originalProductId))
+            .returning();
+            
+          productResult = updatedProduct;
         } else {
-          // This is a new product - create using the wizard method that works
+          // This is a new product - CREATE using INSERT
           logger.debug('Creating new product with wizard method');
           productResult = await storage.createProductWithWizard(productData);
         }
