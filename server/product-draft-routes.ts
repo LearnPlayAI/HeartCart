@@ -874,40 +874,59 @@ export default function registerProductDraftRoutes(router: Router) {
       }
 
       // Get the published product
-      const product = await storage.getProduct(productId);
+      const product = await storage.getProductById(productId);
       if (!product) {
         throw new NotFoundError("Published product not found");
       }
 
-      // Create a draft based on the published product
+      // Get all product images
+      const productImages = await storage.getProductImages(productId);
+      const imageUrls = productImages.map(img => img.url);
+      const imageObjectKeys = productImages.map(img => img.objectKey || '');
+      const mainImageIndex = productImages.findIndex(img => img.isMain) || 0;
+
+      // Get product attributes - handle if method doesn't exist
+      let selectedAttributes = {};
+      try {
+        const productAttributes = await storage.getProductAttributes(productId);
+        if (productAttributes && Array.isArray(productAttributes)) {
+          for (const attr of productAttributes) {
+            if (attr.selectedOptions && attr.selectedOptions.length > 0) {
+              selectedAttributes[attr.attributeId] = attr.selectedOptions;
+            }
+          }
+        }
+      } catch (error) {
+        console.log("Could not fetch product attributes:", error);
+        // Continue without attributes if method doesn't exist
+      }
+
+      // Create comprehensive draft data from the published product
       const draftData = {
         originalProductId: productId,
         name: product.name,
         slug: product.slug,
         description: product.description,
         categoryId: product.categoryId,
-        supplierId: product.supplierId,
+        supplier: product.supplier,
         catalogId: product.catalogId,
-        regularPrice: product.price,
-        costPrice: product.costPrice,
-        salePrice: product.salePrice,
+        regularPrice: String(product.price || 0),
+        costPrice: String(product.costPrice || 0),
+        salePrice: product.salePrice ? String(product.salePrice) : null,
         brand: product.brand,
-        isActive: product.isActive,
-        isFeatured: product.isFeatured,
-        imageUrls: product.imageUrl ? [product.imageUrl] : [],
-        imageObjectKeys: product.imageObjectKey ? [product.imageObjectKey] : [],
-        mainImageIndex: 0,
-        sku: product.sku,
-        stock: product.stock,
-        weight: product.weight,
-        length: product.length,
-        width: product.width,
-        height: product.height,
+        isActive: product.isActive || false,
+        isFeatured: product.isFeatured || false,
+        imageUrls: imageUrls,
+        imageObjectKeys: imageObjectKeys,
+        mainImageIndex: mainImageIndex,
+        stock: product.stock || 0,
+        weight: product.weight ? String(product.weight) : null,
         metaTitle: product.metaTitle,
         metaDescription: product.metaDescription,
         metaKeywords: product.metaKeywords,
-        seoDescription: product.seoDescription,
-        tags: product.tags,
+        tags: product.tags || '',
+        selectedAttributes: JSON.stringify(selectedAttributes),
+        minimumOrder: product.minimumOrder || 1,
         createdBy: userId,
         draftStatus: 'draft' as const
       };
