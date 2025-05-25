@@ -530,48 +530,116 @@ export default function registerProductDraftRoutes(router: Router) {
         throw new BadRequestError("Product price is required");
       }
       
-      // Use simplified publication to avoid database timeouts
+      // Complete systematic mapping of all columns with proper data type conversions
       try {
-        // Create basic product with essential fields only
-        const basicProductData = {
-          name: draft.name,
+        // Map draft columns to products table with exact data type matching
+        const productData = {
+          // Required NOT NULL fields
+          name: draft.name || 'Untitled Product',
           slug: draft.slug || `product-${Date.now()}`,
-          description: draft.description || "",
-          categoryId: draft.categoryId,
           price: parseFloat(String(draft.regularPrice || 0)),
-          costPrice: parseFloat(String(draft.costPrice || 0)),
           stock: parseInt(String(draft.stockLevel || 0)),
-          isActive: true,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          is_active: Boolean(draft.isActive !== false),
+          is_featured: Boolean(draft.isFeatured === true),
+          is_flash_deal: Boolean(draft.isFlashDeal === true),
+          
+          // Optional fields with proper type conversions
+          description: draft.description || null,
+          category_id: draft.categoryId || null,
+          sale_price: draft.salePrice ? parseFloat(String(draft.salePrice)) : null,
+          discount: draft.discount ? parseInt(String(draft.discount)) : null,
+          image_url: draft.imageUrls && draft.imageUrls.length > 0 ? draft.imageUrls[0] : null,
+          additional_images: draft.imageUrls && draft.imageUrls.length > 1 ? draft.imageUrls.slice(1) : null,
+          rating: null,
+          review_count: null,
+          sold_count: null,
+          supplier: draft.supplierId ? String(draft.supplierId) : null,
+          free_shipping: Boolean(draft.freeShipping === true),
+          weight: draft.weight ? parseFloat(String(draft.weight)) : null,
+          dimensions: draft.dimensions || null,
+          brand: draft.brand || null,
+          tags: null,
+          has_background_removed: false,
+          original_image_object_key: draft.imageObjectKeys && draft.imageObjectKeys.length > 0 ? draft.imageObjectKeys[0] : null,
+          cost_price: draft.costPrice ? parseFloat(String(draft.costPrice)) : null,
+          catalog_id: draft.catalogId || null,
+          display_order: null,
+          created_at: new Date().toISOString(),
+          flash_deal_end: draft.flashDealEnd || null,
+          minimum_price: draft.minimumPrice ? parseFloat(String(draft.minimumPrice)) : null,
+          minimum_order: null,
+          discount_label: draft.discountLabel || null,
+          special_sale_text: draft.specialSaleText || null,
+          special_sale_start: draft.specialSaleStart || null,
+          special_sale_end: draft.specialSaleEnd || null,
+          required_attribute_ids: draft.selectedAttributes ? 
+            Object.keys(draft.selectedAttributes).map(id => parseInt(id)) : null
         };
 
-        // Use only the most essential columns to avoid any schema mismatches
+        // Insert product with complete field mapping
         const productResult = await db.execute(sql`
-          INSERT INTO products (name, description, category_id, price, is_active)
-          VALUES (${basicProductData.name}, ${basicProductData.description}, 
-                  ${basicProductData.categoryId}, ${basicProductData.price}, true)
-          RETURNING id, name, price
+          INSERT INTO products (
+            name, slug, description, category_id, price, sale_price, discount, 
+            image_url, additional_images, stock, is_active, is_featured, is_flash_deal,
+            supplier, free_shipping, weight, dimensions, brand, cost_price, catalog_id,
+            created_at, flash_deal_end, minimum_price, discount_label, special_sale_text,
+            special_sale_start, special_sale_end, required_attribute_ids
+          ) VALUES (
+            ${productData.name}, ${productData.slug}, ${productData.description}, 
+            ${productData.category_id}, ${productData.price}, ${productData.sale_price}, 
+            ${productData.discount}, ${productData.image_url}, ${productData.additional_images}, 
+            ${productData.stock}, ${productData.is_active}, ${productData.is_featured}, 
+            ${productData.is_flash_deal}, ${productData.supplier}, ${productData.free_shipping}, 
+            ${productData.weight}, ${productData.dimensions}, ${productData.brand}, 
+            ${productData.cost_price}, ${productData.catalog_id}, ${productData.created_at}, 
+            ${productData.flash_deal_end}, ${productData.minimum_price}, ${productData.discount_label}, 
+            ${productData.special_sale_text}, ${productData.special_sale_start}, 
+            ${productData.special_sale_end}, ${productData.required_attribute_ids}
+          )
+          RETURNING id, name, price, slug
         `);
 
-        const newProduct = productResult.rows?.[0] || { id: Date.now(), name: basicProductData.name };
+        const newProduct = productResult.rows?.[0];
+        if (!newProduct) {
+          throw new Error("Failed to create product - no result returned");
+        }
 
-        // Add main image if available using raw SQL with correct column names
+        // Add all product images with proper object_key mapping
         if (draft.imageUrls && draft.imageUrls.length > 0) {
-          try {
-            await db.execute(sql`
-              INSERT INTO product_images (product_id, url, is_main, sort_order, created_at)
-              VALUES (${newProduct.id}, ${draft.imageUrls[0]}, true, 0, NOW())
-            `);
-          } catch (imageError) {
-            logger.warn("Failed to add image, product created without image", { 
-              productId: newProduct.id 
-            });
+          for (let i = 0; i < draft.imageUrls.length; i++) {
+            try {
+              const objectKey = draft.imageObjectKeys && draft.imageObjectKeys[i] ? 
+                draft.imageObjectKeys[i] : `image-${Date.now()}-${i}`;
+              
+              await db.execute(sql`
+                INSERT INTO product_images (
+                  product_id, url, object_key, is_main, sort_order, created_at,
+                  has_bg_removed, bg_removed_url, bg_removed_object_key
+                ) VALUES (
+                  ${newProduct.id}, ${draft.imageUrls[i]}, ${objectKey}, 
+                  ${i === (draft.mainImageIndex || 0)}, ${i}, ${new Date().toISOString()},
+                  false, null, null
+                )
+              `);
+            } catch (imageError) {
+              logger.warn("Failed to add image", { 
+                productId: newProduct.id, 
+                imageIndex: i,
+                error: imageError 
+              });
+            }
           }
         }
 
-        // Delete the draft after successful publication
-        await storage.deleteProductDraft(draftId);
+        // Update draft status to published and set published metadata
+        await db.execute(sql`
+          UPDATE product_drafts 
+          SET draft_status = 'published',
+              published_at = ${new Date().toISOString()},
+              published_version = COALESCE(published_version, 0) + 1,
+              last_modified = ${new Date().toISOString()}
+          WHERE id = ${draftId}
+        `);
 
         logger.info("Product published successfully", { 
           productId: newProduct.id, 
