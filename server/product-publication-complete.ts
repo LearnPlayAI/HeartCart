@@ -349,37 +349,29 @@ export async function publishProductDraftComplete(draftId: number): Promise<Publ
             // Process each attribute with proper validation
             const attributeInserts = [];
             for (const [attributeId, selectedOptions] of Object.entries(parsedAttributes)) {
-            if (Array.isArray(selectedOptions) && selectedOptions.length > 0) {
-              attributeInserts.push({
-                productId: productResult.id,
-                attributeId: parseInt(attributeId),
-                selectedOptions: selectedOptions,
-                textValue: null // For now, focusing on option-based attributes
-                // Remove createdAt and updatedAt - let database handle these automatically
+              if (Array.isArray(selectedOptions) && selectedOptions.length > 0) {
+                attributeInserts.push({
+                  productId: productResult.id,
+                  attributeId: parseInt(attributeId),
+                  selectedOptions: selectedOptions,
+                  textValue: null // For now, focusing on option-based attributes
+                  // Remove createdAt and updatedAt - let database handle these automatically
+                });
+              }
+            }
+
+            if (attributeInserts.length > 0) {
+              await tx.insert(productAttributes).values(attributeInserts);
+              logger.info('All product attributes processed successfully', { 
+                attributeCount: attributeInserts.length
               });
+            } else {
+              logger.info('No valid product attributes to save');
             }
+          } catch (error) {
+            logger.warn('Attribute processing failed, continuing with product creation', { error });
+            warnings.push('Product attributes could not be saved, but product was created successfully');
           }
-
-          if (attributeInserts.length > 0) {
-            await tx.insert(productAttributes).values(attributeInserts);
-            logger.info('All product attributes processed successfully', { 
-              attributeCount: attributeInserts.length
-            });
-            }
-          }
-
-          if (attributeInserts.length > 0) {
-            await tx.insert(productAttributes).values(attributeInserts);
-            logger.info('All product attributes processed successfully', { 
-              attributeCount: attributeInserts.length
-            });
-          } else {
-            logger.info('No valid product attributes to save');
-          }
-        } catch (error) {
-          logger.warn('Attribute processing failed, continuing with product creation', { error });
-          warnings.push('Product attributes could not be saved, but product was created successfully');
-        }
         }
       }
 
