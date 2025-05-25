@@ -79,16 +79,22 @@ export const ReviewAndSaveStep: React.FC<ReviewAndSaveStepProps> = ({
     }
   ];
   
-  // Get category for display purposes
-  const { data: categoryData } = useQuery({
-    queryKey: ['/api/categories', draft.categoryId],
+  // Get all categories and find the one that matches
+  const { data: allCategoriesData } = useQuery({
+    queryKey: ['/api/categories'],
     queryFn: async () => {
-      if (!draft.categoryId) return { success: true, data: null };
-      const response = await apiRequest('GET', `/api/categories/${draft.categoryId}`);
+      const response = await apiRequest('GET', '/api/categories');
       return response.json();
-    },
-    enabled: !!draft.categoryId
+    }
   });
+
+  // Find the specific category
+  const categoryData = allCategoriesData?.success && draft.categoryId 
+    ? { 
+        success: true, 
+        data: allCategoriesData.data.find((cat: any) => cat.id === draft.categoryId) 
+      }
+    : { success: true, data: null };
   
   // Fetch validation status
   const { data: validationData, isLoading: isValidating, refetch: refetchValidation } = useQuery({
