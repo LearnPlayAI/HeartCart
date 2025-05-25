@@ -103,10 +103,6 @@ function toSASTString(date?: Date | string | null): string {
   }
   
   return new Date().toISOString();
-  const utc = dateObj.getTime() + (dateObj.getTimezoneOffset() * 60000);
-  const sastTime = new Date(utc + (sastOffset * 60000));
-  
-  return sastTime.toISOString().replace('Z', '+02:00');
 }
 
 /**
@@ -193,9 +189,9 @@ export async function publishProductDraftComplete(draftId: number): Promise<Publ
         
         // Promotional and Special Pricing
         specialSaleText: safeString(draft.specialSaleText),
-        specialSaleStart: safeDate(draft.specialSaleStart),
-        specialSaleEnd: safeDate(draft.specialSaleEnd),
-        flashDealEnd: safeDate(draft.flashDealEnd),
+        specialSaleStart: safeString(draft.specialSaleStart),
+        specialSaleEnd: safeString(draft.specialSaleEnd),
+        flashDealEnd: safeString(draft.flashDealEnd),
         
         // Analytics and Performance
         rating: null, // Start fresh for new products
