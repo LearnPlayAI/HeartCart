@@ -80,6 +80,14 @@ export const products = pgTable("products", {
   displayOrder: integer("display_order").default(999), // Default high number to place new products at the end
   hasBackgroundRemoved: boolean("has_background_removed").default(false),
   originalImageObjectKey: text("original_image_object_key"),
+  // SEO fields - missing from database
+  metaTitle: text("meta_title"),
+  metaDescription: text("meta_description"),
+  metaKeywords: text("meta_keywords"),
+  canonicalUrl: text("canonical_url"),
+  // Additional pricing fields
+  compareAtPrice: doublePrecision("compare_at_price"),
+  taxRatePercentage: doublePrecision("tax_rate_percentage"),
   createdAt: text("created_at").default(String(new Date().toISOString())).notNull(),
 }, (table) => {
   return {
