@@ -644,19 +644,22 @@ export default function registerProductDraftRoutes(router: Router) {
       }
       
       if (!step || step === 'pricing') {
-        // Pricing validation
-        if (!draft.regularPrice || draft.regularPrice <= 0) {
+        // Pricing validation - convert strings to numbers for proper comparison
+        const regularPrice = typeof draft.regularPrice === 'string' ? parseFloat(draft.regularPrice) : draft.regularPrice;
+        const salePrice = typeof draft.salePrice === 'string' ? parseFloat(draft.salePrice) : draft.salePrice;
+        
+        if (!regularPrice || regularPrice <= 0) {
           errors['regularPrice'] = ["Regular price must be greater than 0"];
           isValid = false;
         }
         
-        if (draft.salePrice !== null && draft.salePrice !== undefined) {
-          if (draft.salePrice <= 0) {
+        if (salePrice !== null && salePrice !== undefined && !isNaN(salePrice)) {
+          if (salePrice <= 0) {
             errors['salePrice'] = ["Sale price must be greater than 0"];
             isValid = false;
           }
           
-          if (draft.salePrice >= draft.regularPrice) {
+          if (salePrice >= regularPrice) {
             errors['salePrice'] = ["Sale price must be less than regular price"];
             isValid = false;
           }
