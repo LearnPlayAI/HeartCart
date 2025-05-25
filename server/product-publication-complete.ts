@@ -52,6 +52,11 @@ function safeDate(value: any): string | null {
   
   // If it's a string, try to parse it
   if (typeof value === 'string') {
+    // If it's already an ISO string, return as is
+    if (value.includes('T') && (value.includes('Z') || value.includes('+'))) {
+      return value;
+    }
+    // Try to parse and convert
     const date = new Date(value);
     if (!isNaN(date.getTime())) {
       return date.toISOString();
@@ -72,17 +77,32 @@ function safeArray(value: any): any[] {
 }
 
 /**
- * Convert date to SAST timezone string format
+ * Convert date to SAST timezone string format - FIXED VERSION
  */
 function toSASTString(date?: Date | string | null): string {
   if (!date) {
-    date = new Date();
+    return new Date().toISOString();
   }
   
-  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  // If it's already a string in ISO format, return as is
+  if (typeof date === 'string') {
+    if (date.includes('T') && (date.includes('Z') || date.includes('+'))) {
+      return date;
+    }
+    // Try to parse the string
+    const parsedDate = new Date(date);
+    if (!isNaN(parsedDate.getTime())) {
+      return parsedDate.toISOString();
+    }
+    return new Date().toISOString();
+  }
   
-  // Convert to South Africa timezone (UTC+2)
-  const sastOffset = 2 * 60; // 2 hours in minutes
+  // If it's a Date object
+  if (date instanceof Date && !isNaN(date.getTime())) {
+    return date.toISOString();
+  }
+  
+  return new Date().toISOString();
   const utc = dateObj.getTime() + (dateObj.getTimezoneOffset() * 60000);
   const sastTime = new Date(utc + (sastOffset * 60000));
   
@@ -187,8 +207,8 @@ export async function publishProductDraftComplete(draftId: number): Promise<Publ
         hasBackgroundRemoved: safeBoolean(draft.hasBackgroundRemoved, false),
         originalImageObjectKey: safeString(draft.originalImageObjectKey),
         
-        // Timestamp
-        createdAt: draft.originalProductId ? undefined : new Date().toISOString(), // Only set for new products
+        // Timestamp - let database handle this automatically
+        // createdAt: draft.originalProductId ? undefined : new Date().toISOString(), // Only set for new products
       };
 
       logger.debug('Complete product data mapping', { 
