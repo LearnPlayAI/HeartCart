@@ -269,21 +269,30 @@ export const PublishedProducts: React.FC = () => {
                               className="gap-2"
                               onClick={async () => {
                                 try {
+                                  console.log(`Creating draft for product ID: ${product.id}`);
+                                  
                                   // Create a draft from the published product for editing
                                   const response = await apiRequest('POST', `/api/product-drafts/create-from-published/${product.id}`);
+                                  
+                                  if (!response.ok) {
+                                    const errorData = await response.json();
+                                    console.error('API Error:', errorData);
+                                    throw new Error(errorData.error?.message || 'Failed to create draft');
+                                  }
+                                  
                                   const result = await response.json();
+                                  console.log('API Response:', result);
                                   
                                   if (result.success && result.data?.draftId) {
-                                    // Navigate to wizard with the new draft ID
+                                    console.log(`Navigating to wizard with draft ID: ${result.data.draftId}`);
+                                    // Navigate to wizard with the draft ID
                                     window.location.href = `/admin/product-wizard/${result.data.draftId}`;
                                   } else {
-                                    // Fallback to direct product editing if API doesn't exist yet
-                                    window.location.href = `/admin/product-wizard/${product.id}`;
+                                    throw new Error('Invalid response: missing draft ID');
                                   }
                                 } catch (error) {
                                   console.error('Error creating draft:', error);
-                                  // Fallback to direct product editing
-                                  window.location.href = `/admin/product-wizard/${product.id}`;
+                                  alert(`Failed to create draft for editing: ${error.message}`);
                                 }
                               }}
                             >
