@@ -875,14 +875,20 @@ export default function registerProductDraftRoutes(router: Router) {
 
       // Step 1: Check if a draft already exists for this product
       console.log(`Checking for existing draft for product ID: ${productId}`);
-      const existingDraft = await storage.getProductDraftByOriginalId(productId);
-      
-      if (existingDraft) {
-        console.log(`Found existing draft with ID: ${existingDraft.id}`);
-        return sendSuccess(res, { 
-          draftId: existingDraft.id,
-          message: "Using existing draft for product editing"
-        });
+      try {
+        const existingDraft = await storage.getProductDraftByOriginalId(productId);
+        console.log(`Draft lookup result for product ${productId}:`, existingDraft ? `Found draft ID ${existingDraft.id}` : 'No existing draft found');
+        
+        if (existingDraft) {
+          console.log(`Found existing draft with ID: ${existingDraft.id}`);
+          return sendSuccess(res, { 
+            draftId: existingDraft.id,
+            message: "Using existing draft for product editing"
+          });
+        }
+      } catch (draftError) {
+        console.log(`Error checking for existing draft for product ${productId}:`, draftError);
+        // Continue to create new draft even if checking existing fails
       }
 
       // Step 2: No draft exists, create a new one by copying from published product
