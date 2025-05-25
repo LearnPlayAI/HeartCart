@@ -557,12 +557,12 @@ export default function registerProductDraftRoutes(router: Router) {
 
         const newProduct = productResult.rows?.[0] || { id: Date.now(), name: basicProductData.name };
 
-        // Add main image if available using raw SQL
+        // Add main image if available using raw SQL with correct column names
         if (draft.imageUrls && draft.imageUrls.length > 0) {
           try {
             await db.execute(sql`
-              INSERT INTO product_images (product_id, url, is_main, sort_order)
-              VALUES (${newProduct.id}, ${draft.imageUrls[0]}, true, 0)
+              INSERT INTO product_images (product_id, url, is_main, sort_order, created_at)
+              VALUES (${newProduct.id}, ${draft.imageUrls[0]}, true, 0, NOW())
             `);
           } catch (imageError) {
             logger.warn("Failed to add image, product created without image", { 
