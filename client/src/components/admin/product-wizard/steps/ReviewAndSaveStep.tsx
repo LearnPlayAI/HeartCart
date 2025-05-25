@@ -114,8 +114,16 @@ export const ReviewAndSaveStep: React.FC<ReviewAndSaveStepProps> = ({
           variant: 'default',
         });
         
-        // Refresh draft data
+        // Invalidate all relevant queries to trigger UI refresh
         queryClient.invalidateQueries({ queryKey: ['/api/product-drafts', draft.id] });
+        queryClient.invalidateQueries({ queryKey: ['/api/product-drafts'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/admin/drafts'] });
+        
+        // Also trigger a refetch of the current component's data if passed in as a prop
+        if (typeof onSave === 'function') {
+          // Force a re-render by calling onSave with current data
+          onSave({}, false); // This will trigger the parent to refetch
+        }
         
         // Clear review note after successful update
         setReviewNote('');
