@@ -532,21 +532,25 @@ export default function registerProductDraftRoutes(router: Router) {
       
       // Complete systematic mapping of all columns with proper data type conversions
       try {
-        // Use the same field mapping as the working createProductWithWizard method
+        // Map to exact database column names (snake_case)
         const productData = {
           name: draft.name || 'Untitled Product',
           slug: draft.slug || `product-${Date.now()}`,
           price: parseFloat(String(draft.regularPrice || 0)),
-          costPrice: parseFloat(String(draft.costPrice || 0)),
+          cost_price: parseFloat(String(draft.costPrice || 0)),
           stock: parseInt(String(draft.stockLevel || 0)),
           description: draft.description || null,
-          categoryId: draft.categoryId || null,
-          catalogId: draft.catalogId || null,
-          brand: draft.brand || null,
-          isActive: Boolean(draft.isActive !== false),
-          isFeatured: Boolean(draft.isFeatured === true),
-          isFlashDeal: Boolean(draft.isFlashDeal === true),
-          salePrice: draft.salePrice ? parseFloat(String(draft.salePrice)) : null,
+          category_id: draft.categoryId || null,
+          sale_price: draft.salePrice ? parseFloat(String(draft.salePrice)) : null,
+          discount: draft.discount ? parseInt(String(draft.discount)) : null,
+          image_url: draft.imageUrls && draft.imageUrls.length > 0 ? draft.imageUrls[0] : null,
+          additional_images: draft.imageUrls && draft.imageUrls.length > 1 ? draft.imageUrls.slice(1) : [],
+          is_active: Boolean(draft.isActive !== false),
+          is_featured: Boolean(draft.isFeatured === true),
+          is_flash_deal: Boolean(draft.isFlashDeal === true),
+          supplier: draft.supplierId ? String(draft.supplierId) : null,
+          free_shipping: Boolean(draft.freeShipping === true),
+          weight: draft.weight ? parseFloat(String(draft.weight)) : null,
           imageUrls: draft.imageUrls || [],
           imageObjectKeys: draft.imageObjectKeys || [],
           mainImageIndex: draft.mainImageIndex || 0,
