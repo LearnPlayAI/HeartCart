@@ -144,12 +144,12 @@ export async function publishProductDraftComplete(draftId: number): Promise<Publ
         supplier: safeString(draft.supplierId), // Convert integer to text as per schema
         catalogId: draft.catalogId,
         
-        // Pricing Fields - Complete Mapping
-        price: safeNumber(draft.regularPrice || draft.price), // regularPrice is the UI field
-        costPrice: safeNumber(draft.costPrice),
+        // Pricing Fields - Complete Mapping with correct field names
+        price: safeNumber(draft.regularPrice, 0), // Use camelCase field names
+        costPrice: safeNumber(draft.costPrice, 0),
         salePrice: draft.salePrice ? safeNumber(draft.salePrice) : null,
-        compareAtPrice: draft.compareAtPrice ? safeNumber(draft.compareAtPrice) : null,
-        taxRatePercentage: draft.taxRatePercentage ? safeNumber(draft.taxRatePercentage) : null,
+        compareAtPrice: null, // Field doesn't exist in drafts table
+        taxRatePercentage: null, // Field doesn't exist in drafts table
         
         // Discount and Pricing Logic
         discount: draft.markupPercentage ? safeInteger(draft.markupPercentage) : null,
@@ -161,8 +161,8 @@ export async function publishProductDraftComplete(draftId: number): Promise<Publ
         additionalImages: draft.imageUrls && draft.imageUrls.length > 1 ? draft.imageUrls.slice(1) : [],
         
         // Inventory and Stock
-        stock: safeInteger(draft.stockLevel), // stockLevel is the UI field
-        minimumOrder: draft.minimumOrder ? safeInteger(draft.minimumOrder) : 1,
+        stock: safeInteger(draft.stockLevel, 0), // Use camelCase field names
+        minimumOrder: 1, // Default value since field doesn't exist in drafts
         
         // Product Status and Visibility
         isActive: safeBoolean(draft.isActive, true),
@@ -264,26 +264,43 @@ export async function publishProductDraftComplete(draftId: number): Promise<Publ
           // Insert all images with proper order and main image designation
           const imageInserts = draft.imageUrls
             .map((url, index) => {
-              // Extract object key from URL path if it's a file URL
+              // Extract object key from URL path - handle both formats
               let objectKey = null;
+              
               if (url && url.includes('/api/files/')) {
                 // Extract the path after /api/files/ as the object key
                 const parts = url.split('/api/files/');
                 if (parts.length > 1) {
                   objectKey = parts[1];
                 }
+              } else if (url && url.startsWith('/')) {
+                // Handle relative paths - remove leading slash
+                objectKey = url.substring(1);
+              } else if (url) {
+                // Direct object key or other format
+                objectKey = url;
               }
               
-              // CRITICAL: Skip images without valid object keys to prevent constraint violations
-              if (!objectKey) {
-                logger.warn('Skipping image without valid object key', { url, index });
-                return null;
+              // Debug logging for object key extraction
+              logger.debug('Processing image for publication', { 
+                url, 
+                extractedObjectKey: objectKey,
+                index 
+              });
+              
+              // If still no object key, generate one from the URL
+              if (!objectKey || objectKey.trim() === '') {
+                // Generate a fallback object key from the URL
+                const urlParts = url.split('/');
+                const filename = urlParts[urlParts.length - 1];
+                objectKey = `images/${filename}`;
+                logger.warn('Generated fallback object key', { url, objectKey });
               }
               
               return {
                 productId: productResult.id,
                 url: url,
-                objectKey: objectKey!, // REQUIRED: TypeScript knows this is not null due to filter above
+                objectKey: objectKey, // Always have a valid object key
                 isMain: index === (draft.mainImageIndex || 0),
                 hasBgRemoved: false,
                 bgRemovedUrl: null,
@@ -291,8 +308,7 @@ export async function publishProductDraftComplete(draftId: number): Promise<Publ
                 sortOrder: index,
                 createdAt: new Date().toISOString()
               };
-            })
-            .filter(Boolean) as any[]; // Remove null entries
+            }); // Remove the filter since we now always generate valid object keys
 
           await tx.insert(productImages).values(imageInserts);
           logger.info('All product images processed successfully', { 
