@@ -5802,7 +5802,7 @@ export class DatabaseStorage implements IStorage {
       });
       
       const draftData = {
-        // Link to original product (with fallback value)
+        // 1. original_product_id - FIXED: Link to original product
         original_product_id: productId,
         
         // Basic info - these match the column names in product_drafts
@@ -5812,55 +5812,59 @@ export class DatabaseStorage implements IStorage {
         description: product.description || '',
         brand: product.brand || '',
         
-        // Product relationships - match column names
-        category_id: product.categoryId || null,
-        supplier_id: product.supplierId || (product.supplier ? parseInt(product.supplier) : null),
-        catalog_id: product.catalogId || null,
+        // 2. category_id - FIXED: Product relationships
+        category_id: product.categoryId,
+        // 10. supplier_id - FIXED: Handle supplier conversion properly
+        supplier_id: product.supplierId || (typeof product.supplier === 'string' && product.supplier !== '' ? parseInt(product.supplier) : null),
+        // 20. catalog_id - FIXED: Product catalog relationship  
+        catalog_id: product.catalogId,
         
-        // Status flags - match column names (using triple equals to avoid null/undefined issues)
+        // Status flags - match column names
         is_active: product.isActive === true,
         is_featured: product.isFeatured === true,
         
-        // Pricing information - ensure numeric types
-        cost_price: product.costPrice || product.cost_price || 0,
+        // 3,4,5,6,7. Pricing information - FIXED: ensure all pricing fields are captured
+        cost_price: product.costPrice || 0,
         regular_price: product.price || 0,
-        sale_price: product.salePrice || null,
-        on_sale: product.salePrice ? true : false,
+        sale_price: product.salePrice,
+        on_sale: product.salePrice !== null && product.salePrice !== undefined && product.salePrice > 0,
         markup_percentage: product.markup || 0,
-        minimum_price: product.minimumPrice || 0,
+        minimum_price: product.minimumPrice,
         
         // Inventory settings
         stock_level: product.stock || 0,
         low_stock_threshold: product.lowStockThreshold || 5,
         backorder_enabled: product.backorderEnabled === true,
         
-        // Discounts and promotions - ensure text for dates
+        // 11,12,13,14,15,16. Discounts and promotions - FIXED: ensure all promotion fields
         discount_label: product.discountLabel || '',
         special_sale_text: product.specialSaleText || '',
         special_sale_start: product.specialSaleStart ? 
-          (typeof product.specialSaleStart === 'string' ? 
-            product.specialSaleStart : 
+          (product.specialSaleStart instanceof Date ? 
+            product.specialSaleStart.toISOString() : 
             product.specialSaleStart.toString()) 
           : null,
         special_sale_end: product.specialSaleEnd ? 
-          (typeof product.specialSaleEnd === 'string' ? 
-            product.specialSaleEnd : 
+          (product.specialSaleEnd instanceof Date ? 
+            product.specialSaleEnd.toISOString() : 
             product.specialSaleEnd.toString()) 
           : null,
         is_flash_deal: product.isFlashDeal === true,
         flash_deal_end: product.flashDealEnd ? 
-          (typeof product.flashDealEnd === 'string' ? 
-            product.flashDealEnd : 
+          (product.flashDealEnd instanceof Date ? 
+            product.flashDealEnd.toISOString() : 
             product.flashDealEnd.toString()) 
           : null,
         
-        // Images - using arrays - using the comprehensive image arrays we built above
+        // 8,9. Images - FIXED: using arrays with comprehensive image mapping
         image_urls: allImageUrls,
         image_object_keys: allObjectKeys,
         main_image_index: mainImageIndex,
         
         // Attributes - using jsonb - ensure we have a valid array
         attributes: mappedAttributes || [],
+        // 21. attributes_data - FIXED: Additional attributes data
+        attributes_data: mappedAttributes || [],
         
         // Shipping and product details
         weight: product.weight ? product.weight.toString() : '',
@@ -5868,7 +5872,7 @@ export class DatabaseStorage implements IStorage {
         free_shipping: product.freeShipping === true,
         shipping_class: product.shippingClass || 'standard',
         
-        // SEO metadata
+        // 17,18,19,22. SEO metadata - FIXED: ensure all SEO fields are populated
         meta_title: product.metaTitle || product.name || '',
         meta_description: product.metaDescription || 
           (product.description ? product.description.substring(0, 160) : ''),
@@ -5876,7 +5880,7 @@ export class DatabaseStorage implements IStorage {
         canonical_url: product.canonicalUrl || '',
         
         // Tax information
-        taxable: product.taxable !== false, // Default to true
+        taxable: product.taxable !== false,
         tax_class: product.taxClass || 'standard',
         
         // Draft specific fields
@@ -5885,26 +5889,29 @@ export class DatabaseStorage implements IStorage {
         created_at: now,
         last_modified: now,
         
+        // 23. published_at - FIXED: Set to null for draft
+        published_at: null,
+        published_version: null,
+        
         // Product wizard progress - using jsonb
         wizard_progress: {
-          basicInfo: true,
-          images: allImageUrls.length > 0,
-          pricing: true, 
-          attributes: mappedAttributes.length > 0,
-          seo: true,
-          review: false
+          'basic-info': true,
+          'images': allImageUrls.length > 0,
+          'additional-info': true,
+          'sales-promotions': true, 
+          'review': false
         },
         
         // Status tracking - using array
-        completed_steps: ['basicInfo', 'pricing', 'seo'],
+        completed_steps: ['basic-info', 'images', 'additional-info', 'sales-promotions'],
         version: 1,
         
         // AI features status
         has_ai_description: false,
         has_ai_seo: false,
         
-        // Customer selection attributes
-        selected_attributes: requiredAttributeIds,
+        // 24. selected_attributes - FIXED: Customer selection attributes from required_attribute_ids
+        selected_attributes: requiredAttributeIds || {},
         
         // Change history - using jsonb
         change_history: [{
