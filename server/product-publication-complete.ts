@@ -42,6 +42,25 @@ function safeBoolean(value: any, defaultValue: boolean = false): boolean {
   return Boolean(value);
 }
 
+function safeDate(value: any): string | null {
+  if (value === null || value === undefined || value === '') return null;
+  
+  // If it's already a Date object
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+  
+  // If it's a string, try to parse it
+  if (typeof value === 'string') {
+    const date = new Date(value);
+    if (!isNaN(date.getTime())) {
+      return date.toISOString();
+    }
+  }
+  
+  return null;
+}
+
 function safeArray(value: any): any[] {
   if (!value) return [];
   if (Array.isArray(value)) return value;
@@ -154,9 +173,9 @@ export async function publishProductDraftComplete(draftId: number): Promise<Publ
         
         // Promotional and Special Pricing
         specialSaleText: safeString(draft.specialSaleText),
-        specialSaleStart: draft.specialSaleStart ? toSASTString(draft.specialSaleStart) : null,
-        specialSaleEnd: draft.specialSaleEnd ? toSASTString(draft.specialSaleEnd) : null,
-        flashDealEnd: draft.flashDealEnd ? toSASTString(draft.flashDealEnd) : null,
+        specialSaleStart: safeDate(draft.specialSaleStart),
+        specialSaleEnd: safeDate(draft.specialSaleEnd),
+        flashDealEnd: safeDate(draft.flashDealEnd),
         
         // Analytics and Performance
         rating: null, // Start fresh for new products
@@ -169,7 +188,7 @@ export async function publishProductDraftComplete(draftId: number): Promise<Publ
         originalImageObjectKey: safeString(draft.originalImageObjectKey),
         
         // Timestamp
-        createdAt: draft.originalProductId ? undefined : toSASTString(), // Only set for new products
+        createdAt: draft.originalProductId ? undefined : new Date().toISOString(), // Only set for new products
       };
 
       logger.debug('Complete product data mapping', { 
@@ -229,11 +248,11 @@ export async function publishProductDraftComplete(draftId: number): Promise<Publ
           // Insert all images with proper order and main image designation
           const imageInserts = draft.imageUrls.map((url, index) => ({
             productId: productResult.id,
-            imageUrl: url,
+            url: url, // Fix: Use 'url' field name as expected by database schema
             altText: `${productResult.name} - Image ${index + 1}`,
             displayOrder: index,
             isMain: index === (draft.mainImageIndex || 0),
-            createdAt: toSASTString()
+            createdAt: new Date().toISOString()
           }));
 
           await tx.insert(productImages).values(imageInserts);
@@ -267,8 +286,8 @@ export async function publishProductDraftComplete(draftId: number): Promise<Publ
                 attributeId: parseInt(attributeId),
                 selectedOptions: selectedOptions,
                 textValue: null, // For now, focusing on option-based attributes
-                createdAt: toSASTString(),
-                updatedAt: toSASTString()
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
               });
             }
           }
