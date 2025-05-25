@@ -531,9 +531,10 @@ export default function registerProductDraftRoutes(router: Router) {
         throw new BadRequestError("Product price is required");
       }
       
-      // Use the atomic publication service
+      // Use the complete publication service with ALL field mapping
       try {
-        const result = await publishProductDraft(draftId);
+        const { publishProductDraftComplete } = await import('./product-publication-complete');
+        const result = await publishProductDraftComplete(draftId);
 
         if (result.success) {
           logger.info('Product published successfully via atomic service', { 
