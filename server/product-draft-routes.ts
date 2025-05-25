@@ -874,11 +874,20 @@ export default function registerProductDraftRoutes(router: Router) {
       }
 
       // Get the published product (including inactive categories since we need to edit existing products)
-      const product = await storage.getProductById(productId, { 
-        includeInactive: true, 
-        includeCategoryInactive: true 
-      });
+      let product;
+      try {
+        product = await storage.getProductById(productId, { 
+          includeInactive: true, 
+          includeCategoryInactive: true 
+        });
+        console.log(`Product lookup for ID ${productId}:`, product ? 'Found' : 'Not found');
+      } catch (error) {
+        console.log(`Error during product lookup for ID ${productId}:`, error);
+        throw new NotFoundError("Error retrieving published product");
+      }
+      
       if (!product) {
+        console.log(`Product ${productId} not found with inclusive options`);
         throw new NotFoundError("Published product not found");
       }
 
