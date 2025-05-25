@@ -6934,8 +6934,8 @@ export class DatabaseStorage implements IStorage {
                   productId: product.id,
                   attributeId: attr.attributeId,
                   textValue: null,
-                  numberValue: null,
-                  booleanValue: null,
+                  
+                  
                   // Store the full array of selected option IDs
                   selectedOptions: attr.value,
                   // Optional display name override
@@ -7003,8 +7003,8 @@ export class DatabaseStorage implements IStorage {
                   productId: product.id,
                   attributeId: attr.attributeId,
                   textValue: null,
-                  numberValue: null,
-                  booleanValue: null,
+                  
+                  
                   // Store the full array of selected option IDs
                   selectedOptions: attr.value,
                   // Optional display name override
