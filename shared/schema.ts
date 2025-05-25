@@ -160,7 +160,8 @@ export const aiRecommendations = pgTable("ai_recommendations", {
   productIds: integer("product_ids").array(),
   reason: text("reason"),
   aiResponse: jsonb("ai_response"),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  createdAt: text("created_at").default(String(new Date().toISOString())).notNull(),
+  updatedAt: text("updated_at").default(String(new Date().toISOString())).notNull(),
 });
 
 // Pricing settings table for category-specific markup percentages
@@ -169,8 +170,8 @@ export const pricing = pgTable("pricing", {
   categoryId: integer("category_id").references(() => categories.id),
   markupPercentage: integer("markup_percentage").notNull().default(50),
   description: text("description"),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  createdAt: text("created_at").default(String(new Date().toISOString())).notNull(),
+  updatedAt: text("updated_at").default(String(new Date().toISOString())).notNull(),
 }, (table) => {
   return {
     categoryUnique: unique().on(table.categoryId),
@@ -183,8 +184,8 @@ export const aiSettings = pgTable("ai_settings", {
   settingName: text("setting_name").notNull().unique(),
   settingValue: text("setting_value").notNull(),
   description: text("description"),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  createdAt: text("created_at").default(String(new Date().toISOString())).notNull(),
+  updatedAt: text("updated_at").default(String(new Date().toISOString())).notNull(),
 });
 
 // Suppliers table
