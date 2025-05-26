@@ -358,7 +358,7 @@ export default function AdminCatalogs() {
                     <TableCell>
                       <div className="flex items-center">
                         <Factory className="h-4 w-4 mr-2 text-gray-500" />
-                        {catalog.supplierName}
+                        {catalog.supplierName || 'Unknown Supplier'}
                       </div>
                     </TableCell>
                     <TableCell>
