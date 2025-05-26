@@ -33,10 +33,10 @@ router.post('/', asyncHandler(async (req, res) => {
   try {
     console.log('Creating catalog with data:', req.body);
     
-    const { name, description, supplierId, defaultMarkupPercentage, isActive, coverImage, tags, startDate, endDate } = req.body;
+    const { name, description, supplier_id, default_markup_percentage, is_active, cover_image, tags, start_date, end_date } = req.body;
     
     // Validate required fields
-    if (!name || !supplierId) {
+    if (!name || !supplier_id) {
       return res.status(400).json({
         success: false,
         error: { message: 'Name and supplier ID are required' }
@@ -44,7 +44,7 @@ router.post('/', asyncHandler(async (req, res) => {
     }
     
     // Check if catalog name already exists for this supplier
-    const exists = await simpleCatalogService.catalogNameExists(name, parseInt(supplierId));
+    const exists = await simpleCatalogService.catalogNameExists(name, parseInt(supplier_id));
     if (exists) {
       return res.status(400).json({
         success: false,
@@ -56,13 +56,13 @@ router.post('/', asyncHandler(async (req, res) => {
     const catalogData = {
       name,
       description: description || null,
-      supplier_id: parseInt(supplierId),
-      default_markup_percentage: defaultMarkupPercentage ? parseInt(defaultMarkupPercentage) : 0,
-      is_active: isActive !== false,
-      cover_image: coverImage || null,
+      supplier_id: parseInt(supplier_id),
+      default_markup_percentage: default_markup_percentage ? parseInt(default_markup_percentage) : 0,
+      is_active: is_active !== false,
+      cover_image: cover_image || null,
       tags: tags && Array.isArray(tags) ? tags : null,
-      start_date: startDate || null,
-      end_date: endDate || null
+      start_date: start_date || null,
+      end_date: end_date || null
     };
     
     console.log('Processed catalog data:', catalogData);

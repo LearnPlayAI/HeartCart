@@ -93,7 +93,7 @@ class SimpleCatalogService {
         catalogData.default_markup_percentage || 0,
         catalogData.is_active ?? true,
         catalogData.cover_image || null,
-        catalogData.tags ? JSON.stringify(catalogData.tags) : null,
+        catalogData.tags || null,
         catalogData.start_date || null,
         catalogData.end_date || null,
         now,
