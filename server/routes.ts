@@ -4250,7 +4250,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // OLD CATALOG ROUTES DISABLED - Now handled by catalog-routes-new.ts
   /*
-  // CATALOG ROUTES
+  // ALL OLD CATALOG ROUTES DISABLED
   app.get("/api/catalogs", asyncHandler(async (req: Request, res: Response) => {
     try {
       // For admin users, show all catalogs regardless of active status
@@ -4472,6 +4472,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }));
   */
 
+  /*
+  // ALL REMAINING OLD CATALOG ROUTES DISABLED - HANDLED BY catalog-routes-new.ts
   app.put("/api/catalogs/:id", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
     const user = req.user as any;
     const id = parseInt(req.params.id);
@@ -5265,6 +5267,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
     }
   }));
+  */
+  // END OF DISABLED OLD CATALOG ROUTES
   
   // Object storage file access endpoint - using reliable buffer-based approach
   app.get('/api/files/:path(*)', asyncHandler(async (req: Request, res: Response) => {
