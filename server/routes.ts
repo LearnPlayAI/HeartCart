@@ -4006,118 +4006,110 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/suppliers", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
     const user = req.user as any;
     
+    if (user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        error: { message: "Only administrators can manage suppliers" }
+      });
+    }
+    
+    // Extract data from request body matching UI form fields
+    const { name, contactName, email, phone, address, city, country, notes, logo, website, isActive } = req.body;
+    
+    // Validate required fields
+    if (!name || typeof name !== 'string' || name.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: { message: "Supplier name is required" }
+      });
+    }
+    
+    console.log('Creating supplier with data:', { name, contactName, email, phone, address, city, country, notes, logo, website, isActive });
+    
     try {
-      if (user.role !== 'admin') {
-        return res.status(403).json({
+      // Check for existing supplier
+      const existingSupplier = await db.execute(
+        sql`SELECT id, name FROM suppliers WHERE LOWER(name) = LOWER(${name.trim()})`
+      );
+      
+      if (existingSupplier.length > 0) {
+        return res.status(409).json({
           success: false,
-          error: { message: "Only administrators can manage suppliers" }
+          error: { message: `A supplier with the name "${name}" already exists` }
         });
       }
       
-      // Extract and validate required fields (following draft system pattern)
-      const { name, contactName, email, phone, address, city, country, notes, logo, website, isActive } = req.body;
+      // Create timestamp as text (matching database schema)
+      const now = new Date().toISOString();
       
-      if (!name || typeof name !== 'string' || name.trim().length === 0) {
-        return res.status(400).json({
-          success: false,
-          error: { message: "Supplier name is required" }
-        });
-      }
+      // Insert new supplier - matching EXACT database column structure
+      const result = await db.execute(
+        sql`
+          INSERT INTO suppliers (
+            name, 
+            contact_name, 
+            email, 
+            phone, 
+            address, 
+            city, 
+            country, 
+            notes, 
+            logo, 
+            website, 
+            is_active, 
+            created_at, 
+            updated_at
+          ) VALUES (
+            ${name.trim()}, 
+            ${contactName || null}, 
+            ${email || null}, 
+            ${phone || null}, 
+            ${address || null}, 
+            ${city || null}, 
+            ${country || 'South Africa'}, 
+            ${notes || null}, 
+            ${logo || null}, 
+            ${website || null}, 
+            ${isActive !== undefined ? isActive : true}, 
+            ${now}, 
+            ${now}
+          ) RETURNING *
+        `
+      );
       
-      // Check for existing supplier using the same pattern as draft system
-      try {
-        const existingSupplier = await db.execute(
-          sql`SELECT id, name FROM suppliers WHERE LOWER(name) = LOWER(${name.trim()})`
-        );
-        
-        if (existingSupplier.length > 0) {
-          return res.status(409).json({
-            success: false,
-            error: { message: `A supplier with the name "${name}" already exists` }
-          });
-        }
-      } catch (checkError) {
-        console.error('Error checking existing supplier:', checkError);
-        return res.status(500).json({
-          success: false,
-          error: { message: "Database error while checking for existing supplier" }
-        });
-      }
+      const supplier = result[0] as any;
+      console.log('Supplier created successfully:', supplier);
       
-      // Create supplier using the exact pattern from draft system
-      try {
-        const now = new Date().toISOString();
-        
-        const result = await db.execute(
-          sql`
-            INSERT INTO suppliers (
-              name, 
-              contact_name, 
-              email, 
-              phone, 
-              address, 
-              city, 
-              country, 
-              notes, 
-              logo, 
-              website, 
-              is_active, 
-              created_at, 
-              updated_at
-            ) VALUES (
-              ${name.trim()}, 
-              ${contactName || null}, 
-              ${email || null}, 
-              ${phone || null}, 
-              ${address || null}, 
-              ${city || null}, 
-              ${country || 'South Africa'}, 
-              ${notes || null}, 
-              ${logo || null}, 
-              ${website || null}, 
-              ${isActive !== undefined ? isActive : true}, 
-              ${now}, 
-              ${now}
-            ) RETURNING id, name, contact_name, email, phone, address, city, country, notes, logo, website, is_active, created_at, updated_at
-          `
-        );
-        
-        const supplier = result[0];
-        
-        return res.status(201).json({
-          success: true,
-          data: {
-            id: supplier.id,
-            name: supplier.name,
-            contactName: supplier.contact_name,
-            email: supplier.email,
-            phone: supplier.phone,
-            address: supplier.address,
-            city: supplier.city,
-            country: supplier.country,
-            notes: supplier.notes,
-            logo: supplier.logo,
-            website: supplier.website,
-            isActive: supplier.is_active,
-            createdAt: supplier.created_at,
-            updatedAt: supplier.updated_at
-          },
-          message: `Supplier "${supplier.name}" created successfully`
-        });
-        
-      } catch (insertError) {
-        console.error('Error inserting supplier:', insertError);
-        return res.status(500).json({
-          success: false,
-          error: { message: "Database error while creating supplier" }
-        });
-      }
+      // Return response with camelCase field names for frontend
+      return res.status(201).json({
+        success: true,
+        data: {
+          id: supplier.id,
+          name: supplier.name,
+          contactName: supplier.contact_name,
+          email: supplier.email,
+          phone: supplier.phone,
+          address: supplier.address,
+          city: supplier.city,
+          country: supplier.country,
+          notes: supplier.notes,
+          logo: supplier.logo,
+          website: supplier.website,
+          isActive: supplier.is_active,
+          createdAt: supplier.created_at,
+          updatedAt: supplier.updated_at
+        },
+        message: `Supplier "${supplier.name}" created successfully`
+      });
       
     } catch (error) {
-      console.error('Unexpected error in supplier creation:', error);
+      console.error('Database error creating supplier:', error);
       return res.status(500).json({
         success: false,
-        error: { message: "An unexpected error occurred" }
+        error: { 
+          message: "Failed to create supplier",
+          details: error instanceof Error ? error.message : String(error)
+        }
       });
     }
   }));
