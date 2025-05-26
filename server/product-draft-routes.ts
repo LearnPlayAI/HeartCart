@@ -922,10 +922,11 @@ export default function registerProductDraftRoutes(router: Router) {
             });
             
             // Update the existing draft record to change status from published to draft
+            const now = new Date().toISOString();
             await db.update(productDrafts)
               .set({
                 draftStatus: 'draft',
-                lastModified: new Date()
+                lastModified: now
               })
               .where(eq(productDrafts.id, existingDraft.id));
             
