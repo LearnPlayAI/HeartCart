@@ -10,6 +10,20 @@ import { products, productDrafts, productAttributes, productImages } from "@shar
 import { eq } from "drizzle-orm";
 import { logger } from "./logger";
 
+/**
+ * Generate canonical URL for SEO purposes
+ */
+function generateCanonicalUrl(slug: string | null): string {
+  if (!slug) return '';
+  
+  // Get the base URL from environment or use a default structure
+  const baseUrl = process.env.SITE_URL || process.env.REPLIT_DOMAINS 
+    ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` 
+    : 'https://teemeyou.com';
+  
+  return `${baseUrl}/products/${slug}`;
+}
+
 export interface PublicationResult {
   success: boolean;
   productId?: number;
@@ -177,11 +191,11 @@ export async function publishProductDraftComplete(draftId: number): Promise<Publ
         // Shipping and Logistics
         freeShipping: safeBoolean(draft.freeShipping, false),
         
-        // SEO Fields - Complete Mapping
+        // SEO Fields - Complete Mapping with auto-generated canonical URL
         metaTitle: safeString(draft.metaTitle),
         metaDescription: safeString(draft.metaDescription),
         metaKeywords: safeString(draft.metaKeywords),
-        canonicalUrl: safeString(draft.canonicalUrl),
+        canonicalUrl: generateCanonicalUrl(draft.slug),
         
         // Tags and Categories - use defaults for missing fields
         tags: [], // Field doesn't exist in drafts table
