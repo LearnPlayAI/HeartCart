@@ -4004,45 +4004,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }));
 
   app.post("/api/suppliers", async (req: Request, res: Response) => {
+    const user = req.user as any;
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({ success: false, error: { message: "Unauthorized" } });
+    }
+
+    const { name, contactName, email, phone, address, city, country, notes, logo, website, isActive } = req.body;
+    
+    console.log('=== SUPPLIER CREATION DEBUG ===');
+    console.log('Request body:', req.body);
+    console.log('Extracted fields:', { name, contactName, email, phone, address, city, country, notes, logo, website, isActive });
+
+    if (!name) {
+      return res.status(400).json({ success: false, error: { message: "Name is required" } });
+    }
+
     try {
-      // Simple auth check
-      const user = req.user as any;
-      if (!user || user.role !== 'admin') {
-        return res.status(403).json({ success: false, error: { message: "Unauthorized" } });
-      }
-
-      // Get the supplier data
-      const supplierData = req.body;
-      console.log('Received supplier data:', supplierData);
-
-      // Use storage method directly
-      const newSupplier = await storage.createSupplier({
-        name: supplierData.name,
-        contactName: supplierData.contactName,
-        email: supplierData.email,
-        phone: supplierData.phone,
-        address: supplierData.address,
-        city: supplierData.city,
-        country: supplierData.country || 'South Africa',
-        notes: supplierData.notes,
-        logo: supplierData.logo,
-        website: supplierData.website,
-        isActive: supplierData.isActive !== false
-      });
-
-      console.log('Supplier created:', newSupplier);
-
+      const now = new Date().toISOString();
+      console.log('Timestamp:', now);
+      
+      // Direct database insert with raw SQL
+      const result = await db.execute(
+        sql`
+          INSERT INTO suppliers (
+            name, 
+            contact_name, 
+            email, 
+            phone, 
+            address, 
+            city, 
+            country, 
+            notes, 
+            logo, 
+            website, 
+            is_active, 
+            created_at, 
+            updated_at
+          ) VALUES (
+            ${name}, 
+            ${contactName || null}, 
+            ${email || null}, 
+            ${phone || null}, 
+            ${address || null}, 
+            ${city || null}, 
+            ${country || 'South Africa'}, 
+            ${notes || null}, 
+            ${logo || null}, 
+            ${website || null}, 
+            ${isActive !== false}, 
+            ${now}, 
+            ${now}
+          ) RETURNING *
+        `
+      );
+      
+      console.log('SQL execution result:', result);
+      const supplier = result[0] as any;
+      console.log('Created supplier:', supplier);
+      
+      const responseData = {
+        id: supplier.id,
+        name: supplier.name,
+        contactName: supplier.contact_name,
+        email: supplier.email,
+        phone: supplier.phone,
+        address: supplier.address,
+        city: supplier.city,
+        country: supplier.country,
+        notes: supplier.notes,
+        logo: supplier.logo,
+        website: supplier.website,
+        isActive: supplier.is_active,
+        createdAt: supplier.created_at,
+        updatedAt: supplier.updated_at
+      };
+      
+      console.log('Response data:', responseData);
+      
       return res.status(201).json({
         success: true,
-        data: newSupplier,
-        message: `Supplier "${newSupplier.name}" created successfully`
+        data: responseData,
+        message: `Supplier "${supplier.name}" created successfully`
       });
 
     } catch (error) {
-      console.error('Supplier creation error:', error);
+      console.error('=== DATABASE ERROR ===');
+      console.error('Error type:', typeof error);
+      console.error('Error message:', error instanceof Error ? error.message : 'Unknown');
+      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack');
+      console.error('Full error:', error);
+      
       return res.status(500).json({
         success: false,
-        error: { message: error instanceof Error ? error.message : 'Failed to create supplier' }
+        error: { 
+          message: "Database insertion failed",
+          details: error instanceof Error ? error.message : String(error)
+        }
       });
     }
   });
