@@ -19,11 +19,8 @@ import { objectStore, STORAGE_FOLDERS } from "./object-store";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
 import { db } from "./db";
-import { productDrafts } from "@shared/schema";
+import { productDrafts, ProductDraft, products, productImages } from "@shared/schema";
 import { eq, sql } from "drizzle-orm";
-import { db } from "./db";
-import { sql } from "drizzle-orm";
-import { ProductDraft, products, productImages } from "@shared/schema";
 import { z } from "zod";
 
 // Configure multer for in-memory storage (we'll upload to Replit Object Store)
@@ -76,21 +73,23 @@ export default function registerProductDraftRoutes(router: Router) {
       
       try {
         // Use the SQL function we created to generate a draft with all fields populated
-        const [result] = await db.execute(
+        const result = await db.execute(
           sql`SELECT * FROM create_product_draft_from_product(${req.body.originalProductId}, ${userId})`
         );
         
-        if (!result) {
+        if (!result.rows || result.rows.length === 0) {
           throw new Error('Failed to create draft from product');
         }
         
+        const draftRecord = result.rows[0] as any;
+        
         logger.debug('Created draft from product using SQL function', {
-          draftId: result.id,
-          productId: result.original_product_id
+          draftId: draftRecord.id,
+          productId: draftRecord.original_product_id
         });
         
         // Load product attributes if needed
-        if (!result.attributes || result.attributes.length === 0) {
+        if (!draftRecord.attributes || draftRecord.attributes.length === 0) {
           try {
             const productAttributes = await storage.getProductAttributes(req.body.originalProductId);
             if (productAttributes?.length) {
@@ -883,10 +882,10 @@ export default function registerProductDraftRoutes(router: Router) {
       
       try {
         // First check if an existing draft already exists for this product
-        const existingDrafts = await db.select()
-          .from(productDrafts)
-          .where(eq(productDrafts.originalProductId, productId))
-          .where(eq(productDrafts.draftStatus, 'draft'));
+        const existingDrafts = await storage.getProductDrafts({
+          originalProductId: productId,
+          draftStatus: 'draft'
+        });
         
         if (existingDrafts.length > 0) {
           const existingDraft = existingDrafts[0];
