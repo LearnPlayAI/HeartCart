@@ -3156,7 +3156,7 @@ export class DatabaseStorage implements IStorage {
           true,
         );
 
-        deletionStats.orphanedFilesTotal = filesList.length;
+        deletionStats.orphanedFilesTotal += filesList.length;
         logger.debug(`Found orphaned files in product folder to delete`, {
           productId: id,
           count: filesList.length,
@@ -3187,6 +3187,97 @@ export class DatabaseStorage implements IStorage {
           productId: id,
         });
         // Continue with deletion even if listing fails
+      }
+
+      // CRITICAL FIX: Also check for draft-related images that might still be stored in supplier/catalog/draft paths
+      // When products are created from drafts, images often remain in their original draft locations
+      try {
+        // Get all drafts associated with this product to find their image storage paths
+        const productDrafts = await db
+          .select()
+          .from(productDrafts)
+          .where(eq(productDrafts.originalProductId, id));
+
+        logger.debug(`Found ${productDrafts.length} drafts associated with product ${id}`, {
+          productId: id,
+          draftIds: productDrafts.map(d => d.id)
+        });
+
+        // For each draft, check if there are images in the draft path that need cleanup
+        for (const draft of productDrafts) {
+          try {
+            // Check if this draft has a supplier and catalog for path construction
+            if (draft.supplierId && draft.catalogId) {
+              // Get supplier and catalog names for path construction
+              const [supplier] = await db
+                .select({ name: suppliers.name })
+                .from(suppliers)
+                .where(eq(suppliers.id, draft.supplierId));
+              
+              const [catalog] = await db
+                .select({ name: catalogs.name })
+                .from(catalogs)
+                .where(eq(catalogs.id, draft.catalogId));
+
+              if (supplier && catalog) {
+                // Construct the draft path where images might be stored
+                const draftFolderPrefix = `${supplier.name}/${catalog.name}/${draft.id}/`;
+                
+                logger.debug(`Checking for draft images in path`, {
+                  productId: id,
+                  draftId: draft.id,
+                  draftPath: draftFolderPrefix
+                });
+
+                const draftFilesList = await objectStore.listFiles(draftFolderPrefix, true);
+                
+                if (draftFilesList.length > 0) {
+                  deletionStats.orphanedFilesTotal += draftFilesList.length;
+                  logger.debug(`Found ${draftFilesList.length} draft files to delete`, {
+                    productId: id,
+                    draftId: draft.id,
+                    draftPath: draftFolderPrefix,
+                    files: draftFilesList
+                  });
+
+                  // Delete each draft file
+                  for (const draftObjectKey of draftFilesList) {
+                    try {
+                      await objectStore.deleteFile(draftObjectKey);
+                      deletionStats.orphanedFilesDeleted++;
+                      logger.debug(`Deleted draft file from object storage`, {
+                        objectKey: draftObjectKey,
+                        productId: id,
+                        draftId: draft.id
+                      });
+                    } catch (draftFileError) {
+                      logger.error(`Error deleting draft file from object storage`, {
+                        error: draftFileError,
+                        objectKey: draftObjectKey,
+                        productId: id,
+                        draftId: draft.id
+                      });
+                      // Continue with deletion even if file deletion fails
+                    }
+                  }
+                }
+              }
+            }
+          } catch (draftCleanupError) {
+            logger.error(`Error cleaning up draft ${draft.id} files for product ${id}`, {
+              error: draftCleanupError,
+              draftId: draft.id,
+              productId: id
+            });
+            // Continue with other drafts even if one fails
+          }
+        }
+      } catch (draftSearchError) {
+        logger.error(`Error searching for draft files during product deletion`, {
+          error: draftSearchError,
+          productId: id,
+        });
+        // Continue with deletion even if draft cleanup fails
       }
 
       try {
