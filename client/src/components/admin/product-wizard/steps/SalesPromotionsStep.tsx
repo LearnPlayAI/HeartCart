@@ -668,7 +668,14 @@ export const SalesPromotionsStep: React.FC<SalesPromotionsStepProps> = ({
                 <Button 
                   type="button" 
                   variant="outline" 
-                  onClick={() => onSave(form.getValues(), false)}
+                  onClick={() => {
+                    console.log('🚨 SAVE BUTTON CLICKED - Direct form.getValues()');
+                    const values = form.getValues();
+                    console.log('🚨 Raw form values from getValues():', values);
+                    console.log('🚨 Rating in raw values:', values.rating);
+                    console.log('🚨 Review count in raw values:', values.review_count);
+                    onSave(values, false);
+                  }}
                   disabled={saving || isLoading}
                 >
                   Save
