@@ -923,18 +923,34 @@ export default function registerProductDraftRoutes(router: Router) {
             
             // Update the existing draft record to change status from published to draft
             const now = new Date().toISOString();
-            const updateResult = await db.update(productDrafts)
-              .set({
-                draftStatus: 'draft',
-                lastModified: now
-              })
-              .where(eq(productDrafts.id, existingDraft.id));
+            
+            try {
+              const updateResult = await db.update(productDrafts)
+                .set({
+                  draftStatus: 'draft',
+                  lastModified: now
+                })
+                .where(eq(productDrafts.id, existingDraft.id))
+                .returning();
+                
+              logger.debug('Draft status update completed successfully', {
+                draftId: existingDraft.id,
+                updatedRows: updateResult.length,
+                newStatus: 'draft',
+                timestamp: now
+              });
               
-            logger.debug('Draft status update result', {
-              draftId: existingDraft.id,
-              updateResult,
-              newStatus: 'draft'
-            });
+              if (updateResult.length === 0) {
+                throw new Error(`No rows updated for draft ID ${existingDraft.id}`);
+              }
+            } catch (updateError) {
+              logger.error('Failed to update draft status', {
+                draftId: existingDraft.id,
+                error: updateError,
+                errorMessage: updateError instanceof Error ? updateError.message : 'Unknown error'
+              });
+              throw new Error(`Database update failed: ${updateError instanceof Error ? updateError.message : 'Unknown error'}`);
+            }
             
             return sendSuccess(res, { 
               draftId: existingDraft.id,
