@@ -1,7 +1,6 @@
 import { Router } from "express";
-import { db } from "./db";
-import { catalogs, suppliers } from "../shared/schema";
-import { eq } from "drizzle-orm";
+import { executeQuery } from "./database";
+import { CreateCatalogInput } from "../shared/database-types";
 
 const router = Router();
 
@@ -28,40 +27,41 @@ router.post("/api/catalogs/create", async (req, res) => {
     }
 
     // Verify supplier exists
-    const [supplier] = await db
-      .select()
-      .from(suppliers)
-      .where(eq(suppliers.id, supplierId));
+    const supplierResult = await executeQuery(
+      'SELECT id FROM suppliers WHERE id = $1',
+      [supplierId]
+    );
 
-    if (!supplier) {
+    if (supplierResult.rows.length === 0) {
       return res.status(404).json({
         success: false,
         error: { message: "Supplier not found" },
       });
     }
 
-    // Create catalog with only the required fields
-    const catalogData = {
-      name: name.trim(),
-      description: description.trim(),
-      supplierId: parseInt(supplierId, 10),
-      isActive: Boolean(isActive),
-      defaultMarkupPercentage: parseFloat(defaultMarkupPercentage) || 0,
-      freeShipping: Boolean(freeShipping),
-    };
+    // Create catalog using raw SQL
+    const query = `
+      INSERT INTO catalogs (
+        name, description, supplier_id, is_active, 
+        default_markup_percentage, free_shipping, start_date, end_date,
+        created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+      RETURNING *
+    `;
 
-    // Add dates only if provided
-    if (startDate) {
-      catalogData.startDate = new Date(startDate).toISOString();
-    }
-    if (endDate) {
-      catalogData.endDate = new Date(endDate).toISOString();
-    }
+    const values = [
+      name.trim(),
+      description.trim(),
+      parseInt(supplierId, 10),
+      Boolean(isActive),
+      parseFloat(defaultMarkupPercentage) || 0,
+      Boolean(freeShipping),
+      startDate ? new Date(startDate).toISOString() : null,
+      endDate ? new Date(endDate).toISOString() : null,
+    ];
 
-    const [newCatalog] = await db
-      .insert(catalogs)
-      .values(catalogData)
-      .returning();
+    const result = await executeQuery(query, values);
+    const newCatalog = result.rows[0];
 
     return res.status(201).json({
       success: true,

@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "./routes";
+import { registerRoutes } from "./routes-new";
 import simpleCatalogRoutes from "./simple-catalog-routes";
+import attributeRoutes from "./attribute-routes-new";
 import { setupVite, serveStatic, log } from "./vite";
 import { setSessionTimezone } from "./db";
 import { SAST_TIMEZONE } from "@shared/date-utils";
@@ -92,6 +93,7 @@ app.use((req, res, next) => {
 (async () => {
   // Register simple catalog routes first
   app.use(simpleCatalogRoutes);
+  app.use(attributeRoutes);
   
   const server = await registerRoutes(app);
 
