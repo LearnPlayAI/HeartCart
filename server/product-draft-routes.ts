@@ -873,109 +873,71 @@ export default function registerProductDraftRoutes(router: Router) {
         throw new BadRequestError("Valid product ID is required");
       }
 
-      // Step 1: Check if a draft already exists for this product
-      console.log(`Checking for existing draft for product ID: ${productId}`);
-      try {
-        const existingDraft = await storage.getProductDraftByOriginalId(productId);
-        console.log(`Draft lookup result for product ${productId}:`, existingDraft ? `Found draft ID ${existingDraft.id}` : 'No existing draft found');
-        
-        if (existingDraft) {
-          console.log(`Found existing draft with ID: ${existingDraft.id}`);
-          return sendSuccess(res, { 
-            draftId: existingDraft.id,
-            message: "Using existing draft for product editing"
-          });
-        }
-      } catch (draftError) {
-        console.log(`Error checking for existing draft for product ${productId}:`, draftError);
-        // Continue to create new draft even if checking existing fails
-      }
-
-      // Step 2: No draft exists, create a new one by copying from published product
-      console.log(`No existing draft found, creating new draft for product ID: ${productId}`);
-      
-      // Get the published product (including inactive categories since we need to edit existing products)
-      let product;
-      try {
-        product = await storage.getProductById(productId, { 
-          includeInactive: true, 
-          includeCategoryInactive: true 
-        });
-        console.log(`Product lookup for ID ${productId}:`, product ? 'Found' : 'Not found');
-      } catch (error) {
-        console.log(`Error during product lookup for ID ${productId}:`, error);
-        throw new NotFoundError("Error retrieving published product");
-      }
-      
-      if (!product) {
-        console.log(`Product ${productId} not found with inclusive options`);
-        throw new NotFoundError("Published product not found");
-      }
-
-      // Get all product images
-      const productImages = await storage.getProductImages(productId);
-      const imageUrls = productImages.map(img => img.url);
-      const imageObjectKeys = productImages.map(img => img.objectKey || '');
-      const mainImageIndex = productImages.findIndex(img => img.isMain) || 0;
-
-      // Get product attributes - handle if method doesn't exist
-      let selectedAttributes = {};
-      try {
-        const productAttributes = await storage.getProductAttributes(productId);
-        if (productAttributes && Array.isArray(productAttributes)) {
-          for (const attr of productAttributes) {
-            if (attr.selectedOptions && attr.selectedOptions.length > 0) {
-              selectedAttributes[attr.attributeId] = attr.selectedOptions;
-            }
-          }
-        }
-      } catch (error) {
-        console.log("Could not fetch product attributes:", error);
-        // Continue without attributes if method doesn't exist
-      }
-
-      // Create comprehensive draft data from the published product
-      const draftData = {
-        originalProductId: productId,
-        name: product.name,
-        slug: product.slug,
-        description: product.description,
-        categoryId: product.categoryId,
-        supplier: product.supplier,
-        catalogId: product.catalogId,
-        regularPrice: String(product.price || 0),
-        costPrice: String(product.costPrice || 0),
-        salePrice: product.salePrice ? String(product.salePrice) : null,
-        brand: product.brand,
-        isActive: product.isActive || false,
-        isFeatured: product.isFeatured || false,
-        imageUrls: imageUrls,
-        imageObjectKeys: imageObjectKeys,
-        mainImageIndex: mainImageIndex,
-        stock: product.stock || 0,
-        weight: product.weight ? String(product.weight) : null,
-        metaTitle: product.metaTitle,
-        metaDescription: product.metaDescription,
-        metaKeywords: product.metaKeywords,
-        tags: product.tags || '',
-        selectedAttributes: JSON.stringify(selectedAttributes),
-        minimumOrder: product.minimumOrder || 1,
-        createdBy: userId,
-        draftStatus: 'draft' as const
-      };
-
-      const draft = await storage.createProductDraft(draftData);
-      
-      logger.info("Created draft from published product", {
+      logger.debug('Creating draft from published product using SQL function', { 
         productId,
-        draftId: draft.id,
         userId
       });
-
-      sendSuccess(res, { 
-        draftId: draft.id,
-        message: "Draft created successfully from published product" 
-      });
+      
+      try {
+        // Use the working SQL function to create a draft with ALL product data
+        const result = await db.execute(
+          sql`SELECT * FROM create_product_draft_from_product(${productId}, ${userId})`
+        );
+        
+        if (!result.rows || result.rows.length === 0) {
+          throw new Error('Failed to create draft from published product');
+        }
+        
+        const draftRecord = result.rows[0] as any;
+        
+        logger.debug('Successfully created draft from published product', {
+          draftId: draftRecord.id,
+          productId: draftRecord.original_product_id,
+          name: draftRecord.name
+        });
+        
+        // Load and map product attributes if needed
+        if (!draftRecord.attributes || draftRecord.attributes.length === 0) {
+          try {
+            const productAttributes = await storage.getProductAttributes(productId);
+            if (productAttributes?.length) {
+              const mappedAttributes = productAttributes.map(pa => ({
+                attributeId: pa.attributeId,
+                value: pa.textValue || (Array.isArray(pa.selectedOptions) && pa.selectedOptions.length > 0 
+                  ? pa.selectedOptions 
+                  : []),
+                attributeName: pa.attribute?.name || "",
+                attributeDisplayName: pa.overrideDisplayName || pa.attribute?.displayName || "",
+                attributeType: pa.attribute?.attributeType || "text",
+                isRequired: !!pa.isRequired,
+                sortOrder: pa.sortOrder || 0,
+                overrideDisplayName: pa.overrideDisplayName || null,
+                overrideDescription: pa.overrideDescription || null
+              }));
+              
+              await storage.updateProductDraft(draftRecord.id, { attributes: mappedAttributes });
+              draftRecord.attributes = mappedAttributes;
+            }
+          } catch (attrError) {
+            logger.error('Error loading product attributes for draft', { 
+              error: attrError, 
+              productId 
+            });
+          }
+        }
+        
+        return sendSuccess(res, { 
+          draftId: draftRecord.id,
+          message: "Draft created from published product with all data hydrated"
+        });
+        
+      } catch (error) {
+        logger.error('Error creating draft from published product', { 
+          error, 
+          productId 
+        });
+        throw new BadRequestError("Failed to create draft from published product");
+      }
     })
   );
 }
