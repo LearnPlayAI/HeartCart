@@ -4027,6 +4027,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log('Creating supplier with data:', { name, contactName, email, phone, address, city, country, notes, logo, website, isActive });
     
     try {
+      console.log('About to check for existing supplier...');
       // Check for existing supplier
       const existingSupplier = await db.execute(
         sql`SELECT id, name FROM suppliers WHERE LOWER(name) = LOWER(${name.trim()})`
@@ -4104,11 +4105,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
     } catch (error) {
       console.error('Database error creating supplier:', error);
+      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack');
+      console.error('Error details:', JSON.stringify(error, null, 2));
       return res.status(500).json({
         success: false,
         error: { 
           message: "Failed to create supplier",
-          details: error instanceof Error ? error.message : String(error)
+          details: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
         }
       });
     }
