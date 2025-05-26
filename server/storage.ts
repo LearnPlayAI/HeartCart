@@ -3731,7 +3731,7 @@ export class DatabaseStorage implements IStorage {
 
   async createSupplier(supplier: InsertSupplier): Promise<Supplier> {
     try {
-      const now = formatSASTDate(new Date());
+      const now = new Date().toISOString();
       const [newSupplier] = await db
         .insert(suppliers)
         .values({
@@ -3756,7 +3756,7 @@ export class DatabaseStorage implements IStorage {
         .update(suppliers)
         .set({
           ...supplierData,
-          updatedAt: formatSASTDate(new Date()),
+          updatedAt: new Date().toISOString(),
         })
         .where(eq(suppliers.id, id))
         .returning();
