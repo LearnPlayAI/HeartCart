@@ -881,29 +881,52 @@ export default function registerProductDraftRoutes(router: Router) {
       });
       
       try {
-        // First check if an existing draft already exists for this product
-        const existingDrafts = await storage.getProductDrafts({
-          originalProductId: productId,
-          draftStatus: 'draft'
-        });
+        // First check if ANY draft exists for this product (draft OR published status)
+        const allDrafts = await storage.getAllProductDrafts();
+        const existingDrafts = allDrafts.filter(draft => draft.originalProductId === productId);
         
         if (existingDrafts.length > 0) {
           const existingDraft = existingDrafts[0];
-          logger.debug('Found existing draft for product, reusing it', {
-            draftId: existingDraft.id,
-            productId,
-            originalProductId: existingDraft.originalProductId,
-            name: existingDraft.name
-          });
           
-          return sendSuccess(res, { 
-            draftId: existingDraft.id,
-            message: "Using existing draft for product editing"
-          });
+          // If it's already a draft, reuse it
+          if (existingDraft.draftStatus === 'draft') {
+            logger.debug('Found existing draft for product, reusing it', {
+              draftId: existingDraft.id,
+              productId,
+              originalProductId: existingDraft.originalProductId,
+              name: existingDraft.name
+            });
+            
+            return sendSuccess(res, { 
+              draftId: existingDraft.id,
+              message: "Using existing draft for product editing"
+            });
+          }
+          
+          // If it's published, change status back to draft - NEVER create new records
+          if (existingDraft.draftStatus === 'published') {
+            logger.debug('Found published draft, converting back to draft status', {
+              draftId: existingDraft.id,
+              productId,
+              originalProductId: existingDraft.originalProductId,
+              name: existingDraft.name
+            });
+            
+            // Update the existing draft record to change status from published to draft
+            await storage.updateProductDraft(existingDraft.id, {
+              draftStatus: 'draft',
+              lastModified: new Date()
+            });
+            
+            return sendSuccess(res, { 
+              draftId: existingDraft.id,
+              message: "Reactivated existing draft for product editing"
+            });
+          }
         }
         
-        // No existing draft found, create a new one with ALL product data
-        logger.debug('No existing draft found, creating new draft from product', {
+        // Only create new draft if NO existing draft record exists at all
+        logger.debug('No existing draft record found, creating new one', {
           productId,
           userId
         });
@@ -918,20 +941,6 @@ export default function registerProductDraftRoutes(router: Router) {
         }
         
         const draftRecord = result.rows[0] as any;
-        
-        // Ensure the original_product_id is properly set in the new draft
-        if (!draftRecord.original_product_id) {
-          logger.warn('Draft created without original_product_id, updating it', {
-            draftId: draftRecord.id,
-            productId
-          });
-          
-          await db.update(productDrafts)
-            .set({ originalProductId: productId })
-            .where(eq(productDrafts.id, draftRecord.id));
-            
-          draftRecord.original_product_id = productId;
-        }
         
         logger.debug('Successfully created draft from published product', {
           draftId: draftRecord.id,
