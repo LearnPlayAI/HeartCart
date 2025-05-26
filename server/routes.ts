@@ -32,7 +32,7 @@ import fs from "fs";
 import fileRoutes from "./file-routes";
 import uploadHandlers from "./upload-handlers";
 import fileBrowserRoutes from "./file-browser-routes";
-import registerAttributeRoutes from "./attribute-routes";
+import registerAttributeRoutes from "./attribute-routes-new";
 import registerProductAttributeRoutes from "./attribute-routes-product";
 import registerProductDraftRoutes from "./product-draft-routes";
 // Removed attributeDiscountRoutes import as part of centralized attribute system
