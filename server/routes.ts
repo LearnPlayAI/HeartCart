@@ -460,6 +460,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(category);
     })
   );
+
+  // DELETE category route
+  app.delete(
+    "/api/categories/:id", 
+    isAuthenticated, 
+    isAdmin,
+    validateRequest({
+      params: idSchema
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const categoryId = Number(req.params.id);
+      
+      // Check if category exists
+      const existingCategory = await storage.getCategoryById(categoryId);
+      if (!existingCategory) {
+        throw new NotFoundError(`Category with ID ${categoryId} not found`, 'category');
+      }
+      
+      // Delete the category
+      const deleted = await storage.deleteCategory(categoryId);
+      
+      if (!deleted) {
+        throw new AppError(
+          `Failed to delete category "${existingCategory.name}"`,
+          ErrorCode.INTERNAL_SERVER_ERROR,
+          500
+        );
+      }
+      
+      res.json({
+        success: true,
+        message: `Category "${existingCategory.name}" deleted successfully`,
+        data: { id: categoryId, name: existingCategory.name }
+      });
+    })
+  );
   
   // Create display order schema
   const displayOrderSchema = z.object({
