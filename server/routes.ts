@@ -4006,75 +4006,117 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     try {
       if (user.role !== 'admin') {
-        throw new ForbiddenError("Only administrators can manage suppliers");
+        return res.status(403).json({
+          success: false,
+          error: { message: "Only administrators can manage suppliers" }
+        });
       }
       
-      // Use database-centric approach - bypass Drizzle validation entirely
-      const name = req.body.name;
-      const contactName = req.body.contactName || null;
-      const email = req.body.email || null;
-      const phone = req.body.phone || null;
-      const address = req.body.address || null;
-      const city = req.body.city || null;
-      const country = req.body.country || "South Africa";
-      const notes = req.body.notes || null;
-      const logo = req.body.logo || null;
-      const website = req.body.website || null;
-      const isActive = req.body.isActive !== undefined ? req.body.isActive : true;
-      const now = new Date().toISOString();
+      // Extract and validate required fields (following draft system pattern)
+      const { name, contactName, email, phone, address, city, country, notes, logo, website, isActive } = req.body;
       
-      // Check if supplier with same name already exists using raw SQL
-      const existingSupplierResult = await db.execute(
-        sql`SELECT id FROM suppliers WHERE name = ${name}`
-      );
+      if (!name || typeof name !== 'string' || name.trim().length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: { message: "Supplier name is required" }
+        });
+      }
       
-      if (existingSupplierResult.length > 0) {
-        throw new AppError(
-          `A supplier with the name "${name}" already exists`,
-          ErrorCode.DUPLICATE_ENTITY,
-          409
+      // Check for existing supplier using the same pattern as draft system
+      try {
+        const existingSupplier = await db.execute(
+          sql`SELECT id, name FROM suppliers WHERE LOWER(name) = LOWER(${name.trim()})`
         );
+        
+        if (existingSupplier.length > 0) {
+          return res.status(409).json({
+            success: false,
+            error: { message: `A supplier with the name "${name}" already exists` }
+          });
+        }
+      } catch (checkError) {
+        console.error('Error checking existing supplier:', checkError);
+        return res.status(500).json({
+          success: false,
+          error: { message: "Database error while checking for existing supplier" }
+        });
       }
       
-      // Create supplier using raw SQL to avoid any schema mismatch issues
-      const result = await db.execute(
-        sql`INSERT INTO suppliers (
-          name, contact_name, email, phone, address, city, country, 
-          notes, logo, website, is_active, created_at, updated_at
-        ) VALUES (
-          ${name}, ${contactName}, ${email}, ${phone}, ${address}, 
-          ${city}, ${country}, ${notes}, ${logo}, ${website}, 
-          ${isActive}, ${now}, ${now}
-        ) RETURNING *`
-      );
+      // Create supplier using the exact pattern from draft system
+      try {
+        const now = new Date().toISOString();
+        
+        const result = await db.execute(
+          sql`
+            INSERT INTO suppliers (
+              name, 
+              contact_name, 
+              email, 
+              phone, 
+              address, 
+              city, 
+              country, 
+              notes, 
+              logo, 
+              website, 
+              is_active, 
+              created_at, 
+              updated_at
+            ) VALUES (
+              ${name.trim()}, 
+              ${contactName || null}, 
+              ${email || null}, 
+              ${phone || null}, 
+              ${address || null}, 
+              ${city || null}, 
+              ${country || 'South Africa'}, 
+              ${notes || null}, 
+              ${logo || null}, 
+              ${website || null}, 
+              ${isActive !== undefined ? isActive : true}, 
+              ${now}, 
+              ${now}
+            ) RETURNING id, name, contact_name, email, phone, address, city, country, notes, logo, website, is_active, created_at, updated_at
+          `
+        );
+        
+        const supplier = result[0];
+        
+        return res.status(201).json({
+          success: true,
+          data: {
+            id: supplier.id,
+            name: supplier.name,
+            contactName: supplier.contact_name,
+            email: supplier.email,
+            phone: supplier.phone,
+            address: supplier.address,
+            city: supplier.city,
+            country: supplier.country,
+            notes: supplier.notes,
+            logo: supplier.logo,
+            website: supplier.website,
+            isActive: supplier.is_active,
+            createdAt: supplier.created_at,
+            updatedAt: supplier.updated_at
+          },
+          message: `Supplier "${supplier.name}" created successfully`
+        });
+        
+      } catch (insertError) {
+        console.error('Error inserting supplier:', insertError);
+        return res.status(500).json({
+          success: false,
+          error: { message: "Database error while creating supplier" }
+        });
+      }
       
-      const supplier = result[0];
-      
-      return res.status(201).json({
-        success: true,
-        data: supplier,
-        message: `Supplier "${supplier.name}" created successfully`
-      });
     } catch (error) {
-      // Log detailed error information with context
-      logger.error('Error creating supplier', { 
-        error,
-        userId: user.id,
-        supplierData: req.body
+      console.error('Unexpected error in supplier creation:', error);
+      return res.status(500).json({
+        success: false,
+        error: { message: "An unexpected error occurred" }
       });
-      
-      // Check for specific error types
-      if (error instanceof ForbiddenError || error instanceof AppError) {
-        throw error;
-      }
-      
-      // Return generic error for unexpected issues
-      throw new AppError(
-        "Failed to create supplier. Please try again.",
-        ErrorCode.INTERNAL_SERVER_ERROR,
-        500,
-        { originalError: error }
-      );
     }
   }));
 
