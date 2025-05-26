@@ -206,11 +206,13 @@ export const SalesPromotionsStep: React.FC<SalesPromotionsStepProps> = ({
       } as Partial<ProductDraft>;
       
       // Add debugging logs to see what's being sent
-      console.log('Raw form values before formatting:', values);
-      console.log('Rating value:', values.rating);
-      console.log('Review count value:', values.review_count);
-      console.log('Submitting sales promotions data:', formattedValues);
-      console.log('Step ID: sales-promotions (5)');
+      console.log('🔍 Raw form values before formatting:', values);
+      console.log('🔍 Rating value:', values.rating, typeof values.rating);
+      console.log('🔍 Review count value:', values.review_count, typeof values.review_count);
+      console.log('🔍 Formatted values after processing:', formattedValues);
+      console.log('🔍 Rating in formatted:', formattedValues.rating, typeof formattedValues.rating);
+      console.log('🔍 Review count in formatted:', formattedValues.review_count, typeof formattedValues.review_count);
+      console.log('🔍 Step ID: sales-promotions (5)');
       
       await onSave(formattedValues, true);
     } finally {
