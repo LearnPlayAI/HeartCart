@@ -33,6 +33,7 @@ import AdminCatalogs from "@/pages/admin/catalogs";
 import ProductEditPage from "@/pages/admin/product-edit";
 import ProductWizardPage from "@/pages/admin/product-wizard-new";
 import AddSupplier from "@/pages/admin/add-supplier";
+import CreateSupplier from "@/pages/admin/create-supplier";
 import EditSupplier from "@/pages/admin/edit-supplier";
 import AddCatalog from "@/pages/admin/add-catalog";
 import EditCatalog from "@/pages/admin/edit-catalog";
@@ -129,7 +130,8 @@ function App() {
               {/* Admin Routes - No header/footer */}
               <AdminProtectedRoute path="/admin" component={AdminDashboard} />
               <AdminProtectedRoute path="/admin/suppliers" component={AdminSuppliers} />
-              <AdminProtectedRoute path="/admin/suppliers/new" component={AddSupplier} />
+              <AdminProtectedRoute path="/admin/suppliers/new" component={CreateSupplier} />
+              <AdminProtectedRoute path="/admin/suppliers/create" component={CreateSupplier} />
               <AdminProtectedRoute path="/admin/suppliers/:id/edit" component={EditSupplier} />
               <AdminProtectedRoute path="/admin/catalogs" component={AdminCatalogs} />
               <AdminProtectedRoute path="/admin/catalogs/new" component={AddCatalog} />
