@@ -32,7 +32,8 @@ import AdminSuppliers from "@/pages/admin/suppliers";
 import AdminCatalogs from "@/pages/admin/catalogs";
 import ProductEditPage from "@/pages/admin/product-edit";
 import ProductWizardPage from "@/pages/admin/product-wizard-new";
-import SupplierForm from "@/pages/admin/supplier-form";
+import AddSupplier from "@/pages/admin/add-supplier";
+import EditSupplier from "@/pages/admin/edit-supplier";
 import AddCatalog from "@/pages/admin/add-catalog";
 import EditCatalog from "@/pages/admin/edit-catalog";
 import CatalogProducts from "@/pages/admin/catalog-products";
@@ -128,12 +129,10 @@ function App() {
               {/* Admin Routes - No header/footer */}
               <AdminProtectedRoute path="/admin" component={AdminDashboard} />
               <AdminProtectedRoute path="/admin/suppliers" component={AdminSuppliers} />
-              <AdminProtectedRoute path="/admin/suppliers/new" component={SupplierForm} />
-              <AdminProtectedRoute path="/admin/suppliers/create" component={SupplierForm} />
-              <AdminProtectedRoute path="/admin/suppliers/:id/edit" component={SupplierForm} />
+              <AdminProtectedRoute path="/admin/suppliers/new" component={AddSupplier} />
+              <AdminProtectedRoute path="/admin/suppliers/:id/edit" component={EditSupplier} />
               <AdminProtectedRoute path="/admin/catalogs" component={AdminCatalogs} />
-              <AdminProtectedRoute path="/admin/catalogs/new" component={React.lazy(() => import("@/pages/admin/create-catalog"))} />
-              <AdminProtectedRoute path="/admin/create-catalog" component={React.lazy(() => import("@/pages/admin/create-catalog"))} />
+              <AdminProtectedRoute path="/admin/catalogs/new" component={AddCatalog} />
               <AdminProtectedRoute path="/admin/catalogs/:id/edit" component={EditCatalog} />
               <AdminProtectedRoute path="/admin/catalogs/:id/products" component={CatalogProducts} />
               <AdminProtectedRoute path="/admin/products" component={AdminProducts} />

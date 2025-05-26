@@ -34,7 +34,6 @@ import {
   Eye,
   ToggleLeft,
   ToggleRight,
-  X,
 } from "lucide-react";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
@@ -46,13 +45,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -84,38 +76,16 @@ type Catalog = {
 export default function AdminCatalogs() {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedSupplierId, setSelectedSupplierId] = useState<string>("");
   // No longer using modal dialog for adding catalogs
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedCatalog, setSelectedCatalog] = useState<Catalog | null>(null);
 
-  // Query suppliers for filtering
-  const { data: suppliersResponse } = useQuery<{ success: boolean, data: any[] }>({
-    queryKey: ["/api/suppliers"],
-    queryFn: async () => {
-      const response = await fetch(`/api/suppliers?activeOnly=false`);
-      if (!response.ok) {
-        throw new Error("Failed to fetch suppliers");
-      }
-      return response.json();
-    }
-  });
-
   // Query catalogs from API
   const { data: catalogsResponse, isLoading, refetch } = useQuery<{ success: boolean, data: Catalog[], error?: { message: string } }>({
-    queryKey: ["/api/catalogs", searchQuery, selectedSupplierId],
+    queryKey: ["/api/catalogs", searchQuery],
     queryFn: async () => {
       // Add explicit query parameter to force showing inactive catalogs for admins
-      const params = new URLSearchParams({
-        activeOnly: 'false',
-        q: searchQuery
-      });
-      
-      if (selectedSupplierId && selectedSupplierId !== 'all') {
-        params.append('supplierId', selectedSupplierId);
-      }
-      
-      const response = await fetch(`/api/catalogs?${params.toString()}`);
+      const response = await fetch(`/api/catalogs?activeOnly=false&q=${encodeURIComponent(searchQuery)}`);
       if (!response.ok) {
         throw new Error("Failed to fetch catalogs");
       }
@@ -131,7 +101,6 @@ export default function AdminCatalogs() {
   
   // Extract data from standardized response
   const catalogs = catalogsResponse?.data;
-  const suppliers = suppliersResponse?.data;
 
   // CRUD operations
   const [, navigate] = useLocation();
@@ -276,51 +245,18 @@ export default function AdminCatalogs() {
                 <RefreshCw className="h-4 w-4" />
               </Button>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="relative w-64">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search catalogs..."
-                  className="pl-8"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-              <div className="w-48">
-                <Select value={selectedSupplierId} onValueChange={setSelectedSupplierId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Filter by supplier" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Suppliers</SelectItem>
-                    {suppliers?.map((supplier: any) => (
-                      <SelectItem key={supplier.id} value={supplier.id.toString()}>
-                        {supplier.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              {selectedSupplierId && selectedSupplierId !== 'all' && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSelectedSupplierId("all")}
-                  className="h-8 px-2"
-                  title="Clear supplier filter"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
+            <div className="relative w-64">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search catalogs..."
+                className="pl-8"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
             </div>
           </div>
           <CardDescription>
             A list of all product catalogs from your suppliers
-            {selectedSupplierId && selectedSupplierId !== 'all' && suppliers && (
-              <span className="ml-1">
-                • Filtered by {suppliers.find((s: any) => s.id.toString() === selectedSupplierId)?.name}
-              </span>
-            )}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -358,7 +294,7 @@ export default function AdminCatalogs() {
                     <TableCell>
                       <div className="flex items-center">
                         <Factory className="h-4 w-4 mr-2 text-gray-500" />
-                        {suppliers?.find(s => s.id === catalog.supplierId)?.name || 'Unknown Supplier'}
+                        {catalog.supplierName}
                       </div>
                     </TableCell>
                     <TableCell>

@@ -793,16 +793,6 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async deleteCategory(id: number): Promise<boolean> {
-    try {
-      const result = await db.delete(categories).where(eq(categories.id, id));
-      return result.rowCount > 0;
-    } catch (error) {
-      console.error(`Error deleting category ${id}:`, error);
-      throw error; // Rethrow so the route handler can catch it and send a proper error response
-    }
-  }
-
   // Product operations
   async getAllProducts(
     limit = 20,
@@ -3739,75 +3729,21 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getSupplierByName(name: string): Promise<Supplier | undefined> {
-    try {
-      const [supplier] = await db
-        .select()
-        .from(suppliers)
-        .where(eq(suppliers.name, name));
-      return supplier;
-    } catch (error) {
-      console.error(`Error fetching supplier with name "${name}":`, error);
-      throw error;
-    }
-  }
-
-  async createSupplier(supplierData: any): Promise<any> {
+  async createSupplier(supplier: InsertSupplier): Promise<Supplier> {
     try {
       const now = new Date().toISOString();
-      
-      console.log('Creating supplier with data:', supplierData);
-      
-      // Insert and get the ID in one query
-      const result = await db.execute(
-        sql`INSERT INTO suppliers (name, contact_name, email, phone, address, city, country, notes, logo, website, is_active, created_at, updated_at) 
-            VALUES (${supplierData.name}, ${supplierData.contactName || null}, ${supplierData.email || null}, ${supplierData.phone || null}, 
-                   ${supplierData.address || null}, ${supplierData.city || null}, ${supplierData.country || 'South Africa'}, 
-                   ${supplierData.notes || null}, ${supplierData.logo || null}, ${supplierData.website || null}, 
-                   ${supplierData.isActive !== false}, ${now}, ${now})
-            RETURNING id`
-      );
-      
-      if (!result.rows || result.rows.length === 0) {
-        throw new Error('Failed to create supplier');
-      }
-      
-      const newSupplierId = result.rows[0].id;
-      
-      // Now get the full supplier data
-      const supplierResult = await db.execute(
-        sql`SELECT id, name, contact_name, email, phone, address, city, country, notes, logo, website, is_active, created_at, updated_at 
-            FROM suppliers WHERE id = ${newSupplierId}`
-      );
-      
-      console.log('Supplier result:', supplierResult);
-      
-      if (!supplierResult.rows || supplierResult.rows.length === 0) {
-        throw new Error('Supplier was created but could not be retrieved');
-      }
-      
-      const newSupplier = supplierResult.rows[0];
-      console.log('New supplier retrieved:', newSupplier);
-      
-      return {
-        id: newSupplier.id,
-        name: newSupplier.name,
-        contactName: newSupplier.contact_name,
-        email: newSupplier.email,
-        phone: newSupplier.phone,
-        address: newSupplier.address,
-        city: newSupplier.city,
-        country: newSupplier.country,
-        notes: newSupplier.notes,
-        logo: newSupplier.logo,
-        website: newSupplier.website,
-        isActive: newSupplier.is_active,
-        createdAt: newSupplier.created_at,
-        updatedAt: newSupplier.updated_at
-      };
+      const [newSupplier] = await db
+        .insert(suppliers)
+        .values({
+          ...supplier,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .returning();
+      return newSupplier;
     } catch (error) {
-      console.error('Database error creating supplier:', error);
-      throw new Error(error instanceof Error ? error.message : 'Failed to create supplier');
+      console.error(`Error creating supplier "${supplier.name}":`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
   }
 
@@ -3820,7 +3756,7 @@ export class DatabaseStorage implements IStorage {
         .update(suppliers)
         .set({
           ...supplierData,
-          updatedAt: new Date().toISOString(),
+          updatedAt: new Date(),
         })
         .where(eq(suppliers.id, id))
         .returning();
@@ -3852,70 +3788,121 @@ export class DatabaseStorage implements IStorage {
   // Catalog operations
   async getAllCatalogs(activeOnly = true): Promise<any[]> {
     try {
-      // Get basic catalog data first
-      const catalogData = activeOnly
-        ? await db.select().from(catalogs).where(eq(catalogs.isActive, true)).orderBy(asc(catalogs.name))
-        : await db.select().from(catalogs).orderBy(asc(catalogs.name));
+      // Get catalogs with supplier information
+      try {
+        const query = activeOnly
+          ? db
+              .select({
+                id: catalogs.id,
+                name: catalogs.name,
+                description: catalogs.description,
+                supplierId: catalogs.supplierId,
+                supplierName: suppliers.name,
+                isActive: catalogs.isActive,
+                defaultMarkupPercentage: catalogs.defaultMarkupPercentage,
+                startDate: catalogs.startDate,
+                endDate: catalogs.endDate,
+                createdAt: catalogs.createdAt,
+              })
+              .from(catalogs)
+              .leftJoin(suppliers, eq(catalogs.supplierId, suppliers.id))
+              .where(eq(catalogs.isActive, true))
+              .orderBy(asc(catalogs.name))
+          : db
+              .select({
+                id: catalogs.id,
+                name: catalogs.name,
+                description: catalogs.description,
+                supplierId: catalogs.supplierId,
+                supplierName: suppliers.name,
+                isActive: catalogs.isActive,
+                defaultMarkupPercentage: catalogs.defaultMarkupPercentage,
+                startDate: catalogs.startDate,
+                endDate: catalogs.endDate,
+                createdAt: catalogs.createdAt,
+              })
+              .from(catalogs)
+              .leftJoin(suppliers, eq(catalogs.supplierId, suppliers.id))
+              .orderBy(asc(catalogs.name));
 
-      // Add product count and supplier name for each catalog
-      const catalogsWithProductCount = await Promise.all(
-        catalogData.map(async (catalog) => {
-          try {
-            // Count products in this catalog
-            const [result] = await db
-              .select({ count: sql<number>`count(*)` })
-              .from(products)
-              .where(eq(products.catalogId, catalog.id));
+        const catalogData = await query;
 
-            const count = result?.count || 0;
+        // Add product count for each catalog
+        try {
+          const catalogsWithProductCount = await Promise.all(
+            catalogData.map(async (catalog) => {
+              try {
+                // Count products in this catalog
+                const productsQuery = activeOnly
+                  ? db
+                      .select({ count: sql<number>`count(*)` })
+                      .from(products)
+                      .where(
+                        and(
+                          eq(products.catalogId, catalog.id),
+                          eq(products.isActive, true),
+                        ),
+                      )
+                  : db
+                      .select({ count: sql<number>`count(*)` })
+                      .from(products)
+                      .where(eq(products.catalogId, catalog.id));
 
-            // Get supplier name
-            let supplierName = null;
-            if (catalog.supplierId) {
-              const [supplierResult] = await db
-                .select({ name: suppliers.name })
-                .from(suppliers)
-                .where(eq(suppliers.id, catalog.supplierId));
-              supplierName = supplierResult?.name || null;
-            }
+                const [result] = await productsQuery;
+                const count = result?.count || 0;
 
-            // Format dates and return with supplier name
-            return {
-              id: catalog.id,
-              name: catalog.name,
-              description: catalog.description,
-              supplierId: catalog.supplierId,
-              supplierName: supplierName,
-              isActive: catalog.isActive,
-              defaultMarkupPercentage: catalog.defaultMarkupPercentage,
-              startDate: catalog.startDate
-                ? new Date(catalog.startDate).toISOString()
-                : null,
-              endDate: catalog.endDate
-                ? new Date(catalog.endDate).toISOString()
-                : null,
-              createdAt: catalog.createdAt
-                ? new Date(catalog.createdAt).toISOString()
-                : null,
-              updatedAt: catalog.updatedAt
-                ? new Date(catalog.updatedAt).toISOString()
-                : null,
-              coverImage: catalog.coverImage,
-              tags: catalog.tags,
-              productsCount: Number(count),
-            };
-          } catch (error) {
-            console.error(`Error processing catalog ${catalog.id}:`, error);
-            return {
-              ...catalog,
-              supplierName: null,
-              productsCount: 0,
-            };
-          }
-        })
-      );
+                // Format all dates as ISO strings
+                return {
+                  ...catalog,
+                  startDate: catalog.startDate
+                    ? new Date(catalog.startDate).toISOString()
+                    : null,
+                  endDate: catalog.endDate
+                    ? new Date(catalog.endDate).toISOString()
+                    : null,
+                  createdAt: catalog.createdAt
+                    ? new Date(catalog.createdAt).toISOString()
+                    : null,
+                  productsCount: Number(count),
+                };
+              } catch (productCountError) {
+                console.error(
+                  `Error counting products for catalog ${catalog.id}:`,
+                  productCountError,
+                );
+                // Return the catalog with a zero product count in case of an error
+                return {
+                  ...catalog,
+                  startDate: catalog.startDate
+                    ? new Date(catalog.startDate).toISOString()
+                    : null,
+                  endDate: catalog.endDate
+                    ? new Date(catalog.endDate).toISOString()
+                    : null,
+                  createdAt: catalog.createdAt
+                    ? new Date(catalog.createdAt).toISOString()
+                    : null,
+                  productsCount: 0,
+                };
+              }
+            }),
+          );
 
-      return catalogsWithProductCount;
+          return catalogsWithProductCount;
+        } catch (productCountsError) {
+          console.error(
+            "Error while getting product counts for catalogs:",
+            productCountsError,
+          );
+          throw productCountsError; // Rethrow so the route handler can catch it and send a proper error response
+        }
+      } catch (catalogsQueryError) {
+        console.error(
+          `Error fetching catalogs (activeOnly=${activeOnly}):`,
+          catalogsQueryError,
+        );
+        throw catalogsQueryError; // Rethrow so the route handler can catch it and send a proper error response
+      }
     } catch (error) {
       console.error(
         `Error in getAllCatalogs (activeOnly=${activeOnly}):`,
@@ -3929,103 +3916,90 @@ export class DatabaseStorage implements IStorage {
     supplierId: number,
     activeOnly = true,
   ): Promise<any[]> {
-    try {
-      // Use join query to get catalogs with supplier names directly - same as getAllCatalogs
-      const catalogsWithSuppliers = activeOnly
-        ? await db
-            .select({
-              id: catalogs.id,
-              name: catalogs.name,
-              description: catalogs.description,
-              supplierId: catalogs.supplierId,
-              supplierName: suppliers.name,
-              isActive: catalogs.isActive,
-              defaultMarkupPercentage: catalogs.defaultMarkupPercentage,
-              startDate: catalogs.startDate,
-              endDate: catalogs.endDate,
-              createdAt: catalogs.createdAt,
-              updatedAt: catalogs.updatedAt,
-              coverImage: catalogs.coverImage,
-              tags: catalogs.tags,
-            })
-            .from(catalogs)
-            .leftJoin(suppliers, eq(catalogs.supplierId, suppliers.id))
-            .where(and(eq(catalogs.supplierId, supplierId), eq(catalogs.isActive, true)))
-            .orderBy(asc(catalogs.name))
-        : await db
-            .select({
-              id: catalogs.id,
-              name: catalogs.name,
-              description: catalogs.description,
-              supplierId: catalogs.supplierId,
-              supplierName: suppliers.name,
-              isActive: catalogs.isActive,
-              defaultMarkupPercentage: catalogs.defaultMarkupPercentage,
-              startDate: catalogs.startDate,
-              endDate: catalogs.endDate,
-              createdAt: catalogs.createdAt,
-              updatedAt: catalogs.updatedAt,
-              coverImage: catalogs.coverImage,
-              tags: catalogs.tags,
-            })
-            .from(catalogs)
-            .leftJoin(suppliers, eq(catalogs.supplierId, suppliers.id))
-            .where(eq(catalogs.supplierId, supplierId))
-            .orderBy(asc(catalogs.name));
+    // Get catalogs with supplier information
+    const query = activeOnly
+      ? db
+          .select({
+            id: catalogs.id,
+            name: catalogs.name,
+            description: catalogs.description,
+            supplierId: catalogs.supplierId,
+            supplierName: suppliers.name,
+            isActive: catalogs.isActive,
+            defaultMarkupPercentage: catalogs.defaultMarkupPercentage,
+            startDate: catalogs.startDate,
+            endDate: catalogs.endDate,
+            createdAt: catalogs.createdAt,
+          })
+          .from(catalogs)
+          .leftJoin(suppliers, eq(catalogs.supplierId, suppliers.id))
+          .where(
+            and(
+              eq(catalogs.supplierId, supplierId),
+              eq(catalogs.isActive, true),
+            ),
+          )
+          .orderBy(asc(catalogs.name))
+      : db
+          .select({
+            id: catalogs.id,
+            name: catalogs.name,
+            description: catalogs.description,
+            supplierId: catalogs.supplierId,
+            supplierName: suppliers.name,
+            isActive: catalogs.isActive,
+            defaultMarkupPercentage: catalogs.defaultMarkupPercentage,
+            startDate: catalogs.startDate,
+            endDate: catalogs.endDate,
+            createdAt: catalogs.createdAt,
+          })
+          .from(catalogs)
+          .leftJoin(suppliers, eq(catalogs.supplierId, suppliers.id))
+          .where(eq(catalogs.supplierId, supplierId))
+          .orderBy(asc(catalogs.name));
 
-      // Add product count for each catalog
-      const catalogsWithProductCount = await Promise.all(
-        catalogsWithSuppliers.map(async (catalog) => {
-          try {
-            // Count products in this catalog
-            const [result] = await db
+    const catalogData = await query;
+
+    // Add product count for each catalog
+    const catalogsWithProductCount = await Promise.all(
+      catalogData.map(async (catalog) => {
+        // Count products in this catalog
+        const productsQuery = activeOnly
+          ? db
+              .select({ count: sql<number>`count(*)` })
+              .from(products)
+              .where(
+                and(
+                  eq(products.catalogId, catalog.id),
+                  eq(products.isActive, true),
+                ),
+              )
+          : db
               .select({ count: sql<number>`count(*)` })
               .from(products)
               .where(eq(products.catalogId, catalog.id));
 
-            const count = result?.count || 0;
+        const [result] = await productsQuery;
+        const count = result?.count || 0;
 
-            // Format dates and return with supplier name
-            return {
-              id: catalog.id,
-              name: catalog.name,
-              description: catalog.description,
-              supplierId: catalog.supplierId,
-              supplierName: catalog.supplierName || null,
-              isActive: catalog.isActive,
-              defaultMarkupPercentage: catalog.defaultMarkupPercentage,
-              startDate: catalog.startDate
-                ? new Date(catalog.startDate).toISOString()
-                : null,
-              endDate: catalog.endDate
-                ? new Date(catalog.endDate).toISOString()
-                : null,
-              createdAt: catalog.createdAt
-                ? new Date(catalog.createdAt).toISOString()
-                : null,
-              updatedAt: catalog.updatedAt
-                ? new Date(catalog.updatedAt).toISOString()
-                : null,
-              coverImage: catalog.coverImage,
-              tags: catalog.tags,
-              productsCount: Number(count),
-            };
-          } catch (error) {
-            console.error(`Error processing catalog ${catalog.id}:`, error);
-            return {
-              ...catalog,
-              supplierName: catalog.supplierName || null,
-              productsCount: 0,
-            };
-          }
-        })
-      );
+        // Format all dates as ISO strings
+        return {
+          ...catalog,
+          startDate: catalog.startDate
+            ? new Date(catalog.startDate).toISOString()
+            : null,
+          endDate: catalog.endDate
+            ? new Date(catalog.endDate).toISOString()
+            : null,
+          createdAt: catalog.createdAt
+            ? new Date(catalog.createdAt).toISOString()
+            : null,
+          productsCount: Number(count),
+        };
+      }),
+    );
 
-      return catalogsWithProductCount;
-    } catch (error) {
-      console.error("Error while getting filtered catalogs by supplier:", error);
-      throw error;
-    }
+    return catalogsWithProductCount;
   }
 
   async getCatalogById(id: number): Promise<any | undefined> {
@@ -4081,17 +4055,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createCatalog(catalog: InsertCatalog): Promise<Catalog> {
+    const now = new Date();
+
     // Convert startDate and endDate strings to Date objects if provided
     const catalogValues = {
-      name: catalog.name,
-      description: catalog.description,
-      supplierId: catalog.supplierId,
-      isActive: catalog.isActive,
+      ...catalog,
       startDate: catalog.startDate ? new Date(catalog.startDate) : null,
       endDate: catalog.endDate ? new Date(catalog.endDate) : null,
-      defaultMarkupPercentage: catalog.defaultMarkupPercentage || 0,
-      freeShipping: catalog.freeShipping || false,
     };
+
+    // Remove createdAt and updatedAt from the payload since these are handled by Drizzle
+    delete catalogValues["createdAt"];
+    delete catalogValues["updatedAt"];
 
     const [newCatalog] = await db
       .insert(catalogs)
@@ -4138,14 +4113,18 @@ export class DatabaseStorage implements IStorage {
 
   async deleteCatalog(id: number): Promise<boolean> {
     try {
-      // Hard delete the catalog from database
-      const [deletedCatalog] = await db
-        .delete(catalogs)
+      // We use soft deletion by setting isActive to false
+      const [updatedCatalog] = await db
+        .update(catalogs)
+        .set({
+          isActive: false,
+          updatedAt: new Date(),
+        })
         .where(eq(catalogs.id, id))
         .returning();
-      return !!deletedCatalog;
+      return !!updatedCatalog;
     } catch (error) {
-      console.error(`Error deleting catalog ${id}:`, error);
+      console.error(`Error soft-deleting catalog ${id}:`, error);
       throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
   }

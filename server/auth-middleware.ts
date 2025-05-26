@@ -44,19 +44,8 @@ export function checkPermission(req: Request, allowedRoles: string[]): boolean {
 /**
  * Enhanced middleware to check if a user is authenticated
  * Includes detailed logging and standardized error responses
- * Note: Catalog operations bypass authentication as per user requirements
  */
 export function isAuthenticated(req: Request, res: Response, next: NextFunction): void {
-  // Skip authentication for catalog operations as per user requirements
-  if (req.path.startsWith('/api/catalogs')) {
-    logger.debug('Bypassing authentication for catalog operation', {
-      path: req.path,
-      method: req.method,
-      ip: req.ip
-    });
-    return next();
-  }
-  
   const auth = checkAuthentication(req);
   
   if (auth.isAuthenticated) {
@@ -123,21 +112,10 @@ export function isAdmin(req: Request, res: Response, next: NextFunction): void {
  * Enhanced middleware to check if an API request is authenticated and access permitted
  * This handles OPTIONS requests for CORS and checks for application/json content-type
  * Includes detailed logging and standardized error responses
- * Note: Catalog operations bypass authentication as per user requirements
  */
 export function apiAuthCheck(req: Request, res: Response, next: NextFunction): void {
   // Allow OPTIONS requests to pass through for CORS
   if (req.method === 'OPTIONS') {
-    return next();
-  }
-  
-  // Skip authentication for catalog operations as per user requirements
-  if (req.path.startsWith('/api/catalogs')) {
-    logger.debug('Bypassing API auth check for catalog operation', {
-      path: req.path,
-      method: req.method,
-      ip: req.ip
-    });
     return next();
   }
   

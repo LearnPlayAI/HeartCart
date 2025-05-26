@@ -7,9 +7,10 @@
 
 import { Router, Request, Response, Express } from 'express';
 import { z } from 'zod';
+import { storage } from './storage';
 import { sendSuccess, sendError } from './api-response';
 import asyncHandler from 'express-async-handler';
-import { attributeService } from './attribute-service';
+import { Attribute, InsertAttribute } from '@shared/schema';
 
 const router = Router();
 

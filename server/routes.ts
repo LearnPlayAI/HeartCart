@@ -2,8 +2,6 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { sendError } from "./api-response";
 import { storage } from "./storage";
-import { db } from "./db";
-import { sql } from "drizzle-orm";
 import { ZodError } from "zod";
 import { logger } from "./logger";
 import crypto from "crypto";
@@ -20,8 +18,8 @@ import {
   insertProductSchema,
   insertProductImageSchema,
   insertPricingSchema,
-  insertSupplierSchema
-  // insertCatalogSchema removed - catalog validation now handled by catalog-routes-new.ts
+  insertSupplierSchema,
+  insertCatalogSchema
 } from "@shared/schema";
 import { objectStore, STORAGE_FOLDERS } from "./object-store";
 import { setupAuth } from "./auth";
@@ -32,10 +30,9 @@ import fs from "fs";
 import fileRoutes from "./file-routes";
 import uploadHandlers from "./upload-handlers";
 import fileBrowserRoutes from "./file-browser-routes";
-import registerAttributeRoutes from "./attribute-routes-new";
+import registerAttributeRoutes from "./attribute-routes";
 import registerProductAttributeRoutes from "./attribute-routes-product";
 import registerProductDraftRoutes from "./product-draft-routes";
-import registerCatalogRoutes from "./catalog-routes-new";
 // Removed attributeDiscountRoutes import as part of centralized attribute system
 import pricingRoutes from "./pricing-routes";
 import batchUploadRoutes from "./batch-upload-routes";
@@ -94,61 +91,6 @@ function handleApiError(error: any, res: Response) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Register new raw SQL catalog routes FIRST to ensure absolute precedence
-  // registerCatalogRoutes(app); // DISABLED - Using simplified catalog routes from server/index.ts
-  
-  // SUPPLIER CREATION - SIMPLIFIED WITHOUT REDUNDANT AUTH CHECK
-  app.post("/api/suppliers", asyncHandler(async (req: Request, res: Response) => {
-    try {
-      console.log('=== SUPPLIER CREATION DEBUG ===');
-      console.log('Request body:', req.body);
-      
-      const { name, contactName, email, phone, address, notes, website, isActive } = req.body;
-      
-      if (!name) {
-        console.log('Validation failed: Name is required');
-        return res.status(400).json({ success: false, error: { message: "Name is required" } });
-      }
-
-      // Use storage.createSupplier which is known to work
-      const supplierData = {
-        name,
-        contactName: contactName || '',
-        email: email || '',
-        phone: phone || '',
-        address: address || '',
-        notes: notes || '',
-        website: website || '',
-        isActive: isActive !== false
-      };
-
-      console.log('Prepared supplier data:', supplierData);
-      
-      const supplier = await storage.createSupplier(supplierData);
-      
-      console.log('Supplier created successfully:', supplier);
-      
-      return res.status(201).json({
-        success: true,
-        data: supplier
-      });
-    } catch (error) {
-      console.error('=== SUPPLIER CREATION ERROR ===');
-      console.error('Full error object:', error);
-      console.error('Error message:', error instanceof Error ? error.message : 'Unknown error');
-      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
-      
-      logger.error('Error creating supplier', { error });
-      return res.status(500).json({
-        success: false,
-        error: { 
-          message: "Failed to create supplier. Please try again.",
-          details: error instanceof Error ? error.message : 'Unknown error'
-        }
-      });
-    }
-  }));
-
   // Use memory storage for file uploads to avoid local filesystem
   // Files will go directly to Replit Object Storage
   const upload = multer({ 
@@ -462,38 +404,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       res.json(category);
-    })
-  );
-
-  // DELETE category route
-  app.delete(
-    "/api/categories/:id", 
-    isAuthenticated, 
-    isAdmin,
-    validateRequest({
-      params: idSchema
-    }),
-    withStandardResponse(async (req: Request, res: Response) => {
-      const categoryId = Number(req.params.id);
-      
-      // Check if category exists
-      const existingCategory = await storage.getCategoryById(categoryId);
-      if (!existingCategory) {
-        throw new NotFoundError(`Category with ID ${categoryId} not found`, 'category');
-      }
-      
-      // Delete the category
-      const deleted = await storage.deleteCategory(categoryId);
-      
-      if (!deleted) {
-        throw new AppError(
-          `Failed to delete category "${existingCategory.name}"`,
-          ErrorCode.INTERNAL_SERVER_ERROR,
-          500
-        );
-      }
-      
-      return { id: categoryId, name: existingCategory.name };
     })
   );
   
@@ -4091,11 +4001,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }));
 
-  // Simple test endpoint
-  app.get("/api/suppliers/test", (req: Request, res: Response) => {
-    console.log('=== TEST ENDPOINT REACHED ===');
-    return res.json({ success: true, message: "Test endpoint working" });
-  });
+  app.post("/api/suppliers", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    try {
+      if (user.role !== 'admin') {
+        throw new ForbiddenError("Only administrators can manage suppliers");
+      }
+      
+      const supplierData = insertSupplierSchema.parse(req.body);
+      
+      // Check if supplier with same name already exists
+      const existingSupplier = await storage.getSupplierByName(supplierData.name);
+      if (existingSupplier) {
+        throw new AppError(
+          `A supplier with the name "${supplierData.name}" already exists`,
+          ErrorCode.DUPLICATE_ENTITY,
+          409
+        );
+      }
+      
+      const supplier = await storage.createSupplier(supplierData);
+      
+      return res.status(201).json({
+        success: true,
+        data: supplier,
+        message: `Supplier "${supplier.name}" created successfully`
+      });
+    } catch (error) {
+      // Log detailed error information with context
+      logger.error('Error creating supplier', { 
+        error,
+        userId: user.id,
+        supplierData: req.body
+      });
+      
+      // Check for specific error types
+      if (error instanceof ForbiddenError || error instanceof AppError || error instanceof z.ZodError) {
+        throw error;
+      }
+      
+      // Return generic error for unexpected issues
+      throw new AppError(
+        "Failed to create supplier. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
+    }
+  }));
 
   app.put("/api/suppliers/:id", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
     const user = req.user as any;
@@ -4251,9 +4205,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }));
 
-  // OLD CATALOG ROUTES DISABLED - Now handled by catalog-routes-new.ts
-  /*
-  // ALL OLD CATALOG ROUTES DISABLED
+  // CATALOG ROUTES
   app.get("/api/catalogs", asyncHandler(async (req: Request, res: Response) => {
     try {
       // For admin users, show all catalogs regardless of active status
@@ -4262,29 +4214,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const isAdmin = user && user.role === 'admin';
       const activeOnly = isAdmin ? false : req.query.activeOnly !== 'false';
       
-      // Check if filtering by supplier
-      const supplierIdParam = req.query.supplierId as string;
-      const supplierId = supplierIdParam && supplierIdParam !== 'all' ? parseInt(supplierIdParam) : null;
-      
-      let catalogs;
-      if (supplierId) {
-        // Verify the supplier exists
-        const supplier = await storage.getSupplierById(supplierId);
-        if (!supplier) {
-          throw new NotFoundError(`Supplier with ID ${supplierId} not found`, "supplier");
-        }
-        catalogs = await storage.getCatalogsBySupplierId(supplierId, activeOnly);
-      } else {
-        catalogs = await storage.getAllCatalogs(activeOnly);
-      }
+      const catalogs = await storage.getAllCatalogs(activeOnly);
       
       return res.json({
         success: true,
         data: catalogs,
         meta: {
           count: catalogs.length,
-          activeOnly,
-          supplierId: supplierId || null
+          activeOnly
         }
       });
     } catch (error) {
@@ -4293,11 +4230,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error,
         query: req.query
       });
-      
-      // Check for specific error types
-      if (error instanceof NotFoundError) {
-        throw error;
-      }
       
       // Return generic error
       throw new AppError(
@@ -4308,10 +4240,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
     }
   }));
-  */
 
-  // All old catalog routes disabled - handled by catalog-routes-new.ts
-  /*
   app.get("/api/catalogs/:id", asyncHandler(async (req: Request, res: Response) => {
     const id = parseInt(req.params.id);
     
@@ -4412,11 +4341,107 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }));
 
-  // OLD CATALOG ROUTES COMPLETELY REMOVED - All catalog functionality handled by catalog-routes-new.ts
+  app.post("/api/catalogs", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    
+    try {
+      if (user.role !== 'admin') {
+        throw new ForbiddenError("Only administrators can manage catalogs");
+      }
+      
+      const catalogData = insertCatalogSchema.parse(req.body);
+      
+      // Verify the supplier exists
+      const supplier = await storage.getSupplierById(catalogData.supplierId);
+      if (!supplier) {
+        throw new NotFoundError(`Supplier with ID ${catalogData.supplierId} not found`, "supplier");
+      }
+      
+      // Check if a catalog with the same name already exists for this supplier
+      const existingCatalog = await storage.getCatalogByNameAndSupplierId(
+        catalogData.name, 
+        catalogData.supplierId
+      );
+      
+      if (existingCatalog) {
+        throw new AppError(
+          `A catalog named "${catalogData.name}" already exists for this supplier`,
+          ErrorCode.DUPLICATE_ENTITY,
+          409
+        );
+      }
+      
+      const catalog = await storage.createCatalog(catalogData);
+      
+      return res.status(201).json({
+        success: true,
+        data: catalog,
+        message: `Catalog "${catalog.name}" created successfully`
+      });
+    } catch (error) {
+      // Log detailed error information with context
+      logger.error('Error creating catalog', { 
+        error,
+        userId: user.id,
+        catalogData: req.body
+      });
+      
+      // Check for specific error types
+      if (error instanceof ForbiddenError || error instanceof NotFoundError || error instanceof AppError || error instanceof z.ZodError) {
+        throw error;
+      }
+      
+      // Return generic error for unexpected issues
+      throw new AppError(
+        "Failed to create catalog. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
+    }
+  }));
 
-  /*
-  // ALL OLD CATALOG ROUTES COMPLETELY REMOVED - HANDLED BY catalog-routes-new.ts
-  // This section intentionally left blank to prevent any conflicts
+  app.put("/api/catalogs/:id", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    const id = parseInt(req.params.id);
+    
+    try {
+      if (user.role !== 'admin') {
+        throw new ForbiddenError("Only administrators can manage catalogs");
+      }
+      
+      // Validate request body
+      const catalogData = insertCatalogSchema.partial().parse(req.body);
+      
+      // Check if catalog exists
+      const existingCatalog = await storage.getCatalogById(id);
+      if (!existingCatalog) {
+        throw new NotFoundError(`Catalog with ID ${id} not found`, "catalog");
+      }
+      
+      // If changing the supplier, check if it exists
+      if (catalogData.supplierId && catalogData.supplierId !== existingCatalog.supplierId) {
+        const supplier = await storage.getSupplierById(catalogData.supplierId);
+        if (!supplier) {
+          throw new NotFoundError(`Supplier with ID ${catalogData.supplierId} not found`, "supplier");
+        }
+      }
+      
+      // If changing the name, check for duplicates within the same supplier
+      if (catalogData.name && catalogData.name !== existingCatalog.name) {
+        const supplierId = catalogData.supplierId || existingCatalog.supplierId;
+        const duplicateCatalog = await storage.getCatalogByNameAndSupplierId(
+          catalogData.name, 
+          supplierId
+        );
+        
+        if (duplicateCatalog && duplicateCatalog.id !== id) {
+          throw new AppError(
+            `A catalog named "${catalogData.name}" already exists for this supplier`,
+            ErrorCode.DUPLICATE_ENTITY,
+            409
+          );
+        }
       }
       
       // Update the catalog
@@ -4470,7 +4495,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }));
 
-  app.delete("/api/catalogs/:id", asyncHandler(async (req: Request, res: Response) => {
+  app.delete("/api/catalogs/:id", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
     const user = req.user as any;
     const id = parseInt(req.params.id);
     
@@ -4573,7 +4598,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }));
 
   // Endpoint to toggle catalog active status and update all its products
-  app.patch("/api/catalogs/:id/toggle-status", asyncHandler(async (req: Request, res: Response) => {
+  app.patch("/api/catalogs/:id/toggle-status", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
     const user = req.user as any;
     const id = parseInt(req.params.id);
     
@@ -4789,7 +4814,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   );
 
   // Get catalog context data for product wizard
-  app.get("/api/catalogs/:catalogId/context", asyncHandler(async (req: Request, res: Response) => {
+  app.get("/api/catalogs/:catalogId/context", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
     const user = req.user as any;
     const catalogId = parseInt(req.params.catalogId);
     
@@ -4872,7 +4897,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }));
 
-  app.put("/api/catalogs/:catalogId/products/bulk", asyncHandler(async (req: Request, res: Response) => {
+  app.put("/api/catalogs/:catalogId/products/bulk", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
     const user = req.user as any;
     const catalogId = parseInt(req.params.catalogId);
     
@@ -5065,7 +5090,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }));
 
   // PATCH endpoint to reorder products in a catalog
-  app.patch("/api/catalogs/:id/products/reorder", asyncHandler(async (req: Request, res: Response) => {
+  app.patch("/api/catalogs/:id/products/reorder", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
     const user = req.user as any;
     const catalogId = parseInt(req.params.id);
     
@@ -5169,8 +5194,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
     }
   }));
-  */
-  // END OF DISABLED OLD CATALOG ROUTES
   
   // Object storage file access endpoint - using reliable buffer-based approach
   app.get('/api/files/:path(*)', asyncHandler(async (req: Request, res: Response) => {
@@ -5380,8 +5403,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerAttributeRoutes(app);
   registerProductAttributeRoutes(app);
   registerProductDraftRoutes(app);
-  
-  // Catalog routes already registered at the beginning of this function
   
   // Register AI API routes for product generation features
   app.use('/api/ai', aiRouter);
