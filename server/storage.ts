@@ -6409,6 +6409,8 @@ export class DatabaseStorage implements IStorage {
             specialSaleEnd: draftData.specialSaleEnd,
             isFlashDeal: draftData.isFlashDeal,
             flashDealEnd: draftData.flashDealEnd,
+            rating: draftData.rating,
+            review_count: draftData.review_count,
           });
 
           updateData = {
@@ -6487,6 +6489,16 @@ export class DatabaseStorage implements IStorage {
                     : draftData.flashDealEnd
                   : null
                 : existingDraft.flashDealEnd,
+
+            // Rating and review count for marketplace appearance
+            rating:
+              draftData.rating !== undefined
+                ? draftData.rating
+                : existingDraft.rating,
+            review_count:
+              draftData.review_count !== undefined
+                ? draftData.review_count
+                : existingDraft.review_count,
 
             // Additional sales flags
             hasSpecialSale:

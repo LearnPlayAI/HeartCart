@@ -28,7 +28,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { format } from 'date-fns';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ProductDraft } from '../ProductWizard';
 
@@ -48,6 +48,9 @@ const formSchema = z.object({
   // Use Date objects in the form for better UX, but store as strings in the database
   specialSaleStart: z.date().nullable().optional(),
   specialSaleEnd: z.date().nullable().optional(),
+  // Rating and review count for marketplace appearance
+  rating: z.coerce.number().min(0).max(5).nullable().optional(),
+  review_count: z.coerce.number().min(0).nullable().optional(),
   isFlashDeal: z.boolean().default(false),
   flashDealEnd: z.date().nullable().optional()
 }).refine(data => {
@@ -134,7 +137,10 @@ export const SalesPromotionsStep: React.FC<SalesPromotionsStepProps> = ({
       specialSaleStart: draft.specialSaleStart ? parseStringToDate(draft.specialSaleStart) : null,
       specialSaleEnd: draft.specialSaleEnd ? parseStringToDate(draft.specialSaleEnd) : null,
       isFlashDeal: draft.isFlashDeal || false,
-      flashDealEnd: draft.flashDealEnd ? parseStringToDate(draft.flashDealEnd) : null
+      flashDealEnd: draft.flashDealEnd ? parseStringToDate(draft.flashDealEnd) : null,
+      // Rating and review count for marketplace appearance
+      rating: draft.rating || null,
+      review_count: draft.review_count || null
     }
   });
 
@@ -536,6 +542,119 @@ export const SalesPromotionsStep: React.FC<SalesPromotionsStepProps> = ({
                   />
                 )}
               </div>
+
+              {/* Rating & Reviews Section for Marketplace Appearance */}
+              <Card className="mt-6">
+                <CardHeader>
+                  <CardTitle className="text-lg">Product Rating & Reviews</CardTitle>
+                  <CardDescription>
+                    Set initial rating and review count to make your product appear established in the marketplace
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Star Rating */}
+                    <FormField
+                      control={form.control}
+                      name="rating"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Star Rating</FormLabel>
+                          <FormControl>
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-1">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                  <button
+                                    key={star}
+                                    type="button"
+                                    onClick={() => {
+                                      const newRating = star === field.value ? 0 : star;
+                                      field.onChange(newRating || null);
+                                    }}
+                                    className={`p-1 transition-colors rounded ${
+                                      star <= (field.value || 0) 
+                                        ? 'text-yellow-500 hover:text-yellow-600' 
+                                        : 'text-gray-300 hover:text-yellow-400'
+                                    }`}
+                                  >
+                                    <Star 
+                                      className="h-6 w-6" 
+                                      fill={star <= (field.value || 0) ? 'currentColor' : 'none'}
+                                    />
+                                  </button>
+                                ))}
+                                <span className="ml-2 text-sm text-muted-foreground">
+                                  {field.value > 0 ? `${field.value} star${field.value !== 1 ? 's' : ''}` : 'No rating'}
+                                </span>
+                              </div>
+                            </div>
+                          </FormControl>
+                          <FormDescription>
+                            Set the initial star rating to make your product appear established
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Review Count */}
+                    <FormField
+                      control={form.control}
+                      name="review_count"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Number of Reviews</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min="0"
+                              placeholder="0"
+                              value={field.value || ''}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                field.onChange(value ? parseInt(value) : null);
+                              }}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Set the initial review count to build customer confidence
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  {/* Rating Preview */}
+                  {(form.watch('rating') > 0 || form.watch('review_count') > 0) && (
+                    <div className="p-4 bg-muted/30 rounded-md">
+                      <h4 className="text-sm font-medium mb-2">Preview:</h4>
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Star
+                              key={star}
+                              className={`h-4 w-4 ${
+                                star <= (form.watch('rating') || 0)
+                                  ? 'text-yellow-500 fill-current'
+                                  : 'text-gray-300'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <span className="text-sm text-muted-foreground">
+                          {form.watch('rating') || 0}/5
+                        </span>
+                        {form.watch('review_count') > 0 && (
+                          <span className="text-sm text-muted-foreground">
+                            ({form.watch('review_count')} reviews)
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
 
               <div className="flex justify-end space-x-4 pt-4">
                 <Button 
