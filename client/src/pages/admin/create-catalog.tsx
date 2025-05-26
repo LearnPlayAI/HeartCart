@@ -31,9 +31,11 @@ export default function CreateCatalog() {
   });
 
   // Fetch suppliers
-  const { data: suppliers = [], isLoading: suppliersLoading } = useQuery({
+  const { data: suppliersResponse, isLoading: suppliersLoading } = useQuery({
     queryKey: ["/api/suppliers"],
   });
+  
+  const suppliers = suppliersResponse?.data || [];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
