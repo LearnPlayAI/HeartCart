@@ -3742,29 +3742,70 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async createSupplier(supplier: InsertSupplier): Promise<Supplier> {
+  async createSupplier(supplierData: any): Promise<any> {
     try {
       const now = new Date().toISOString();
       
-      // Debug logging to see what data we're trying to insert
-      console.log('Creating supplier with data:', {
-        supplier,
-        timestamps: { createdAt: now, updatedAt: now }
-      });
+      console.log('Creating supplier with data:', supplierData);
       
-      const [newSupplier] = await db
-        .insert(suppliers)
-        .values({
-          ...supplier,
-          createdAt: now,
-          updatedAt: now,
-        })
-        .returning();
-      return newSupplier;
+      // Use direct SQL to avoid all Drizzle validation issues
+      const result = await db.execute(
+        sql`
+          INSERT INTO suppliers (
+            name, 
+            contact_name, 
+            email, 
+            phone, 
+            address, 
+            city, 
+            country, 
+            notes, 
+            logo, 
+            website, 
+            is_active, 
+            created_at, 
+            updated_at
+          ) VALUES (
+            ${supplierData.name}, 
+            ${supplierData.contactName || null}, 
+            ${supplierData.email || null}, 
+            ${supplierData.phone || null}, 
+            ${supplierData.address || null}, 
+            ${supplierData.city || null}, 
+            ${supplierData.country || 'South Africa'}, 
+            ${supplierData.notes || null}, 
+            ${supplierData.logo || null}, 
+            ${supplierData.website || null}, 
+            ${supplierData.isActive !== false}, 
+            ${now}, 
+            ${now}
+          ) RETURNING *
+        `
+      );
+      
+      const newSupplier = result[0] as any;
+      console.log('Supplier created successfully:', newSupplier);
+      
+      // Return with camelCase field names
+      return {
+        id: newSupplier.id,
+        name: newSupplier.name,
+        contactName: newSupplier.contact_name,
+        email: newSupplier.email,
+        phone: newSupplier.phone,
+        address: newSupplier.address,
+        city: newSupplier.city,
+        country: newSupplier.country,
+        notes: newSupplier.notes,
+        logo: newSupplier.logo,
+        website: newSupplier.website,
+        isActive: newSupplier.is_active,
+        createdAt: newSupplier.created_at,
+        updatedAt: newSupplier.updated_at
+      };
     } catch (error) {
-      console.error(`Error creating supplier "${supplier.name}":`, error);
-      console.error('Full error details:', error);
-      throw error; // Rethrow so the route handler can catch it and send a proper error response
+      console.error('Database error creating supplier:', error);
+      throw new Error(error instanceof Error ? error.message : 'Failed to create supplier');
     }
   }
 

@@ -4003,120 +4003,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }));
 
-  app.post("/api/suppliers", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
-    const user = req.user as any;
-    
-    if (user.role !== 'admin') {
-      return res.status(403).json({
-        success: false,
-        error: { message: "Only administrators can manage suppliers" }
-      });
-    }
-    
-    // Extract data from request body matching UI form fields
-    const { name, contactName, email, phone, address, city, country, notes, logo, website, isActive } = req.body;
-    
-    // Validate required fields
-    if (!name || typeof name !== 'string' || name.trim().length === 0) {
-      return res.status(400).json({
-        success: false,
-        error: { message: "Supplier name is required" }
-      });
-    }
-    
-    console.log('Creating supplier with data:', { name, contactName, email, phone, address, city, country, notes, logo, website, isActive });
-    
+  app.post("/api/suppliers", async (req: Request, res: Response) => {
     try {
-      console.log('About to check for existing supplier...');
-      // Check for existing supplier
-      const existingSupplier = await db.execute(
-        sql`SELECT id, name FROM suppliers WHERE LOWER(name) = LOWER(${name.trim()})`
-      );
-      
-      if (existingSupplier.length > 0) {
-        return res.status(409).json({
-          success: false,
-          error: { message: `A supplier with the name "${name}" already exists` }
-        });
+      // Simple auth check
+      const user = req.user as any;
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ success: false, error: { message: "Unauthorized" } });
       }
-      
-      // Create timestamp as text (matching database schema)
-      const now = new Date().toISOString();
-      
-      // Insert new supplier - matching EXACT database column structure
-      const result = await db.execute(
-        sql`
-          INSERT INTO suppliers (
-            name, 
-            contact_name, 
-            email, 
-            phone, 
-            address, 
-            city, 
-            country, 
-            notes, 
-            logo, 
-            website, 
-            is_active, 
-            created_at, 
-            updated_at
-          ) VALUES (
-            ${name.trim()}, 
-            ${contactName || null}, 
-            ${email || null}, 
-            ${phone || null}, 
-            ${address || null}, 
-            ${city || null}, 
-            ${country || 'South Africa'}, 
-            ${notes || null}, 
-            ${logo || null}, 
-            ${website || null}, 
-            ${isActive !== undefined ? isActive : true}, 
-            ${now}, 
-            ${now}
-          ) RETURNING *
-        `
-      );
-      
-      const supplier = result[0] as any;
-      console.log('Supplier created successfully:', supplier);
-      
-      // Return response with camelCase field names for frontend
+
+      // Get the supplier data
+      const supplierData = req.body;
+      console.log('Received supplier data:', supplierData);
+
+      // Use storage method directly
+      const newSupplier = await storage.createSupplier({
+        name: supplierData.name,
+        contactName: supplierData.contactName,
+        email: supplierData.email,
+        phone: supplierData.phone,
+        address: supplierData.address,
+        city: supplierData.city,
+        country: supplierData.country || 'South Africa',
+        notes: supplierData.notes,
+        logo: supplierData.logo,
+        website: supplierData.website,
+        isActive: supplierData.isActive !== false
+      });
+
+      console.log('Supplier created:', newSupplier);
+
       return res.status(201).json({
         success: true,
-        data: {
-          id: supplier.id,
-          name: supplier.name,
-          contactName: supplier.contact_name,
-          email: supplier.email,
-          phone: supplier.phone,
-          address: supplier.address,
-          city: supplier.city,
-          country: supplier.country,
-          notes: supplier.notes,
-          logo: supplier.logo,
-          website: supplier.website,
-          isActive: supplier.is_active,
-          createdAt: supplier.created_at,
-          updatedAt: supplier.updated_at
-        },
-        message: `Supplier "${supplier.name}" created successfully`
+        data: newSupplier,
+        message: `Supplier "${newSupplier.name}" created successfully`
       });
-      
+
     } catch (error) {
-      console.error('Database error creating supplier:', error);
-      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack');
-      console.error('Error details:', JSON.stringify(error, null, 2));
+      console.error('Supplier creation error:', error);
       return res.status(500).json({
         success: false,
-        error: { 
-          message: "Failed to create supplier",
-          details: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        }
+        error: { message: error instanceof Error ? error.message : 'Failed to create supplier' }
       });
     }
-  }));
+  });
 
   app.put("/api/suppliers/:id", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
     const user = req.user as any;
