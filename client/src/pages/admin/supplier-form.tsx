@@ -86,8 +86,10 @@ export default function SupplierForm() {
 
   // Create supplier mutation
   const createSupplier = useMutation({
-    mutationFn: (data: SupplierFormValues) =>
-      apiRequest("/api/suppliers", { method: "POST", data }),
+    mutationFn: async (data: SupplierFormValues) => {
+      const response = await apiRequest("POST", "/api/suppliers", data);
+      return response.json();
+    },
     onSuccess: (response) => {
       toast({
         title: "Success!",
@@ -107,8 +109,10 @@ export default function SupplierForm() {
 
   // Update supplier mutation
   const updateSupplier = useMutation({
-    mutationFn: (data: SupplierFormValues) =>
-      apiRequest(`/api/suppliers/${supplierId}`, { method: "PATCH", data }),
+    mutationFn: async (data: SupplierFormValues) => {
+      const response = await apiRequest("PATCH", `/api/suppliers/${supplierId}`, data);
+      return response.json();
+    },
     onSuccess: (response) => {
       toast({
         title: "Success!",
