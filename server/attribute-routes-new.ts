@@ -1,6 +1,6 @@
 import express, { type Request, Response } from "express";
 import { executeQuery } from "./database";
-import { isAuthenticated } from "./auth-middleware";
+import { isAuthenticated } from "./auth-middleware-new";
 import asyncHandler from "express-async-handler";
 
 const router = express.Router();

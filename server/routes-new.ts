@@ -1,7 +1,7 @@
 import express, { type Request, Response } from "express";
 import { executeQuery } from "./database";
 import { Supplier, Catalog, Category, User, Product, CreateSupplierInput, CreateCatalogInput } from "../shared/database-types";
-import { isAuthenticated, isAdmin } from "./auth-middleware";
+import { isAuthenticated, isAdmin } from "./auth-middleware-new";
 import asyncHandler from "express-async-handler";
 
 const router = express.Router();
@@ -316,6 +316,10 @@ router.get("/api/cart", asyncHandler(async (req: Request, res: Response) => {
   });
 }));
 
-export async function registerRoutes(app: express.Application): Promise<void> {
+export async function registerRoutes(app: express.Application): Promise<any> {
   app.use(router);
+  
+  // Return the HTTP server for proper server startup
+  const http = await import('http');
+  return http.createServer(app);
 }

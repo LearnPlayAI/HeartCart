@@ -3,11 +3,12 @@ import { registerRoutes } from "./routes-new";
 import simpleCatalogRoutes from "./simple-catalog-routes";
 import attributeRoutes from "./attribute-routes-new";
 import { setupVite, serveStatic, log } from "./vite";
-import { setSessionTimezone } from "./db";
+import { setSessionTimezone } from "./db-new";
 import { SAST_TIMEZONE } from "@shared/date-utils";
 import { errorHandlerMiddleware, notFoundMiddleware } from "./error-handler";
 import { logger } from "./logger";
 import crypto from "crypto";
+import "./session-types";
 
 const app = express();
 app.use(express.json());
