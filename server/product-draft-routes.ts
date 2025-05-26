@@ -923,12 +923,18 @@ export default function registerProductDraftRoutes(router: Router) {
             
             // Update the existing draft record to change status from published to draft
             const now = new Date().toISOString();
-            await db.update(productDrafts)
+            const updateResult = await db.update(productDrafts)
               .set({
                 draftStatus: 'draft',
                 lastModified: now
               })
               .where(eq(productDrafts.id, existingDraft.id));
+              
+            logger.debug('Draft status update result', {
+              draftId: existingDraft.id,
+              updateResult,
+              newStatus: 'draft'
+            });
             
             return sendSuccess(res, { 
               draftId: existingDraft.id,
@@ -998,9 +1004,11 @@ export default function registerProductDraftRoutes(router: Router) {
       } catch (error) {
         logger.error('Error creating draft from published product', { 
           error, 
-          productId 
+          productId,
+          errorMessage: error instanceof Error ? error.message : 'Unknown error',
+          errorStack: error instanceof Error ? error.stack : undefined 
         });
-        throw new BadRequestError("Failed to create draft from published product");
+        throw new BadRequestError(`Failed to create draft from published product: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     })
   );
