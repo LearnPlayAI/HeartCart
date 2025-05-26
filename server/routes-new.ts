@@ -183,7 +183,7 @@ router.delete("/api/catalogs/:id", isAuthenticated, asyncHandler(async (req: Req
 
 // Category routes
 router.get("/api/categories", asyncHandler(async (req: Request, res: Response) => {
-  const query = "SELECT * FROM categories ORDER BY sort_order ASC, name ASC";
+  const query = "SELECT * FROM categories ORDER BY name ASC";
   const result = await executeQuery(query);
   
   res.json({
@@ -316,10 +316,6 @@ router.get("/api/cart", asyncHandler(async (req: Request, res: Response) => {
   });
 }));
 
-export async function registerRoutes(app: express.Application): Promise<any> {
+export async function registerRoutes(app: express.Application): Promise<void> {
   app.use(router);
-  
-  // Return the HTTP server for proper server startup
-  const http = await import('http');
-  return http.createServer(app);
 }

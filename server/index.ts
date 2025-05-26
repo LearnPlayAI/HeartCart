@@ -96,7 +96,11 @@ app.use((req, res, next) => {
   app.use(simpleCatalogRoutes);
   app.use(attributeRoutes);
   
-  const server = await registerRoutes(app);
+  await registerRoutes(app);
+
+  // Create HTTP server for proper setup
+  const http = await import('http');
+  const server = http.createServer(app);
 
   // importantly only setup vite in development and after
   // setting up all the other API routes so the catch-all route
@@ -117,11 +121,7 @@ app.use((req, res, next) => {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = 5000;
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
+  server.listen(port, "0.0.0.0", () => {
     logger.info(`Server started successfully on port ${port}`);
     log(`serving on port ${port}`);
   });
