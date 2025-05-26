@@ -196,6 +196,30 @@ export default function CreateCatalog() {
                     <Label htmlFor="active">Active Catalog</Label>
                   </div>
                 </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="start_date">Start Date</Label>
+                    <Input
+                      id="start_date"
+                      type="date"
+                      value={formData.start_date}
+                      onChange={(e) => setFormData(prev => ({ ...prev, start_date: e.target.value }))}
+                      className="mt-1"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="end_date">End Date</Label>
+                    <Input
+                      id="end_date"
+                      type="date"
+                      value={formData.end_date}
+                      onChange={(e) => setFormData(prev => ({ ...prev, end_date: e.target.value }))}
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
               </div>
 
               {/* Form Actions */}

@@ -144,21 +144,29 @@ class CatalogService {
       
       const now = new Date().toISOString();
       
+      console.log('Creating catalog with data:', catalogData);
+      console.log('SQL Query:', query);
+      
+      const args = [
+        catalogData.name,
+        catalogData.description || null,
+        catalogData.supplier_id,
+        catalogData.default_markup_percentage || 0,
+        catalogData.is_active ?? true,
+        catalogData.cover_image || null,
+        catalogData.tags ? JSON.stringify(catalogData.tags) : null,
+        catalogData.start_date || null,
+        catalogData.end_date || null,
+        now,
+        now
+      ];
+      
+      console.log('SQL Args:', args);
+      console.log('Args length:', args.length);
+      
       const result = await db.execute({
         sql: query,
-        args: [
-          catalogData.name,
-          catalogData.description || null,
-          catalogData.supplier_id,
-          catalogData.default_markup_percentage || 0,
-          catalogData.is_active ?? true,
-          catalogData.cover_image || null,
-          catalogData.tags ? JSON.stringify(catalogData.tags) : null,
-          catalogData.start_date || null,
-          catalogData.end_date || null,
-          now,
-          now
-        ]
+        args: args
       });
       
       return result.rows[0] as CatalogData;
