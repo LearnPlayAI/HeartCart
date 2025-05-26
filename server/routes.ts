@@ -469,7 +469,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     validateRequest({
       params: idSchema
     }),
-    asyncHandler(async (req: Request, res: Response) => {
+    withStandardResponse(async (req: Request, res: Response) => {
       const categoryId = Number(req.params.id);
       
       // Check if category exists
@@ -489,11 +489,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
       }
       
-      res.json({
-        success: true,
-        message: `Category "${existingCategory.name}" deleted successfully`,
-        data: { id: categoryId, name: existingCategory.name }
-      });
+      return { id: categoryId, name: existingCategory.name };
     })
   );
   
