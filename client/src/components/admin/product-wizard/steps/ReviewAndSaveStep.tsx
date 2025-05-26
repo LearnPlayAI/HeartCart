@@ -8,10 +8,12 @@ import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Loader2, Check, AlertCircle, Clock, Eye, FileCheck, FilePen } from 'lucide-react';
+import { Loader2, Check, AlertCircle, Clock, Eye, FileCheck, FilePen, Star } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import type { ProductDraft } from '../ProductWizard';
 
 // Status types for product drafts
@@ -44,6 +46,10 @@ export const ReviewAndSaveStep: React.FC<ReviewAndSaveStepProps> = ({
   const [reviewNote, setReviewNote] = useState('');
   const [activeTab, setActiveTab] = useState('review');
   const [selectedStatus, setSelectedStatus] = useState<ProductDraftStatus>('draft');
+  
+  // Rating and review count state
+  const [rating, setRating] = useState<number>((draft as any).rating || 0);
+  const [reviewCount, setReviewCount] = useState<number>((draft as any).review_count || 0);
   
   // Status options for the workflow
   const statusOptions: StatusOption[] = [
@@ -624,6 +630,107 @@ export const ReviewAndSaveStep: React.FC<ReviewAndSaveStepProps> = ({
                         <div>
                           <h4 className="text-sm font-medium text-muted-foreground">Canonical URL</h4>
                           <p className="text-base">{draft.canonicalUrl}</p>
+                        </div>
+                      )}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+                
+                {/* Rating & Reviews Section */}
+                <AccordionItem value="rating-reviews">
+                  <AccordionTrigger className="text-lg font-medium">
+                    Product Rating & Reviews
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="space-y-6 p-4 bg-muted/30 rounded-md">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Star Rating */}
+                        <div className="space-y-3">
+                          <Label className="text-sm font-medium">Star Rating</Label>
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-1">
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <button
+                                  key={star}
+                                  type="button"
+                                  onClick={() => {
+                                    const newRating = star === rating ? 0 : star;
+                                    setRating(newRating);
+                                    onSave({ rating: newRating });
+                                  }}
+                                  className={`p-1 transition-colors rounded ${
+                                    star <= rating 
+                                      ? 'text-yellow-500 hover:text-yellow-600' 
+                                      : 'text-gray-300 hover:text-yellow-400'
+                                  }`}
+                                >
+                                  <Star 
+                                    className="h-6 w-6" 
+                                    fill={star <= rating ? 'currentColor' : 'none'}
+                                  />
+                                </button>
+                              ))}
+                              <span className="ml-2 text-sm text-muted-foreground">
+                                {rating > 0 ? `${rating} star${rating !== 1 ? 's' : ''}` : 'No rating'}
+                              </span>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              Set the initial star rating to make your product appear established
+                            </p>
+                          </div>
+                        </div>
+                        
+                        {/* Review Count */}
+                        <div className="space-y-3">
+                          <Label htmlFor="reviewCount" className="text-sm font-medium">Number of Reviews</Label>
+                          <div className="space-y-2">
+                            <Input
+                              id="reviewCount"
+                              type="number"
+                              min="0"
+                              max="9999"
+                              value={reviewCount}
+                              onChange={(e) => {
+                                const newCount = parseInt(e.target.value) || 0;
+                                setReviewCount(newCount);
+                                onSave({ review_count: newCount });
+                              }}
+                              placeholder="0"
+                              className="w-full"
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              Set the initial review count to build customer confidence
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Preview */}
+                      {(rating > 0 || reviewCount > 0) && (
+                        <div className="pt-4 border-t">
+                          <Label className="text-sm font-medium text-muted-foreground">Preview</Label>
+                          <div className="flex items-center gap-2 mt-2">
+                            <div className="flex items-center gap-1">
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <Star 
+                                  key={star}
+                                  className={`h-4 w-4 ${
+                                    star <= rating ? 'text-yellow-500 fill-current' : 'text-gray-300'
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                            <span className="text-sm">
+                              {rating > 0 && (
+                                <span className="font-medium">{rating.toFixed(1)}</span>
+                              )}
+                              {reviewCount > 0 && (
+                                <span className="text-muted-foreground ml-1">
+                                  ({reviewCount} review{reviewCount !== 1 ? 's' : ''})
+                                </span>
+                              )}
+                            </span>
+                          </div>
                         </div>
                       )}
                     </div>

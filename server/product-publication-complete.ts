@@ -206,9 +206,9 @@ export async function publishProductDraftComplete(draftId: number): Promise<Publ
         specialSaleEnd: safeString(draft.specialSaleEnd),
         flashDealEnd: safeString(draft.flashDealEnd),
         
-        // Analytics and Performance
-        rating: null, // Start fresh for new products
-        reviewCount: 0,
+        // Analytics and Performance - use draft values or defaults
+        rating: (draft as any).rating || null,
+        reviewCount: (draft as any).review_count || 0,
         soldCount: 0,
         
         // System Fields - use defaults for missing fields
