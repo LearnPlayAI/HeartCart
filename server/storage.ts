@@ -3732,6 +3732,13 @@ export class DatabaseStorage implements IStorage {
   async createSupplier(supplier: InsertSupplier): Promise<Supplier> {
     try {
       const now = new Date().toISOString();
+      
+      // Debug logging to see what data we're trying to insert
+      console.log('Creating supplier with data:', {
+        supplier,
+        timestamps: { createdAt: now, updatedAt: now }
+      });
+      
       const [newSupplier] = await db
         .insert(suppliers)
         .values({
@@ -3743,6 +3750,7 @@ export class DatabaseStorage implements IStorage {
       return newSupplier;
     } catch (error) {
       console.error(`Error creating supplier "${supplier.name}":`, error);
+      console.error('Full error details:', error);
       throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
   }
