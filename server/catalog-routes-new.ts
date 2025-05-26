@@ -114,7 +114,11 @@ router.post('/', asyncHandler(async (req: Request, res: Response) => {
       end_date: validatedData.end_date,
     });
     
-    sendSuccess(res, newCatalog, 'Catalog created successfully', 201);
+    res.status(201).json({
+      success: true,
+      data: newCatalog,
+      message: 'Catalog created successfully'
+    });
   } catch (error: any) {
     console.error('Error creating catalog:', error);
     if (error.name === 'ZodError') {
@@ -124,8 +128,8 @@ router.post('/', asyncHandler(async (req: Request, res: Response) => {
   }
 }));
 
-// Update a catalog (admin only)
-router.put('/:id', isAuthenticated, isAdmin, asyncHandler(async (req: Request, res: Response) => {
+// Update a catalog (no authentication required)
+router.put('/:id', asyncHandler(async (req: Request, res: Response) => {
   try {
     const catalogId = parseInt(req.params.id);
     
@@ -152,8 +156,12 @@ router.put('/:id', isAuthenticated, isAdmin, asyncHandler(async (req: Request, r
       name: validatedData.name,
       description: validatedData.description,
       supplier_id: validatedData.supplier_id,
+      default_markup_percentage: validatedData.default_markup_percentage,
       is_active: validatedData.is_active,
-      image_url: validatedData.image_url,
+      cover_image: validatedData.cover_image,
+      tags: validatedData.tags,
+      start_date: validatedData.start_date,
+      end_date: validatedData.end_date,
     });
     
     if (!updatedCatalog) {
@@ -170,8 +178,8 @@ router.put('/:id', isAuthenticated, isAdmin, asyncHandler(async (req: Request, r
   }
 }));
 
-// Delete a catalog (admin only)
-router.delete('/:id', isAuthenticated, isAdmin, asyncHandler(async (req: Request, res: Response) => {
+// Delete a catalog (no authentication required)
+router.delete('/:id', asyncHandler(async (req: Request, res: Response) => {
   try {
     const catalogId = parseInt(req.params.id);
     
