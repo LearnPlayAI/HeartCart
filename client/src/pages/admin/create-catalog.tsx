@@ -61,12 +61,22 @@ export default function CreateCatalog() {
     setIsSubmitting(true);
 
     try {
+      // Prepare the data with proper null handling for optional fields
+      const submitData = {
+        ...formData,
+        cover_image: formData.cover_image?.trim() || null,
+        description: formData.description?.trim() || null,
+        tags: formData.tags && formData.tags.length > 0 ? formData.tags : null,
+        start_date: formData.start_date?.trim() || null,
+        end_date: formData.end_date?.trim() || null
+      };
+
       const response = await fetch("/api/catalogs", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(submitData),
       });
 
       const result = await response.json();
