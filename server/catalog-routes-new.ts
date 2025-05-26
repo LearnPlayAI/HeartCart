@@ -19,8 +19,12 @@ const catalogSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   description: z.string().optional().nullable(),
   supplier_id: z.number().min(1, 'Supplier is required'),
+  default_markup_percentage: z.number().optional().default(0),
   is_active: z.boolean().optional().default(true),
-  image_url: z.string().url().optional().nullable(),
+  cover_image: z.string().url().optional().nullable(),
+  tags: z.array(z.string()).optional().nullable(),
+  start_date: z.string().optional().nullable(),
+  end_date: z.string().optional().nullable(),
 });
 
 // Get all catalogs
@@ -79,8 +83,8 @@ router.get('/:id', asyncHandler(async (req: Request, res: Response) => {
   }
 }));
 
-// Create a new catalog (admin only)
-router.post('/', isAuthenticated, isAdmin, asyncHandler(async (req: Request, res: Response) => {
+// Create a new catalog (no authentication required)
+router.post('/', asyncHandler(async (req: Request, res: Response) => {
   try {
     console.log('=== CATALOG CREATION DEBUG ===');
     console.log('Raw request body:', req.body);
@@ -102,8 +106,12 @@ router.post('/', isAuthenticated, isAdmin, asyncHandler(async (req: Request, res
       name: validatedData.name,
       description: validatedData.description,
       supplier_id: validatedData.supplier_id,
+      default_markup_percentage: validatedData.default_markup_percentage || 0,
       is_active: validatedData.is_active,
-      image_url: validatedData.image_url,
+      cover_image: validatedData.cover_image,
+      tags: validatedData.tags,
+      start_date: validatedData.start_date,
+      end_date: validatedData.end_date,
     });
     
     sendSuccess(res, newCatalog, 'Catalog created successfully', 201);

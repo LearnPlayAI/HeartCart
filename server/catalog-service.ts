@@ -12,10 +12,14 @@ export interface CatalogData {
   name: string;
   description?: string | null;
   supplier_id: number;
+  default_markup_percentage?: number;
   is_active?: boolean;
-  image_url?: string | null;
+  cover_image?: string | null;
+  tags?: string[] | null;
   created_at?: string | null;
   updated_at?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
 }
 
 export interface CatalogWithSupplier extends CatalogData {
@@ -34,10 +38,14 @@ class CatalogService {
           c.name,
           c.description,
           c.supplier_id,
+          c.default_markup_percentage,
           c.is_active,
-          c.image_url,
+          c.cover_image,
+          c.tags,
           c.created_at,
           c.updated_at,
+          c.start_date,
+          c.end_date,
           s.name as supplier_name
         FROM catalogs c
         LEFT JOIN suppliers s ON c.supplier_id = s.id
@@ -85,10 +93,14 @@ class CatalogService {
           c.name,
           c.description,
           c.supplier_id,
+          c.default_markup_percentage,
           c.is_active,
-          c.image_url,
+          c.cover_image,
+          c.tags,
           c.created_at,
           c.updated_at,
+          c.start_date,
+          c.end_date,
           s.name as supplier_name
         FROM catalogs c
         LEFT JOIN suppliers s ON c.supplier_id = s.id
