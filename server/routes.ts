@@ -96,8 +96,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // SUPPLIER CREATION - SIMPLIFIED DIRECT APPROACH
   app.post("/api/suppliers", async (req: Request, res: Response) => {
     try {
+      // Check if user is logged in and has admin role
       const user = req.user as any;
+      console.log('User from request:', user);
+      console.log('Session:', req.session);
+      
       if (!user || user.role !== 'admin') {
+        console.log('Authorization failed - user:', user);
         return res.status(403).json({ success: false, error: { message: "Unauthorized" } });
       }
 
