@@ -107,6 +107,7 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, isL
     defaultValues: {
       name: draft.name || '',
       slug: draft.slug || '',
+      sku: draft.sku || '',
       description: draft.description || '',
       categoryId: draft.categoryId || 0,
       supplierId: draft.supplierId || 0,
@@ -127,6 +128,7 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, isL
       form.reset({
         name: draft.name || '',
         slug: draft.slug || '',
+        sku: draft.sku || '',
         description: draft.description || '',
         categoryId: draft.categoryId || 0,
         supplierId: draft.supplierId || 0,
@@ -369,21 +371,34 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, isL
                 )}
               />
 
-              {/* Product Slug */}
+              {/* Product SKU */}
               <FormField
                 control={form.control}
-                name="slug"
+                name="sku"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Product Slug*</FormLabel>
+                    <FormLabel>SKU (Supplier Code)</FormLabel>
                     <FormControl>
                       <Input 
                         {...field} 
-                        placeholder="Enter product slug" 
+                        placeholder="Enter supplier SKU/product code" 
                         className="h-9 sm:h-10"
                       />
                     </FormControl>
                     <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Hidden Product Slug - auto-generated */}
+              <FormField
+                control={form.control}
+                name="slug"
+                render={({ field }) => (
+                  <FormItem className="hidden">
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
                   </FormItem>
                 )}
               />
