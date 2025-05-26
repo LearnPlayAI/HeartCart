@@ -6524,6 +6524,8 @@ export class DatabaseStorage implements IStorage {
               specialSaleEnd: updateData.specialSaleEnd,
               isFlashDeal: updateData.isFlashDeal,
               flashDealEnd: updateData.flashDealEnd,
+              rating: updateData.rating,
+              review_count: updateData.review_count,
             },
           });
 

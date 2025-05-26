@@ -201,6 +201,9 @@ export const SalesPromotionsStep: React.FC<SalesPromotionsStepProps> = ({
       } as Partial<ProductDraft>;
       
       // Add debugging logs to see what's being sent
+      console.log('Raw form values before formatting:', values);
+      console.log('Rating value:', values.rating);
+      console.log('Review count value:', values.review_count);
       console.log('Submitting sales promotions data:', formattedValues);
       console.log('Step ID: sales-promotions (5)');
       
