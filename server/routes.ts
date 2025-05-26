@@ -93,98 +93,41 @@ function handleApiError(error: any, res: Response) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // SUPPLIER CREATION - MOVED TO TOP TO BYPASS MIDDLEWARE ISSUES
+  // SUPPLIER CREATION - SIMPLIFIED DIRECT APPROACH
   app.post("/api/suppliers", async (req: Request, res: Response) => {
-    console.log('=== SUPPLIER POST ENDPOINT REACHED ===');
-    console.log('Method:', req.method);
-    console.log('Body:', req.body);
-
-    const user = req.user as any;
-    if (!user || user.role !== 'admin') {
-      return res.status(403).json({ success: false, error: { message: "Unauthorized" } });
-    }
-
-    const { name, contactName, email, phone, address, notes, website, isActive } = req.body;
-    
-    if (!name) {
-      return res.status(400).json({ success: false, error: { message: "Name is required" } });
-    }
-
     try {
-      const now = new Date().toISOString();
+      const user = req.user as any;
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ success: false, error: { message: "Unauthorized" } });
+      }
+
+      const { name, contactName, email, phone, address, notes, website, isActive } = req.body;
       
-      // Use storage layer instead of direct SQL
+      if (!name) {
+        return res.status(400).json({ success: false, error: { message: "Name is required" } });
+      }
+
+      // Use storage.createSupplier which is known to work
       const supplierData = {
         name,
-        contactName: contactName || null,
-        email: email || null,
-        phone: phone || null,
-        address: address || null,
-        notes: notes || null,
-        website: website || null,
-        isActive: isActive !== false,
-        createdAt: now,
-        updatedAt: now
+        contactName: contactName || '',
+        email: email || '',
+        phone: phone || '',
+        address: address || '',
+        notes: notes || '',
+        website: website || '',
+        isActive: isActive !== false
       };
 
-      console.log('Creating supplier with data:', supplierData);
-      
-      // Convert camelCase to snake_case for database
-      const dbData = {
-        name: supplierData.name,
-        contact_name: supplierData.contactName,
-        email: supplierData.email,
-        phone: supplierData.phone,
-        address: supplierData.address,
-        notes: supplierData.notes,
-        website: supplierData.website,
-        is_active: supplierData.isActive,
-        created_at: supplierData.createdAt,
-        updated_at: supplierData.updatedAt
-      };
-
-      const result = await db.execute(
-        sql`
-          INSERT INTO suppliers (
-            name, contact_name, email, phone, address, notes, website, is_active, created_at, updated_at
-          ) VALUES (
-            ${dbData.name}, 
-            ${dbData.contact_name}, 
-            ${dbData.email}, 
-            ${dbData.phone}, 
-            ${dbData.address}, 
-            ${dbData.notes}, 
-            ${dbData.website}, 
-            ${dbData.is_active}, 
-            ${dbData.created_at}, 
-            ${dbData.updated_at}
-          ) RETURNING *
-        `
-      );
-      
-      console.log('SQL execution result:', result);
-      const supplier = result[0] as any;
+      const supplier = await storage.createSupplier(supplierData);
       
       return res.status(201).json({
         success: true,
-        data: {
-          id: supplier.id,
-          name: supplier.name,
-          contactName: supplier.contact_name,
-          email: supplier.email,
-          phone: supplier.phone,
-          address: supplier.address,
-          notes: supplier.notes,
-          website: supplier.website,
-          isActive: supplier.is_active,
-          createdAt: supplier.created_at,
-          updatedAt: supplier.updated_at
-        }
+        data: supplier
       });
 
     } catch (error) {
-      console.error('Database error creating supplier:', error);
-      
+      console.error('Error creating supplier:', error);
       return res.status(500).json({
         success: false,
         error: { 
