@@ -20,8 +20,8 @@ import {
   insertProductSchema,
   insertProductImageSchema,
   insertPricingSchema,
-  insertSupplierSchema,
-  insertCatalogSchema
+  insertSupplierSchema
+  // insertCatalogSchema removed - catalog validation now handled by catalog-routes-new.ts
 } from "@shared/schema";
 import { objectStore, STORAGE_FOLDERS } from "./object-store";
 import { setupAuth } from "./auth";
@@ -4412,112 +4412,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }));
 
-  // OLD CATALOG POST ROUTE DISABLED - Now handled by catalog-routes-new.ts
-  /*
-  // app.post("/api/catalogs", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
-    const user = req.user as any;
-    
-    try {
-      if (user.role !== 'admin') {
-        throw new ForbiddenError("Only administrators can manage catalogs");
-      }
-      
-      const catalogData = insertCatalogSchema.parse(req.body);
-      
-      // Verify the supplier exists
-      const supplier = await storage.getSupplierById(catalogData.supplierId);
-      if (!supplier) {
-        throw new NotFoundError(`Supplier with ID ${catalogData.supplierId} not found`, "supplier");
-      }
-      
-      // Check if a catalog with the same name already exists for this supplier
-      const existingCatalog = await storage.getCatalogByNameAndSupplierId(
-        catalogData.name, 
-        catalogData.supplierId
-      );
-      
-      if (existingCatalog) {
-        throw new AppError(
-          `A catalog named "${catalogData.name}" already exists for this supplier`,
-          ErrorCode.DUPLICATE_ENTITY,
-          409
-        );
-      }
-      
-      const catalog = await storage.createCatalog(catalogData);
-      
-      return res.status(201).json({
-        success: true,
-        data: catalog,
-        message: `Catalog "${catalog.name}" created successfully`
-      });
-    } catch (error) {
-      // Log detailed error information with context
-      logger.error('Error creating catalog', { 
-        error,
-        userId: user.id,
-        catalogData: req.body
-      });
-      
-      // Check for specific error types
-      if (error instanceof ForbiddenError || error instanceof NotFoundError || error instanceof AppError || error instanceof z.ZodError) {
-        throw error;
-      }
-      
-      // Return generic error for unexpected issues
-      throw new AppError(
-        "Failed to create catalog. Please try again.",
-        ErrorCode.INTERNAL_SERVER_ERROR,
-        500,
-        { originalError: error }
-      );
-    }
-  }));
-  */
+  // OLD CATALOG ROUTES COMPLETELY REMOVED - All catalog functionality handled by catalog-routes-new.ts
 
   /*
-  // ALL REMAINING OLD CATALOG ROUTES DISABLED - HANDLED BY catalog-routes-new.ts
-  app.put("/api/catalogs/:id", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
-    const user = req.user as any;
-    const id = parseInt(req.params.id);
-    
-    try {
-      if (user.role !== 'admin') {
-        throw new ForbiddenError("Only administrators can manage catalogs");
-      }
-      
-      // Validate request body
-      const catalogData = insertCatalogSchema.partial().parse(req.body);
-      
-      // Check if catalog exists
-      const existingCatalog = await storage.getCatalogById(id);
-      if (!existingCatalog) {
-        throw new NotFoundError(`Catalog with ID ${id} not found`, "catalog");
-      }
-      
-      // If changing the supplier, check if it exists
-      if (catalogData.supplierId && catalogData.supplierId !== existingCatalog.supplierId) {
-        const supplier = await storage.getSupplierById(catalogData.supplierId);
-        if (!supplier) {
-          throw new NotFoundError(`Supplier with ID ${catalogData.supplierId} not found`, "supplier");
-        }
-      }
-      
-      // If changing the name, check for duplicates within the same supplier
-      if (catalogData.name && catalogData.name !== existingCatalog.name) {
-        const supplierId = catalogData.supplierId || existingCatalog.supplierId;
-        const duplicateCatalog = await storage.getCatalogByNameAndSupplierId(
-          catalogData.name, 
-          supplierId
-        );
-        
-        if (duplicateCatalog && duplicateCatalog.id !== id) {
-          throw new AppError(
-            `A catalog named "${catalogData.name}" already exists for this supplier`,
-            ErrorCode.DUPLICATE_ENTITY,
-            409
-          );
-        }
+  // ALL OLD CATALOG ROUTES COMPLETELY REMOVED - HANDLED BY catalog-routes-new.ts
+  // This section intentionally left blank to prevent any conflicts
       }
       
       // Update the catalog
