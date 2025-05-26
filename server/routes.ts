@@ -93,10 +93,9 @@ function handleApiError(error: any, res: Response) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // SUPPLIER CREATION - WITH PROPER AUTHENTICATION MIDDLEWARE
-  app.post("/api/suppliers", isAdmin, asyncHandler(async (req: Request, res: Response) => {
-
-      const { name, contactName, email, phone, address, notes, website, isActive } = req.body;
+  // SUPPLIER CREATION - SIMPLIFIED WITHOUT REDUNDANT AUTH CHECK
+  app.post("/api/suppliers", asyncHandler(async (req: Request, res: Response) => {
+    const { name, contactName, email, phone, address, notes, website, isActive } = req.body;
       
       if (!name) {
         return res.status(400).json({ success: false, error: { message: "Name is required" } });
