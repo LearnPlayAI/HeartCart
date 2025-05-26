@@ -1,5 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
+import simpleCatalogRoutes from "./simple-catalog-routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { setSessionTimezone } from "./db";
 import { SAST_TIMEZONE } from "@shared/date-utils";
@@ -89,6 +90,9 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Register simple catalog routes first
+  app.use(simpleCatalogRoutes);
+  
   const server = await registerRoutes(app);
 
   // importantly only setup vite in development and after
