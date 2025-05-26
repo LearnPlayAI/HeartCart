@@ -3783,7 +3783,10 @@ export class DatabaseStorage implements IStorage {
         `
       );
       
-      const newSupplier = result[0] as any;
+      console.log('Raw database result:', result);
+      console.log('Result rows:', result.rows);
+      
+      const newSupplier = result.rows?.[0] || result[0] as any;
       console.log('Supplier created successfully:', newSupplier);
       
       // Return with camelCase field names
