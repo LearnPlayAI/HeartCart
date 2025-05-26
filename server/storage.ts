@@ -3748,29 +3748,37 @@ export class DatabaseStorage implements IStorage {
       
       console.log('Creating supplier with data:', supplierData);
       
-      // Use Drizzle ORM insert which works better with Neon
-      const [newSupplier] = await db
-        .insert(suppliers)
-        .values({
-          name: supplierData.name,
-          contactName: supplierData.contactName || null,
-          email: supplierData.email || null,
-          phone: supplierData.phone || null,
-          address: supplierData.address || null,
-          city: supplierData.city || null,
-          country: supplierData.country || 'South Africa',
-          notes: supplierData.notes || null,
-          logo: supplierData.logo || null,
-          website: supplierData.website || null,
-          isActive: supplierData.isActive !== false,
-          createdAt: now,
-          updatedAt: now
-        })
-        .returning();
+      // Simple SQL that matches exact database structure
+      const result = await db.execute(
+        sql`INSERT INTO suppliers (name, contact_name, email, phone, address, city, country, notes, logo, website, is_active, created_at, updated_at) 
+            VALUES (${supplierData.name}, ${supplierData.contactName || null}, ${supplierData.email || null}, ${supplierData.phone || null}, 
+                   ${supplierData.address || null}, ${supplierData.city || null}, ${supplierData.country || 'South Africa'}, 
+                   ${supplierData.notes || null}, ${supplierData.logo || null}, ${supplierData.website || null}, 
+                   ${supplierData.isActive !== false}, ${now}, ${now}) 
+            RETURNING id, name, contact_name, email, phone, address, city, country, notes, logo, website, is_active, created_at, updated_at`
+      );
       
-      console.log('Supplier created successfully:', newSupplier);
+      console.log('Database result:', result);
       
-      return newSupplier;
+      const newSupplier = result.rows[0];
+      console.log('New supplier:', newSupplier);
+      
+      return {
+        id: newSupplier.id,
+        name: newSupplier.name,
+        contactName: newSupplier.contact_name,
+        email: newSupplier.email,
+        phone: newSupplier.phone,
+        address: newSupplier.address,
+        city: newSupplier.city,
+        country: newSupplier.country,
+        notes: newSupplier.notes,
+        logo: newSupplier.logo,
+        website: newSupplier.website,
+        isActive: newSupplier.is_active,
+        createdAt: newSupplier.created_at,
+        updatedAt: newSupplier.updated_at
+      };
     } catch (error) {
       console.error('Database error creating supplier:', error);
       throw new Error(error instanceof Error ? error.message : 'Failed to create supplier');
