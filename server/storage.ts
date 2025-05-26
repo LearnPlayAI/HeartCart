@@ -6574,6 +6574,17 @@ export class DatabaseStorage implements IStorage {
           };
       }
 
+      // Log the final updateData before database update
+      logger.debug(`Final updateData being sent to database:`, {
+        draftId: id,
+        step,
+        updateDataKeys: Object.keys(updateData),
+        rating: updateData.rating,
+        review_count: updateData.review_count,
+        hasRating: 'rating' in updateData,
+        hasReviewCount: 'review_count' in updateData
+      });
+
       // Update the draft
       return await this.updateProductDraft(id, updateData);
     } catch (error) {
