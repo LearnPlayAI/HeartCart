@@ -4081,18 +4081,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createCatalog(catalog: InsertCatalog): Promise<Catalog> {
-    const now = new Date();
-
     // Convert startDate and endDate strings to Date objects if provided
     const catalogValues = {
-      ...catalog,
+      name: catalog.name,
+      description: catalog.description,
+      supplierId: catalog.supplierId,
+      isActive: catalog.isActive,
       startDate: catalog.startDate ? new Date(catalog.startDate) : null,
       endDate: catalog.endDate ? new Date(catalog.endDate) : null,
+      defaultMarkupPercentage: catalog.defaultMarkupPercentage || 0,
+      freeShipping: catalog.freeShipping || false,
     };
-
-    // Remove createdAt and updatedAt from the payload since these are handled by Drizzle
-    delete catalogValues["createdAt"];
-    delete catalogValues["updatedAt"];
 
     const [newCatalog] = await db
       .insert(catalogs)
