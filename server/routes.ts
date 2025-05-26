@@ -96,9 +96,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // SUPPLIER CREATION - SIMPLIFIED WITHOUT REDUNDANT AUTH CHECK
   app.post("/api/suppliers", asyncHandler(async (req: Request, res: Response) => {
     try {
+      console.log('=== SUPPLIER CREATION DEBUG ===');
+      console.log('Request body:', req.body);
+      
       const { name, contactName, email, phone, address, notes, website, isActive } = req.body;
       
       if (!name) {
+        console.log('Validation failed: Name is required');
         return res.status(400).json({ success: false, error: { message: "Name is required" } });
       }
 
@@ -114,13 +118,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isActive: isActive !== false
       };
 
+      console.log('Prepared supplier data:', supplierData);
+      
       const supplier = await storage.createSupplier(supplierData);
+      
+      console.log('Supplier created successfully:', supplier);
       
       return res.status(201).json({
         success: true,
         data: supplier
       });
     } catch (error) {
+      console.error('=== SUPPLIER CREATION ERROR ===');
+      console.error('Full error object:', error);
+      console.error('Error message:', error instanceof Error ? error.message : 'Unknown error');
+      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+      
       logger.error('Error creating supplier', { error });
       return res.status(500).json({
         success: false,
