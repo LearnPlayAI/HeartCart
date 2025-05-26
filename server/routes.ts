@@ -4305,7 +4305,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
     }
   }));
+  */
 
+  // All old catalog routes disabled - handled by catalog-routes-new.ts
+  /*
   app.get("/api/catalogs/:id", asyncHandler(async (req: Request, res: Response) => {
     const id = parseInt(req.params.id);
     

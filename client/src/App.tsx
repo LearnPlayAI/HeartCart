@@ -133,6 +133,7 @@ function App() {
               <AdminProtectedRoute path="/admin/suppliers/:id/edit" component={SupplierForm} />
               <AdminProtectedRoute path="/admin/catalogs" component={AdminCatalogs} />
               <AdminProtectedRoute path="/admin/catalogs/new" component={React.lazy(() => import("@/pages/admin/create-catalog"))} />
+              <AdminProtectedRoute path="/admin/create-catalog" component={React.lazy(() => import("@/pages/admin/create-catalog"))} />
               <AdminProtectedRoute path="/admin/catalogs/:id/edit" component={EditCatalog} />
               <AdminProtectedRoute path="/admin/catalogs/:id/products" component={CatalogProducts} />
               <AdminProtectedRoute path="/admin/products" component={AdminProducts} />
