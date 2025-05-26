@@ -301,11 +301,11 @@ export default function AdminCatalogs() {
                   </SelectContent>
                 </Select>
               </div>
-              {selectedSupplierId && (
+              {selectedSupplierId && selectedSupplierId !== 'all' && (
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setSelectedSupplierId("")}
+                  onClick={() => setSelectedSupplierId("all")}
                   className="h-8 px-2"
                   title="Clear supplier filter"
                 >
@@ -316,7 +316,7 @@ export default function AdminCatalogs() {
           </div>
           <CardDescription>
             A list of all product catalogs from your suppliers
-            {selectedSupplierId && suppliers && (
+            {selectedSupplierId && selectedSupplierId !== 'all' && suppliers && (
               <span className="ml-1">
                 • Filtered by {suppliers.find((s: any) => s.id.toString() === selectedSupplierId)?.name}
               </span>

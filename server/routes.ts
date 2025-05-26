@@ -4256,14 +4256,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const isAdmin = user && user.role === 'admin';
       const activeOnly = isAdmin ? false : req.query.activeOnly !== 'false';
       
-      const catalogs = await storage.getAllCatalogs(activeOnly);
+      // Check if filtering by supplier
+      const supplierId = req.query.supplierId ? parseInt(req.query.supplierId as string) : null;
+      
+      let catalogs;
+      if (supplierId) {
+        // Verify the supplier exists
+        const supplier = await storage.getSupplierById(supplierId);
+        if (!supplier) {
+          throw new NotFoundError(`Supplier with ID ${supplierId} not found`, "supplier");
+        }
+        catalogs = await storage.getCatalogsBySupplierId(supplierId, activeOnly);
+      } else {
+        catalogs = await storage.getAllCatalogs(activeOnly);
+      }
       
       return res.json({
         success: true,
         data: catalogs,
         meta: {
           count: catalogs.length,
-          activeOnly
+          activeOnly,
+          supplierId: supplierId || null
         }
       });
     } catch (error) {
@@ -4272,6 +4286,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error,
         query: req.query
       });
+      
+      // Check for specific error types
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
       
       // Return generic error
       throw new AppError(
