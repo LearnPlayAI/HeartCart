@@ -159,6 +159,8 @@ export const SalesPromotionsStep: React.FC<SalesPromotionsStepProps> = ({
 
   // Handle form submission
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    console.log('🎯 FORM SUBMISSION TRIGGERED - SalesPromotionsStep');
+    console.log('🎯 Form values received:', values);
     setSaving(true);
     try {
       // Format dates as strings in SAST timezone for South Africa (UTC+2)
