@@ -3748,17 +3748,26 @@ export class DatabaseStorage implements IStorage {
       
       console.log('Creating supplier with data:', supplierData);
       
-      // Simple SQL that matches exact database structure
-      const result = await db.execute(
+      // First insert the supplier
+      await db.execute(
         sql`INSERT INTO suppliers (name, contact_name, email, phone, address, city, country, notes, logo, website, is_active, created_at, updated_at) 
             VALUES (${supplierData.name}, ${supplierData.contactName || null}, ${supplierData.email || null}, ${supplierData.phone || null}, 
                    ${supplierData.address || null}, ${supplierData.city || null}, ${supplierData.country || 'South Africa'}, 
                    ${supplierData.notes || null}, ${supplierData.logo || null}, ${supplierData.website || null}, 
-                   ${supplierData.isActive !== false}, ${now}, ${now}) 
-            RETURNING id, name, contact_name, email, phone, address, city, country, notes, logo, website, is_active, created_at, updated_at`
+                   ${supplierData.isActive !== false}, ${now}, ${now})`
+      );
+      
+      // Then get the created supplier
+      const result = await db.execute(
+        sql`SELECT id, name, contact_name, email, phone, address, city, country, notes, logo, website, is_active, created_at, updated_at 
+            FROM suppliers WHERE name = ${supplierData.name} AND created_at = ${now} ORDER BY id DESC LIMIT 1`
       );
       
       console.log('Database result:', result);
+      
+      if (!result.rows || result.rows.length === 0) {
+        throw new Error('Supplier was created but could not be retrieved');
+      }
       
       const newSupplier = result.rows[0];
       console.log('New supplier:', newSupplier);
