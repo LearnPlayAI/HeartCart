@@ -882,9 +882,17 @@ export default function registerProductDraftRoutes(router: Router) {
       
       try {
         // First check if ANY draft exists for this product (draft OR published status)
+        logger.debug('Checking for existing drafts', { productId });
+        
         const existingDrafts = await db.select()
           .from(productDrafts)
           .where(eq(productDrafts.originalProductId, productId));
+        
+        logger.debug('Found existing drafts', { 
+          productId, 
+          draftCount: existingDrafts.length,
+          drafts: existingDrafts.map(d => ({ id: d.id, status: d.draftStatus }))
+        });
         
         if (existingDrafts.length > 0) {
           const existingDraft = existingDrafts[0];
