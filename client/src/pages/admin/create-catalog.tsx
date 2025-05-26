@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Plus, Loader2 } from "lucide-react";
 import { Link } from "wouter";
-import AdminPageLayout from "@/components/admin/admin-layout";
+import AdminLayout from "@/components/admin/layout";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 export default function CreateCatalog() {
@@ -273,6 +273,6 @@ export default function CreateCatalog() {
           </div>
         </div>
       </div>
-    </AdminPageLayout>
+    </AdminLayout>
   );
 }
