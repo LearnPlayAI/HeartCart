@@ -4257,7 +4257,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const activeOnly = isAdmin ? false : req.query.activeOnly !== 'false';
       
       // Check if filtering by supplier
-      const supplierId = req.query.supplierId ? parseInt(req.query.supplierId as string) : null;
+      const supplierIdParam = req.query.supplierId as string;
+      const supplierId = supplierIdParam && supplierIdParam !== 'all' ? parseInt(supplierIdParam) : null;
       
       let catalogs;
       if (supplierId) {

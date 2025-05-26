@@ -3863,15 +3863,15 @@ export class DatabaseStorage implements IStorage {
         try {
           const catalogsWithDetailsPromises = catalogData.map(async (catalog) => {
             try {
-              // Get supplier name if supplierId exists
+              // Get supplier name if supplierId exists - use raw SQL for reliability
               let supplierName = null;
               if (catalog.supplierId) {
-                const supplier = await db
-                  .select({ name: suppliers.name })
-                  .from(suppliers)
-                  .where(eq(suppliers.id, catalog.supplierId))
-                  .limit(1);
-                supplierName = supplier.length > 0 ? supplier[0].name : null;
+                const result = await db.execute(sql.raw(
+                  `SELECT name FROM suppliers WHERE id = ${catalog.supplierId} LIMIT 1`
+                ));
+                if (result.rows && result.rows.length > 0) {
+                  supplierName = (result.rows[0] as any).name;
+                }
               }
 
               // Count products in this catalog
