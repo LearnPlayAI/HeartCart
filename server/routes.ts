@@ -94,6 +94,9 @@ function handleApiError(error: any, res: Response) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Register new raw SQL catalog routes FIRST to ensure absolute precedence
+  registerCatalogRoutes(app);
+  
   // SUPPLIER CREATION - SIMPLIFIED WITHOUT REDUNDANT AUTH CHECK
   app.post("/api/suppliers", asyncHandler(async (req: Request, res: Response) => {
     try {
@@ -5479,8 +5482,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerProductAttributeRoutes(app);
   registerProductDraftRoutes(app);
   
-  // Register new raw SQL catalog routes
-  registerCatalogRoutes(app);
+  // Catalog routes already registered at the beginning of this function
   
   // Register AI API routes for product generation features
   app.use('/api/ai', aiRouter);
