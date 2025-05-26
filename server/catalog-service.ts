@@ -5,7 +5,7 @@
  * to avoid camelCase/snake_case conflicts with Drizzle ORM.
  */
 
-import { db } from './db';
+import { pool } from './db';
 
 export interface CatalogData {
   id?: number;
@@ -70,12 +70,13 @@ class CatalogService {
       
       query += ' ORDER BY c.name ASC';
       
-      const result = await db.execute({
-        sql: query,
-        args: params
-      });
-      
-      return result.rows as CatalogWithSupplier[];
+      const client = await pool.connect();
+      try {
+        const result = await client.query(query, params);
+        return result.rows as CatalogWithSupplier[];
+      } finally {
+        client.release();
+      }
     } catch (error) {
       console.error('Error fetching catalogs:', error);
       throw new Error('Failed to fetch catalogs');
@@ -107,12 +108,13 @@ class CatalogService {
         WHERE c.id = $1
       `;
       
-      const result = await db.execute({
-        sql: query,
-        args: [id]
-      });
-      
-      return result.rows[0] as CatalogWithSupplier || null;
+      const client = await pool.connect();
+      try {
+        const result = await client.query(query, [id]);
+        return result.rows[0] as CatalogWithSupplier || null;
+      } finally {
+        client.release();
+      }
     } catch (error) {
       console.error('Error fetching catalog by ID:', error);
       throw new Error('Failed to fetch catalog');
@@ -164,12 +166,13 @@ class CatalogService {
       console.log('SQL Args:', args);
       console.log('Args length:', args.length);
       
-      const result = await db.execute({
-        sql: query,
-        args: args
-      });
-      
-      return result.rows[0] as CatalogData;
+      const client = await pool.connect();
+      try {
+        const result = await client.query(query, args);
+        return result.rows[0] as CatalogData;
+      } finally {
+        client.release();
+      }
     } catch (error) {
       console.error('Error creating catalog:', error);
       throw new Error('Failed to create catalog');
@@ -226,12 +229,13 @@ class CatalogService {
         RETURNING id, name, description, supplier_id, is_active, image_url, created_at, updated_at
       `;
       
-      const result = await db.execute({
-        sql: query,
-        args: params
-      });
-      
-      return result.rows[0] as CatalogData || null;
+      const client = await pool.connect();
+      try {
+        const result = await client.query(query, params);
+        return result.rows[0] as CatalogData || null;
+      } finally {
+        client.release();
+      }
     } catch (error) {
       console.error('Error updating catalog:', error);
       throw new Error('Failed to update catalog');
