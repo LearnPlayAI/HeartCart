@@ -93,6 +93,122 @@ function handleApiError(error: any, res: Response) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // SUPPLIER CREATION - MOVED TO TOP TO BYPASS MIDDLEWARE ISSUES
+  app.post("/api/suppliers", async (req: Request, res: Response) => {
+    console.log('=== SUPPLIER POST ENDPOINT REACHED ===');
+    console.log('Method:', req.method);
+    console.log('URL:', req.url);
+    console.log('Body:', req.body);
+    console.log('User:', req.user);
+
+    const user = req.user as any;
+    if (!user || user.role !== 'admin') {
+      console.log('=== AUTHORIZATION FAILED ===');
+      return res.status(403).json({ success: false, error: { message: "Unauthorized" } });
+    }
+
+    console.log('=== AUTHORIZATION PASSED ===');
+
+    const { name, contactName, email, phone, address, city, country, notes, logo, website, isActive } = req.body;
+    
+    console.log('=== SUPPLIER CREATION DEBUG ===');
+    console.log('Extracted fields:', { name, contactName, email, phone, address, city, country, notes, logo, website, isActive });
+
+    if (!name) {
+      console.log('=== NAME VALIDATION FAILED ===');
+      return res.status(400).json({ success: false, error: { message: "Name is required" } });
+    }
+
+    console.log('=== VALIDATION PASSED ===');
+
+    try {
+      const now = new Date().toISOString();
+      console.log('=== STARTING DATABASE INSERTION ===');
+      
+      // Test database connection first
+      console.log('Testing database connection...');
+      const testResult = await db.execute(sql`SELECT 1 as test`);
+      console.log('Database connection test result:', testResult);
+      
+      // Direct database insert with raw SQL
+      console.log('Executing INSERT query...');
+      const result = await db.execute(
+        sql`
+          INSERT INTO suppliers (
+            name, 
+            contact_name, 
+            email, 
+            phone, 
+            address, 
+            city, 
+            country, 
+            notes, 
+            logo, 
+            website, 
+            is_active, 
+            created_at, 
+            updated_at
+          ) VALUES (
+            ${name}, 
+            ${contactName || null}, 
+            ${email || null}, 
+            ${phone || null}, 
+            ${address || null}, 
+            ${city || null}, 
+            ${country || 'South Africa'}, 
+            ${notes || null}, 
+            ${logo || null}, 
+            ${website || null}, 
+            ${isActive !== false}, 
+            ${now}, 
+            ${now}
+          ) RETURNING *
+        `
+      );
+      
+      console.log('=== SQL EXECUTION SUCCESS ===');
+      const supplier = result[0] as any;
+      console.log('Created supplier:', supplier);
+      
+      const responseData = {
+        id: supplier.id,
+        name: supplier.name,
+        contactName: supplier.contact_name,
+        email: supplier.email,
+        phone: supplier.phone,
+        address: supplier.address,
+        city: supplier.city,
+        country: supplier.country,
+        notes: supplier.notes,
+        logo: supplier.logo,
+        website: supplier.website,
+        isActive: supplier.is_active,
+        createdAt: supplier.created_at,
+        updatedAt: supplier.updated_at
+      };
+      
+      console.log('=== RESPONSE SUCCESS ===');
+      
+      return res.status(201).json({
+        success: true,
+        data: responseData,
+        message: `Supplier "${supplier.name}" created successfully`
+      });
+
+    } catch (error) {
+      console.error('=== DATABASE ERROR ===');
+      console.error('Error:', error);
+      
+      return res.status(500).json({
+        success: false,
+        error: { 
+          message: "Database insertion failed",
+          details: error instanceof Error ? error.message : String(error)
+        }
+      });
+    }
+  });
+
   // Use memory storage for file uploads to avoid local filesystem
   // Files will go directly to Replit Object Storage
   const upload = multer({ 
@@ -4003,11 +4119,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }));
 
+  // Simple test endpoint
+  app.get("/api/suppliers/test", (req: Request, res: Response) => {
+    console.log('=== TEST ENDPOINT REACHED ===');
+    return res.json({ success: true, message: "Test endpoint working" });
+  });
+
   app.post("/api/suppliers", async (req: Request, res: Response) => {
+    console.log('=== SUPPLIER POST ENDPOINT REACHED ===');
+    console.log('Method:', req.method);
+    console.log('URL:', req.url);
+    console.log('Headers:', req.headers);
+    console.log('Body:', req.body);
+    console.log('User:', req.user);
+
     const user = req.user as any;
     if (!user || user.role !== 'admin') {
+      console.log('=== AUTHORIZATION FAILED ===');
+      console.log('User:', user);
+      console.log('User role:', user?.role);
       return res.status(403).json({ success: false, error: { message: "Unauthorized" } });
     }
+
+    console.log('=== AUTHORIZATION PASSED ===');
 
     const { name, contactName, email, phone, address, city, country, notes, logo, website, isActive } = req.body;
     
@@ -4016,14 +4150,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log('Extracted fields:', { name, contactName, email, phone, address, city, country, notes, logo, website, isActive });
 
     if (!name) {
+      console.log('=== NAME VALIDATION FAILED ===');
       return res.status(400).json({ success: false, error: { message: "Name is required" } });
     }
 
+    console.log('=== VALIDATION PASSED ===');
+
     try {
       const now = new Date().toISOString();
+      console.log('=== STARTING DATABASE INSERTION ===');
       console.log('Timestamp:', now);
       
+      // Test database connection first
+      console.log('Testing database connection...');
+      const testResult = await db.execute(sql`SELECT 1 as test`);
+      console.log('Database connection test result:', testResult);
+      
       // Direct database insert with raw SQL
+      console.log('Executing INSERT query...');
       const result = await db.execute(
         sql`
           INSERT INTO suppliers (
@@ -4058,9 +4202,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         `
       );
       
-      console.log('SQL execution result:', result);
+      console.log('=== SQL EXECUTION SUCCESS ===');
+      console.log('Raw result:', result);
+      console.log('Result type:', typeof result);
+      console.log('Result length:', result?.length);
+      console.log('First item:', result?.[0]);
+      
       const supplier = result[0] as any;
-      console.log('Created supplier:', supplier);
+      console.log('=== SUPPLIER CREATED ===');
+      console.log('Created supplier raw:', supplier);
       
       const responseData = {
         id: supplier.id,
@@ -4079,6 +4229,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updatedAt: supplier.updated_at
       };
       
+      console.log('=== RESPONSE DATA ===');
       console.log('Response data:', responseData);
       
       return res.status(201).json({
@@ -4090,15 +4241,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('=== DATABASE ERROR ===');
       console.error('Error type:', typeof error);
+      console.error('Error constructor:', error?.constructor?.name);
       console.error('Error message:', error instanceof Error ? error.message : 'Unknown');
       console.error('Error stack:', error instanceof Error ? error.stack : 'No stack');
-      console.error('Full error:', error);
+      console.error('Full error object:', error);
+      console.error('Error JSON:', JSON.stringify(error, null, 2));
       
       return res.status(500).json({
         success: false,
         error: { 
           message: "Database insertion failed",
-          details: error instanceof Error ? error.message : String(error)
+          details: error instanceof Error ? error.message : String(error),
+          errorType: typeof error,
+          errorConstructor: error?.constructor?.name
         }
       });
     }
