@@ -31,7 +31,6 @@ class SimpleCatalogService {
    * Get all catalogs with supplier information
    */
   async getAllCatalogs(): Promise<SimpleCatalogWithSupplier[]> {
-    const client = await pool.connect();
     try {
       const query = `
         SELECT 
@@ -53,10 +52,11 @@ class SimpleCatalogService {
         ORDER BY c.name ASC
       `;
       
-      const result = await client.query(query);
+      const result = await pool.query(query);
       return result.rows as SimpleCatalogWithSupplier[];
-    } finally {
-      client.release();
+    } catch (error) {
+      console.error('Database error in getAllCatalogs:', error);
+      throw error;
     }
   }
 
@@ -64,7 +64,6 @@ class SimpleCatalogService {
    * Create a new catalog
    */
   async createCatalog(catalogData: Omit<SimpleCatalogData, 'id' | 'created_at' | 'updated_at'>): Promise<SimpleCatalogData> {
-    const client = await pool.connect();
     try {
       const now = new Date().toISOString();
       
@@ -100,10 +99,11 @@ class SimpleCatalogService {
         now
       ];
       
-      const result = await client.query(query, args);
+      const result = await pool.query(query, args);
       return result.rows[0] as SimpleCatalogData;
-    } finally {
-      client.release();
+    } catch (error) {
+      console.error('Database error in createCatalog:', error);
+      throw error;
     }
   }
 

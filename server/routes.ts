@@ -95,7 +95,7 @@ function handleApiError(error: any, res: Response) {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Register new raw SQL catalog routes FIRST to ensure absolute precedence
-  registerCatalogRoutes(app);
+  // registerCatalogRoutes(app); // DISABLED - Using simplified catalog routes from server/index.ts
   
   // SUPPLIER CREATION - SIMPLIFIED WITHOUT REDUNDANT AUTH CHECK
   app.post("/api/suppliers", asyncHandler(async (req: Request, res: Response) => {
