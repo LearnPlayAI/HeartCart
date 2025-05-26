@@ -158,6 +158,10 @@ export const updateProductDraftWizardStepSchema = z.object({
     isFlashDeal: z.boolean().optional(),
     flashDealEnd: z.string().nullable().optional(),
     
+    // Rating and review fields for marketplace appearance
+    rating: z.number().min(0).max(5).nullable().optional(),
+    review_count: z.number().min(0).nullable().optional(),
+    
     // System fields
     completedSteps: z.array(z.string()).optional(),
     wizardProgress: z.record(z.string(), z.boolean()).optional(),
