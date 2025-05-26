@@ -2,10 +2,9 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Plus, Loader2 } from "lucide-react";
@@ -17,40 +16,41 @@ export default function CreateCatalog() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    supplierId: "",
-    isActive: true,
-    defaultMarkupPercentage: 0,
-    freeShipping: false,
-    startDate: "",
-    endDate: "",
+    supplier_id: 0,
+    default_markup_percentage: 0,
+    is_active: true,
+    cover_image: "",
+    tags: [],
+    start_date: "",
+    end_date: ""
   });
 
-  // Fetch suppliers for dropdown
-  const { data: suppliersResponse, isLoading: suppliersLoading } = useQuery({
+  // Fetch suppliers
+  const { data: suppliers = [], isLoading: suppliersLoading } = useQuery({
     queryKey: ["/api/suppliers"],
-    queryFn: async () => {
-      const response = await fetch("/api/suppliers?activeOnly=false");
-      if (!response.ok) throw new Error("Failed to fetch suppliers");
-      const result = await response.json();
-      return result;
-    },
   });
-
-  // Extract suppliers array from the response data
-  const suppliers = Array.isArray(suppliersResponse?.data) ? suppliersResponse.data : [];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name.trim() || !formData.description.trim() || !formData.supplierId) {
+    if (!formData.name.trim()) {
       toast({
-        title: "Validation Error",
-        description: "Please fill in all required fields (Name, Description, and Supplier)",
+        title: "Error",
+        description: "Catalog name is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.supplier_id) {
+      toast({
+        title: "Error", 
+        description: "Please select a supplier",
         variant: "destructive",
       });
       return;
@@ -59,34 +59,25 @@ export default function CreateCatalog() {
     setIsSubmitting(true);
 
     try {
-      const payload = {
-        name: formData.name.trim(),
-        description: formData.description.trim(),
-        supplier_id: parseInt(formData.supplierId, 10),
-        is_active: formData.isActive,
-      };
-
       const response = await fetch("/api/catalogs", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        credentials: "include",
-        body: JSON.stringify(payload),
+        body: JSON.stringify(formData),
       });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error?.message || "Failed to create catalog");
-      }
 
       const result = await response.json();
-      
+
+      if (!response.ok) {
+        throw new Error(result.error?.message || "Failed to create catalog");
+      }
+
       toast({
-        title: "Success!",
-        description: `Catalog "${result.data.name}" has been created successfully.`,
+        title: "Success",
+        description: "Catalog created successfully",
       });
-      
+
       queryClient.invalidateQueries({ queryKey: ["/api/catalogs"] });
       setLocation("/admin/catalogs");
     } catch (error: any) {
@@ -101,71 +92,58 @@ export default function CreateCatalog() {
   };
 
   return (
-    <AdminPageLayout>
-      <div className="flex-1 bg-gray-50 p-8">
-        {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
-          <Link href="/admin/catalogs">
-            <Button variant="outline" size="sm" className="flex items-center gap-2">
-              <ArrowLeft className="w-4 h-4" />
-              Back
-            </Button>
+    <AdminLayout>
+      <div className="space-y-6">
+        <div className="flex items-center space-x-4">
+          <Link href="/admin/catalogs" className="text-gray-500 hover:text-gray-700">
+            <ArrowLeft className="h-5 w-5" />
           </Link>
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Create New Catalog</h1>
-            <p className="text-gray-600 mt-1">Add a new catalog to organize your products</p>
-          </div>
+          <h1 className="text-2xl font-bold text-gray-900">Create New Catalog</h1>
         </div>
 
-        {/* Form Card */}
-        <div className="bg-white rounded-lg shadow-sm border">
-          <div className="p-8">
-            <div className="mb-8">
-              <h2 className="text-xl font-semibold text-gray-900 mb-2">Catalog Details</h2>
-              <p className="text-gray-600">Fill in the information below to create your new catalog</p>
-            </div>
-            <form onSubmit={handleSubmit} className="space-y-8">
+        <div className="bg-white shadow rounded-lg">
+          <div className="px-4 py-5 sm:p-6">
+            <form onSubmit={handleSubmit} className="space-y-6">
               {/* Basic Information */}
               <div className="space-y-4">
-                <div>
-                  <Label htmlFor="name">Catalog Name *</Label>
-                  <Input
-                    id="name"
-                    placeholder="e.g., Summer Collection 2024"
-                    value={formData.name}
-                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                    className="mt-1"
-                    required
-                  />
-                </div>
+                <h3 className="text-lg font-medium">Basic Information</h3>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="name">Catalog Name *</Label>
+                    <Input
+                      id="name"
+                      type="text"
+                      placeholder="Enter catalog name"
+                      value={formData.name}
+                      onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                      className="mt-1"
+                      required
+                    />
+                  </div>
 
-                <div>
-                  <Label htmlFor="supplier">Supplier *</Label>
-                  <Select
-                    value={formData.supplierId}
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, supplierId: value }))}
-                  >
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Select a supplier" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {suppliersLoading ? (
-                        <SelectItem value="loading" disabled>Loading suppliers...</SelectItem>
-                      ) : suppliers.length === 0 ? (
-                        <SelectItem value="none" disabled>No suppliers available</SelectItem>
-                      ) : (
-                        suppliers.map((supplier: any) => (
+                  <div>
+                    <Label htmlFor="supplier">Supplier *</Label>
+                    <Select 
+                      value={formData.supplier_id?.toString() || ""} 
+                      onValueChange={(value) => setFormData(prev => ({ ...prev, supplier_id: parseInt(value) }))}
+                    >
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder="Select a supplier" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {suppliers?.map((supplier) => (
                           <SelectItem key={supplier.id} value={supplier.id.toString()}>
                             {supplier.name}
                           </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
                 <div>
-                  <Label htmlFor="description">Description *</Label>
+                  <Label htmlFor="description">Description</Label>
                   <Textarea
                     id="description"
                     placeholder="Describe this catalog and what products it will contain..."
@@ -189,63 +167,32 @@ export default function CreateCatalog() {
                       type="number"
                       min="0"
                       max="100"
-                      step="0.01"
-                      placeholder="0"
-                      value={formData.defaultMarkupPercentage}
-                      onChange={(e) => setFormData(prev => ({ 
-                        ...prev, 
-                        defaultMarkupPercentage: parseFloat(e.target.value) || 0 
-                      }))}
+                      step="0.1"
+                      placeholder="0.0"
+                      value={formData.default_markup_percentage}
+                      onChange={(e) => setFormData(prev => ({ ...prev, default_markup_percentage: parseFloat(e.target.value) || 0 }))}
                       className="mt-1"
                     />
                   </div>
 
-                  <div className="flex items-center space-x-2 pt-6">
+                  <div className="flex items-center space-x-2">
                     <Switch
-                      id="freeShipping"
-                      checked={formData.freeShipping}
-                      onCheckedChange={(checked) => setFormData(prev => ({ ...prev, freeShipping: checked }))}
+                      id="active"
+                      checked={formData.is_active}
+                      onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked }))}
                     />
-                    <Label htmlFor="freeShipping">Free Shipping</Label>
+                    <Label htmlFor="active">Active Catalog</Label>
                   </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="startDate">Start Date (Optional)</Label>
-                    <Input
-                      id="startDate"
-                      type="date"
-                      value={formData.startDate}
-                      onChange={(e) => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
-                      className="mt-1"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="endDate">End Date (Optional)</Label>
-                    <Input
-                      id="endDate"
-                      type="date"
-                      value={formData.endDate}
-                      onChange={(e) => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
-                      className="mt-1"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="isActive"
-                    checked={formData.isActive}
-                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isActive: checked }))}
-                  />
-                  <Label htmlFor="isActive">Active (Catalog is currently visible)</Label>
                 </div>
               </div>
 
-              {/* Submit Buttons */}
-              <div className="flex flex-col sm:flex-row gap-3 pt-4">
+              {/* Form Actions */}
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-3 space-y-3 space-y-reverse sm:space-y-0">
+                <Link href="/admin/catalogs">
+                  <Button type="button" variant="outline" className="w-full sm:w-auto">
+                    Cancel
+                  </Button>
+                </Link>
                 <Button
                   type="submit"
                   className="flex-1"
@@ -263,11 +210,6 @@ export default function CreateCatalog() {
                     </>
                   )}
                 </Button>
-                <Link href="/admin/catalogs">
-                  <Button type="button" variant="outline" className="w-full sm:w-auto">
-                    Cancel
-                  </Button>
-                </Link>
               </div>
             </form>
           </div>
