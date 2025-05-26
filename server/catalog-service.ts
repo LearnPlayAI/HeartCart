@@ -208,9 +208,9 @@ class CatalogService {
         params.push(catalogData.is_active);
       }
       
-      if (catalogData.image_url !== undefined) {
-        updateFields.push(`image_url = $${paramIndex++}`);
-        params.push(catalogData.image_url);
+      if (catalogData.cover_image !== undefined) {
+        updateFields.push(`cover_image = $${paramIndex++}`);
+        params.push(catalogData.cover_image);
       }
       
       if (updateFields.length === 0) {
@@ -226,7 +226,7 @@ class CatalogService {
         UPDATE catalogs 
         SET ${updateFields.join(', ')}
         WHERE id = $${paramIndex}
-        RETURNING id, name, description, supplier_id, is_active, image_url, created_at, updated_at
+        RETURNING id, name, description, supplier_id, default_markup_percentage, is_active, cover_image, tags, start_date, end_date, created_at, updated_at
       `;
       
       const client = await pool.connect();
