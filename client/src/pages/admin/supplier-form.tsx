@@ -24,7 +24,15 @@ const supplierFormSchema = z.object({
   contactName: z.string().min(2, "Contact person name must be at least 2 characters"),
   address: z.string().optional(),
   notes: z.string().optional(),
-  website: z.string().url("Please enter a valid URL").optional().or(z.literal("")),
+  website: z.string().optional().refine((val) => {
+    if (!val || val === "") return true;
+    try {
+      new URL(val);
+      return true;
+    } catch {
+      return false;
+    }
+  }, "Please enter a valid URL"),
   isActive: z.boolean().default(true),
 });
 
