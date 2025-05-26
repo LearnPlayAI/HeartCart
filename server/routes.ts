@@ -4024,8 +4024,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isActive: req.body.isActive !== undefined ? req.body.isActive : true
       };
       
-      // Validate the converted data
-      const validatedData = insertSupplierSchema.parse(supplierData);
+      // Validate the converted data with detailed error logging
+      console.log('About to validate supplier data:', supplierData);
+      
+      let validatedData;
+      try {
+        validatedData = insertSupplierSchema.parse(supplierData);
+        console.log('Validation successful, validated data:', validatedData);
+      } catch (validationError) {
+        console.error('VALIDATION ERROR DETAILS:', validationError);
+        if (validationError instanceof z.ZodError) {
+          console.error('Zod validation issues:', validationError.issues);
+          validationError.issues.forEach((issue, index) => {
+            console.error(`Issue ${index + 1}:`, {
+              path: issue.path,
+              message: issue.message,
+              code: issue.code,
+              received: 'received' in issue ? issue.received : 'N/A'
+            });
+          });
+        }
+        throw validationError;
+      }
       
       // Check if supplier with same name already exists
       const existingSupplier = await storage.getSupplierByName(validatedData.name);
