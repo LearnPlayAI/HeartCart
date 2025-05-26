@@ -5470,9 +5470,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register new raw SQL catalog routes
   registerCatalogRoutes(app);
   
-  // Register new catalog routes using raw SQL
-  registerCatalogRoutes(app);
-  
   // Register AI API routes for product generation features
   app.use('/api/ai', aiRouter);
   
