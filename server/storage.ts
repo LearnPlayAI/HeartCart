@@ -3729,6 +3729,19 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async getSupplierByName(name: string): Promise<Supplier | undefined> {
+    try {
+      const [supplier] = await db
+        .select()
+        .from(suppliers)
+        .where(eq(suppliers.name, name));
+      return supplier;
+    } catch (error) {
+      console.error(`Error fetching supplier with name "${name}":`, error);
+      throw error;
+    }
+  }
+
   async createSupplier(supplier: InsertSupplier): Promise<Supplier> {
     try {
       const now = new Date().toISOString();

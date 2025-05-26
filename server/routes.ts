@@ -4009,32 +4009,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw new ForbiddenError("Only administrators can manage suppliers");
       }
       
-      // Add debug logging for the raw request body
-      console.log('Raw request body for supplier creation:', req.body);
-      console.log('insertSupplierSchema shape:', insertSupplierSchema.shape);
-      
-      // Add country default if missing to match database default
-      const supplierDataWithDefaults = {
-        ...req.body,
-        country: req.body.country || "South Africa"
+      // Convert camelCase form data to snake_case database format
+      const supplierData = {
+        name: req.body.name,
+        contactName: req.body.contactName, // This maps to contact_name in DB via Drizzle
+        email: req.body.email,
+        phone: req.body.phone,
+        address: req.body.address || null,
+        city: req.body.city || null,
+        country: req.body.country || "South Africa",
+        notes: req.body.notes || null,
+        logo: req.body.logo || null,
+        website: req.body.website || null,
+        isActive: req.body.isActive !== undefined ? req.body.isActive : true
       };
       
-      console.log('Supplier data with defaults:', supplierDataWithDefaults);
-      
-      const supplierData = insertSupplierSchema.parse(supplierDataWithDefaults);
-      console.log('Parsed supplier data:', supplierData);
+      // Validate the converted data
+      const validatedData = insertSupplierSchema.parse(supplierData);
       
       // Check if supplier with same name already exists
-      const existingSupplier = await storage.getSupplierByName(supplierData.name);
+      const existingSupplier = await storage.getSupplierByName(validatedData.name);
       if (existingSupplier) {
         throw new AppError(
-          `A supplier with the name "${supplierData.name}" already exists`,
+          `A supplier with the name "${validatedData.name}" already exists`,
           ErrorCode.DUPLICATE_ENTITY,
           409
         );
       }
       
-      const supplier = await storage.createSupplier(supplierData);
+      const supplier = await storage.createSupplier(validatedData);
       
       return res.status(201).json({
         success: true,
@@ -4042,14 +4045,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: `Supplier "${supplier.name}" created successfully`
       });
     } catch (error) {
-      // Enhanced error logging with more details
-      console.error('FULL ERROR DETAILS:', error);
-      
-      if (error instanceof z.ZodError) {
-        console.error('Zod validation errors:', error.errors);
-        console.error('Input data that failed validation:', req.body);
-      }
-      
       // Log detailed error information with context
       logger.error('Error creating supplier', { 
         error,
