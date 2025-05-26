@@ -3852,44 +3852,28 @@ export class DatabaseStorage implements IStorage {
   // Catalog operations
   async getAllCatalogs(activeOnly = true): Promise<any[]> {
     try {
-      // Get catalogs with supplier information
-      try {
-        const query = activeOnly
-          ? db
-              .select({
-                id: catalogs.id,
-                name: catalogs.name,
-                description: catalogs.description,
-                supplierId: catalogs.supplierId,
-                supplierName: suppliers.name,
-                isActive: catalogs.isActive,
-                defaultMarkupPercentage: catalogs.defaultMarkupPercentage,
-                startDate: catalogs.startDate,
-                endDate: catalogs.endDate,
-                createdAt: catalogs.createdAt,
-              })
-              .from(catalogs)
-              .leftJoin(suppliers, eq(catalogs.supplierId, suppliers.id))
-              .where(eq(catalogs.isActive, true))
-              .orderBy(asc(catalogs.name))
-          : db
-              .select({
-                id: catalogs.id,
-                name: catalogs.name,
-                description: catalogs.description,
-                supplierId: catalogs.supplierId,
-                supplierName: suppliers.name,
-                isActive: catalogs.isActive,
-                defaultMarkupPercentage: catalogs.defaultMarkupPercentage,
-                startDate: catalogs.startDate,
-                endDate: catalogs.endDate,
-                createdAt: catalogs.createdAt,
-              })
-              .from(catalogs)
-              .leftJoin(suppliers, eq(catalogs.supplierId, suppliers.id))
-              .orderBy(asc(catalogs.name));
+      // Get catalogs with supplier information using raw SQL for better reliability
+      const catalogQuery = activeOnly
+        ? `SELECT c.id, c.name, c.description, c.supplier_id as "supplierId", 
+                  s.name as "supplierName", c.is_active as "isActive", 
+                  c.default_markup_percentage as "defaultMarkupPercentage",
+                  c.start_date as "startDate", c.end_date as "endDate", 
+                  c.created_at as "createdAt", c.updated_at as "updatedAt"
+           FROM catalogs c 
+           LEFT JOIN suppliers s ON c.supplier_id = s.id 
+           WHERE c.is_active = true 
+           ORDER BY c.name`
+        : `SELECT c.id, c.name, c.description, c.supplier_id as "supplierId", 
+                  s.name as "supplierName", c.is_active as "isActive", 
+                  c.default_markup_percentage as "defaultMarkupPercentage",
+                  c.start_date as "startDate", c.end_date as "endDate", 
+                  c.created_at as "createdAt", c.updated_at as "updatedAt"
+           FROM catalogs c 
+           LEFT JOIN suppliers s ON c.supplier_id = s.id 
+           ORDER BY c.name`;
 
-        const catalogData = await query;
+      const result = await db.execute(sql.raw(catalogQuery));
+      const catalogData = result.rows as any[];
 
         // Add product count for each catalog
         try {
