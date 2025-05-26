@@ -535,8 +535,20 @@ export default function registerProductDraftRoutes(router: Router) {
       
       // Use the complete publication service with ALL field mapping
       try {
+        logger.info('PUBLICATION ROUTE: Starting publication process', { 
+          draftId, 
+          draftName: draft.name,
+          hasAttributesData: !!draft.attributesData 
+        });
+        
         const { publishProductDraftComplete } = await import('./product-publication-complete');
         const result = await publishProductDraftComplete(draftId);
+        
+        logger.info('PUBLICATION ROUTE: Publication completed', { 
+          draftId, 
+          success: result.success,
+          productId: result.productId 
+        });
 
         if (result.success) {
           logger.info('Product published successfully via atomic service', { 

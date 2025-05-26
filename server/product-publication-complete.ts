@@ -344,7 +344,8 @@ export async function publishProductDraftComplete(draftId: number): Promise<Publ
 
       // 5. Handle Product Attributes with complete relationship mapping
       // Check for attributes in the correct field - attributes_data contains the full attribute information
-      const attributeData = draft.attributesData || draft.selectedAttributes;
+      // Note: database field is attributes_data but Drizzle converts to camelCase as attributesData
+      const attributeData = (draft as any).attributes_data || draft.attributesData || draft.selectedAttributes;
       
       logger.info('ATTRIBUTE DEBUG: Starting attribute processing', {
         hasAttributesData: !!draft.attributesData,
