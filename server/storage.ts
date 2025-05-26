@@ -6400,17 +6400,15 @@ export class DatabaseStorage implements IStorage {
           // For sales promotions step, ensure date fields are stored as strings
           // Also ensure explicitly that the fields shown in red boxes in the UI are processed properly
 
-          // Log incoming data for debugging
+          // Log incoming data for debugging - log ALL draftData to see what's actually received
           logger.debug(`Incoming sales promotions data:`, {
             draftId: id,
-            discountLabel: draftData.discountLabel,
-            specialSaleText: draftData.specialSaleText,
-            specialSaleStart: draftData.specialSaleStart,
-            specialSaleEnd: draftData.specialSaleEnd,
-            isFlashDeal: draftData.isFlashDeal,
-            flashDealEnd: draftData.flashDealEnd,
-            rating: draftData.rating,
-            review_count: draftData.review_count,
+            fullDraftData: draftData,
+            hasRating: 'rating' in draftData,
+            hasReviewCount: 'review_count' in draftData,
+            ratingValue: draftData.rating,
+            reviewCountValue: draftData.review_count,
+            allKeys: Object.keys(draftData)
           });
 
           updateData = {
