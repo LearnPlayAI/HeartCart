@@ -31,15 +31,18 @@ export default function CreateCatalog() {
   });
 
   // Fetch suppliers for dropdown
-  const { data: suppliers = [], isLoading: suppliersLoading } = useQuery({
+  const { data: suppliersResponse, isLoading: suppliersLoading } = useQuery({
     queryKey: ["/api/suppliers"],
     queryFn: async () => {
       const response = await fetch("/api/suppliers?activeOnly=false");
       if (!response.ok) throw new Error("Failed to fetch suppliers");
       const result = await response.json();
-      return result.data || [];
+      return result;
     },
   });
+
+  // Extract suppliers array from the response data
+  const suppliers = Array.isArray(suppliersResponse?.data) ? suppliersResponse.data : [];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

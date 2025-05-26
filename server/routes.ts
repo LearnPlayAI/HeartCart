@@ -35,6 +35,7 @@ import fileBrowserRoutes from "./file-browser-routes";
 import registerAttributeRoutes from "./attribute-routes-new";
 import registerProductAttributeRoutes from "./attribute-routes-product";
 import registerProductDraftRoutes from "./product-draft-routes";
+import registerCatalogRoutes from "./catalog-routes-new";
 // Removed attributeDiscountRoutes import as part of centralized attribute system
 import pricingRoutes from "./pricing-routes";
 import batchUploadRoutes from "./batch-upload-routes";
@@ -5465,6 +5466,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerAttributeRoutes(app);
   registerProductAttributeRoutes(app);
   registerProductDraftRoutes(app);
+  
+  // Register new raw SQL catalog routes
+  registerCatalogRoutes(app);
+  
+  // Register new catalog routes using raw SQL
+  registerCatalogRoutes(app);
   
   // Register AI API routes for product generation features
   app.use('/api/ai', aiRouter);
