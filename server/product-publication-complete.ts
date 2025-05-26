@@ -344,7 +344,7 @@ export async function publishProductDraftComplete(draftId: number): Promise<Publ
 
       // 5. Handle Product Attributes with complete relationship mapping
       // Check for attributes in the correct field - attributes_data contains the full attribute information
-      const attributeData = draft.attributesData || draft.attributes_data || draft.selectedAttributes;
+      const attributeData = draft.attributesData || draft.selectedAttributes;
       
       if (attributeData) {
         // Parse attributes if it's a JSON string
@@ -362,7 +362,8 @@ export async function publishProductDraftComplete(draftId: number): Promise<Publ
           logger.info('Processing product attributes with complete mapping', { 
             productId: productResult.id,
             attributeCount: parsedAttributes.length,
-            rawAttributes: attributeData
+            rawAttributes: attributeData,
+            parsedData: parsedAttributes
           });
 
           try {
@@ -372,29 +373,50 @@ export async function publishProductDraftComplete(draftId: number): Promise<Publ
             // Process each attribute with proper validation
             const attributeInserts = [];
             for (const attr of parsedAttributes) {
+              // Handle the specific structure from the wizard: { attributeId, selectedOptions, ... }
               if (attr.selectedOptions && Array.isArray(attr.selectedOptions) && attr.selectedOptions.length > 0) {
+                logger.debug('Processing attribute with selectedOptions', {
+                  attributeId: attr.attributeId,
+                  selectedOptions: attr.selectedOptions,
+                  textValue: attr.textValue
+                });
+                
                 attributeInserts.push({
                   productId: productResult.id,
                   attributeId: attr.attributeId,
                   selectedOptions: attr.selectedOptions,
                   textValue: attr.textValue || null
-                  // Remove createdAt and updatedAt - let database handle these automatically
+                });
+              } else {
+                logger.debug('Skipping attribute - no valid selectedOptions', {
+                  attributeId: attr.attributeId,
+                  selectedOptions: attr.selectedOptions
                 });
               }
             }
 
             if (attributeInserts.length > 0) {
+              logger.info('Inserting product attributes', { 
+                attributeCount: attributeInserts.length,
+                attributes: attributeInserts
+              });
+              
               await tx.insert(productAttributes).values(attributeInserts);
+              
               logger.info('All product attributes processed successfully', { 
                 attributeCount: attributeInserts.length
               });
             } else {
-              logger.info('No valid product attributes to save');
+              logger.warn('No valid product attributes to save - check data format', {
+                parsedAttributes
+              });
             }
           } catch (error) {
-            logger.warn('Attribute processing failed, continuing with product creation', { error });
+            logger.error('Attribute processing failed', { error, stack: error instanceof Error ? error.stack : undefined });
             warnings.push('Product attributes could not be saved, but product was created successfully');
           }
+        } else {
+          logger.info('No attributes to process', { attributeData, parsedAttributes });
         }
       }
 
