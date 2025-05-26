@@ -882,48 +882,12 @@ export default function CatalogProducts() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => navigate(`/product/${product.slug}`)}>
-                  <Eye className="mr-2 h-4 w-4" />
-                  View
-                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleEditProduct(product)}>
                   <Edit className="mr-2 h-4 w-4" />
                   Edit
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => {
-                  setSelectedProduct(product);
-                  setShowQuickEditDialog(true);
-                }}>
-                  <Edit className="mr-2 h-4 w-4" />
-                  Quick Edit
-                </DropdownMenuItem>
-                {product.hasAttributes && (
-                  <>
-                    <DropdownMenuItem onClick={() => navigate(`/admin/products/${product.id}/attributes`)}>
-                      <Tag className="mr-2 h-4 w-4" />
-                      Manage Attributes
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => {
-                      setSelectedProduct(product);
-                      setShowAttributesDialog(true);
-                    }}>
-                      <Tag className="mr-2 h-4 w-4" />
-                      Edit Attributes
-                    </DropdownMenuItem>
-                  </>
-                )}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => handleBulkActivate(true)}>
-                  <ShoppingBag className="mr-2 h-4 w-4" />
-                  Activate
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleBulkActivate(false)}>
-                  <Scissors className="mr-2 h-4 w-4" />
-                  Deactivate
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  className="text-red-600"
+                  className="text-red-600 focus:text-red-600"
                   onClick={() => handleDeleteClick(product)}
                 >
                   <Trash className="mr-2 h-4 w-4" />
