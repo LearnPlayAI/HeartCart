@@ -4470,7 +4470,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }));
 
-  app.delete("/api/catalogs/:id", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
+  app.delete("/api/catalogs/:id", asyncHandler(async (req: Request, res: Response) => {
     const user = req.user as any;
     const id = parseInt(req.params.id);
     
@@ -4573,7 +4573,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }));
 
   // Endpoint to toggle catalog active status and update all its products
-  app.patch("/api/catalogs/:id/toggle-status", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
+  app.patch("/api/catalogs/:id/toggle-status", asyncHandler(async (req: Request, res: Response) => {
     const user = req.user as any;
     const id = parseInt(req.params.id);
     
@@ -4789,7 +4789,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   );
 
   // Get catalog context data for product wizard
-  app.get("/api/catalogs/:catalogId/context", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
+  app.get("/api/catalogs/:catalogId/context", asyncHandler(async (req: Request, res: Response) => {
     const user = req.user as any;
     const catalogId = parseInt(req.params.catalogId);
     
@@ -4872,7 +4872,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }));
 
-  app.put("/api/catalogs/:catalogId/products/bulk", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
+  app.put("/api/catalogs/:catalogId/products/bulk", asyncHandler(async (req: Request, res: Response) => {
     const user = req.user as any;
     const catalogId = parseInt(req.params.catalogId);
     
@@ -5065,7 +5065,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }));
 
   // PATCH endpoint to reorder products in a catalog
-  app.patch("/api/catalogs/:id/products/reorder", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
+  app.patch("/api/catalogs/:id/products/reorder", asyncHandler(async (req: Request, res: Response) => {
     const user = req.user as any;
     const catalogId = parseInt(req.params.id);
     
