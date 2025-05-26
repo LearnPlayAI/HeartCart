@@ -13,15 +13,13 @@ import { logger } from "./logger";
 /**
  * Generate canonical URL for SEO purposes
  */
-function generateCanonicalUrl(slug: string | null): string {
-  if (!slug) return '';
+function generateCanonicalUrl(slug: string | null, productId?: number): string {
+  if (!productId) return '';
   
-  // Get the base URL from environment or use a default structure
-  const baseUrl = process.env.SITE_URL || process.env.REPLIT_DOMAINS 
-    ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` 
-    : 'https://teemeyou.com';
+  // Use the production domain for canonical URLs
+  const baseUrl = 'https://teemeyou.shop';
   
-  return `${baseUrl}/products/${slug}`;
+  return `${baseUrl}/product/id/${productId}`;
 }
 
 export interface PublicationResult {
@@ -196,7 +194,7 @@ export async function publishProductDraftComplete(draftId: number): Promise<Publ
         metaTitle: safeString(draft.metaTitle),
         metaDescription: safeString(draft.metaDescription),
         metaKeywords: safeString(draft.metaKeywords),
-        canonicalUrl: generateCanonicalUrl(draft.slug),
+        canonicalUrl: generateCanonicalUrl(draft.slug, draft.originalProductId),
         
         // Tags and Categories - use defaults for missing fields
         tags: [], // Field doesn't exist in drafts table
@@ -257,6 +255,14 @@ export async function publishProductDraftComplete(draftId: number): Promise<Publ
 
       if (!productResult) {
         throw new Error('Failed to create/update product');
+      }
+
+      // For new products, update the canonical URL with the actual product ID
+      if (!draft.originalProductId) {
+        await tx
+          .update(products)
+          .set({ canonicalUrl: generateCanonicalUrl(draft.slug, productResult.id) })
+          .where(eq(products.id, productResult.id));
       }
 
       logger.info('Product created/updated successfully with all fields', { 
