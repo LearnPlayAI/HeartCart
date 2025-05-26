@@ -1,14 +1,12 @@
 import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "./routes-new";
+import { registerRoutes } from "./routes";
 import simpleCatalogRoutes from "./simple-catalog-routes";
-import attributeRoutes from "./attribute-routes-new";
 import { setupVite, serveStatic, log } from "./vite";
-import { setSessionTimezone } from "./db-new";
+import { setSessionTimezone } from "./db";
 import { SAST_TIMEZONE } from "@shared/date-utils";
 import { errorHandlerMiddleware, notFoundMiddleware } from "./error-handler";
 import { logger } from "./logger";
 import crypto from "crypto";
-import "./session-types";
 
 const app = express();
 app.use(express.json());
@@ -94,13 +92,8 @@ app.use((req, res, next) => {
 (async () => {
   // Register simple catalog routes first
   app.use(simpleCatalogRoutes);
-  app.use(attributeRoutes);
   
-  await registerRoutes(app);
-
-  // Create HTTP server for proper setup
-  const http = await import('http');
-  const server = http.createServer(app);
+  const server = await registerRoutes(app);
 
   // importantly only setup vite in development and after
   // setting up all the other API routes so the catch-all route
@@ -121,7 +114,11 @@ app.use((req, res, next) => {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = 5000;
-  server.listen(port, "0.0.0.0", () => {
+  server.listen({
+    port,
+    host: "0.0.0.0",
+    reusePort: true,
+  }, () => {
     logger.info(`Server started successfully on port ${port}`);
     log(`serving on port ${port}`);
   });
