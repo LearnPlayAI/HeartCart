@@ -40,19 +40,27 @@ router.post("/api/catalogs/create", async (req, res) => {
       });
     }
 
-    // Create catalog
+    // Create catalog with only the required fields
+    const catalogData = {
+      name: name.trim(),
+      description: description.trim(),
+      supplierId: parseInt(supplierId, 10),
+      isActive: Boolean(isActive),
+      defaultMarkupPercentage: parseFloat(defaultMarkupPercentage) || 0,
+      freeShipping: Boolean(freeShipping),
+    };
+
+    // Add dates only if provided
+    if (startDate) {
+      catalogData.startDate = new Date(startDate).toISOString();
+    }
+    if (endDate) {
+      catalogData.endDate = new Date(endDate).toISOString();
+    }
+
     const [newCatalog] = await db
       .insert(catalogs)
-      .values({
-        name: name.trim(),
-        description: description.trim(),
-        supplierId: parseInt(supplierId, 10),
-        isActive: Boolean(isActive),
-        startDate: startDate ? new Date(startDate).toISOString() : null,
-        endDate: endDate ? new Date(endDate).toISOString() : null,
-        defaultMarkupPercentage: parseFloat(defaultMarkupPercentage) || 0,
-        freeShipping: Boolean(freeShipping),
-      })
+      .values(catalogData)
       .returning();
 
     return res.status(201).json({
