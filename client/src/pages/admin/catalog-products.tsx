@@ -498,6 +498,7 @@ export default function CatalogProducts() {
   const [showQuickEditDialog, setShowQuickEditDialog] = useState(false);
   const [showAttributesDialog, setShowAttributesDialog] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<number[]>([]);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
   // Query for the catalog details
   const { data: catalogResponse, isLoading: catalogLoading } = useQuery({
@@ -727,6 +728,49 @@ export default function CatalogProducts() {
       productIds: selectedProducts,
       active: activate
     });
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedProducts.length === 0) return;
+
+    const confirmed = window.confirm(
+      `Are you sure you want to delete ${selectedProducts.length} selected products? This action cannot be undone.`
+    );
+
+    if (!confirmed) return;
+
+    setIsBulkDeleting(true);
+
+    try {
+      // Delete products one by one using the same robust delete function
+      const deletePromises = selectedProducts.map(async (productId) => {
+        const response = await apiRequest("DELETE", `/api/products/${productId}`);
+        if (!response.ok) {
+          throw new Error(`Failed to delete product ${productId}`);
+        }
+        return response.json();
+      });
+
+      await Promise.all(deletePromises);
+
+      toast({
+        title: "Products deleted successfully",
+        description: `${selectedProducts.length} products have been deleted.`,
+      });
+
+      // Refresh the products list and clear selection
+      queryClient.invalidateQueries({ queryKey: [`/api/catalogs/${catalogId}/products`] });
+      setSelectedProducts([]);
+    } catch (error: any) {
+      console.error("Bulk delete error:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete some products",
+        variant: "destructive",
+      });
+    } finally {
+      setIsBulkDeleting(false);
+    }
   };
 
   // For drag-and-drop reordering
@@ -1002,6 +1046,15 @@ export default function CatalogProducts() {
                 >
                   {isBulkActivating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
                   Deactivate All
+                </Button>
+                <Button 
+                  variant="destructive" 
+                  size="sm" 
+                  onClick={handleBulkDelete}
+                  disabled={isBulkDeleting}
+                >
+                  {isBulkDeleting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Trash className="h-4 w-4 mr-2" />}
+                  Delete All Selected
                 </Button>
                 <Button 
                   variant="outline" 
