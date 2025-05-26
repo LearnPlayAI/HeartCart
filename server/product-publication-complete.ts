@@ -346,6 +346,13 @@ export async function publishProductDraftComplete(draftId: number): Promise<Publ
       // Check for attributes in the correct field - attributes_data contains the full attribute information
       const attributeData = draft.attributesData || draft.selectedAttributes;
       
+      logger.info('ATTRIBUTE DEBUG: Starting attribute processing', {
+        hasAttributesData: !!draft.attributesData,
+        hasSelectedAttributes: !!draft.selectedAttributes,
+        attributeDataType: typeof attributeData,
+        attributeDataValue: attributeData
+      });
+      
       if (attributeData) {
         // Parse attributes if it's a JSON string
         let parsedAttributes;
