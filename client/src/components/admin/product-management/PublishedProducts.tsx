@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 import { apiRequest } from '@/lib/queryClient';
@@ -25,6 +25,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -37,6 +44,8 @@ import {
   Edit,
   ExternalLink,
   ShoppingCart,
+  Filter,
+  X,
 } from 'lucide-react';
 
 // Types
@@ -57,12 +66,34 @@ interface PublishedProduct {
 
 export const PublishedProducts: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [supplierFilter, setSupplierFilter] = useState('');
+  const [catalogFilter, setCatalogFilter] = useState('');
+  const [skuFilter, setSkuFilter] = useState('');
   
   // Fetch published products
   const { data: productsData, isLoading: isProductsLoading, error: productsError } = useQuery({
     queryKey: ['/api/products'],
     queryFn: async () => {
       const response = await apiRequest('GET', '/api/products');
+      return response.json();
+    }
+  });
+
+  // Fetch categories for filter
+  const { data: categoriesData } = useQuery({
+    queryKey: ['/api/categories'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/categories');
+      return response.json();
+    }
+  });
+
+  // Fetch catalogs for filter
+  const { data: catalogsData } = useQuery({
+    queryKey: ['/api/catalogs'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/catalogs');
       return response.json();
     }
   });
