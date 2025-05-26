@@ -6527,6 +6527,15 @@ export class DatabaseStorage implements IStorage {
             ...(draftData.draftStatus === "ready" && {
               publishedAt: new Date(),
             }),
+            // Handle rating and review count for marketplace appearance
+            rating:
+              draftData.rating !== undefined
+                ? draftData.rating
+                : existingDraft.rating,
+            review_count:
+              draftData.review_count !== undefined
+                ? draftData.review_count
+                : existingDraft.review_count,
             // Handle any additional review-specific fields
             reviewNotes:
               draftData.reviewNotes !== undefined
