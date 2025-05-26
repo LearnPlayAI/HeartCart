@@ -97,113 +97,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/suppliers", async (req: Request, res: Response) => {
     console.log('=== SUPPLIER POST ENDPOINT REACHED ===');
     console.log('Method:', req.method);
-    console.log('URL:', req.url);
     console.log('Body:', req.body);
-    console.log('User:', req.user);
 
     const user = req.user as any;
     if (!user || user.role !== 'admin') {
-      console.log('=== AUTHORIZATION FAILED ===');
       return res.status(403).json({ success: false, error: { message: "Unauthorized" } });
     }
 
-    console.log('=== AUTHORIZATION PASSED ===');
-
-    const { name, contactName, email, phone, address, city, country, notes, logo, website, isActive } = req.body;
+    const { name, contactName, email, phone, address, notes, website, isActive } = req.body;
     
-    console.log('=== SUPPLIER CREATION DEBUG ===');
-    console.log('Extracted fields:', { name, contactName, email, phone, address, city, country, notes, logo, website, isActive });
-
     if (!name) {
-      console.log('=== NAME VALIDATION FAILED ===');
       return res.status(400).json({ success: false, error: { message: "Name is required" } });
     }
 
-    console.log('=== VALIDATION PASSED ===');
-
     try {
       const now = new Date().toISOString();
-      console.log('=== STARTING DATABASE INSERTION ===');
       
-      // Test database connection first
-      console.log('Testing database connection...');
-      const testResult = await db.execute(sql`SELECT 1 as test`);
-      console.log('Database connection test result:', testResult);
+      // Use storage layer instead of direct SQL
+      const supplierData = {
+        name,
+        contactName: contactName || null,
+        email: email || null,
+        phone: phone || null,
+        address: address || null,
+        notes: notes || null,
+        website: website || null,
+        isActive: isActive !== false,
+        createdAt: now,
+        updatedAt: now
+      };
+
+      console.log('Creating supplier with data:', supplierData);
       
-      // Direct database insert with raw SQL
-      console.log('Executing INSERT query...');
+      // Convert camelCase to snake_case for database
+      const dbData = {
+        name: supplierData.name,
+        contact_name: supplierData.contactName,
+        email: supplierData.email,
+        phone: supplierData.phone,
+        address: supplierData.address,
+        notes: supplierData.notes,
+        website: supplierData.website,
+        is_active: supplierData.isActive,
+        created_at: supplierData.createdAt,
+        updated_at: supplierData.updatedAt
+      };
+
       const result = await db.execute(
         sql`
           INSERT INTO suppliers (
-            name, 
-            contact_name, 
-            email, 
-            phone, 
-            address, 
-            city, 
-            country, 
-            notes, 
-            logo, 
-            website, 
-            is_active, 
-            created_at, 
-            updated_at
+            name, contact_name, email, phone, address, notes, website, is_active, created_at, updated_at
           ) VALUES (
-            ${name}, 
-            ${contactName || null}, 
-            ${email || null}, 
-            ${phone || null}, 
-            ${address || null}, 
-            ${city || null}, 
-            ${country || 'South Africa'}, 
-            ${notes || null}, 
-            ${logo || null}, 
-            ${website || null}, 
-            ${isActive !== false}, 
-            ${now}, 
-            ${now}
+            ${dbData.name}, 
+            ${dbData.contact_name}, 
+            ${dbData.email}, 
+            ${dbData.phone}, 
+            ${dbData.address}, 
+            ${dbData.notes}, 
+            ${dbData.website}, 
+            ${dbData.is_active}, 
+            ${dbData.created_at}, 
+            ${dbData.updated_at}
           ) RETURNING *
         `
       );
       
-      console.log('=== SQL EXECUTION SUCCESS ===');
+      console.log('SQL execution result:', result);
       const supplier = result[0] as any;
-      console.log('Created supplier:', supplier);
-      
-      const responseData = {
-        id: supplier.id,
-        name: supplier.name,
-        contactName: supplier.contact_name,
-        email: supplier.email,
-        phone: supplier.phone,
-        address: supplier.address,
-        city: supplier.city,
-        country: supplier.country,
-        notes: supplier.notes,
-        logo: supplier.logo,
-        website: supplier.website,
-        isActive: supplier.is_active,
-        createdAt: supplier.created_at,
-        updatedAt: supplier.updated_at
-      };
-      
-      console.log('=== RESPONSE SUCCESS ===');
       
       return res.status(201).json({
         success: true,
-        data: responseData,
-        message: `Supplier "${supplier.name}" created successfully`
+        data: {
+          id: supplier.id,
+          name: supplier.name,
+          contactName: supplier.contact_name,
+          email: supplier.email,
+          phone: supplier.phone,
+          address: supplier.address,
+          notes: supplier.notes,
+          website: supplier.website,
+          isActive: supplier.is_active,
+          createdAt: supplier.created_at,
+          updatedAt: supplier.updated_at
+        }
       });
 
     } catch (error) {
-      console.error('=== DATABASE ERROR ===');
-      console.error('Error:', error);
+      console.error('Database error creating supplier:', error);
       
       return res.status(500).json({
         success: false,
         error: { 
-          message: "Database insertion failed",
-          details: error instanceof Error ? error.message : String(error)
+          message: "Failed to create supplier. Please try again.",
+          details: error instanceof Error ? error.message : 'Unknown error'
         }
       });
     }
