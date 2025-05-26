@@ -499,7 +499,7 @@ export const ReviewAndSaveStep: React.FC<ReviewAndSaveStepProps> = ({
             </TabsList>
             
             <TabsContent value="review" className="space-y-4">
-              <Accordion type="multiple" defaultValue={['basic-info', 'pricing', 'images']} className="w-full">
+              <Accordion type="multiple" defaultValue={['basic-info', 'pricing', 'images', 'rating-reviews']} className="w-full">
                 {/* Basic Info Section */}
                 <AccordionItem value="basic-info">
                   <AccordionTrigger className="text-lg font-medium">

@@ -83,6 +83,10 @@ export interface ProductDraft {
   lowStockThreshold: number | null;
   backorderEnabled: boolean;
   
+  // Rating and reviews for marketplace appearance
+  rating?: number | null;
+  review_count?: number | null;
+  
   // Attributes
   attributes: Array<{
     attributeId: number;
