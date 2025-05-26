@@ -93,18 +93,8 @@ function handleApiError(error: any, res: Response) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // SUPPLIER CREATION - SIMPLIFIED DIRECT APPROACH
-  app.post("/api/suppliers", async (req: Request, res: Response) => {
-    try {
-      // Check if user is logged in and has admin role
-      const user = req.user as any;
-      console.log('User from request:', user);
-      console.log('Session:', req.session);
-      
-      if (!user || user.role !== 'admin') {
-        console.log('Authorization failed - user:', user);
-        return res.status(403).json({ success: false, error: { message: "Unauthorized" } });
-      }
+  // SUPPLIER CREATION - WITH PROPER AUTHENTICATION MIDDLEWARE
+  app.post("/api/suppliers", isAdmin, asyncHandler(async (req: Request, res: Response) => {
 
       const { name, contactName, email, phone, address, notes, website, isActive } = req.body;
       
@@ -126,22 +116,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const supplier = await storage.createSupplier(supplierData);
       
-      return res.status(201).json({
-        success: true,
-        data: supplier
-      });
-
+      return sendSuccess(res, supplier, 201);
     } catch (error) {
-      console.error('Error creating supplier:', error);
-      return res.status(500).json({
-        success: false,
-        error: { 
-          message: "Failed to create supplier. Please try again.",
-          details: error instanceof Error ? error.message : 'Unknown error'
-        }
-      });
+      logger.error('Error creating supplier', { error });
+      throw new AppError(
+        "Failed to create supplier. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
     }
-  });
+  }));
 
   // Use memory storage for file uploads to avoid local filesystem
   // Files will go directly to Replit Object Storage
