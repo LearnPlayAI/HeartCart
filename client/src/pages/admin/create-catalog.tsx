@@ -59,15 +59,11 @@ export default function CreateCatalog() {
       const payload = {
         name: formData.name.trim(),
         description: formData.description.trim(),
-        supplierId: parseInt(formData.supplierId, 10),
-        isActive: formData.isActive,
-        defaultMarkupPercentage: formData.defaultMarkupPercentage,
-        freeShipping: formData.freeShipping,
-        startDate: formData.startDate || null,
-        endDate: formData.endDate || null,
+        supplier_id: parseInt(formData.supplierId, 10),
+        is_active: formData.isActive,
       };
 
-      const response = await fetch("/api/catalogs/create", {
+      const response = await fetch("/api/catalogs", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
