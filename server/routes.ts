@@ -4009,7 +4009,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw new ForbiddenError("Only administrators can manage suppliers");
       }
       
-      const supplierData = insertSupplierSchema.parse(req.body);
+      // Add debug logging for the raw request body
+      console.log('Raw request body for supplier creation:', req.body);
+      console.log('insertSupplierSchema shape:', insertSupplierSchema.shape);
+      
+      // Add country default if missing to match database default
+      const supplierDataWithDefaults = {
+        ...req.body,
+        country: req.body.country || "South Africa"
+      };
+      
+      console.log('Supplier data with defaults:', supplierDataWithDefaults);
+      
+      const supplierData = insertSupplierSchema.parse(supplierDataWithDefaults);
+      console.log('Parsed supplier data:', supplierData);
       
       // Check if supplier with same name already exists
       const existingSupplier = await storage.getSupplierByName(supplierData.name);
@@ -4029,6 +4042,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: `Supplier "${supplier.name}" created successfully`
       });
     } catch (error) {
+      // Enhanced error logging with more details
+      console.error('FULL ERROR DETAILS:', error);
+      
+      if (error instanceof z.ZodError) {
+        console.error('Zod validation errors:', error.errors);
+        console.error('Input data that failed validation:', req.body);
+      }
+      
       // Log detailed error information with context
       logger.error('Error creating supplier', { 
         error,
