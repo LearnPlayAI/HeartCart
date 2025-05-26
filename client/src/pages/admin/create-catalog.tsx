@@ -102,31 +102,29 @@ export default function CreateCatalog() {
 
   return (
     <AdminPageLayout>
-      <div className="container mx-auto px-4 py-6 max-w-2xl">
+      <div className="flex-1 bg-gray-50 p-8">
         {/* Header */}
-        <div className="flex items-center gap-4 mb-6">
+        <div className="flex items-center gap-4 mb-8">
           <Link href="/admin/catalogs">
-            <Button variant="outline" size="sm">
-              <ArrowLeft className="w-4 h-4 mr-2" />
+            <Button variant="outline" size="sm" className="flex items-center gap-2">
+              <ArrowLeft className="w-4 h-4" />
               Back
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-bold">Create New Catalog</h1>
-            <p className="text-gray-600">Add a new catalog to organize your products</p>
+            <h1 className="text-3xl font-bold text-gray-900">Create New Catalog</h1>
+            <p className="text-gray-600 mt-1">Add a new catalog to organize your products</p>
           </div>
         </div>
 
         {/* Form Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Catalog Details</CardTitle>
-            <CardDescription>
-              Fill in the information below to create your new catalog
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="bg-white rounded-lg shadow-sm border">
+          <div className="p-8">
+            <div className="mb-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">Catalog Details</h2>
+              <p className="text-gray-600">Fill in the information below to create your new catalog</p>
+            </div>
+            <form onSubmit={handleSubmit} className="space-y-8">
               {/* Basic Information */}
               <div className="space-y-4">
                 <div>
@@ -272,8 +270,8 @@ export default function CreateCatalog() {
                 </Link>
               </div>
             </form>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     </AdminPageLayout>
   );
