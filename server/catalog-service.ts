@@ -125,9 +125,21 @@ class CatalogService {
   async createCatalog(catalogData: Omit<CatalogData, 'id' | 'created_at' | 'updated_at'>): Promise<CatalogData> {
     try {
       const query = `
-        INSERT INTO catalogs (name, description, supplier_id, is_active, image_url, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
-        RETURNING id, name, description, supplier_id, is_active, image_url, created_at, updated_at
+        INSERT INTO catalogs (
+          name, 
+          description, 
+          supplier_id, 
+          default_markup_percentage,
+          is_active, 
+          cover_image, 
+          tags,
+          start_date,
+          end_date,
+          created_at, 
+          updated_at
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        RETURNING id, name, description, supplier_id, default_markup_percentage, is_active, cover_image, tags, start_date, end_date, created_at, updated_at
       `;
       
       const now = new Date().toISOString();
@@ -138,8 +150,12 @@ class CatalogService {
           catalogData.name,
           catalogData.description || null,
           catalogData.supplier_id,
+          catalogData.default_markup_percentage || 0,
           catalogData.is_active ?? true,
-          catalogData.image_url || null,
+          catalogData.cover_image || null,
+          catalogData.tags ? JSON.stringify(catalogData.tags) : null,
+          catalogData.start_date || null,
+          catalogData.end_date || null,
           now,
           now
         ]
