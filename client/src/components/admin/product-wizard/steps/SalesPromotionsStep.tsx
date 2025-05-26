@@ -181,9 +181,12 @@ export const SalesPromotionsStep: React.FC<SalesPromotionsStepProps> = ({
       };
       
       // Type assertion to avoid TypeScript errors with ProductDraft interface
-      // We're safely converting Date objects to strings
+      // We're safely converting Date objects to strings and ensuring numeric fields are numbers
       const formattedValues = {
         ...values,
+        // Convert string prices to numbers (same as BasicInfoStep)
+        regularPrice: typeof values.regularPrice === 'string' ? parseFloat(values.regularPrice) : values.regularPrice,
+        salePrice: values.salePrice && typeof values.salePrice === 'string' ? parseFloat(values.salePrice) : values.salePrice,
         // When onSale is false, explicitly set salePrice and discountLabel to null when saving
         ...(values.onSale === false && { 
           salePrice: null,
@@ -696,6 +699,9 @@ export const SalesPromotionsStep: React.FC<SalesPromotionsStepProps> = ({
                     // Apply the same formatting as onSubmit function
                     const formattedValues = {
                       ...values,
+                      // Convert string prices to numbers (same as BasicInfoStep)
+                      regularPrice: typeof values.regularPrice === 'string' ? parseFloat(values.regularPrice) : values.regularPrice,
+                      salePrice: values.salePrice && typeof values.salePrice === 'string' ? parseFloat(values.salePrice) : values.salePrice,
                       // When onSale is false, explicitly set salePrice and discountLabel to null when saving
                       ...(values.onSale === false && { 
                         salePrice: null,
