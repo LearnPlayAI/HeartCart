@@ -3857,9 +3857,9 @@ export class DatabaseStorage implements IStorage {
         ? await db.select().from(catalogs).where(eq(catalogs.isActive, true)).orderBy(asc(catalogs.name))
         : await db.select().from(catalogs).orderBy(asc(catalogs.name));
 
-      // Add product count for each catalog
+      // Add product count and supplier name for each catalog
       const catalogsWithProductCount = await Promise.all(
-        catalogsWithSuppliers.map(async (catalog) => {
+        catalogData.map(async (catalog) => {
           try {
             // Count products in this catalog
             const [result] = await db
@@ -3869,13 +3869,23 @@ export class DatabaseStorage implements IStorage {
 
             const count = result?.count || 0;
 
+            // Get supplier name
+            let supplierName = null;
+            if (catalog.supplierId) {
+              const [supplierResult] = await db
+                .select({ name: suppliers.name })
+                .from(suppliers)
+                .where(eq(suppliers.id, catalog.supplierId));
+              supplierName = supplierResult?.name || null;
+            }
+
             // Format dates and return with supplier name
             return {
               id: catalog.id,
               name: catalog.name,
               description: catalog.description,
               supplierId: catalog.supplierId,
-              supplierName: catalog.supplierName || null,
+              supplierName: supplierName,
               isActive: catalog.isActive,
               defaultMarkupPercentage: catalog.defaultMarkupPercentage,
               startDate: catalog.startDate
@@ -3898,7 +3908,7 @@ export class DatabaseStorage implements IStorage {
             console.error(`Error processing catalog ${catalog.id}:`, error);
             return {
               ...catalog,
-              supplierName: catalog.supplierName || null,
+              supplierName: null,
               productsCount: 0,
             };
           }
