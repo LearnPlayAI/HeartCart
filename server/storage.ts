@@ -3852,47 +3852,10 @@ export class DatabaseStorage implements IStorage {
   // Catalog operations
   async getAllCatalogs(activeOnly = true): Promise<any[]> {
     try {
-      // Use join query to get catalogs with supplier names directly
-      const catalogsWithSuppliers = activeOnly
-        ? await db
-            .select({
-              id: catalogs.id,
-              name: catalogs.name,
-              description: catalogs.description,
-              supplierId: catalogs.supplierId,
-              supplierName: suppliers.name,
-              isActive: catalogs.isActive,
-              defaultMarkupPercentage: catalogs.defaultMarkupPercentage,
-              startDate: catalogs.startDate,
-              endDate: catalogs.endDate,
-              createdAt: catalogs.createdAt,
-              updatedAt: catalogs.updatedAt,
-              coverImage: catalogs.coverImage,
-              tags: catalogs.tags,
-            })
-            .from(catalogs)
-            .leftJoin(suppliers, eq(catalogs.supplierId, suppliers.id))
-            .where(eq(catalogs.isActive, true))
-            .orderBy(asc(catalogs.name))
-        : await db
-            .select({
-              id: catalogs.id,
-              name: catalogs.name,
-              description: catalogs.description,
-              supplierId: catalogs.supplierId,
-              supplierName: suppliers.name,
-              isActive: catalogs.isActive,
-              defaultMarkupPercentage: catalogs.defaultMarkupPercentage,
-              startDate: catalogs.startDate,
-              endDate: catalogs.endDate,
-              createdAt: catalogs.createdAt,
-              updatedAt: catalogs.updatedAt,
-              coverImage: catalogs.coverImage,
-              tags: catalogs.tags,
-            })
-            .from(catalogs)
-            .leftJoin(suppliers, eq(catalogs.supplierId, suppliers.id))
-            .orderBy(asc(catalogs.name));
+      // Get basic catalog data first
+      const catalogData = activeOnly
+        ? await db.select().from(catalogs).where(eq(catalogs.isActive, true)).orderBy(asc(catalogs.name))
+        : await db.select().from(catalogs).orderBy(asc(catalogs.name));
 
       // Add product count for each catalog
       const catalogsWithProductCount = await Promise.all(
