@@ -672,8 +672,8 @@ export default function CatalogProducts() {
           description: "You can now edit the product in the wizard.",
         });
         
-        // Navigate to product wizard with the draft ID
-        navigate(`/admin/products/wizard/${result.data.draftId}`);
+        // Navigate to product management with the draft ID
+        navigate(`/admin/products/manage/${result.data.draftId}`);
       } else {
         throw new Error("Invalid response from server");
       }
