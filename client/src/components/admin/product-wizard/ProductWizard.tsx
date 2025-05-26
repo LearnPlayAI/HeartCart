@@ -395,8 +395,12 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ draftId, initialDa
         });
         
         // Determine redirect destination based on context
-        const currentUrl = window.location.href;
-        const catalogMatch = currentUrl.match(/\/admin\/catalogs\/(\d+)\/products/);
+        const currentPath = window.location.pathname;
+        const referrer = document.referrer;
+        
+        // Check if we came from a catalog context (either current URL or referrer)
+        const catalogMatch = currentPath.match(/\/admin\/catalogs\/(\d+)/) || 
+                            referrer.match(/\/admin\/catalogs\/(\d+)\/products/);
         
         if (catalogMatch) {
           // If we came from a catalog context, redirect back to that catalog
@@ -406,8 +410,8 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ draftId, initialDa
           // If we have a catalog ID in the draft, redirect to that catalog
           setLocation(`/admin/catalogs/${draft.catalogId}/products`);
         } else {
-          // Default fallback to general catalog management
-          setLocation('/admin/catalog');
+          // Default fallback to general product management
+          setLocation('/admin/products');
         }
       } else {
         toast({
