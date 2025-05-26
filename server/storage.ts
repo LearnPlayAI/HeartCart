@@ -793,6 +793,16 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async deleteCategory(id: number): Promise<boolean> {
+    try {
+      const result = await db.delete(categories).where(eq(categories.id, id));
+      return result.rowCount > 0;
+    } catch (error) {
+      console.error(`Error deleting category ${id}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
+  }
+
   // Product operations
   async getAllProducts(
     limit = 20,
