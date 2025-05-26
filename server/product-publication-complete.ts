@@ -343,24 +343,26 @@ export async function publishProductDraftComplete(draftId: number): Promise<Publ
       }
 
       // 5. Handle Product Attributes with complete relationship mapping
-      if (draft.selectedAttributes) {
-        // Parse selectedAttributes if it's a JSON string
+      // Check for attributes in the correct field - attributes_data contains the full attribute information
+      const attributeData = draft.attributesData || draft.attributes_data || draft.selectedAttributes;
+      
+      if (attributeData) {
+        // Parse attributes if it's a JSON string
         let parsedAttributes;
         try {
-          parsedAttributes = typeof draft.selectedAttributes === 'string' 
-            ? JSON.parse(draft.selectedAttributes) 
-            : draft.selectedAttributes;
+          parsedAttributes = typeof attributeData === 'string' 
+            ? JSON.parse(attributeData) 
+            : attributeData;
         } catch (parseError) {
-          logger.warn('Failed to parse selectedAttributes', { selectedAttributes: draft.selectedAttributes, parseError });
-          parsedAttributes = {};
+          logger.warn('Failed to parse attributes', { attributeData, parseError });
+          parsedAttributes = [];
         }
 
-        if (parsedAttributes && Object.keys(parsedAttributes).length > 0) {
+        if (Array.isArray(parsedAttributes) && parsedAttributes.length > 0) {
           logger.info('Processing product attributes with complete mapping', { 
             productId: productResult.id,
-            attributeCount: Object.keys(parsedAttributes).length,
-            rawAttributes: draft.selectedAttributes,
-            parsedAttributes: parsedAttributes
+            attributeCount: parsedAttributes.length,
+            rawAttributes: attributeData
           });
 
           try {
@@ -369,13 +371,13 @@ export async function publishProductDraftComplete(draftId: number): Promise<Publ
 
             // Process each attribute with proper validation
             const attributeInserts = [];
-            for (const [attributeId, selectedOptions] of Object.entries(parsedAttributes)) {
-              if (Array.isArray(selectedOptions) && selectedOptions.length > 0) {
+            for (const attr of parsedAttributes) {
+              if (attr.selectedOptions && Array.isArray(attr.selectedOptions) && attr.selectedOptions.length > 0) {
                 attributeInserts.push({
                   productId: productResult.id,
-                  attributeId: parseInt(attributeId),
-                  selectedOptions: selectedOptions,
-                  textValue: null // For now, focusing on option-based attributes
+                  attributeId: attr.attributeId,
+                  selectedOptions: attr.selectedOptions,
+                  textValue: attr.textValue || null
                   // Remove createdAt and updatedAt - let database handle these automatically
                 });
               }
