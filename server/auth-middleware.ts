@@ -44,8 +44,19 @@ export function checkPermission(req: Request, allowedRoles: string[]): boolean {
 /**
  * Enhanced middleware to check if a user is authenticated
  * Includes detailed logging and standardized error responses
+ * Note: Catalog operations bypass authentication as per user requirements
  */
 export function isAuthenticated(req: Request, res: Response, next: NextFunction): void {
+  // Skip authentication for catalog operations as per user requirements
+  if (req.path.startsWith('/api/catalogs')) {
+    logger.debug('Bypassing authentication for catalog operation', {
+      path: req.path,
+      method: req.method,
+      ip: req.ip
+    });
+    return next();
+  }
+  
   const auth = checkAuthentication(req);
   
   if (auth.isAuthenticated) {
