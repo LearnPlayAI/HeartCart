@@ -650,10 +650,10 @@ export default function CatalogProducts() {
         description: "Please wait while we prepare the product for editing...",
       });
       
-      // Call API to create a draft from the existing product
+      // Call API to reuse existing draft (same as published products edit)
       const response = await apiRequest(
         "POST", 
-        `/api/product-drafts/from-product/${product.id}`
+        `/api/product-drafts/create-from-published/${product.id}`
       );
       
       if (!response.ok) {
@@ -673,7 +673,7 @@ export default function CatalogProducts() {
         });
         
         // Navigate to product wizard with the draft ID
-        navigate(`/admin/product-wizard/${result.data.id}`);
+        navigate(`/admin/products/wizard/${result.data.draftId}`);
       } else {
         throw new Error("Invalid response from server");
       }
