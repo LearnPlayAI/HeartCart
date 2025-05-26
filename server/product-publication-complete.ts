@@ -151,6 +151,7 @@ export async function publishProductDraftComplete(draftId: number): Promise<Publ
         // Basic Information Fields
         name: safeString(draft.name) || 'Untitled Product',
         slug: safeString(draft.slug) || `product-${Date.now()}`,
+        sku: safeString(draft.sku), // Critical SKU field for dropshipping
         description: safeString(draft.description),
         categoryId: draft.categoryId,
         

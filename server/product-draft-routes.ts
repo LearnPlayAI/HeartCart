@@ -914,10 +914,12 @@ export default function registerProductDraftRoutes(router: Router) {
             });
             
             // Update the existing draft record to change status from published to draft
-            await storage.updateProductDraft(existingDraft.id, {
-              draftStatus: 'draft',
-              lastModified: new Date()
-            });
+            await db.update(productDrafts)
+              .set({
+                draftStatus: 'draft',
+                lastModified: new Date()
+              })
+              .where(eq(productDrafts.id, existingDraft.id));
             
             return sendSuccess(res, { 
               draftId: existingDraft.id,
