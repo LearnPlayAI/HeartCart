@@ -4075,7 +4075,9 @@ export class DatabaseStorage implements IStorage {
       console.log(
         `Found ${result.length} products for catalog ID ${catalogId}`,
       );
-      return result;
+
+      // Enrich products with main image URLs
+      return await this.enrichProductsWithMainImage(result);
     } catch (error) {
       console.error(
         `Error getting products for catalog ID ${catalogId}:`,

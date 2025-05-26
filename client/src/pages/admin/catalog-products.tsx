@@ -103,6 +103,7 @@ type Product = {
   hasAttributes: boolean;
   discountPercentage?: number;
   thumbnailUrl?: string;
+  imageUrl?: string;
   rating?: number;
   salesCount?: number;
   createdAt: string;
@@ -799,9 +800,13 @@ export default function CatalogProducts() {
           </TableCell>
           <TableCell className="font-medium">
             <div className="flex items-center gap-3">
-              {product.thumbnailUrl ? (
+              {product.imageUrl || product.thumbnailUrl ? (
                 <div className="h-10 w-10 rounded bg-muted overflow-hidden">
-                  <img src={product.thumbnailUrl} alt={product.name} className="h-full w-full object-cover" />
+                  <img 
+                    src={product.imageUrl || product.thumbnailUrl} 
+                    alt={product.name} 
+                    className="h-full w-full object-cover" 
+                  />
                 </div>
               ) : (
                 <div className="h-10 w-10 rounded bg-muted flex items-center justify-center">
