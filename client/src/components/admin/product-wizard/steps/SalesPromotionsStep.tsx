@@ -674,7 +674,48 @@ export const SalesPromotionsStep: React.FC<SalesPromotionsStepProps> = ({
                     console.log('🚨 Raw form values from getValues():', values);
                     console.log('🚨 Rating in raw values:', values.rating);
                     console.log('🚨 Review count in raw values:', values.review_count);
-                    onSave(values, false);
+                    
+                    // Define the same formatting function used in onSubmit
+                    const formatDateToSASTString = (date: Date | null): string | null => {
+                      if (!date) return null;
+                      
+                      // Format to SAST timezone (UTC+2) as text string
+                      const sastOffset = 2 * 60; // 2 hours in minutes
+                      const sastDate = new Date(date.getTime() + (sastOffset * 60 * 1000));
+                      
+                      const year = sastDate.getUTCFullYear();
+                      const month = String(sastDate.getUTCMonth() + 1).padStart(2, '0');
+                      const day = String(sastDate.getUTCDate()).padStart(2, '0');
+                      const hours = String(sastDate.getUTCHours()).padStart(2, '0');
+                      const minutes = String(sastDate.getUTCMinutes()).padStart(2, '0');
+                      const seconds = String(sastDate.getUTCSeconds()).padStart(2, '0');
+                      
+                      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+                    };
+                    
+                    // Apply the same formatting as onSubmit function
+                    const formattedValues = {
+                      ...values,
+                      // When onSale is false, explicitly set salePrice and discountLabel to null when saving
+                      ...(values.onSale === false && { 
+                        salePrice: null,
+                        discountLabel: null
+                      }),
+                      // Ensure all fields are explicitly included, including the ones in red boxes in the UI
+                      discountLabel: values.onSale ? values.discountLabel : null,
+                      specialSaleText: values.specialSaleText || null,
+                      // Convert date objects to text strings in SAST format
+                      specialSaleStart: formatDateToSASTString(values.specialSaleStart),
+                      specialSaleEnd: formatDateToSASTString(values.specialSaleEnd),
+                      isFlashDeal: values.isFlashDeal || false,
+                      flashDealEnd: formatDateToSASTString(values.flashDealEnd),
+                      // Include rating and review count for marketplace appearance
+                      rating: values.rating || null,
+                      review_count: values.review_count || null
+                    } as Partial<ProductDraft>;
+                    
+                    console.log('🚨 Formatted values for Save button:', formattedValues);
+                    onSave(formattedValues, false);
                   }}
                   disabled={saving || isLoading}
                 >
