@@ -47,6 +47,7 @@ export const products = pgTable("products", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   slug: text("slug").notNull().unique(),
+  sku: text("sku").unique(), // SKU field for supplier ordering
   description: text("description"),
   categoryId: integer("category_id").references(() => categories.id),
   catalogId: integer("catalog_id").references(() => catalogs.id),

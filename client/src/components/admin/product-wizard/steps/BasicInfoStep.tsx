@@ -53,6 +53,7 @@ import slugify from 'slugify';
 const basicInfoSchema = z.object({
   name: z.string().min(3, { message: 'Product name must be at least 3 characters' }),
   slug: z.string().min(3, { message: 'Product slug must be at least 3 characters' }),
+  sku: z.string().nullable().optional(), // SKU field for supplier ordering
   description: z.string().nullable().optional(),
   categoryId: z.coerce.number().int().positive({ message: 'Please select a category' }),
   supplierId: z.coerce.number().int().positive({ message: 'Please select a supplier' }),
