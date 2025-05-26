@@ -4248,6 +4248,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }));
 
+  // OLD CATALOG ROUTES DISABLED - Now handled by catalog-routes-new.ts
+  /*
   // CATALOG ROUTES
   app.get("/api/catalogs", asyncHandler(async (req: Request, res: Response) => {
     try {
@@ -4404,6 +4406,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }));
 
+  // OLD CATALOG POST ROUTE DISABLED - Now handled by catalog-routes-new.ts
+  /*
   app.post("/api/catalogs", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
     const user = req.user as any;
     
@@ -4463,6 +4467,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
     }
   }));
+  */
 
   app.put("/api/catalogs/:id", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
     const user = req.user as any;
