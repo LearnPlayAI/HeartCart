@@ -82,7 +82,11 @@ router.get('/:id', asyncHandler(async (req: Request, res: Response) => {
 // Create a new catalog (admin only)
 router.post('/', isAuthenticated, isAdmin, asyncHandler(async (req: Request, res: Response) => {
   try {
+    console.log('=== CATALOG CREATION DEBUG ===');
+    console.log('Raw request body:', req.body);
+    
     const validatedData = catalogSchema.parse(req.body);
+    console.log('Validated data:', validatedData);
     
     // Check if catalog name already exists for this supplier
     const nameExists = await catalogService.catalogNameExists(
