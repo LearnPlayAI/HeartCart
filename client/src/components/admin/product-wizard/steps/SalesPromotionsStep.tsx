@@ -194,7 +194,10 @@ export const SalesPromotionsStep: React.FC<SalesPromotionsStepProps> = ({
         specialSaleStart: formatDateToSASTString(values.specialSaleStart),
         specialSaleEnd: formatDateToSASTString(values.specialSaleEnd),
         isFlashDeal: values.isFlashDeal || false,
-        flashDealEnd: formatDateToSASTString(values.flashDealEnd)
+        flashDealEnd: formatDateToSASTString(values.flashDealEnd),
+        // Include rating and review count for marketplace appearance
+        rating: values.rating || null,
+        review_count: values.review_count || null
       } as Partial<ProductDraft>;
       
       // Add debugging logs to see what's being sent
