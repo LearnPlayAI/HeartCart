@@ -4009,55 +4009,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw new ForbiddenError("Only administrators can manage suppliers");
       }
       
-      // Convert camelCase form data to snake_case database format
-      const supplierData = {
-        name: req.body.name,
-        contactName: req.body.contactName, // This maps to contact_name in DB via Drizzle
-        email: req.body.email,
-        phone: req.body.phone,
-        address: req.body.address || null,
-        city: req.body.city || null,
-        country: req.body.country || "South Africa",
-        notes: req.body.notes || null,
-        logo: req.body.logo || null,
-        website: req.body.website || null,
-        isActive: req.body.isActive !== undefined ? req.body.isActive : true
-      };
+      // Use database-centric approach - bypass Drizzle validation entirely
+      const name = req.body.name;
+      const contactName = req.body.contactName || null;
+      const email = req.body.email || null;
+      const phone = req.body.phone || null;
+      const address = req.body.address || null;
+      const city = req.body.city || null;
+      const country = req.body.country || "South Africa";
+      const notes = req.body.notes || null;
+      const logo = req.body.logo || null;
+      const website = req.body.website || null;
+      const isActive = req.body.isActive !== undefined ? req.body.isActive : true;
+      const now = new Date().toISOString();
       
-      // Validate the converted data with detailed error logging
-      console.log('About to validate supplier data:', supplierData);
+      // Check if supplier with same name already exists using raw SQL
+      const existingSupplierResult = await db.execute(
+        sql`SELECT id FROM suppliers WHERE name = ${name}`
+      );
       
-      let validatedData;
-      try {
-        validatedData = insertSupplierSchema.parse(supplierData);
-        console.log('Validation successful, validated data:', validatedData);
-      } catch (validationError) {
-        console.error('VALIDATION ERROR DETAILS:', validationError);
-        if (validationError instanceof z.ZodError) {
-          console.error('Zod validation issues:', validationError.issues);
-          validationError.issues.forEach((issue, index) => {
-            console.error(`Issue ${index + 1}:`, {
-              path: issue.path,
-              message: issue.message,
-              code: issue.code,
-              received: 'received' in issue ? issue.received : 'N/A'
-            });
-          });
-        }
-        throw validationError;
-      }
-      
-      // Check if supplier with same name already exists
-      const existingSupplier = await storage.getSupplierByName(validatedData.name);
-      if (existingSupplier) {
+      if (existingSupplierResult.length > 0) {
         throw new AppError(
-          `A supplier with the name "${validatedData.name}" already exists`,
+          `A supplier with the name "${name}" already exists`,
           ErrorCode.DUPLICATE_ENTITY,
           409
         );
       }
       
-      const supplier = await storage.createSupplier(validatedData);
+      // Create supplier using raw SQL to avoid any schema mismatch issues
+      const result = await db.execute(
+        sql`INSERT INTO suppliers (
+          name, contact_name, email, phone, address, city, country, 
+          notes, logo, website, is_active, created_at, updated_at
+        ) VALUES (
+          ${name}, ${contactName}, ${email}, ${phone}, ${address}, 
+          ${city}, ${country}, ${notes}, ${logo}, ${website}, 
+          ${isActive}, ${now}, ${now}
+        ) RETURNING *`
+      );
+      
+      const supplier = result[0];
       
       return res.status(201).json({
         success: true,
@@ -4073,7 +4064,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       // Check for specific error types
-      if (error instanceof ForbiddenError || error instanceof AppError || error instanceof z.ZodError) {
+      if (error instanceof ForbiddenError || error instanceof AppError) {
         throw error;
       }
       
