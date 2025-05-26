@@ -19,6 +19,9 @@ import { objectStore, STORAGE_FOLDERS } from "./object-store";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
 import { db } from "./db";
+import { productDrafts } from "@shared/schema";
+import { eq, sql } from "drizzle-orm";
+import { db } from "./db";
 import { sql } from "drizzle-orm";
 import { ProductDraft, products, productImages } from "@shared/schema";
 import { z } from "zod";
@@ -879,6 +882,33 @@ export default function registerProductDraftRoutes(router: Router) {
       });
       
       try {
+        // First check if an existing draft already exists for this product
+        const existingDrafts = await db.select()
+          .from(productDrafts)
+          .where(eq(productDrafts.originalProductId, productId))
+          .where(eq(productDrafts.draftStatus, 'draft'));
+        
+        if (existingDrafts.length > 0) {
+          const existingDraft = existingDrafts[0];
+          logger.debug('Found existing draft for product, reusing it', {
+            draftId: existingDraft.id,
+            productId,
+            originalProductId: existingDraft.originalProductId,
+            name: existingDraft.name
+          });
+          
+          return sendSuccess(res, { 
+            draftId: existingDraft.id,
+            message: "Using existing draft for product editing"
+          });
+        }
+        
+        // No existing draft found, create a new one with ALL product data
+        logger.debug('No existing draft found, creating new draft from product', {
+          productId,
+          userId
+        });
+        
         // Use the working SQL function to create a draft with ALL product data
         const result = await db.execute(
           sql`SELECT * FROM create_product_draft_from_product(${productId}, ${userId})`
@@ -889,6 +919,20 @@ export default function registerProductDraftRoutes(router: Router) {
         }
         
         const draftRecord = result.rows[0] as any;
+        
+        // Ensure the original_product_id is properly set in the new draft
+        if (!draftRecord.original_product_id) {
+          logger.warn('Draft created without original_product_id, updating it', {
+            draftId: draftRecord.id,
+            productId
+          });
+          
+          await db.update(productDrafts)
+            .set({ originalProductId: productId })
+            .where(eq(productDrafts.id, draftRecord.id));
+            
+          draftRecord.original_product_id = productId;
+        }
         
         logger.debug('Successfully created draft from published product', {
           draftId: draftRecord.id,
