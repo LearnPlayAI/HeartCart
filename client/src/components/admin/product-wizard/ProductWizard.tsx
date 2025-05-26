@@ -306,7 +306,10 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ draftId, initialDa
           specialSaleStart: stepData.specialSaleStart,
           specialSaleEnd: stepData.specialSaleEnd,
           isFlashDeal: stepData.isFlashDeal,
-          flashDealEnd: stepData.flashDealEnd
+          flashDealEnd: stepData.flashDealEnd,
+          // Rating and review count fields
+          rating: stepData.rating,
+          review_count: stepData.review_count
         });
       }
       
