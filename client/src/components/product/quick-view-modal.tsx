@@ -367,7 +367,7 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
             {/* Additional info */}
             {product.sku && (
               <div className="text-xs text-gray-500 mt-2">
-                SKU: {product.sku} {currentCombination?.sku && `(${currentCombination.sku})`}
+                SKU: {product.sku}
               </div>
             )}
             
