@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { getTimeRemaining, formatTimeRemaining } from '@/lib/utils';
 
 type UseCountdownReturnType = {
@@ -15,12 +15,19 @@ type UseCountdownReturnType = {
 };
 
 export const useCountdown = (endDate: Date | string): UseCountdownReturnType => {
-  const [timeRemaining, setTimeRemaining] = useState(() => getTimeRemaining(endDate));
-  const [formattedTime, setFormattedTime] = useState('00:00:00');
-  const [humanReadableTime, setHumanReadableTime] = useState('');
-  const [isExpired, setIsExpired] = useState(false);
-  
-  const formatHumanReadable = (time: { days: number; hours: number; minutes: number; seconds: number }) => {
+  // Memoize the target end date to prevent unnecessary recalculations
+  const targetEndDate = useMemo(() => {
+    return typeof endDate === 'string' ? endDate : endDate.toISOString();
+  }, [endDate]);
+
+  const [currentTime, setCurrentTime] = useState(Date.now());
+
+  // Calculate time remaining based on current time
+  const timeRemaining = useMemo(() => {
+    return getTimeRemaining(targetEndDate);
+  }, [targetEndDate, currentTime]);
+
+  const formatHumanReadable = useCallback((time: { days: number; hours: number; minutes: number; seconds: number }) => {
     const parts = [];
     
     if (time.days > 0) {
@@ -38,34 +45,25 @@ export const useCountdown = (endDate: Date | string): UseCountdownReturnType => 
     }
     
     return parts.slice(0, 2).join(', ');
-  };
-  
+  }, []);
+
+  // Derived values
+  const isExpired = timeRemaining.total <= 0;
+  const formattedTime = isExpired ? '00:00:00' : formatTimeRemaining({
+    hours: timeRemaining.days * 24 + timeRemaining.hours,
+    minutes: timeRemaining.minutes,
+    seconds: timeRemaining.seconds
+  });
+  const humanReadableTime = isExpired ? 'Expired' : formatHumanReadable(timeRemaining);
+
   useEffect(() => {
-    const updateCountdown = () => {
-      const time = getTimeRemaining(endDate);
-      setTimeRemaining(time);
-      
-      if (time.total <= 0) {
-        setIsExpired(true);
-        setFormattedTime('00:00:00');
-        setHumanReadableTime('Expired');
-        clearInterval(interval);
-      } else {
-        setFormattedTime(formatTimeRemaining({
-          hours: time.days * 24 + time.hours,
-          minutes: time.minutes,
-          seconds: time.seconds
-        }));
-        setHumanReadableTime(formatHumanReadable(time));
-      }
-    };
-    
-    updateCountdown();
-    const interval = setInterval(updateCountdown, 1000);
-    
+    const interval = setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 1000);
+
     return () => clearInterval(interval);
-  }, [endDate]);
-  
+  }, []);
+
   return {
     timeRemaining,
     formattedTime,
