@@ -41,18 +41,17 @@ const FlashDealsPage = () => {
           <div className="flex items-center">
             <Zap className="h-8 w-8 mr-3" />
             <div>
-              <h1 className="text-3xl font-bold">Flash Deals</h1>
+              <h1 className="text-3xl font-bold">Special Deals</h1>
               <p className="text-lg opacity-90">Limited time offers - Don't miss out!</p>
             </div>
           </div>
         </div>
       </div>
-
       {/* Content Section */}
       <div className="container mx-auto px-4 py-8">
         {isLoading ? (
           // Loading state
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          (<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {Array.from({ length: 10 }).map((_, index) => (
               <Card key={index} className="h-80 animate-pulse bg-gray-100">
                 <div className="h-48 bg-gray-200 rounded-t-lg"></div>
@@ -63,10 +62,10 @@ const FlashDealsPage = () => {
                 </div>
               </Card>
             ))}
-          </div>
+          </div>)
         ) : error ? (
           // Error state
-          <div className="text-center py-16">
+          (<div className="text-center py-16">
             <div className="text-red-500 text-xl mb-4">Failed to load flash deals</div>
             <p className="text-gray-600 mb-6">Something went wrong while fetching the deals. Please try again.</p>
             <button 
@@ -75,17 +74,16 @@ const FlashDealsPage = () => {
             >
               Retry
             </button>
-          </div>
+          </div>)
         ) : flashDeals.length > 0 ? (
           // Flash deals content
-          <div>
+          (<div>
             <div className="mb-6">
               <h2 className="text-2xl font-semibold text-gray-800 mb-2">
-                {flashDeals.length} Flash Deal{flashDeals.length !== 1 ? 's' : ''} Available
+                {flashDeals.length} Special Deal{flashDeals.length !== 1 ? 's' : ''} Available
               </h2>
               <p className="text-gray-600">Hurry up! These deals won't last long.</p>
             </div>
-            
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
               {flashDeals.map((product) => {
                 // Using product ID for deterministic soldPercentage to avoid re-renders
@@ -101,17 +99,17 @@ const FlashDealsPage = () => {
                 );
               })}
             </div>
-          </div>
+          </div>)
         ) : (
           // Empty state
-          <div className="text-center py-16">
+          (<div className="text-center py-16">
             <Zap className="h-16 w-16 text-gray-300 mx-auto mb-4" />
             <h2 className="text-2xl font-semibold text-gray-800 mb-2">No Flash Deals Available</h2>
             <p className="text-gray-600 mb-6">Check back later for exciting limited-time offers!</p>
             <Link href="/" className="inline-flex items-center px-6 py-3 rounded-md bg-[#FF69B4] text-white hover:bg-[#FF1493] transition-colors">
               Browse All Products
             </Link>
-          </div>
+          </div>)
         )}
       </div>
     </div>

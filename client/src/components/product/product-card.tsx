@@ -13,11 +13,11 @@ import { useCountdown } from '@/hooks/use-countdown';
 
 // Flash Deal Timer Component 
 const FlashDealTimer = ({ endDate }: { endDate: Date }) => {
-  const { formattedTime } = useCountdown(endDate);
+  const { humanReadableTime } = useCountdown(endDate);
   
   return (
-    <span className="text-xs font-mono bg-gray-100 px-2 py-0.5 rounded">
-      {formattedTime}
+    <span className="text-xs bg-gray-100 px-2 py-0.5 rounded">
+      {humanReadableTime}
     </span>
   );
 };
