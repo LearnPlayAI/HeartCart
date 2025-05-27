@@ -62,7 +62,7 @@ export const products = pgTable("products", {
   stock: integer("stock").notNull(), // Added to match DB structure - used as stockQuantity in UI
   minimumOrder: integer("minimum_order").default(1), // New field for supplier requirements
   rating: doublePrecision("rating").default(0),
-  review_count: integer("review_count").default(0),
+  reviewCount: integer("review_count").default(0),
   isActive: boolean("is_active").default(true).notNull(),
   isFeatured: boolean("is_featured").default(false).notNull(),
   isFlashDeal: boolean("is_flash_deal").default(false).notNull(),
