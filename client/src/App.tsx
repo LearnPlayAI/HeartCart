@@ -16,6 +16,7 @@ import OrderDetail from "@/pages/order-detail";
 import SearchResults from "@/pages/search-results";
 import Profile from "@/pages/profile-fix";
 import AuthPage from "@/pages/auth-page";
+import FlashDeals from "@/pages/flash-deals";
 import NotFound from "@/pages/not-found";
 import CartDrawer from "@/components/cart/cart-drawer";
 import { SessionExpiryWarning } from "@/components/session/session-expiry-warning";
@@ -237,6 +238,7 @@ function App() {
                       <Route path="/product/id/:id"><ProductDetail /></Route>
                       <Route path="/product/:slug"><ProductDetail /></Route>
                       <Route path="/category/:slug"><Category /></Route>
+                      <Route path="/flash-deals"><FlashDeals /></Route>
                       <Route path="/products"><ProductListing /></Route>
                       <Route path="/products-example"><ProductsExample /></Route>
                       <ProtectedRoute path="/checkout" component={Checkout} />
