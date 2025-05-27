@@ -419,15 +419,16 @@ const ProductListing = () => {
   
   // Get all child category IDs for hierarchical filtering
   const getAllChildCategoryIds = (parentCategoryId: number, categoriesWithChildren: any[]): number[] => {
-    const categoryItem = categoriesWithChildren.find(item => item.category.id === parentCategoryId);
-    if (!categoryItem) return [];
+    const categoryItem = categoriesWithChildren.find(item => item.category?.id === parentCategoryId);
+    if (!categoryItem) return [parentCategoryId];
     
     let allIds = [parentCategoryId];
     if (categoryItem.children && categoryItem.children.length > 0) {
       categoryItem.children.forEach((child: any) => {
         allIds.push(child.id);
         // Recursively get children of children if needed
-        allIds = allIds.concat(getAllChildCategoryIds(child.id, categoriesWithChildren));
+        const childIds = getAllChildCategoryIds(child.id, categoriesWithChildren);
+        allIds = allIds.concat(childIds.filter(id => !allIds.includes(id)));
       });
     }
     return allIds;
@@ -443,6 +444,10 @@ const ProductListing = () => {
         if (includeChildren) {
           // Get all child category IDs using the fetched categories data
           const allowedCategoryIds = getAllChildCategoryIds(selectedCategoryId, categoriesWithChildren);
+          console.log('Debug - Selected Category ID:', selectedCategoryId);
+          console.log('Debug - Categories with children:', categoriesWithChildren);
+          console.log('Debug - Allowed category IDs:', allowedCategoryIds);
+          console.log('Debug - Product category ID:', product.categoryId);
           
           if (!product.categoryId || !allowedCategoryIds.includes(product.categoryId)) return false;
         } else {
