@@ -208,8 +208,8 @@ export async function publishProductDraftComplete(draftId: number): Promise<Publ
         
         // Analytics and Performance - use draft values or defaults
         rating: (draft as any).rating || null,
-        reviewCount: (draft as any).reviewCount || 0,
-        soldCount: 0,
+        review_count: (draft as any).reviewCount || 0,
+        sold_count: 0,
         
         // System Fields - use defaults for missing fields
         displayOrder: 999, // Field doesn't exist in drafts table, use default
