@@ -174,3 +174,5 @@ export function CategorySidebar({ className, onCategorySelect }: CategorySidebar
     </div>
   );
 }
+
+export default CategorySidebar;

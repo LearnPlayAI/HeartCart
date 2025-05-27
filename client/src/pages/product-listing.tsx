@@ -35,6 +35,7 @@ import {
   CircleCheck
 } from 'lucide-react';
 import ProductCard from '@/components/product/product-card';
+import CategorySidebar from '@/components/ui/category-sidebar';
 import type { Product, Category } from '@shared/schema';
 import { Input } from '@/components/ui/input';
 import { formatCurrency } from '@/lib/utils';
@@ -600,32 +601,20 @@ const ProductListing = () => {
               <SlidersHorizontal className="h-5 w-5 text-gray-500" />
             </div>
             
-            <Accordion type="multiple" defaultValue={['categories', 'price', 'availability', 'rating', 'attributes', 'more']}>
-              <AccordionItem value="categories">
-                <AccordionTrigger>Categories</AccordionTrigger>
-                <AccordionContent>
-                  <div className="space-y-2">
-                    <div className="flex items-center">
-                      <RadioGroup 
-                        value={selectedCategory || ''} 
-                        onValueChange={handleCategoryChange}
-                      >
-                        <div className="flex items-center space-x-2 mb-2">
-                          <RadioGroupItem id="all-categories" value="" />
-                          <label htmlFor="all-categories" className="text-sm">All Categories</label>
-                        </div>
-                        
-                        {categories?.map(cat => (
-                          <div key={cat.id} className="flex items-center space-x-2 mb-2">
-                            <RadioGroupItem id={`cat-${cat.id}`} value={cat.id.toString()} />
-                            <label htmlFor={`cat-${cat.id}`} className="text-sm">{cat.name}</label>
-                          </div>
-                        ))}
-                      </RadioGroup>
-                    </div>
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
+            {/* Category Sidebar Component */}
+            <div className="mb-6">
+              <CategorySidebar
+                onCategorySelect={() => {
+                  // Close mobile filter when category is selected
+                  if (isFilterOpen) {
+                    toggleFilter();
+                  }
+                }}
+                className="border-0 shadow-none"
+              />
+            </div>
+            
+            <Accordion type="multiple" defaultValue={['price', 'availability', 'rating', 'attributes', 'more']}>
               
               <AccordionItem value="price">
                 <AccordionTrigger>Price Range</AccordionTrigger>
