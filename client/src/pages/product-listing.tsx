@@ -84,7 +84,9 @@ const ProductListing = () => {
   const [sortBy, setSortBy] = useState(searchParams.get('sort') || 'default');
   const [priceRange, setPriceRange] = useState([0, 5000]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(searchParams.get('category'));
-  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
+    searchParams.get('categoryId') ? parseInt(searchParams.get('categoryId')!) : null
+  );
   const [availabilityFilter, setAvailabilityFilter] = useState('all');
   const [ratingFilter, setRatingFilter] = useState(searchParams.get('rating') || '');
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
@@ -120,6 +122,14 @@ const ProductListing = () => {
   const products = productsResponse?.success ? productsResponse.data : [];
   const totalPages = productsResponse?.meta?.totalPages || 1;
   
+  // Fetch categories with children for hierarchical filtering
+  const { 
+    data: categoriesWithChildrenResponse 
+  } = useQuery({
+    queryKey: ["/api/categories/main/with-children"],
+  });
+  const categoriesWithChildren = categoriesWithChildrenResponse?.success ? categoriesWithChildrenResponse.data : [];
+
   // Fetch filterable attributes based on selected category
   const { 
     data: filterableAttributesResponse, 
@@ -227,6 +237,26 @@ const ProductListing = () => {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setPage(1);
+  };
+
+  // Handle category filtering with hierarchical support
+  const handleCategoryFilter = (categoryId: number | null, includeChildren: boolean = false) => {
+    setSelectedCategoryId(categoryId);
+    
+    // Update URL parameters
+    const newSearchParams = new URLSearchParams(searchParams);
+    if (categoryId) {
+      newSearchParams.set('categoryId', categoryId.toString());
+      if (includeChildren) {
+        newSearchParams.set('includeChildren', 'true');
+      } else {
+        newSearchParams.delete('includeChildren');
+      }
+    } else {
+      newSearchParams.delete('categoryId');
+      newSearchParams.delete('includeChildren');
+    }
+    setLocation(`/products?${newSearchParams.toString()}`);
   };
   
   // Handle attribute filter changes
@@ -387,10 +417,41 @@ const ProductListing = () => {
     setActiveFilters(newActiveFilters);
   }, [attributeFilters]);
   
+  // Get all child category IDs for hierarchical filtering
+  const getAllChildCategoryIds = (parentCategoryId: number, categoriesWithChildren: any[]): number[] => {
+    const categoryItem = categoriesWithChildren.find(item => item.category.id === parentCategoryId);
+    if (!categoryItem) return [];
+    
+    let allIds = [parentCategoryId];
+    if (categoryItem.children && categoryItem.children.length > 0) {
+      categoryItem.children.forEach((child: any) => {
+        allIds.push(child.id);
+        // Recursively get children of children if needed
+        allIds = allIds.concat(getAllChildCategoryIds(child.id, categoriesWithChildren));
+      });
+    }
+    return allIds;
+  };
+
   // Apply filters and sorting to products
   const filteredProducts = products ? products
     .filter(product => {
-      // Apply category filter
+      // Apply category filter with hierarchical support
+      if (selectedCategoryId) {
+        const includeChildren = new URLSearchParams(location.split('?')[1] || '').get('includeChildren') === 'true';
+        
+        if (includeChildren) {
+          // Get all child category IDs using the fetched categories data
+          const allowedCategoryIds = getAllChildCategoryIds(selectedCategoryId, categoriesWithChildren);
+          
+          if (!product.categoryId || !allowedCategoryIds.includes(product.categoryId)) return false;
+        } else {
+          // Exact category match
+          if (product.categoryId !== selectedCategoryId) return false;
+        }
+      }
+      
+      // Legacy category filter support (string-based)
       if (selectedCategory && (!product.categoryId || product.categoryId.toString() !== selectedCategory)) return false;
       
       // Apply price filter
@@ -605,6 +666,9 @@ const ProductListing = () => {
             {/* Category Sidebar Component */}
             <div className="mb-6">
               <CategorySidebar
+                isFilterMode={true}
+                selectedCategoryId={selectedCategoryId}
+                onCategoryFilter={handleCategoryFilter}
                 onCategorySelect={() => {
                   // Close mobile filter when category is selected
                   if (isFilterOpen) {
