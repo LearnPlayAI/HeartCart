@@ -119,7 +119,7 @@ export default function AuthPage() {
         {/* Auth Forms Section */}
         <div className="flex flex-col justify-center">
           <div className="mb-6">
-            <h1 className="text-2xl font-bold">Welcome to TemuSA</h1>
+            <h1 className="text-2xl font-bold">Welcome to TeeMeYou.shop</h1>
             <p className="text-muted-foreground">
               Sign in to your account or create a new one to start shopping.
             </p>
