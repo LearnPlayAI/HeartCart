@@ -15,16 +15,10 @@ type UseCountdownReturnType = {
 };
 
 export const useCountdown = (endDate: Date | string): UseCountdownReturnType => {
-  const [timeRemaining, setTimeRemaining] = useState(getTimeRemaining(endDate));
+  const [timeRemaining, setTimeRemaining] = useState(() => getTimeRemaining(endDate));
   const [formattedTime, setFormattedTime] = useState('00:00:00');
   const [humanReadableTime, setHumanReadableTime] = useState('');
   const [isExpired, setIsExpired] = useState(false);
-  
-  // Debug logging
-  console.log('useCountdown - endDate input:', endDate);
-  console.log('useCountdown - current time:', new Date().toISOString());
-  console.log('useCountdown - parsed endDate:', new Date(endDate).toISOString());
-  console.log('useCountdown - timeRemaining:', timeRemaining);
   
   const formatHumanReadable = (time: { days: number; hours: number; minutes: number; seconds: number }) => {
     const parts = [];
