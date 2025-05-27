@@ -163,7 +163,7 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
       }
     } else if (productAttributesData && productAttributesData.length === 0) {
       // Clear attributes if no product attributes
-      if (Object.keys(productAttributes).length > 0) {
+      if (productAttributes && Object.keys(productAttributes).length > 0) {
         setProductAttributes({});
       }
     }
