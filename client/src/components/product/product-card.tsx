@@ -96,18 +96,38 @@ const ProductCard: React.FC<ProductCardProps> = ({
   // All product cards will use a consistent design based on the Featured Products style
   return (
     <div className="product-card bg-white rounded-lg shadow-sm overflow-hidden min-w-[200px]">
-      <Link href={`/product/id/${product.id}`} className="block">
+      <Link href={`/product/id/${product.id}`} className="block relative">
         {imageError ? (
           <div className="w-full h-48 bg-gray-100 flex items-center justify-center">
             <ImageOff className="w-10 h-10 text-gray-400" />
           </div>
         ) : (
-          <img 
-            src={product.imageUrl ? ensureValidImageUrl(product.imageUrl) : (product.originalImageObjectKey ? ensureValidImageUrl(product.originalImageObjectKey) : '')} 
-            alt={product.name || 'Product image'} 
-            className="w-full h-48 object-cover"
-            onError={() => setImageError(true)}
-          />
+          <div className="relative">
+            <img 
+              src={product.imageUrl ? ensureValidImageUrl(product.imageUrl) : (product.originalImageObjectKey ? ensureValidImageUrl(product.originalImageObjectKey) : '')} 
+              alt={product.name || 'Product image'} 
+              className="w-full h-48 object-cover"
+              onError={() => setImageError(true)}
+            />
+            
+            {/* Discount/Sale Badges - positioned in lower right */}
+            <div className="absolute bottom-2 right-2 flex flex-col gap-1">
+              {product.discountLabel && (
+                <Badge 
+                  className="bg-blue-500 hover:bg-blue-600 text-white text-xs px-2 py-1 rounded-md shadow-sm"
+                >
+                  {product.discountLabel}
+                </Badge>
+              )}
+              {product.specialSaleText && (
+                <Badge 
+                  className="bg-green-500 hover:bg-green-600 text-white text-xs px-2 py-1 rounded-md shadow-sm"
+                >
+                  {product.specialSaleText}
+                </Badge>
+              )}
+            </div>
+          </div>
         )}
         
         <div className="p-3">
