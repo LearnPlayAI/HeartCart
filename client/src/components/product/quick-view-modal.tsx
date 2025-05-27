@@ -106,13 +106,13 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
   });
   const categoryAttributes = categoryAttributesResponse?.success ? categoryAttributesResponse.data : [];
 
-  // Fetch product attribute values
+  // Fetch product global attributes (includes options)
   const { 
     data: productAttributesDataResponse, 
     isLoading: isLoadingProductAttributes,
     error: productAttributesError
-  } = useQuery<StandardApiResponse<ProductAttribute[]>>({
-    queryKey: [`/api/products/${product?.id}/attributes`],
+  } = useQuery<StandardApiResponse<any[]>>({
+    queryKey: [`/api/products/${product?.id}/global-attributes`],
     enabled: !!product?.id && open,
   });
   const productAttributesData = productAttributesDataResponse?.success ? productAttributesDataResponse.data : [];
@@ -146,19 +146,19 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
     // The quick view should work fine without attributes
   }, [categoryAttributesError, productAttributesError, combinationsError]);
 
-  // Process product attributes - use product attributes directly since they contain the needed data
+  // Process product global attributes - they include attribute and options data
   useEffect(() => {
     if (productAttributesData && productAttributesData.length > 0) {
-      console.log('Processing product attributes data:', productAttributesData);
+      console.log('Processing global attributes data:', productAttributesData);
       const attributesMap: Record<number, Array<{id: number, value: string}>> = {};
       
-      productAttributesData.forEach((productAttr: ProductAttribute) => {
-        console.log('Processing product attribute:', productAttr);
-        if (productAttr && productAttr.attributeOptions && productAttr.attributeOptions.length > 0) {
-          console.log('Adding attribute options:', productAttr.attributeOptions);
-          attributesMap[productAttr.categoryAttributeId] = productAttr.attributeOptions;
+      productAttributesData.forEach((globalAttr: any) => {
+        console.log('Processing global attribute:', globalAttr);
+        if (globalAttr && globalAttr.attribute && globalAttr.options && globalAttr.options.length > 0) {
+          console.log('Adding attribute options:', globalAttr.options);
+          attributesMap[globalAttr.attribute.id] = globalAttr.options;
         } else {
-          console.log('No attribute options found for:', productAttr);
+          console.log('No attribute options found for:', globalAttr);
         }
       });
       
@@ -341,27 +341,28 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
               <>
                 {productAttributesData && productAttributesData.length > 0 && (
                   <div className="space-y-3">
-                    {productAttributesData.map((productAttr: ProductAttribute) => (
-                      <div key={productAttr.categoryAttributeId} className="space-y-1">
+                    {productAttributesData.map((globalAttr: any) => (
+                      <div key={globalAttr.id} className="space-y-1">
                         <div className="flex items-center gap-2">
                           <label className="text-sm font-medium">
-                            {/* Use a generic label since we may not have category attribute details */}
-                            Option {productAttr.categoryAttributeId}
+                            {globalAttr.attribute?.displayName || globalAttr.attribute?.name || 'Option'}
                           </label>
-                          <Badge variant="outline" className="text-[#FF69B4] text-xs">Required</Badge>
+                          {globalAttr.attribute?.isRequired && (
+                            <Badge variant="outline" className="text-[#FF69B4] text-xs">Required</Badge>
+                          )}
                         </div>
                         
                         <Select 
-                          value={selectedAttributes[productAttr.categoryAttributeId] || ''}
-                          onValueChange={value => handleAttributeChange(productAttr.categoryAttributeId, value)}
+                          value={selectedAttributes[globalAttr.attribute?.id] || ''}
+                          onValueChange={value => handleAttributeChange(globalAttr.attribute?.id, value)}
                         >
                           <SelectTrigger className="w-full">
                             <SelectValue placeholder="Select option" />
                           </SelectTrigger>
                           <SelectContent>
-                            {productAttr.attributeOptions?.map(option => (
+                            {globalAttr.options?.map((option: any) => (
                               <SelectItem key={option.id} value={option.value}>
-                                {option.value}
+                                {option.displayValue || option.value}
                               </SelectItem>
                             ))}
                           </SelectContent>
