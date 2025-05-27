@@ -627,6 +627,10 @@ export const productDrafts = pgTable("product_drafts", {
   selectedAttributes: jsonb("selected_attributes").default('[]'),
   aiSuggestions: jsonb("ai_suggestions").default('{}'),
   discountData: jsonb("discount_data").default('{}'),
+  
+  // Rating and review count for marketplace appearance
+  rating: doublePrecision("rating"),
+  reviewCount: integer("review_count"),
 }, (table) => {
   return {
     originalProductIdx: index("idx_product_drafts_original_product").on(table.originalProductId),
@@ -654,6 +658,8 @@ export const insertProductDraftSchema = createInsertSchema(productDrafts, {
   selectedAttributes: z.any().optional(),
   aiSuggestions: z.any().optional(),
   discountData: z.any().optional(),
+  rating: z.number().optional().nullable(),
+  reviewCount: z.number().int().optional().nullable(),
 }).omit({ 
   id: true 
 });
