@@ -95,7 +95,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   
   // All product cards will use a consistent design based on the Featured Products style
   return (
-    <div className="product-card bg-white rounded-lg shadow-sm overflow-hidden min-w-[200px]">
+    <div className="product-card bg-white rounded-lg shadow-sm overflow-hidden min-w-[240px]">
       <Link href={`/product/id/${product.id}`} className="block relative">
         {imageError ? (
           <div className="w-full h-48 bg-gray-100 flex items-center justify-center">
@@ -145,13 +145,17 @@ const ProductCard: React.FC<ProductCardProps> = ({
           </div>
           
           {isFlashDeal && (
-            <div className="flex items-center justify-between mt-1 mb-1">
-              <Badge variant="outline" className="bg-[#FF69B4]/10 text-[#FF69B4] border-[#FF69B4]/30 flex items-center gap-1 px-2 py-0.5">
-                <Zap className="h-3 w-3" />
-                <span className="text-xs">Special Deal</span>
-              </Badge>
+            <div className="space-y-1 mt-2 mb-1">
+              <div className="flex items-center justify-between">
+                <Badge variant="outline" className="bg-[#FF69B4]/10 text-[#FF69B4] border-[#FF69B4]/30 flex items-center gap-1 px-2 py-0.5">
+                  <Zap className="h-3 w-3" />
+                  <span className="text-xs">Special Deal</span>
+                </Badge>
+              </div>
               {product.flashDealEnd && (
-                <FlashDealTimer endDate={new Date(product.flashDealEnd)} />
+                <div className="flex justify-center">
+                  <FlashDealTimer endDate={new Date(product.flashDealEnd)} />
+                </div>
               )}
             </div>
           )}
