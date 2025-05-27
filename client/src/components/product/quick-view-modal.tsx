@@ -101,7 +101,7 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
     isLoading: isLoadingAttributes,
     error: categoryAttributesError 
   } = useQuery<StandardApiResponse<CategoryAttribute[]>>({
-    queryKey: ['/api/products/attributes-for-category', product?.categoryId],
+    queryKey: [`/api/categories/${product?.categoryId}/attributes`],
     enabled: !!product?.categoryId && open,
   });
   const categoryAttributes = categoryAttributesResponse?.success ? categoryAttributesResponse.data : [];
@@ -128,7 +128,7 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
   });
   const combinations = combinationsResponse?.success ? combinationsResponse.data : [];
   
-  // Log any attribute-related errors
+  // Log any attribute-related errors (but don't show toast - attributes are optional)
   useEffect(() => {
     if (categoryAttributesError) {
       console.error('Error loading category attributes:', categoryAttributesError);
@@ -142,15 +142,9 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
       console.error('Error loading product combinations:', combinationsError);
     }
     
-    // Show toast only once if any of these errors occur
-    if (categoryAttributesError || productAttributesError || combinationsError) {
-      toast({
-        title: "Error loading product options",
-        description: "There was a problem loading some product options. Some features may be limited.",
-        variant: "destructive",
-      });
-    }
-  }, [categoryAttributesError, productAttributesError, combinationsError, toast]);
+    // Don't show error toasts for attribute errors as they're optional features
+    // The quick view should work fine without attributes
+  }, [categoryAttributesError, productAttributesError, combinationsError]);
 
   // Process product attributes
   useEffect(() => {

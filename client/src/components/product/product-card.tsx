@@ -148,7 +148,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
             <div className="flex items-center justify-between mt-1 mb-1">
               <Badge variant="outline" className="bg-[#FF69B4]/10 text-[#FF69B4] border-[#FF69B4]/30 flex items-center gap-1 px-2 py-0.5">
                 <Zap className="h-3 w-3" />
-                <span className="text-xs">Flash Deal</span>
+                <span className="text-xs">Special Deal</span>
               </Badge>
               {product.flashDealEnd && (
                 <FlashDealTimer endDate={new Date(product.flashDealEnd)} />
@@ -168,7 +168,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
           )}
         </div>
       </Link>
-      
       <div className="px-3 pb-3 flex flex-col gap-2">
         {showAddToCart && (
           <Button 
@@ -193,7 +192,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
           Quick View
         </Button>
       </div>
-      
       {/* Quick View Modal */}
       <QuickViewModal
         open={quickViewOpen}
