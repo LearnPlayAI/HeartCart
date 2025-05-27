@@ -151,7 +151,12 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
     if (productAttributesData && categoryAttributes && productAttributesData.length > 0) {
       const attributesMap: Record<number, Array<{id: number, value: string}>> = {};
       
-      categoryAttributes.forEach((catAttr: CategoryAttribute) => {
+      // Handle case where categoryAttributes might be an object instead of array
+      const categoryAttributesArray = Array.isArray(categoryAttributes) 
+        ? categoryAttributes 
+        : Object.values(categoryAttributes);
+      
+      categoryAttributesArray.forEach((catAttr: CategoryAttribute) => {
         // Find product attribute for this category attribute
         const productAttr = productAttributesData.find(
           (pa: ProductAttribute) => pa.categoryAttributeId === catAttr.id
