@@ -24,16 +24,16 @@ const FlashDealTimer = ({ endDate }: { endDate: Date }) => {
 
 // Time Left Progress Bar Component
 const TimeLeftProgressBar = ({ product }: { product: Product }) => {
-  // Safety check for required fields
-  if (!product.flashDealEnd) {
+  // Safety check for required fields - use specialSaleEnd for special deals
+  if (!product.specialSaleEnd) {
     return null;
   }
   
-  const { timeRemaining, isExpired } = useCountdown(new Date(product.flashDealEnd));
+  const { timeRemaining, isExpired } = useCountdown(new Date(product.specialSaleEnd));
   
   // Calculate progress based on actual deal duration using product's start and end dates
   const dealStartDate = product.specialSaleStart ? new Date(product.specialSaleStart) : new Date(Date.now() - (7 * 24 * 60 * 60 * 1000));
-  const dealEndDate = new Date(product.flashDealEnd);
+  const dealEndDate = new Date(product.specialSaleEnd);
   const totalDealDuration = dealEndDate.getTime() - dealStartDate.getTime();
   const timeRemaining_ms = timeRemaining.total;
   
