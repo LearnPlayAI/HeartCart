@@ -5788,6 +5788,16 @@ export class DatabaseStorage implements IStorage {
         .from(productDrafts)
         .where(eq(productDrafts.id, id));
 
+      // Debug: Log what we got from the database
+      logger.debug("Raw draft from database", {
+        id,
+        hasRating: draft?.rating !== undefined,
+        hasReviewCount: draft?.reviewCount !== undefined,
+        rating: draft?.rating,
+        reviewCount: draft?.reviewCount,
+        allKeys: draft ? Object.keys(draft) : 'no draft'
+      });
+
       return draft;
     } catch (error) {
       logger.error("Error getting product draft", { error, id });
