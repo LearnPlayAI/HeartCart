@@ -145,16 +145,28 @@ const ProductCard: React.FC<ProductCardProps> = ({
           </div>
           
           {isFlashDeal && (
-            <div className="space-y-1 mt-2 mb-1">
-              <div className="flex items-center justify-between">
+            <div className="mt-2 mb-1">
+              <div className="flex items-center justify-between mb-2">
                 <Badge variant="outline" className="bg-[#FF69B4]/10 text-[#FF69B4] border-[#FF69B4]/30 flex items-center gap-1 px-2 py-0.5">
                   <Zap className="h-3 w-3" />
                   <span className="text-xs">Special Deal</span>
                 </Badge>
-              </div>
-              {product.flashDealEnd && (
-                <div className="flex justify-center">
+                {product.flashDealEnd && (
                   <FlashDealTimer endDate={new Date(product.flashDealEnd)} />
+                )}
+              </div>
+              {soldPercentage && (
+                <div className="w-full">
+                  <div className="flex justify-between text-xs text-gray-600 mb-1">
+                    <span>Sold</span>
+                    <span>{soldPercentage}%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-1.5">
+                    <div 
+                      className="bg-[#FF69B4] h-1.5 rounded-full transition-all duration-300" 
+                      style={{ width: `${soldPercentage}%` }}
+                    ></div>
+                  </div>
                 </div>
               )}
             </div>
