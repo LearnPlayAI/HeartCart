@@ -5436,36 +5436,26 @@ export class DatabaseStorage implements IStorage {
     productId: number,
   ): Promise<ProductAttributeValue[]> {
     try {
-      // First try to get values from the centralized attribute system
+      // Get values from the centralized attribute system
       const centralizedAttrs = await db
         .select()
         .from(productAttributes)
         .where(eq(productAttributes.productId, productId));
 
-      if (centralizedAttrs && centralizedAttrs.length > 0) {
-        // Convert from centralized format to legacy format for backward compatibility
-        return centralizedAttrs.map((attr) => ({
-          id: attr.id,
-          productId: attr.productId,
-          attributeId: attr.attributeId,
-          attributeOptionId:
-            Array.isArray(attr.selectedOptions) &&
-            attr.selectedOptions.length > 0
-              ? attr.selectedOptions[0]
-              : null,
-          valueText: attr.textValue || null,
-          createdAt: attr.createdAt,
-          updatedAt: attr.updatedAt,
-        }));
-      }
-
-      // Fallback to legacy system if no centralized attributes found
-      const values = await db
-        .select()
-        .from(productAttributeValues)
-        .where(eq(productAttributeValues.productId, productId));
-
-      return values;
+      // Convert from centralized format to legacy format for backward compatibility
+      return centralizedAttrs.map((attr) => ({
+        id: attr.id,
+        productId: attr.productId,
+        attributeId: attr.attributeId,
+        attributeOptionId:
+          Array.isArray(attr.selectedOptions) &&
+          attr.selectedOptions.length > 0
+            ? attr.selectedOptions[0]
+            : null,
+        valueText: attr.textValue || null,
+        createdAt: attr.createdAt,
+        updatedAt: attr.updatedAt,
+      }));
     } catch (error) {
       logger.error("Error getting product attribute values", {
         error,
