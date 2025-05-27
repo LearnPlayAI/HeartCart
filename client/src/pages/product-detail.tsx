@@ -315,7 +315,7 @@ const ProductDetailContent = ({
       setCurrentPrice(null);
       setSelectedCombination(null);
     }
-  }, [selectedAttributes, combinations, product, categoryAttributes]);
+  }, [selectedAttributes, combinations, product?.id, categoryAttributes?.length]);
   
   const handleAttributeChange = (attributeId: number, value: string) => {
     setSelectedAttributes(prev => ({
