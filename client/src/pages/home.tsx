@@ -22,12 +22,12 @@ const Home = () => {
         <HeroBanner />
         
         {/* Mobile Category Drawer - Shown only on mobile */}
-        <div className="block md:hidden mb-4">
+        <div className="block md:hidden mb-2">
           <CategorySidebarDrawer />
         </div>
         
         {/* Desktop Layout with Sidebar */}
-        <div className="flex flex-col md:flex-row gap-6 mt-2">
+        <div className="flex flex-col md:flex-row gap-2 md:gap-6 mt-1 md:mt-2">
           {/* Category Sidebar - Hidden on mobile */}
           <div className="hidden md:block w-64 flex-shrink-0">
             <div className="bg-white rounded-lg shadow-md p-4 sticky top-20">
