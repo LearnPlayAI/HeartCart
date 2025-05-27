@@ -143,7 +143,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   
   // All product cards will use a consistent design based on the Featured Products style
   return (
-    <div className="product-card bg-white rounded-lg shadow-sm overflow-hidden min-w-[240px]">
+    <div className="product-card bg-white rounded-lg shadow-sm overflow-hidden w-full max-w-sm mx-auto">
       <Link href={`/product/id/${product.id}`} className="block relative">
         {imageError ? (
           <div className="w-full h-48 bg-gray-100 flex items-center justify-center">
