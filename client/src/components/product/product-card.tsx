@@ -22,6 +22,46 @@ const FlashDealTimer = ({ endDate }: { endDate: Date }) => {
   );
 };
 
+// Time Left Progress Bar Component
+const TimeLeftProgressBar = ({ endDate }: { endDate: Date }) => {
+  const { timeRemaining, isExpired } = useCountdown(endDate);
+  
+  // Calculate time remaining percentage (assuming 7-day deal period)
+  const totalDealDuration = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+  const timeRemaining_ms = timeRemaining.total;
+  const timeElapsed = totalDealDuration - timeRemaining_ms;
+  const progressPercentage = Math.max(0, Math.min(100, (timeRemaining_ms / totalDealDuration) * 100));
+  
+  if (isExpired) {
+    return (
+      <div className="w-full">
+        <div className="flex justify-between text-xs text-gray-600 mb-1">
+          <span>Deal Expired</span>
+          <span>0%</span>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-1.5">
+          <div className="bg-gray-400 h-1.5 rounded-full w-0"></div>
+        </div>
+      </div>
+    );
+  }
+  
+  return (
+    <div className="w-full">
+      <div className="flex justify-between text-xs text-gray-600 mb-1">
+        <span>Time Left</span>
+        <span>{Math.round(progressPercentage)}%</span>
+      </div>
+      <div className="w-full bg-gray-200 rounded-full h-1.5">
+        <div 
+          className="bg-gradient-to-r from-red-500 to-[#FF69B4] h-1.5 rounded-full transition-all duration-1000" 
+          style={{ width: `${progressPercentage}%` }}
+        ></div>
+      </div>
+    </div>
+  );
+};
+
 type ProductCardProps = {
   product: Product;
   isFlashDeal?: boolean;
@@ -155,19 +195,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
                   <FlashDealTimer endDate={new Date(product.flashDealEnd)} />
                 )}
               </div>
-              {soldPercentage && (
-                <div className="w-full">
-                  <div className="flex justify-between text-xs text-gray-600 mb-1">
-                    <span>Sold</span>
-                    <span>{soldPercentage}%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-1.5">
-                    <div 
-                      className="bg-[#FF69B4] h-1.5 rounded-full transition-all duration-300" 
-                      style={{ width: `${soldPercentage}%` }}
-                    ></div>
-                  </div>
-                </div>
+              {product.flashDealEnd && (
+                <TimeLeftProgressBar endDate={new Date(product.flashDealEnd)} />
               )}
             </div>
           )}
