@@ -140,7 +140,7 @@ export const SalesPromotionsStep: React.FC<SalesPromotionsStepProps> = ({
       flashDealEnd: draft.flashDealEnd ? parseStringToDate(draft.flashDealEnd) : null,
       // Rating and review count for marketplace appearance
       rating: draft.rating || null,
-      review_count: draft.review_count || null
+      review_count: draft.reviewCount || null
     }
   });
 
