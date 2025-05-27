@@ -439,14 +439,15 @@ const ProductListing = () => {
     .filter(product => {
       // Apply category filter with hierarchical support
       if (selectedCategoryId) {
-        const includeChildren = new URLSearchParams(location.split('?')[1] || '').get('includeChildren') === 'true';
+        const urlParams = new URLSearchParams(window.location.search);
+        const includeChildren = urlParams.get('includeChildren') === 'true';
         
         if (includeChildren) {
           // Get all child category IDs using the fetched categories data
           const allowedCategoryIds = getAllChildCategoryIds(selectedCategoryId, categoriesWithChildren);
-          console.log('Debug - Selected Category ID:', selectedCategoryId);
-          console.log('Debug - Categories with children:', categoriesWithChildren);
-          console.log('Debug - Allowed category IDs:', allowedCategoryIds);
+          console.log('Debug - Hierarchical filtering for category:', selectedCategoryId);
+          console.log('Debug - Categories data:', categoriesWithChildren);
+          console.log('Debug - Allowed IDs:', allowedCategoryIds);
           console.log('Debug - Product category ID:', product.categoryId);
           
           if (!product.categoryId || !allowedCategoryIds.includes(product.categoryId)) return false;
