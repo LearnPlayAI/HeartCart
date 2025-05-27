@@ -2,6 +2,7 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Bot } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatCurrency } from '@/lib/utils';
 import { Link } from 'wouter';
@@ -74,11 +75,24 @@ const AIRecommendedProducts = () => {
               href={`/product/${product.slug}`}
               className="product-card bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
             >
-              <img 
-                src={product.imageUrl}
-                alt={product.name}
-                className="w-full h-40 object-cover"
-              />
+              <div className="relative">
+                <img 
+                  src={product.imageUrl}
+                  alt={product.name}
+                  className="w-full h-40 object-cover"
+                />
+                
+                {/* Discount Badge - positioned in lower right */}
+                {product.discountLabel && (
+                  <div className="absolute bottom-2 right-2">
+                    <Badge 
+                      className="bg-blue-500 hover:bg-blue-600 text-white text-xs px-2 py-1 rounded-md shadow-sm"
+                    >
+                      {product.discountLabel}
+                    </Badge>
+                  </div>
+                )}
+              </div>
               <div className="p-3">
                 <h3 className="text-sm font-medium text-gray-800 mb-1 line-clamp-2">
                   {product.name}
