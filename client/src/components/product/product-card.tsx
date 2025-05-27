@@ -144,27 +144,16 @@ const ProductCard: React.FC<ProductCardProps> = ({
             )}
           </div>
           
-          {isFlashDeal && typeof soldPercentage === 'number' && (
-            <>
-              <div className="flex items-center justify-between mt-1 mb-1">
-                <Badge variant="outline" className="bg-[#FF69B4]/10 text-[#FF69B4] border-[#FF69B4]/30 flex items-center gap-1 px-2 py-0.5">
-                  <Zap className="h-3 w-3" />
-                  <span className="text-xs">Flash Deal</span>
-                </Badge>
-                {product.flashDealEnd && (
-                  <FlashDealTimer endDate={new Date(product.flashDealEnd)} />
-                )}
-              </div>
-              <div className="mt-1 h-2 bg-gray-200 rounded-full overflow-hidden">
-                <div 
-                  className="bg-[#FF69B4] h-full rounded-full pulse-animation"
-                  style={{ width: `${soldPercentage}%` }}
-                ></div>
-              </div>
-              <div className="text-xs text-gray-500 mt-1">
-                {soldPercentage}% sold
-              </div>
-            </>
+          {isFlashDeal && (
+            <div className="flex items-center justify-between mt-1 mb-1">
+              <Badge variant="outline" className="bg-[#FF69B4]/10 text-[#FF69B4] border-[#FF69B4]/30 flex items-center gap-1 px-2 py-0.5">
+                <Zap className="h-3 w-3" />
+                <span className="text-xs">Flash Deal</span>
+              </Badge>
+              {product.flashDealEnd && (
+                <FlashDealTimer endDate={new Date(product.flashDealEnd)} />
+              )}
+            </div>
           )}
           
           {!isFlashDeal && (
