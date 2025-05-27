@@ -492,7 +492,7 @@ const ProductDetailView = ({
           {/* Product Images */}
           <div>
             <div 
-              className="mb-4 bg-white rounded-lg overflow-hidden border border-gray-200 cursor-pointer"
+              className="mb-4 bg-white rounded-lg overflow-hidden border border-gray-200 cursor-pointer relative"
               onClick={() => openImageModal(product.additionalImages?.findIndex(img => img === currentImage) || 0)}
             >
               <img 
@@ -500,6 +500,17 @@ const ProductDetailView = ({
                 alt={product.name || 'Product image'} 
                 className="w-full h-auto object-contain aspect-square"
               />
+              
+              {/* Discount Badge - positioned in lower right */}
+              {product.discountLabel && (
+                <div className="absolute bottom-2 right-2">
+                  <Badge 
+                    className="bg-blue-500 hover:bg-blue-600 text-white text-xs px-2 py-1 rounded-md shadow-sm"
+                  >
+                    {product.discountLabel}
+                  </Badge>
+                </div>
+              )}
             </div>
             
             {/* Thumbnail gallery showing both main image and additional images */}
