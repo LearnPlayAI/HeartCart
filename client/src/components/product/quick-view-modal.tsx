@@ -146,24 +146,14 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
     // The quick view should work fine without attributes
   }, [categoryAttributesError, productAttributesError, combinationsError]);
 
-  // Process product attributes
+  // Process product attributes - use product attributes directly since they contain the needed data
   useEffect(() => {
-    if (productAttributesData && categoryAttributes && productAttributesData.length > 0) {
+    if (productAttributesData && productAttributesData.length > 0) {
       const attributesMap: Record<number, Array<{id: number, value: string}>> = {};
       
-      // Handle case where categoryAttributes might be an object instead of array
-      const categoryAttributesArray = Array.isArray(categoryAttributes) 
-        ? categoryAttributes 
-        : Object.values(categoryAttributes);
-      
-      categoryAttributesArray.forEach((catAttr: CategoryAttribute) => {
-        // Find product attribute for this category attribute
-        const productAttr = productAttributesData.find(
-          (pa: ProductAttribute) => pa.categoryAttributeId === catAttr.id
-        );
-        
-        if (productAttr && productAttr.attributeOptions) {
-          attributesMap[catAttr.id] = productAttr.attributeOptions;
+      productAttributesData.forEach((productAttr: ProductAttribute) => {
+        if (productAttr && productAttr.attributeOptions && productAttr.attributeOptions.length > 0) {
+          attributesMap[productAttr.categoryAttributeId] = productAttr.attributeOptions;
         }
       });
       
@@ -171,8 +161,13 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
       if (JSON.stringify(attributesMap) !== JSON.stringify(productAttributes)) {
         setProductAttributes(attributesMap);
       }
+    } else if (productAttributesData && productAttributesData.length === 0) {
+      // Clear attributes if no product attributes
+      if (Object.keys(productAttributes).length > 0) {
+        setProductAttributes({});
+      }
     }
-  }, [productAttributesData, categoryAttributes, productAttributes]);
+  }, [productAttributesData, productAttributes]);
 
   // Handle attribute change
   const handleAttributeChange = (attributeId: number, value: string) => {
@@ -328,7 +323,7 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
             <Separator className="my-2" />
             
             {/* Attribute Selection */}
-            {isLoadingAttributes || isLoadingProductAttributes ? (
+            {isLoadingProductAttributes ? (
               <div className="space-y-3">
                 <Skeleton className="h-4 w-24" />
                 <Skeleton className="h-10 w-full" />
@@ -337,26 +332,27 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
               </div>
             ) : (
               <>
-                {categoryAttributes && categoryAttributes.length > 0 && productAttributes && (
+                {productAttributesData && productAttributesData.length > 0 && (
                   <div className="space-y-3">
-                    {categoryAttributes.map((attribute: CategoryAttribute) => (
-                      <div key={attribute.id} className="space-y-1">
+                    {productAttributesData.map((productAttr: ProductAttribute) => (
+                      <div key={productAttr.categoryAttributeId} className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <label className="text-sm font-medium">{attribute.name}</label>
-                          {attribute.required && (
-                            <Badge variant="outline" className="text-[#FF69B4] text-xs">Required</Badge>
-                          )}
+                          <label className="text-sm font-medium">
+                            {/* Use a generic label since we may not have category attribute details */}
+                            Option {productAttr.categoryAttributeId}
+                          </label>
+                          <Badge variant="outline" className="text-[#FF69B4] text-xs">Required</Badge>
                         </div>
                         
                         <Select 
-                          value={selectedAttributes[attribute.id] || ''}
-                          onValueChange={value => handleAttributeChange(attribute.id, value)}
+                          value={selectedAttributes[productAttr.categoryAttributeId] || ''}
+                          onValueChange={value => handleAttributeChange(productAttr.categoryAttributeId, value)}
                         >
                           <SelectTrigger className="w-full">
-                            <SelectValue placeholder={`Select ${attribute.name}`} />
+                            <SelectValue placeholder="Select option" />
                           </SelectTrigger>
                           <SelectContent>
-                            {productAttributes[attribute.id]?.map(option => (
+                            {productAttr.attributeOptions?.map(option => (
                               <SelectItem key={option.id} value={option.value}>
                                 {option.value}
                               </SelectItem>
