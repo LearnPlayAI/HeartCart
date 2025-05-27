@@ -84,7 +84,8 @@ const CategoryPage = () => {
     enabled: !!category?.id,
   });
   
-  const categoryAttributes = categoryAttributesResponse?.success ? categoryAttributesResponse.data : [];
+  const categoryAttributes = categoryAttributesResponse?.success ? 
+    (Array.isArray(categoryAttributesResponse.data) ? categoryAttributesResponse.data : []) : [];
   
   // State to store attribute options
   const [attributeOptions, setAttributeOptions] = useState<Record<number, CategoryAttributeOption[]>>({});
