@@ -271,6 +271,10 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[800px]">
+        <DialogTitle className="text-xl font-bold">{product.name}</DialogTitle>
+        <DialogDescription className="sr-only">
+          Quick view of {product.name} with pricing and options
+        </DialogDescription>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Product Image */}
           <div>
@@ -284,7 +288,7 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
           
           {/* Product Info */}
           <div className="space-y-4">
-            <DialogTitle className="text-xl font-bold">{product.name}</DialogTitle>
+            <h2 className="text-xl font-bold">{product.name}</h2>
             
             {/* Price and ratings */}
             <div className="flex items-center justify-between">
