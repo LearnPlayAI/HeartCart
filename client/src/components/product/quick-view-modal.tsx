@@ -103,16 +103,7 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
   });
   const attributeValues = attributeValuesResponse?.success ? attributeValuesResponse.data : [];
 
-  // Fetch product combinations
-  const { 
-    data: combinationsResponse, 
-    isLoading: isLoadingCombinations,
-    error: combinationsError
-  } = useQuery<StandardApiResponse<ProductAttributeCombination[]>>({
-    queryKey: [`/api/products/${product?.id}/combinations`],
-    enabled: !!product?.id && open,
-  });
-  const combinations = combinationsResponse?.success ? combinationsResponse.data : [];
+  // Note: We no longer use combinations since product prices don't change based on attributes
   
   // Log any attribute-related errors (but don't show toast - attributes are optional)
   useEffect(() => {
@@ -124,13 +115,9 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
       console.error('Error loading attribute values:', attributeValuesError);
     }
     
-    if (combinationsError) {
-      console.error('Error loading product combinations:', combinationsError);
-    }
-    
     // Don't show error toasts for attribute errors as they're optional features
     // The quick view should work fine without attributes
-  }, [productAttributesError, attributeValuesError, combinationsError]);
+  }, [productAttributesError, attributeValuesError]);
 
   // Handle attribute change (simplified like product detail page)
   const handleAttributeChange = (attributeId: number, value: string) => {
