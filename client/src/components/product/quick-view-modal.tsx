@@ -149,13 +149,20 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
   // Process product attributes - use product attributes directly since they contain the needed data
   useEffect(() => {
     if (productAttributesData && productAttributesData.length > 0) {
+      console.log('Processing product attributes data:', productAttributesData);
       const attributesMap: Record<number, Array<{id: number, value: string}>> = {};
       
       productAttributesData.forEach((productAttr: ProductAttribute) => {
+        console.log('Processing product attribute:', productAttr);
         if (productAttr && productAttr.attributeOptions && productAttr.attributeOptions.length > 0) {
+          console.log('Adding attribute options:', productAttr.attributeOptions);
           attributesMap[productAttr.categoryAttributeId] = productAttr.attributeOptions;
+        } else {
+          console.log('No attribute options found for:', productAttr);
         }
       });
+      
+      console.log('Final attributes map:', attributesMap);
       
       // Only update if the map is different from current state
       if (JSON.stringify(attributesMap) !== JSON.stringify(productAttributes)) {
