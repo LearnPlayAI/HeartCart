@@ -199,11 +199,11 @@ const ProductCard: React.FC<ProductCardProps> = ({
                   <Zap className="h-3 w-3" />
                   <span className="text-xs">Special Deal</span>
                 </Badge>
-                {product.flashDealEnd && (
-                  <FlashDealTimer endDate={new Date(product.flashDealEnd)} />
+                {product.specialSaleEnd && (
+                  <FlashDealTimer endDate={new Date(product.specialSaleEnd)} />
                 )}
               </div>
-              {product.flashDealEnd && (
+              {product.specialSaleEnd && (
                 <TimeLeftProgressBar product={product} />
               )}
             </div>
