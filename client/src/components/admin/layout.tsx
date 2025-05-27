@@ -109,41 +109,20 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         </div>
       )}
 
-      {/* Mobile header with menu button */}
-      <div className={cn("sticky top-0 z-10 md:hidden flex flex-shrink-0 h-16 bg-white border-b border-gray-200 shadow-sm")}>
+      {/* Mobile admin menu - positioned as floating button to avoid duplication with main header */}
+      <div className={cn("md:hidden fixed bottom-6 right-6 z-50")}>
         <Sheet open={open} onOpenChange={setOpen}>
-          <div className="flex-1 flex justify-between px-4">
-            <div className="flex-1 flex">
-              <SheetTrigger asChild>
-                <Button variant="ghost" className="-my-1 px-1" onClick={() => setOpen(true)}>
-                  <span className="sr-only">Open sidebar</span>
-                  <svg
-                    className="h-6 w-6"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4 6h16M4 12h16M4 18h16"
-                    />
-                  </svg>
-                </Button>
-              </SheetTrigger>
-              <Link href="/" className="flex-shrink-0 flex items-center px-4">
-                <span className="text-xl font-bold text-pink-600">
-                  TEE ME YOU
-                </span>
-              </Link>
-            </div>
-            <div className="flex items-center">
-              <div className="h-8 w-8 rounded-full bg-pink-500 flex items-center justify-center text-white font-bold">
-                {user?.username.charAt(0).toUpperCase()}
-              </div>
-            </div>
-          </div>
+          <SheetTrigger asChild>
+            <Button 
+              variant="default" 
+              size="icon"
+              className="h-14 w-14 rounded-full bg-pink-600 hover:bg-pink-700 shadow-lg"
+              onClick={() => setOpen(true)}
+            >
+              <span className="sr-only">Open admin menu</span>
+              <LayoutDashboard className="h-6 w-6 text-white" />
+            </Button>
+          </SheetTrigger>
           
           <SheetContent side="left" className="w-[80%] sm:w-[350px]">
             <div className="flex items-center h-16 flex-shrink-0 px-4 bg-pink-600 -mx-4 -my-4 mb-4">
