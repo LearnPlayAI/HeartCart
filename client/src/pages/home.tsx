@@ -17,7 +17,7 @@ const Home = () => {
         <meta name="description" content="Discover unique products from local South African suppliers at unbeatable prices. Shop now for exclusive deals!" />
       </Helmet>
       
-      <div className="container mx-auto px-4 py-4">
+      <div className="container mx-auto px-4 py-2">
         <InstallBanner />
         <HeroBanner />
         
@@ -27,7 +27,7 @@ const Home = () => {
         </div>
         
         {/* Desktop Layout with Sidebar */}
-        <div className="flex flex-col md:flex-row gap-6 mt-4">
+        <div className="flex flex-col md:flex-row gap-6 mt-2">
           {/* Category Sidebar - Hidden on mobile */}
           <div className="hidden md:block w-64 flex-shrink-0">
             <div className="bg-white rounded-lg shadow-md p-4 sticky top-20">
