@@ -110,23 +110,16 @@ const ProductCard: React.FC<ProductCardProps> = ({
               onError={() => setImageError(true)}
             />
             
-            {/* Discount/Sale Badges - positioned in lower right */}
-            <div className="absolute bottom-2 right-2 flex flex-col gap-1">
-              {product.discountLabel && (
+            {/* Discount Badge - positioned in lower right */}
+            {product.discountLabel && (
+              <div className="absolute bottom-2 right-2">
                 <Badge 
                   className="bg-blue-500 hover:bg-blue-600 text-white text-xs px-2 py-1 rounded-md shadow-sm"
                 >
                   {product.discountLabel}
                 </Badge>
-              )}
-              {product.specialSaleText && (
-                <Badge 
-                  className="bg-green-500 hover:bg-green-600 text-white text-xs px-2 py-1 rounded-md shadow-sm"
-                >
-                  {product.specialSaleText}
-                </Badge>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         )}
         
