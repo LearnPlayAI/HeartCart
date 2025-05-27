@@ -31,7 +31,7 @@ const FlashDealsSection = () => {
     <section className="mb-4 md:mb-8 bg-white rounded-lg shadow-md overflow-hidden">
       <div className="bg-gradient-to-r from-[#FF69B4] to-[#FF1493] p-4">
         <h2 className="text-white text-xl font-bold flex items-center">
-          <Zap className="mr-2" /> Flash Deals
+          <Zap className="mr-2" /> Special Deals
         </h2>
       </div>
       
