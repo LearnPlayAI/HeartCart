@@ -10,9 +10,18 @@ import { Skeleton } from "@/components/ui/skeleton";
 interface CategorySidebarProps {
   className?: string;
   onCategorySelect?: () => void; // Optional callback when category is selected (useful for mobile)
+  onCategoryFilter?: (categoryId: number | null, includeChildren?: boolean) => void; // Optional callback for filtering products
+  selectedCategoryId?: number | null; // Currently selected category for filtering
+  isFilterMode?: boolean; // Whether this sidebar is used for filtering (vs navigation)
 }
 
-export function CategorySidebar({ className, onCategorySelect }: CategorySidebarProps) {
+export function CategorySidebar({ 
+  className, 
+  onCategorySelect, 
+  onCategoryFilter, 
+  selectedCategoryId, 
+  isFilterMode = false 
+}: CategorySidebarProps) {
   const [expandedCategories, setExpandedCategories] = useState<Record<number, boolean>>({});
   const [location] = useLocation();
   
@@ -47,6 +56,30 @@ export function CategorySidebar({ className, onCategorySelect }: CategorySidebar
   const categorySlug = location.startsWith("/category/") 
     ? location.replace("/category/", "") 
     : null;
+
+  // Helper function to handle category selection
+  const handleCategorySelect = (categoryId: number, hasChildren: boolean) => {
+    if (isFilterMode && onCategoryFilter) {
+      // In filter mode, call the filter callback with includeChildren=true for hierarchical filtering
+      onCategoryFilter(categoryId, hasChildren);
+    }
+    
+    // Call the general onCategorySelect callback if provided
+    if (onCategorySelect) {
+      onCategorySelect();
+    }
+  };
+
+  // Helper function to handle "All Categories" selection
+  const handleAllCategoriesSelect = () => {
+    if (isFilterMode && onCategoryFilter) {
+      onCategoryFilter(null, false); // Clear all filters
+    }
+    
+    if (onCategorySelect) {
+      onCategorySelect();
+    }
+  };
   
   // Handle category expansion toggle
   const toggleCategory = (categoryId: number) => {
@@ -111,64 +144,119 @@ export function CategorySidebar({ className, onCategorySelect }: CategorySidebar
         ) : !categoriesWithChildren || categoriesWithChildren.length === 0 ? (
           <div className="p-4 text-sm text-muted-foreground">No categories found</div>
         ) : (
-          <ul className="p-2 space-y-0.5">
-            {categoriesWithChildren.map((item) => (
-              <li key={item.category.id} className="rounded-md overflow-hidden">
-                {/* Main category */}
-                <div className="flex items-center">
-                  <button
-                    onClick={() => toggleCategory(item.category.id)}
-                    className="p-2 text-muted-foreground hover:text-foreground"
-                    aria-label={expandedCategories[item.category.id] ? "Collapse category" : "Expand category"}
-                  >
-                    {item.children && item.children.length > 0 ? (
-                      expandedCategories[item.category.id] ? (
-                        <ChevronDown className="h-4 w-4" />
+          <div className="p-2 space-y-0.5">
+            {/* All Categories option for filter mode */}
+            {isFilterMode && (
+              <div className="rounded-md overflow-hidden mb-2">
+                <button
+                  onClick={handleAllCategoriesSelect}
+                  className={cn(
+                    "w-full px-4 py-2 text-sm text-left rounded-md transition-colors",
+                    selectedCategoryId === null
+                      ? "font-semibold text-pink-600 bg-pink-50"
+                      : "hover:bg-gray-100"
+                  )}
+                >
+                  All Categories
+                </button>
+              </div>
+            )}
+            
+            <ul className="space-y-0.5">
+              {categoriesWithChildren.map((item) => (
+                <li key={item.category.id} className="rounded-md overflow-hidden">
+                  {/* Main category */}
+                  <div className="flex items-center">
+                    <button
+                      onClick={() => toggleCategory(item.category.id)}
+                      className="p-2 text-muted-foreground hover:text-foreground"
+                      aria-label={expandedCategories[item.category.id] ? "Collapse category" : "Expand category"}
+                    >
+                      {item.children && item.children.length > 0 ? (
+                        expandedCategories[item.category.id] ? (
+                          <ChevronDown className="h-4 w-4" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4" />
+                        )
                       ) : (
-                        <ChevronRight className="h-4 w-4" />
-                      )
+                        <span className="w-4" />
+                      )}
+                    </button>
+                    
+                    {/* Conditional rendering: button for filter mode, Link for navigation mode */}
+                    {isFilterMode ? (
+                      <button
+                        onClick={() => handleCategorySelect(item.category.id, item.children.length > 0)}
+                        className={cn(
+                          "flex-1 px-2 py-2 text-sm text-left rounded-md transition-colors",
+                          selectedCategoryId === item.category.id
+                            ? "font-semibold text-pink-600 bg-pink-50"
+                            : "hover:bg-gray-100"
+                        )}
+                      >
+                        {item.category.name}
+                        {item.children.length > 0 && (
+                          <span className="text-xs text-gray-500 ml-1">
+                            (includes subcategories)
+                          </span>
+                        )}
+                      </button>
                     ) : (
-                      <span className="w-4" />
+                      <Link
+                        href={`/category/${item.category.slug}`}
+                        onClick={onCategorySelect}
+                        className={cn(
+                          "flex-1 px-2 py-2 text-sm rounded-md transition-colors",
+                          categorySlug === item.category.slug
+                            ? "font-semibold text-pink-600 bg-pink-50"
+                            : "hover:bg-gray-100"
+                        )}
+                      >
+                        {item.category.name}
+                      </Link>
                     )}
-                  </button>
-                  <Link
-                    href={`/category/${item.category.slug}`}
-                    onClick={onCategorySelect}
-                    className={cn(
-                      "flex-1 px-2 py-2 text-sm rounded-md transition-colors",
-                      categorySlug === item.category.slug
-                        ? "font-semibold text-pink-600 bg-pink-50"
-                        : "hover:bg-gray-100"
-                    )}
-                  >
-                    {item.category.name}
-                  </Link>
-                </div>
-                
-                {/* Subcategories (children) */}
-                {item.children && item.children.length > 0 && expandedCategories[item.category.id] && (
-                  <ul className="pl-8 pr-2 py-1 space-y-1">
-                    {item.children.map((child) => (
-                      <li key={child.id}>
-                        <Link
-                          href={`/category/${child.slug}`}
-                          onClick={onCategorySelect}
-                          className={cn(
-                            "block px-2 py-1.5 text-sm rounded-md transition-colors",
-                            categorySlug === child.slug
-                              ? "font-semibold text-pink-600 bg-pink-50"
-                              : "hover:bg-gray-100"
+                  </div>
+                  
+                  {/* Subcategories (children) */}
+                  {item.children && item.children.length > 0 && expandedCategories[item.category.id] && (
+                    <ul className="pl-8 pr-2 py-1 space-y-1">
+                      {item.children.map((child) => (
+                        <li key={child.id}>
+                          {/* Conditional rendering: button for filter mode, Link for navigation mode */}
+                          {isFilterMode ? (
+                            <button
+                              onClick={() => handleCategorySelect(child.id, false)}
+                              className={cn(
+                                "w-full px-2 py-1.5 text-sm text-left rounded-md transition-colors",
+                                selectedCategoryId === child.id
+                                  ? "font-semibold text-pink-600 bg-pink-50"
+                                  : "hover:bg-gray-100"
+                              )}
+                            >
+                              {child.name}
+                            </button>
+                          ) : (
+                            <Link
+                              href={`/category/${child.slug}`}
+                              onClick={onCategorySelect}
+                              className={cn(
+                                "block px-2 py-1.5 text-sm rounded-md transition-colors",
+                                categorySlug === child.slug
+                                  ? "font-semibold text-pink-600 bg-pink-50"
+                                  : "hover:bg-gray-100"
+                              )}
+                            >
+                              {child.name}
+                            </Link>
                           )}
-                        >
-                          {child.name}
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </li>
-            ))}
-          </ul>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
       </div>
     </div>

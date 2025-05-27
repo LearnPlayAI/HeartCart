@@ -84,6 +84,7 @@ const ProductListing = () => {
   const [sortBy, setSortBy] = useState(searchParams.get('sort') || 'default');
   const [priceRange, setPriceRange] = useState([0, 5000]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(searchParams.get('category'));
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [availabilityFilter, setAvailabilityFilter] = useState('all');
   const [ratingFilter, setRatingFilter] = useState(searchParams.get('rating') || '');
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
