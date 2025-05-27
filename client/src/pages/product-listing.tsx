@@ -445,10 +445,6 @@ const ProductListing = () => {
         if (includeChildren) {
           // Get all child category IDs using the fetched categories data
           const allowedCategoryIds = getAllChildCategoryIds(selectedCategoryId, categoriesWithChildren);
-          console.log('Debug - Hierarchical filtering for category:', selectedCategoryId);
-          console.log('Debug - Categories data:', categoriesWithChildren);
-          console.log('Debug - Allowed IDs:', allowedCategoryIds);
-          console.log('Debug - Product category ID:', product.categoryId);
           
           if (!product.categoryId || !allowedCategoryIds.includes(product.categoryId)) return false;
         } else {

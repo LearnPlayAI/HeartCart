@@ -195,11 +195,6 @@ export function CategorySidebar({
                         )}
                       >
                         {item.category.name}
-                        {item.children.length > 0 && (
-                          <span className="text-xs text-gray-500 ml-1">
-                            (includes subcategories)
-                          </span>
-                        )}
                       </button>
                     ) : (
                       <Link
