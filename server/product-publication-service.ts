@@ -148,7 +148,7 @@ function mapDraftToProduct(draft: any): DraftToProductMapping {
     
     // Rating and review count from draft
     rating: draft.rating || null,
-    review_count: draft.reviewCount || 0,
+    review_count: draft.review_count || 0,
     sold_count: 0,
     minimum_order: null,
     created_at: new Date().toISOString()
