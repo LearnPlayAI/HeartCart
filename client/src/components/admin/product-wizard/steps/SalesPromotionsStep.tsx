@@ -126,13 +126,7 @@ export const SalesPromotionsStep: React.FC<SalesPromotionsStepProps> = ({
     }
   };
   
-  // Debug: Log the draft data to see what fields are available
-  console.log('Draft data in SalesPromotionsStep:', {
-    rating: draft.rating,
-    reviewCount: draft.reviewCount,
-    review_count: (draft as any).review_count,
-    allFields: Object.keys(draft)
-  });
+
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),

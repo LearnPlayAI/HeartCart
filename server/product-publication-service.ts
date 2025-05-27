@@ -62,7 +62,12 @@ export interface DraftToProductMapping {
  * Maps ALL fields from product_drafts to products table format
  */
 function mapDraftToProduct(draft: any): DraftToProductMapping {
-  logger.debug('Starting complete field mapping for draft', { draftId: draft.id });
+  logger.debug('Starting complete field mapping for draft', { 
+    draftId: draft.id,
+    draftRating: draft.rating,
+    draftReviewCount: draft.reviewCount,
+    allDraftKeys: Object.keys(draft)
+  });
 
   // Calculate discount percentage from markup or direct discount
   let discountPercentage = null;
@@ -141,9 +146,9 @@ function mapDraftToProduct(draft: any): DraftToProductMapping {
     // Attributes
     required_attribute_ids: requiredAttributeIds,
     
-    // Defaults for products table
-    rating: null,
-    review_count: 0,
+    // Rating and review count from draft
+    rating: draft.rating || null,
+    review_count: draft.reviewCount || 0,
     sold_count: 0,
     minimum_order: null,
     created_at: new Date().toISOString()
