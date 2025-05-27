@@ -6493,10 +6493,10 @@ export class DatabaseStorage implements IStorage {
               draftData.rating !== undefined
                 ? draftData.rating
                 : existingDraft.rating,
-            review_count:
+            reviewCount:
               draftData.review_count !== undefined
                 ? draftData.review_count
-                : existingDraft.review_count,
+                : existingDraft.reviewCount,
 
             // Additional sales flags
             hasSpecialSale:
@@ -6523,7 +6523,7 @@ export class DatabaseStorage implements IStorage {
               isFlashDeal: updateData.isFlashDeal,
               flashDealEnd: updateData.flashDealEnd,
               rating: updateData.rating,
-              review_count: updateData.review_count,
+              reviewCount: updateData.reviewCount,
             },
           });
 
@@ -6578,7 +6578,7 @@ export class DatabaseStorage implements IStorage {
         step,
         updateDataKeys: Object.keys(updateData),
         rating: updateData.rating,
-        review_count: updateData.review_count,
+        reviewCount: updateData.reviewCount,
         hasRating: 'rating' in updateData,
         hasReviewCount: 'review_count' in updateData
       });
