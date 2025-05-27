@@ -162,7 +162,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
             {product.discountLabel && (
               <div className="absolute bottom-2 right-2">
                 <Badge 
-                  className="bg-blue-500 hover:bg-blue-600 text-white text-xs px-2 py-1 rounded-md shadow-sm"
+                  className="inline-flex items-center border font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent hover:bg-blue-600 text-white text-xs px-2 py-1 rounded-md shadow-sm bg-[#1ac20c]"
                 >
                   {product.discountLabel}
                 </Badge>
