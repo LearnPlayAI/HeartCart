@@ -148,7 +148,15 @@ function mapDraftToProduct(draft: any): DraftToProductMapping {
     
     // Rating and review count from draft
     rating: draft.rating || null,
-    review_count: draft.reviewCount || draft.review_count || 0,
+    review_count: (() => {
+      const reviewCount = draft.reviewCount || draft.review_count || 0;
+      logger.debug('Review count mapping debug', { 
+        draftReviewCount: draft.reviewCount,
+        draftReview_count: draft.review_count,
+        finalReviewCount: reviewCount
+      });
+      return reviewCount;
+    })(),
     sold_count: 0,
     minimum_order: null,
     created_at: new Date().toISOString()
