@@ -49,7 +49,7 @@ export const ReviewAndSaveStep: React.FC<ReviewAndSaveStepProps> = ({
   
   // Rating and review count state
   const [rating, setRating] = useState<number>((draft as any).rating || 0);
-  const [reviewCount, setReviewCount] = useState<number>((draft as any).review_count || 0);
+  const [reviewCount, setReviewCount] = useState<number>((draft as any).reviewCount || 0);
   
   // Status options for the workflow
   const statusOptions: StatusOption[] = [
