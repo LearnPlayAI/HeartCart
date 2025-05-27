@@ -25,9 +25,9 @@ export function CategorySidebarDrawer({ className, onCategorySelect }: CategoryS
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
         <Button 
-          variant="outline" 
+          variant="ghost" 
           size="icon"
-          className="md:hidden"
+          className="md:hidden text-white hover:bg-white/20"
           aria-label="Open categories menu"
         >
           <Menu className="h-5 w-5" />
