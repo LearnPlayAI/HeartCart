@@ -14,23 +14,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { StandardApiResponse } from '@/types/api';
 import { Product } from '@shared/schema';
 import { ensureValidImageUrl } from '@/utils/file-manager';
-
-interface ProductAttribute {
-  id: number;
-  productId: number;
-  categoryAttributeId: number;
-  attributeOptions: {
-    id: number;
-    value: string;
-  }[];
-}
-
-interface CategoryAttribute {
-  id: number;
-  name: string;
-  required: boolean;
-  displayOrder: number;
-}
+import { 
+  CategoryAttribute, 
+  CategoryAttributeOption, 
+  ProductAttributeValue,
+  ProductAttributeOption
+} from '@/types/attribute-types';
 
 interface ProductAttributeCombination {
   id: number;
@@ -50,8 +39,6 @@ interface QuickViewModalProps {
 export default function QuickViewModal({ open, onOpenChange, productSlug, productId }: QuickViewModalProps) {
   const [quantity, setQuantity] = useState(1);
   const [selectedAttributes, setSelectedAttributes] = useState<Record<number, string>>({});
-  const [currentCombination, setCurrentCombination] = useState<ProductAttributeCombination | null>(null);
-  const [productAttributes, setProductAttributes] = useState<Record<number, Array<{id: number, value: string}>> | null>(null);
   const { addItem } = useCart();
   const [, navigate] = useLocation();
   const { toast } = useToast();
@@ -95,27 +82,26 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
     }
   }, [productError, toast]);
 
-  // Fetch category attributes
+  // Get product attributes (same as working product detail page)
   const { 
-    data: categoryAttributesResponse, 
-    isLoading: isLoadingAttributes,
-    error: categoryAttributesError 
-  } = useQuery<StandardApiResponse<CategoryAttribute[]>>({
-    queryKey: [`/api/categories/${product?.categoryId}/attributes`],
-    enabled: !!product?.categoryId && open,
-  });
-  const categoryAttributes = categoryAttributesResponse?.success ? categoryAttributesResponse.data : [];
-
-  // Fetch product global attributes (includes options)
-  const { 
-    data: productAttributesDataResponse, 
+    data: productAttributesResponse,
     isLoading: isLoadingProductAttributes,
     error: productAttributesError
-  } = useQuery<StandardApiResponse<any[]>>({
-    queryKey: [`/api/products/${product?.id}/global-attributes`],
+  } = useQuery<StandardApiResponse<CategoryAttribute[]>>({
+    queryKey: [`/api/product-attributes/product/${product?.id}/attributes`],
     enabled: !!product?.id && open,
   });
-  const productAttributesData = productAttributesDataResponse?.success ? productAttributesDataResponse.data : [];
+  const productAttributes = productAttributesResponse?.success ? productAttributesResponse.data : [];
+
+  // Get product attribute values for combinations (same as working product detail page)
+  const { 
+    data: attributeValuesResponse,
+    error: attributeValuesError
+  } = useQuery<StandardApiResponse<ProductAttributeValue[]>>({
+    queryKey: [`/api/product-attributes/product/${product?.id}/attribute-values`],
+    enabled: !!product?.id && open,
+  });
+  const attributeValues = attributeValuesResponse?.success ? attributeValuesResponse.data : [];
 
   // Fetch product combinations
   const { 
@@ -130,12 +116,12 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
   
   // Log any attribute-related errors (but don't show toast - attributes are optional)
   useEffect(() => {
-    if (categoryAttributesError) {
-      console.error('Error loading category attributes:', categoryAttributesError);
-    }
-    
     if (productAttributesError) {
       console.error('Error loading product attributes:', productAttributesError);
+    }
+    
+    if (attributeValuesError) {
+      console.error('Error loading attribute values:', attributeValuesError);
     }
     
     if (combinationsError) {
@@ -144,67 +130,14 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
     
     // Don't show error toasts for attribute errors as they're optional features
     // The quick view should work fine without attributes
-  }, [categoryAttributesError, productAttributesError, combinationsError]);
+  }, [productAttributesError, attributeValuesError, combinationsError]);
 
-  // Process product global attributes - they include attribute and options data
-  useEffect(() => {
-    if (productAttributesData && productAttributesData.length > 0) {
-      console.log('Processing global attributes data:', productAttributesData);
-      const attributesMap: Record<number, Array<{id: number, value: string}>> = {};
-      
-      productAttributesData.forEach((globalAttr: any) => {
-        console.log('Processing global attribute:', globalAttr);
-        if (globalAttr && globalAttr.attribute && globalAttr.options && globalAttr.options.length > 0) {
-          console.log('Adding attribute options:', globalAttr.options);
-          attributesMap[globalAttr.attribute.id] = globalAttr.options;
-        } else {
-          console.log('No attribute options found for:', globalAttr);
-        }
-      });
-      
-      console.log('Final attributes map:', attributesMap);
-      
-      // Only update if the map is different from current state
-      if (JSON.stringify(attributesMap) !== JSON.stringify(productAttributes)) {
-        setProductAttributes(attributesMap);
-      }
-    } else if (productAttributesData && productAttributesData.length === 0) {
-      // Clear attributes if no product attributes
-      if (productAttributes && Object.keys(productAttributes).length > 0) {
-        setProductAttributes({});
-      }
-    }
-  }, [productAttributesData, productAttributes]);
-
-  // Handle attribute change
+  // Handle attribute change (simplified like product detail page)
   const handleAttributeChange = (attributeId: number, value: string) => {
-    const newSelectedAttributes = {
-      ...selectedAttributes,
-      [attributeId]: value,
-    };
-    
-    setSelectedAttributes(newSelectedAttributes);
-    
-    // Check if there's a matching combination
-    if (combinations && combinations.length > 0) {
-      // Look for a matching combination
-      const matchingCombination = combinations.find((combo: ProductAttributeCombination) => {
-        const comboAttrs = combo.attributes;
-        
-        // Check if all selected attributes match this combination
-        let isMatch = true;
-        for (const [attrId, attrValue] of Object.entries(newSelectedAttributes)) {
-          if (comboAttrs[attrId] !== attrValue) {
-            isMatch = false;
-            break;
-          }
-        }
-        
-        return isMatch;
-      });
-      
-      setCurrentCombination(matchingCombination || null);
-    }
+    setSelectedAttributes(prev => ({
+      ...prev,
+      [attributeId]: value
+    }));
   };
 
   // Show skeletons while loading
@@ -233,16 +166,16 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
   if (!product) return null;
 
   const handleAddToCart = () => {
-    if (categoryAttributes && categoryAttributes.length > 0) {
+    if (productAttributes && productAttributes.length > 0) {
       // Check if all required attributes are selected
-      const missingRequiredAttributes = categoryAttributes
-        .filter((attr: CategoryAttribute) => attr.required)
+      const missingRequiredAttributes = productAttributes
+        .filter((attr: CategoryAttribute) => attr.isRequired)
         .filter((attr: CategoryAttribute) => !selectedAttributes[attr.id]);
       
       if (missingRequiredAttributes.length > 0) {
         toast({
           title: "Please select options",
-          description: `Please select ${missingRequiredAttributes.map((a: CategoryAttribute) => a.name).join(', ')}`,
+          description: `Please select ${missingRequiredAttributes.map((a: CategoryAttribute) => a.displayName || a.name).join(', ')}`,
           variant: "destructive",
         });
         return;
@@ -251,11 +184,8 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
     
     addItem({
       productId: product.id,
-      product: product,
       quantity: quantity,
-      combinationId: currentCombination?.id || null,
       selectedAttributes: selectedAttributes,
-      // No price adjustment based on attributes as per requirements
     });
     
     toast({
@@ -329,49 +259,67 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
             
             <Separator className="my-2" />
             
-            {/* Attribute Selection */}
-            {isLoadingProductAttributes ? (
+            {/* Attribute Selection - Match product detail page implementation */}
+            {productAttributes && productAttributes.length > 0 && attributeValues && (
               <div className="space-y-3">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-10 w-full" />
-              </div>
-            ) : (
-              <>
-                {productAttributesData && productAttributesData.length > 0 && (
-                  <div className="space-y-3">
-                    {productAttributesData.map((globalAttr: any) => (
-                      <div key={globalAttr.id} className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <label className="text-sm font-medium">
-                            {globalAttr.attribute?.displayName || globalAttr.attribute?.name || 'Option'}
-                          </label>
-                          {globalAttr.attribute?.isRequired && (
-                            <Badge variant="outline" className="text-[#FF69B4] text-xs">Required</Badge>
+                <h4 className="font-semibold text-sm">Product Options</h4>
+                
+                {productAttributes.map(attribute => {
+                  // Get the attribute ID from the attribute object
+                  const attributeId = attribute.id;
+                  
+                  // Find available options for this attribute from the attribute values
+                  const attrValue = attributeValues.find(val => val.attributeId === attributeId);
+                  let availableOptionValues: string[] = [];
+                  
+                  if (attrValue && attrValue.valueText) {
+                    // Split the comma-separated values
+                    availableOptionValues = attrValue.valueText.split(',');
+                  }
+                  
+                  // We'll use the options directly from the productAttributes
+                  const options = attribute.options || [];
+                  
+                  // Filter options based on available values if needed
+                  const filteredOptions = availableOptionValues.length > 0 
+                    ? options.filter(option => 
+                        availableOptionValues.includes(option.value) || 
+                        availableOptionValues.includes(option.id.toString()))
+                    : options;
+                  
+                  // Skip if no options available
+                  if (filteredOptions.length === 0 && attribute.type !== 'text') return null;
+                  
+                  return (
+                    <div key={attributeId} className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center">
+                          <label className="font-medium text-sm">{attribute.displayName || attribute.name}</label>
+                          {attribute.isRequired && (
+                            <span className="text-red-500 ml-1">*</span>
                           )}
                         </div>
-                        
-                        <Select 
-                          value={selectedAttributes[globalAttr.attribute?.id] || ''}
-                          onValueChange={value => handleAttributeChange(globalAttr.attribute?.id, value)}
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select option" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {globalAttr.options?.map((option: any) => (
-                              <SelectItem key={option.id} value={option.value}>
-                                {option.displayValue || option.value}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </>
+                      
+                      <Select 
+                        value={selectedAttributes[attributeId] || ''}
+                        onValueChange={value => handleAttributeChange(attributeId, value)}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder={`Select ${attribute.displayName || attribute.name}`} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {filteredOptions.map(option => (
+                            <SelectItem key={option.id} value={option.value}>
+                              {option.displayValue || option.value}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  );
+                })}
+              </div>
             )}
             
             {/* Quantity and Add to Cart */}
