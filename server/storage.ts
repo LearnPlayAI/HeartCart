@@ -6572,6 +6572,13 @@ export class DatabaseStorage implements IStorage {
           };
       }
 
+      // Fix field mapping for rating and review count before database update
+      // Convert frontend field names to schema field names
+      if (draftData.review_count !== undefined) {
+        updateData.reviewCount = draftData.review_count;
+        delete updateData.review_count; // Remove the snake_case version
+      }
+      
       // Log the final updateData before database update
       logger.debug(`Final updateData being sent to database:`, {
         draftId: id,
@@ -6580,7 +6587,7 @@ export class DatabaseStorage implements IStorage {
         rating: updateData.rating,
         reviewCount: updateData.reviewCount,
         hasRating: 'rating' in updateData,
-        hasReviewCount: 'review_count' in updateData
+        hasReviewCount: 'reviewCount' in updateData
       });
 
       // Update the draft
