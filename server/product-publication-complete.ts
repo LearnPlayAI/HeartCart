@@ -141,7 +141,11 @@ export async function publishProductDraftComplete(draftId: number): Promise<Publ
         draftId, 
         name: draft.name,
         isUpdate: !!draft.originalProductId,
-        fieldsCount: Object.keys(draft).length
+        fieldsCount: Object.keys(draft).length,
+        draftRating: draft.rating,
+        draftReviewCount: draft.reviewCount,
+        debugRatingValue: (draft as any).rating,
+        debugReviewCountValue: (draft as any).reviewCount
       });
 
       // 2. Map ALL fields with complete validation and type conversion
