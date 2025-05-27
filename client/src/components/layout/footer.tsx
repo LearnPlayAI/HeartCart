@@ -82,7 +82,7 @@ const Footer = () => {
           </div>
           <div className="text-center md:text-right">
             <div className="mb-2 text-sm text-gray-600">
-              &copy; {new Date().getFullYear()} TEE ME YOU. All rights reserved.
+              &copy; {new Date().getFullYear()} TeeMeYou. All rights reserved.
             </div>
             <div className="flex justify-center md:justify-end space-x-4 text-xs text-gray-500">
               <Link href="/" className="hover:text-[#FF69B4]">Privacy Policy</Link>

@@ -360,7 +360,8 @@ export default function AuthPage() {
         <div className="hidden rounded-lg bg-gradient-to-r from-pink-500 to-purple-500 p-8 md:flex md:flex-col md:justify-center">
           <div className="text-center text-white">
             <ShoppingBag className="mx-auto mb-4 h-16 w-16" />
-            <h2 className="mb-2 text-3xl font-bold">TemuSA</h2>
+            <h2 className="mb-2 text-3xl font-bold">TeeMeYou
+</h2>
             <h3 className="mb-6 text-xl">Your One-Stop Shop for Everything</h3>
             <div className="space-y-4">
               <p className="text-lg">✓ Shop from Local South African Suppliers</p>
@@ -369,9 +370,7 @@ export default function AuthPage() {
               <p className="text-lg">✓ Get Exclusive Deals and Discounts</p>
             </div>
             <Separator className="my-6 bg-white/20" />
-            <p className="text-sm">
-              Join thousands of satisfied customers shopping on TemuSA today!
-            </p>
+            <p className="text-sm">Join thousands of satisfied customers shopping on TeeMeYou today!</p>
           </div>
         </div>
       </div>
