@@ -69,6 +69,14 @@ function mapDraftToProduct(draft: any): DraftToProductMapping {
     allDraftKeys: Object.keys(draft)
   });
 
+  // Additional debug for rating and review count specifically
+  logger.debug('Rating and review count values before mapping', {
+    rating: draft.rating,
+    reviewCount: draft.reviewCount,
+    ratingType: typeof draft.rating,
+    reviewCountType: typeof draft.reviewCount
+  });
+
   // Calculate discount percentage from markup or direct discount
   let discountPercentage = null;
   if (draft.salePrice && draft.regularPrice && draft.salePrice < draft.regularPrice) {
@@ -148,7 +156,7 @@ function mapDraftToProduct(draft: any): DraftToProductMapping {
     
     // Rating and review count from draft
     rating: draft.rating || null,
-    review_count: draft.review_count || 0,
+    review_count: draft.reviewCount || 0,
     sold_count: 0,
     minimum_order: null,
     created_at: new Date().toISOString()
