@@ -23,13 +23,21 @@ const FlashDealTimer = ({ endDate }: { endDate: Date }) => {
 };
 
 // Time Left Progress Bar Component
-const TimeLeftProgressBar = ({ endDate }: { endDate: Date }) => {
-  const { timeRemaining, isExpired } = useCountdown(endDate);
+const TimeLeftProgressBar = ({ product }: { product: Product }) => {
+  // Safety check for required fields
+  if (!product.flashDealEnd) {
+    return null;
+  }
   
-  // Calculate time remaining percentage (assuming 7-day deal period)
-  const totalDealDuration = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+  const { timeRemaining, isExpired } = useCountdown(new Date(product.flashDealEnd));
+  
+  // Calculate progress based on actual deal duration using product's start and end dates
+  const dealStartDate = product.specialSaleStart ? new Date(product.specialSaleStart) : new Date(Date.now() - (7 * 24 * 60 * 60 * 1000));
+  const dealEndDate = new Date(product.flashDealEnd);
+  const totalDealDuration = dealEndDate.getTime() - dealStartDate.getTime();
   const timeRemaining_ms = timeRemaining.total;
-  const timeElapsed = totalDealDuration - timeRemaining_ms;
+  
+  // Calculate percentage of time remaining (100% = full time left, 0% = expired)
   const progressPercentage = Math.max(0, Math.min(100, (timeRemaining_ms / totalDealDuration) * 100));
   
   if (isExpired) {
@@ -196,7 +204,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 )}
               </div>
               {product.flashDealEnd && (
-                <TimeLeftProgressBar endDate={new Date(product.flashDealEnd)} />
+                <TimeLeftProgressBar product={product} />
               )}
             </div>
           )}
