@@ -232,10 +232,10 @@ export default function OrderConfirmationPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {order.orderItems?.map((item: any, index: number) => (
+                  {order.items?.map((item: any, index: number) => (
                     <div key={index} className="flex justify-between items-start">
                       <div className="flex-1">
-                        <div className="font-medium">{item.productName}</div>
+                        <div className="font-medium">{item.product?.name || item.productName}</div>
                         <div className="text-sm text-gray-600">
                           Qty: {item.quantity} × R{(item.unitPrice || 0).toFixed(2)}
                         </div>
