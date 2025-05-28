@@ -208,7 +208,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const closeCart = () => setIsOpen(false);
   
   // Type-safe version of addItem that excludes the server-calculated fields
-  const addItem = (item: Omit<CartItemWithDiscounts, 'id' | 'discountData' | 'totalDiscount' | 'itemPrice'>) => {
+  const addItem = (item: Omit<CartItemWithDiscounts, 'id' | 'discountData' | 'totalDiscount'>) => {
     addToCartMutation.mutate(item);
   };
   
