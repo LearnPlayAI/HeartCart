@@ -105,10 +105,17 @@ const ProductListing = () => {
     const currentSearchParams = new URLSearchParams(location.split('?')[1] || '');
     const urlSearchQuery = currentSearchParams.get('q') || '';
     
+    console.log('URL changed, search query:', urlSearchQuery);
+    
     if (urlSearchQuery !== searchQuery) {
       setSearchQuery(urlSearchQuery);
     }
   }, [location]);
+  
+  // Debug logging for search query
+  useEffect(() => {
+    console.log('Search query state updated:', searchQuery);
+  }, [searchQuery]);
   
   // Pagination
   const [page, setPage] = useState(parseInt(searchParams.get('page') || '1'));
@@ -136,6 +143,7 @@ const ProductListing = () => {
       search: searchQuery || undefined,
       includeChildren: searchParams.get('includeChildren') === 'true'
     }],
+    enabled: true
   });
   const products = productsResponse?.success ? productsResponse.data : [];
   const totalPages = productsResponse?.meta?.totalPages || 1;
