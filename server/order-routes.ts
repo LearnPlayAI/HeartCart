@@ -93,9 +93,9 @@ router.post("/", isAuthenticated, asyncHandler(async (req: Request, res: Respons
       return sendError(res, "User not authenticated", 401);
     }
 
-    // Validate request body
+    // Validate request body using the checkout form schema
     logger.info("Validating order data", { orderData: req.body });
-    const orderData = createOrderSchema.parse(req.body);
+    const orderData = checkoutOrderSchema.parse(req.body);
     logger.info("Order data validation successful", { orderData });
 
     // Use the order items from the request (checkout form already validates these)
