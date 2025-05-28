@@ -54,13 +54,13 @@ import {
   eq,
   like,
   and,
+  or,
   desc,
   asc,
   sql,
   inArray,
   isNull,
   not,
-  or,
   SQL,
   count,
 } from "drizzle-orm";
@@ -1272,51 +1272,34 @@ export class DatabaseStorage implements IStorage {
       // Use a more direct approach with raw SQL for comprehensive search
       if (!options?.includeCategoryInactive) {
         try {
-          // Search with category join to ensure category is active
-          // Build dynamic search conditions for each term (any term can match)
-          const searchConditions = searchTerms.map(term => {
-            const searchTerm = `%${term}%`;
-            return sql`(
-              p.name ILIKE ${searchTerm} OR 
-              p.description ILIKE ${searchTerm} OR 
-              p.brand ILIKE ${searchTerm} OR 
-              p.supplier ILIKE ${searchTerm} OR 
-              p.sku ILIKE ${searchTerm} OR 
-              p.meta_title ILIKE ${searchTerm} OR 
-              p.meta_description ILIKE ${searchTerm} OR 
-              p.meta_keywords ILIKE ${searchTerm} OR 
-              p.dimensions ILIKE ${searchTerm} OR 
-              p.special_sale_text ILIKE ${searchTerm} OR 
-              p.discount_label ILIKE ${searchTerm} OR 
-              EXISTS (
-                SELECT 1 FROM unnest(p.tags) AS tag 
-                WHERE tag ILIKE ${searchTerm}
-              )
-            )`;
-          });
-
-          // Combine all search conditions with OR for broader results
-          const combinedSearchCondition = searchConditions.reduce((acc, condition, index) => {
-            if (index === 0) return condition;
-            return sql`${acc} OR ${condition}`;
+          // First get all active products using the same method as getAllProducts
+          const allProducts = await this.getAllProducts();
+          
+          // Filter the results based on search terms
+          productList = allProducts.filter(product => {
+            if (!options?.includeInactive && !product.isActive) return false;
+            
+            return searchTerms.some(term => {
+              const searchTerm = term.toLowerCase();
+              return (
+                product.name?.toLowerCase().includes(searchTerm) ||
+                product.description?.toLowerCase().includes(searchTerm) ||
+                product.brand?.toLowerCase().includes(searchTerm) ||
+                product.supplier?.toLowerCase().includes(searchTerm) ||
+                product.sku?.toLowerCase().includes(searchTerm) ||
+                product.metaTitle?.toLowerCase().includes(searchTerm) ||
+                product.metaDescription?.toLowerCase().includes(searchTerm) ||
+                product.metaKeywords?.toLowerCase().includes(searchTerm) ||
+                product.dimensions?.toLowerCase().includes(searchTerm) ||
+                product.specialSaleText?.toLowerCase().includes(searchTerm) ||
+                product.discountLabel?.toLowerCase().includes(searchTerm) ||
+                product.tags?.some(tag => tag.toLowerCase().includes(searchTerm))
+              );
+            });
           });
           
-          const result = await db.select({
-            products: products
-          })
-            .from(products)
-            .innerJoin(categories, eq(products.categoryId, categories.id))
-            .where(
-              and(
-                options?.includeInactive ? undefined : eq(products.isActive, true),
-                eq(categories.isActive, true),
-                or(...searchConditions)
-              )
-            )
-            .limit(limit)
-            .offset(offset);
-          
-          productList = result.map((row: any) => row.products) as Product[];
+          // Apply pagination
+          productList = productList.slice(offset, offset + limit);
           console.log(`Found ${productList.length} products with category join`);
         } catch (joinError) {
           console.error(
