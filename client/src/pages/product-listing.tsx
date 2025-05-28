@@ -111,13 +111,17 @@ const ProductListing = () => {
   });
   const categories = categoriesResponse?.success ? categoriesResponse.data : [];
   
-  // Fetch products with category filtering
+  // Fetch products with proper search or filtering
   const { 
     data: productsResponse, 
     isLoading: isLoadingProducts,
     error: productsError
   } = useQuery<StandardApiResponse<Product[], { total?: number, totalPages?: number }>>({
-    queryKey: ['/api/products', { 
+    queryKey: searchQuery ? ['/api/search', { 
+      q: searchQuery,
+      limit, 
+      offset: (page - 1) * limit
+    }] : ['/api/products', { 
       limit, 
       offset: (page - 1) * limit,
       categoryId: selectedCategoryId,
