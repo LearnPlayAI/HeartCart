@@ -774,39 +774,7 @@ const ProductListing = () => {
                 </AccordionContent>
               </AccordionItem>
               
-              {/* Product Attributes */}
-              {filterableAttributes && filterableAttributes.length > 0 && (
-                <div className="space-y-4">
-                  {filterableAttributes.map(attribute => (
-                    <div key={attribute.id} className="space-y-2">
-                      <h3 className="text-sm font-medium">{getAttributeDisplayName(attribute)}</h3>
-                      <div className="space-y-1.5">
-                        {attribute.options.map(option => (
-                          <>
-                            <Checkbox 
-                              key={option.id}
-                              id={`attr-${attribute.id}-${option.id}`}
-                              checked={isAttributeOptionSelected(attribute.id, option.value)}
-                              onCheckedChange={(checked) => handleAttributeFilterChange(
-                                attribute.id,
-                                getAttributeDisplayName(attribute),
-                                option.value,
-                                checked as boolean
-                              )}
-                            />
-                            <label 
-                              htmlFor={`attr-${attribute.id}-${option.id}`} 
-                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                            >
-                              {option.value}
-                            </label>
-                          </>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+
               
               <AccordionItem value="more">
                 <AccordionTrigger>More Filters</AccordionTrigger>
