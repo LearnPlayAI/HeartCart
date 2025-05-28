@@ -164,11 +164,9 @@ const OrderDetail: React.FC = () => {
   const uploadProofMutation = useMutation({
     mutationFn: async (file: File) => {
       const formData = new FormData();
-      formData.append('file', file);
-      formData.append('bucket', 'POPS');
-      formData.append('path', `${order?.orderNumber}/proof-of-payment.pdf`);
+      formData.append('proofOfPayment', file);
       
-      const response = await fetch('/api/files/upload', {
+      const response = await fetch(`/api/orders/${orderId}/upload-proof`, {
         method: 'POST',
         body: formData,
       });
