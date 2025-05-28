@@ -102,13 +102,9 @@ const ProductListing = () => {
   
   // Update state when URL changes (for direct navigation or back/forward)
   useEffect(() => {
-    console.log('URL parsing - full location:', window.location.href);
     const queryString = window.location.search;
-    console.log('Query string extracted:', queryString);
-    
     const currentSearchParams = new URLSearchParams(queryString);
     const urlSearchQuery = currentSearchParams.get('q') || '';
-    console.log('Search query from URL:', urlSearchQuery);
     
     setSearchQuery(urlSearchQuery);
     setSelectedCategoryId(currentSearchParams.get('categoryId') ? parseInt(currentSearchParams.get('categoryId')!) : null);
@@ -138,10 +134,6 @@ const ProductListing = () => {
     q: searchQuery || undefined,
     includeChildren: searchParams.get('includeChildren') === 'true'
   };
-  
-  console.log('Product query params:', queryParams);
-  console.log('Current searchQuery state:', searchQuery);
-  console.log('URL location:', location);
   
   const { 
     data: productsResponse, 
