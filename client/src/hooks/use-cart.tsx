@@ -85,10 +85,18 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const addToCartMutation = useMutation({
     mutationFn: async (item: Omit<CartItemWithDiscounts, 'id' | 'discountData' | 'totalDiscount' | 'itemPrice'>) => {
       const { product, ...rest } = item;
+      
+      // Ensure attributeSelections is included in the request
+      const requestData = {
+        ...rest,
+        attributeSelections: item.attributeSelections || {}
+      };
+      
       console.log('🔍 CART MUTATION DEBUG - Original item:', item);
-      console.log('🔍 CART MUTATION DEBUG - Sending to server:', rest);
+      console.log('🔍 CART MUTATION DEBUG - Sending to server:', requestData);
+      
       try {
-        const res = await apiRequest('POST', '/api/cart', rest);
+        const res = await apiRequest('POST', '/api/cart', requestData);
         const data: StandardApiResponse<any> = await res.json();
         if (!data.success) {
           throw new Error(data.error?.message || "Failed to add item to cart");
