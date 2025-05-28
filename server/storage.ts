@@ -2250,122 +2250,127 @@ export class DatabaseStorage implements IStorage {
     items: InsertOrderItem[],
   ): Promise<Order> {
     try {
-      // Create the order
-      try {
-        const [newOrder] = await db.insert(orders).values(order).returning();
+      // Generate a unique order number
+      const orderNumber = `TMY-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+      
+      // Create the order with generated order number
+      const orderWithNumber = {
+        ...order,
+        orderNumber,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
 
-        logger.info(`Created new order`, {
-          orderId: newOrder.id,
-          userId: order.userId,
-          status: order.status,
-          itemCount: items.length,
-          totalAmount: order.totalAmount,
-        });
+      const [newOrder] = await db.insert(orders).values(orderWithNumber).returning();
 
-        // Add order items with attribute combination data
-        let successfulItemInserts = 0;
-        let failedItemInserts = 0;
+      logger.info(`Created new order`, {
+        orderId: newOrder.id,
+        orderNumber: newOrder.orderNumber,
+        userId: order.userId,
+        status: order.status,
+        itemCount: items.length,
+        totalAmount: order.totalAmount,
+      });
 
-        for (const item of items) {
-          try {
-            const [orderItem] = await db
-              .insert(orderItems)
-              .values({
-                ...item,
-                orderId: newOrder.id,
-              })
-              .returning();
+      // Add order items with full product details and attributes
+      let successfulItemInserts = 0;
+      let failedItemInserts = 0;
 
-            successfulItemInserts++;
-
-            logger.debug(`Added item to order`, {
+      for (const item of items) {
+        try {
+          const [orderItem] = await db
+            .insert(orderItems)
+            .values({
+              ...item,
               orderId: newOrder.id,
-              orderItemId: orderItem.id,
-              productId: item.productId,
-              quantity: item.quantity,
-              price: item.price,
-            });
+              createdAt: new Date().toISOString(),
+            })
+            .returning();
 
-            // If this item has a productId, update the product's sold count
-            if (item.productId) {
-              try {
-                await db
-                  .update(products)
-                  .set({
-                    soldCount: sql`${products.soldCount} + ${item.quantity}`,
-                  })
-                  .where(eq(products.id, item.productId));
+          successfulItemInserts++;
 
-                logger.debug(`Updated product sold count`, {
-                  orderId: newOrder.id,
-                  productId: item.productId,
-                  quantitySold: item.quantity,
-                });
-              } catch (updateError) {
-                logger.error(`Error updating sold count for product`, {
-                  error: updateError,
-                  orderId: newOrder.id,
-                  productId: item.productId,
-                  quantity: item.quantity,
-                });
-                // Continue processing other items instead of halting the entire order process
-              }
-            }
-          } catch (itemError) {
-            failedItemInserts++;
-            logger.error(`Error inserting order item`, {
-              error: itemError,
-              orderId: newOrder.id,
-              productId: item.productId,
-              itemIndex: successfulItemInserts + failedItemInserts - 1,
-            });
-            // Continue processing other items instead of halting the entire order process
-          }
-        }
-
-        if (failedItemInserts > 0) {
-          logger.warn(`Some order items failed to insert`, {
+          logger.debug(`Added item to order`, {
             orderId: newOrder.id,
-            successCount: successfulItemInserts,
-            failCount: failedItemInserts,
-            totalItems: items.length,
+            orderItemId: orderItem.id,
+            productId: item.productId,
+            productName: item.productName,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            totalPrice: item.totalPrice,
+            selectedAttributes: item.selectedAttributes,
+          });
+
+          // Update the product's sold count
+          if (item.productId) {
+            try {
+              await db
+                .update(products)
+                .set({
+                  soldCount: sql`${products.soldCount} + ${item.quantity}`,
+                })
+                .where(eq(products.id, item.productId));
+
+              logger.debug(`Updated product sold count`, {
+                orderId: newOrder.id,
+                productId: item.productId,
+                quantitySold: item.quantity,
+              });
+            } catch (updateError) {
+              logger.error(`Error updating sold count for product`, {
+                error: updateError,
+                orderId: newOrder.id,
+                productId: item.productId,
+                quantity: item.quantity,
+              });
+              // Continue processing other items
+            }
+          }
+        } catch (itemError) {
+          failedItemInserts++;
+          logger.error(`Error inserting order item`, {
+            error: itemError,
+            orderId: newOrder.id,
+            productId: item.productId,
+            itemIndex: successfulItemInserts + failedItemInserts - 1,
           });
         }
+      }
 
-        // Clear the cart
-        try {
-          if (order.userId) {
-            await this.clearCart(order.userId);
-            logger.info(`Cleared cart after order creation`, {
-              orderId: newOrder.id,
-              userId: order.userId,
-            });
-          }
-        } catch (cartError) {
-          logger.error(`Error clearing cart after order creation`, {
-            error: cartError,
+      if (failedItemInserts > 0) {
+        logger.warn(`Some order items failed to insert`, {
+          orderId: newOrder.id,
+          successCount: successfulItemInserts,
+          failCount: failedItemInserts,
+          totalItems: items.length,
+        });
+      }
+
+      // Clear the cart after successful order creation
+      try {
+        if (order.userId) {
+          await this.clearCart(order.userId);
+          logger.info(`Cleared cart after order creation`, {
             orderId: newOrder.id,
+            orderNumber: newOrder.orderNumber,
             userId: order.userId,
           });
-          // Don't throw here as the order is already created
         }
-
-        return newOrder;
-      } catch (orderInsertError) {
-        logger.error(`Error creating new order`, {
-          error: orderInsertError,
+      } catch (cartError) {
+        logger.error(`Error clearing cart after order creation`, {
+          error: cartError,
+          orderId: newOrder.id,
           userId: order.userId,
-          totalAmount: order.totalAmount,
-          itemCount: items.length,
         });
-        throw orderInsertError; // Rethrow so the route handler can catch it and send a proper error response
+        // Don't throw here as the order is already created
       }
+
+      return newOrder;
     } catch (error) {
       logger.error(`Error in order creation process`, {
         error,
         userId: order.userId,
       });
-      throw error; // Rethrow so the route handler can catch it and send a proper error response
+      throw error;
     }
   }
 

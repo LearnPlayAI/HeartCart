@@ -112,25 +112,66 @@ export const cartItems = pgTable("cart_items", {
   };
 });
 
-// Orders table
+// Orders table - camelCase version with comprehensive order management
 export const orders = pgTable("orders", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id),
-  status: text("status").notNull().default("pending"),
-  totalAmount: doublePrecision("total_amount").notNull(),
-  shippingAddress: text("shipping_address").notNull(),
-  shippingMethod: text("shipping_method"),
-  paymentMethod: text("payment_method"),
-  createdAt: text("created_at").default(String(new Date().toISOString())).notNull(),
+  userId: integer("userId").notNull().references(() => users.id),
+  orderNumber: text("orderNumber").notNull().unique(), // Human-readable order number
+  status: text("status").notNull().default("pending"), // pending, confirmed, processing, shipped, delivered, cancelled
+  
+  // Customer information
+  customerName: text("customerName").notNull(),
+  customerEmail: text("customerEmail").notNull(),
+  customerPhone: text("customerPhone").notNull(),
+  
+  // Shipping information
+  shippingAddress: text("shippingAddress").notNull(),
+  shippingCity: text("shippingCity").notNull(),
+  shippingPostalCode: text("shippingPostalCode").notNull(),
+  shippingMethod: text("shippingMethod").notNull().default("standard"), // standard, express
+  shippingCost: doublePrecision("shippingCost").notNull().default(85), // R85 for PUDO
+  
+  // Payment information
+  paymentMethod: text("paymentMethod").notNull().default("eft"), // eft only for now
+  paymentStatus: text("paymentStatus").notNull().default("pending"), // pending, paid, failed
+  
+  // Order totals
+  subtotalAmount: doublePrecision("subtotalAmount").notNull(),
+  totalAmount: doublePrecision("totalAmount").notNull(),
+  
+  // Order notes and tracking
+  customerNotes: text("customerNotes"),
+  adminNotes: text("adminNotes"),
+  trackingNumber: text("trackingNumber"),
+  
+  // Timestamps
+  createdAt: text("createdAt").default(String(new Date().toISOString())).notNull(),
+  updatedAt: text("updatedAt").default(String(new Date().toISOString())).notNull(),
+  shippedAt: text("shippedAt"),
+  deliveredAt: text("deliveredAt"),
 });
 
-// Order items table
-export const orderItems = pgTable("order_items", {
+// Order items table - camelCase version with full attribute support
+export const orderItems = pgTable("orderItems", {
   id: serial("id").primaryKey(),
-  orderId: integer("order_id").references(() => orders.id),
-  productId: integer("product_id").references(() => products.id),
+  orderId: integer("orderId").notNull().references(() => orders.id, { onDelete: "cascade" }),
+  productId: integer("productId").notNull().references(() => products.id),
+  
+  // Product details at time of order (for historical accuracy)
+  productName: text("productName").notNull(),
+  productSku: text("productSku"),
+  productImageUrl: text("productImageUrl"),
+  
+  // Order item specifics
   quantity: integer("quantity").notNull(),
-  price: doublePrecision("price").notNull(),
+  unitPrice: doublePrecision("unitPrice").notNull(),
+  totalPrice: doublePrecision("totalPrice").notNull(),
+  
+  // Product attributes selected for this item
+  selectedAttributes: jsonb("selectedAttributes").default('{}').notNull(), // {size: "Large", color: "Red", etc.}
+  attributeDisplayText: text("attributeDisplayText"), // Human-readable attribute summary like "Large, Red"
+  
+  createdAt: text("createdAt").default(String(new Date().toISOString())).notNull(),
 });
 
 // Product Images table
@@ -345,10 +386,18 @@ export const insertCartItemSchema = createInsertSchema(cartItems).omit({
 export const insertOrderSchema = createInsertSchema(orders).omit({
   id: true,
   createdAt: true,
+  updatedAt: true,
+  orderNumber: true, // Generated automatically
+}).extend({
+  shippingMethod: z.enum(["standard", "express"]).default("standard"),
+  paymentMethod: z.enum(["eft"]).default("eft"),
+  paymentStatus: z.enum(["pending", "paid", "failed"]).default("pending"),
+  status: z.enum(["pending", "confirmed", "processing", "shipped", "delivered", "cancelled"]).default("pending"),
 });
 
 export const insertOrderItemSchema = createInsertSchema(orderItems).omit({
   id: true,
+  createdAt: true,
 });
 
 export const insertProductImageSchema = createInsertSchema(productImages)
