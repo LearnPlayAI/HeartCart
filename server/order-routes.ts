@@ -307,6 +307,9 @@ router.post("/:id/upload-proof", isAuthenticated, upload.single('proofOfPayment'
       return sendError(res, "Unauthorized", 403);
     }
 
+    // Update the order with the file path
+    const updatedOrder = await storage.updateOrderEftProof(orderId, req.file.path);
+
     logger.info("Proof of payment uploaded", {
       orderId,
       orderNumber: order.orderNumber,
@@ -320,6 +323,7 @@ router.post("/:id/upload-proof", isAuthenticated, upload.single('proofOfPayment'
       message: "Proof of payment uploaded successfully",
       filename: req.file.filename,
       filepath: req.file.path,
+      order: updatedOrder,
     });
   } catch (error) {
     logger.error("Error uploading proof of payment", { 

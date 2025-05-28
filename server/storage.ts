@@ -2710,6 +2710,73 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async updateOrderEftProof(
+    id: number,
+    eftPop: string,
+  ): Promise<Order | undefined> {
+    try {
+      // First check if the order exists
+      try {
+        const [existingOrder] = await db
+          .select()
+          .from(orders)
+          .where(eq(orders.id, id));
+
+        if (!existingOrder) {
+          logger.warn(`Attempted to update EFT proof of non-existent order`, {
+            orderId: id,
+            eftPop,
+          });
+          return undefined;
+        }
+
+        const now = new Date().toISOString();
+
+        try {
+          // Update the order with the EFT proof path and updatedAt timestamp
+          const [updatedOrder] = await db
+            .update(orders)
+            .set({
+              eftPop,
+              updatedAt: now,
+            })
+            .where(eq(orders.id, id))
+            .returning();
+
+          logger.info(`Updated order EFT proof of payment`, {
+            orderId: id,
+            eftPop,
+            userId: updatedOrder.userId,
+          });
+
+          return updatedOrder;
+        } catch (updateError) {
+          logger.error(`Error updating order EFT proof`, {
+            error: updateError,
+            orderId: id,
+            eftPop,
+            userId: existingOrder.userId,
+          });
+          throw updateError;
+        }
+      } catch (queryError) {
+        logger.error(`Error querying order before EFT proof update`, {
+          error: queryError,
+          orderId: id,
+          eftPop,
+        });
+        throw queryError;
+      }
+    } catch (error) {
+      logger.error(`Error in order EFT proof update process`, {
+        error,
+        orderId: id,
+        eftPop,
+      });
+      throw error;
+    }
+  }
+
   // Product Image operations
   async getProductImages(productId: number): Promise<ProductImage[]> {
     try {

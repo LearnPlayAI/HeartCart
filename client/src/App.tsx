@@ -247,6 +247,7 @@ function App() {
                       <Route path="/search"><SearchResults /></Route>
                       <ProtectedRoute path="/profile" component={Profile} />
                       <ProtectedRoute path="/order/:id" component={OrderDetail} />
+                      <ProtectedRoute path="/orders/:id" component={OrderDetail} />
                       <Route path="/auth"><AuthPage /></Route>
                       <Route><NotFound /></Route>
                     </Switch>
