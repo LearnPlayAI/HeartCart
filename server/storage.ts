@@ -2040,11 +2040,25 @@ export class DatabaseStorage implements IStorage {
               quantity: cartItem.quantity || 1,
             };
 
+            // Debug: Log the exact data being inserted
+            logger.debug(`Inserting cart item with data:`, {
+              itemToInsert,
+              itemPrice: itemToInsert.itemPrice,
+              createdAt: itemToInsert.createdAt
+            });
+
             // Insert new item
             const [newItem] = await db
               .insert(cartItems)
               .values(itemToInsert)
               .returning();
+
+            // Debug: Log what was actually inserted
+            logger.debug(`Database returned after insert:`, {
+              newItem,
+              actualItemPrice: newItem.itemPrice,
+              actualCreatedAt: newItem.createdAt
+            });
 
             logger.info(`Added new item to cart`, {
               cartItemId: newItem.id,
