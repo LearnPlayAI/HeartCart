@@ -2,7 +2,7 @@ import express, { Request, Response } from "express";
 import { z } from "zod";
 import asyncHandler from "express-async-handler";
 import { storage } from "./storage";
-import { isAuthenticated } from "./auth";
+import { isAuthenticated } from "./auth-middleware";
 import { sendSuccess, sendError } from "./api-response";
 import { insertOrderSchema, insertOrderItemSchema } from "@shared/schema";
 import { logger } from "./logger";
