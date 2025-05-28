@@ -83,7 +83,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   
   // Add to cart mutation
   const addToCartMutation = useMutation({
-    mutationFn: async (item: Omit<CartItemWithDiscounts, 'id' | 'discountData' | 'totalDiscount' | 'itemPrice'>) => {
+    mutationFn: async (item: Omit<CartItemWithDiscounts, 'id' | 'discountData' | 'totalDiscount'>) => {
       console.log('🔍 CART MUTATION DEBUG - Original item:', item);
       
       const { product, ...rest } = item;
