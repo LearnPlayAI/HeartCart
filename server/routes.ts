@@ -606,9 +606,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           parsedAttributeFilters = JSON.parse(attributeFilters);
           console.log('Route: Parsed attribute filters:', parsedAttributeFilters);
         } catch (error) {
-          console.error('Error parsing attribute filters:', error);
+          console.error('Error parsing attribute filters:', error, 'Raw value:', attributeFilters);
         }
       }
+      
+      console.log('Route: Final parsedAttributeFilters:', parsedAttributeFilters);
       
       // Build comprehensive filter options
       const filterOptions = {
