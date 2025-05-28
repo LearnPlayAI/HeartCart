@@ -161,10 +161,18 @@ router.post("/", isAuthenticated, asyncHandler(async (req: Request, res: Respons
       itemCount: orderItems.length,
     });
 
-    return sendSuccess(res, {
-      order: newOrder,
-      message: "Order created successfully",
+    // Send success response with proper structure
+    res.status(200).json({
+      success: true,
+      data: {
+        id: newOrder.id,
+        orderNumber: newOrder.orderNumber,
+        status: newOrder.status,
+        totalAmount: newOrder.totalAmount,
+        message: "Order created successfully"
+      }
     });
+    return;
 
   } catch (error) {
     if (error instanceof z.ZodError) {

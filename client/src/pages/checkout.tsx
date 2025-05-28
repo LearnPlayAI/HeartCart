@@ -177,29 +177,34 @@ export default function CheckoutPage() {
   
   const total = subtotal + shippingCost;
 
-  // Create order mutation
+  // Create order mutation with proper response handling
   const createOrderMutation = useMutation({
     mutationFn: async (orderData: any) => {
       console.log("Starting order creation with data:", orderData);
       
-      try {
-        console.log("Making API request to /api/orders");
-        const response = await apiRequest("POST", "/api/orders", orderData, { debug: true });
-        console.log("Received API response:", response);
+      const response = await fetch("/api/orders", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify(orderData),
+      });
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error("Order API error response:", errorText);
-          throw new Error(`Order creation failed: ${response.status} - ${errorText}`);
-        }
-
-        const result = await response.json();
-        console.log("Order creation successful:", result);
-        return result;
-      } catch (error) {
-        console.error("Order creation error:", error);
-        throw error;
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Order creation failed: ${response.status} - ${errorText}`);
       }
+
+      const result = await response.json();
+      console.log("Order creation successful:", result);
+      
+      // Ensure we have a proper success response
+      if (!result.success) {
+        throw new Error(result.error?.message || "Order creation failed");
+      }
+      
+      return result;
     },
     onSuccess: (data) => {
       console.log("Order mutation success:", data);
