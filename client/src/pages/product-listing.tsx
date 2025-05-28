@@ -467,6 +467,11 @@ const ProductListing = () => {
   // Apply filters and sorting to products
   const filteredProducts = products ? products
     .filter(product => {
+      // Skip additional filtering for search results - the backend search already handles filtering
+      if (searchQuery) {
+        return true;
+      }
+      
       // Apply category filter with hierarchical support
       if (selectedCategoryId) {
         const urlParams = new URLSearchParams(window.location.search);
