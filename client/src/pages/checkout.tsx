@@ -134,7 +134,7 @@ export default function CheckoutPage() {
 
   // Calculate totals
   const subtotal = Array.isArray(cartItems) ? cartItems.reduce((sum: number, item: any) => 
-    sum + (item.price * item.quantity), 0) : 0;
+    sum + (parseFloat(item.itemPrice || 0) * item.quantity), 0) : 0;
 
   const form = useForm<CheckoutFormData>({
     resolver: zodResolver(checkoutSchema),
@@ -619,12 +619,12 @@ export default function CheckoutPage() {
                 {Array.isArray(cartItems) && cartItems.map((item: any) => (
                   <div key={item.id} className="flex justify-between items-start">
                     <div className="flex-1">
-                      <div className="font-medium text-sm">{item.productName}</div>
+                      <div className="font-medium text-sm">{item.product?.name || 'Product'}</div>
                       <div className="text-xs text-gray-600">Qty: {item.quantity}</div>
                       {/* Show product attributes if they exist */}
-                      {item.productAttributes && Object.keys(item.productAttributes).length > 0 && (
+                      {item.attributeSelections && Object.keys(item.attributeSelections).length > 0 && (
                         <div className="text-xs text-gray-500 mt-1">
-                          {Object.entries(item.productAttributes).map(([key, value]) => (
+                          {Object.entries(item.attributeSelections).map(([key, value]) => (
                             <Badge key={key} variant="outline" className="mr-1 text-xs">
                               {key}: {String(value)}
                             </Badge>
@@ -633,7 +633,7 @@ export default function CheckoutPage() {
                       )}
                     </div>
                     <div className="text-sm font-medium">
-                      R{(item.price * item.quantity).toFixed(2)}
+                      R{(parseFloat(item.itemPrice || 0) * item.quantity).toFixed(2)}
                     </div>
                   </div>
                 ))}
