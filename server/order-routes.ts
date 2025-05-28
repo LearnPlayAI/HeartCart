@@ -11,15 +11,31 @@ const router = express.Router();
 
 // Create order schema validation
 const createOrderSchema = z.object({
-  customerName: z.string().min(1, "Customer name is required"),
-  customerEmail: z.string().email("Valid email is required"),
-  customerPhone: z.string().min(1, "Phone number is required"),
-  shippingAddress: z.string().min(1, "Shipping address is required"),
-  shippingCity: z.string().min(1, "City is required"),
-  shippingPostalCode: z.string().min(1, "Postal code is required"),
-  shippingMethod: z.enum(["standard", "express"]).default("standard"),
-  paymentMethod: z.enum(["eft"]).default("eft"),
-  customerNotes: z.string().optional(),
+  customerInfo: z.object({
+    firstName: z.string().min(1, "First name is required"),
+    lastName: z.string().min(1, "Last name is required"),
+    email: z.string().email("Valid email is required"),
+    phone: z.string().min(1, "Phone number is required")
+  }),
+  shippingAddress: z.object({
+    addressLine1: z.string().min(1, "Address line 1 is required"),
+    addressLine2: z.string().optional(),
+    city: z.string().min(1, "City is required"),
+    province: z.string().min(1, "Province is required"),
+    postalCode: z.string().min(1, "Postal code is required")
+  }),
+  shippingMethod: z.string().default("pudo"),
+  shippingCost: z.number(),
+  paymentMethod: z.string().default("eft"),
+  specialInstructions: z.string().optional(),
+  orderItems: z.array(z.object({
+    productId: z.number(),
+    quantity: z.number(),
+    unitPrice: z.number(),
+    productAttributes: z.record(z.string()).optional()
+  })),
+  subtotal: z.number(),
+  total: z.number()
 });
 
 // Helper function to generate attribute display text
@@ -44,69 +60,56 @@ router.post("/", isAuthenticated, asyncHandler(async (req: Request, res: Respons
     // Validate request body
     const orderData = createOrderSchema.parse(req.body);
 
-    // Get user's cart items
-    const cartItems = await storage.getCartItems(userId);
-    
-    if (!cartItems || cartItems.length === 0) {
-      return sendError(res, "Cart is empty", 400);
+    // Use the order items from the request (checkout form already validates these)
+    if (!orderData.orderItems || orderData.orderItems.length === 0) {
+      return sendError(res, "No order items provided", 400);
     }
 
-    // Calculate totals
-    let subtotalAmount = 0;
+    // Validate products exist and prepare order items
     const orderItems = [];
-
-    for (const cartItem of cartItems) {
-      // Get product details
-      const product = await storage.getProductById(cartItem.productId);
+    for (const item of orderData.orderItems) {
+      // Verify product exists
+      const product = await storage.getProductById(item.productId);
       if (!product) {
-        return sendError(res, `Product with ID ${cartItem.productId} not found`, 400);
+        return sendError(res, `Product with ID ${item.productId} not found`, 400);
       }
-
-      // Calculate item total
-      const unitPrice = parseFloat(cartItem.itemPrice);
-      const totalPrice = unitPrice * cartItem.quantity;
-      subtotalAmount += totalPrice;
 
       // Generate attribute display text
       const attributeDisplayText = generateAttributeDisplayText(
-        cartItem.attributeSelections as Record<string, string> || {}
+        item.productAttributes || {}
       );
 
       // Create order item
       orderItems.push({
-        productId: cartItem.productId,
+        productId: item.productId,
         productName: product.name,
         productSku: product.sku,
         productImageUrl: product.imageUrl,
-        quantity: cartItem.quantity,
-        unitPrice: unitPrice,
-        totalPrice: totalPrice,
-        selectedAttributes: cartItem.attributeSelections || {},
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        totalPrice: item.unitPrice * item.quantity,
+        selectedAttributes: item.productAttributes || {},
         attributeDisplayText: attributeDisplayText,
       });
     }
 
-    // Calculate shipping cost based on method
-    const shippingCost = orderData.shippingMethod === "express" ? 100 : 85;
-    const totalAmount = subtotalAmount + shippingCost;
-
-    // Create order object
+    // Create order object with new structure
     const order = {
       userId: userId,
       status: "pending",
-      customerName: orderData.customerName,
-      customerEmail: orderData.customerEmail,
-      customerPhone: orderData.customerPhone,
-      shippingAddress: orderData.shippingAddress,
-      shippingCity: orderData.shippingCity,
-      shippingPostalCode: orderData.shippingPostalCode,
+      customerName: `${orderData.customerInfo.firstName} ${orderData.customerInfo.lastName}`,
+      customerEmail: orderData.customerInfo.email,
+      customerPhone: orderData.customerInfo.phone,
+      shippingAddress: `${orderData.shippingAddress.addressLine1}${orderData.shippingAddress.addressLine2 ? ', ' + orderData.shippingAddress.addressLine2 : ''}`,
+      shippingCity: orderData.shippingAddress.city,
+      shippingPostalCode: orderData.shippingAddress.postalCode,
       shippingMethod: orderData.shippingMethod,
-      shippingCost: shippingCost,
+      shippingCost: orderData.shippingCost,
       paymentMethod: orderData.paymentMethod,
       paymentStatus: "pending",
-      subtotalAmount: subtotalAmount,
-      totalAmount: totalAmount,
-      customerNotes: orderData.customerNotes || null,
+      subtotalAmount: orderData.subtotal,
+      totalAmount: orderData.total,
+      customerNotes: orderData.specialInstructions || null,
     };
 
     // Create the order
