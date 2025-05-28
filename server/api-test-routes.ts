@@ -107,7 +107,7 @@ export function registerApiTestRoutes(app: Express): void {
         });
       } else if (layer.name === 'router' && layer.handle && layer.handle.stack) {
         // This is a router - it has a stack of middleware layers
-        const routerPath = (layer.regexp !== /^\\/i) 
+        const routerPath = (layer.regexp.toString() !== '/^\\\\\\/i/') 
           ? basePath + (layer.regexp.toString().replace('/^', '').replace('\\/?(?=\\/|$)/i', '').replace(/\\\//g, '/'))
           : basePath;
         
@@ -117,7 +117,7 @@ export function registerApiTestRoutes(app: Express): void {
         });
       } else if (layer.name === 'bound dispatch' && layer.handle && layer.handle.stack) {
         // Handle mounted apps/middlewares
-        const mountPath = (layer.regexp !== /^\\/i)
+        const mountPath = (layer.regexp.toString() !== '/^\\\\\\/i/')
           ? basePath + (layer.regexp.toString().replace('/^', '').replace('\\/?(?=\\/|$)/i', '').replace(/\\\//g, '/'))
           : basePath;
         
