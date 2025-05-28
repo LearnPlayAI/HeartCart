@@ -102,8 +102,14 @@ const ProductListing = () => {
   
   // Update state when URL changes (for direct navigation or back/forward)
   useEffect(() => {
-    const currentSearchParams = new URLSearchParams(location.split('?')[1] || '');
+    console.log('URL parsing - full location:', location);
+    const urlParts = location.split('?');
+    const queryString = urlParts[1] || '';
+    console.log('Query string extracted:', queryString);
+    
+    const currentSearchParams = new URLSearchParams(queryString);
     const urlSearchQuery = currentSearchParams.get('q') || '';
+    console.log('Search query from URL:', urlSearchQuery);
     
     setSearchQuery(urlSearchQuery);
     setSelectedCategoryId(currentSearchParams.get('categoryId') ? parseInt(currentSearchParams.get('categoryId')!) : null);
