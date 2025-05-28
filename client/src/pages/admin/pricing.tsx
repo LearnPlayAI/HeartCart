@@ -51,7 +51,7 @@ interface Category {
   parent?: Category;
 }
 
-type SortField = 'name' | 'sku' | 'category' | 'costPrice' | 'price' | 'salePrice' | 'tmyMarkup' | 'customerDiscount';
+type SortField = 'name' | 'sku' | 'parentCategory' | 'childCategory' | 'costPrice' | 'price' | 'salePrice' | 'tmyMarkup' | 'customerDiscount';
 type SortDirection = 'asc' | 'desc';
 
 export default function PricingPage() {
@@ -138,7 +138,8 @@ export default function PricingPage() {
       return {
         ...product,
         categoryName: category?.name || 'Uncategorized',
-        parentCategoryName: category?.parent?.name || null,
+        parentCategoryName: category?.parent?.name || category?.name || 'Uncategorized',
+        childCategoryName: category?.name || 'Uncategorized',
         catalogName: catalog?.name || 'No Catalog',
         tmyMarkup: Number(tmyMarkup.toFixed(2)),
         customerDiscount: Number(customerDiscount.toFixed(2)),
@@ -200,9 +201,13 @@ export default function PricingPage() {
           aValue = a.sku || '';
           bValue = b.sku || '';
           break;
-        case 'category':
-          aValue = a.categoryName;
-          bValue = b.categoryName;
+        case 'parentCategory':
+          aValue = a.parentCategoryName;
+          bValue = b.parentCategoryName;
+          break;
+        case 'childCategory':
+          aValue = a.childCategoryName;
+          bValue = b.childCategoryName;
           break;
         case 'costPrice':
           aValue = a.costPrice;
@@ -471,10 +476,19 @@ export default function PricingPage() {
                         </TableHead>
                         <TableHead 
                           className="cursor-pointer hover:bg-muted/50"
-                          onClick={() => handleSort('category')}
+                          onClick={() => handleSort('parentCategory')}
                         >
                           <div className="flex items-center gap-2">
-                            Categories
+                            Parent Cat
+                            <ArrowUpDown className="h-4 w-4" />
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => handleSort('childCategory')}
+                        >
+                          <div className="flex items-center gap-2">
+                            Child Cat
                             <ArrowUpDown className="h-4 w-4" />
                           </div>
                         </TableHead>
@@ -556,14 +570,14 @@ export default function PricingPage() {
                             </code>
                           </TableCell>
                           <TableCell>
-                            <div className="space-y-1">
-                              <Badge variant="outline">{product.categoryName}</Badge>
-                              {product.parentCategoryName && (
-                                <Badge variant="secondary" className="text-xs">
-                                  {product.parentCategoryName}
-                                </Badge>
-                              )}
-                            </div>
+                            <Badge variant="secondary" className="text-xs">
+                              {product.parentCategoryName}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline">
+                              {product.childCategoryName}
+                            </Badge>
                           </TableCell>
                           <TableCell className="text-right font-mono">
                             {formatCurrency(product.costPrice)}
@@ -654,12 +668,18 @@ export default function PricingPage() {
                         {/* Categories */}
                         <div className="space-y-2">
                           <div className="flex flex-wrap gap-2">
-                            <Badge variant="outline">{product.categoryName}</Badge>
-                            {product.parentCategoryName && (
+                            <div className="flex items-center gap-1">
+                              <span className="text-xs text-muted-foreground">Parent:</span>
                               <Badge variant="secondary" className="text-xs">
                                 {product.parentCategoryName}
                               </Badge>
-                            )}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <span className="text-xs text-muted-foreground">Child:</span>
+                              <Badge variant="outline">
+                                {product.childCategoryName}
+                              </Badge>
+                            </div>
                           </div>
                         </div>
 
