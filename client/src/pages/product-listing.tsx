@@ -233,7 +233,7 @@ const ProductListing = () => {
     }
     
     setActiveFilters(newActiveFilters);
-  }, [sortBy, selectedCategory, ratingFilter, searchQuery, filters, page, priceRange, categories, location, setLocation]);
+  }, [sortBy, selectedCategory, ratingFilter, searchQuery, filters, page, priceRange, attributeFilters, categories, location, setLocation]);
   
   const toggleFilter = () => {
     setIsFilterOpen(!isFilterOpen);
