@@ -774,30 +774,47 @@ const ProductListing = () => {
                 </AccordionContent>
               </AccordionItem>
               
-              {/* Product Attributes */}
+              {/* Product Attributes - Hierarchical Structure */}
               {filterableAttributes && filterableAttributes.length > 0 && (
                 <AccordionItem value="attributes">
                   <AccordionTrigger>Product Attributes</AccordionTrigger>
                   <AccordionContent>
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                       {filterableAttributes.map(attribute => (
-                        <div key={attribute.id} className="space-y-2">
-                          <h3 className="text-sm font-medium">{getAttributeDisplayName(attribute)}</h3>
-                          <div className="space-y-1.5">
-                            {attribute.options.map(option => (
-                              <div key={option.id} className="flex items-center space-x-2">
-                                <Checkbox 
-                                  id={`attr-${attribute.id}-${option.id}`}
-                                  checked={isAttributeOptionSelected(attribute.id, option.value)}
-                                  onCheckedChange={(checked) => handleAttributeFilterChange(
-                                    attribute.id,
-                                    getAttributeDisplayName(attribute),
-                                    option.value,
-                                    checked as boolean
-                                  )}
-                                />
-                                <label 
-                                  htmlFor={`attr-${attribute.id}-${option.id}`} 
+                        <Accordion key={attribute.id} type="single" collapsible className="border rounded-lg">
+                          <AccordionItem value={`attribute-${attribute.id}`} className="border-none">
+                            <AccordionTrigger className="px-3 py-2 text-sm font-medium hover:no-underline">
+                              <div className="flex items-center justify-between w-full">
+                                <span>{getAttributeDisplayName(attribute)}</span>
+                                {/* Show count of selected options */}
+                                {(() => {
+                                  const selectedCount = attribute.options.filter(option => 
+                                    isAttributeOptionSelected(attribute.id, option.value)
+                                  ).length;
+                                  return selectedCount > 0 ? (
+                                    <Badge variant="secondary" className="ml-2 text-xs">
+                                      {selectedCount} selected
+                                    </Badge>
+                                  ) : null;
+                                })()}
+                              </div>
+                            </AccordionTrigger>
+                            <AccordionContent className="px-3 pb-3">
+                              <div className="space-y-2">
+                                {attribute.options.map(option => (
+                                  <div key={option.id} className="flex items-center space-x-2">
+                                    <Checkbox 
+                                      id={`attr-${attribute.id}-${option.id}`}
+                                      checked={isAttributeOptionSelected(attribute.id, option.value)}
+                                      onCheckedChange={(checked) => handleAttributeFilterChange(
+                                        attribute.id,
+                                        getAttributeDisplayName(attribute),
+                                        option.value,
+                                        checked as boolean
+                                      )}
+                                    />
+                                    <label 
+                                      htmlFor={`attr-${attribute.id}-${option.id}`} 
                                   className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                                 >
                                   {option.value}
