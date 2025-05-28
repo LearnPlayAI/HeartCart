@@ -116,13 +116,21 @@ const ProductListing = () => {
   });
   const categories = categoriesResponse?.success ? categoriesResponse.data : [];
   
-  // Fetch products
+  // Fetch products with attribute filtering
+  const queryParams = {
+    limit, 
+    offset: (page - 1) * limit,
+    ...(attributeFilters.length > 0 && { attributeFilters: JSON.stringify(attributeFilters) }),
+    ...(searchQuery && { q: searchQuery }),
+    ...(selectedCategoryId && { categoryId: selectedCategoryId })
+  };
+  
   const { 
     data: productsResponse, 
     isLoading: isLoadingProducts,
     error: productsError
   } = useQuery<StandardApiResponse<Product[], { total?: number, totalPages?: number }>>({
-    queryKey: ['/api/products', { limit, offset: (page - 1) * limit }],
+    queryKey: ['/api/products', queryParams],
   });
   const products = productsResponse?.success ? productsResponse.data : [];
   const totalPages = productsResponse?.meta?.totalPages || 1;

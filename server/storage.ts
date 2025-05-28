@@ -800,6 +800,7 @@ export class DatabaseStorage implements IStorage {
     categoryId?: number,
     search?: string,
     options?: { includeInactive?: boolean; includeCategoryInactive?: boolean },
+    attributeFilters?: any[],
   ): Promise<Product[]> {
     try {
       // Create conditions array
@@ -900,6 +901,68 @@ export class DatabaseStorage implements IStorage {
               like(products.description || "", searchTerm),
             ),
           );
+        }
+
+        // Apply attribute filters if provided
+        if (attributeFilters && attributeFilters.length > 0) {
+          // For attribute filtering, we need to join with product_attributes table
+          // and check if the product has the required attribute option IDs
+          const productAttributeSubquery = db
+            .select({ productId: productAttributes.productId })
+            .from(productAttributes);
+          
+          // Build conditions for each attribute filter
+          const attributeConditions: SQL<unknown>[] = [];
+          
+          for (const filter of attributeFilters) {
+            if (filter.selectedOptions && filter.selectedOptions.length > 0) {
+              // Get the attribute option IDs for the selected values
+              const optionIds: number[] = [];
+              
+              // First, get option IDs from attribute_options table
+              for (const optionValue of filter.selectedOptions) {
+                const optionResults = await db
+                  .select({ id: attributeOptions.id })
+                  .from(attributeOptions)
+                  .where(eq(attributeOptions.value, optionValue));
+                
+                optionResults.forEach(opt => optionIds.push(opt.id));
+              }
+              
+              if (optionIds.length > 0) {
+                // Create condition that checks if selected_options JSONB contains any of the option IDs
+                const optionConditions = optionIds.map(optionId => 
+                  sql`${productAttributes.selectedOptions}::jsonb ? ${optionId.toString()}`
+                );
+                
+                if (optionConditions.length > 0) {
+                  attributeConditions.push(or(...optionConditions));
+                }
+              }
+            }
+          }
+          
+          if (attributeConditions.length > 0) {
+            // Add the attribute filtering subquery
+            const filteredProductIds = await db
+              .select({ productId: productAttributes.productId })
+              .from(productAttributes)
+              .where(and(...attributeConditions));
+            
+            const productIds = filteredProductIds.map(p => p.productId);
+            
+            if (productIds.length > 0) {
+              query = query.where(
+                and(
+                  conditions.length > 0 ? and(...conditions) : undefined,
+                  inArray(products.id, productIds)
+                )
+              );
+            } else {
+              // No products match the attribute filters, return empty array
+              return [];
+            }
+          }
         }
 
         const productList = await query.limit(limit).offset(offset);

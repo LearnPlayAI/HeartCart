@@ -575,7 +575,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/products", 
     validateRequest({ query: productsQuerySchema }),
     withStandardResponse(async (req: Request, res: Response) => {
-      const { limit, offset, category: categoryId, search } = req.query;
+      const { limit, offset, category: categoryId, search, attributeFilters } = req.query;
       
       const user = req.user as any;
       const isAdmin = user && user.role === 'admin';
@@ -585,12 +585,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         includeCategoryInactive: isAdmin 
       };
       
+      // Parse attribute filters if provided
+      let parsedAttributeFilters = [];
+      if (attributeFilters && typeof attributeFilters === 'string') {
+        try {
+          parsedAttributeFilters = JSON.parse(attributeFilters);
+        } catch (error) {
+          console.error('Error parsing attribute filters:', error);
+        }
+      }
+      
       const products = await storage.getAllProducts(
         Number(limit), 
         Number(offset), 
         categoryId ? Number(categoryId) : undefined, 
         search as string | undefined, 
-        options
+        options,
+        parsedAttributeFilters
       );
       return products;
     }));
