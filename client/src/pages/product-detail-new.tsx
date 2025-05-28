@@ -543,7 +543,7 @@ const ProductDetailView = ({
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white/90 shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-700 hover:text-gray-900"
+                        className="absolute left-2 top-1/2 -translate-y-1/2 bg-[#FF69B4] hover:bg-[#FF69B4]/90 shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-white"
                         onClick={(e) => {
                           e.stopPropagation();
                           navigateMainImage('prev');
@@ -556,7 +556,7 @@ const ProductDetailView = ({
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white/90 shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-700 hover:text-gray-900"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 bg-[#FF69B4] hover:bg-[#FF69B4]/90 shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-white"
                         onClick={(e) => {
                           e.stopPropagation();
                           navigateMainImage('next');
