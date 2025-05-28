@@ -604,6 +604,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (attributeFilters && typeof attributeFilters === 'string') {
         try {
           parsedAttributeFilters = JSON.parse(attributeFilters);
+          console.log('Route: Parsed attribute filters:', parsedAttributeFilters);
         } catch (error) {
           console.error('Error parsing attribute filters:', error);
         }
@@ -620,6 +621,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         freeShipping: freeShipping === 'true',
         newArrivals: newArrivals === 'true'
       };
+      
+      console.log('Route: About to call storage.getAllProducts with:', {
+        limit: Number(limit),
+        offset: Number(offset),
+        categoryId: categoryId ? Number(categoryId) : undefined,
+        search: search as string | undefined,
+        options,
+        parsedAttributeFilters,
+        filterOptions
+      });
       
       const products = await storage.getAllProducts(
         Number(limit), 

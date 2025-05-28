@@ -954,6 +954,7 @@ export class DatabaseStorage implements IStorage {
         }
 
         // Apply attribute filters if provided
+        console.log("Checking attribute filters:", attributeFilters, "Length:", attributeFilters ? attributeFilters.length : 0);
         if (attributeFilters && attributeFilters.length > 0) {
           console.log("Processing attribute filters:", JSON.stringify(attributeFilters, null, 2));
           
