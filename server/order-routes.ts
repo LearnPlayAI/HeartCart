@@ -45,7 +45,8 @@ const router = express.Router();
 const storage_multer = multer.diskStorage({
   destination: async (req, file, cb) => {
     const orderId = req.params.id;
-    const uploadDir = `/root/POPS/${orderId}`;
+    const userEmail = (req.user as any)?.email || 'unknown-user';
+    const uploadDir = `/root/POPS/${userEmail}/${orderId}`;
     
     try {
       await fs.mkdir(uploadDir, { recursive: true });
@@ -55,9 +56,8 @@ const storage_multer = multer.diskStorage({
     }
   },
   filename: (req, file, cb) => {
-    // Use original filename or create a default PDF name
-    const filename = file.originalname || `proof-of-payment-${Date.now()}.pdf`;
-    cb(null, filename);
+    // Always use the specific filename format
+    cb(null, 'pdf_file.pdf');
   },
 });
 
