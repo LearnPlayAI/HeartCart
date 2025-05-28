@@ -1,355 +1,761 @@
-import { useEffect, useState } from "react";
-import { AdminLayout } from "@/components/admin/layout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
-import { Trash2, Plus, Loader2, Info } from "lucide-react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { AdminLayout } from '@/components/admin/layout';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
+import { 
+  Search, 
+  Filter, 
+  Edit, 
+  Package, 
+  TrendingUp, 
+  TrendingDown,
+  Calculator,
+  DollarSign,
+  Tag,
+  ArrowUpDown,
+  ChevronLeft,
+  ChevronRight,
+  X
+} from 'lucide-react';
+import { useLocation } from 'wouter';
+
+interface ProductPricingData {
+  id: number;
+  name: string;
+  slug: string;
+  sku?: string;
+  imageUrl?: string;
+  categoryId: number;
+  categoryName?: string;
+  parentCategoryName?: string;
+  price: number; // regular price
+  salePrice?: number;
+  costPrice: number;
+  stock: number;
+  isActive: boolean;
+  supplier?: string;
+  catalogId?: number;
+  catalogName?: string;
+}
 
 interface Category {
   id: number;
   name: string;
-  slug: string;
+  parentId?: number;
+  parent?: Category;
 }
 
-interface PricingSetting {
-  id: number;
-  categoryId: number;
-  markupPercentage: number;
-  categoryName?: string; // For display purposes
-}
+type SortField = 'name' | 'sku' | 'category' | 'costPrice' | 'price' | 'salePrice' | 'tmyMarkup' | 'customerDiscount';
+type SortDirection = 'asc' | 'desc';
 
 export default function PricingPage() {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [newMarkup, setNewMarkup] = useState<string>("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("");
-  const [defaultMarkup, setDefaultMarkup] = useState<number | null>(null); // No default
-
-  // Fetch all categories
-  const { data: categoriesResponse, isLoading: categoriesLoading } = useQuery<{success: boolean, data: Category[]}>({
-    queryKey: ["/api/categories"],
-  });
+  const [, setLocation] = useLocation();
   
+  // Search and filter states
+  const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<string>('');
+  const [supplierFilter, setSupplierFilter] = useState<string>('');
+  const [catalogFilter, setCatalogFilter] = useState<string>('');
+  const [sortField, setSortField] = useState<SortField>('name');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
+
+  // Fetch products
+  const { data: productsResponse, isLoading: isProductsLoading, error: productsError } = useQuery({
+    queryKey: ['/api/products'],
+    queryFn: async () => {
+      const response = await fetch('/api/products');
+      if (!response.ok) throw new Error('Failed to fetch products');
+      return response.json();
+    }
+  });
+
+  // Fetch categories
+  const { data: categoriesResponse } = useQuery({
+    queryKey: ['/api/categories'],
+    queryFn: async () => {
+      const response = await fetch('/api/categories');
+      if (!response.ok) throw new Error('Failed to fetch categories');
+      return response.json();
+    }
+  });
+
+  // Fetch catalogs
+  const { data: catalogsResponse } = useQuery({
+    queryKey: ['/api/catalogs'],
+    queryFn: async () => {
+      const response = await fetch('/api/catalogs');
+      if (!response.ok) throw new Error('Failed to fetch catalogs');
+      return response.json();
+    }
+  });
+
+  const products = productsResponse?.data || [];
   const categories = categoriesResponse?.data || [];
+  const catalogs = catalogsResponse?.data || [];
 
-  // Fetch all pricing settings
-  const { data: pricingSettingsResponse, isLoading: pricingLoading } = useQuery<{success: boolean, data: PricingSetting[]}>({
-    queryKey: ["/api/admin/pricing"],
-  });
-  
-  const pricingSettings = pricingSettingsResponse?.data || [];
+  // Calculate derived pricing data
+  const enrichedProducts = useMemo(() => {
+    return products.map((product: ProductPricingData) => {
+      const category = categories.find((cat: Category) => cat.id === product.categoryId);
+      const catalog = catalogs.find((cat: any) => cat.id === product.catalogId);
+      
+      // Calculate TMY markup percentage (profit margin between cost and sale price)
+      const effectivePrice = product.salePrice || product.price;
+      const tmyMarkup = product.costPrice > 0 
+        ? ((effectivePrice - product.costPrice) / product.costPrice * 100) 
+        : 0;
+      
+      // Calculate customer discount percentage (discount between regular and sale price)
+      const customerDiscount = product.salePrice && product.price > 0
+        ? ((product.price - product.salePrice) / product.price * 100)
+        : 0;
 
-  // Fetch default markup percentage
-  const { data: defaultMarkupResponse } = useQuery<{ success: boolean, data: { markupPercentage: number | null, isSet: boolean } }>({
-    queryKey: ["/api/pricing/default-markup"]
-  });
-  
-  const defaultMarkupData = defaultMarkupResponse?.data;
-  
-  // Update default markup when data is loaded
-  useEffect(() => {
-    if (defaultMarkupData) {
-      setDefaultMarkup(defaultMarkupData.markupPercentage);
-    }
-  }, [defaultMarkupData]);
-
-  // Create/update a pricing setting
-  const createMutation = useMutation({
-    mutationFn: async (data: { categoryId: number; markupPercentage: number }) => {
-      const response = await apiRequest("POST", "/api/admin/pricing", data);
-      const result = await response.json();
-      if (!result.success) {
-        throw new Error(result.error?.message || "Failed to save markup");
-      }
-      return result.data;
-    },
-    onSuccess: () => {
-      toast({
-        title: "Success",
-        description: "Markup percentage saved successfully",
-      });
-      setNewMarkup("");
-      setSelectedCategory("");
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/pricing"] });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: `Failed to save markup: ${error.message}`,
-        variant: "destructive",
-      });
-    }
-  });
-
-  // Delete a pricing setting
-  const deleteMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const response = await apiRequest("DELETE", `/api/admin/pricing/${id}`);
-      const result = await response.json();
-      if (!result.success) {
-        throw new Error(result.error?.message || "Failed to delete markup");
-      }
-      return result.data;
-    },
-    onSuccess: () => {
-      toast({
-        title: "Success",
-        description: "Category markup removed successfully",
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/pricing"] });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: `Failed to delete markup: ${error.message}`,
-        variant: "destructive",
-      });
-    }
-  });
-
-  // Prepare pricing settings with category names
-  const pricingWithNames = pricingSettings?.map(pricing => {
-    const category = categories?.find(cat => cat.id === pricing.categoryId);
-    return {
-      ...pricing,
-      categoryName: category?.name || `Category ID: ${pricing.categoryId}`
-    };
-  }) || [];
-
-  // Filter out categories that already have pricing settings
-  const availableCategories = categories?.filter(
-    cat => !pricingSettings?.some(pricing => pricing.categoryId === cat.id)
-  ) || [];
-
-  const handleSubmit = () => {
-    if (!selectedCategory || !newMarkup) {
-      toast({
-        title: "Validation Error",
-        description: "Please select a category and enter a markup percentage",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const markup = parseFloat(newMarkup);
-    if (isNaN(markup) || markup < 0) {
-      toast({
-        title: "Validation Error",
-        description: "Markup percentage must be a positive number",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    createMutation.mutate({
-      categoryId: parseInt(selectedCategory),
-      markupPercentage: markup
+      return {
+        ...product,
+        categoryName: category?.name || 'Uncategorized',
+        parentCategoryName: category?.parent?.name || null,
+        catalogName: catalog?.name || 'No Catalog',
+        tmyMarkup: Number(tmyMarkup.toFixed(2)),
+        customerDiscount: Number(customerDiscount.toFixed(2)),
+        effectivePrice
+      };
     });
-  };
+  }, [products, categories, catalogs]);
 
-  const handleDelete = (id: number) => {
-    if (confirm("Are you sure you want to remove this category markup? Products in this category will use AI-based pricing suggestions instead.")) {
-      deleteMutation.mutate(id);
+  // Get unique values for filters
+  const uniqueCategories = useMemo(() => {
+    const categorySet = new Set(enrichedProducts.map((p: any) => p.categoryName));
+    return Array.from(categorySet).sort();
+  }, [enrichedProducts]);
+
+  const uniqueSuppliers = useMemo(() => {
+    const supplierSet = new Set(enrichedProducts.filter((p: any) => p.supplier).map((p: any) => p.supplier));
+    return Array.from(supplierSet).sort();
+  }, [enrichedProducts]);
+
+  const uniqueCatalogs = useMemo(() => {
+    const catalogSet = new Set(enrichedProducts.map((p: any) => p.catalogName));
+    return Array.from(catalogSet).sort();
+  }, [enrichedProducts]);
+
+  // Filter and search products
+  const filteredProducts = useMemo(() => {
+    return enrichedProducts.filter((product: any) => {
+      // Search filter
+      if (searchQuery) {
+        const searchLower = searchQuery.toLowerCase();
+        const matchesSearch = 
+          product.name.toLowerCase().includes(searchLower) ||
+          product.sku?.toLowerCase().includes(searchLower) ||
+          product.categoryName.toLowerCase().includes(searchLower) ||
+          product.supplier?.toLowerCase().includes(searchLower);
+        
+        if (!matchesSearch) return false;
+      }
+
+      // Category filter
+      if (categoryFilter && categoryFilter !== 'all' && product.categoryName !== categoryFilter) {
+        return false;
+      }
+
+      // Supplier filter
+      if (supplierFilter && supplierFilter !== 'all' && product.supplier !== supplierFilter) {
+        return false;
+      }
+
+      // Catalog filter
+      if (catalogFilter && catalogFilter !== 'all' && product.catalogName !== catalogFilter) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [enrichedProducts, searchQuery, categoryFilter, supplierFilter, catalogFilter]);
+
+  // Sort products
+  const sortedProducts = useMemo(() => {
+    return [...filteredProducts].sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
+
+      switch (sortField) {
+        case 'name':
+          aValue = a.name;
+          bValue = b.name;
+          break;
+        case 'sku':
+          aValue = a.sku || '';
+          bValue = b.sku || '';
+          break;
+        case 'category':
+          aValue = a.categoryName;
+          bValue = b.categoryName;
+          break;
+        case 'costPrice':
+          aValue = a.costPrice;
+          bValue = b.costPrice;
+          break;
+        case 'price':
+          aValue = a.price;
+          bValue = b.price;
+          break;
+        case 'salePrice':
+          aValue = a.salePrice || 0;
+          bValue = b.salePrice || 0;
+          break;
+        case 'tmyMarkup':
+          aValue = a.tmyMarkup;
+          bValue = b.tmyMarkup;
+          break;
+        case 'customerDiscount':
+          aValue = a.customerDiscount;
+          bValue = b.customerDiscount;
+          break;
+        default:
+          aValue = a.name;
+          bValue = b.name;
+      }
+
+      if (typeof aValue === 'string') {
+        aValue = aValue.toLowerCase();
+        bValue = bValue.toLowerCase();
+      }
+
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [filteredProducts, sortField, sortDirection]);
+
+  // Pagination
+  const totalPages = Math.ceil(sortedProducts.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedProducts = sortedProducts.slice(startIndex, startIndex + itemsPerPage);
+
+  // Handle sorting
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
     }
   };
+
+  // Handle edit product
+  const handleEditProduct = (productId: number) => {
+    setLocation(`/admin/products/draft/edit/${productId}`);
+  };
+
+  // Format currency
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-ZA', {
+      style: 'currency',
+      currency: 'ZAR',
+    }).format(amount);
+  };
+
+  // Clear filters
+  const clearFilters = () => {
+    setSearchQuery('');
+    setCategoryFilter('all');
+    setSupplierFilter('all');
+    setCatalogFilter('all');
+    setCurrentPage(1);
+  };
+
+  // Active filters count
+  const activeFiltersCount = [searchQuery, categoryFilter, supplierFilter, catalogFilter].filter(Boolean).length;
+
+  if (productsError) {
+    return (
+      <AdminLayout>
+        <div className="container mx-auto py-8">
+          <Card>
+            <CardContent className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <Package className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Error Loading Products</h3>
+                <p className="text-muted-foreground">There was an error loading the product data. Please try again.</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout>
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold">Pricing Management</h1>
+      <div className="container mx-auto py-6 space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Product Pricing Management</h1>
+            <p className="text-muted-foreground">
+              Manage pricing, markups, and discounts for all published products
+            </p>
+          </div>
+          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <Package className="h-4 w-4" />
+              <span>{sortedProducts.length} products</span>
+            </div>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Add New Markup Card */}
-          <Card className="col-span-1">
-            <CardHeader>
-              <CardTitle className="text-xl">Add Category Markup</CardTitle>
-              <CardDescription>
-                Set specific markup percentages for different product categories
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Select Category</label>
-                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableCategories.length === 0 ? (
-                        <SelectItem value="none" disabled>All categories have markup settings</SelectItem>
-                      ) : (
-                        availableCategories.map((category) => (
-                          <SelectItem key={category.id} value={category.id.toString()}>
-                            {category.name}
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Markup Percentage (%)</label>
-                  <div className="relative">
-                    <Input
-                      type="number"
-                      min="0"
-                      step="1"
-                      placeholder="Enter markup percentage"
-                      value={newMarkup}
-                      onChange={(e) => setNewMarkup(e.target.value)}
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">%</span>
-                  </div>
-                  <p className="text-xs text-gray-500">
-                    This is the percentage added to the cost price to determine the selling price
-                  </p>
-                </div>
-
-                <Button
-                  className="w-full bg-pink-600 hover:bg-pink-700"
-                  onClick={handleSubmit}
-                  disabled={createMutation.isPending || !selectedCategory || !newMarkup}
-                >
-                  {createMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="mr-2 h-4 w-4" />
-                      Save Markup
-                    </>
-                  )}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Default Markup Info Card */}
-          <Card className="col-span-1 md:col-span-2 bg-gradient-to-r from-pink-50 to-white dark:from-pink-950 dark:to-gray-900">
-            <CardHeader>
-              <CardTitle className="flex items-center text-xl">
-                <Info className="mr-2 h-5 w-5 text-pink-600" />
-                Default Product Markup
-              </CardTitle>
-              <CardDescription>
-                Information about how product pricing works
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="p-4 rounded-md bg-white dark:bg-gray-800 shadow-sm">
-                  <h3 className="text-lg font-medium mb-2">How pricing works:</h3>
-                  <p className="text-sm mb-2">
-                    When setting product prices, the system follows this hierarchy:
-                  </p>
-                  <ol className="list-decimal pl-5 space-y-1 text-sm mb-3">
-                    <li>
-                      <strong>Category-specific markup</strong>: If a category has a set markup percentage, all products in that category use this percentage
-                    </li>
-                    <li>
-                      <strong>AI pricing</strong>: If no category-specific markup exists, AI will suggest a suitable price based on product and market data
-                    </li>
-                    <li>
-                      <strong>Manual override</strong>: Any manually set selling price takes precedence
-                    </li>
-                  </ol>
-                  <p className="text-sm">
-                    <strong>Formula</strong>: Selling Price = Cost Price × (1 + Markup% ÷ 100)
-                  </p>
-                  <p className="text-sm mt-2">
-                    Example: Cost Price R100 with 50% markup = R150 selling price
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Pricing Settings Table */}
+        {/* Filters and Search */}
         <Card>
           <CardHeader>
-            <CardTitle>Category Markup Settings</CardTitle>
-            <CardDescription>
-              View and manage category-specific markup percentages
-            </CardDescription>
+            <CardTitle className="flex items-center gap-2">
+              <Filter className="h-5 w-5" />
+              Filters & Search
+              {activeFiltersCount > 0 && (
+                <Badge variant="secondary" className="ml-2">
+                  {activeFiltersCount} active
+                </Badge>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Search Row */}
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search products, SKU, category, or supplier..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              {activeFiltersCount > 0 && (
+                <Button variant="outline" onClick={clearFilters} className="shrink-0">
+                  <X className="h-4 w-4 mr-2" />
+                  Clear Filters
+                </Button>
+              )}
+            </div>
+
+            {/* Filter Row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {uniqueCategories.map((category) => (
+                    <SelectItem key={category} value={category || 'unknown'}>
+                      {category}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={supplierFilter} onValueChange={setSupplierFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by supplier" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Suppliers</SelectItem>
+                  {uniqueSuppliers.map((supplier) => (
+                    <SelectItem key={supplier} value={supplier || 'unknown'}>
+                      {supplier}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={catalogFilter} onValueChange={setCatalogFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by catalog" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Catalogs</SelectItem>
+                  {uniqueCatalogs.map((catalog) => (
+                    <SelectItem key={catalog} value={catalog || 'unknown'}>
+                      {catalog}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Products Table */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5" />
+              Product Pricing Data
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            {pricingLoading || categoriesLoading ? (
-              <div className="flex justify-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin text-pink-600" />
+            {isProductsLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-center">
+                  <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+                  <p className="text-muted-foreground">Loading products...</p>
+                </div>
               </div>
-            ) : pricingWithNames.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <p>No category-specific markup settings defined yet.</p>
-                <p className="text-sm mt-2">Products without category markup will use AI pricing suggestions</p>
+            ) : paginatedProducts.length === 0 ? (
+              <div className="text-center py-12">
+                <Package className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No Products Found</h3>
+                <p className="text-muted-foreground">
+                  {activeFiltersCount > 0 
+                    ? "No products match your current filters. Try adjusting your search criteria."
+                    : "No products available. Add some products to get started."
+                  }
+                </p>
               </div>
             ) : (
-              <Table>
-                <TableCaption>
-                  Category markup settings define specific pricing rules for each product category
-                </TableCaption>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Markup Percentage</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {pricingWithNames.map((pricing) => (
-                    <TableRow key={pricing.id}>
-                      <TableCell className="font-medium">
-                        {pricing.categoryName}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="font-medium">
-                          {pricing.markupPercentage}%
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleDelete(pricing.id)}
-                                disabled={deleteMutation.isPending}
-                              >
-                                <Trash2 className="h-4 w-4 text-red-500" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Remove this markup setting</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </TableCell>
-                    </TableRow>
+              <div className="space-y-4">
+                {/* Desktop Table */}
+                <div className="hidden lg:block">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Product</TableHead>
+                        <TableHead 
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => handleSort('sku')}
+                        >
+                          <div className="flex items-center gap-2">
+                            SKU
+                            <ArrowUpDown className="h-4 w-4" />
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => handleSort('category')}
+                        >
+                          <div className="flex items-center gap-2">
+                            Categories
+                            <ArrowUpDown className="h-4 w-4" />
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="cursor-pointer hover:bg-muted/50 text-right"
+                          onClick={() => handleSort('costPrice')}
+                        >
+                          <div className="flex items-center justify-end gap-2">
+                            Cost Price
+                            <ArrowUpDown className="h-4 w-4" />
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="cursor-pointer hover:bg-muted/50 text-right"
+                          onClick={() => handleSort('price')}
+                        >
+                          <div className="flex items-center justify-end gap-2">
+                            Regular Price
+                            <ArrowUpDown className="h-4 w-4" />
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="cursor-pointer hover:bg-muted/50 text-right"
+                          onClick={() => handleSort('salePrice')}
+                        >
+                          <div className="flex items-center justify-end gap-2">
+                            Sale Price
+                            <ArrowUpDown className="h-4 w-4" />
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="cursor-pointer hover:bg-muted/50 text-right"
+                          onClick={() => handleSort('tmyMarkup')}
+                        >
+                          <div className="flex items-center justify-end gap-2">
+                            TMY Markup %
+                            <ArrowUpDown className="h-4 w-4" />
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="cursor-pointer hover:bg-muted/50 text-right"
+                          onClick={() => handleSort('customerDiscount')}
+                        >
+                          <div className="flex items-center justify-end gap-2">
+                            Cust Discount %
+                            <ArrowUpDown className="h-4 w-4" />
+                          </div>
+                        </TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {paginatedProducts.map((product: any) => (
+                        <TableRow key={product.id} className="hover:bg-muted/50">
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center overflow-hidden">
+                                {product.imageUrl ? (
+                                  <img 
+                                    src={product.imageUrl} 
+                                    alt={product.name}
+                                    className="h-full w-full object-cover"
+                                  />
+                                ) : (
+                                  <Package className="h-6 w-6 text-muted-foreground" />
+                                )}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="font-medium truncate">{product.name}</p>
+                                <p className="text-sm text-muted-foreground truncate">
+                                  {product.supplier || 'No supplier'}
+                                </p>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <code className="text-xs bg-muted px-2 py-1 rounded">
+                              {product.sku || 'No SKU'}
+                            </code>
+                          </TableCell>
+                          <TableCell>
+                            <div className="space-y-1">
+                              <Badge variant="outline">{product.categoryName}</Badge>
+                              {product.parentCategoryName && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {product.parentCategoryName}
+                                </Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right font-mono">
+                            {formatCurrency(product.costPrice)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono">
+                            {formatCurrency(product.price)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono">
+                            {product.salePrice ? (
+                              <span className="text-red-600 font-semibold">
+                                {formatCurrency(product.salePrice)}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              {product.tmyMarkup > 0 ? (
+                                <TrendingUp className="h-4 w-4 text-green-600" />
+                              ) : (
+                                <TrendingDown className="h-4 w-4 text-red-600" />
+                              )}
+                              <span className={`font-semibold ${
+                                product.tmyMarkup > 0 ? 'text-green-600' : 'text-red-600'
+                              }`}>
+                                {product.tmyMarkup}%
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {product.customerDiscount > 0 ? (
+                              <Badge variant="destructive" className="font-mono">
+                                {product.customerDiscount}%
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEditProduct(product.id)}
+                              className="hover:bg-primary hover:text-primary-foreground"
+                            >
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Mobile Cards */}
+                <div className="lg:hidden space-y-4">
+                  {paginatedProducts.map((product: any) => (
+                    <Card key={product.id} className="p-4">
+                      <div className="space-y-4">
+                        {/* Product Header */}
+                        <div className="flex items-center gap-3">
+                          <div className="h-16 w-16 rounded-lg bg-muted flex items-center justify-center overflow-hidden">
+                            {product.imageUrl ? (
+                              <img 
+                                src={product.imageUrl} 
+                                alt={product.name}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <Package className="h-8 w-8 text-muted-foreground" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold truncate">{product.name}</h3>
+                            <p className="text-sm text-muted-foreground">
+                              {product.supplier || 'No supplier'}
+                            </p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <code className="text-xs bg-muted px-2 py-1 rounded">
+                                {product.sku || 'No SKU'}
+                              </code>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Categories */}
+                        <div className="space-y-2">
+                          <div className="flex flex-wrap gap-2">
+                            <Badge variant="outline">{product.categoryName}</Badge>
+                            {product.parentCategoryName && (
+                              <Badge variant="secondary" className="text-xs">
+                                {product.parentCategoryName}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Pricing Grid */}
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <p className="text-muted-foreground">Cost Price</p>
+                            <p className="font-mono font-semibold">{formatCurrency(product.costPrice)}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Regular Price</p>
+                            <p className="font-mono font-semibold">{formatCurrency(product.price)}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Sale Price</p>
+                            <p className="font-mono font-semibold">
+                              {product.salePrice ? (
+                                <span className="text-red-600">{formatCurrency(product.salePrice)}</span>
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
+                              )}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">TMY Markup</p>
+                            <div className="flex items-center gap-1">
+                              {product.tmyMarkup > 0 ? (
+                                <TrendingUp className="h-4 w-4 text-green-600" />
+                              ) : (
+                                <TrendingDown className="h-4 w-4 text-red-600" />
+                              )}
+                              <span className={`font-semibold ${
+                                product.tmyMarkup > 0 ? 'text-green-600' : 'text-red-600'
+                              }`}>
+                                {product.tmyMarkup}%
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Customer Discount & Action */}
+                        <div className="flex items-center justify-between pt-2 border-t">
+                          <div className="text-sm">
+                            <span className="text-muted-foreground">Customer Discount: </span>
+                            {product.customerDiscount > 0 ? (
+                              <Badge variant="destructive" className="font-mono text-xs">
+                                {product.customerDiscount}%
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground">None</span>
+                            )}
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditProduct(product.id)}
+                          >
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit
+                          </Button>
+                        </div>
+                      </div>
+                    </Card>
                   ))}
-                </TableBody>
-              </Table>
+                </div>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between pt-4">
+                    <div className="text-sm text-muted-foreground">
+                      Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, sortedProducts.length)} of {sortedProducts.length} products
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(currentPage - 1)}
+                        disabled={currentPage === 1}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                        Previous
+                      </Button>
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                          const pageNum = Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + i;
+                          return (
+                            <Button
+                              key={pageNum}
+                              variant={pageNum === currentPage ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setCurrentPage(pageNum)}
+                              className="w-8"
+                            >
+                              {pageNum}
+                            </Button>
+                          );
+                        })}
+                        {totalPages > 5 && currentPage < totalPages - 2 && (
+                          <>
+                            <span className="px-2">...</span>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setCurrentPage(totalPages)}
+                              className="w-8"
+                            >
+                              {totalPages}
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                      >
+                        Next
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </CardContent>
         </Card>
