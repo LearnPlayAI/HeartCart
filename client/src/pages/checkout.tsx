@@ -139,15 +139,10 @@ export default function CheckoutPage() {
   // Extract cart items from the response
   const cartItems = cartResponse?.data || [];
 
-  // Debug cart data
-  console.log("🔍 CHECKOUT DEBUG - cartResponse:", cartResponse);
-  console.log("🔍 CHECKOUT DEBUG - cartItems:", cartItems);
-
   // Calculate totals
   const subtotal = Array.isArray(cartItems) ? cartItems.reduce((sum: number, item: any) => {
     const itemPrice = parseFloat(item.itemPrice || 0);
     const quantity = item.quantity || 0;
-    console.log(`🔍 CHECKOUT DEBUG - Item: ${item.product?.name}, Price: ${itemPrice}, Qty: ${quantity}`);
     return sum + (itemPrice * quantity);
   }, 0) : 0;
 
@@ -635,25 +630,53 @@ export default function CheckoutPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Cart Items */}
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {Array.isArray(cartItems) && cartItems.map((item: any) => (
-                  <div key={item.id} className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="font-medium text-sm">{item.product?.name || 'Product'}</div>
-                      <div className="text-xs text-gray-600">Qty: {item.quantity}</div>
+                  <div key={item.id} className="flex items-center space-x-3 pb-4 border-b last:border-b-0">
+                    {/* Product Image */}
+                    <div className="flex-shrink-0 w-12 h-12 bg-gray-100 rounded-lg overflow-hidden">
+                      {item.product?.imageUrl ? (
+                        <img 
+                          src={item.product.imageUrl} 
+                          alt={item.product.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                          <span className="text-gray-400 text-xs">No image</span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Product Details */}
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm leading-tight mb-1">
+                        {item.product?.name || 'Product'}
+                      </div>
+                      <div className="text-xs text-gray-600 mb-1">Qty: {item.quantity}</div>
+                      
                       {/* Show product attributes if they exist */}
                       {item.attributeSelections && Object.keys(item.attributeSelections).length > 0 && (
-                        <div className="text-xs text-gray-500 mt-1">
+                        <div className="text-xs text-gray-500">
                           {Object.entries(item.attributeSelections).map(([key, value]) => (
-                            <Badge key={key} variant="outline" className="mr-1 text-xs">
+                            <Badge key={key} variant="outline" className="mr-1 text-xs py-0 px-1 h-4">
                               {key}: {String(value)}
                             </Badge>
                           ))}
                         </div>
                       )}
                     </div>
-                    <div className="text-sm font-medium">
-                      R{(parseFloat(item.itemPrice || 0) * item.quantity).toFixed(2)}
+                    
+                    {/* Price */}
+                    <div className="text-right">
+                      <div className="text-sm font-semibold text-primary">
+                        R{(parseFloat(item.itemPrice || 0) * item.quantity).toFixed(2)}
+                      </div>
+                      {item.quantity > 1 && (
+                        <div className="text-xs text-gray-500">
+                          R{parseFloat(item.itemPrice || 0).toFixed(2)} each
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
