@@ -322,6 +322,35 @@ const ProductDetailView = ({
   const handleThumbnailClick = useCallback((image: string) => {
     setCurrentImage(ensureValidImageUrl(image));
   }, []);
+
+  // Navigate between images on main display
+  const navigateMainImage = useCallback((direction: 'prev' | 'next') => {
+    if (!product) return;
+    
+    // Create array of all available images
+    const allImages = [];
+    if (product.imageUrl) {
+      allImages.push(product.imageUrl);
+    }
+    if (product.additionalImages) {
+      allImages.push(...product.additionalImages);
+    }
+    
+    if (allImages.length <= 1) return; // No navigation needed for single image
+    
+    // Find current image index
+    const currentImageUrl = currentImage || product.imageUrl;
+    const currentIndex = allImages.findIndex(img => ensureValidImageUrl(img) === currentImageUrl);
+    
+    let newIndex;
+    if (direction === 'prev') {
+      newIndex = currentIndex <= 0 ? allImages.length - 1 : currentIndex - 1;
+    } else {
+      newIndex = currentIndex >= allImages.length - 1 ? 0 : currentIndex + 1;
+    }
+    
+    setCurrentImage(ensureValidImageUrl(allImages[newIndex]));
+  }, [product, currentImage]);
   
   // Open image carousel modal
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -492,7 +521,7 @@ const ProductDetailView = ({
           {/* Product Images */}
           <div>
             <div 
-              className="mb-4 bg-white rounded-lg overflow-hidden border border-gray-200 cursor-pointer relative"
+              className="mb-4 bg-white rounded-lg overflow-hidden border border-gray-200 cursor-pointer relative group"
               onClick={() => openImageModal(product.additionalImages?.findIndex(img => img === currentImage) || 0)}
             >
               <img 
@@ -500,6 +529,46 @@ const ProductDetailView = ({
                 alt={product.name || 'Product image'} 
                 className="w-full h-auto object-contain aspect-square max-h-[300px] sm:max-h-[400px] md:max-h-[500px] lg:max-h-[600px]"
               />
+              
+              {/* Navigation Arrows - only show if there are multiple images */}
+              {(() => {
+                const allImages = [];
+                if (product.imageUrl) allImages.push(product.imageUrl);
+                if (product.additionalImages) allImages.push(...product.additionalImages);
+                
+                if (allImages.length > 1) {
+                  return (
+                    <>
+                      {/* Left Arrow */}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white/90 shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-700 hover:text-gray-900"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigateMainImage('prev');
+                        }}
+                      >
+                        <ChevronLeft className="h-5 w-5" />
+                      </Button>
+                      
+                      {/* Right Arrow */}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white/90 shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-700 hover:text-gray-900"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigateMainImage('next');
+                        }}
+                      >
+                        <ChevronRight className="h-5 w-5" />
+                      </Button>
+                    </>
+                  );
+                }
+                return null;
+              })()}
               
               {/* Discount Badge - positioned in lower right */}
               {product.discountLabel && (
