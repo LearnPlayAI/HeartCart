@@ -132,6 +132,10 @@ const ProductListing = () => {
     ...(filters.freeShipping && { freeShipping: true }),
     ...(filters.newArrivals && { newArrivals: true })
   };
+
+  // Debug logging for attribute filters
+  console.log("Current attribute filters:", attributeFilters);
+  console.log("Query params being sent:", queryParams);
   
   const { 
     data: productsResponse, 
