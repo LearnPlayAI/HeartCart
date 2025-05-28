@@ -2034,10 +2034,19 @@ export class DatabaseStorage implements IStorage {
           }
         } else {
           try {
-            // Set default quantity if not provided
+            // Set default quantity if not provided and ensure all required fields are present
             const itemToInsert = {
-              ...cartItem,
+              userId: cartItem.userId,
+              productId: cartItem.productId,
               quantity: cartItem.quantity || 1,
+              combinationHash: cartItem.combinationHash || null,
+              combinationId: cartItem.combinationId || null,
+              selectedAttributes: cartItem.selectedAttributes || {},
+              priceAdjustment: cartItem.priceAdjustment || 0,
+              discountData: cartItem.discountData || null,
+              totalDiscount: cartItem.totalDiscount || 0,
+              itemPrice: cartItem.itemPrice || 0,
+              createdAt: cartItem.createdAt || new Date().toISOString(),
             };
 
             // Debug: Log the exact data being inserted
