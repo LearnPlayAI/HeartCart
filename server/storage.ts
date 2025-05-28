@@ -1240,119 +1240,73 @@ export class DatabaseStorage implements IStorage {
     try {
       // Create search terms for intelligent keyword matching
       const searchTerms = query.toLowerCase().split(/\s+/).filter(term => term.length > 0);
-      const exactSearchTerm = `%${query}%`;
       let productList: Product[] = [];
 
+      // Build individual search conditions for each keyword
+      const searchConditions = [];
+      
+      // Add exact phrase search first (highest priority)
+      const exactPhrase = `%${query.toLowerCase()}%`;
+      searchConditions.push(
+        sql`LOWER(${products.name}) LIKE ${exactPhrase}`,
+        sql`LOWER(${products.description}) LIKE ${exactPhrase}`
+      );
+
+      // Add individual keyword searches
+      for (const term of searchTerms) {
+        const termPattern = `%${term}%`;
+        searchConditions.push(
+          sql`LOWER(${products.name}) LIKE ${termPattern}`,
+          sql`LOWER(${products.description}) LIKE ${termPattern}`,
+          sql`LOWER(${products.brand}) LIKE ${termPattern}`,
+          sql`LOWER(${products.sku}) LIKE ${termPattern}`,
+          sql`LOWER(${products.supplier}) LIKE ${termPattern}`,
+          sql`LOWER(${products.metaTitle}) LIKE ${termPattern}`,
+          sql`LOWER(${products.metaDescription}) LIKE ${termPattern}`,
+          sql`LOWER(${products.metaKeywords}) LIKE ${termPattern}`
+        );
+      }
+
       if (!options?.includeCategoryInactive) {
-        try {
-          // For search, we need to join with categories to check if category is active
-          // Create intelligent search conditions using individual keywords
-          const keywordConditions = searchTerms.flatMap(term => {
-            const termPattern = `%${term}%`;
-            return [
-              like(products.name, termPattern),
-              like(products.description, termPattern),
-              like(products.brand, termPattern),
-              like(products.sku, termPattern),
-              like(products.supplier, termPattern),
-              like(products.metaTitle, termPattern),
-              like(products.metaDescription, termPattern),
-              like(products.metaKeywords, termPattern),
-              sql`EXISTS (
-                SELECT 1 FROM unnest(${products.tags}) AS tag 
-                WHERE tag ILIKE ${termPattern}
-              )`
-            ];
-          });
-
-          const searchQuery = db
-            .select({
-              product: products,
-            })
-            .from(products)
-            .innerJoin(categories, eq(products.categoryId, categories.id))
-            .where(
-              and(
-                options?.includeInactive
-                  ? sql`1=1`
-                  : eq(products.isActive, true),
-                eq(categories.isActive, true),
-                or(
-                  // Exact phrase match (highest priority)
-                  like(products.name, exactSearchTerm),
-                  like(products.description, exactSearchTerm),
-                  // Individual keyword matches
-                  ...keywordConditions
-                ),
-              ),
+        // Search with category join to ensure active categories
+        const searchQuery = db
+          .select({
+            product: products,
+          })
+          .from(products)
+          .innerJoin(categories, eq(products.categoryId, categories.id))
+          .where(
+            and(
+              options?.includeInactive ? sql`1=1` : eq(products.isActive, true),
+              eq(categories.isActive, true),
+              or(...searchConditions)
             )
-            .limit(limit)
-            .offset(offset);
+          )
+          .limit(limit)
+          .offset(offset);
 
-          const result = await searchQuery;
-          productList = result.map((row) => row.product);
-        } catch (joinError) {
-          console.error(
-            `Error searching products with active categories for query "${query}":`,
-            joinError,
-          );
-          throw joinError; // Rethrow so the route handler can catch it and send a proper error response
-        }
+        const result = await searchQuery;
+        productList = result.map((row) => row.product);
       } else {
-        try {
-          // If we don't need to check category visibility, use simpler query
-          // Create intelligent search conditions using individual keywords
-          const keywordConditions = searchTerms.flatMap(term => {
-            const termPattern = `%${term}%`;
-            return [
-              like(products.name, termPattern),
-              like(products.description, termPattern),
-              like(products.brand, termPattern),
-              like(products.sku, termPattern),
-              like(products.supplier, termPattern),
-              like(products.metaTitle, termPattern),
-              like(products.metaDescription, termPattern),
-              like(products.metaKeywords, termPattern),
-              sql`EXISTS (
-                SELECT 1 FROM unnest(${products.tags}) AS tag 
-                WHERE tag ILIKE ${termPattern}
-              )`
-            ];
-          });
-
-          productList = await db
-            .select()
-            .from(products)
-            .where(
-              and(
-                options?.includeInactive
-                  ? sql`1=1`
-                  : eq(products.isActive, true),
-                or(
-                  // Exact phrase match (highest priority)
-                  like(products.name, exactSearchTerm),
-                  like(products.description, exactSearchTerm),
-                  // Individual keyword matches
-                  ...keywordConditions
-                ),
-              ),
+        // Simple search without category constraints
+        productList = await db
+          .select()
+          .from(products)
+          .where(
+            and(
+              options?.includeInactive ? sql`1=1` : eq(products.isActive, true),
+              or(...searchConditions)
             )
-            .limit(limit)
-            .offset(offset);
-        } catch (queryError) {
-          console.error(
-            `Error searching products for query "${query}":`,
-            queryError,
-          );
-          throw queryError; // Rethrow so the route handler can catch it and send a proper error response
-        }
+          )
+          .limit(limit)
+          .offset(offset);
       }
 
       // Enrich products with main image URLs
       return await this.enrichProductsWithMainImage(productList);
     } catch (error) {
       console.error(`Error in searchProducts for query "${query}":`, error);
-      throw error; // Rethrow so the route handler can catch it and send a proper error response
+      throw error;
     }
   }
 
