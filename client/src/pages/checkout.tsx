@@ -42,7 +42,7 @@ const checkoutSchema = z.object({
   postalCode: z.string().min(4, "Please enter a valid postal code"),
   
   // Shipping Method
-  shippingMethod: z.enum(["pudo", "courier", "collection"], {
+  shippingMethod: z.enum(["pudo"], {
     required_error: "Please select a shipping method"
   }),
   
@@ -75,22 +75,6 @@ const shippingOptions = [
     price: 85,
     estimatedDays: "2-3 business days",
     icon: Package
-  },
-  {
-    id: "courier",
-    name: "Door-to-Door Courier",
-    description: "Direct delivery to your address",
-    price: 120,
-    estimatedDays: "1-2 business days",
-    icon: Truck
-  },
-  {
-    id: "collection",
-    name: "Store Collection",
-    description: "Collect from our warehouse",
-    price: 0,
-    estimatedDays: "Same day",
-    icon: Building2
   }
 ];
 
