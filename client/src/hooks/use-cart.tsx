@@ -84,15 +84,17 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   // Add to cart mutation
   const addToCartMutation = useMutation({
     mutationFn: async (item: Omit<CartItemWithDiscounts, 'id' | 'discountData' | 'totalDiscount' | 'itemPrice'>) => {
+      console.log('🔍 CART MUTATION DEBUG - Original item:', item);
+      
       const { product, ...rest } = item;
       
-      // Ensure attributeSelections is included in the request
+      // Build request data explicitly to ensure attributeSelections is included
       const requestData = {
-        ...rest,
+        productId: item.productId,
+        quantity: item.quantity,
         attributeSelections: item.attributeSelections || {}
       };
       
-      console.log('🔍 CART MUTATION DEBUG - Original item:', item);
       console.log('🔍 CART MUTATION DEBUG - Sending to server:', requestData);
       
       try {
