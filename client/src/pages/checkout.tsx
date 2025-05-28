@@ -174,10 +174,8 @@ export default function CheckoutPage() {
   // Create order mutation
   const createOrderMutation = useMutation({
     mutationFn: async (orderData: any) => {
-      return apiRequest("/api/orders", {
-        method: "POST",
-        body: JSON.stringify(orderData)
-      });
+      const response = await apiRequest("POST", "/api/orders", orderData);
+      return response.json();
     },
     onSuccess: (data) => {
       toast({
@@ -201,10 +199,8 @@ export default function CheckoutPage() {
   // Update user profile mutation
   const updateProfileMutation = useMutation({
     mutationFn: async (profileData: any) => {
-      return apiRequest("/api/user/profile", {
-        method: "PATCH",
-        body: JSON.stringify(profileData)
-      });
+      const response = await apiRequest("PATCH", "/api/user/profile", profileData);
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
