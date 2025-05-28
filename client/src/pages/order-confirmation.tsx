@@ -139,7 +139,7 @@ export default function OrderConfirmationPage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="font-medium">Total Amount:</span>
-                    <span className="font-bold text-lg">R{(order.total || 0).toFixed(2)}</span>
+                    <span className="font-bold text-lg">R{(order.totalAmount || 0).toFixed(2)}</span>
                   </div>
                 </div>
               </CardContent>
@@ -171,12 +171,9 @@ export default function OrderConfirmationPage() {
                     <div>
                       <div className="font-medium">Delivery Address</div>
                       <div className="text-sm text-gray-600">
-                        {order.shippingAddress.addressLine1}<br />
-                        {order.shippingAddress.addressLine2 && (
-                          <>{order.shippingAddress.addressLine2}<br /></>
-                        )}
-                        {order.shippingAddress.city}, {order.shippingAddress.province}<br />
-                        {order.shippingAddress.postalCode}
+                        {order.shippingAddress}<br />
+                        {order.shippingCity}, {order.shippingProvince || 'Gauteng'}<br />
+                        {order.shippingPostalCode}
                       </div>
                     </div>
                   </div>
@@ -208,16 +205,16 @@ export default function OrderConfirmationPage() {
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span>Subtotal:</span>
-                      <span>R{order.subtotal.toFixed(2)}</span>
+                      <span>R{(order.subtotalAmount || 0).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span>Shipping:</span>
-                      <span>{order.shippingCost === 0 ? "Free" : `R${order.shippingCost.toFixed(2)}`}</span>
+                      <span>{order.shippingCost === 0 ? "Free" : `R${(order.shippingCost || 0).toFixed(2)}`}</span>
                     </div>
                     <Separator />
                     <div className="flex justify-between font-bold">
                       <span>Total:</span>
-                      <span>R{order.total.toFixed(2)}</span>
+                      <span>R{(order.totalAmount || 0).toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
@@ -240,12 +237,12 @@ export default function OrderConfirmationPage() {
                       <div className="flex-1">
                         <div className="font-medium">{item.productName}</div>
                         <div className="text-sm text-gray-600">
-                          Qty: {item.quantity} × R{item.unitPrice.toFixed(2)}
+                          Qty: {item.quantity} × R{(item.unitPrice || 0).toFixed(2)}
                         </div>
                         {/* Show product attributes if they exist */}
-                        {item.productAttributes && Object.keys(item.productAttributes).length > 0 && (
+                        {item.selectedAttributes && Object.keys(item.selectedAttributes).length > 0 && (
                           <div className="mt-1 space-x-1">
-                            {Object.entries(item.productAttributes).map(([key, value]) => (
+                            {Object.entries(item.selectedAttributes).map(([key, value]) => (
                               <Badge key={key} variant="outline" className="text-xs">
                                 {key}: {String(value)}
                               </Badge>
@@ -254,7 +251,7 @@ export default function OrderConfirmationPage() {
                         )}
                       </div>
                       <div className="font-medium">
-                        R{(item.quantity * item.unitPrice).toFixed(2)}
+                        R{(item.totalPrice || item.quantity * (item.unitPrice || 0)).toFixed(2)}
                       </div>
                     </div>
                   ))}
@@ -270,28 +267,26 @@ export default function OrderConfirmationPage() {
               <CardContent className="space-y-3">
                 <div className="flex items-center gap-2">
                   <Mail className="h-4 w-4 text-gray-500" />
-                  <span>{order.customerInfo.email}</span>
+                  <span>{order.customerEmail}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Phone className="h-4 w-4 text-gray-500" />
-                  <span>{order.customerInfo.phone}</span>
+                  <span>{order.customerPhone}</span>
                 </div>
                 <div className="text-sm">
-                  <strong>
-                    {order.customerInfo.firstName} {order.customerInfo.lastName}
-                  </strong>
+                  <strong>{order.customerName}</strong>
                 </div>
               </CardContent>
             </Card>
 
             {/* Special Instructions */}
-            {order.specialInstructions && (
+            {order.customerNotes && (
               <Card>
                 <CardHeader>
                   <CardTitle>Special Instructions</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-gray-600">{order.specialInstructions}</p>
+                  <p className="text-sm text-gray-600">{order.customerNotes}</p>
                 </CardContent>
               </Card>
             )}
