@@ -198,6 +198,35 @@ export function formatTimeRemaining(time: TimeFormat): string {
 }
 
 /**
+ * Formats a date string into a readable format
+ * 
+ * @param dateString The date string to format
+ * @returns A formatted date string
+ */
+export function formatDate(dateString: string | Date): string {
+  if (!dateString) return 'N/A';
+  
+  try {
+    const date = new Date(dateString);
+    
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      return 'Invalid Date';
+    }
+    
+    return new Intl.DateTimeFormat('en-ZA', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(date);
+  } catch (error) {
+    return 'Invalid Date';
+  }
+}
+
+/**
  * Determines the display mode of the PWA
  * 
  * @returns The display mode as a string (e.g., 'browser', 'standalone', 'fullscreen', etc.)
