@@ -955,11 +955,15 @@ export class DatabaseStorage implements IStorage {
 
         // Apply attribute filters if provided
         if (attributeFilters && attributeFilters.length > 0) {
+          console.log("Processing attribute filters:", attributeFilters);
+          
           // For each attribute filter, find products that have the required attribute options
           let filteredProductIds: number[] = [];
           
           for (const filter of attributeFilters) {
             if (filter.selectedOptions && filter.selectedOptions.length > 0) {
+              console.log("Processing filter:", filter);
+              
               // Get the attribute option IDs for the selected values
               const optionIds: number[] = [];
               
@@ -970,10 +974,13 @@ export class DatabaseStorage implements IStorage {
                   .from(attributeOptions)
                   .where(eq(attributeOptions.value, optionValue));
                 
+                console.log(`Option value "${optionValue}" maps to IDs:`, optionResults);
                 optionResults.forEach(opt => optionIds.push(opt.id));
               }
               
               if (optionIds.length > 0) {
+                console.log("Looking for products with option IDs:", optionIds);
+                
                 // Find products that have ANY of the selected option IDs in their selected_options
                 const matchingProducts = await db
                   .select({ productId: productAttributes.productId })
@@ -989,6 +996,7 @@ export class DatabaseStorage implements IStorage {
                     )
                   );
                 
+                console.log("Matching products for this filter:", matchingProducts);
                 const currentFilterProductIds = matchingProducts.map(p => p.productId);
                 
                 // If this is the first filter, use its results
@@ -1000,15 +1008,19 @@ export class DatabaseStorage implements IStorage {
                     currentFilterProductIds.includes(id)
                   );
                 }
+                
+                console.log("Current filtered product IDs:", filteredProductIds);
               }
             }
           }
           
           // Apply the filtered product IDs to the main query
           if (filteredProductIds.length > 0) {
+            console.log("Adding product ID filter:", filteredProductIds);
             conditions.push(inArray(products.id, filteredProductIds));
           } else {
             // No products match the attribute filters, return empty array
+            console.log("No products match attribute filters, returning empty array");
             return [];
           }
         }
