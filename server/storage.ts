@@ -1269,10 +1269,10 @@ export class DatabaseStorage implements IStorage {
             )`;
           });
 
-          // Combine all search conditions with AND
+          // Combine all search conditions with OR for broader results
           const combinedSearchCondition = searchConditions.reduce((acc, condition, index) => {
             if (index === 0) return condition;
-            return sql`${acc} AND ${condition}`;
+            return sql`${acc} OR ${condition}`;
           });
           
           const result = await db.execute(sql`
@@ -1281,7 +1281,7 @@ export class DatabaseStorage implements IStorage {
             INNER JOIN categories c ON p.category_id = c.id 
             WHERE ${options?.includeInactive ? sql`TRUE` : sql`p.is_active = TRUE`}
             AND c.is_active = TRUE
-            AND ${combinedSearchCondition}
+            AND (${combinedSearchCondition})
             LIMIT ${limit}
             OFFSET ${offset}
           `);
