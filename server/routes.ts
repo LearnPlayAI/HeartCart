@@ -575,7 +575,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/products", 
     validateRequest({ query: productsQuerySchema }),
     withStandardResponse(async (req: Request, res: Response) => {
-      const { limit, offset, category: categoryId, search } = req.query;
+      const { limit, offset, category: categoryId, q } = req.query;
       
       const user = req.user as any;
       const isAdmin = user && user.role === 'admin';
@@ -589,7 +589,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         Number(limit), 
         Number(offset), 
         categoryId ? Number(categoryId) : undefined, 
-        search as string | undefined, 
+        q as string | undefined, 
         options
       );
       return products;
