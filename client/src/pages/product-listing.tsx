@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, Link } from 'wouter';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet';
 import { StandardApiResponse } from '@/types/api';
 import { Button } from '@/components/ui/button';
@@ -140,9 +140,31 @@ const ProductListing = () => {
   const { 
     data: productsResponse, 
     isLoading: isLoadingProducts,
-    error: productsError
+    error: productsError,
+    refetch: refetchProducts
   } = useQuery<StandardApiResponse<Product[], { total?: number, totalPages?: number }>>({
     queryKey: ['/api/products', queryParams],
+    queryFn: async () => {
+      // Build URL with query parameters
+      const url = new URL('/api/products', window.location.origin);
+      Object.entries(queryParams).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          url.searchParams.append(key, String(value));
+        }
+      });
+      
+      const response = await fetch(url.toString(), {
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      return await response.json();
+    },
+    staleTime: 0, // Ensure fresh data on filter changes
+    cacheTime: 0, // Don't cache results
   });
   const products = productsResponse?.success ? productsResponse.data : [];
   const totalPages = productsResponse?.meta?.totalPages || 1;
