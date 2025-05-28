@@ -81,38 +81,25 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     });
   }, [cartItems]);
   
-  // Add to cart mutation
+  // Clean cart mutation implementation for attribute selections
   const addToCartMutation = useMutation({
-    mutationFn: async (item: Omit<CartItemWithDiscounts, 'id' | 'discountData' | 'totalDiscount'>) => {
-      console.log('🔍 CART MUTATION DEBUG - Original item:', item);
+    mutationFn: async (cartItem: {
+      productId: number;
+      quantity: number;
+      itemPrice: number;
+      attributeSelections: Record<string, string> | null;
+    }) => {
+      console.log('🔍 CLEAN CART MUTATION - Adding item:', cartItem);
       
-      const { product, ...rest } = item;
+      const res = await apiRequest('POST', '/api/cart', cartItem);
+      const data: StandardApiResponse<any> = await res.json();
       
-      // Build request data explicitly to ensure attributeSelections is included
-      const requestData = {
-        productId: item.productId,
-        quantity: item.quantity,
-        itemPrice: item.itemPrice,
-        attributeSelections: item.attributeSelections || {}
-      };
-      
-      console.log('🔍 CART MUTATION DEBUG - Sending to server:', requestData);
-      
-      try {
-        const res = await apiRequest('POST', '/api/cart', requestData);
-        const data: StandardApiResponse<any> = await res.json();
-        if (!data.success) {
-          throw new Error(data.error?.message || "Failed to add item to cart");
-        }
-        return data;
-      } catch (error) {
-        // Check if the error message contains authentication information
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        if (errorMessage.includes('401') || errorMessage.includes('Authentication required')) {
-          throw new Error('AUTHENTICATION_REQUIRED');
-        }
-        throw error;
+      if (!data.success) {
+        throw new Error(data.error?.message || "Failed to add item to cart");
       }
+      
+      console.log('🔍 CLEAN CART MUTATION - Success:', data);
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
@@ -207,11 +194,21 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const openCart = () => setIsOpen(true);
   const closeCart = () => setIsOpen(false);
   
-  // Type-safe version of addItem that excludes the server-calculated fields
+  // Clean addItem implementation that extracts only what the server needs
   const addItem = (item: Omit<CartItemWithDiscounts, 'id' | 'discountData' | 'totalDiscount'>) => {
     console.log('🔍 ADD ITEM DEBUG - Received item in cart hook:', item);
     console.log('🔍 ADD ITEM DEBUG - attributeSelections field:', item.attributeSelections);
-    addToCartMutation.mutate(item);
+    
+    // Extract only the fields the server expects
+    const cartItemData = {
+      productId: item.productId,
+      quantity: item.quantity,
+      itemPrice: item.itemPrice,
+      attributeSelections: item.attributeSelections
+    };
+    
+    console.log('🔍 ADD ITEM DEBUG - Sending to mutation:', cartItemData);
+    addToCartMutation.mutate(cartItemData);
   };
   
   const updateItemQuantity = (id: number, quantity: number) => {
