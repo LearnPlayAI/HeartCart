@@ -254,8 +254,31 @@ export default function PricingPage() {
   };
 
   // Handle edit product
-  const handleEditProduct = (productId: number) => {
-    setLocation(`/admin/products/draft/edit/${productId}`);
+  const handleEditProduct = async (productId: number) => {
+    try {
+      // Call API to create or reuse existing draft
+      const response = await fetch(`/api/product-drafts/create-from-published/${productId}`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        console.error("Failed to create product draft");
+        return;
+      }
+      
+      // Get the draft data
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        // Navigate to product wizard with the draft ID
+        setLocation(`/admin/product-wizard/${result.data.draftId}`);
+      } else {
+        console.error("Invalid response from server");
+      }
+    } catch (error) {
+      console.error("Error creating product draft:", error);
+    }
   };
 
   // Format currency
