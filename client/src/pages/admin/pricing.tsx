@@ -138,7 +138,7 @@ export default function PricingPage() {
       return {
         ...product,
         categoryName: category?.name || 'Uncategorized',
-        parentCategoryName: category?.parent?.name || category?.name || 'Uncategorized',
+        parentCategoryName: category?.parent?.name || 'No Parent',
         childCategoryName: category?.name || 'Uncategorized',
         catalogName: catalog?.name || 'No Catalog',
         tmyMarkup: Number(tmyMarkup.toFixed(2)),
