@@ -161,8 +161,8 @@ router.post("/", isAuthenticated, asyncHandler(async (req: Request, res: Respons
       itemCount: orderItems.length,
     });
 
-    // Send success response with proper structure
-    res.status(200).json({
+    // Send success response immediately
+    return res.status(200).json({
       success: true,
       data: {
         id: newOrder.id,
@@ -172,7 +172,6 @@ router.post("/", isAuthenticated, asyncHandler(async (req: Request, res: Respons
         message: "Order created successfully"
       }
     });
-    return;
 
   } catch (error) {
     if (error instanceof z.ZodError) {
