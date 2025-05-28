@@ -33,7 +33,21 @@ const SearchResults = () => {
     isFetching,
     error
   } = useQuery<StandardApiResponse<Product[]>>({
-    queryKey: [`/api/search?q=${query}`, { limit, offset: (page - 1) * limit }],
+    queryKey: ['/api/search', query, page, limit],
+    queryFn: async () => {
+      const offset = (page - 1) * limit;
+      const searchParams = new URLSearchParams({
+        q: query,
+        limit: limit.toString(),
+        offset: offset.toString()
+      });
+      
+      const response = await fetch(`/api/search?${searchParams}`);
+      if (!response.ok) {
+        throw new Error('Failed to search products');
+      }
+      return response.json();
+    },
     enabled: query.length > 0,
   });
   
