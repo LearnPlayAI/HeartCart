@@ -39,7 +39,7 @@ import CategorySidebar from '@/components/ui/category-sidebar';
 import type { Product, Category } from '@shared/schema';
 import { Input } from '@/components/ui/input';
 import { formatCurrency } from '@/lib/utils';
-import type { Attribute, AttributeOption, CategoryAttribute } from '@/types/attribute-types';
+import type { Attribute, AttributeOption } from '@/types/attribute-types';
 
 // Availability filter options (replaced stock filter)
 const availabilityOptions = [
@@ -65,11 +65,16 @@ interface AttributeFilter {
 }
 
 // Helper function to get attribute display name
-const getAttributeDisplayName = (attribute: Attribute | CategoryAttribute): string => {
-  if ('overrideDisplayName' in attribute && attribute.overrideDisplayName) {
+const getAttributeDisplayName = (attribute: any): string => {
+  if (attribute.overrideDisplayName) {
     return attribute.overrideDisplayName;
   }
-  return attribute.attribute?.displayName || '';
+  // Try different attribute name properties based on the structure
+  return attribute.attribute?.displayName || 
+         attribute.attribute?.name || 
+         attribute.displayName || 
+         attribute.name || 
+         'Unknown Attribute';
 };
 
 const ProductListing = () => {
@@ -135,7 +140,7 @@ const ProductListing = () => {
     data: filterableAttributesResponse, 
     isLoading: isLoadingAttributes,
     error: attributesError
-  } = useQuery<StandardApiResponse<(CategoryAttribute & { options: AttributeOption[], attribute: Attribute })[]>>({
+  } = useQuery<StandardApiResponse<any[]>>({
     queryKey: [selectedCategory ? 
       `/api/categories/${selectedCategory}/filterable-attributes` : 
       '/api/products/filterable-attributes'
@@ -371,32 +376,7 @@ const ProductListing = () => {
     setPage(1);
   };
   
-  // Fetch product attribute values for filtering
-  const { 
-    data: productAttributeValuesResponse,
-    error: attributeValuesError
-  } = useQuery<StandardApiResponse<{
-    productId: number;
-    attributeId: number;
-    optionId: number | null;
-    textValue: string | null;
-  }[]>>({
-    queryKey: ['/api/products/attribute-values'],
-    enabled: !!products && attributeFilters.length > 0,
-  });
-  const productAttributeValues = productAttributeValuesResponse?.success ? productAttributeValuesResponse.data : [];
-  
-  // Handle attribute values error
-  useEffect(() => {
-    if (attributeValuesError) {
-      console.error('Error fetching product attribute values:', attributeValuesError);
-      toast({
-        title: "Failed to load product attributes",
-        description: attributeValuesError instanceof Error ? attributeValuesError.message : "An unexpected error occurred",
-        variant: "destructive",
-      });
-    }
-  }, [attributeValuesError, toast]);
+  // Remove the problematic attribute values query that was causing API errors
   
   // Update active filters to include attribute filters
   useEffect(() => {
