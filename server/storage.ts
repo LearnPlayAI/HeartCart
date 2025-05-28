@@ -955,14 +955,8 @@ export class DatabaseStorage implements IStorage {
 
         // Apply attribute filters if provided
         if (attributeFilters && attributeFilters.length > 0) {
-          // For attribute filtering, we need to join with product_attributes table
-          // and check if the product has the required attribute option IDs
-          const productAttributeSubquery = db
-            .select({ productId: productAttributes.productId })
-            .from(productAttributes);
-          
-          // Build conditions for each attribute filter
-          const attributeConditions: SQL<unknown>[] = [];
+          // For each attribute filter, find products that have the required attribute options
+          let filteredProductIds: number[] = [];
           
           for (const filter of attributeFilters) {
             if (filter.selectedOptions && filter.selectedOptions.length > 0) {
@@ -980,38 +974,42 @@ export class DatabaseStorage implements IStorage {
               }
               
               if (optionIds.length > 0) {
-                // Create condition that checks if selected_options JSONB contains any of the option IDs
-                const optionConditions = optionIds.map(optionId => 
-                  sql`${productAttributes.selectedOptions}::jsonb ? ${optionId.toString()}`
-                );
+                // Find products that have ANY of the selected option IDs in their selected_options
+                const matchingProducts = await db
+                  .select({ productId: productAttributes.productId })
+                  .from(productAttributes)
+                  .where(
+                    and(
+                      eq(productAttributes.attributeId, filter.attributeId),
+                      or(
+                        ...optionIds.map(optionId => 
+                          sql`${productAttributes.selectedOptions}::jsonb @> ${JSON.stringify([optionId])}`
+                        )
+                      )
+                    )
+                  );
                 
-                if (optionConditions.length > 0) {
-                  attributeConditions.push(or(...optionConditions));
+                const currentFilterProductIds = matchingProducts.map(p => p.productId);
+                
+                // If this is the first filter, use its results
+                // If we already have results, intersect with current results (AND logic)
+                if (filteredProductIds.length === 0) {
+                  filteredProductIds = currentFilterProductIds;
+                } else {
+                  filteredProductIds = filteredProductIds.filter(id => 
+                    currentFilterProductIds.includes(id)
+                  );
                 }
               }
             }
           }
           
-          if (attributeConditions.length > 0) {
-            // Add the attribute filtering subquery
-            const filteredProductIds = await db
-              .select({ productId: productAttributes.productId })
-              .from(productAttributes)
-              .where(and(...attributeConditions));
-            
-            const productIds = filteredProductIds.map(p => p.productId);
-            
-            if (productIds.length > 0) {
-              query = query.where(
-                and(
-                  conditions.length > 0 ? and(...conditions) : undefined,
-                  inArray(products.id, productIds)
-                )
-              );
-            } else {
-              // No products match the attribute filters, return empty array
-              return [];
-            }
+          // Apply the filtered product IDs to the main query
+          if (filteredProductIds.length > 0) {
+            conditions.push(inArray(products.id, filteredProductIds));
+          } else {
+            // No products match the attribute filters, return empty array
+            return [];
           }
         }
 
