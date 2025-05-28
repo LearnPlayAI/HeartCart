@@ -622,7 +622,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         newArrivals: newArrivals === 'true'
       };
       
-      console.log('Route: About to call storage.getAllProducts with:', {
+      console.log('CRITICAL ROUTE DEBUG - About to call storage.getAllProducts with:', {
         limit: Number(limit),
         offset: Number(offset),
         categoryId: categoryId ? Number(categoryId) : undefined,
