@@ -2049,7 +2049,11 @@ export class DatabaseStorage implements IStorage {
               createdAt: cartItem.createdAt || new Date().toISOString(),
             };
 
-            // Debug: Log the exact data being inserted
+            // Debug: Log the exact data being inserted with more detail
+            console.log(`🔍 CART DEBUG - Original cartItem:`, cartItem);
+            console.log(`🔍 CART DEBUG - Processed itemToInsert:`, itemToInsert);
+            console.log(`🔍 CART DEBUG - itemPrice value:`, itemToInsert.itemPrice, typeof itemToInsert.itemPrice);
+            
             logger.debug(`Inserting cart item with data:`, {
               itemToInsert,
               itemPrice: itemToInsert.itemPrice,
