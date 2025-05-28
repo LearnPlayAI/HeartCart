@@ -1238,12 +1238,33 @@ export class DatabaseStorage implements IStorage {
     options?: { includeInactive?: boolean; includeCategoryInactive?: boolean },
   ): Promise<Product[]> {
     try {
-      const searchTerm = `%${query}%`;
+      // Create search terms for intelligent keyword matching
+      const searchTerms = query.toLowerCase().split(/\s+/).filter(term => term.length > 0);
+      const exactSearchTerm = `%${query}%`;
       let productList: Product[] = [];
 
       if (!options?.includeCategoryInactive) {
         try {
           // For search, we need to join with categories to check if category is active
+          // Create intelligent search conditions using individual keywords
+          const keywordConditions = searchTerms.flatMap(term => {
+            const termPattern = `%${term}%`;
+            return [
+              like(products.name, termPattern),
+              like(products.description, termPattern),
+              like(products.brand, termPattern),
+              like(products.sku, termPattern),
+              like(products.supplier, termPattern),
+              like(products.metaTitle, termPattern),
+              like(products.metaDescription, termPattern),
+              like(products.metaKeywords, termPattern),
+              sql`EXISTS (
+                SELECT 1 FROM unnest(${products.tags}) AS tag 
+                WHERE tag ILIKE ${termPattern}
+              )`
+            ];
+          });
+
           const searchQuery = db
             .select({
               product: products,
@@ -1257,18 +1278,11 @@ export class DatabaseStorage implements IStorage {
                   : eq(products.isActive, true),
                 eq(categories.isActive, true),
                 or(
-                  like(products.name, searchTerm),
-                  like(products.description, searchTerm),
-                  like(products.brand, searchTerm),
-                  like(products.sku, searchTerm),
-                  like(products.supplier, searchTerm),
-                  like(products.metaTitle, searchTerm),
-                  like(products.metaDescription, searchTerm),
-                  like(products.metaKeywords, searchTerm),
-                  sql`EXISTS (
-                    SELECT 1 FROM unnest(${products.tags}) AS tag 
-                    WHERE tag ILIKE ${searchTerm}
-                  )`
+                  // Exact phrase match (highest priority)
+                  like(products.name, exactSearchTerm),
+                  like(products.description, exactSearchTerm),
+                  // Individual keyword matches
+                  ...keywordConditions
                 ),
               ),
             )
@@ -1287,6 +1301,25 @@ export class DatabaseStorage implements IStorage {
       } else {
         try {
           // If we don't need to check category visibility, use simpler query
+          // Create intelligent search conditions using individual keywords
+          const keywordConditions = searchTerms.flatMap(term => {
+            const termPattern = `%${term}%`;
+            return [
+              like(products.name, termPattern),
+              like(products.description, termPattern),
+              like(products.brand, termPattern),
+              like(products.sku, termPattern),
+              like(products.supplier, termPattern),
+              like(products.metaTitle, termPattern),
+              like(products.metaDescription, termPattern),
+              like(products.metaKeywords, termPattern),
+              sql`EXISTS (
+                SELECT 1 FROM unnest(${products.tags}) AS tag 
+                WHERE tag ILIKE ${termPattern}
+              )`
+            ];
+          });
+
           productList = await db
             .select()
             .from(products)
@@ -1296,18 +1329,11 @@ export class DatabaseStorage implements IStorage {
                   ? sql`1=1`
                   : eq(products.isActive, true),
                 or(
-                  like(products.name, searchTerm),
-                  like(products.description, searchTerm),
-                  like(products.brand, searchTerm),
-                  like(products.sku, searchTerm),
-                  like(products.supplier, searchTerm),
-                  like(products.metaTitle, searchTerm),
-                  like(products.metaDescription, searchTerm),
-                  like(products.metaKeywords, searchTerm),
-                  sql`EXISTS (
-                    SELECT 1 FROM unnest(${products.tags}) AS tag 
-                    WHERE tag ILIKE ${searchTerm}
-                  )`
+                  // Exact phrase match (highest priority)
+                  like(products.name, exactSearchTerm),
+                  like(products.description, exactSearchTerm),
+                  // Individual keyword matches
+                  ...keywordConditions
                 ),
               ),
             )
