@@ -84,14 +84,20 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const addToCartMutation = useMutation({
     mutationFn: async (item: Omit<CartItemWithDiscounts, 'id' | 'discountData' | 'totalDiscount' | 'itemPrice'>) => {
       const { product, ...rest } = item;
-      const res = await apiRequest('POST', '/api/cart', rest);
-      const data: StandardApiResponse<any> = await res.json();
-      if (!data.success) {
-        // Check if it's an authentication error
-        if (res.status === 401) {
+      try {
+        const res = await apiRequest('POST', '/api/cart', rest);
+        const data: StandardApiResponse<any> = await res.json();
+        if (!data.success) {
+          throw new Error(data.error?.message || "Failed to add item to cart");
+        }
+        return data;
+      } catch (error) {
+        // Check if the error message contains authentication information
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        if (errorMessage.includes('401') || errorMessage.includes('Authentication required')) {
           throw new Error('AUTHENTICATION_REQUIRED');
         }
-        throw new Error(data.error?.message || "Failed to add item to cart");
+        throw error;
       }
     },
     onSuccess: () => {
