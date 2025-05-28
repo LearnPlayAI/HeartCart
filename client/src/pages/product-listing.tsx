@@ -117,18 +117,13 @@ const ProductListing = () => {
     isLoading: isLoadingProducts,
     error: productsError
   } = useQuery<StandardApiResponse<Product[], { total?: number, totalPages?: number }>>({
-    queryKey: searchQuery ? 
-      ['/api/search', { 
-        q: searchQuery,
-        limit, 
-        offset: (page - 1) * limit
-      }] :
-      ['/api/products', { 
-        limit, 
-        offset: (page - 1) * limit,
-        categoryId: selectedCategoryId,
-        includeChildren: searchParams.get('includeChildren') === 'true'
-      }],
+    queryKey: ['/api/products', { 
+      limit, 
+      offset: (page - 1) * limit,
+      categoryId: selectedCategoryId,
+      search: searchQuery || undefined,
+      includeChildren: searchParams.get('includeChildren') === 'true'
+    }],
   });
   const products = productsResponse?.success ? productsResponse.data : [];
   const totalPages = productsResponse?.meta?.totalPages || 1;
