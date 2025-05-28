@@ -2767,21 +2767,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       body: z.object({
         productId: z.coerce.number().positive("Product ID is required"),
         quantity: z.coerce.number().int().positive("Quantity must be a positive integer"),
-        itemPrice: z.coerce.number().positive("Item price is required"),
-        combinationHash: z.string().nullable().optional(),
-        selectedAttributes: z.any().nullable().optional(),
-        attributeValues: z.array(z.object({
-          attributeId: z.coerce.number().positive(),
-          optionId: z.coerce.number().positive().optional(),
-          textValue: z.string().optional(),
-          numericValue: z.coerce.number().optional(),
-          dateValue: z.coerce.date().optional()
-        })).optional().default([])
+        itemPrice: z.coerce.number().positive("Item price is required")
       })
     }),
     asyncHandler(async (req: Request, res: Response) => {
       const user = req.user as any;
-      const { productId, quantity, itemPrice, attributeValues } = req.body;
+      const { productId, quantity, itemPrice } = req.body;
       
       // Debug: Log the incoming request data with explicit output
       console.error(`=== CART DEBUG START ===`);

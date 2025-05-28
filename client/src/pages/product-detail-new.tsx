@@ -409,16 +409,10 @@ const ProductDetailView = ({
     // Use base price without adjustments per requirements
     const basePrice = product.salePrice || product.price;
     
-    // Create the cart item with NO price adjustments or discounts based on attributes
+    // Create the cart item - simplified without deprecated combination fields
     const cartItem = {
       productId: product.id,
-      product,
       quantity,
-      combinationHash: combinationHash || null,
-      selectedAttributes: Object.keys(formattedAttributes).length > 0 ? formattedAttributes : null,
-      // No price adjustment based on attributes as per requirements
-      // No discount information as per requirements
-      // Store the base price for the item
       itemPrice: basePrice
     };
     
