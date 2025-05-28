@@ -777,7 +777,6 @@ const ProductListing = () => {
               {/* Product Attributes */}
               {filterableAttributes && filterableAttributes.length > 0 && (
                 <AccordionItem value="attributes">
-                  <AccordionTrigger>Product Attributes</AccordionTrigger>
                   <AccordionContent>
                     <div className="space-y-4">
                       {filterableAttributes.map(attribute => (
