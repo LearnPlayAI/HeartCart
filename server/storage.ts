@@ -892,7 +892,7 @@ export class DatabaseStorage implements IStorage {
       
       // Add attribute filter condition if we have filtered product IDs
       if (attributeFilteredProductIds !== null && attributeFilteredProductIds.length > 0) {
-        conditions.push(sql`${products.id} = ANY(${attributeFilteredProductIds})`);
+        conditions.push(inArray(products.id, attributeFilteredProductIds));
         console.log("CRITICAL DEBUG - Added attribute filter condition for product IDs:", attributeFilteredProductIds);
       }
 
