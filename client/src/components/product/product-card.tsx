@@ -58,7 +58,7 @@ const TimeLeftProgressBar = ({ product }: { product: Product }) => {
     <div className="w-full">
       <div className="flex justify-between text-xs text-gray-600 mb-1">
         <span>Time Left</span>
-        <span>{Math.round(progressPercentage)}%</span>
+        <span>{timeRemaining.days}d, {timeRemaining.hours}h</span>
       </div>
       <div className="w-full bg-gray-200 rounded-full h-1.5">
         <div 
@@ -185,10 +185,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 {formatCurrency(product.price)}
               </span>
             )}
-            {discount > 0 && (
-              <span className="ml-2 text-xs bg-[#FF69B4]/10 text-[#FF69B4] px-1 rounded">
-                -{discount}%
-              </span>
+            {isFlashDeal && product.specialSaleEnd && (
+              <FlashDealTimer endDate={new Date(product.specialSaleEnd)} />
             )}
           </div>
           
