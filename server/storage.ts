@@ -1239,82 +1239,85 @@ export class DatabaseStorage implements IStorage {
   ): Promise<Product[]> {
     try {
       const searchTerm = `%${query}%`;
+      console.log(`Searching products with term: "${searchTerm}"`);
       let productList: Product[] = [];
 
-      // Create comprehensive search condition that searches across multiple fields
-      const createSearchCondition = (searchTerm: string) => {
-        return or(
-          sql`${products.name} ILIKE ${searchTerm}`,
-          sql`${products.description} ILIKE ${searchTerm}`,
-          sql`${products.brand} ILIKE ${searchTerm}`,
-          sql`${products.supplier} ILIKE ${searchTerm}`,
-          sql`${products.sku} ILIKE ${searchTerm}`,
-          sql`${products.metaTitle} ILIKE ${searchTerm}`,
-          sql`${products.metaDescription} ILIKE ${searchTerm}`,
-          sql`${products.metaKeywords} ILIKE ${searchTerm}`,
-          sql`${products.dimensions} ILIKE ${searchTerm}`,
-          sql`${products.specialSaleText} ILIKE ${searchTerm}`,
-          sql`${products.discountLabel} ILIKE ${searchTerm}`,
-          // Search in tags array - using PostgreSQL array operations
-          sql`EXISTS (
-            SELECT 1 FROM unnest(${products.tags}) AS tag 
-            WHERE tag ILIKE ${searchTerm}
-          )`
-        );
-      };
-
+      // Use a more direct approach with raw SQL for comprehensive search
       if (!options?.includeCategoryInactive) {
         try {
-          // For search, we need to join with categories to check if category is active
-          const searchQuery = db
-            .select({
-              product: products,
-            })
-            .from(products)
-            .innerJoin(categories, eq(products.categoryId, categories.id))
-            .where(
-              and(
-                options?.includeInactive
-                  ? sql`1=1`
-                  : eq(products.isActive, true),
-                eq(categories.isActive, true),
-                createSearchCondition(searchTerm),
-              ),
+          // Search with category join to ensure category is active
+          const result = await db.execute(sql`
+            SELECT p.* 
+            FROM products p 
+            INNER JOIN categories c ON p.category_id = c.id 
+            WHERE ${options?.includeInactive ? sql`TRUE` : sql`p.is_active = TRUE`}
+            AND c.is_active = TRUE
+            AND (
+              p.name ILIKE ${searchTerm} OR 
+              p.description ILIKE ${searchTerm} OR 
+              p.brand ILIKE ${searchTerm} OR 
+              p.supplier ILIKE ${searchTerm} OR 
+              p.sku ILIKE ${searchTerm} OR 
+              p.meta_title ILIKE ${searchTerm} OR 
+              p.meta_description ILIKE ${searchTerm} OR 
+              p.meta_keywords ILIKE ${searchTerm} OR 
+              p.dimensions ILIKE ${searchTerm} OR 
+              p.special_sale_text ILIKE ${searchTerm} OR 
+              p.discount_label ILIKE ${searchTerm} OR 
+              EXISTS (
+                SELECT 1 FROM unnest(p.tags) AS tag 
+                WHERE tag ILIKE ${searchTerm}
+              )
             )
-            .limit(limit)
-            .offset(offset);
-
-          const result = await searchQuery;
-          productList = result.map((row) => row.product);
+            LIMIT ${limit}
+            OFFSET ${offset}
+          `);
+          
+          productList = result.rows as Product[];
+          console.log(`Found ${productList.length} products with category join`);
         } catch (joinError) {
           console.error(
             `Error searching products with active categories for query "${query}":`,
             joinError,
           );
-          throw joinError; // Rethrow so the route handler can catch it and send a proper error response
+          throw joinError;
         }
       } else {
         try {
-          // If we don't need to check category visibility, use simpler query
-          productList = await db
-            .select()
-            .from(products)
-            .where(
-              and(
-                options?.includeInactive
-                  ? sql`1=1`
-                  : eq(products.isActive, true),
-                createSearchCondition(searchTerm),
-              ),
+          // Search without category constraint  
+          const result = await db.execute(sql`
+            SELECT * 
+            FROM products 
+            WHERE ${options?.includeInactive ? sql`TRUE` : sql`is_active = TRUE`}
+            AND (
+              name ILIKE ${searchTerm} OR 
+              description ILIKE ${searchTerm} OR 
+              brand ILIKE ${searchTerm} OR 
+              supplier ILIKE ${searchTerm} OR 
+              sku ILIKE ${searchTerm} OR 
+              meta_title ILIKE ${searchTerm} OR 
+              meta_description ILIKE ${searchTerm} OR 
+              meta_keywords ILIKE ${searchTerm} OR 
+              dimensions ILIKE ${searchTerm} OR 
+              special_sale_text ILIKE ${searchTerm} OR 
+              discount_label ILIKE ${searchTerm} OR 
+              EXISTS (
+                SELECT 1 FROM unnest(tags) AS tag 
+                WHERE tag ILIKE ${searchTerm}
+              )
             )
-            .limit(limit)
-            .offset(offset);
+            LIMIT ${limit}
+            OFFSET ${offset}
+          `);
+          
+          productList = result.rows as Product[];
+          console.log(`Found ${productList.length} products without category constraint`);
         } catch (queryError) {
           console.error(
             `Error searching products for query "${query}":`,
             queryError,
           );
-          throw queryError; // Rethrow so the route handler can catch it and send a proper error response
+          throw queryError;
         }
       }
 
@@ -1322,7 +1325,7 @@ export class DatabaseStorage implements IStorage {
       return await this.enrichProductsWithMainImage(productList);
     } catch (error) {
       console.error(`Error in searchProducts for query "${query}":`, error);
-      throw error; // Rethrow so the route handler can catch it and send a proper error response
+      throw error;
     }
   }
 
