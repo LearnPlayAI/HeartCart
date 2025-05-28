@@ -158,18 +158,35 @@ const SearchResults = () => {
         
         {/* Search Results */}
         {isLoading ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {Array.from({ length: 10 }).map((_, index) => (
-              <div key={index} className="bg-white rounded-lg shadow-md overflow-hidden animate-pulse">
-                <div className="h-48 bg-gray-200"></div>
-                <div className="p-3">
-                  <div className="h-3 bg-gray-200 rounded w-3/4 mb-2"></div>
-                  <div className="h-3 bg-gray-200 rounded w-1/2 mb-2"></div>
-                  <div className="h-6 bg-gray-200 rounded w-1/4 mb-2"></div>
-                  <div className="h-8 bg-gray-200 rounded w-full mt-2"></div>
+          <div className="space-y-6">
+            {/* Prominent Loading Indicator */}
+            <div className="flex items-center justify-center py-12 bg-gradient-to-r from-pink-50 to-purple-50 rounded-lg border-2 border-dashed border-pink-200">
+              <div className="flex flex-col items-center space-y-4">
+                <div className="relative">
+                  <div className="animate-spin rounded-full h-12 w-12 border-4 border-pink-200"></div>
+                  <div className="animate-spin rounded-full h-12 w-12 border-4 border-pink-500 border-t-transparent absolute top-0 left-0"></div>
+                </div>
+                <div className="text-center">
+                  <p className="text-xl font-semibold text-gray-800">Searching for "{query}"</p>
+                  <p className="text-gray-600 mt-1">Finding the best products for you...</p>
                 </div>
               </div>
-            ))}
+            </div>
+            
+            {/* Loading Skeleton Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              {Array.from({ length: 8 }).map((_, index) => (
+                <div key={index} className="bg-white rounded-lg shadow-md overflow-hidden animate-pulse">
+                  <div className="h-48 bg-gray-200"></div>
+                  <div className="p-3">
+                    <div className="h-3 bg-gray-200 rounded w-3/4 mb-2"></div>
+                    <div className="h-3 bg-gray-200 rounded w-1/2 mb-2"></div>
+                    <div className="h-6 bg-gray-200 rounded w-1/4 mb-2"></div>
+                    <div className="h-8 bg-gray-200 rounded w-full mt-2"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         ) : error ? (
           <Card>
