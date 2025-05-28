@@ -1636,7 +1636,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Move file from temp to product folder
-      const result = await objectStore.moveFromTemp(sourceKey, parseInt(productId));
+      const result = await objectStore.moveFromTemp(optimizedKey, parseInt(productId));
       
       console.log(`Successfully moved file to ${result.objectKey}`);
       
@@ -1649,7 +1649,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
     } catch (error: any) {
-      console.error(`Error moving file ${sourceKey} to product ${productId}:`, error);
+      console.error(`Error moving file ${optimizedKey} to product ${productId}:`, error);
       return res.status(500).json({
         success: false,
         error: {
