@@ -3358,9 +3358,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = req.user as any;
       const { status, limit = 20, offset = 0 } = req.query;
       
+      // Debug logging for authentication
+      logger.info('Orders API called', { 
+        userExists: !!user, 
+        userId: user?.id, 
+        userRole: user?.role,
+        sessionId: req.sessionID 
+      });
+      
+      if (!user || !user.id) {
+        logger.warn('Orders API called without authenticated user', { 
+          hasUser: !!user, 
+          sessionId: req.sessionID 
+        });
+        throw new AppError("Authentication required", ErrorCode.UNAUTHORIZED, 401);
+      }
+      
       try {
+        logger.info('Fetching orders for user', { userId: user.id });
+        
         // Get orders for the authenticated user with items included
         const basicOrders = await storage.getOrdersByUser(user.id);
+        
+        logger.info('Retrieved basic orders', { 
+          userId: user.id, 
+          orderCount: basicOrders.length,
+          orderIds: basicOrders.map(o => o.id)
+        });
         
         // Enhance each order with its items
         const ordersWithItems = await Promise.all(
@@ -3380,6 +3404,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ? ordersWithItems.filter(order => order.status === status)
           : ordersWithItems;
         
+        logger.info('Returning filtered orders', { 
+          userId: user.id,
+          totalOrders: basicOrders.length,
+          filteredCount: filteredOrders.length,
+          statusFilter: status || 'all'
+        });
+        
         return res.json({
           success: true,
           data: filteredOrders,
@@ -3393,7 +3424,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Log detailed error information with context
         logger.error('Error retrieving user orders', { 
           error, 
-          userId: user.id, 
+          userId: user?.id, 
           filters: { status, limit, offset }
         });
         

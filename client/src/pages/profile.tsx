@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { formatCurrency } from "@/lib/utils";
 import { 
   Form, 
   FormControl, 
@@ -18,96 +21,181 @@ import {
   Card, 
   CardContent, 
   CardDescription, 
-  CardFooter, 
   CardHeader, 
   CardTitle 
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 import { 
-  Tabs, 
-  TabsContent, 
-  TabsList, 
-  TabsTrigger 
-} from '@/components/ui/tabs';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from '@/components/ui/table';
-import { 
-  User, 
-  Package, 
-  LogOut, 
-  Eye, 
   UserCircle, 
+  Package, 
   ShoppingBag, 
-  Settings 
+  Settings, 
+  LogOut, 
+  User, 
+  Eye, 
+  MapPin,
+  Phone,
+  Mail,
+  Calendar,
+  CreditCard,
+  Truck,
+  Clock,
+  CheckCircle,
+  Package2,
+  ArrowRight
 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { useDateFormat } from '@/hooks/use-date-format';
-import { formatCurrency } from '@/lib/utils';
-import { apiRequest } from '@/lib/queryClient';
 
-// Profile schema for form validation
+// User interface matching our camelCase schema
+interface UserType {
+  id: number;
+  username: string;
+  email: string;
+  fullName: string | null;
+  profilePicture: string | null;
+  phoneNumber: string | null;
+  address: string | null;
+  city: string | null;
+  postalCode: string | null;
+  province: string | null;
+  country: string | null;
+  isActive: boolean;
+  role: string;
+  createdAt: string;
+  updatedAt: string;
+  lastLogin: string | null;
+}
+
+// Order interface matching our camelCase schema
+interface OrderType {
+  id: number;
+  userId: number;
+  orderNumber: string;
+  status: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  shippingAddress: string;
+  shippingCity: string;
+  shippingPostalCode: string;
+  shippingMethod: string;
+  shippingCost: number;
+  paymentMethod: string;
+  paymentStatus: string;
+  subtotalAmount: number;
+  totalAmount: number;
+  customerNotes: string | null;
+  adminNotes: string | null;
+  trackingNumber: string | null;
+  createdAt: string;
+  updatedAt: string;
+  shippedAt: string | null;
+  deliveredAt: string | null;
+  items?: OrderItemType[];
+}
+
+// Order item interface
+interface OrderItemType {
+  id: number;
+  orderId: number;
+  productId: number;
+  productName: string;
+  productSku: string;
+  productImageUrl: string | null;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  selectedAttributes: Record<string, string> | null;
+  attributeDisplayText: string | null;
+  createdAt: string;
+}
+
+// Profile form schema
 const profileSchema = z.object({
-  fullName: z.string().min(2, 'Full name is required'),
-  email: z.string().email('Invalid email address'),
-  phoneNumber: z.string().optional(),
-  address: z.string().optional(),
-  city: z.string().optional(),
-  postalCode: z.string().optional(),
+  fullName: z.string().min(2, 'Full name must be at least 2 characters'),
+  email: z.string().email('Please enter a valid email address'),
+  phoneNumber: z.string().min(10, 'Please enter a valid phone number'),
+  address: z.string().min(5, 'Please enter your full address'),
+  city: z.string().min(2, 'Please enter your city'),
+  postalCode: z.string().min(4, 'Please enter a valid postal code'),
+  province: z.string().min(2, 'Please select your province'),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
-// Login schema for form validation
-const loginSchema = z.object({
-  username: z.string().min(2, 'Username is required'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-});
+// Status color mapping
+const getStatusColor = (status: string) => {
+  switch (status.toLowerCase()) {
+    case 'pending':
+      return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+    case 'processing':
+      return 'bg-blue-100 text-blue-800 border-blue-200';
+    case 'shipped':
+      return 'bg-purple-100 text-purple-800 border-purple-200';
+    case 'delivered':
+      return 'bg-green-100 text-green-800 border-green-200';
+    case 'cancelled':
+      return 'bg-red-100 text-red-800 border-red-200';
+    default:
+      return 'bg-gray-100 text-gray-800 border-gray-200';
+  }
+};
 
-type LoginFormValues = z.infer<typeof loginSchema>;
+// Status icon mapping
+const getStatusIcon = (status: string) => {
+  switch (status.toLowerCase()) {
+    case 'pending':
+      return <Clock className="h-4 w-4" />;
+    case 'processing':
+      return <Package2 className="h-4 w-4" />;
+    case 'shipped':
+      return <Truck className="h-4 w-4" />;
+    case 'delivered':
+      return <CheckCircle className="h-4 w-4" />;
+    default:
+      return <Package className="h-4 w-4" />;
+  }
+};
 
-// Register schema for form validation
-const registerSchema = z.object({
-  username: z.string().min(2, 'Username is required'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-  email: z.string().email('Invalid email address'),
-  fullName: z.string().min(2, 'Full name is required'),
-});
+// Format date function
+const formatDate = (dateString: string) => {
+  return new Date(dateString).toLocaleDateString('en-ZA', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+};
 
-type RegisterFormValues = z.infer<typeof registerSchema>;
-
-const ProfilePage = () => {
+const ProfilePage: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<'profile' | 'orders'>('profile');
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const { formatDate, formatShortDate } = useDateFormat();
-  const [authTab, setAuthTab] = useState<'login' | 'register'>('login');
-  const [activeTab, setActiveTab] = useState<'orders' | 'profile'>('orders');
-  
-  // Get user profile if logged in
+  const queryClient = useQueryClient();
+
+  // Fetch user data
   const { 
-    data: user, 
+    data: userResponse, 
     isLoading: isLoadingUser, 
-    isError: isErrorUser, 
-    refetch: refetchUser 
-  } = useQuery({
+    isError: isErrorUser 
+  } = useQuery<{success: boolean; data: UserType}>({
     queryKey: ['/api/user'],
   });
-  
-  // Get orders if logged in
+
+  const user = userResponse?.success ? userResponse.data : null;
+
+  // Fetch orders data
   const { 
-    data: orders, 
+    data: ordersResponse, 
     isLoading: isLoadingOrders 
-  } = useQuery({
+  } = useQuery<{success: boolean; data: OrderType[]}>({
     queryKey: ['/api/orders'],
     enabled: !!user,
   });
-  
-  // Profile form
+
+  const orders = ordersResponse?.success ? ordersResponse.data : [];
+
+  // Profile form setup
   const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
@@ -117,10 +205,11 @@ const ProfilePage = () => {
       address: '',
       city: '',
       postalCode: '',
+      province: '',
     },
   });
-  
-  // Update form values when user data is loaded
+
+  // Update form when user data loads
   useEffect(() => {
     if (user) {
       profileForm.reset({
@@ -130,302 +219,75 @@ const ProfilePage = () => {
         address: user.address || '',
         city: user.city || '',
         postalCode: user.postalCode || '',
+        province: user.province || '',
       });
     }
   }, [user, profileForm]);
-  
-  // Login form
-  const loginForm = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: {
-      username: '',
-      password: '',
-    },
-  });
-  
-  // Register form
-  const registerForm = useForm<RegisterFormValues>({
-    resolver: zodResolver(registerSchema),
-    defaultValues: {
-      username: '',
-      password: '',
-      email: '',
-      fullName: '',
-    },
-  });
-  
-  // Update profile mutation
-  const updateProfileMutation = useMutation({
+
+  // Profile update mutation
+  const profileMutation = useMutation({
     mutationFn: async (data: ProfileFormValues) => {
-      if (user && user.id) {
-        await apiRequest('PUT', `/api/users/${user.id}`, data);
-      } else {
-        throw new Error('User not found');
-      }
+      return apiRequest('/api/user', {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      });
     },
     onSuccess: () => {
       toast({
-        title: "Profile updated",
-        description: "Your profile has been updated successfully.",
-        duration: 3000,
+        title: "Profile updated successfully!",
+        description: "Your profile information has been saved.",
       });
-      refetchUser();
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         title: "Error updating profile",
-        description: "There was an error updating your profile. Please try again.",
+        description: error.message || "Please try again later.",
         variant: "destructive",
       });
     },
   });
-  
-  // Login mutation
-  const loginMutation = useMutation({
-    mutationFn: async (data: LoginFormValues) => {
-      await apiRequest('POST', '/api/login', data);
-    },
-    onSuccess: () => {
+
+  // Handle logout
+  const handleLogout = async () => {
+    try {
+      await apiRequest('/api/auth/logout', { method: 'POST' });
       toast({
-        title: "Login successful",
-        description: "You have been logged in successfully.",
-        duration: 3000,
+        title: "Logged out successfully",
+        description: "See you next time!",
       });
-      refetchUser();
-    },
-    onError: (error) => {
+      navigate('/');
+    } catch (error) {
       toast({
-        title: "Login failed",
-        description: "Invalid username or password. Please try again.",
+        title: "Error logging out",
+        description: "Please try again.",
         variant: "destructive",
       });
-    },
-  });
-  
-  // Register mutation
-  const registerMutation = useMutation({
-    mutationFn: async (data: RegisterFormValues) => {
-      await apiRequest('POST', '/api/register', data);
-    },
-    onSuccess: () => {
-      toast({
-        title: "Registration successful",
-        description: "Your account has been created. You can now log in.",
-        duration: 3000,
-      });
-      setAuthTab('login');
-    },
-    onError: (error) => {
-      toast({
-        title: "Registration failed",
-        description: "There was an error creating your account. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-  
-  // Logout mutation
-  const logoutMutation = useMutation({
-    mutationFn: async () => {
-      await apiRequest('POST', '/api/logout', {});
-    },
-    onSuccess: () => {
-      toast({
-        title: "Logout successful",
-        description: "You have been logged out successfully.",
-        duration: 3000,
-      });
-      refetchUser();
-    },
-    onError: (error) => {
-      toast({
-        title: "Logout failed",
-        description: "There was an error logging out. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-  
+    }
+  };
+
   // Handle profile form submission
   const onProfileSubmit = (data: ProfileFormValues) => {
-    updateProfileMutation.mutate(data);
+    profileMutation.mutate(data);
   };
-  
-  // Handle login form submission
-  const onLoginSubmit = (data: LoginFormValues) => {
-    loginMutation.mutate(data);
-  };
-  
-  // Handle register form submission
-  const onRegisterSubmit = (data: RegisterFormValues) => {
-    registerMutation.mutate(data);
-  };
-  
-  // Handle logout
-  const handleLogout = () => {
-    logoutMutation.mutate();
-  };
-  
-  // If loading user data
+
+  // Loading state
   if (isLoadingUser) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <Card>
-          <CardContent className="p-8">
-            <div className="animate-pulse flex flex-col items-center">
-              <div className="w-24 h-24 bg-gray-200 rounded-full mb-4"></div>
-              <div className="h-6 bg-gray-200 rounded w-48 mb-2"></div>
-              <div className="h-4 bg-gray-200 rounded w-32"></div>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF69B4]"></div>
+        </div>
       </div>
     );
   }
-  
-  // If user is not logged in, show login/register forms
+
+  // Error state or not logged in
   if (isErrorUser || !user) {
-    return (
-      <>
-        <Helmet>
-          <title>Login or Register - TEE ME YOU</title>
-          <meta name="description" content="Login or create an account to shop at TEE ME YOU and track your orders." />
-        </Helmet>
-        
-        <div className="container mx-auto px-4 py-8">
-          <div className="max-w-md mx-auto">
-            <Card>
-              <CardHeader>
-                <CardTitle>My Account</CardTitle>
-                <CardDescription>
-                  Login or create an account to track orders and manage your profile.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Tabs value={authTab} onValueChange={(value) => setAuthTab(value as any)}>
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="login">Login</TabsTrigger>
-                    <TabsTrigger value="register">Register</TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="login">
-                    <Form {...loginForm}>
-                      <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4 mt-4">
-                        <FormField
-                          control={loginForm.control}
-                          name="username"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Username</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Enter your username" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={loginForm.control}
-                          name="password"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Password</FormLabel>
-                              <FormControl>
-                                <Input type="password" placeholder="Enter your password" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <Button 
-                          type="submit" 
-                          className="w-full bg-[#FF69B4] hover:bg-[#FF1493] text-white"
-                          disabled={loginMutation.isPending}
-                        >
-                          {loginMutation.isPending ? 'Logging in...' : 'Login'}
-                        </Button>
-                      </form>
-                    </Form>
-                  </TabsContent>
-                  <TabsContent value="register">
-                    <Form {...registerForm}>
-                      <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4 mt-4">
-                        <FormField
-                          control={registerForm.control}
-                          name="username"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Username</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Choose a username" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={registerForm.control}
-                          name="email"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Email</FormLabel>
-                              <FormControl>
-                                <Input type="email" placeholder="Enter your email" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={registerForm.control}
-                          name="fullName"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Full Name</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Enter your full name" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={registerForm.control}
-                          name="password"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Password</FormLabel>
-                              <FormControl>
-                                <Input type="password" placeholder="Choose a password" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <Button 
-                          type="submit" 
-                          className="w-full bg-[#FF69B4] hover:bg-[#FF1493] text-white"
-                          disabled={registerMutation.isPending}
-                        >
-                          {registerMutation.isPending ? 'Creating account...' : 'Create Account'}
-                        </Button>
-                      </form>
-                    </Form>
-                  </TabsContent>
-                </Tabs>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </>
-    );
+    navigate('/auth');
+    return null;
   }
-  
+
   return (
     <>
       <Helmet>
@@ -433,42 +295,63 @@ const ProfilePage = () => {
         <meta name="description" content="Manage your account, view orders, and update your profile at TEE ME YOU." />
       </Helmet>
       
-      <div className="container mx-auto px-4 py-6">
-        <div className="flex flex-col md:flex-row gap-6">
+      <div className="container mx-auto px-4 py-6 max-w-6xl">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">My Account</h1>
+          <p className="text-gray-600">Manage your profile and view your orders</p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Sidebar */}
-          <div className="w-full md:w-64">
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex flex-col items-center py-4">
-                  <div className="w-24 h-24 rounded-full bg-[#FF69B4]/10 flex items-center justify-center mb-3">
-                    <UserCircle className="h-16 w-16 text-[#FF69B4]" />
+          <div className="lg:col-span-1">
+            <Card className="sticky top-6">
+              <CardContent className="p-6">
+                {/* User Avatar & Info */}
+                <div className="text-center mb-6">
+                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#FF69B4] to-[#FF1493] flex items-center justify-center mx-auto mb-3">
+                    <UserCircle className="h-12 w-12 text-white" />
                   </div>
-                  <h2 className="text-lg font-bold">{user.fullName || user.username}</h2>
+                  <h3 className="font-semibold text-lg">{user.fullName || user.username}</h3>
                   <p className="text-sm text-gray-500">{user.email}</p>
+                  <Badge variant="secondary" className="mt-2">
+                    {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                  </Badge>
                 </div>
-                
-                <div className="mt-4">
-                  <Button
-                    variant={activeTab === 'orders' ? 'default' : 'ghost'}
-                    className="w-full justify-start mb-2 text-left"
-                    onClick={() => setActiveTab('orders')}
-                  >
-                    <ShoppingBag className="mr-2 h-4 w-4" />
-                    My Orders
-                  </Button>
+
+                <Separator className="mb-6" />
+
+                {/* Navigation */}
+                <div className="space-y-2">
                   <Button
                     variant={activeTab === 'profile' ? 'default' : 'ghost'}
-                    className="w-full justify-start mb-2 text-left"
+                    className="w-full justify-start"
                     onClick={() => setActiveTab('profile')}
                   >
                     <User className="mr-2 h-4 w-4" />
                     Profile Settings
                   </Button>
+                  <Button
+                    variant={activeTab === 'orders' ? 'default' : 'ghost'}
+                    className="w-full justify-start"
+                    onClick={() => setActiveTab('orders')}
+                  >
+                    <ShoppingBag className="mr-2 h-4 w-4" />
+                    My Orders
+                    {orders.length > 0 && (
+                      <Badge variant="secondary" className="ml-auto">
+                        {orders.length}
+                      </Badge>
+                    )}
+                  </Button>
                 </div>
-                
+
+                <Separator className="my-6" />
+
+                {/* Logout Button */}
                 <Button 
                   variant="outline" 
-                  className="w-full mt-4 text-gray-600"
+                  className="w-full text-gray-600"
                   onClick={handleLogout}
                 >
                   <LogOut className="mr-2 h-4 w-4" />
@@ -477,88 +360,10 @@ const ProfilePage = () => {
               </CardContent>
             </Card>
           </div>
-          
+
           {/* Main Content */}
-          <div className="flex-1">
-            {activeTab === 'orders' && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Package className="mr-2 h-5 w-5" />
-                    My Orders
-                  </CardTitle>
-                  <CardDescription>
-                    View and track your order history.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    {isLoadingOrders ? (
-                      <div className="animate-pulse space-y-4">
-                        {[1, 2, 3].map((i) => (
-                          <div key={i} className="h-16 bg-gray-100 rounded-md"></div>
-                        ))}
-                      </div>
-                    ) : orders && orders.length > 0 ? (
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Order ID</TableHead>
-                            <TableHead>Date</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Total</TableHead>
-                            <TableHead>Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {orders.map((order) => (
-                            <TableRow key={order.id}>
-                              <TableCell>#{order.id}</TableCell>
-                              <TableCell>
-                                {formatShortDate(order.createdAt)}
-                              </TableCell>
-                              <TableCell>
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                  order.status === 'completed' 
-                                    ? 'bg-green-100 text-green-700' 
-                                    : order.status === 'processing'
-                                    ? 'bg-blue-100 text-blue-700'
-                                    : 'bg-yellow-100 text-yellow-700'
-                                }`}>
-                                  {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                                </span>
-                              </TableCell>
-                              <TableCell>{formatCurrency(order.totalAmount)}</TableCell>
-                              <TableCell>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm"
-                                  className="text-[#FF69B4]"
-                                  onClick={() => navigate(`/order/${order.id}`)}
-                                >
-                                  <Eye className="h-4 w-4 mr-1" />
-                                  View
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    ) : (
-                      <div className="text-center py-8">
-                        <Package className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                        <h3 className="text-lg font-medium mb-2">No orders yet</h3>
-                        <p className="text-gray-500 mb-4">
-                          You haven't placed any orders yet. Start shopping to place your first order!
-                        </p>
-                        <Button asChild>
-                          <a href="/">Shop Now</a>
-                        </Button>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-            )}
-            
+          <div className="lg:col-span-3">
+            {/* Profile Tab */}
             {activeTab === 'profile' && (
               <Card>
                 <CardHeader>
@@ -567,12 +372,13 @@ const ProfilePage = () => {
                     Profile Settings
                   </CardTitle>
                   <CardDescription>
-                    Update your personal information and shipping details.
+                    Update your personal information and shipping details
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <Form {...profileForm}>
-                      <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-4">
+                  <Form {...profileForm}>
+                    <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField
                           control={profileForm.control}
                           name="fullName"
@@ -586,29 +392,22 @@ const ProfilePage = () => {
                             </FormItem>
                           )}
                         />
-                        
                         <FormField
                           control={profileForm.control}
                           name="email"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Email (cannot be changed)</FormLabel>
+                              <FormLabel>Email Address</FormLabel>
                               <FormControl>
-                                <Input 
-                                  placeholder="you@example.com" 
-                                  {...field} 
-                                  disabled 
-                                  className="bg-gray-50 cursor-not-allowed"
-                                />
+                                <Input type="email" placeholder="john@example.com" {...field} />
                               </FormControl>
-                              <FormDescription className="text-xs text-gray-500">
-                                Email is used for login and cannot be changed
-                              </FormDescription>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
-                        
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField
                           control={profileForm.control}
                           name="phoneNumber"
@@ -616,68 +415,204 @@ const ProfilePage = () => {
                             <FormItem>
                               <FormLabel>Phone Number</FormLabel>
                               <FormControl>
-                                <Input placeholder="+27 12 345 6789" {...field} />
+                                <Input placeholder="0123456789" {...field} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <FormField
-                            control={profileForm.control}
-                            name="address"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Address</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="123 Main St" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          
-                          <FormField
-                            control={profileForm.control}
-                            name="city"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>City</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="Cape Town" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          
-                          <FormField
-                            control={profileForm.control}
-                            name="postalCode"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Postal Code</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="8001" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                        
+                        <FormField
+                          control={profileForm.control}
+                          name="province"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Province</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Gauteng" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <FormField
+                        control={profileForm.control}
+                        name="address"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Street Address</FormLabel>
+                            <FormControl>
+                              <Input placeholder="123 Main Street" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField
+                          control={profileForm.control}
+                          name="city"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>City</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Johannesburg" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={profileForm.control}
+                          name="postalCode"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Postal Code</FormLabel>
+                              <FormControl>
+                                <Input placeholder="2000" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="flex justify-end pt-4">
                         <Button 
                           type="submit" 
-                          className="bg-[#FF69B4] hover:bg-[#FF1493] text-white"
-                          disabled={updateProfileMutation.isPending}
+                          disabled={profileMutation.isPending}
+                          className="bg-[#FF69B4] hover:bg-[#FF1493]"
                         >
-                          {updateProfileMutation.isPending ? 'Saving...' : 'Save Changes'}
+                          {profileMutation.isPending ? 'Saving...' : 'Save Changes'}
                         </Button>
-                      </form>
-                    </Form>
-                  </CardContent>
-                </Card>
+                      </div>
+                    </form>
+                  </Form>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Orders Tab */}
+            {activeTab === 'orders' && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Package className="mr-2 h-5 w-5" />
+                    My Orders
+                  </CardTitle>
+                  <CardDescription>
+                    View and track your order history
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {isLoadingOrders ? (
+                    <div className="space-y-4">
+                      {[1, 2, 3].map((i) => (
+                        <div key={i} className="animate-pulse">
+                          <div className="h-24 bg-gray-100 rounded-lg"></div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : orders && orders.length > 0 ? (
+                    <div className="space-y-4">
+                      {orders.map((order) => (
+                        <Card key={order.id} className="hover:shadow-md transition-shadow">
+                          <CardContent className="p-6">
+                            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                              {/* Order Info */}
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <h3 className="font-semibold text-lg">#{order.orderNumber}</h3>
+                                  <Badge className={`border ${getStatusColor(order.status)}`}>
+                                    {getStatusIcon(order.status)}
+                                    <span className="ml-1 capitalize">{order.status}</span>
+                                  </Badge>
+                                </div>
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
+                                  <div className="flex items-center">
+                                    <Calendar className="h-4 w-4 mr-2" />
+                                    {formatDate(order.createdAt)}
+                                  </div>
+                                  <div className="flex items-center">
+                                    <CreditCard className="h-4 w-4 mr-2" />
+                                    {order.paymentMethod}
+                                  </div>
+                                  <div className="flex items-center">
+                                    <Truck className="h-4 w-4 mr-2" />
+                                    {order.shippingMethod}
+                                  </div>
+                                </div>
+
+                                {/* Order Items Preview */}
+                                {order.items && order.items.length > 0 && (
+                                  <div className="mt-3">
+                                    <p className="text-sm text-gray-600 mb-2">
+                                      {order.items.length} item{order.items.length > 1 ? 's' : ''}
+                                    </p>
+                                    <div className="flex flex-wrap gap-2">
+                                      {order.items.slice(0, 3).map((item) => (
+                                        <div key={item.id} className="flex items-center bg-gray-50 rounded-md px-2 py-1 text-xs">
+                                          <span>{item.productName}</span>
+                                          <span className="ml-1 text-gray-500">×{item.quantity}</span>
+                                        </div>
+                                      ))}
+                                      {order.items.length > 3 && (
+                                        <div className="bg-gray-50 rounded-md px-2 py-1 text-xs text-gray-500">
+                                          +{order.items.length - 3} more
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Order Total & Actions */}
+                              <div className="flex flex-col lg:items-end gap-3">
+                                <div className="text-right">
+                                  <p className="text-sm text-gray-600">Total</p>
+                                  <p className="text-xl font-bold text-[#FF69B4]">
+                                    {formatCurrency(order.totalAmount)}
+                                  </p>
+                                </div>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  className="text-[#FF69B4] border-[#FF69B4] hover:bg-[#FF69B4] hover:text-white"
+                                  onClick={() => navigate(`/order/${order.id}`)}
+                                >
+                                  <Eye className="h-4 w-4 mr-2" />
+                                  View Details
+                                  <ArrowRight className="h-4 w-4 ml-2" />
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                        <Package className="h-10 w-10 text-gray-400" />
+                      </div>
+                      <h3 className="text-lg font-semibold mb-2">No orders yet</h3>
+                      <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                        You haven't placed any orders yet. Start shopping to place your first order!
+                      </p>
+                      <Button 
+                        onClick={() => navigate('/')}
+                        className="bg-[#FF69B4] hover:bg-[#FF1493]"
+                      >
+                        <ShoppingBag className="h-4 w-4 mr-2" />
+                        Start Shopping
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             )}
           </div>
         </div>
