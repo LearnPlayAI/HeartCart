@@ -2844,11 +2844,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
         
-        // Calculate unit price - use sale price if available, otherwise regular price
-        const unitPrice = product.salePrice || product.price || 0;
-        
-        // Calculate total item price (unit price * quantity)
-        const itemPrice = unitPrice * quantity;
+        // Use the itemPrice sent from frontend (already calculated correctly)
+        // The frontend sends the per-unit price: (product.salePrice || product.price)
         
         // Add user ID, combination hash, calculated price, and timestamp to the cart item data
         const cartItemData = {
