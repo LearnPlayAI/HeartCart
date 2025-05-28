@@ -1242,74 +1242,55 @@ export class DatabaseStorage implements IStorage {
     options?: { includeInactive?: boolean; includeCategoryInactive?: boolean },
   ): Promise<Product[]> {
     try {
-      // Create search terms for intelligent keyword matching
-      const searchTerms = query.toLowerCase().split(/\s+/).filter(term => term.length > 0);
-      let productList: Product[] = [];
-
-      // Build individual search conditions for each keyword
-      const searchConditions = [];
+      console.log(`Searching for products with query: "${query}"`);
       
-      // Add exact phrase search first (highest priority)
-      const exactPhrase = `%${query.toLowerCase()}%`;
-      searchConditions.push(
-        sql`LOWER(${products.name}) LIKE ${exactPhrase}`,
-        sql`LOWER(${products.description}) LIKE ${exactPhrase}`
-      );
-
-      // Add individual keyword searches
-      for (const term of searchTerms) {
-        const termPattern = `%${term}%`;
-        searchConditions.push(
-          sql`LOWER(${products.name}) LIKE ${termPattern}`,
-          sql`LOWER(${products.description}) LIKE ${termPattern}`,
-          sql`LOWER(${products.brand}) LIKE ${termPattern}`,
-          sql`LOWER(${products.sku}) LIKE ${termPattern}`,
-          sql`LOWER(${products.supplier}) LIKE ${termPattern}`,
-          sql`LOWER(${products.metaTitle}) LIKE ${termPattern}`,
-          sql`LOWER(${products.metaDescription}) LIKE ${termPattern}`,
-          sql`LOWER(${products.metaKeywords}) LIKE ${termPattern}`
-        );
+      // Create base conditions
+      const conditions: SQL<unknown>[] = [];
+      
+      // Only include active products unless explicitly including inactive ones
+      if (!options?.includeInactive) {
+        conditions.push(eq(products.isActive, true));
       }
-
+      
+      // Create search condition - search in name and description
+      const searchTerm = `%${query.toLowerCase()}%`;
+      const searchCondition = or(
+        sql`LOWER(${products.name}) LIKE ${searchTerm}`,
+        sql`LOWER(COALESCE(${products.description}, '')) LIKE ${searchTerm}`
+      );
+      conditions.push(searchCondition);
+      
+      let productList: Product[] = [];
+      
       if (!options?.includeCategoryInactive) {
-        // Search with category join to ensure active categories
-        const searchQuery = db
+        // Join with categories to ensure category is active
+        const result = await db
           .select({
             product: products,
           })
           .from(products)
           .innerJoin(categories, eq(products.categoryId, categories.id))
-          .where(
-            and(
-              options?.includeInactive ? sql`1=1` : eq(products.isActive, true),
-              eq(categories.isActive, true),
-              or(...searchConditions)
-            )
-          )
+          .where(and(...conditions, eq(categories.isActive, true)))
           .limit(limit)
           .offset(offset);
-
-        const result = await searchQuery;
+        
         productList = result.map((row) => row.product);
       } else {
         // Simple search without category constraints
         productList = await db
           .select()
           .from(products)
-          .where(
-            and(
-              options?.includeInactive ? sql`1=1` : eq(products.isActive, true),
-              or(...searchConditions)
-            )
-          )
+          .where(and(...conditions))
           .limit(limit)
           .offset(offset);
       }
-
+      
+      console.log(`Found ${productList.length} products matching "${query}"`);
+      
       // Enrich products with main image URLs
       return await this.enrichProductsWithMainImage(productList);
     } catch (error) {
-      console.error(`Error in searchProducts for query "${query}":`, error);
+      console.error(`Error searching for products with query "${query}":`, error);
       throw error;
     }
   }
