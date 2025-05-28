@@ -2640,6 +2640,76 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async updateOrderPaymentStatus(
+    id: number,
+    paymentStatus: string,
+  ): Promise<Order | undefined> {
+    try {
+      // First check if the order exists
+      try {
+        const [existingOrder] = await db
+          .select()
+          .from(orders)
+          .where(eq(orders.id, id));
+
+        if (!existingOrder) {
+          logger.warn(`Attempted to update payment status of non-existent order`, {
+            orderId: id,
+            newPaymentStatus: paymentStatus,
+          });
+          return undefined;
+        }
+
+        const oldPaymentStatus = existingOrder.paymentStatus;
+        const now = new Date().toISOString();
+
+        try {
+          // Update the order with the new payment status and updatedAt timestamp
+          const [updatedOrder] = await db
+            .update(orders)
+            .set({
+              paymentStatus,
+              updatedAt: now,
+            })
+            .where(eq(orders.id, id))
+            .returning();
+
+          logger.info(`Updated order payment status`, {
+            orderId: id,
+            oldPaymentStatus,
+            newPaymentStatus: paymentStatus,
+            userId: updatedOrder.userId,
+          });
+
+          return updatedOrder;
+        } catch (updateError) {
+          logger.error(`Error updating order payment status`, {
+            error: updateError,
+            orderId: id,
+            oldPaymentStatus,
+            newPaymentStatus: paymentStatus,
+            userId: existingOrder.userId,
+          });
+          throw updateError;
+        }
+      } catch (queryError) {
+        logger.error(`Error querying order before payment status update`, {
+          error: queryError,
+          orderId: id,
+          newPaymentStatus: paymentStatus,
+        });
+        throw queryError;
+      }
+    } catch (error) {
+      logger.error(`Error in order payment status update process`, {
+        error,
+        orderId: id,
+        newPaymentStatus: paymentStatus,
+      });
+      throw error;
+    }
+  }
+
   // Product Image operations
   async getProductImages(productId: number): Promise<ProductImage[]> {
     try {

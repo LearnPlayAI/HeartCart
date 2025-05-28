@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useLocation, useParams } from 'wouter';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet';
 import { formatCurrency } from "@/lib/utils";
 import { 
@@ -13,6 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Progress } from '@/components/ui/progress';
 import { 
   ArrowLeft,
   Package, 
@@ -28,7 +29,11 @@ import {
   User,
   FileText,
   Copy,
-  ExternalLink
+  ExternalLink,
+  Building2,
+  Upload,
+  FileCheck,
+  DollarSign
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -125,7 +130,13 @@ const OrderDetail: React.FC = () => {
   const params = useParams();
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const orderId = params.id ? parseInt(params.id) : null;
+
+  // State for file upload
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [proofOfPayment, setProofOfPayment] = useState<string | null>(null);
 
   // Fetch order data
   const { 
@@ -147,6 +158,116 @@ const OrderDetail: React.FC = () => {
         description: `${label} copied to clipboard`,
       });
     });
+  };
+
+  // Proof of payment upload mutation
+  const uploadProofMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('bucket', 'POPS');
+      formData.append('path', `${order?.orderNumber}/proof-of-payment.pdf`);
+      
+      const response = await fetch('/api/files/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to upload proof of payment');
+      }
+      
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setProofOfPayment(data.url);
+      toast({
+        title: "Upload Successful",
+        description: "Proof of payment uploaded successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Upload Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mark order as paid mutation
+  const markAsPaidMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(`/api/orders/${orderId}/mark-paid`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to mark order as paid');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/orders/${orderId}`] });
+      toast({
+        title: "Order Updated",
+        description: "Order has been marked as paid",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Update Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Handle file upload
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (file.type !== 'application/pdf') {
+      toast({
+        title: "Invalid File Type",
+        description: "Please upload a PDF file only",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast({
+        title: "File Too Large",
+        description: "Please upload a file smaller than 10MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadProgress(0);
+
+    // Simulate progress
+    const progressInterval = setInterval(() => {
+      setUploadProgress(prev => Math.min(prev + 10, 90));
+    }, 100);
+
+    try {
+      await uploadProofMutation.mutateAsync(file);
+      setUploadProgress(100);
+    } finally {
+      clearInterval(progressInterval);
+      setIsUploading(false);
+      setTimeout(() => setUploadProgress(0), 500);
+    }
   };
 
   // Loading state
@@ -297,6 +418,170 @@ const OrderDetail: React.FC = () => {
                 </CardHeader>
                 <CardContent>
                   <p className="text-gray-700">{order.customerNotes}</p>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* EFT Payment Instructions */}
+            {order.paymentMethod === 'eft' && order.paymentStatus !== 'paid' && (
+              <Card className="border-[#FF69B4] border-2">
+                <CardHeader>
+                  <CardTitle className="flex items-center text-[#FF69B4]">
+                    <Building2 className="h-5 w-5 mr-2" />
+                    EFT Payment Instructions
+                  </CardTitle>
+                  <CardDescription>
+                    Complete your payment using the banking details below
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Banking Details */}
+                  <div className="bg-gray-50 p-4 rounded-lg space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium text-gray-600">Bank</label>
+                        <div className="flex items-center justify-between">
+                          <p className="font-semibold">Standard Bank</p>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => copyToClipboard('Standard Bank', 'Bank name')}
+                          >
+                            <Copy className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-600">Branch</label>
+                        <div className="flex items-center justify-between">
+                          <p className="font-semibold">Northgate</p>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => copyToClipboard('Northgate', 'Branch name')}
+                          >
+                            <Copy className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-600">Account Type</label>
+                        <div className="flex items-center justify-between">
+                          <p className="font-semibold">Cheque</p>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => copyToClipboard('Cheque', 'Account type')}
+                          >
+                            <Copy className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-600">Account Number</label>
+                        <div className="flex items-center justify-between">
+                          <p className="font-semibold">4023252158</p>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => copyToClipboard('4023252158', 'Account number')}
+                          >
+                            <Copy className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <div className="flex items-center">
+                        <FileText className="h-4 w-4 text-yellow-600 mr-2" />
+                        <div>
+                          <p className="text-sm font-medium text-yellow-800">Reference Number</p>
+                          <div className="flex items-center justify-between">
+                            <p className="text-lg font-bold text-yellow-900">{order.orderNumber}</p>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => copyToClipboard(order.orderNumber, 'Reference number')}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          <p className="text-xs text-yellow-700 mt-1">
+                            IMPORTANT: Use this order number as your reference
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Upload Proof of Payment */}
+                  <div className="border-t pt-4">
+                    <h4 className="font-semibold mb-3 flex items-center">
+                      <Upload className="h-4 w-4 mr-2" />
+                      Upload Proof of Payment
+                    </h4>
+                    
+                    {!proofOfPayment ? (
+                      <div className="space-y-3">
+                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                          <input
+                            type="file"
+                            accept=".pdf"
+                            onChange={handleFileUpload}
+                            disabled={isUploading}
+                            className="hidden"
+                            id="proof-upload"
+                          />
+                          <label htmlFor="proof-upload" className="cursor-pointer">
+                            <div className="space-y-2">
+                              <Upload className="h-8 w-8 text-gray-400 mx-auto" />
+                              <p className="text-sm text-gray-600">
+                                Click to upload proof of payment (PDF only)
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                Maximum file size: 10MB
+                              </p>
+                            </div>
+                          </label>
+                        </div>
+                        
+                        {isUploading && (
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between text-sm">
+                              <span>Uploading...</span>
+                              <span>{uploadProgress}%</span>
+                            </div>
+                            <Progress value={uploadProgress} className="h-2" />
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                          <div className="flex items-center">
+                            <FileCheck className="h-5 w-5 text-green-600 mr-2" />
+                            <div className="flex-1">
+                              <p className="font-medium text-green-800">
+                                Proof of payment uploaded successfully
+                              </p>
+                              <p className="text-sm text-green-600">
+                                Your payment will be verified within 24 hours
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <Button
+                          onClick={() => markAsPaidMutation.mutate()}
+                          disabled={markAsPaidMutation.isPending}
+                          className="w-full bg-[#FF69B4] hover:bg-[#FF1493]"
+                        >
+                          <DollarSign className="h-4 w-4 mr-2" />
+                          {markAsPaidMutation.isPending ? 'Updating...' : 'Mark Order as Paid'}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             )}

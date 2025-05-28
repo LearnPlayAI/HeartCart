@@ -241,4 +241,48 @@ router.get("/:id", isAuthenticated, asyncHandler(async (req: Request, res: Respo
   }
 }));
 
+// Mark order as paid
+router.post("/:id/mark-paid", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const orderId = parseInt(req.params.id);
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return sendError(res, "User not authenticated", 401);
+    }
+
+    if (isNaN(orderId)) {
+      return sendError(res, "Invalid order ID", 400);
+    }
+
+    // First check if the order belongs to the user
+    const order = await storage.getOrderById(orderId);
+    if (!order) {
+      return sendError(res, "Order not found", 404);
+    }
+
+    if (order.userId !== userId) {
+      return sendError(res, "Unauthorized", 403);
+    }
+
+    // Update payment status
+    const updatedOrder = await storage.updateOrderPaymentStatus(orderId, 'paid');
+
+    logger.info("Order marked as paid", {
+      orderId,
+      orderNumber: order.orderNumber,
+      userId,
+    });
+
+    return sendSuccess(res, updatedOrder);
+  } catch (error) {
+    logger.error("Error marking order as paid", { 
+      error: error instanceof Error ? error.message : String(error),
+      orderId: req.params.id,
+      userId: req.user?.id 
+    });
+    return sendError(res, "Failed to update order payment status", 500);
+  }
+}));
+
 export { router as orderRoutes };
