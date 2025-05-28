@@ -1241,6 +1241,31 @@ export class DatabaseStorage implements IStorage {
       const searchTerm = `%${query}%`;
       let productList: Product[] = [];
 
+      // Create comprehensive search condition that searches across multiple fields
+      const createSearchCondition = (searchTerm: string) => {
+        return or(
+          like(products.name, searchTerm),
+          like(products.description, searchTerm),
+          like(products.brand, searchTerm),
+          like(products.supplier, searchTerm),
+          like(products.sku, searchTerm),
+          like(products.metaTitle, searchTerm),
+          like(products.metaDescription, searchTerm),
+          like(products.metaKeywords, searchTerm),
+          // Search in tags array - using PostgreSQL array operations
+          sql`EXISTS (
+            SELECT 1 FROM unnest(${products.tags}) AS tag 
+            WHERE tag ILIKE ${searchTerm}
+          )`,
+          // Search in dimensions
+          like(products.dimensions, searchTerm),
+          // Search in special sale text
+          like(products.specialSaleText, searchTerm),
+          // Search in discount label
+          like(products.discountLabel, searchTerm)
+        );
+      };
+
       if (!options?.includeCategoryInactive) {
         try {
           // For search, we need to join with categories to check if category is active
@@ -1256,7 +1281,7 @@ export class DatabaseStorage implements IStorage {
                   ? sql`1=1`
                   : eq(products.isActive, true),
                 eq(categories.isActive, true),
-                like(products.name, searchTerm),
+                createSearchCondition(searchTerm),
               ),
             )
             .limit(limit)
@@ -1282,7 +1307,7 @@ export class DatabaseStorage implements IStorage {
                 options?.includeInactive
                   ? sql`1=1`
                   : eq(products.isActive, true),
-                like(products.name, searchTerm),
+                createSearchCondition(searchTerm),
               ),
             )
             .limit(limit)
