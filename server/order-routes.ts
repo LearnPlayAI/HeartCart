@@ -9,6 +9,7 @@ import { logger } from "./logger";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import { objectStore } from "./object-store";
 
 // Define the order creation schema that matches the checkout form structure
 const checkoutOrderSchema = z.object({
@@ -261,33 +262,10 @@ router.get("/:id", isAuthenticated, asyncHandler(async (req: Request, res: Respo
 }));
 
 // Custom multer configuration for EFT proof of payment uploads
-const eftProofStorage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    // We'll set the destination dynamically in the route handler
-    cb(null, './temp'); // Temporary destination, we'll move it later
-  },
-  filename: function (req, file, cb) {
-    cb(null, 'pdf_file.pdf'); // Always use this filename as specified
-  }
-});
 
-const eftProofUpload = multer({ 
-  storage: eftProofStorage,
-  fileFilter: (req, file, cb) => {
-    // Only allow PDF files for proof of payment
-    if (file.mimetype === 'application/pdf') {
-      cb(null, true);
-    } else {
-      cb(new Error('Only PDF files are allowed for proof of payment'));
-    }
-  },
-  limits: {
-    fileSize: 10 * 1024 * 1024 // 10MB limit
-  }
-});
 
 // Upload proof of payment
-router.post("/:id/upload-proof", isAuthenticated, eftProofUpload.single('proofOfPayment'), asyncHandler(async (req: Request, res: Response) => {
+router.post("/:id/upload-proof", isAuthenticated, upload.single('proofOfPayment'), asyncHandler(async (req: Request, res: Response) => {
   try {
     const orderId = parseInt(req.params.id);
     const userId = req.user?.id;
@@ -367,6 +345,14 @@ router.post("/:id/upload-proof", isAuthenticated, eftProofUpload.single('proofOf
       });
       return sendError(res, "Failed to upload proof of payment", 500);
     }
+  } catch (error) {
+    logger.error("Error in upload proof route", { 
+      error: error instanceof Error ? error.message : String(error),
+      orderId: req.params.id,
+      userId: req.user?.id 
+    });
+    return sendError(res, "Internal server error", 500);
+  }
 }));
 
 // Mark order as paid
