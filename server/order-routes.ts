@@ -202,7 +202,7 @@ router.get("/", isAuthenticated, asyncHandler(async (req: Request, res: Response
   }
 }));
 
-// Get specific order by ID
+// Get specific order by ID with items
 router.get("/:id", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
   try {
     const orderId = parseInt(req.params.id);
@@ -216,6 +216,7 @@ router.get("/:id", isAuthenticated, asyncHandler(async (req: Request, res: Respo
       return sendError(res, "Invalid order ID", 400);
     }
 
+    // Get the basic order details first
     const order = await storage.getOrderById(orderId);
     
     if (!order) {
@@ -226,6 +227,12 @@ router.get("/:id", isAuthenticated, asyncHandler(async (req: Request, res: Respo
     if (order.userId !== userId && req.user?.role !== "admin") {
       return sendError(res, "Access denied", 403);
     }
+
+    logger.info("Retrieved order with items", { 
+      orderId, 
+      userId, 
+      itemCount: order.items?.length || 0 
+    });
 
     return sendSuccess(res, order);
   } catch (error) {
