@@ -21,18 +21,19 @@ export interface PriceAdjustmentResult {
 }
 
 /**
- * Extended CartItem type that includes discount-related fields.
- * This is the fully serialized version including all discount calculations.
+ * Extended CartItem type that includes attribute selections.
+ * This is the fully serialized version including selected product attributes.
  * 
  * Implementation Strategy:
- * - Discount data is persisted in the database along with the cart item
+ * - Attribute selections are persisted in the database along with the cart item
  * - All price calculations are performed on the server-side
- * - The client displays the final prices and breakdown of discounts
+ * - The client displays the final prices and selected attribute options
  */
 export interface CartItemWithDiscounts extends CartItem {
   discountData: PriceAdjustment[] | null;
   totalDiscount: number;
   itemPrice: number | null;
+  attributeSelections: Record<string, string> | null; // Store selected attributes like {gender: "For Him", size: "Large"}
   
   // Helper properties (calculated client-side)
   finalPrice?: number;      // Calculated final price after all adjustments and discounts

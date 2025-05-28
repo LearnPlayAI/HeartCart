@@ -2017,7 +2017,8 @@ export class DatabaseStorage implements IStorage {
           userId: cartItem.userId,
           productId: cartItem.productId,
           quantity: cartItem.quantity,
-          itemPrice: String(cartItem.itemPrice) // Convert to string for decimal column
+          itemPrice: String(cartItem.itemPrice), // Convert to string for decimal column
+          attributeSelections: cartItem.attributeSelections || {}
         };
 
         console.log(`🔍 NEW CART DEBUG - Inserting:`, itemToInsert);

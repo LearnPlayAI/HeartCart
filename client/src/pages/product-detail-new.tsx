@@ -377,31 +377,36 @@ const ProductDetailView = ({
   const handleAddToCart = useCallback(() => {
     if (!product) return;
     
-    // Create a combination hash from selected attributes (for cart item identification)
-    const combinationHash = Object.entries(selectedAttributes)
-      .map(([attrId, value]) => `${attrId}:${value}`)
-      .sort()
-      .join('|');
+    // Check if product has required attributes that need to be selected
+    const requiredAttributes = productAttributes?.filter(attr => attr.isRequired) || [];
+    const hasRequiredAttributes = requiredAttributes.length > 0;
     
-    // Format selectedAttributes for cart storage
-    const formattedAttributes: Record<string, any> = {};
+    if (hasRequiredAttributes) {
+      // Check if all required attributes have been selected
+      const allRequiredSelected = requiredAttributes.every(attr => selectedAttributes[attr.id]);
+      
+      if (!allRequiredSelected) {
+        toast({
+          title: "Please select all required options",
+          description: "This product requires you to select options before adding to cart.",
+          variant: "destructive",
+          duration: 3000,
+        });
+        return;
+      }
+    }
+    
+    // Format selectedAttributes for cart storage with user-friendly names
+    const attributeSelections: Record<string, string> = {};
     
     if (productAttributes && Object.keys(selectedAttributes).length > 0) {
       productAttributes.forEach(attr => {
-        const attrId = attr.id.toString();
         const selectedValue = selectedAttributes[attr.id];
         
         if (selectedValue) {
-          // Find the option display value for select-type attributes
-          const options = attributeOptions?.[attr.id] || [];
-          const selectedOption = options.find(opt => opt.value === selectedValue);
-          
-          formattedAttributes[attrId] = {
-            attributeId: attr.id,
-            attributeName: attr.displayName,
-            value: selectedValue,
-            displayValue: selectedOption?.displayValue || selectedValue,
-          };
+          // Use the attribute display name as key and selected value as value
+          const attributeName = attr.displayName || attr.name;
+          attributeSelections[attributeName] = selectedValue;
         }
       });
     }
@@ -409,11 +414,12 @@ const ProductDetailView = ({
     // Use base price without adjustments per requirements
     const basePrice = product.salePrice || product.price;
     
-    // Create the cart item - simplified without deprecated combination fields
+    // Create the cart item with attribute selections
     const cartItem = {
       productId: product.id,
       quantity,
-      itemPrice: basePrice
+      itemPrice: basePrice,
+      attributeSelections
     };
     
     addItem(cartItem);
@@ -423,7 +429,7 @@ const ProductDetailView = ({
       description: `${quantity} x ${product.name} has been added to your cart.`,
       duration: 2000,
     });
-  }, [product, selectedAttributes, productAttributes, attributeOptions, quantity, addItem, toast]);
+  }, [product, selectedAttributes, productAttributes, quantity, addItem, toast]);
   
   // Render star ratings (memoized to prevent re-renders)
   const renderStars = useCallback((rating: number | null = 0) => {
