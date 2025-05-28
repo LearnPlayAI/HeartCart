@@ -8,8 +8,11 @@ import InstallBanner from '@/components/pwa/install-banner';
 import { CategorySidebar } from '@/components/ui/category-sidebar';
 import { CategorySidebarDrawer } from '@/components/ui/category-sidebar-drawer';
 import { Helmet } from 'react-helmet';
+import { useLocation } from 'wouter';
 
 const Home = () => {
+  const [, setLocation] = useLocation();
+
   return (
     <>
       <Helmet>
@@ -39,7 +42,7 @@ const Home = () => {
                   className="border-none p-0" 
                   isFilterMode={true}
                   onCategoryFilter={(categoryId, includeChildren) => {
-                    // Navigate to products page with category filter
+                    // Navigate to products page with category filter using React Router
                     const params = new URLSearchParams();
                     if (categoryId) {
                       params.set('categoryId', categoryId.toString());
@@ -47,7 +50,7 @@ const Home = () => {
                         params.set('includeChildren', 'true');
                       }
                     }
-                    window.location.href = `/products?${params.toString()}`;
+                    setLocation(`/products?${params.toString()}`);
                   }}
                 />
               </div>

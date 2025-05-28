@@ -111,13 +111,18 @@ const ProductListing = () => {
   });
   const categories = categoriesResponse?.success ? categoriesResponse.data : [];
   
-  // Fetch products
+  // Fetch products with category filtering
   const { 
     data: productsResponse, 
     isLoading: isLoadingProducts,
     error: productsError
   } = useQuery<StandardApiResponse<Product[], { total?: number, totalPages?: number }>>({
-    queryKey: ['/api/products', { limit, offset: (page - 1) * limit }],
+    queryKey: ['/api/products', { 
+      limit, 
+      offset: (page - 1) * limit,
+      categoryId: selectedCategoryId,
+      includeChildren: searchParams.get('includeChildren') === 'true'
+    }],
   });
   const products = productsResponse?.success ? productsResponse.data : [];
   const totalPages = productsResponse?.meta?.totalPages || 1;
