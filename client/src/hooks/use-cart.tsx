@@ -85,6 +85,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const addToCartMutation = useMutation({
     mutationFn: async (item: Omit<CartItemWithDiscounts, 'id' | 'discountData' | 'totalDiscount' | 'itemPrice'>) => {
       const { product, ...rest } = item;
+      console.log('🔍 CART MUTATION DEBUG - Original item:', item);
+      console.log('🔍 CART MUTATION DEBUG - Sending to server:', rest);
       try {
         const res = await apiRequest('POST', '/api/cart', rest);
         const data: StandardApiResponse<any> = await res.json();
