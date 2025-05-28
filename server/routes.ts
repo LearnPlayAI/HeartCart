@@ -2839,13 +2839,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
         
-        // Add user ID and combination hash to the cart item data
+        // Calculate item price - get the product's current price
+        const itemPrice = product.price || 0;
+        
+        // Add user ID, combination hash, and calculated price to the cart item data
         const cartItemData = {
           productId,
           quantity,
           attributeValues,
           userId: user.id,
-          combinationHash
+          combinationHash,
+          itemPrice,
+          // Note: createdAt will be set by database default
         };
         
         const cartItem = await storage.addToCart(cartItemData);
