@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useMemo } from 'react';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useLocation } from 'wouter';
 import type { Product } from '@shared/schema';
 import { CartItemWithDiscounts, CartSummary } from '@/types/cart.types';
 import { StandardApiResponse } from '@/types/api';
@@ -44,6 +45,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
   
   // Get cart items from server with improved typing for discount fields
   // API now returns StandardApiResponse format
@@ -85,6 +87,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const res = await apiRequest('POST', '/api/cart', rest);
       const data: StandardApiResponse<any> = await res.json();
       if (!data.success) {
+        // Check if it's an authentication error
+        if (res.status === 401) {
+          throw new Error('AUTHENTICATION_REQUIRED');
+        }
         throw new Error(data.error?.message || "Failed to add item to cart");
       }
     },
@@ -96,9 +102,16 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       });
     },
     onError: (error) => {
+      // Check if the error is authentication related
+      if (error.message === 'AUTHENTICATION_REQUIRED') {
+        // Redirect to auth page instead of showing error toast
+        setLocation('/auth');
+        return;
+      }
+      
       toast({
         title: "Error",
-        description: error.message || "Please log in to add items to your cart",
+        description: error.message || "Failed to add item to cart",
         variant: "destructive"
       });
     }
