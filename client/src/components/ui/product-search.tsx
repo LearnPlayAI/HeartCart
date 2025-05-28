@@ -36,8 +36,10 @@ export function ProductSearch({
       return;
     }
     
-    // Otherwise, navigate to search results page
-    navigate(`/search?q=${encodeURIComponent(trimmedQuery)}`);
+    // Otherwise, navigate to search results page using window.location
+    const searchUrl = `/search?q=${encodeURIComponent(trimmedQuery)}`;
+    console.log('Navigating to:', searchUrl);
+    window.location.href = searchUrl;
   };
 
   // Define component styles based on props
