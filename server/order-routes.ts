@@ -41,23 +41,15 @@ const checkoutOrderSchema = z.object({
 
 const router = express.Router();
 
-// Configure multer for PDF uploads
+// Configure multer for PDF uploads - temporary storage
 const storage_multer = multer.diskStorage({
-  destination: async (req, file, cb) => {
-    const orderId = req.params.id;
-    const userEmail = (req.user as any)?.email || 'unknown-user';
-    const uploadDir = `/root/POPS/${userEmail}/${orderId}`;
-    
-    try {
-      await fs.mkdir(uploadDir, { recursive: true });
-      cb(null, uploadDir);
-    } catch (error) {
-      cb(error, '');
-    }
+  destination: (req, file, cb) => {
+    // Store temporarily in the writable temp directory
+    cb(null, './temp');
   },
   filename: (req, file, cb) => {
-    // Always use the specific filename format
-    cb(null, 'pdf_file.pdf');
+    // Use a temporary filename, we'll rename it later
+    cb(null, `eft_proof_${Date.now()}_${req.params.id}.pdf`);
   },
 });
 
@@ -339,7 +331,7 @@ router.post("/:id/upload-proof", isAuthenticated, eftProofUpload.single('proofOf
       return sendError(res, "User not found", 401);
     }
 
-    // Create the proper directory structure: /root/POPS/{user_email}/{order_number}/
+    // Create the proper directory structure: POPS/{user_email}/{order_number}/
     const eftProofDir = path.join(process.cwd(), 'POPS', user.email, order.orderNumber);
     const finalFilePath = path.join(eftProofDir, 'pdf_file.pdf');
     
