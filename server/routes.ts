@@ -2767,6 +2767,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       body: z.object({
         productId: z.coerce.number().positive("Product ID is required"),
         quantity: z.coerce.number().int().positive("Quantity must be a positive integer"),
+        itemPrice: z.coerce.number().positive("Item price is required"),
         attributeValues: z.array(z.object({
           attributeId: z.coerce.number().positive(),
           optionId: z.coerce.number().positive().optional(),
@@ -2778,7 +2779,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }),
     asyncHandler(async (req: Request, res: Response) => {
       const user = req.user as any;
-      const { productId, quantity, attributeValues } = req.body;
+      const { productId, quantity, itemPrice, attributeValues } = req.body;
+      
+      // Debug: Log the incoming request data
+      console.log(`🔍 CART ROUTE DEBUG - Request body:`, req.body);
+      console.log(`🔍 CART ROUTE DEBUG - itemPrice value:`, itemPrice, typeof itemPrice);
       
       try {
         // Check if product exists with comprehensive error handling
