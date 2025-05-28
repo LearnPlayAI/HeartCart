@@ -202,6 +202,11 @@ const ProductListing = () => {
     if (filters.newArrivals) params.set('new_arrivals', 'true');
     if (page > 1) params.set('page', page.toString());
     
+    // Add attribute filters to URL
+    if (attributeFilters.length > 0) {
+      params.set('attributeFilters', JSON.stringify(attributeFilters));
+    }
+    
     const queryString = params.toString();
     const newLocation = queryString ? `/products?${queryString}` : '/products';
     
