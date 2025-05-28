@@ -126,18 +126,24 @@ const ProductListing = () => {
   const categories = categoriesResponse?.success ? categoriesResponse.data : [];
   
   // Fetch products with category filtering or search
+  const queryParams = { 
+    limit, 
+    offset: (page - 1) * limit,
+    categoryId: selectedCategoryId,
+    q: searchQuery || undefined,
+    includeChildren: searchParams.get('includeChildren') === 'true'
+  };
+  
+  console.log('Product query params:', queryParams);
+  console.log('Current searchQuery state:', searchQuery);
+  console.log('URL location:', location);
+  
   const { 
     data: productsResponse, 
     isLoading: isLoadingProducts,
     error: productsError
   } = useQuery<StandardApiResponse<Product[], { total?: number, totalPages?: number }>>({
-    queryKey: ['/api/products', { 
-      limit, 
-      offset: (page - 1) * limit,
-      categoryId: selectedCategoryId,
-      q: searchQuery || undefined,
-      includeChildren: searchParams.get('includeChildren') === 'true'
-    }],
+    queryKey: ['/api/products', queryParams],
     enabled: true
   });
   const products = productsResponse?.success ? productsResponse.data : [];
