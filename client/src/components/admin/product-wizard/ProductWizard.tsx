@@ -549,6 +549,44 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ draftId, initialDa
     });
   };
 
+  // Handle saving and publishing from the basic info step
+  const handleSaveAndPublish = async (stepData: any) => {
+    setIsPublishing(true);
+    
+    try {
+      // First save the step data
+      const formattedData = {
+        ...stepData,
+        completedSteps: Array.from(new Set([
+          ...(draftData?.data.completedSteps || []), 
+          currentStep
+        ])),
+        wizardProgress: {
+          ...(draftData?.data.wizardProgress || {}),
+          [currentStep]: true
+        }
+      };
+      
+      // Update the step
+      await updateStepMutation.mutateAsync({
+        step: currentStep,
+        stepData: formattedData,
+      });
+      
+      // Then publish the draft
+      publishDraftMutation.mutate(draftData?.data);
+    } catch (error) {
+      console.error('Failed to save and publish:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to save and publish product',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
   // Handle publishing the product
   const handlePublish = () => {
     if (!draftId) {
@@ -646,7 +684,9 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ draftId, initialDa
             <CurrentStepComponent
               draft={draft as ProductDraft}
               onSave={handleSaveStep}
+              onSaveAndPublish={step.id === 'basic-info' ? handleSaveAndPublish : undefined}
               isLoading={updateStepMutation.isPending}
+              isPublishing={isPublishing}
             />
           </TabsContent>
         ))}
