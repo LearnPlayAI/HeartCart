@@ -190,6 +190,7 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ draftId, initialDa
   const [internalDraftId, setInternalDraftId] = useState<number | null>(draftId || null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isAutoAdvancing, setIsAutoAdvancing] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
 
   // Get user information to ensure we're authenticated
   const { user, isLoading: isLoadingUser } = useAuth();

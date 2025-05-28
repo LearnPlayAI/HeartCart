@@ -72,10 +72,12 @@ type BasicInfoFormValues = z.infer<typeof basicInfoSchema>;
 interface BasicInfoStepProps {
   draft: ProductDraft;
   onSave: (data: any) => void;
+  onSaveAndPublish?: (data: any) => void;
   isLoading: boolean;
+  isPublishing?: boolean;
 }
 
-export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, isLoading }) => {
+export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onSaveAndPublish, isLoading, isPublishing }) => {
   const { toast } = useToast();
   const [isNameTouched, setIsNameTouched] = useState(false);
   const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
@@ -774,10 +776,33 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, isL
               </div>
             </div>
 
-            <div className="flex justify-end pt-2">
+            <div className="flex justify-between sm:justify-end gap-3 pt-2">
+              {/* Save & Publish button - only show when editing an existing product */}
+              {draft.originalProductId && onSaveAndPublish && (
+                <Button 
+                  type="button"
+                  variant="default"
+                  disabled={isLoading || isPublishing}
+                  className="h-9 px-3 sm:h-10 sm:px-4 bg-green-600 hover:bg-green-700"
+                  onClick={form.handleSubmit((data) => {
+                    // Process the data same as onSubmit
+                    if (data.salePrice && data.salePrice < data.regularPrice) {
+                      data.onSale = true;
+                    } else if (!data.salePrice || data.salePrice >= data.regularPrice) {
+                      data.onSale = false;
+                      data.salePrice = null;
+                    }
+                    onSaveAndPublish(data);
+                  })}
+                >
+                  {isPublishing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Save & Publish
+                </Button>
+              )}
+              
               <Button 
                 type="submit" 
-                disabled={isLoading}
+                disabled={isLoading || isPublishing}
                 className="h-9 px-3 sm:h-10 sm:px-4"
               >
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
