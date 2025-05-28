@@ -1238,21 +1238,19 @@ export class DatabaseStorage implements IStorage {
     options?: { includeInactive?: boolean; includeCategoryInactive?: boolean },
   ): Promise<Product[]> {
     try {
-      const searchTerm = `%${query}%`;
-      console.log(`Searching products with term: "${searchTerm}"`);
+      // Split query into individual terms and create search patterns
+      const searchTerms = query.trim().split(/\s+/).filter(term => term.length > 0);
+      console.log(`Searching products with terms: ${searchTerms.join(', ')}`);
       let productList: Product[] = [];
 
       // Use a more direct approach with raw SQL for comprehensive search
       if (!options?.includeCategoryInactive) {
         try {
           // Search with category join to ensure category is active
-          const result = await db.execute(sql`
-            SELECT p.* 
-            FROM products p 
-            INNER JOIN categories c ON p.category_id = c.id 
-            WHERE ${options?.includeInactive ? sql`TRUE` : sql`p.is_active = TRUE`}
-            AND c.is_active = TRUE
-            AND (
+          // Build dynamic search conditions for each term (all terms must match)
+          const searchConditions = searchTerms.map(term => {
+            const searchTerm = `%${term}%`;
+            return sql`(
               p.name ILIKE ${searchTerm} OR 
               p.description ILIKE ${searchTerm} OR 
               p.brand ILIKE ${searchTerm} OR 
@@ -1268,7 +1266,22 @@ export class DatabaseStorage implements IStorage {
                 SELECT 1 FROM unnest(p.tags) AS tag 
                 WHERE tag ILIKE ${searchTerm}
               )
-            )
+            )`;
+          });
+
+          // Combine all search conditions with AND
+          const combinedSearchCondition = searchConditions.reduce((acc, condition, index) => {
+            if (index === 0) return condition;
+            return sql`${acc} AND ${condition}`;
+          });
+          
+          const result = await db.execute(sql`
+            SELECT p.* 
+            FROM products p 
+            INNER JOIN categories c ON p.category_id = c.id 
+            WHERE ${options?.includeInactive ? sql`TRUE` : sql`p.is_active = TRUE`}
+            AND c.is_active = TRUE
+            AND ${combinedSearchCondition}
             LIMIT ${limit}
             OFFSET ${offset}
           `);
@@ -1285,11 +1298,10 @@ export class DatabaseStorage implements IStorage {
       } else {
         try {
           // Search without category constraint  
-          const result = await db.execute(sql`
-            SELECT * 
-            FROM products 
-            WHERE ${options?.includeInactive ? sql`TRUE` : sql`is_active = TRUE`}
-            AND (
+          // Build dynamic search conditions for each term (all terms must match)
+          const searchConditions = searchTerms.map(term => {
+            const searchTerm = `%${term}%`;
+            return sql`(
               name ILIKE ${searchTerm} OR 
               description ILIKE ${searchTerm} OR 
               brand ILIKE ${searchTerm} OR 
@@ -1305,7 +1317,20 @@ export class DatabaseStorage implements IStorage {
                 SELECT 1 FROM unnest(tags) AS tag 
                 WHERE tag ILIKE ${searchTerm}
               )
-            )
+            )`;
+          });
+
+          // Combine all search conditions with AND
+          const combinedSearchCondition = searchConditions.reduce((acc, condition, index) => {
+            if (index === 0) return condition;
+            return sql`${acc} AND ${condition}`;
+          });
+          
+          const result = await db.execute(sql`
+            SELECT * 
+            FROM products 
+            WHERE ${options?.includeInactive ? sql`TRUE` : sql`is_active = TRUE`}
+            AND ${combinedSearchCondition}
             LIMIT ${limit}
             OFFSET ${offset}
           `);
