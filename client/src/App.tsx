@@ -13,6 +13,7 @@ import ProductListing from "@/pages/product-listing";
 import ProductsExample from "@/pages/products-example";
 import Checkout from "@/pages/checkout";
 import OrderDetail from "@/pages/order-detail";
+import OrderConfirmation from "@/pages/order-confirmation";
 import SearchResults from "@/pages/search-results";
 import Profile from "@/pages/profile-fix";
 import AuthPage from "@/pages/auth-page";

@@ -1,650 +1,676 @@
-import React, { useState } from 'react';
-import { useLocation } from 'wouter';
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { Helmet } from 'react-helmet';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { 
-  Form, 
-  FormControl, 
-  FormField, 
-  FormItem, 
-  FormLabel, 
-  FormMessage 
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardFooter, 
-  CardHeader, 
-  CardTitle 
-} from '@/components/ui/card';
-import { 
-  Tabs, 
-  TabsContent, 
-  TabsList, 
-  TabsTrigger 
-} from '@/components/ui/tabs';
-import { Separator } from '@/components/ui/separator';
-import { Button } from '@/components/ui/button';
+import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { useLocation } from "wouter";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import { 
   CreditCard, 
-  LucideIcon, 
   Truck, 
-  AlertCircle,
-  CheckCircle
-} from 'lucide-react';
-import { useCart } from '@/hooks/use-cart';
-import { useToast } from '@/hooks/use-toast';
-import { formatCurrency } from '@/lib/utils';
-import { apiRequest } from '@/lib/queryClient';
+  MapPin, 
+  User, 
+  Phone, 
+  Mail, 
+  Building2,
+  Banknote,
+  Package
+} from "lucide-react";
 
-// Schema for checkout form
+// Enhanced checkout form schema with comprehensive validation
 const checkoutSchema = z.object({
-  fullName: z.string().min(2, 'Full name is required'),
-  email: z.string().email('Invalid email address'),
-  phoneNumber: z.string().min(10, 'Valid phone number is required'),
-  address: z.string().min(5, 'Address is required'),
-  city: z.string().min(2, 'City is required'),
-  postalCode: z.string().min(4, 'Valid postal code is required'),
-  paymentMethod: z.enum(['credit-card', 'eft', 'cash']),
-  shippingMethod: z.enum(['standard', 'express']),
+  // Customer Information
+  firstName: z.string().min(2, "First name must be at least 2 characters"),
+  lastName: z.string().min(2, "Last name must be at least 2 characters"),
+  email: z.string().email("Please enter a valid email address"),
+  phone: z.string().min(10, "Please enter a valid phone number"),
+  
+  // Shipping Address
+  addressLine1: z.string().min(5, "Please enter a complete address"),
+  addressLine2: z.string().optional(),
+  city: z.string().min(2, "Please enter a valid city"),
+  province: z.string().min(2, "Please select a province"),
+  postalCode: z.string().min(4, "Please enter a valid postal code"),
+  
+  // Shipping Method
+  shippingMethod: z.enum(["pudo", "courier", "collection"], {
+    required_error: "Please select a shipping method"
+  }),
+  
+  // Payment Method
+  paymentMethod: z.enum(["eft", "card", "cod"], {
+    required_error: "Please select a payment method"
+  }),
+  
+  // Special Instructions
+  specialInstructions: z.string().optional(),
+  
+  // Save preferences
+  saveDetails: z.boolean().default(false)
 });
 
-type CheckoutFormValues = z.infer<typeof checkoutSchema>;
+type CheckoutFormData = z.infer<typeof checkoutSchema>;
 
-// Payment method option type
-type PaymentOption = {
-  id: string;
-  name: string;
-  description: string;
-  icon: LucideIcon;
-};
+// South African provinces
+const provinces = [
+  "Eastern Cape", "Free State", "Gauteng", "KwaZulu-Natal",
+  "Limpopo", "Mpumalanga", "Northern Cape", "North West", "Western Cape"
+];
 
-// Shipping method option type
-type ShippingOption = {
-  id: string;
-  name: string;
-  price: number;
-  description: string;
-  estimatedDelivery: string;
-};
+// Shipping options with detailed information
+const shippingOptions = [
+  {
+    id: "pudo",
+    name: "PUDO Lockers",
+    description: "Collect from nearest PUDO locker",
+    price: 85,
+    estimatedDays: "2-3 business days",
+    icon: Package
+  },
+  {
+    id: "courier",
+    name: "Door-to-Door Courier",
+    description: "Direct delivery to your address",
+    price: 120,
+    estimatedDays: "1-2 business days",
+    icon: Truck
+  },
+  {
+    id: "collection",
+    name: "Store Collection",
+    description: "Collect from our warehouse",
+    price: 0,
+    estimatedDays: "Same day",
+    icon: Building2
+  }
+];
 
-const CheckoutPage = () => {
-  const [, navigate] = useLocation();
+// Payment options
+const paymentOptions = [
+  {
+    id: "eft",
+    name: "EFT Bank Transfer",
+    description: "Pay via electronic funds transfer",
+    icon: Banknote
+  },
+  {
+    id: "card",
+    name: "Credit/Debit Card",
+    description: "Pay securely with your card",
+    icon: CreditCard
+  },
+  {
+    id: "cod",
+    name: "Cash on Delivery",
+    description: "Pay when you receive your order",
+    icon: Package
+  }
+];
+
+export default function CheckoutPage() {
+  const [location, navigate] = useLocation();
   const { toast } = useToast();
-  const [orderComplete, setOrderComplete] = useState(false);
-  const [orderId, setOrderId] = useState<number | null>(null);
-  
-  const {
-    cartItems,
-    clearCart,
-    cartSummary,
-    isLoading
-  } = useCart();
-  
-  // Get user profile if logged in
+  const queryClient = useQueryClient();
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  // Fetch current user details
   const { data: user } = useQuery({
-    queryKey: ['/api/auth/user'],
+    queryKey: ["/api/user"]
   });
-  
-  // Form definition
-  const form = useForm<CheckoutFormValues>({
+
+  // Fetch cart items
+  const { data: cartItems, isLoading: cartLoading } = useQuery({
+    queryKey: ["/api/cart"]
+  });
+
+  // Calculate totals
+  const subtotal = Array.isArray(cartItems) ? cartItems.reduce((sum: number, item: any) => 
+    sum + (item.price * item.quantity), 0) : 0;
+
+  const form = useForm<CheckoutFormData>({
     resolver: zodResolver(checkoutSchema),
     defaultValues: {
-      fullName: user?.fullName || '',
-      email: user?.email || '',
-      phoneNumber: user?.phoneNumber || '',
-      address: user?.address || '',
-      city: user?.city || '',
-      postalCode: user?.postalCode || '',
-      paymentMethod: 'credit-card',
-      shippingMethod: 'standard',
-    },
+      firstName: "",
+      lastName: "",
+      email: "",
+      phone: "",
+      addressLine1: "",
+      addressLine2: "",
+      city: "",
+      province: "",
+      postalCode: "",
+      shippingMethod: "pudo",
+      paymentMethod: "eft",
+      specialInstructions: "",
+      saveDetails: false
+    }
   });
+
+  // Pre-populate form with user data if available
+  useEffect(() => {
+    if (user) {
+      form.reset({
+        firstName: user.firstName || "",
+        lastName: user.lastName || "",
+        email: user.email || "",
+        phone: user.phone || "",
+        addressLine1: user.addressLine1 || "",
+        addressLine2: user.addressLine2 || "",
+        city: user.city || "",
+        province: user.province || "",
+        postalCode: user.postalCode || "",
+        shippingMethod: "pudo",
+        paymentMethod: "eft",
+        specialInstructions: "",
+        saveDetails: false
+      });
+    }
+  }, [user, form]);
+
+  const selectedShippingMethod = form.watch("shippingMethod");
+  const selectedPaymentMethod = form.watch("paymentMethod");
   
-  // Payment methods
-  const paymentMethods: PaymentOption[] = [
-    {
-      id: 'credit-card',
-      name: 'Credit Card',
-      description: 'Pay securely with your credit card',
-      icon: CreditCard,
-    },
-    {
-      id: 'eft',
-      name: 'EFT Payment',
-      description: 'Electronic funds transfer',
-      icon: CreditCard,
-    },
-    {
-      id: 'cash',
-      name: 'Cash on Delivery',
-      description: 'Pay when you receive your order',
-      icon: CreditCard,
-    },
-  ];
+  const shippingCost = shippingOptions.find(option => 
+    option.id === selectedShippingMethod)?.price || 0;
   
-  // Shipping methods
-  const shippingMethods: ShippingOption[] = [
-    {
-      id: 'standard',
-      name: 'Standard Delivery',
-      price: 50,
-      description: 'Standard delivery to your doorstep',
-      estimatedDelivery: '3-5 business days',
-    },
-    {
-      id: 'express',
-      name: 'Express Delivery',
-      price: 100,
-      description: 'Get your order faster',
-      estimatedDelivery: '1-2 business days',
-    },
-  ];
-  
-  // Get cart summary values
-  const { subtotal, finalTotal } = cartSummary;
-  
-  // Get selected shipping method price
-  const selectedShippingMethod = form.watch('shippingMethod');
-  const shippingCost = shippingMethods.find(
-    method => method.id === selectedShippingMethod
-  )?.price || 50;
-  
-  // Calculate total with shipping
-  const total = finalTotal + shippingCost;
-  
+  const total = subtotal + shippingCost;
+
   // Create order mutation
   const createOrderMutation = useMutation({
-    mutationFn: async (data: CheckoutFormValues) => {
-      // Prepare order data
-      const orderData = {
-        order: {
-          totalAmount: total,
-          shippingAddress: `${data.address}, ${data.city}, ${data.postalCode}`,
-          shippingMethod: data.shippingMethod,
-          paymentMethod: data.paymentMethod,
-          status: 'pending',
-        },
-        items: cartItems.map(item => ({
-          productId: item.productId,
-          quantity: item.quantity,
-          // Use the itemPrice when available, otherwise fallback to calculated price
-          price: item.itemPrice ? 
-            (item.itemPrice - item.totalDiscount) : 
-            (item.product.salePrice || item.product.price) + (item.priceAdjustment || 0),
-          // Include all attribute and discount information for the order item
-          combinationId: item.combinationId || null,
-          combinationHash: item.combinationHash || null,
-          selectedAttributes: item.selectedAttributes || {},
-          priceAdjustment: item.priceAdjustment || 0,
-          originalPrice: item.itemPrice || null,
-          totalDiscount: item.totalDiscount || 0,
-          discountData: item.discountData || null,
-        })),
-      };
-      
-      const response = await apiRequest('POST', '/api/orders', orderData);
-      return response.json();
+    mutationFn: async (orderData: any) => {
+      return apiRequest("/api/orders", {
+        method: "POST",
+        body: JSON.stringify(orderData)
+      });
     },
     onSuccess: (data) => {
-      setOrderId(data.id);
-      setOrderComplete(true);
-      clearCart();
+      toast({
+        title: "Order Created Successfully!",
+        description: `Order #${data.orderNumber} has been placed.`
+      });
       
-      toast({
-        title: "Order placed successfully!",
-        description: `Your order #${data.id} has been received.`,
-        duration: 5000,
-      });
+      // Clear cart and redirect to order confirmation
+      queryClient.invalidateQueries({ queryKey: ["/api/cart"] });
+      navigate(`/order-confirmation/${data.id}`);
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
-        title: "Failed to place order",
-        description: "There was an error processing your order. Please try again.",
-        variant: "destructive",
+        title: "Order Failed",
+        description: error.message || "Failed to create order. Please try again.",
+        variant: "destructive"
       });
-    },
+    }
   });
-  
-  // Handle form submission
-  const onSubmit = (data: CheckoutFormValues) => {
-    if (cartItems.length === 0) {
+
+  // Update user profile mutation
+  const updateProfileMutation = useMutation({
+    mutationFn: async (profileData: any) => {
+      return apiRequest("/api/user/profile", {
+        method: "PATCH",
+        body: JSON.stringify(profileData)
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+    }
+  });
+
+  const onSubmit = async (data: CheckoutFormData) => {
+    if (!cartItems || !Array.isArray(cartItems) || cartItems.length === 0) {
       toast({
-        title: "Your cart is empty",
-        description: "Add items to your cart before checking out.",
-        variant: "destructive",
+        title: "Empty Cart",
+        description: "Please add items to your cart before checkout.",
+        variant: "destructive"
       });
       return;
     }
-    
-    createOrderMutation.mutate(data);
+
+    setIsProcessing(true);
+
+    try {
+      // Save user details if requested
+      if (data.saveDetails && user) {
+        await updateProfileMutation.mutateAsync({
+          firstName: data.firstName,
+          lastName: data.lastName,
+          phone: data.phone,
+          addressLine1: data.addressLine1,
+          addressLine2: data.addressLine2,
+          city: data.city,
+          province: data.province,
+          postalCode: data.postalCode
+        });
+      }
+
+      // Prepare order data with product attributes
+      const orderItems = cartItems.map((item: any) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        unitPrice: item.price,
+        // Include product attributes for items that have them
+        productAttributes: item.productAttributes || {}
+      }));
+
+      const orderData = {
+        customerInfo: {
+          firstName: data.firstName,
+          lastName: data.lastName,
+          email: data.email,
+          phone: data.phone
+        },
+        shippingAddress: {
+          addressLine1: data.addressLine1,
+          addressLine2: data.addressLine2,
+          city: data.city,
+          province: data.province,
+          postalCode: data.postalCode
+        },
+        shippingMethod: data.shippingMethod,
+        shippingCost,
+        paymentMethod: data.paymentMethod,
+        specialInstructions: data.specialInstructions,
+        orderItems,
+        subtotal,
+        total
+      };
+
+      await createOrderMutation.mutateAsync(orderData);
+    } catch (error) {
+      console.error("Checkout error:", error);
+    } finally {
+      setIsProcessing(false);
+    }
   };
-  
-  // If cart is empty, show message
-  if (cartItems.length === 0 && !orderComplete) {
+
+  if (cartLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <Card>
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+          <div className="h-64 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!cartItems || cartItems.length === 0) {
+    return (
+      <div className="container mx-auto px-4 py-8 text-center">
+        <Card className="max-w-md mx-auto">
           <CardContent className="pt-6">
-            <div className="flex mb-4 gap-2">
-              <AlertCircle className="h-8 w-8 text-yellow-500" />
-              <h1 className="text-2xl font-bold text-gray-900">Your Cart is Empty</h1>
-            </div>
-            <p className="mb-4">You don't have any items in your cart to checkout.</p>
-            <Button asChild>
-              <a href="/">Continue Shopping</a>
-            </Button>
+            <Package className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+            <h2 className="text-xl font-semibold mb-2">Your cart is empty</h2>
+            <p className="text-gray-600 mb-4">Add some items to your cart before checkout.</p>
+            <Button onClick={() => navigate("/")}>Continue Shopping</Button>
           </CardContent>
         </Card>
       </div>
     );
   }
-  
-  // If order is complete, show confirmation
-  if (orderComplete && orderId) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <Card>
-          <CardContent className="pt-6 text-center">
-            <div className="flex flex-col items-center mb-6">
-              <CheckCircle className="h-16 w-16 text-green-500 mb-4" />
-              <h1 className="text-2xl font-bold text-gray-900">Order Confirmed!</h1>
-              <p className="text-gray-600 mt-2">
-                Your order #{orderId} has been placed successfully.
-              </p>
-            </div>
-            
-            <div className="bg-gray-50 p-4 rounded-lg mb-6">
-              <p className="font-medium">A confirmation email has been sent to your email address.</p>
-              <p className="text-sm text-gray-500 mt-2">
-                You can check the status of your order anytime in your account dashboard.
-              </p>
-            </div>
-            
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button asChild>
-                <a href="/">Continue Shopping</a>
-              </Button>
-              <Button variant="outline" asChild>
-                <a href="/profile">View Your Orders</a>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-  
+
   return (
-    <>
-      <Helmet>
-        <title>Checkout - TEE ME YOU</title>
-        <meta name="description" content="Complete your purchase. Fast, secure checkout for your South African products." />
-      </Helmet>
-      
-      <div className="container mx-auto px-4 py-6">
-        <h1 className="text-2xl font-bold mb-6">Checkout</h1>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Checkout Form */}
-          <div className="lg:col-span-2">
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Contact Information</CardTitle>
-                    <CardDescription>
-                      We'll use this information to contact you about your order.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="fullName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Full Name</FormLabel>
-                          <FormControl>
-                            <Input placeholder="John Doe" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="email"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Email</FormLabel>
-                            <FormControl>
-                              <Input placeholder="your@email.com" type="email" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="phoneNumber"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Phone Number</FormLabel>
-                            <FormControl>
-                              <Input placeholder="+27 12 345 6789" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Shipping Address</CardTitle>
-                    <CardDescription>
-                      Enter where you want your order delivered.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="address"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Address</FormLabel>
-                          <FormControl>
-                            <Input placeholder="123 Main St" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="city"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>City</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Cape Town" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="postalCode"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Postal Code</FormLabel>
-                            <FormControl>
-                              <Input placeholder="8001" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Shipping Method</CardTitle>
-                    <CardDescription>
-                      Select your preferred delivery option.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <FormField
-                      control={form.control}
-                      name="shippingMethod"
-                      render={({ field }) => (
-                        <FormItem className="space-y-3">
-                          <div className="space-y-2">
-                            {shippingMethods.map((method) => (
-                              <div
-                                key={method.id}
-                                className={`flex items-center justify-between p-4 border rounded-lg cursor-pointer ${
-                                  field.value === method.id
-                                    ? 'border-[#FF69B4] bg-[#FF69B4]/5'
-                                    : 'border-gray-200 hover:border-gray-300'
-                                }`}
-                                onClick={() => form.setValue('shippingMethod', method.id as any)}
-                              >
-                                <div className="flex items-center">
-                                  <div className={`w-4 h-4 rounded-full mr-3 ${
-                                    field.value === method.id
-                                      ? 'bg-[#FF69B4]'
-                                      : 'border border-gray-300'
-                                  }`}></div>
-                                  <div>
-                                    <h4 className="font-medium">{method.name}</h4>
-                                    <p className="text-sm text-gray-500">{method.description}</p>
-                                    <p className="text-sm text-gray-500">{method.estimatedDelivery}</p>
-                                  </div>
-                                </div>
-                                <div className="font-medium">{formatCurrency(method.price)}</div>
-                              </div>
-                            ))}
-                          </div>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Payment Method</CardTitle>
-                    <CardDescription>
-                      Select your preferred payment method.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Tabs defaultValue="credit-card" onValueChange={(value) => form.setValue('paymentMethod', value as any)}>
-                      <TabsList className="grid grid-cols-3 mb-4">
-                        {paymentMethods.map((method) => (
-                          <TabsTrigger key={method.id} value={method.id}>
-                            {method.name}
-                          </TabsTrigger>
-                        ))}
-                      </TabsList>
-                      
-                      {paymentMethods.map((method) => (
-                        <TabsContent key={method.id} value={method.id}>
-                          <div className="p-4 bg-gray-50 rounded-lg">
-                            <div className="flex items-center mb-4">
-                              <method.icon className="h-5 w-5 mr-2 text-[#FF69B4]" />
-                              <h3 className="font-medium">{method.name}</h3>
-                            </div>
-                            <p className="text-sm text-gray-600 mb-4">{method.description}</p>
-                            
-                            {method.id === 'credit-card' && (
-                              <div className="space-y-4">
-                                <div className="grid grid-cols-2 gap-4">
-                                  <div>
-                                    <label className="block text-sm font-medium mb-1">Card Number</label>
-                                    <Input placeholder="1234 5678 9012 3456" disabled />
-                                  </div>
-                                  <div>
-                                    <label className="block text-sm font-medium mb-1">Name on Card</label>
-                                    <Input placeholder="John Doe" disabled />
-                                  </div>
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                  <div>
-                                    <label className="block text-sm font-medium mb-1">Expiry Date</label>
-                                    <Input placeholder="MM/YY" disabled />
-                                  </div>
-                                  <div>
-                                    <label className="block text-sm font-medium mb-1">CVV</label>
-                                    <Input placeholder="123" disabled />
-                                  </div>
-                                </div>
-                                <p className="text-sm text-gray-500 italic">
-                                  Note: This is a demo app. No actual payment will be processed.
-                                </p>
-                              </div>
-                            )}
-                            
-                            {method.id === 'eft' && (
-                              <div>
-                                <p className="text-sm text-gray-600">
-                                  Bank: TEE ME YOU Bank<br />
-                                  Account Number: 1234567890<br />
-                                  Branch Code: 123456<br />
-                                  Reference: Your order number will be generated after checkout
-                                </p>
-                              </div>
-                            )}
-                            
-                            {method.id === 'cash' && (
-                              <p className="text-sm text-gray-600">
-                                You'll pay in cash when your order is delivered to your doorstep.
-                              </p>
-                            )}
-                          </div>
-                        </TabsContent>
-                      ))}
-                    </Tabs>
-                  </CardContent>
-                </Card>
-                
-                <Button 
-                  type="submit" 
-                  className="w-full bg-[#FF69B4] hover:bg-[#FF1493] text-white"
-                  disabled={createOrderMutation.isPending}
-                >
-                  {createOrderMutation.isPending ? 'Processing...' : 'Place Order'}
-                </Button>
-              </form>
-            </Form>
-          </div>
-          
-          {/* Order Summary */}
-          <div>
-            <Card className="sticky top-4">
+    <div className="container mx-auto px-4 py-8">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold">Checkout</h1>
+        <p className="text-gray-600">Complete your order details below</p>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Checkout Form */}
+        <div className="lg:col-span-2 space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            
+            {/* Customer Information */}
+            <Card>
               <CardHeader>
-                <CardTitle>Order Summary</CardTitle>
-                <CardDescription>
-                  {cartItems.length} {cartItems.length === 1 ? 'item' : 'items'} in your cart
-                </CardDescription>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="h-5 w-5" />
+                  Customer Information
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Cart Items */}
-                <div className="space-y-3">
-                  {cartItems.map((item) => (
-                    <div key={item.id} className="flex items-start py-2">
-                      <img 
-                        src={item.product.imageUrl} 
-                        alt={item.product.name} 
-                        className="w-16 h-16 object-cover rounded-md"
-                      />
-                      <div className="ml-3 flex-1">
-                        <h4 className="text-sm font-medium">{item.product.name}</h4>
-                        
-                        {/* Selected attributes */}
-                        {item.selectedAttributes && Object.keys(item.selectedAttributes).length > 0 && (
-                          <div className="mt-1 mb-1">
-                            {Object.entries(item.selectedAttributes as Record<string, any>).map(([attrId, selection]) => (
-                              <div key={attrId} className="flex text-xs text-gray-600">
-                                <span className="font-medium mr-1">{selection.attributeName}:</span>
-                                <span>{selection.displayValue || selection.value}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                        
-                        <div className="flex items-center mt-1">
-                          <span className="text-sm text-[#FF69B4] font-medium flex items-center gap-2">
-                            {item.itemPrice ? 
-                              formatCurrency(item.itemPrice - item.totalDiscount) : 
-                              formatCurrency((item.product.salePrice || item.product.price) + (item.priceAdjustment || 0))
-                            }
-                            
-                            {item.totalDiscount > 0 && (
-                              <span className="text-gray-500 line-through text-xs">
-                                {formatCurrency(item.itemPrice || 0)}
-                              </span>
-                            )}
-                          </span>
-                          <span className="text-xs text-gray-500 mx-2">×</span>
-                          <span className="text-sm">{item.quantity}</span>
-                        </div>
-                      </div>
-                      <div className="font-medium flex flex-col items-end">
-                        <span>
-                          {item.itemPrice ? 
-                            formatCurrency((item.itemPrice - item.totalDiscount) * item.quantity) :
-                            formatCurrency(((item.product.salePrice || item.product.price) + (item.priceAdjustment || 0)) * item.quantity)
-                          }
-                        </span>
-                        {item.totalDiscount > 0 && (
-                          <span className="text-xs text-pink-600">
-                            You save: {formatCurrency(item.totalDiscount * item.quantity)}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="firstName">First Name</Label>
+                    <Input
+                      id="firstName"
+                      {...form.register("firstName")}
+                      placeholder="Enter your first name"
+                    />
+                    {form.formState.errors.firstName && (
+                      <p className="text-sm text-red-600 mt-1">
+                        {form.formState.errors.firstName.message}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <Label htmlFor="lastName">Last Name</Label>
+                    <Input
+                      id="lastName"
+                      {...form.register("lastName")}
+                      placeholder="Enter your last name"
+                    />
+                    {form.formState.errors.lastName && (
+                      <p className="text-sm text-red-600 mt-1">
+                        {form.formState.errors.lastName.message}
+                      </p>
+                    )}
+                  </div>
                 </div>
                 
-                <Separator />
-                
-                {/* Price Calculations */}
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Subtotal</span>
-                    <span>{formatCurrency(subtotal)}</span>
-                  </div>
-                  {cartSummary.totalDiscount > 0 && (
-                    <div className="flex justify-between text-pink-600">
-                      <span>Discount</span>
-                      <span>-{formatCurrency(cartSummary.totalDiscount)}</span>
-                    </div>
+                <div>
+                  <Label htmlFor="email" className="flex items-center gap-2">
+                    <Mail className="h-4 w-4" />
+                    Email Address
+                  </Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    {...form.register("email")}
+                    placeholder="Enter your email"
+                  />
+                  {form.formState.errors.email && (
+                    <p className="text-sm text-red-600 mt-1">
+                      {form.formState.errors.email.message}
+                    </p>
                   )}
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Shipping</span>
-                    <span>{formatCurrency(shippingCost)}</span>
+                </div>
+                
+                <div>
+                  <Label htmlFor="phone" className="flex items-center gap-2">
+                    <Phone className="h-4 w-4" />
+                    Phone Number
+                  </Label>
+                  <Input
+                    id="phone"
+                    {...form.register("phone")}
+                    placeholder="Enter your phone number"
+                  />
+                  {form.formState.errors.phone && (
+                    <p className="text-sm text-red-600 mt-1">
+                      {form.formState.errors.phone.message}
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Shipping Address */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MapPin className="h-5 w-5" />
+                  Shipping Address
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="addressLine1">Address Line 1</Label>
+                  <Input
+                    id="addressLine1"
+                    {...form.register("addressLine1")}
+                    placeholder="Street address"
+                  />
+                  {form.formState.errors.addressLine1 && (
+                    <p className="text-sm text-red-600 mt-1">
+                      {form.formState.errors.addressLine1.message}
+                    </p>
+                  )}
+                </div>
+                
+                <div>
+                  <Label htmlFor="addressLine2">Address Line 2 (Optional)</Label>
+                  <Input
+                    id="addressLine2"
+                    {...form.register("addressLine2")}
+                    placeholder="Apartment, suite, etc."
+                  />
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label htmlFor="city">City</Label>
+                    <Input
+                      id="city"
+                      {...form.register("city")}
+                      placeholder="Enter city"
+                    />
+                    {form.formState.errors.city && (
+                      <p className="text-sm text-red-600 mt-1">
+                        {form.formState.errors.city.message}
+                      </p>
+                    )}
                   </div>
-                  <Separator />
-                  <div className="flex justify-between font-bold">
-                    <span>Total</span>
-                    <span>{formatCurrency(total)}</span>
+                  
+                  <div>
+                    <Label htmlFor="province">Province</Label>
+                    <select
+                      id="province"
+                      {...form.register("province")}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <option value="">Select Province</option>
+                      {provinces.map(province => (
+                        <option key={province} value={province}>
+                          {province}
+                        </option>
+                      ))}
+                    </select>
+                    {form.formState.errors.province && (
+                      <p className="text-sm text-red-600 mt-1">
+                        {form.formState.errors.province.message}
+                      </p>
+                    )}
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="postalCode">Postal Code</Label>
+                    <Input
+                      id="postalCode"
+                      {...form.register("postalCode")}
+                      placeholder="Enter postal code"
+                    />
+                    {form.formState.errors.postalCode && (
+                      <p className="text-sm text-red-600 mt-1">
+                        {form.formState.errors.postalCode.message}
+                      </p>
+                    )}
                   </div>
                 </div>
               </CardContent>
-              <CardFooter>
-                <div className="text-sm text-gray-500 w-full">
-                  <div className="flex items-center justify-center text-[#FF69B4]">
-                    <Truck className="h-4 w-4 mr-2" />
-                    <span>Free shipping on orders over R1000</span>
-                  </div>
-                </div>
-              </CardFooter>
             </Card>
-          </div>
+
+            {/* Shipping Method */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Truck className="h-5 w-5" />
+                  Shipping Method
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <RadioGroup
+                  value={selectedShippingMethod}
+                  onValueChange={(value) => form.setValue("shippingMethod", value as any)}
+                >
+                  {shippingOptions.map((option) => (
+                    <div key={option.id} className="flex items-center space-x-2 p-4 border rounded-lg">
+                      <RadioGroupItem value={option.id} id={option.id} />
+                      <Label htmlFor={option.id} className="flex-1 cursor-pointer">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <option.icon className="h-5 w-5 text-gray-500" />
+                            <div>
+                              <div className="font-medium">{option.name}</div>
+                              <div className="text-sm text-gray-600">{option.description}</div>
+                              <div className="text-sm text-gray-500">{option.estimatedDays}</div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-semibold">
+                              {option.price === 0 ? "Free" : `R${option.price}`}
+                            </div>
+                          </div>
+                        </div>
+                      </Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+              </CardContent>
+            </Card>
+
+            {/* Payment Method */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CreditCard className="h-5 w-5" />
+                  Payment Method
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <RadioGroup
+                  value={selectedPaymentMethod}
+                  onValueChange={(value) => form.setValue("paymentMethod", value as any)}
+                >
+                  {paymentOptions.map((option) => (
+                    <div key={option.id} className="flex items-center space-x-2 p-4 border rounded-lg">
+                      <RadioGroupItem value={option.id} id={option.id} />
+                      <Label htmlFor={option.id} className="flex-1 cursor-pointer">
+                        <div className="flex items-center gap-3">
+                          <option.icon className="h-5 w-5 text-gray-500" />
+                          <div>
+                            <div className="font-medium">{option.name}</div>
+                            <div className="text-sm text-gray-600">{option.description}</div>
+                          </div>
+                        </div>
+                      </Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+              </CardContent>
+            </Card>
+
+            {/* Special Instructions */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Special Instructions</CardTitle>
+                <CardDescription>
+                  Any special delivery instructions or notes for your order
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Textarea
+                  {...form.register("specialInstructions")}
+                  placeholder="Enter any special instructions for your order..."
+                  rows={3}
+                />
+              </CardContent>
+            </Card>
+
+            {/* Save Details Option */}
+            {user && (
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="saveDetails"
+                      {...form.register("saveDetails")}
+                      className="rounded border-gray-300"
+                    />
+                    <Label htmlFor="saveDetails" className="text-sm">
+                      Save these details to my profile for future orders
+                    </Label>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Submit Button */}
+            <Button
+              type="submit"
+              size="lg"
+              className="w-full"
+              disabled={isProcessing || createOrderMutation.isPending}
+            >
+              {isProcessing ? "Processing Order..." : `Place Order - R${total.toFixed(2)}`}
+            </Button>
+          </form>
+        </div>
+
+        {/* Order Summary */}
+        <div className="lg:col-span-1">
+          <Card className="sticky top-4">
+            <CardHeader>
+              <CardTitle>Order Summary</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Cart Items */}
+              <div className="space-y-3">
+                {Array.isArray(cartItems) && cartItems.map((item: any) => (
+                  <div key={item.id} className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <div className="font-medium text-sm">{item.productName}</div>
+                      <div className="text-xs text-gray-600">Qty: {item.quantity}</div>
+                      {/* Show product attributes if they exist */}
+                      {item.productAttributes && Object.keys(item.productAttributes).length > 0 && (
+                        <div className="text-xs text-gray-500 mt-1">
+                          {Object.entries(item.productAttributes).map(([key, value]) => (
+                            <Badge key={key} variant="outline" className="mr-1 text-xs">
+                              {key}: {String(value)}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-sm font-medium">
+                      R{(item.price * item.quantity).toFixed(2)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <Separator />
+
+              {/* Pricing Breakdown */}
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Subtotal:</span>
+                  <span>R{subtotal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span>Shipping:</span>
+                  <span>{shippingCost === 0 ? "Free" : `R${shippingCost.toFixed(2)}`}</span>
+                </div>
+                <Separator />
+                <div className="flex justify-between font-bold">
+                  <span>Total:</span>
+                  <span>R{total.toFixed(2)}</span>
+                </div>
+              </div>
+
+              {/* Selected Options Summary */}
+              <div className="text-xs text-gray-600 space-y-1">
+                <div>
+                  Shipping: {shippingOptions.find(o => o.id === selectedShippingMethod)?.name}
+                </div>
+                <div>
+                  Payment: {paymentOptions.find(o => o.id === selectedPaymentMethod)?.name}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
-    </>
+    </div>
   );
-};
-
-export default CheckoutPage;
+}
