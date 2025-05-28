@@ -39,7 +39,7 @@ import CategorySidebar from '@/components/ui/category-sidebar';
 import type { Product, Category } from '@shared/schema';
 import { Input } from '@/components/ui/input';
 import { formatCurrency } from '@/lib/utils';
-import type { Attribute, AttributeOption } from '@/types/attribute-types';
+
 
 // Availability filter options (replaced stock filter)
 const availabilityOptions = [
@@ -96,7 +96,7 @@ const ProductListing = () => {
   const [ratingFilter, setRatingFilter] = useState(searchParams.get('rating') || '');
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
-  const [attributeFilters, setAttributeFilters] = useState<AttributeFilter[]>([]);
+
   const [filters, setFilters] = useState({
     onSale: searchParams.get('on_sale') === 'true',
     freeShipping: searchParams.get('free_shipping') === 'true',
@@ -224,10 +224,7 @@ const ProductListing = () => {
     if (filters.newArrivals) params.set('new_arrivals', 'true');
     if (page > 1) params.set('page', page.toString());
     
-    // Add attribute filters to URL
-    if (attributeFilters.length > 0) {
-      params.set('attributeFilters', JSON.stringify(attributeFilters));
-    }
+
     
     const queryString = params.toString();
     const newLocation = queryString ? `/products?${queryString}` : '/products';
@@ -255,7 +252,7 @@ const ProductListing = () => {
     }
     
     setActiveFilters(newActiveFilters);
-  }, [sortBy, selectedCategory, ratingFilter, searchQuery, filters, page, priceRange, attributeFilters, categories, location, setLocation]);
+  }, [sortBy, selectedCategory, ratingFilter, searchQuery, filters, page, priceRange, categories, location, setLocation]);
   
   const toggleFilter = () => {
     setIsFilterOpen(!isFilterOpen);
