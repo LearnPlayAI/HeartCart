@@ -575,24 +575,7 @@ const ProductListing = () => {
           </p>
         </div>
         
-        {/* Search Bar */}
-        <div className="mb-6">
-          <form onSubmit={handleSearchSubmit} className="flex gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-              <Input
-                type="search"
-                placeholder="Search products..."
-                className="pl-10"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-            <Button type="submit" className="bg-[#FF69B4] hover:bg-[#FF1493] text-white">
-              Search
-            </Button>
-          </form>
-        </div>
+
         
         {/* Active Filters */}
         {activeFilters.length > 0 && (

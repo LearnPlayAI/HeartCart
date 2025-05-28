@@ -1256,7 +1256,20 @@ export class DatabaseStorage implements IStorage {
                   ? sql`1=1`
                   : eq(products.isActive, true),
                 eq(categories.isActive, true),
-                like(products.name, searchTerm),
+                or(
+                  like(products.name, searchTerm),
+                  like(products.description, searchTerm),
+                  like(products.brand, searchTerm),
+                  like(products.sku, searchTerm),
+                  like(products.supplier, searchTerm),
+                  like(products.metaTitle, searchTerm),
+                  like(products.metaDescription, searchTerm),
+                  like(products.metaKeywords, searchTerm),
+                  sql`EXISTS (
+                    SELECT 1 FROM unnest(${products.tags}) AS tag 
+                    WHERE tag ILIKE ${searchTerm}
+                  )`
+                ),
               ),
             )
             .limit(limit)
@@ -1282,7 +1295,20 @@ export class DatabaseStorage implements IStorage {
                 options?.includeInactive
                   ? sql`1=1`
                   : eq(products.isActive, true),
-                like(products.name, searchTerm),
+                or(
+                  like(products.name, searchTerm),
+                  like(products.description, searchTerm),
+                  like(products.brand, searchTerm),
+                  like(products.sku, searchTerm),
+                  like(products.supplier, searchTerm),
+                  like(products.metaTitle, searchTerm),
+                  like(products.metaDescription, searchTerm),
+                  like(products.metaKeywords, searchTerm),
+                  sql`EXISTS (
+                    SELECT 1 FROM unnest(${products.tags}) AS tag 
+                    WHERE tag ILIKE ${searchTerm}
+                  )`
+                ),
               ),
             )
             .limit(limit)
