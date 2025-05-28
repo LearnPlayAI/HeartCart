@@ -1010,7 +1010,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     q: z.string().min(1, { message: "Search query is required" }),
     limit: z.coerce.number().int().nonnegative().default(20),
     offset: z.coerce.number().int().nonnegative().default(0)
-  });
+  }).passthrough(); // Allow additional parameters
 
   app.get(
     "/api/search",
