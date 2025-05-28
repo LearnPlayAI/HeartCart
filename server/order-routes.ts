@@ -8,7 +8,7 @@ import { insertOrderSchema, insertOrderItemSchema } from "@shared/schema";
 import { logger } from "./logger";
 import multer from "multer";
 import path from "path";
-import fs from "fs/promises";
+import fs from "fs";
 
 // Define the order creation schema that matches the checkout form structure
 const checkoutOrderSchema = z.object({
@@ -279,8 +279,34 @@ router.get("/:id", isAuthenticated, asyncHandler(async (req: Request, res: Respo
   }
 }));
 
+// Custom multer configuration for EFT proof of payment uploads
+const eftProofStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    // We'll set the destination dynamically in the route handler
+    cb(null, './temp'); // Temporary destination, we'll move it later
+  },
+  filename: function (req, file, cb) {
+    cb(null, 'pdf_file.pdf'); // Always use this filename as specified
+  }
+});
+
+const eftProofUpload = multer({ 
+  storage: eftProofStorage,
+  fileFilter: (req, file, cb) => {
+    // Only allow PDF files for proof of payment
+    if (file.mimetype === 'application/pdf') {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF files are allowed for proof of payment'));
+    }
+  },
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit
+  }
+});
+
 // Upload proof of payment
-router.post("/:id/upload-proof", isAuthenticated, upload.single('proofOfPayment'), asyncHandler(async (req: Request, res: Response) => {
+router.post("/:id/upload-proof", isAuthenticated, eftProofUpload.single('proofOfPayment'), asyncHandler(async (req: Request, res: Response) => {
   try {
     const orderId = parseInt(req.params.id);
     const userId = req.user?.id;
@@ -307,8 +333,24 @@ router.post("/:id/upload-proof", isAuthenticated, upload.single('proofOfPayment'
       return sendError(res, "Unauthorized", 403);
     }
 
+    // Get user details for the folder path
+    const user = await storage.getUserById(userId);
+    if (!user) {
+      return sendError(res, "User not found", 401);
+    }
+
+    // Create the proper directory structure: /root/POPS/{user_email}/{order_number}/
+    const eftProofDir = path.join(process.cwd(), 'POPS', user.email, order.orderNumber);
+    const finalFilePath = path.join(eftProofDir, 'pdf_file.pdf');
+    
+    // Create directory if it doesn't exist
+    await fs.promises.mkdir(eftProofDir, { recursive: true });
+    
+    // Move the file from temp location to the proper EFT proof directory
+    await fs.promises.rename(req.file.path, finalFilePath);
+
     // Update the order with the file path
-    const updatedOrder = await storage.updateOrderEftProof(orderId, req.file.path);
+    const updatedOrder = await storage.updateOrderEftProof(orderId, finalFilePath);
 
     logger.info("Proof of payment uploaded", {
       orderId,
