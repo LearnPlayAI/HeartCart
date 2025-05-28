@@ -141,7 +141,9 @@ const ProductListing = () => {
     error: productsError
   } = useQuery<StandardApiResponse<Product[], { total?: number, totalPages?: number }>>({
     queryKey: ['/api/products', queryParams],
-    enabled: true
+    enabled: true,
+    staleTime: 0, // Always fetch fresh data
+    cacheTime: 0, // Don't cache the results
   });
   const products = productsResponse?.success ? productsResponse.data : [];
   const totalPages = productsResponse?.meta?.totalPages || 1;
