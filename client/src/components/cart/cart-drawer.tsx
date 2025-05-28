@@ -84,12 +84,12 @@ const CartDrawer = () => {
                     <div className="text-[#FF69B4] font-bold text-sm flex items-center gap-2">
                       {item.itemPrice ? (
                         <>
-                          {formatCurrency(item.itemPrice - item.totalDiscount)} 
+                          {formatCurrency(Number(item.itemPrice))} 
                           
-                          {/* Show original price if there are discounts */}
-                          {item.totalDiscount > 0 && (
+                          {/* Show original price if on sale */}
+                          {item.product.salePrice && item.product.price > item.product.salePrice && (
                             <span className="text-gray-500 line-through text-xs">
-                              {formatCurrency(item.itemPrice)}
+                              {formatCurrency(item.product.price)}
                             </span>
                           )}
                         </>

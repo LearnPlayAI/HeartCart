@@ -60,17 +60,18 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   // If response is not available or doesn't have success/data properties, fall back to empty array
   const cartItems = (responseData?.success ? responseData.data : []);
   
-  // Calculate cart summary with persistence approach
+  // Calculate cart summary with simplified approach
   // Since we're using database persistence, the pricing calculations are done server-side
   // Here we simply aggregate the information that was calculated and stored in the database
   const cartSummary = useMemo<CartSummary>(() => {
     return cartItems.reduce((summary, item) => {
-      // For each item, accumulate total items, price and discounts
+      // For each item, accumulate total items and price
+      const itemPrice = Number(item.itemPrice) || 0;
       return {
         itemCount: summary.itemCount + item.quantity,
-        subtotal: summary.subtotal + ((item.itemPrice || 0) * item.quantity),
-        totalDiscount: summary.totalDiscount + (item.totalDiscount * item.quantity),
-        finalTotal: summary.finalTotal + (((item.itemPrice || 0) - item.totalDiscount) * item.quantity)
+        subtotal: summary.subtotal + (itemPrice * item.quantity),
+        totalDiscount: 0, // No discounts in simplified cart
+        finalTotal: summary.finalTotal + (itemPrice * item.quantity)
       };
     }, {
       itemCount: 0,
