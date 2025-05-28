@@ -111,18 +111,24 @@ const ProductListing = () => {
   });
   const categories = categoriesResponse?.success ? categoriesResponse.data : [];
   
-  // Fetch products with category filtering
+  // Fetch products with category filtering or search
   const { 
     data: productsResponse, 
     isLoading: isLoadingProducts,
     error: productsError
   } = useQuery<StandardApiResponse<Product[], { total?: number, totalPages?: number }>>({
-    queryKey: ['/api/products', { 
-      limit, 
-      offset: (page - 1) * limit,
-      categoryId: selectedCategoryId,
-      includeChildren: searchParams.get('includeChildren') === 'true'
-    }],
+    queryKey: searchQuery ? 
+      ['/api/search', { 
+        q: searchQuery,
+        limit, 
+        offset: (page - 1) * limit
+      }] :
+      ['/api/products', { 
+        limit, 
+        offset: (page - 1) * limit,
+        categoryId: selectedCategoryId,
+        includeChildren: searchParams.get('includeChildren') === 'true'
+      }],
   });
   const products = productsResponse?.success ? productsResponse.data : [];
   const totalPages = productsResponse?.meta?.totalPages || 1;
@@ -494,8 +500,7 @@ const ProductListing = () => {
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       if (filters.newArrivals && new Date(product.createdAt) < thirtyDaysAgo) return false;
       
-      // Apply search query
-      if (searchQuery && !product.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+      // Search query is now handled by the API, no need for client-side filtering
       
       // Apply attribute filters
       if (attributeFilters.length > 0 && productAttributeValues) {
