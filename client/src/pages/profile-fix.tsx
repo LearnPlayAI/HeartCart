@@ -48,15 +48,48 @@ interface UserType {
   lastLogin: Date | null;
 }
 
-// Define interface for Order
+// Define interface for Order that matches our new camelCase system
 interface OrderType {
   id: number;
   userId: number;
+  orderNumber: string;
   status: string;
-  totalAmount: number;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  shippingAddress: string;
+  shippingCity: string;
+  shippingPostalCode: string;
+  shippingMethod: string;
+  shippingCost: number;
   paymentMethod: string;
-  createdAt: string | Date;
-  updatedAt: string | Date;
+  paymentStatus: string;
+  subtotalAmount: number;
+  totalAmount: number;
+  customerNotes: string | null;
+  adminNotes: string | null;
+  trackingNumber: string | null;
+  createdAt: string;
+  updatedAt: string;
+  shippedAt: string | null;
+  deliveredAt: string | null;
+  items?: OrderItemType[];
+}
+
+// Define interface for Order Items
+interface OrderItemType {
+  id: number;
+  orderId: number;
+  productId: number;
+  productName: string;
+  productSku: string;
+  productImageUrl: string | null;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  selectedAttributes: Record<string, string> | null;
+  attributeDisplayText: string | null;
+  createdAt: string;
 }
 
 // Profile form schema
@@ -90,12 +123,15 @@ const ProfilePage: React.FC = () => {
 
   // Fetch orders data
   const { 
-    data: orders, 
+    data: ordersResponse, 
     isLoading: isLoadingOrders 
-  } = useQuery<OrderType[]>({
+  } = useQuery<{success: boolean; data: OrderType[]}>({
     queryKey: ['/api/orders'],
     enabled: !!user,
   });
+
+  // Extract orders from response
+  const orders = ordersResponse?.success ? ordersResponse.data : [];
 
   // Setup profile form
   const profileForm = useForm<ProfileFormValues>({
