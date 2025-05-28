@@ -847,24 +847,26 @@ export class DatabaseStorage implements IStorage {
         try {
           // If we're not filtering by category but we need to exclude products
           // from inactive categories, we need to join with the categories table
+          const allConditions = [...conditions, eq(categories.isActive, true)];
+          
+          // Apply search filter if provided
+          if (search) {
+            const searchTerm = `%${search}%`;
+            allConditions.push(
+              or(
+                like(products.name, searchTerm),
+                like(products.description || "", searchTerm),
+              )
+            );
+          }
+
           const query = db
             .select({
               product: products,
             })
             .from(products)
             .innerJoin(categories, eq(products.categoryId, categories.id))
-            .where(and(...conditions, eq(categories.isActive, true)));
-
-          // Apply search filter if provided
-          if (search) {
-            const searchTerm = `%${search}%`;
-            query.where(
-              or(
-                like(products.name, searchTerm),
-                like(products.description || "", searchTerm),
-              ),
-            );
-          }
+            .where(and(...allConditions));
 
           const result = await query.limit(limit).offset(offset);
           const productList = result.map((row) => row.product);
@@ -884,22 +886,24 @@ export class DatabaseStorage implements IStorage {
       // or we filtered by a specific category that is active
 
       try {
-        // Apply base conditions
-        let query = db.select().from(products);
-
-        if (conditions.length > 0) {
-          query = query.where(and(...conditions));
-        }
-
+        // Combine all conditions including search
+        const allConditions = [...conditions];
+        
         // Add search condition if provided
         if (search) {
           const searchTerm = `%${search}%`;
-          query = query.where(
+          allConditions.push(
             or(
               like(products.name, searchTerm),
               like(products.description || "", searchTerm),
-            ),
+            )
           );
+        }
+
+        // Apply all conditions at once
+        let query = db.select().from(products);
+        if (allConditions.length > 0) {
+          query = query.where(and(...allConditions));
         }
 
         const productList = await query.limit(limit).offset(offset);
