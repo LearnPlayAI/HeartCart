@@ -77,8 +77,8 @@ const ProductListing = () => {
   const { addItem } = useCart();
   const { toast } = useToast();
   
-  // Parse URL parameters
-  const searchParams = new URLSearchParams(location.split('?')[1] || '');
+  // Parse URL parameters from window.location.search since wouter doesn't include query params
+  const searchParams = new URLSearchParams(window.location.search);
   
   // State for filters - initialize from URL params
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
@@ -102,9 +102,8 @@ const ProductListing = () => {
   
   // Update state when URL changes (for direct navigation or back/forward)
   useEffect(() => {
-    console.log('URL parsing - full location:', location);
-    const urlParts = location.split('?');
-    const queryString = urlParts[1] || '';
+    console.log('URL parsing - full location:', window.location.href);
+    const queryString = window.location.search;
     console.log('Query string extracted:', queryString);
     
     const currentSearchParams = new URLSearchParams(queryString);
