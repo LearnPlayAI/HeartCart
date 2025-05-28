@@ -1997,15 +1997,19 @@ export class DatabaseStorage implements IStorage {
 
         if (existingItem) {
           try {
-            // Update quantity and item price (in case price has changed)
+            // Update quantity and recalculate total item price
             const newQuantity =
               existingItem.quantity + (cartItem.quantity || 1);
+            
+            // Recalculate total price for the new quantity
+            const unitPrice = cartItem.itemPrice ? (cartItem.itemPrice / (cartItem.quantity || 1)) : 0;
+            const newItemPrice = unitPrice * newQuantity;
 
             const [updatedItem] = await db
               .update(cartItems)
               .set({ 
                 quantity: newQuantity,
-                itemPrice: cartItem.itemPrice || existingItem.itemPrice
+                itemPrice: newItemPrice
               })
               .where(eq(cartItems.id, existingItem.id))
               .returning();
