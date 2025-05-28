@@ -135,7 +135,7 @@ const ProductListing = () => {
       limit, 
       offset: (page - 1) * limit,
       categoryId: selectedCategoryId,
-      search: searchQuery || undefined,
+      q: searchQuery || undefined,
       includeChildren: searchParams.get('includeChildren') === 'true'
     }],
     enabled: true
