@@ -127,9 +127,13 @@ export default function CheckoutPage() {
     queryKey: ["/api/user"]
   });
 
-  // Fetch cart items
+  // Fetch cart items with fresh data
   const { data: cartItems, isLoading: cartLoading } = useQuery({
-    queryKey: ["/api/cart"]
+    queryKey: ["/api/cart"],
+    staleTime: 0, // Always fetch fresh data
+    cacheTime: 0, // Don't cache the results
+    refetchOnMount: true, // Refetch when component mounts
+    refetchOnWindowFocus: true // Refetch when window gets focus
   });
 
   // Calculate totals
