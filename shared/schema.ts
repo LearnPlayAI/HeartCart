@@ -96,22 +96,19 @@ export const products = pgTable("products", {
   };
 });
 
-// Cart items table
+// Cart items table - simplified without deprecated combination logic
 export const cartItems = pgTable("cart_items", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id),
-  productId: integer("product_id").references(() => products.id),
+  userId: integer("userId").notNull().references(() => users.id),
+  productId: integer("productId").notNull().references(() => products.id),
   quantity: integer("quantity").notNull().default(1),
-  combinationHash: text("combination_hash"),
-  // Remove reference to non-existent table
-  combinationId: integer("combination_id"),
-  selectedAttributes: jsonb("selected_attributes").default({}),
-  priceAdjustment: doublePrecision("price_adjustment").default(0),
-  // New discount-related fields
-  discountData: jsonb("discount_data"),
-  totalDiscount: doublePrecision("total_discount").default(0),
-  itemPrice: doublePrecision("item_price"),
-  createdAt: text("created_at").default(String(new Date().toISOString())).notNull(),
+  itemPrice: decimal("itemPrice", { precision: 10, scale: 2 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+}, (table) => {
+  return {
+    userProductUnique: unique().on(table.userId, table.productId),
+  };
 });
 
 // Orders table
@@ -340,6 +337,8 @@ export const insertProductSchema = createInsertSchema(products).omit({
 
 export const insertCartItemSchema = createInsertSchema(cartItems).omit({
   id: true,
+  createdAt: true,
+  updatedAt: true,
 });
 
 export const insertOrderSchema = createInsertSchema(orders).omit({

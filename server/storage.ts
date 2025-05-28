@@ -1978,126 +1978,66 @@ export class DatabaseStorage implements IStorage {
 
   async addToCart(cartItem: InsertCartItem): Promise<CartItem> {
     try {
-      // Check if the item with same combination is already in the cart
-      const query = and(
-        eq(cartItems.userId, cartItem.userId),
-        eq(cartItems.productId, cartItem.productId),
-      );
+      console.log(`🔍 NEW CART DEBUG - Received cartItem:`, cartItem);
+      console.log(`🔍 NEW CART DEBUG - itemPrice value:`, cartItem.itemPrice, typeof cartItem.itemPrice);
+      
+      // Check if the item is already in the cart (same user and product)
+      const [existingItem] = await db
+        .select()
+        .from(cartItems)
+        .where(and(
+          eq(cartItems.userId, cartItem.userId),
+          eq(cartItems.productId, cartItem.productId)
+        ));
 
-      // Add combination check if a combination is selected
-      const fullQuery = cartItem.combinationHash
-        ? and(query, eq(cartItems.combinationHash, cartItem.combinationHash))
-        : query;
+      if (existingItem) {
+        // Update quantity for existing item
+        const newQuantity = existingItem.quantity + cartItem.quantity;
+        const [updatedItem] = await db
+          .update(cartItems)
+          .set({ 
+            quantity: newQuantity,
+            updatedAt: new Date()
+          })
+          .where(eq(cartItems.id, existingItem.id))
+          .returning();
 
-      try {
-        const [existingItem] = await db
-          .select()
-          .from(cartItems)
-          .where(fullQuery);
+        logger.info(`Updated quantity for existing cart item`, {
+          cartItemId: existingItem.id,
+          productId: cartItem.productId,
+          userId: cartItem.userId,
+          oldQuantity: existingItem.quantity,
+          newQuantity: newQuantity,
+        });
 
-        if (existingItem) {
-          try {
-            // Update quantity and recalculate total item price
-            const newQuantity =
-              existingItem.quantity + (cartItem.quantity || 1);
-            
-            // Recalculate total price for the new quantity
-            const unitPrice = cartItem.itemPrice ? (cartItem.itemPrice / (cartItem.quantity || 1)) : 0;
-            const newItemPrice = unitPrice * newQuantity;
-
-            const [updatedItem] = await db
-              .update(cartItems)
-              .set({ 
-                quantity: newQuantity,
-                itemPrice: newItemPrice
-              })
-              .where(eq(cartItems.id, existingItem.id))
-              .returning();
-
-            logger.info(`Updated quantity for existing cart item`, {
-              cartItemId: existingItem.id,
-              productId: cartItem.productId,
-              userId: cartItem.userId,
-              oldQuantity: existingItem.quantity,
-              newQuantity: newQuantity,
-            });
-
-            return updatedItem;
-          } catch (updateError) {
-            logger.error(`Error updating quantity for existing cart item`, {
-              error: updateError,
-              cartItemId: existingItem.id,
-              productId: cartItem.productId,
-              userId: cartItem.userId,
-            });
-            throw updateError; // Rethrow so the route handler can catch it and send a proper error response
-          }
-        } else {
-          try {
-            // Set default quantity if not provided and ensure all required fields are present
-            const itemToInsert = {
-              userId: cartItem.userId,
-              productId: cartItem.productId,
-              quantity: cartItem.quantity || 1,
-              combinationHash: cartItem.combinationHash || null,
-              combinationId: cartItem.combinationId || null,
-              selectedAttributes: cartItem.selectedAttributes || {},
-              priceAdjustment: cartItem.priceAdjustment || 0,
-              discountData: cartItem.discountData || null,
-              totalDiscount: cartItem.totalDiscount || 0,
-              itemPrice: cartItem.itemPrice || 0,
-              createdAt: cartItem.createdAt || new Date().toISOString(),
-            };
-
-            // Debug: Log the exact data being inserted with more detail
-            console.log(`🔍 CART DEBUG - Original cartItem:`, cartItem);
-            console.log(`🔍 CART DEBUG - Processed itemToInsert:`, itemToInsert);
-            console.log(`🔍 CART DEBUG - itemPrice value:`, itemToInsert.itemPrice, typeof itemToInsert.itemPrice);
-            
-            logger.debug(`Inserting cart item with data:`, {
-              itemToInsert,
-              itemPrice: itemToInsert.itemPrice,
-              createdAt: itemToInsert.createdAt
-            });
-
-            // Insert new item
-            const [newItem] = await db
-              .insert(cartItems)
-              .values(itemToInsert)
-              .returning();
-
-            // Debug: Log what was actually inserted
-            logger.debug(`Database returned after insert:`, {
-              newItem,
-              actualItemPrice: newItem.itemPrice,
-              actualCreatedAt: newItem.createdAt
-            });
-
-            logger.info(`Added new item to cart`, {
-              cartItemId: newItem.id,
-              productId: cartItem.productId,
-              userId: cartItem.userId,
-              quantity: itemToInsert.quantity,
-              hasCombination: !!cartItem.combinationHash,
-            });
-
-            return newItem;
-          } catch (insertError) {
-            logger.error(`Error inserting new item into cart`, {
-              error: insertError,
-              productId: cartItem.productId,
-              userId: cartItem.userId,
-            });
-            throw insertError; // Rethrow so the route handler can catch it and send a proper error response
-          }
-        }
-      } catch (queryError) {
-        logger.error(`Error checking if item already exists in cart`, {
-          error: queryError,
+        return updatedItem;
+      } else {
+        // Insert new item - ensure itemPrice is properly formatted
+        const itemToInsert = {
           userId: cartItem.userId,
           productId: cartItem.productId,
+          quantity: cartItem.quantity,
+          itemPrice: String(cartItem.itemPrice) // Convert to string for decimal column
+        };
+
+        console.log(`🔍 NEW CART DEBUG - Inserting:`, itemToInsert);
+
+        const [newItem] = await db
+          .insert(cartItems)
+          .values(itemToInsert)
+          .returning();
+
+        console.log(`🔍 NEW CART DEBUG - Database returned:`, newItem);
+
+        logger.info(`Added new item to cart`, {
+          cartItemId: newItem.id,
+          productId: cartItem.productId,
+          userId: cartItem.userId,
+          quantity: cartItem.quantity,
+          itemPrice: cartItem.itemPrice
         });
-        throw queryError; // Rethrow so the route handler can catch it and send a proper error response
+
+        return newItem;
       }
     } catch (error) {
       logger.error(`Error adding item to cart`, {
@@ -2105,7 +2045,7 @@ export class DatabaseStorage implements IStorage {
         userId: cartItem.userId,
         productId: cartItem.productId,
       });
-      throw error; // Rethrow so the route handler can catch it and send a proper error response
+      throw error;
     }
   }
 
