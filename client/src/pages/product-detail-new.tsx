@@ -419,12 +419,15 @@ const ProductDetailView = ({
     // Use base price without adjustments per requirements
     const basePrice = product.salePrice || product.price;
     
-    // Create the cart item with attribute selections
+    // Create the cart item with attribute selections  
     const cartItem = {
       productId: product.id,
       quantity,
       itemPrice: basePrice,
-      attributeSelections
+      attributeSelections,
+      discountData: null,
+      totalDiscount: 0,
+      product // Include product reference for cart display
     };
     
     console.log('🔍 PRODUCT DETAIL DEBUG - Selected Attributes:', selectedAttributes);
