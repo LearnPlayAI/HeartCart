@@ -148,7 +148,6 @@ router.post("/", isAuthenticated, asyncHandler(async (req: Request, res: Respons
       subtotalAmount: orderData.subtotal,
       totalAmount: orderData.total,
       customerNotes: orderData.specialInstructions || null,
-      specialNotes: orderData.specialInstructions || null,
     };
 
     // Create the order
