@@ -171,7 +171,12 @@ router.post("/", isAuthenticated, asyncHandler(async (req: Request, res: Respons
       return sendError(res, "Invalid order data", 400, error.errors);
     }
     
-    logger.error("Error creating order", { error, userId: req.user?.id });
+    // Log the full error details for debugging
+    logger.error("Error creating order", { 
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      userId: req.user?.id 
+    });
     return sendError(res, "Failed to create order", 500);
   }
 }));
