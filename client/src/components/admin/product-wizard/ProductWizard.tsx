@@ -407,10 +407,14 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ draftId, initialDa
         const referrer = document.referrer;
         
         // Check if we came from the pricing page
+        // Also check if there's a flag in sessionStorage indicating we came from pricing
         const cameFromPricing = referrer.includes('/admin/pricing') || 
-                               currentPath.includes('/admin/pricing');
+                               currentPath.includes('/admin/pricing') ||
+                               sessionStorage.getItem('cameFromPricing') === 'true';
         
         if (cameFromPricing) {
+          // Clear the flag
+          sessionStorage.removeItem('cameFromPricing');
           // Invalidate products query to refresh pricing data
           queryClient.invalidateQueries({ queryKey: ['/api/products'] });
           // Redirect back to pricing page

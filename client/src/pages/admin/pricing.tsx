@@ -256,6 +256,9 @@ export default function PricingPage() {
   // Handle edit product
   const handleEditProduct = async (productId: number) => {
     try {
+      // Set flag to indicate we came from pricing page
+      sessionStorage.setItem('cameFromPricing', 'true');
+      
       // Call API to create or reuse existing draft
       const response = await fetch(`/api/product-drafts/create-from-published/${productId}`, {
         method: 'POST',
