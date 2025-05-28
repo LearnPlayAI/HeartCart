@@ -575,6 +575,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/products", 
     validateRequest({ query: productsQuerySchema }),
     withStandardResponse(async (req: Request, res: Response) => {
+      console.log('RAW REQ.QUERY:', JSON.stringify(req.query, null, 2));
+      
       const { 
         limit, 
         offset, 
@@ -590,6 +592,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         freeShipping,
         newArrivals
       } = req.query;
+      
+      console.log('EXTRACTED attributeFilters:', attributeFilters);
       
       const user = req.user as any;
       const isAdmin = user && user.role === 'admin';

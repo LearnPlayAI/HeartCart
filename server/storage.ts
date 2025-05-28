@@ -851,7 +851,7 @@ export class DatabaseStorage implements IStorage {
                 .where(
                   and(
                     eq(productAttributes.attributeId, filter.attributeId),
-                    sql`${productAttributes.selectedOptions} && ARRAY[${optionIds.join(',')}]`
+                    sql`${productAttributes.selectedOptions} && ${JSON.stringify(optionIds)}::jsonb`
                   )
                 );
               
