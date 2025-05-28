@@ -3359,14 +3359,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { status, limit = 20, offset = 0 } = req.query;
       
       try {
-        // Get orders for the authenticated user
-        const orders = await storage.getOrdersByUser(user.id);
+        // Get orders for the authenticated user with items included
+        const basicOrders = await storage.getOrdersByUser(user.id);
+        
+        // Enhance each order with its items
+        const ordersWithItems = await Promise.all(
+          basicOrders.map(async (order) => {
+            try {
+              const orderWithItems = await storage.getOrderById(order.id);
+              return orderWithItems || order;
+            } catch (error) {
+              logger.warn('Failed to fetch items for order', { orderId: order.id, error });
+              return { ...order, items: [] };
+            }
+          })
+        );
+        
+        // Apply status filter if provided
+        const filteredOrders = status 
+          ? ordersWithItems.filter(order => order.status === status)
+          : ordersWithItems;
         
         return res.json({
           success: true,
-          data: orders,
+          data: filteredOrders,
           meta: {
-            count: orders.length,
+            count: filteredOrders.length,
+            total: basicOrders.length,
             status: status || 'all'
           }
         });
