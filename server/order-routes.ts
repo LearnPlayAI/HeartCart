@@ -7,6 +7,35 @@ import { sendSuccess, sendError } from "./api-response";
 import { insertOrderSchema, insertOrderItemSchema } from "@shared/schema";
 import { logger } from "./logger";
 
+// Define the order creation schema that matches the checkout form structure
+const checkoutOrderSchema = z.object({
+  customerInfo: z.object({
+    firstName: z.string().min(1),
+    lastName: z.string().min(1),
+    email: z.string().email(),
+    phone: z.string().min(1),
+  }),
+  shippingAddress: z.object({
+    addressLine1: z.string().min(1),
+    addressLine2: z.string().optional(),
+    city: z.string().min(1),
+    province: z.string().min(1),
+    postalCode: z.string().min(1),
+  }),
+  orderItems: z.array(z.object({
+    productId: z.number(),
+    quantity: z.number().min(1),
+    unitPrice: z.number().min(0),
+    productAttributes: z.record(z.string()).optional(),
+  })),
+  shippingMethod: z.string(),
+  shippingCost: z.number(),
+  paymentMethod: z.string(),
+  subtotal: z.number(),
+  total: z.number(),
+  specialInstructions: z.string().optional(),
+});
+
 const router = express.Router();
 
 // Create order schema validation
@@ -52,13 +81,22 @@ function generateAttributeDisplayText(attributes: Record<string, string>): strin
 // Create a new order
 router.post("/", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
   try {
+    logger.info("Order creation attempt", { 
+      userId: req.user?.id, 
+      bodyKeys: Object.keys(req.body || {}),
+      body: req.body 
+    });
+
     const userId = req.user?.id;
     if (!userId) {
+      logger.error("Order creation failed: User not authenticated");
       return sendError(res, "User not authenticated", 401);
     }
 
     // Validate request body
+    logger.info("Validating order data", { orderData: req.body });
     const orderData = createOrderSchema.parse(req.body);
+    logger.info("Order data validation successful", { orderData });
 
     // Use the order items from the request (checkout form already validates these)
     if (!orderData.orderItems || orderData.orderItems.length === 0) {

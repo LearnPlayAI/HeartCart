@@ -114,7 +114,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication with our new auth module
   setupAuth(app);
   
-  // Register order routes
+  // Apply response wrapper middleware to standardize API responses
+  app.use(responseWrapperMiddleware);
+  
+  // Register order routes (after middleware for proper error handling)
   app.use("/api/orders", orderRoutes);
   
   // Register authentication testing routes
@@ -131,9 +134,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register File Manager testing routes
   registerFileManagerTestRoutes(app);
-  
-  // Apply response wrapper middleware to standardize API responses
-  app.use(responseWrapperMiddleware);
   
   // Mount file routes for serving files from Object Storage
   app.use('/api/files', fileRoutes);
