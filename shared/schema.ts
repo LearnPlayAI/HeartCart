@@ -14,6 +14,7 @@ export const users = pgTable("users", {
   phoneNumber: text("phoneNumber"),
   address: text("address"),
   city: text("city"),
+  province: text("province"),
   postalCode: text("postalCode"),
   country: text("country").default("South Africa"),
   isActive: boolean("isActive").default(true).notNull(),

@@ -159,7 +159,7 @@ export default function CheckoutPage() {
         addressLine1: userData.address || "",
         addressLine2: "",
         city: userData.city || "",
-        province: "",
+        province: userData.province || "",
         postalCode: userData.postalCode || "",
         shippingMethod: "pudo",
         paymentMethod: "eft",
