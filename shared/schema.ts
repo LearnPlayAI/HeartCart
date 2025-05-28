@@ -141,6 +141,7 @@ export const orders = pgTable("orders", {
   
   // Order notes and tracking
   customerNotes: text("customerNotes"),
+  specialNotes: text("specialNotes"), // Customer special instructions
   adminNotes: text("adminNotes"),
   trackingNumber: text("trackingNumber"),
   
