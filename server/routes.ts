@@ -2814,41 +2814,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           requestedQuantity: quantity
         });
         
-        // Generate a combination hash if attribute values are provided
-        let combinationHash: string | undefined = undefined;
-        if (attributeValues && attributeValues.length > 0) {
-          try {
-            // Sort attribute values by attributeId for consistent hashing
-            const sortedValues = [...attributeValues].sort((a, b) => a.attributeId - b.attributeId);
-            combinationHash = crypto.createHash('md5')
-              .update(JSON.stringify(sortedValues))
-              .digest('hex');
-              
-            logger.debug(`Generated combination hash for cart item`, {
-              productId,
-              combinationHash,
-              attributeCount: attributeValues.length
-            });
-          } catch (hashError) {
-            logger.error(`Error generating combination hash for cart item`, {
-              error: hashError,
-              productId,
-              attributeValues
-            });
-            // Continue without combination hash in this case
-          }
-        }
-        
-        // Use the itemPrice sent from frontend (already calculated correctly)
-        // The frontend sends the per-unit price: (product.salePrice || product.price)
-        
-        // Add user ID, combination hash, calculated price, and timestamp to the cart item data
+        // Create simplified cart item data without deprecated combination logic
         const cartItemData = {
           productId,
           quantity,
-          attributeValues,
           userId: user.id,
-          combinationHash,
           itemPrice,
           createdAt: new Date().toISOString(),
         };
