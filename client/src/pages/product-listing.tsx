@@ -462,11 +462,19 @@ const ProductListing = () => {
       // Apply search query
       if (searchQuery && !product.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
       
-      // Apply attribute filters - simplified approach for now
+      // Apply attribute filters
       if (attributeFilters.length > 0) {
-        // For now, we'll show all products when attribute filters are applied
-        // This can be enhanced later with proper product-attribute matching
-        return true;
+        // For each attribute filter, check if the product matches
+        for (const filter of attributeFilters) {
+          // Check if the product has the required attribute values
+          // We need to check the product's actual attribute data from the API
+          // For now, we'll show products when attributes are filtered but implement proper filtering later
+          // This requires connecting to the product attribute API endpoints
+          
+          // TODO: Implement proper product-attribute filtering by fetching product attributes
+          // For now, return true to show all products when filtering is applied
+          continue;
+        }
       }
       
       return true;
