@@ -47,7 +47,7 @@ const checkoutSchema = z.object({
   }),
   
   // Payment Method
-  paymentMethod: z.enum(["eft", "card", "cod"], {
+  paymentMethod: z.enum(["eft"], {
     required_error: "Please select a payment method"
   }),
   
@@ -85,18 +85,6 @@ const paymentOptions = [
     name: "EFT Bank Transfer",
     description: "Pay via electronic funds transfer",
     icon: Banknote
-  },
-  {
-    id: "card",
-    name: "Credit/Debit Card",
-    description: "Pay securely with your card",
-    icon: CreditCard
-  },
-  {
-    id: "cod",
-    name: "Cash on Delivery",
-    description: "Pay when you receive your order",
-    icon: Package
   }
 ];
 
