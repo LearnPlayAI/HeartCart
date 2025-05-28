@@ -243,6 +243,7 @@ function App() {
                       <Route path="/products"><ProductListing /></Route>
                       <Route path="/products-example"><ProductsExample /></Route>
                       <ProtectedRoute path="/checkout" component={Checkout} />
+                      <ProtectedRoute path="/order-confirmation/:id" component={OrderConfirmation} />
                       <Route path="/search"><SearchResults /></Route>
                       <ProtectedRoute path="/profile" component={Profile} />
                       <ProtectedRoute path="/order/:id" component={OrderDetail} />
