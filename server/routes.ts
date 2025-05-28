@@ -1037,6 +1037,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           meta: {
             query: query as string,
             total: products.length,
+            totalPages: Math.ceil(products.length / Number(limit)),
             limit: Number(limit),
             offset: Number(offset)
           }
