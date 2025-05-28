@@ -460,8 +460,18 @@ const ProductListing = () => {
       const price = product.salePrice || product.price;
       if (price < priceRange[0] || price > priceRange[1]) return false;
       
-      // Apply sale filter
-      if (filters.onSale && !product.salePrice) return false;
+      // Apply special deals filter (flash deals)
+      if (filters.onSale) {
+        // Check if product is a flash deal and still active
+        if (!product.isFlashDeal) return false;
+        
+        // Check if flash deal is still active (flashDealEnd > now)
+        if (product.flashDealEnd) {
+          const now = new Date();
+          const flashDealEnd = new Date(product.flashDealEnd);
+          if (flashDealEnd <= now) return false;
+        }
+      }
       
       // All products are available to order from our suppliers
       
@@ -785,7 +795,7 @@ const ProductListing = () => {
                         htmlFor="onSale"
                         className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                       >
-                        On Sale
+                        Special Deals
                       </label>
                     </div>
                     
