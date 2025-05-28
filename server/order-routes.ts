@@ -41,20 +41,9 @@ const checkoutOrderSchema = z.object({
 
 const router = express.Router();
 
-// Configure multer for PDF uploads - temporary storage
-const storage_multer = multer.diskStorage({
-  destination: (req, file, cb) => {
-    // Store temporarily in the writable temp directory
-    cb(null, './temp');
-  },
-  filename: (req, file, cb) => {
-    // Use a temporary filename, we'll rename it later
-    cb(null, `eft_proof_${Date.now()}_${req.params.id}.pdf`);
-  },
-});
-
+// Configure multer for PDF uploads - use memory storage like product images
 const upload = multer({
-  storage: storage_multer,
+  storage: multer.memoryStorage(),
   fileFilter: (req, file, cb) => {
     // Only allow PDF files
     if (file.mimetype === 'application/pdf') {
@@ -331,42 +320,53 @@ router.post("/:id/upload-proof", isAuthenticated, eftProofUpload.single('proofOf
       return sendError(res, "User not found", 401);
     }
 
-    // Create the proper directory structure: POPS/{user_email}/{order_number}/
-    const eftProofDir = path.join(process.cwd(), 'POPS', user.email, order.orderNumber);
-    const finalFilePath = path.join(eftProofDir, 'pdf_file.pdf');
-    
-    // Create directory if it doesn't exist
-    await fs.promises.mkdir(eftProofDir, { recursive: true });
-    
-    // Move the file from temp location to the proper EFT proof directory
-    await fs.promises.rename(req.file.path, finalFilePath);
+    // Use object store to save the PDF file
+    try {
+      // Store the PDF in object store with the proper path structure
+      const objectKey = `POPS/${user.email}/${order.orderNumber}/pdf_file.pdf`;
+      
+      await objectStore.uploadFile(
+        req.file.buffer,
+        objectKey,
+        {
+          contentType: 'application/pdf',
+          metadata: {
+            originalname: req.file.originalname,
+            size: String(req.file.size),
+            orderId: String(orderId),
+            orderNumber: order.orderNumber,
+            userEmail: user.email,
+            uploadedAt: new Date().toISOString()
+          }
+        }
+      );
 
-    // Update the order with the file path
-    const updatedOrder = await storage.updateOrderEftProof(orderId, finalFilePath);
+      // Update the order with the object store key
+      const updatedOrder = await storage.updateOrderEftProof(orderId, objectKey);
 
-    logger.info("Proof of payment uploaded", {
-      orderId,
-      orderNumber: order.orderNumber,
-      userId,
-      filename: req.file.filename,
-      filepath: req.file.path,
-      filesize: req.file.size,
-    });
+      logger.info("Proof of payment uploaded", {
+        orderId,
+        orderNumber: order.orderNumber,
+        userId,
+        filename: req.file.originalname,
+        objectKey: objectKey,
+        filesize: req.file.size,
+      });
 
-    return sendSuccess(res, {
-      message: "Proof of payment uploaded successfully",
-      filename: req.file.filename,
-      filepath: req.file.path,
-      order: updatedOrder,
-    });
-  } catch (error) {
-    logger.error("Error uploading proof of payment", { 
-      error: error instanceof Error ? error.message : String(error),
-      orderId: req.params.id,
-      userId: req.user?.id 
-    });
-    return sendError(res, "Failed to upload proof of payment", 500);
-  }
+      return sendSuccess(res, {
+        message: "Proof of payment uploaded successfully",
+        filename: req.file.originalname,
+        objectKey: objectKey,
+        order: updatedOrder,
+      });
+    } catch (uploadError) {
+      logger.error("Error uploading proof of payment", { 
+        error: uploadError instanceof Error ? uploadError.message : String(uploadError),
+        orderId: orderId,
+        userId: userId 
+      });
+      return sendError(res, "Failed to upload proof of payment", 500);
+    }
 }));
 
 // Mark order as paid
