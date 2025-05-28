@@ -139,7 +139,7 @@ export default function OrderConfirmationPage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="font-medium">Total Amount:</span>
-                    <span className="font-bold text-lg">R{order.total.toFixed(2)}</span>
+                    <span className="font-bold text-lg">R{(order.total || 0).toFixed(2)}</span>
                   </div>
                 </div>
               </CardContent>
