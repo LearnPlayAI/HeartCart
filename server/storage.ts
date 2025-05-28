@@ -1244,25 +1244,22 @@ export class DatabaseStorage implements IStorage {
       // Create comprehensive search condition that searches across multiple fields
       const createSearchCondition = (searchTerm: string) => {
         return or(
-          like(products.name, searchTerm),
-          like(products.description, searchTerm),
-          like(products.brand, searchTerm),
-          like(products.supplier, searchTerm),
-          like(products.sku, searchTerm),
-          like(products.metaTitle, searchTerm),
-          like(products.metaDescription, searchTerm),
-          like(products.metaKeywords, searchTerm),
+          sql`${products.name} ILIKE ${searchTerm}`,
+          sql`${products.description} ILIKE ${searchTerm}`,
+          sql`${products.brand} ILIKE ${searchTerm}`,
+          sql`${products.supplier} ILIKE ${searchTerm}`,
+          sql`${products.sku} ILIKE ${searchTerm}`,
+          sql`${products.metaTitle} ILIKE ${searchTerm}`,
+          sql`${products.metaDescription} ILIKE ${searchTerm}`,
+          sql`${products.metaKeywords} ILIKE ${searchTerm}`,
+          sql`${products.dimensions} ILIKE ${searchTerm}`,
+          sql`${products.specialSaleText} ILIKE ${searchTerm}`,
+          sql`${products.discountLabel} ILIKE ${searchTerm}`,
           // Search in tags array - using PostgreSQL array operations
           sql`EXISTS (
             SELECT 1 FROM unnest(${products.tags}) AS tag 
             WHERE tag ILIKE ${searchTerm}
-          )`,
-          // Search in dimensions
-          like(products.dimensions, searchTerm),
-          // Search in special sale text
-          like(products.specialSaleText, searchTerm),
-          // Search in discount label
-          like(products.discountLabel, searchTerm)
+          )`
         );
       };
 
