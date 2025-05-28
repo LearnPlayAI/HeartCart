@@ -57,25 +57,7 @@ const ratingOptions = [
 // View modes
 type ViewMode = 'grid' | 'list';
 
-// Type definition for attribute filters
-interface AttributeFilter {
-  attributeId: number;
-  attributeName: string;
-  selectedOptions: string[];
-}
 
-// Helper function to get attribute display name
-const getAttributeDisplayName = (attribute: any): string => {
-  if (attribute.overrideDisplayName) {
-    return attribute.overrideDisplayName;
-  }
-  // Try different attribute name properties based on the structure
-  return attribute.attribute?.displayName || 
-         attribute.attribute?.name || 
-         attribute.displayName || 
-         attribute.name || 
-         'Unknown Attribute';
-};
 
 const ProductListing = () => {
   const [location, setLocation] = useLocation();
@@ -120,7 +102,6 @@ const ProductListing = () => {
   const queryParams = {
     limit, 
     offset: (page - 1) * limit,
-    ...(attributeFilters.length > 0 && { attributeFilters: JSON.stringify(attributeFilters) }),
     ...(searchQuery && { q: searchQuery }),
     ...(selectedCategoryId && { categoryId: selectedCategoryId }),
     ...(sortBy !== 'default' && { sort: sortBy }),
@@ -133,8 +114,6 @@ const ProductListing = () => {
     ...(filters.newArrivals && { newArrivals: true })
   };
 
-  // Debug logging for attribute filters
-  console.log("Current attribute filters:", attributeFilters);
   console.log("Query params being sent:", queryParams);
   
   const { 
