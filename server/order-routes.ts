@@ -157,7 +157,7 @@ router.post("/", isAuthenticated, asyncHandler(async (req: Request, res: Respons
       orderId: newOrder.id,
       orderNumber: newOrder.orderNumber,
       userId: userId,
-      totalAmount: totalAmount,
+      totalAmount: orderData.total,
       itemCount: orderItems.length,
     });
 
