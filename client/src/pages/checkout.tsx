@@ -174,17 +174,47 @@ export default function CheckoutPage() {
   // Create order mutation
   const createOrderMutation = useMutation({
     mutationFn: async (orderData: any) => {
-      console.log("Making API request with data:", orderData);
-      const response = await apiRequest("POST", "/api/orders", orderData);
-      console.log("API response:", response);
+      console.log("Starting order creation with data:", orderData);
       
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("API error response:", errorText);
-        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      try {
+        console.log("Making API request to /api/orders");
+        const response = await apiRequest("POST", "/api/orders", orderData, { debug: true });
+        console.log("Received API response:", response);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("Order API error response:", errorText);
+          throw new Error(`Order creation failed: ${response.status} - ${errorText}`);
+        }
+
+        const result = await response.json();
+        console.log("Order creation successful:", result);
+        return result;
+      } catch (error) {
+        console.error("Order creation error:", error);
+        throw error;
       }
+    },
+    onSuccess: (data) => {
+      console.log("Order mutation success:", data);
+      // Clear cart and show success
+      queryClient.invalidateQueries({ queryKey: ["/api/cart"] });
       
-      return response.json();
+      toast({
+        title: "Order Placed Successfully!",
+        description: `Order #${data.data?.orderNumber || data.orderNumber || 'N/A'} has been created.`,
+      });
+      
+      // Navigate to order confirmation
+      navigate(`/order-confirmation/${data.data?.id || data.id}`);
+    },
+    onError: (error: any) => {
+      console.error("Order mutation error:", error);
+      toast({
+        title: "Order Failed",
+        description: error.message || "Failed to create order. Please try again.",
+        variant: "destructive"
+      });
     }
   });
 
@@ -259,19 +289,9 @@ export default function CheckoutPage() {
       };
 
       console.log("Submitting order data:", orderData);
-      const result = await createOrderMutation.mutateAsync(orderData);
-      console.log("Order creation result:", result);
       
-      // Clear cart and redirect to order confirmation
-      queryClient.invalidateQueries({ queryKey: ["/api/cart"] });
-      
-      toast({
-        title: "Order Placed Successfully!",
-        description: "Your order has been submitted and you will receive a confirmation email shortly.",
-      });
-      
-      // Navigate to order confirmation
-      navigate(`/order-confirmation/${result.data?.id || result.id}`);
+      // Use the mutation which handles success/error automatically
+      await createOrderMutation.mutateAsync(orderData);
     } catch (error) {
       console.error("Checkout error:", error);
       toast({
