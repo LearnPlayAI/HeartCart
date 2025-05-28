@@ -28,6 +28,7 @@ export function ProductSearch({
     e.preventDefault();
     
     const trimmedQuery = searchQuery.trim();
+    console.log('Search submitted:', trimmedQuery);
     if (!trimmedQuery) return;
     
     // If onSearch callback is provided, use it
@@ -37,7 +38,9 @@ export function ProductSearch({
     }
     
     // Otherwise, navigate to products page with search query
-    navigate(`/products?q=${encodeURIComponent(trimmedQuery)}`);
+    const searchUrl = `/products?q=${encodeURIComponent(trimmedQuery)}`;
+    console.log('Navigating to:', searchUrl);
+    navigate(searchUrl);
   };
 
   // Define component styles based on props
