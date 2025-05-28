@@ -592,14 +592,36 @@ export class DatabaseStorage implements IStorage {
 
       const result = await query;
       
-      // Now fetch parent information for categories that have parent_id
+      // Create a map of all categories for quick lookup
       const categoryMap = new Map(result.map(cat => [cat.id, cat]));
       
       // Add parent information to each category
-      return result.map(category => ({
-        ...category,
-        parent: category.parentId ? categoryMap.get(category.parentId) || null : null
-      }));
+      return result.map(category => {
+        const parent = category.parentId ? categoryMap.get(category.parentId) : null;
+        
+        // Debug logging for specific categories
+        if (category.id === 19 || category.id === 15) {
+          console.log(`Category ${category.id} (${category.name}): parentId=${category.parentId}, found parent:`, parent ? parent.name : 'null');
+        }
+        
+        return {
+          ...category,
+          parent: parent ? {
+            id: parent.id,
+            name: parent.name,
+            slug: parent.slug,
+            description: parent.description,
+            icon: parent.icon,
+            imageUrl: parent.imageUrl,
+            isActive: parent.isActive,
+            parentId: parent.parentId,
+            level: parent.level,
+            displayOrder: parent.displayOrder,
+            createdAt: parent.createdAt,
+            updatedAt: parent.updatedAt
+          } : null
+        };
+      });
     } catch (error) {
       console.error(`Error fetching all categories:`, error);
       throw error; // Rethrow so the route handler can catch it and send a proper error response
