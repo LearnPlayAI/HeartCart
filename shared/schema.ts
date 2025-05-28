@@ -3,23 +3,23 @@ import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Users table
+// Users table - Updated to use camelCase column names
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   email: text("email").notNull().unique(),
-  fullName: text("full_name"),
-  profilePicture: text("profile_picture"),
-  phoneNumber: text("phone_number"),
+  fullName: text("fullName"),
+  profilePicture: text("profilePicture"),
+  phoneNumber: text("phoneNumber"),
   address: text("address"),
   city: text("city"),
-  postalCode: text("postal_code"),
+  postalCode: text("postalCode"),
   country: text("country").default("South Africa"),
-  isActive: boolean("is_active").default(true).notNull(),
+  isActive: boolean("isActive").default(true).notNull(),
   role: text("role").default("user").notNull(), // 'user', 'admin', etc.
-  createdAt: text("created_at").default(String(new Date().toISOString())).notNull(),
-  updatedAt: text("updated_at").default(String(new Date().toISOString())).notNull(),
+  createdAt: text("createdAt").default(String(new Date().toISOString())).notNull(),
+  updatedAt: text("updatedAt").default(String(new Date().toISOString())).notNull(),
   lastLogin: text("last_login"),
 });
 

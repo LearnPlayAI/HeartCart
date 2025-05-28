@@ -2722,6 +2722,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     })
   );
 
+  // USER PROFILE UPDATE ENDPOINT
+  app.patch(
+    "/api/user/profile",
+    isAuthenticated,
+    validateRequest({
+      body: z.object({
+        firstName: z.string().optional(),
+        lastName: z.string().optional(),
+        phone: z.string().optional(),
+        addressLine1: z.string().optional(),
+        addressLine2: z.string().optional(),
+        city: z.string().optional(),
+        province: z.string().optional(),
+        postalCode: z.string().optional()
+      })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const user = req.user as any;
+      const profileData = req.body;
+      
+      try {
+        // Map the request fields to database fields 
+        const updateData: any = {};
+        
+        if (profileData.firstName || profileData.lastName) {
+          updateData.fullName = `${profileData.firstName || ''} ${profileData.lastName || ''}`.trim();
+        }
+        if (profileData.phone) updateData.phoneNumber = profileData.phone;
+        if (profileData.addressLine1) updateData.address = profileData.addressLine1;
+        if (profileData.city) updateData.city = profileData.city;
+        if (profileData.postalCode) updateData.postalCode = profileData.postalCode;
+        
+        // Update the user profile
+        const updatedUser = await storage.updateUser(user.id, updateData);
+        
+        if (!updatedUser) {
+          throw new NotFoundError("User not found", "user");
+        }
+        
+        return res.json({
+          success: true,
+          data: updatedUser,
+          message: "Profile updated successfully"
+        });
+      } catch (error) {
+        logger.error('Error updating user profile', { 
+          error, 
+          userId: user.id,
+          profileData 
+        });
+        
+        throw new AppError(
+          "Failed to update profile. Please try again.",
+          ErrorCode.INTERNAL_SERVER_ERROR,
+          500,
+          { originalError: error }
+        );
+      }
+    })
+  );
+
   // CART ROUTES
   app.get(
     "/api/cart",
