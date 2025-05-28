@@ -242,9 +242,9 @@ export default function CheckoutPage() {
       const orderItems = cartItems.map((item: any) => ({
         productId: item.productId,
         quantity: item.quantity,
-        unitPrice: item.price,
+        unitPrice: parseFloat(item.itemPrice || 0),
         // Include product attributes for items that have them
-        productAttributes: item.productAttributes || {}
+        productAttributes: item.attributeSelections || {}
       }));
 
       const orderData = {
@@ -270,9 +270,24 @@ export default function CheckoutPage() {
         total
       };
 
-      await createOrderMutation.mutateAsync(orderData);
+      console.log("Submitting order data:", orderData);
+      const result = await createOrderMutation.mutateAsync(orderData);
+      console.log("Order creation result:", result);
+      
+      toast({
+        title: "Order Placed Successfully!",
+        description: "Your order has been submitted and you will receive a confirmation email shortly.",
+      });
+      
+      // Navigate to order confirmation
+      navigate(`/order-confirmation/${result.orderId || result.id}`);
     } catch (error) {
       console.error("Checkout error:", error);
+      toast({
+        title: "Order Failed",
+        description: error instanceof Error ? error.message : "An error occurred while placing your order. Please try again.",
+        variant: "destructive"
+      });
     } finally {
       setIsProcessing(false);
     }
