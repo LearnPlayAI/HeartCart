@@ -676,19 +676,24 @@ const ProductListing = () => {
             </div>
             
             {/* Category Sidebar Component */}
-            <div className="mb-6">
-              <CategorySidebar
-                isFilterMode={true}
-                selectedCategoryId={selectedCategoryId}
-                onCategoryFilter={handleCategoryFilter}
-                onCategorySelect={() => {
-                  // Close mobile filter when category is selected
-                  if (isFilterOpen) {
-                    toggleFilter();
-                  }
-                }}
-                className="border-0 shadow-none"
-              />
+            <div className="mb-6 bg-white rounded-lg shadow-md overflow-hidden">
+              <div className="bg-gradient-to-r from-[#FF69B4] to-[#FF1493] p-4">
+                <h3 className="text-white text-lg font-bold">Categories</h3>
+              </div>
+              <div className="p-4 bg-[#ff68b32e]">
+                <CategorySidebar
+                  isFilterMode={true}
+                  selectedCategoryId={selectedCategoryId}
+                  onCategoryFilter={handleCategoryFilter}
+                  onCategorySelect={() => {
+                    // Close mobile filter when category is selected
+                    if (isFilterOpen) {
+                      toggleFilter();
+                    }
+                  }}
+                  className="border-0 shadow-none p-0"
+                />
+              </div>
             </div>
             
             <Accordion type="multiple" defaultValue={['price', 'availability', 'rating', 'attributes', 'more']}>
