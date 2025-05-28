@@ -34,12 +34,11 @@ const FlashDealsSection = () => {
           <Zap className="mr-2" /> Special Deals
         </h2>
       </div>
-      
-      <div className="p-4">
+      <div className="p-4 bg-[#ff68b32e]">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
           {isLoading ? (
             // Show skeleton loaders while loading
-            Array.from({ length: 6 }).map((_, index) => (
+            (Array.from({ length: 6 }).map((_, index) => (
               <Card key={index} className="h-64 animate-pulse bg-gray-100">
                 <div className="h-36 bg-gray-200 rounded-t-lg"></div>
                 <div className="p-2">
@@ -47,10 +46,10 @@ const FlashDealsSection = () => {
                   <div className="h-3 bg-gray-200 rounded w-1/2"></div>
                 </div>
               </Card>
-            ))
+            )))
           ) : error ? (
             // Show error state
-            <div className="col-span-full py-8 text-center">
+            (<div className="col-span-full py-8 text-center">
               <div className="text-red-500 mb-2">Failed to load flash deals</div>
               <button 
                 className="px-4 py-2 rounded-md border border-[#FF69B4] text-[#FF69B4] hover:bg-[#FF69B4] hover:text-white transition-colors"
@@ -58,10 +57,10 @@ const FlashDealsSection = () => {
               >
                 Retry
               </button>
-            </div>
+            </div>)
           ) : flashDeals.length > 0 ? (
             // Show flash deals
-            flashDeals.map((product) => {
+            (flashDeals.map((product) => {
               // Using product ID for deterministic soldPercentage to avoid re-renders
               // Calculate sold percentage directly without useMemo (to avoid hooks order issues)
               const soldPercentage = Math.floor((product.id * 17) % 100);
@@ -74,17 +73,16 @@ const FlashDealsSection = () => {
                   soldPercentage={soldPercentage}
                 />
               );
-            })
+            }))
           ) : (
             // Show empty state
-            <div className="col-span-full text-center py-8">
+            (<div className="col-span-full text-center py-8">
               <div className="text-gray-500 mb-2">No flash deals available at the moment</div>
               <div className="text-sm text-gray-400">Check back later for exciting deals!</div>
-            </div>
+            </div>)
           )}
         </div>
       </div>
-      
       <div className="p-3 border-t border-gray-200 flex justify-center">
         <Link href="/flash-deals" className="text-[#FF69B4] font-medium hover:underline flex items-center">
           View all deals 

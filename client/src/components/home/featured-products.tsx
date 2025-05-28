@@ -35,55 +35,59 @@ const FeaturedProductsSection = () => {
   };
   
   return (
-    <section id="featuredProducts" className="mb-8">
-      <h2 className="text-xl font-bold mb-4">Featured Products</h2>
-      
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-        {isLoading ? (
-          // Show skeleton loaders while loading
-          Array.from({ length: 10 }).map((_, index) => (
-            <div key={index} className="bg-white rounded-lg shadow-md overflow-hidden animate-pulse">
-              <div className="h-48 bg-gray-200"></div>
-              <div className="p-3">
-                <div className="h-3 bg-gray-200 rounded w-3/4 mb-2"></div>
-                <div className="h-3 bg-gray-200 rounded w-1/2 mb-2"></div>
-                <div className="h-6 bg-gray-200 rounded w-1/4 mb-2"></div>
-                <div className="h-8 bg-gray-200 rounded w-full mt-2"></div>
-              </div>
-            </div>
-          ))
-        ) : error ? (
-          // Show error state
-          <div className="col-span-full py-8 text-center">
-            <div className="text-red-500 mb-2">Failed to load featured products</div>
-            <Button 
-              variant="outline"
-              className="border-[#FF69B4] text-[#FF69B4] hover:bg-[#FF69B4] hover:text-white"
-              onClick={() => window.location.reload()}
-            >
-              Retry
-            </Button>
-          </div>
-        ) : featuredProducts.length === 0 ? (
-          // Show empty state
-          <div className="col-span-full py-8 text-center text-gray-500">
-            No featured products available at the moment
-          </div>
-        ) : (
-          // Show products
-          featuredProducts.map((product) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              isFlashDeal={false}
-              showAddToCart={true}
-            />
-          ))
-        )}
+    <section id="featuredProducts" className="mb-4 md:mb-8 bg-white rounded-lg shadow-md overflow-hidden">
+      <div className="bg-gradient-to-r from-[#FF69B4] to-[#FF1493] p-4">
+        <h2 className="text-white text-xl font-bold flex items-center">
+          Featured Products
+        </h2>
       </div>
-      
+      <div className="p-4 bg-[#ff68b32e]">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+          {isLoading ? (
+            // Show skeleton loaders while loading
+            Array.from({ length: 10 }).map((_, index) => (
+              <div key={index} className="bg-white rounded-lg shadow-md overflow-hidden animate-pulse">
+                <div className="h-48 bg-gray-200"></div>
+                <div className="p-3">
+                  <div className="h-3 bg-gray-200 rounded w-3/4 mb-2"></div>
+                  <div className="h-3 bg-gray-200 rounded w-1/2 mb-2"></div>
+                  <div className="h-6 bg-gray-200 rounded w-1/4 mb-2"></div>
+                  <div className="h-8 bg-gray-200 rounded w-full mt-2"></div>
+                </div>
+              </div>
+            ))
+          ) : error ? (
+            // Show error state
+            <div className="col-span-full py-8 text-center">
+              <div className="text-red-500 mb-2">Failed to load featured products</div>
+              <Button 
+                variant="outline"
+                className="border-[#FF69B4] text-[#FF69B4] hover:bg-[#FF69B4] hover:text-white"
+                onClick={() => window.location.reload()}
+              >
+                Retry
+              </Button>
+            </div>
+          ) : featuredProducts.length === 0 ? (
+            // Show empty state
+            <div className="col-span-full py-8 text-center text-gray-500">
+              No featured products available at the moment
+            </div>
+          ) : (
+            // Show products
+            featuredProducts.map((product) => (
+              <ProductCard
+                key={product.id}
+                product={product}
+                isFlashDeal={false}
+                showAddToCart={true}
+              />
+            ))
+          )}
+        </div>
+      </div>
       {!isLoading && !error && featuredProducts.length > 0 && (
-        <div className="flex justify-center mt-6">
+        <div className="p-3 border-t border-gray-200 flex justify-center">
           <Button 
             variant="outline"
             className="border-[#FF69B4] text-[#FF69B4] hover:bg-[#FF69B4] hover:text-white"
