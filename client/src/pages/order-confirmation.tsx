@@ -71,7 +71,8 @@ export default function OrderConfirmationPage() {
     retry: 1
   });
 
-  const order = orderResponse?.data as Order;
+  // Handle different response structures
+  const order = orderResponse?.data || orderResponse as Order;
 
   if (isLoading) {
     return (
@@ -164,31 +165,31 @@ export default function OrderConfirmationPage() {
             <CardContent className="space-y-4">
               <div className="flex justify-between">
                 <span className="text-gray-600">Order Number:</span>
-                <span className="font-mono text-sm">{order.orderNumber}</span>
+                <span className="font-mono text-sm">{order?.orderNumber || 'N/A'}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Order Date:</span>
-                <span>{formatDate(order.createdAt)}</span>
+                <span>{order?.createdAt ? formatDate(order.createdAt) : 'N/A'}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-gray-600">Status:</span>
-                <Badge className={getStatusColor(order.status)}>
-                  {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                <Badge className={getStatusColor(order?.status)}>
+                  {order?.status ? order.status.charAt(0).toUpperCase() + order.status.slice(1) : 'Unknown'}
                 </Badge>
               </div>
               <Separator />
               <div className="flex justify-between">
                 <span className="text-gray-600">Subtotal:</span>
-                <span>R{order.subtotalAmount.toFixed(2)}</span>
+                <span>R{(order?.subtotalAmount || 0).toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Shipping:</span>
-                <span>R{order.shippingCost.toFixed(2)}</span>
+                <span>R{(order?.shippingCost || 0).toFixed(2)}</span>
               </div>
               <Separator />
               <div className="flex justify-between font-semibold text-lg">
                 <span>Total Amount:</span>
-                <span>R{order.totalAmount.toFixed(2)}</span>
+                <span>R{(order?.totalAmount || 0).toFixed(2)}</span>
               </div>
             </CardContent>
           </Card>
@@ -204,15 +205,15 @@ export default function OrderConfirmationPage() {
             <CardContent className="space-y-3">
               <div className="flex items-center gap-2">
                 <span className="text-gray-600">Name:</span>
-                <span>{order.customerName}</span>
+                <span>{order?.customerName || 'N/A'}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Mail className="h-4 w-4 text-gray-400" />
-                <span>{order.customerEmail}</span>
+                <span>{order?.customerEmail || 'N/A'}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Phone className="h-4 w-4 text-gray-400" />
-                <span>{order.customerPhone}</span>
+                <span>{order?.customerPhone || 'N/A'}</span>
               </div>
             </CardContent>
           </Card>
