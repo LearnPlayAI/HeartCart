@@ -422,6 +422,10 @@ const ProductDetailView = ({
       attributeSelections
     };
     
+    console.log('🔍 PRODUCT DETAIL DEBUG - Selected Attributes:', selectedAttributes);
+    console.log('🔍 PRODUCT DETAIL DEBUG - Formatted Attribute Selections:', attributeSelections);
+    console.log('🔍 PRODUCT DETAIL DEBUG - Cart Item:', cartItem);
+    
     addItem(cartItem);
     
     toast({
