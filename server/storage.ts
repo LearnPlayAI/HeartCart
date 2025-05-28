@@ -1247,7 +1247,7 @@ export class DatabaseStorage implements IStorage {
       if (!options?.includeCategoryInactive) {
         try {
           // Search with category join to ensure category is active
-          // Build dynamic search conditions for each term (all terms must match)
+          // Build dynamic search conditions for each term (any term can match)
           const searchConditions = searchTerms.map(term => {
             const searchTerm = `%${term}%`;
             return sql`(
