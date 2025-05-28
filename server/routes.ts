@@ -574,13 +574,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/products", 
     validateRequest({ query: productsQuerySchema }),
-    asyncHandler(async (req: Request, res: Response) => {
-      const { limit, offset, category: categoryId, q } = req.query;
-      
-      // Add cache control headers to prevent caching issues
-      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-      res.setHeader('Pragma', 'no-cache');
-      res.setHeader('Expires', '0');
+    withStandardResponse(async (req: Request, res: Response) => {
+      const { limit, offset, category: categoryId, search } = req.query;
       
       const user = req.user as any;
       const isAdmin = user && user.role === 'admin';
@@ -590,55 +585,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         includeCategoryInactive: isAdmin 
       };
       
-      try {
-        let products;
-        
-        // If there's a search query, use search function
-        if (q && typeof q === 'string' && q.trim().length > 0) {
-          console.log(`Search request: "${q}"`);
-          products = await storage.searchProducts(
-            q.trim(),
-            Number(limit) || 20,
-            Number(offset) || 0,
-            options
-          );
-        } else {
-          // Otherwise use regular product listing
-          products = await storage.getAllProducts(
-            Number(limit) || 20, 
-            Number(offset) || 0, 
-            categoryId ? Number(categoryId) : undefined, 
-            undefined, // No search term
-            options
-          );
-        }
-        
-        res.json({
-          success: true,
-          data: products,
-          meta: {
-            searchQuery: q || null,
-            categoryId: categoryId ? Number(categoryId) : null,
-            count: products.length,
-            limit: Number(limit) || 20,
-            offset: Number(offset) || 0
-          }
-        });
-      } catch (error) {
-        logger.error('Error fetching products:', { 
-          error, 
-          searchQuery: q,
-          categoryId,
-          limit: Number(limit),
-          offset: Number(offset)
-        });
-        
-        throw new AppError(
-          "Failed to fetch products. Please try again.",
-          ErrorCode.INTERNAL_SERVER_ERROR,
-          500
-        );
-      }
+      const products = await storage.getAllProducts(
+        Number(limit), 
+        Number(offset), 
+        categoryId ? Number(categoryId) : undefined, 
+        search as string | undefined, 
+        options
+      );
+      return products;
     }));
   
   // Create bulk update status schema

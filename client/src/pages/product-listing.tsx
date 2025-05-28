@@ -74,13 +74,11 @@ const getAttributeDisplayName = (attribute: Attribute | CategoryAttribute): stri
 
 const ProductListing = () => {
   const [location, setLocation] = useLocation();
+  const searchParams = new URLSearchParams(location.split('?')[1] || '');
   const { addItem } = useCart();
   const { toast } = useToast();
   
-  // Parse URL parameters from window.location.search since wouter doesn't include query params
-  const searchParams = new URLSearchParams(window.location.search);
-  
-  // State for filters - initialize from URL params
+  // State for filters
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [sortBy, setSortBy] = useState(searchParams.get('sort') || 'default');
@@ -100,19 +98,6 @@ const ProductListing = () => {
     newArrivals: searchParams.get('new_arrivals') === 'true'
   });
   
-  // Update state when URL changes (for direct navigation or back/forward)
-  useEffect(() => {
-    const queryString = window.location.search;
-    const currentSearchParams = new URLSearchParams(queryString);
-    const urlSearchQuery = currentSearchParams.get('q') || '';
-    
-    setSearchQuery(urlSearchQuery);
-    setSelectedCategoryId(currentSearchParams.get('categoryId') ? parseInt(currentSearchParams.get('categoryId')!) : null);
-    setRatingFilter(currentSearchParams.get('rating') || '');
-    setSortBy(currentSearchParams.get('sort') || 'default');
-    setPage(parseInt(currentSearchParams.get('page') || '1'));
-  }, [location]);
-  
   // Pagination
   const [page, setPage] = useState(parseInt(searchParams.get('page') || '1'));
   const limit = 20;
@@ -126,24 +111,18 @@ const ProductListing = () => {
   });
   const categories = categoriesResponse?.success ? categoriesResponse.data : [];
   
-  // Fetch products with category filtering or search
-  const queryParams = { 
-    limit, 
-    offset: (page - 1) * limit,
-    categoryId: selectedCategoryId,
-    q: searchQuery || undefined,
-    includeChildren: searchParams.get('includeChildren') === 'true'
-  };
-  
+  // Fetch products with category filtering
   const { 
     data: productsResponse, 
     isLoading: isLoadingProducts,
     error: productsError
   } = useQuery<StandardApiResponse<Product[], { total?: number, totalPages?: number }>>({
-    queryKey: ['/api/products', queryParams],
-    enabled: true,
-    staleTime: 0, // Always fetch fresh data
-    cacheTime: 0, // Don't cache the results
+    queryKey: ['/api/products', { 
+      limit, 
+      offset: (page - 1) * limit,
+      categoryId: selectedCategoryId,
+      includeChildren: searchParams.get('includeChildren') === 'true'
+    }],
   });
   const products = productsResponse?.success ? productsResponse.data : [];
   const totalPages = productsResponse?.meta?.totalPages || 1;
@@ -515,7 +494,8 @@ const ProductListing = () => {
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       if (filters.newArrivals && new Date(product.createdAt) < thirtyDaysAgo) return false;
       
-      // Search query is now handled by the API, no need for client-side filtering
+      // Apply search query
+      if (searchQuery && !product.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
       
       // Apply attribute filters
       if (attributeFilters.length > 0 && productAttributeValues) {
@@ -595,7 +575,24 @@ const ProductListing = () => {
           </p>
         </div>
         
-
+        {/* Search Bar */}
+        <div className="mb-6">
+          <form onSubmit={handleSearchSubmit} className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+              <Input
+                type="search"
+                placeholder="Search products..."
+                className="pl-10"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            <Button type="submit" className="bg-[#FF69B4] hover:bg-[#FF1493] text-white">
+              Search
+            </Button>
+          </form>
+        </div>
         
         {/* Active Filters */}
         {activeFilters.length > 0 && (

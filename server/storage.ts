@@ -847,26 +847,24 @@ export class DatabaseStorage implements IStorage {
         try {
           // If we're not filtering by category but we need to exclude products
           // from inactive categories, we need to join with the categories table
-          const allConditions = [...conditions, eq(categories.isActive, true)];
-          
-          // Apply search filter if provided
-          if (search) {
-            const searchTerm = `%${search}%`;
-            allConditions.push(
-              or(
-                like(products.name, searchTerm),
-                like(products.description || "", searchTerm),
-              )
-            );
-          }
-
           const query = db
             .select({
               product: products,
             })
             .from(products)
             .innerJoin(categories, eq(products.categoryId, categories.id))
-            .where(and(...allConditions));
+            .where(and(...conditions, eq(categories.isActive, true)));
+
+          // Apply search filter if provided
+          if (search) {
+            const searchTerm = `%${search}%`;
+            query.where(
+              or(
+                like(products.name, searchTerm),
+                like(products.description || "", searchTerm),
+              ),
+            );
+          }
 
           const result = await query.limit(limit).offset(offset);
           const productList = result.map((row) => row.product);
@@ -886,24 +884,22 @@ export class DatabaseStorage implements IStorage {
       // or we filtered by a specific category that is active
 
       try {
-        // Combine all conditions including search
-        const allConditions = [...conditions];
-        
+        // Apply base conditions
+        let query = db.select().from(products);
+
+        if (conditions.length > 0) {
+          query = query.where(and(...conditions));
+        }
+
         // Add search condition if provided
         if (search) {
           const searchTerm = `%${search}%`;
-          allConditions.push(
+          query = query.where(
             or(
               like(products.name, searchTerm),
               like(products.description || "", searchTerm),
-            )
+            ),
           );
-        }
-
-        // Apply all conditions at once
-        let query = db.select().from(products);
-        if (allConditions.length > 0) {
-          query = query.where(and(...allConditions));
         }
 
         const productList = await query.limit(limit).offset(offset);
@@ -1242,56 +1238,69 @@ export class DatabaseStorage implements IStorage {
     options?: { includeInactive?: boolean; includeCategoryInactive?: boolean },
   ): Promise<Product[]> {
     try {
-      console.log(`Searching for products with query: "${query}"`);
-      
-      // Create base conditions
-      const conditions: SQL<unknown>[] = [];
-      
-      // Only include active products unless explicitly including inactive ones
-      if (!options?.includeInactive) {
-        conditions.push(eq(products.isActive, true));
-      }
-      
-      // Create search condition - search in name and description
-      const searchTerm = `%${query.toLowerCase()}%`;
-      const searchCondition = or(
-        sql`LOWER(${products.name}) LIKE ${searchTerm}`,
-        sql`LOWER(COALESCE(${products.description}, '')) LIKE ${searchTerm}`
-      );
-      conditions.push(searchCondition);
-      
+      const searchTerm = `%${query}%`;
       let productList: Product[] = [];
-      
+
       if (!options?.includeCategoryInactive) {
-        // Join with categories to ensure category is active
-        const result = await db
-          .select({
-            product: products,
-          })
-          .from(products)
-          .innerJoin(categories, eq(products.categoryId, categories.id))
-          .where(and(...conditions, eq(categories.isActive, true)))
-          .limit(limit)
-          .offset(offset);
-        
-        productList = result.map((row) => row.product);
+        try {
+          // For search, we need to join with categories to check if category is active
+          const searchQuery = db
+            .select({
+              product: products,
+            })
+            .from(products)
+            .innerJoin(categories, eq(products.categoryId, categories.id))
+            .where(
+              and(
+                options?.includeInactive
+                  ? sql`1=1`
+                  : eq(products.isActive, true),
+                eq(categories.isActive, true),
+                like(products.name, searchTerm),
+              ),
+            )
+            .limit(limit)
+            .offset(offset);
+
+          const result = await searchQuery;
+          productList = result.map((row) => row.product);
+        } catch (joinError) {
+          console.error(
+            `Error searching products with active categories for query "${query}":`,
+            joinError,
+          );
+          throw joinError; // Rethrow so the route handler can catch it and send a proper error response
+        }
       } else {
-        // Simple search without category constraints
-        productList = await db
-          .select()
-          .from(products)
-          .where(and(...conditions))
-          .limit(limit)
-          .offset(offset);
+        try {
+          // If we don't need to check category visibility, use simpler query
+          productList = await db
+            .select()
+            .from(products)
+            .where(
+              and(
+                options?.includeInactive
+                  ? sql`1=1`
+                  : eq(products.isActive, true),
+                like(products.name, searchTerm),
+              ),
+            )
+            .limit(limit)
+            .offset(offset);
+        } catch (queryError) {
+          console.error(
+            `Error searching products for query "${query}":`,
+            queryError,
+          );
+          throw queryError; // Rethrow so the route handler can catch it and send a proper error response
+        }
       }
-      
-      console.log(`Found ${productList.length} products matching "${query}"`);
-      
+
       // Enrich products with main image URLs
       return await this.enrichProductsWithMainImage(productList);
     } catch (error) {
-      console.error(`Error searching for products with query "${query}":`, error);
-      throw error;
+      console.error(`Error in searchProducts for query "${query}":`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
   }
 
