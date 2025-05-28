@@ -21,11 +21,13 @@ import type { StandardApiResponse } from '@/types/api';
 
 const SearchResults = () => {
   const [location] = useLocation();
-  const urlParams = location.includes('?') ? location.split('?')[1] : '';
-  const searchParams = new URLSearchParams(urlParams);
-  const query = searchParams.get('q') || '';
+  
+  // Get query from URL using both location and window.location
+  const urlSearchParams = new URLSearchParams(window.location.search);
+  const query = urlSearchParams.get('q') || '';
   
   console.log('Search page - location:', location);
+  console.log('Search page - window.location.search:', window.location.search);
   console.log('Search page - query:', query);
   const [sortBy, setSortBy] = useState('default');
   const [page, setPage] = useState(1);
