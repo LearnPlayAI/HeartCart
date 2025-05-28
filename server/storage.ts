@@ -812,6 +812,7 @@ export class DatabaseStorage implements IStorage {
       newArrivals?: boolean;
     },
   ): Promise<Product[]> {
+    console.log("FUNCTION START - getAllProducts called with:", { attributeFilters, limit, offset, categoryId });
     try {
       console.log("CRITICAL DEBUG - getAllProducts called with attributeFilters:", attributeFilters);
       
@@ -850,7 +851,7 @@ export class DatabaseStorage implements IStorage {
                 .where(
                   and(
                     eq(productAttributes.attributeId, filter.attributeId),
-                    sql`${productAttributes.selectedOptions} && ${optionIds}`
+                    sql`${productAttributes.selectedOptions} && ARRAY[${optionIds.join(',')}]`
                   )
                 );
               
