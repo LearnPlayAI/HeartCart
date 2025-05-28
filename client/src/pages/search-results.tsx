@@ -33,6 +33,9 @@ const SearchResults = () => {
   const [page, setPage] = useState(1);
   const limit = 20;
   
+  // Show initial loading state before API call starts
+  const [initialLoading, setInitialLoading] = useState(true);
+  
   const { 
     data: response,
     isLoading, 
@@ -59,6 +62,13 @@ const SearchResults = () => {
   
   // Extract products from standardized API response
   const products = response?.success ? response.data : [];
+  
+  // Turn off initial loading once we have data or error
+  useEffect(() => {
+    if (!isLoading) {
+      setInitialLoading(false);
+    }
+  }, [isLoading]);
   
   // Reset page when query changes
   useEffect(() => {
@@ -157,7 +167,7 @@ const SearchResults = () => {
         </div>
         
         {/* Search Results */}
-        {isLoading ? (
+        {(isLoading || initialLoading) ? (
           <div className="space-y-6">
             {/* Prominent Loading Indicator */}
             <div className="flex items-center justify-center py-12 bg-gradient-to-r from-pink-50 to-purple-50 rounded-lg border-2 border-dashed border-pink-200">
