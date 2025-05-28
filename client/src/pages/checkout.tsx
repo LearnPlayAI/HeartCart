@@ -147,6 +147,7 @@ export default function CheckoutPage() {
     if (user?.data) {
       // Split fullName into firstName and lastName
       const userData = user.data;
+      console.log("User data for form hydration:", userData);
       const nameParts = (userData.fullName || "").trim().split(" ");
       const firstName = nameParts[0] || "";
       const lastName = nameParts.slice(1).join(" ") || "";
