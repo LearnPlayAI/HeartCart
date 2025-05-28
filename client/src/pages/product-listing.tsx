@@ -116,13 +116,21 @@ const ProductListing = () => {
   });
   const categories = categoriesResponse?.success ? categoriesResponse.data : [];
   
-  // Fetch products with attribute filtering
+  // Fetch products with comprehensive filtering
   const queryParams = {
     limit, 
     offset: (page - 1) * limit,
     ...(attributeFilters.length > 0 && { attributeFilters: JSON.stringify(attributeFilters) }),
     ...(searchQuery && { q: searchQuery }),
-    ...(selectedCategoryId && { categoryId: selectedCategoryId })
+    ...(selectedCategoryId && { categoryId: selectedCategoryId }),
+    ...(sortBy !== 'default' && { sort: sortBy }),
+    ...(priceRange[0] > 0 && { minPrice: priceRange[0] }),
+    ...(priceRange[1] < 5000 && { maxPrice: priceRange[1] }),
+    ...(ratingFilter && { minRating: ratingFilter }),
+    ...(availabilityFilter !== 'all' && { availability: availabilityFilter }),
+    ...(filters.onSale && { onSale: true }),
+    ...(filters.freeShipping && { freeShipping: true }),
+    ...(filters.newArrivals && { newArrivals: true })
   };
   
   const { 

@@ -801,6 +801,16 @@ export class DatabaseStorage implements IStorage {
     search?: string,
     options?: { includeInactive?: boolean; includeCategoryInactive?: boolean },
     attributeFilters?: any[],
+    filterOptions?: {
+      sort?: string;
+      minPrice?: number;
+      maxPrice?: number;
+      minRating?: number;
+      availability?: string;
+      onSale?: boolean;
+      freeShipping?: boolean;
+      newArrivals?: boolean;
+    },
   ): Promise<Product[]> {
     try {
       // Create conditions array
@@ -903,6 +913,46 @@ export class DatabaseStorage implements IStorage {
           );
         }
 
+        // Apply additional filter options if provided
+        if (filterOptions) {
+          // Price range filters
+          if (filterOptions.minPrice !== undefined) {
+            conditions.push(sql`COALESCE(${products.salePrice}, ${products.price}) >= ${filterOptions.minPrice}`);
+          }
+          if (filterOptions.maxPrice !== undefined) {
+            conditions.push(sql`COALESCE(${products.salePrice}, ${products.price}) <= ${filterOptions.maxPrice}`);
+          }
+
+          // Rating filter
+          if (filterOptions.minRating !== undefined) {
+            conditions.push(sql`${products.rating} >= ${filterOptions.minRating}`);
+          }
+
+          // Availability filter
+          if (filterOptions.availability === 'in_stock') {
+            conditions.push(sql`${products.stock} > 0`);
+          } else if (filterOptions.availability === 'out_of_stock') {
+            conditions.push(sql`${products.stock} = 0`);
+          }
+
+          // On sale filter
+          if (filterOptions.onSale) {
+            conditions.push(sql`${products.salePrice} IS NOT NULL AND ${products.salePrice} < ${products.price}`);
+          }
+
+          // Free shipping filter
+          if (filterOptions.freeShipping) {
+            conditions.push(eq(products.freeShipping, true));
+          }
+
+          // New arrivals filter (products created in last 30 days)
+          if (filterOptions.newArrivals) {
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            conditions.push(sql`${products.createdAt} >= ${thirtyDaysAgo.toISOString()}`);
+          }
+        }
+
         // Apply attribute filters if provided
         if (attributeFilters && attributeFilters.length > 0) {
           // For attribute filtering, we need to join with product_attributes table
@@ -963,6 +1013,40 @@ export class DatabaseStorage implements IStorage {
               return [];
             }
           }
+        }
+
+        // Apply sorting if specified
+        if (filterOptions?.sort) {
+          switch (filterOptions.sort) {
+            case 'price-asc':
+              query = query.orderBy(sql`COALESCE(${products.salePrice}, ${products.price}) ASC`);
+              break;
+            case 'price-desc':
+              query = query.orderBy(sql`COALESCE(${products.salePrice}, ${products.price}) DESC`);
+              break;
+            case 'name-asc':
+              query = query.orderBy(asc(products.name));
+              break;
+            case 'name-desc':
+              query = query.orderBy(desc(products.name));
+              break;
+            case 'rating-desc':
+              query = query.orderBy(desc(products.rating));
+              break;
+            case 'newest':
+              query = query.orderBy(desc(products.createdAt));
+              break;
+            case 'oldest':
+              query = query.orderBy(asc(products.createdAt));
+              break;
+            default:
+              // Default sorting by creation date (newest first)
+              query = query.orderBy(desc(products.createdAt));
+              break;
+          }
+        } else {
+          // Default sorting by creation date (newest first)
+          query = query.orderBy(desc(products.createdAt));
         }
 
         const productList = await query.limit(limit).offset(offset);

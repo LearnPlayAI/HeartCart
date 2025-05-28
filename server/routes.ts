@@ -575,7 +575,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/products", 
     validateRequest({ query: productsQuerySchema }),
     withStandardResponse(async (req: Request, res: Response) => {
-      const { limit, offset, category: categoryId, search, attributeFilters } = req.query;
+      const { 
+        limit, 
+        offset, 
+        category: categoryId, 
+        search, 
+        attributeFilters,
+        sort,
+        minPrice,
+        maxPrice,
+        minRating,
+        availability,
+        onSale,
+        freeShipping,
+        newArrivals
+      } = req.query;
       
       const user = req.user as any;
       const isAdmin = user && user.role === 'admin';
@@ -595,13 +609,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      // Build comprehensive filter options
+      const filterOptions = {
+        sort: sort as string,
+        minPrice: minPrice ? Number(minPrice) : undefined,
+        maxPrice: maxPrice ? Number(maxPrice) : undefined,
+        minRating: minRating ? Number(minRating) : undefined,
+        availability: availability as string,
+        onSale: onSale === 'true',
+        freeShipping: freeShipping === 'true',
+        newArrivals: newArrivals === 'true'
+      };
+      
       const products = await storage.getAllProducts(
         Number(limit), 
         Number(offset), 
         categoryId ? Number(categoryId) : undefined, 
         search as string | undefined, 
         options,
-        parsedAttributeFilters
+        parsedAttributeFilters,
+        filterOptions
       );
       return products;
     }));
