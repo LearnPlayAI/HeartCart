@@ -185,9 +185,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 {formatCurrency(product.price)}
               </span>
             )}
-            {isFlashDeal && product.specialSaleEnd && (
-              <FlashDealTimer endDate={new Date(product.specialSaleEnd)} />
-            )}
+
           </div>
           
           {isFlashDeal && (
