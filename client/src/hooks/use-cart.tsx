@@ -209,6 +209,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   
   // Type-safe version of addItem that excludes the server-calculated fields
   const addItem = (item: Omit<CartItemWithDiscounts, 'id' | 'discountData' | 'totalDiscount'>) => {
+    console.log('🔍 ADD ITEM DEBUG - Received item in cart hook:', item);
+    console.log('🔍 ADD ITEM DEBUG - attributeSelections field:', item.attributeSelections);
     addToCartMutation.mutate(item);
   };
   
