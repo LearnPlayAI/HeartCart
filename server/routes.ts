@@ -601,12 +601,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Parse attribute filters if provided
       let parsedAttributeFilters = [];
+      console.log('Route: Raw attributeFilters received:', attributeFilters, 'Type:', typeof attributeFilters);
+      
       if (attributeFilters && typeof attributeFilters === 'string') {
         try {
-          parsedAttributeFilters = JSON.parse(attributeFilters);
-          console.log('Route: Parsed attribute filters:', parsedAttributeFilters);
+          const decoded = decodeURIComponent(attributeFilters);
+          console.log('Route: Decoded attributeFilters:', decoded);
+          parsedAttributeFilters = JSON.parse(decoded);
+          console.log('Route: Successfully parsed attribute filters:', parsedAttributeFilters);
         } catch (error) {
           console.error('Error parsing attribute filters:', error, 'Raw value:', attributeFilters);
+          try {
+            // Try parsing without decoding
+            parsedAttributeFilters = JSON.parse(attributeFilters);
+            console.log('Route: Parsed without decoding:', parsedAttributeFilters);
+          } catch (error2) {
+            console.error('Error parsing without decoding:', error2);
+          }
         }
       }
       
