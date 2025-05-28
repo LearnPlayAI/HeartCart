@@ -550,41 +550,41 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ draftId, initialDa
   };
 
   // Handle saving and publishing from the basic info step
-  const handleSaveAndPublish = async (stepData: any) => {
+  const handleSaveAndPublish = (stepData: any) => {
     setIsPublishing(true);
     
-    try {
-      // First save the step data
-      const formattedData = {
-        ...stepData,
-        completedSteps: Array.from(new Set([
-          ...(draftData?.data.completedSteps || []), 
-          currentStep
-        ])),
-        wizardProgress: {
-          ...(draftData?.data.wizardProgress || {}),
-          [currentStep]: true
-        }
-      };
-      
-      // Update the step
-      await updateStepMutation.mutateAsync({
-        step: currentStep,
-        stepData: formattedData,
-      });
-      
-      // Then publish the draft
-      publishDraftMutation.mutate(draftData?.data);
-    } catch (error) {
-      console.error('Failed to save and publish:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to save and publish product',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsPublishing(false);
-    }
+    // First save the step data using the existing handleSaveStep function
+    const formattedData = {
+      ...stepData,
+      completedSteps: Array.from(new Set([
+        ...(draftData?.data.completedSteps || []), 
+        currentStep
+      ])),
+      wizardProgress: {
+        ...(draftData?.data.wizardProgress || {}),
+        [currentStep]: true
+      }
+    };
+    
+    // Update the step first, then publish using the existing publish function
+    updateStepMutation.mutate({
+      step: currentStep,
+      stepData: formattedData,
+    }, {
+      onSuccess: () => {
+        // After successfully saving the step, use the existing publish function
+        handlePublish();
+      },
+      onError: (error) => {
+        console.error('Failed to save step before publishing:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to save changes before publishing',
+          variant: 'destructive',
+        });
+        setIsPublishing(false);
+      }
+    });
   };
 
   // Handle publishing the product
