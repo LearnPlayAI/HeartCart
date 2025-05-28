@@ -554,40 +554,7 @@ export class DatabaseStorage implements IStorage {
     orderBy?: "name" | "displayOrder";
   }): Promise<Category[]> {
     try {
-      // Create aliases for parent category join
-      const parentCategories = alias(categories, 'parent_categories');
-      
-      let query = db
-        .select({
-          id: categories.id,
-          name: categories.name,
-          slug: categories.slug,
-          description: categories.description,
-          icon: categories.icon,
-          imageUrl: categories.imageUrl,
-          isActive: categories.isActive,
-          parentId: categories.parentId,
-          level: categories.level,
-          displayOrder: categories.displayOrder,
-          createdAt: categories.createdAt,
-          updatedAt: categories.updatedAt,
-          parent: {
-            id: parentCategories.id,
-            name: parentCategories.name,
-            slug: parentCategories.slug,
-            description: parentCategories.description,
-            icon: parentCategories.icon,
-            imageUrl: parentCategories.imageUrl,
-            isActive: parentCategories.isActive,
-            parentId: parentCategories.parentId,
-            level: parentCategories.level,
-            displayOrder: parentCategories.displayOrder,
-            createdAt: parentCategories.createdAt,
-            updatedAt: parentCategories.updatedAt,
-          }
-        })
-        .from(categories)
-        .leftJoin(parentCategories, eq(categories.parentId, parentCategories.id));
+      let query = db.select().from(categories);
 
       // Apply filters
       const conditions: SQL<unknown>[] = [];
@@ -623,12 +590,15 @@ export class DatabaseStorage implements IStorage {
         );
       }
 
-      const results = await query;
+      const result = await query;
       
-      // Transform results to include parent as nested object or null
-      return results.map(row => ({
-        ...row,
-        parent: row.parent.id ? row.parent : null
+      // Now fetch parent information for categories that have parent_id
+      const categoryMap = new Map(result.map(cat => [cat.id, cat]));
+      
+      // Add parent information to each category
+      return result.map(category => ({
+        ...category,
+        parent: category.parentId ? categoryMap.get(category.parentId) || null : null
       }));
     } catch (error) {
       console.error(`Error fetching all categories:`, error);
