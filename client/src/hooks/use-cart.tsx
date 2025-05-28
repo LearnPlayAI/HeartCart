@@ -92,6 +92,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const requestData = {
         productId: item.productId,
         quantity: item.quantity,
+        itemPrice: item.itemPrice,
         attributeSelections: item.attributeSelections || {}
       };
       
