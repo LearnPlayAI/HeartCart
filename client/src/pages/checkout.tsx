@@ -128,17 +128,28 @@ export default function CheckoutPage() {
   });
 
   // Fetch cart items with fresh data
-  const { data: cartItems, isLoading: cartLoading } = useQuery({
+  const { data: cartResponse, isLoading: cartLoading, refetch: refetchCart } = useQuery({
     queryKey: ["/api/cart"],
     staleTime: 0, // Always fetch fresh data
-    cacheTime: 0, // Don't cache the results
+    gcTime: 0, // Don't cache the results (updated for TanStack Query v5)
     refetchOnMount: true, // Refetch when component mounts
     refetchOnWindowFocus: true // Refetch when window gets focus
   });
 
+  // Extract cart items from the response
+  const cartItems = cartResponse?.data || [];
+
+  // Debug cart data
+  console.log("🔍 CHECKOUT DEBUG - cartResponse:", cartResponse);
+  console.log("🔍 CHECKOUT DEBUG - cartItems:", cartItems);
+
   // Calculate totals
-  const subtotal = Array.isArray(cartItems) ? cartItems.reduce((sum: number, item: any) => 
-    sum + (parseFloat(item.itemPrice || 0) * item.quantity), 0) : 0;
+  const subtotal = Array.isArray(cartItems) ? cartItems.reduce((sum: number, item: any) => {
+    const itemPrice = parseFloat(item.itemPrice || 0);
+    const quantity = item.quantity || 0;
+    console.log(`🔍 CHECKOUT DEBUG - Item: ${item.product?.name}, Price: ${itemPrice}, Qty: ${quantity}`);
+    return sum + (itemPrice * quantity);
+  }, 0) : 0;
 
   const form = useForm<CheckoutFormData>({
     resolver: zodResolver(checkoutSchema),
@@ -158,6 +169,11 @@ export default function CheckoutPage() {
       saveDetails: false
     }
   });
+
+  // Force cart refetch on component mount
+  useEffect(() => {
+    refetchCart();
+  }, [refetchCart]);
 
   // Pre-populate form with user data if available
   useEffect(() => {
