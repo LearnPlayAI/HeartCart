@@ -568,7 +568,7 @@ export default function PricingPage() {
                           </TableCell>
                           <TableCell className="text-right">
                             {product.customerDiscount > 0 ? (
-                              <Badge variant="destructive" className="font-mono">
+                              <Badge className="font-mono bg-pink-500 hover:bg-pink-600 text-white">
                                 {product.customerDiscount}%
                               </Badge>
                             ) : (
@@ -677,7 +677,7 @@ export default function PricingPage() {
                           <div className="text-sm">
                             <span className="text-muted-foreground">Customer Discount: </span>
                             {product.customerDiscount > 0 ? (
-                              <Badge variant="destructive" className="font-mono text-xs">
+                              <Badge className="font-mono text-xs bg-pink-500 hover:bg-pink-600 text-white">
                                 {product.customerDiscount}%
                               </Badge>
                             ) : (
