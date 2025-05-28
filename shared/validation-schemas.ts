@@ -211,16 +211,7 @@ export const productsQuerySchema = z.object({
   limit: z.coerce.number().int().min(0).default(20),
   offset: z.coerce.number().int().min(0).default(0),
   category: z.coerce.number().int().positive().optional(),
-  search: z.string().trim().optional(),
-  attributeFilters: z.string().optional(),
-  sort: z.string().optional(),
-  minPrice: z.coerce.number().min(0).optional(),
-  maxPrice: z.coerce.number().min(0).optional(),
-  minRating: z.coerce.number().min(0).max(5).optional(),
-  availability: z.string().optional(),
-  onSale: z.string().optional(),
-  freeShipping: z.string().optional(),
-  newArrivals: z.string().optional()
+  search: z.string().trim().optional()
 });
 
 /**

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, Link } from 'wouter';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet';
 import { StandardApiResponse } from '@/types/api';
 import { Button } from '@/components/ui/button';
@@ -39,7 +39,7 @@ import CategorySidebar from '@/components/ui/category-sidebar';
 import type { Product, Category } from '@shared/schema';
 import { Input } from '@/components/ui/input';
 import { formatCurrency } from '@/lib/utils';
-
+import type { Attribute, AttributeOption, CategoryAttribute } from '@/types/attribute-types';
 
 // Availability filter options (replaced stock filter)
 const availabilityOptions = [
@@ -57,7 +57,20 @@ const ratingOptions = [
 // View modes
 type ViewMode = 'grid' | 'list';
 
+// Type definition for attribute filters
+interface AttributeFilter {
+  attributeId: number;
+  attributeName: string;
+  selectedOptions: string[];
+}
 
+// Helper function to get attribute display name
+const getAttributeDisplayName = (attribute: Attribute | CategoryAttribute): string => {
+  if ('overrideDisplayName' in attribute && attribute.overrideDisplayName) {
+    return attribute.overrideDisplayName;
+  }
+  return attribute.attribute?.displayName || '';
+};
 
 const ProductListing = () => {
   const [location, setLocation] = useLocation();
@@ -78,7 +91,7 @@ const ProductListing = () => {
   const [ratingFilter, setRatingFilter] = useState(searchParams.get('rating') || '');
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
-
+  const [attributeFilters, setAttributeFilters] = useState<AttributeFilter[]>([]);
   const [filters, setFilters] = useState({
     onSale: searchParams.get('on_sale') === 'true',
     freeShipping: searchParams.get('free_shipping') === 'true',
@@ -98,52 +111,13 @@ const ProductListing = () => {
   });
   const categories = categoriesResponse?.success ? categoriesResponse.data : [];
   
-  // Fetch products with comprehensive filtering
-  const queryParams = {
-    limit, 
-    offset: (page - 1) * limit,
-    ...(searchQuery && { q: searchQuery }),
-    ...(selectedCategoryId && { categoryId: selectedCategoryId }),
-    ...(sortBy !== 'default' && { sort: sortBy }),
-    ...(priceRange[0] > 0 && { minPrice: priceRange[0] }),
-    ...(priceRange[1] < 5000 && { maxPrice: priceRange[1] }),
-    ...(ratingFilter && { minRating: ratingFilter }),
-    ...(availabilityFilter !== 'all' && { availability: availabilityFilter }),
-    ...(filters.onSale && { onSale: true }),
-    ...(filters.freeShipping && { freeShipping: true }),
-    ...(filters.newArrivals && { newArrivals: true })
-  };
-
-  console.log("Query params being sent:", queryParams);
-  
+  // Fetch products
   const { 
     data: productsResponse, 
     isLoading: isLoadingProducts,
-    error: productsError,
-    refetch: refetchProducts
+    error: productsError
   } = useQuery<StandardApiResponse<Product[], { total?: number, totalPages?: number }>>({
-    queryKey: ['/api/products', queryParams],
-    queryFn: async () => {
-      // Build URL with query parameters
-      const url = new URL('/api/products', window.location.origin);
-      Object.entries(queryParams).forEach(([key, value]) => {
-        if (value !== undefined && value !== null && value !== '') {
-          url.searchParams.append(key, String(value));
-        }
-      });
-      
-      const response = await fetch(url.toString(), {
-        credentials: 'include',
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      return await response.json();
-    },
-    staleTime: 0, // Ensure fresh data on filter changes
-    cacheTime: 0, // Don't cache results
+    queryKey: ['/api/products', { limit, offset: (page - 1) * limit }],
   });
   const products = productsResponse?.success ? productsResponse.data : [];
   const totalPages = productsResponse?.meta?.totalPages || 1;
@@ -161,7 +135,7 @@ const ProductListing = () => {
     data: filterableAttributesResponse, 
     isLoading: isLoadingAttributes,
     error: attributesError
-  } = useQuery<StandardApiResponse<any[]>>({
+  } = useQuery<StandardApiResponse<(CategoryAttribute & { options: AttributeOption[], attribute: Attribute })[]>>({
     queryKey: [selectedCategory ? 
       `/api/categories/${selectedCategory}/filterable-attributes` : 
       '/api/products/filterable-attributes'
@@ -202,8 +176,6 @@ const ProductListing = () => {
     if (filters.freeShipping) params.set('free_shipping', 'true');
     if (filters.newArrivals) params.set('new_arrivals', 'true');
     if (page > 1) params.set('page', page.toString());
-    
-
     
     const queryString = params.toString();
     const newLocation = queryString ? `/products?${queryString}` : '/products';
@@ -399,7 +371,32 @@ const ProductListing = () => {
     setPage(1);
   };
   
-  // Remove the problematic attribute values query that was causing API errors
+  // Fetch product attribute values for filtering
+  const { 
+    data: productAttributeValuesResponse,
+    error: attributeValuesError
+  } = useQuery<StandardApiResponse<{
+    productId: number;
+    attributeId: number;
+    optionId: number | null;
+    textValue: string | null;
+  }[]>>({
+    queryKey: ['/api/products/attribute-values'],
+    enabled: !!products && attributeFilters.length > 0,
+  });
+  const productAttributeValues = productAttributeValuesResponse?.success ? productAttributeValuesResponse.data : [];
+  
+  // Handle attribute values error
+  useEffect(() => {
+    if (attributeValuesError) {
+      console.error('Error fetching product attribute values:', attributeValuesError);
+      toast({
+        title: "Failed to load product attributes",
+        description: attributeValuesError instanceof Error ? attributeValuesError.message : "An unexpected error occurred",
+        variant: "destructive",
+      });
+    }
+  }, [attributeValuesError, toast]);
   
   // Update active filters to include attribute filters
   useEffect(() => {
@@ -486,17 +483,32 @@ const ProductListing = () => {
       if (searchQuery && !product.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
       
       // Apply attribute filters
-      if (attributeFilters.length > 0) {
-        // For each attribute filter, check if the product matches
+      if (attributeFilters.length > 0 && productAttributeValues) {
+        // For each attribute filter
         for (const filter of attributeFilters) {
-          // Check if the product has the required attribute values
-          // We need to check the product's actual attribute data from the API
-          // For now, we'll show products when attributes are filtered but implement proper filtering later
-          // This requires connecting to the product attribute API endpoints
+          // Get all attribute values for this product and attribute
+          const productValues = productAttributeValues.filter(
+            pav => pav.productId === product.id && pav.attributeId === filter.attributeId
+          );
           
-          // TODO: Implement proper product-attribute filtering by fetching product attributes
-          // For now, return true to show all products when filtering is applied
-          continue;
+          // If no values found for this attribute, filter out the product
+          if (productValues.length === 0) return false;
+          
+          // Check if any of the selected options match this product's values
+          const hasMatch = filter.selectedOptions.some(selectedOption => 
+            productValues.some(pav => {
+              // Match either by option ID or text value
+              if (pav.optionId) {
+                const option = filterableAttributes?.find(attr => attr.id === filter.attributeId)
+                  ?.options.find(opt => opt.id === pav.optionId);
+                return option && option.value === selectedOption;
+              }
+              return pav.textValue === selectedOption;
+            })
+          );
+          
+          // If no matches found for this attribute filter, filter out the product
+          if (!hasMatch) return false;
         }
       }
       
@@ -762,57 +774,38 @@ const ProductListing = () => {
                 </AccordionContent>
               </AccordionItem>
               
-              {/* Product Attributes - Hierarchical Structure */}
+              {/* Product Attributes */}
               {filterableAttributes && filterableAttributes.length > 0 && (
                 <AccordionItem value="attributes">
                   <AccordionTrigger>Product Attributes</AccordionTrigger>
                   <AccordionContent>
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                       {filterableAttributes.map(attribute => (
-                        <Accordion key={attribute.id} type="single" collapsible className="border rounded-lg">
-                          <AccordionItem value={`attribute-${attribute.id}`} className="border-none">
-                            <AccordionTrigger className="px-3 py-2 text-sm font-medium hover:no-underline">
-                              <div className="flex items-center justify-between w-full">
-                                <span>{getAttributeDisplayName(attribute)}</span>
-                                {/* Show count of selected options */}
-                                {(() => {
-                                  const selectedCount = attribute.options.filter(option => 
-                                    isAttributeOptionSelected(attribute.id, option.value)
-                                  ).length;
-                                  return selectedCount > 0 ? (
-                                    <Badge variant="secondary" className="ml-2 text-xs">
-                                      {selectedCount} selected
-                                    </Badge>
-                                  ) : null;
-                                })()}
+                        <div key={attribute.id} className="space-y-2">
+                          <h3 className="text-sm font-medium">{getAttributeDisplayName(attribute)}</h3>
+                          <div className="space-y-1.5">
+                            {attribute.options.map(option => (
+                              <div key={option.id} className="flex items-center space-x-2">
+                                <Checkbox 
+                                  id={`attr-${attribute.id}-${option.id}`}
+                                  checked={isAttributeOptionSelected(attribute.id, option.value)}
+                                  onCheckedChange={(checked) => handleAttributeFilterChange(
+                                    attribute.id,
+                                    getAttributeDisplayName(attribute),
+                                    option.value,
+                                    checked as boolean
+                                  )}
+                                />
+                                <label 
+                                  htmlFor={`attr-${attribute.id}-${option.id}`} 
+                                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                >
+                                  {option.value}
+                                </label>
                               </div>
-                            </AccordionTrigger>
-                            <AccordionContent className="px-3 pb-3">
-                              <div className="space-y-2">
-                                {attribute.options.map(option => (
-                                  <div key={option.id} className="flex items-center space-x-2">
-                                    <Checkbox 
-                                      id={`attr-${attribute.id}-${option.id}`}
-                                      checked={isAttributeOptionSelected(attribute.id, option.value)}
-                                      onCheckedChange={(checked) => handleAttributeFilterChange(
-                                        attribute.id,
-                                        getAttributeDisplayName(attribute),
-                                        option.value,
-                                        checked as boolean
-                                      )}
-                                    />
-                                    <label 
-                                      htmlFor={`attr-${attribute.id}-${option.id}`} 
-                                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                                    >
-                                      {option.value}
-                                    </label>
-                                  </div>
-                                ))}
-                              </div>
-                            </AccordionContent>
-                          </AccordionItem>
-                        </Accordion>
+                            ))}
+                          </div>
+                        </div>
                       ))}
                     </div>
                   </AccordionContent>

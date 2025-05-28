@@ -575,25 +575,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/products", 
     validateRequest({ query: productsQuerySchema }),
     withStandardResponse(async (req: Request, res: Response) => {
-      console.log('RAW REQ.QUERY:', JSON.stringify(req.query, null, 2));
-      
-      const { 
-        limit, 
-        offset, 
-        category: categoryId, 
-        search, 
-        attributeFilters,
-        sort,
-        minPrice,
-        maxPrice,
-        minRating,
-        availability,
-        onSale,
-        freeShipping,
-        newArrivals
-      } = req.query;
-      
-      console.log('EXTRACTED attributeFilters:', attributeFilters);
+      const { limit, offset, category: categoryId, search } = req.query;
       
       const user = req.user as any;
       const isAdmin = user && user.role === 'admin';
@@ -603,60 +585,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         includeCategoryInactive: isAdmin 
       };
       
-      // Parse attribute filters if provided
-      let parsedAttributeFilters = [];
-      console.log('Route: Raw attributeFilters received:', attributeFilters, 'Type:', typeof attributeFilters);
-      
-      if (attributeFilters && typeof attributeFilters === 'string') {
-        try {
-          const decoded = decodeURIComponent(attributeFilters);
-          console.log('Route: Decoded attributeFilters:', decoded);
-          parsedAttributeFilters = JSON.parse(decoded);
-          console.log('Route: Successfully parsed attribute filters:', parsedAttributeFilters);
-        } catch (error) {
-          console.error('Error parsing attribute filters:', error, 'Raw value:', attributeFilters);
-          try {
-            // Try parsing without decoding
-            parsedAttributeFilters = JSON.parse(attributeFilters);
-            console.log('Route: Parsed without decoding:', parsedAttributeFilters);
-          } catch (error2) {
-            console.error('Error parsing without decoding:', error2);
-          }
-        }
-      }
-      
-      console.log('Route: Final parsedAttributeFilters:', parsedAttributeFilters);
-      
-      // Build comprehensive filter options
-      const filterOptions = {
-        sort: sort as string,
-        minPrice: minPrice ? Number(minPrice) : undefined,
-        maxPrice: maxPrice ? Number(maxPrice) : undefined,
-        minRating: minRating ? Number(minRating) : undefined,
-        availability: availability as string,
-        onSale: onSale === 'true',
-        freeShipping: freeShipping === 'true',
-        newArrivals: newArrivals === 'true'
-      };
-      
-      console.log('CRITICAL ROUTE DEBUG - About to call storage.getAllProducts with:', {
-        limit: Number(limit),
-        offset: Number(offset),
-        categoryId: categoryId ? Number(categoryId) : undefined,
-        search: search as string | undefined,
-        options,
-        parsedAttributeFilters,
-        filterOptions
-      });
-      
       const products = await storage.getAllProducts(
         Number(limit), 
         Number(offset), 
         categoryId ? Number(categoryId) : undefined, 
         search as string | undefined, 
-        options,
-        parsedAttributeFilters,
-        filterOptions
+        options
       );
       return products;
     }));
