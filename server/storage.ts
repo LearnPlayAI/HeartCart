@@ -599,11 +599,6 @@ export class DatabaseStorage implements IStorage {
       return result.map(category => {
         const parent = category.parentId ? categoryMap.get(category.parentId) : null;
         
-        // Debug logging for specific categories
-        if (category.id === 19 || category.id === 15) {
-          console.log(`Category ${category.id} (${category.name}): parentId=${category.parentId}, found parent:`, parent ? parent.name : 'null');
-        }
-        
         return {
           ...category,
           parent: parent ? {
