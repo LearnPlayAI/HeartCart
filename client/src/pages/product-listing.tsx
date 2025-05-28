@@ -74,11 +74,13 @@ const getAttributeDisplayName = (attribute: Attribute | CategoryAttribute): stri
 
 const ProductListing = () => {
   const [location, setLocation] = useLocation();
-  const searchParams = new URLSearchParams(location.split('?')[1] || '');
   const { addItem } = useCart();
   const { toast } = useToast();
   
-  // State for filters
+  // Parse URL parameters
+  const searchParams = new URLSearchParams(location.split('?')[1] || '');
+  
+  // State for filters - initialize from URL params
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [sortBy, setSortBy] = useState(searchParams.get('sort') || 'default');
@@ -97,6 +99,16 @@ const ProductListing = () => {
     freeShipping: searchParams.get('free_shipping') === 'true',
     newArrivals: searchParams.get('new_arrivals') === 'true'
   });
+  
+  // Update state when URL changes (for direct navigation or back/forward)
+  useEffect(() => {
+    const currentSearchParams = new URLSearchParams(location.split('?')[1] || '');
+    const urlSearchQuery = currentSearchParams.get('q') || '';
+    
+    if (urlSearchQuery !== searchQuery) {
+      setSearchQuery(urlSearchQuery);
+    }
+  }, [location]);
   
   // Pagination
   const [page, setPage] = useState(parseInt(searchParams.get('page') || '1'));
