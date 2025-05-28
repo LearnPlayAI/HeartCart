@@ -71,12 +71,26 @@ export default function PricingPage() {
   const itemsPerPage = 20;
 
   // Fetch products
+  // Fetch products using search endpoint when there's a search query, otherwise use regular products endpoint
   const { data: productsResponse, isLoading: isProductsLoading, error: productsError } = useQuery({
-    queryKey: ['/api/products'],
+    queryKey: searchQuery.trim() ? ['/api/search', searchQuery.trim()] : ['/api/products'],
     queryFn: async () => {
-      const response = await fetch('/api/products');
-      if (!response.ok) throw new Error('Failed to fetch products');
-      return response.json();
+      if (searchQuery.trim()) {
+        // Use the powerful search endpoint that searches across all product fields
+        const searchParams = new URLSearchParams({
+          q: searchQuery.trim(),
+          limit: '1000', // Get all matching results for client-side filtering and sorting
+          offset: '0'
+        });
+        const response = await fetch(`/api/search?${searchParams}`);
+        if (!response.ok) throw new Error('Failed to search products');
+        return response.json();
+      } else {
+        // Use regular products endpoint when no search query
+        const response = await fetch('/api/products');
+        if (!response.ok) throw new Error('Failed to fetch products');
+        return response.json();
+      }
     }
   });
 
@@ -149,21 +163,9 @@ export default function PricingPage() {
     return Array.from(catalogSet).sort();
   }, [enrichedProducts]);
 
-  // Filter and search products
+  // Apply additional filters (search is already handled by the API)
   const filteredProducts = useMemo(() => {
     return enrichedProducts.filter((product: any) => {
-      // Search filter
-      if (searchQuery) {
-        const searchLower = searchQuery.toLowerCase();
-        const matchesSearch = 
-          product.name.toLowerCase().includes(searchLower) ||
-          product.sku?.toLowerCase().includes(searchLower) ||
-          product.categoryName.toLowerCase().includes(searchLower) ||
-          product.supplier?.toLowerCase().includes(searchLower);
-        
-        if (!matchesSearch) return false;
-      }
-
       // Category filter
       if (categoryFilter && categoryFilter !== 'all' && product.categoryName !== categoryFilter) {
         return false;
@@ -181,7 +183,7 @@ export default function PricingPage() {
 
       return true;
     });
-  }, [enrichedProducts, searchQuery, categoryFilter, supplierFilter, catalogFilter]);
+  }, [enrichedProducts, categoryFilter, supplierFilter, catalogFilter]);
 
   // Sort products
   const sortedProducts = useMemo(() => {
@@ -361,7 +363,7 @@ export default function PricingPage() {
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Search products, SKU, category, or supplier..."
+                    placeholder="Search products by name, description, SKU, brand, supplier, category, tags..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10"
