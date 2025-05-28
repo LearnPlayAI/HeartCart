@@ -702,14 +702,7 @@ const ProductListing = () => {
                 </AccordionContent>
               </AccordionItem>
               
-              <AccordionItem value="availability">
-                <AccordionTrigger>Availability</AccordionTrigger>
-                <AccordionContent>
-                  <div className="text-sm text-gray-600 italic">
-                    All products are available to order from our local suppliers.
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
+
               
               <AccordionItem value="rating">
                 <AccordionTrigger>Product Rating</AccordionTrigger>
