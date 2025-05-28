@@ -145,15 +145,20 @@ export default function CheckoutPage() {
   // Pre-populate form with user data if available
   useEffect(() => {
     if (user) {
+      // Split fullName into firstName and lastName
+      const nameParts = (user.fullName || "").trim().split(" ");
+      const firstName = nameParts[0] || "";
+      const lastName = nameParts.slice(1).join(" ") || "";
+      
       form.reset({
-        firstName: user.firstName || "",
-        lastName: user.lastName || "",
+        firstName,
+        lastName,
         email: user.email || "",
-        phone: user.phone || "",
-        addressLine1: user.addressLine1 || "",
-        addressLine2: user.addressLine2 || "",
+        phone: user.phoneNumber || "",
+        addressLine1: user.address || "",
+        addressLine2: "",
         city: user.city || "",
-        province: user.province || "",
+        province: "",
         postalCode: user.postalCode || "",
         shippingMethod: "pudo",
         paymentMethod: "eft",
