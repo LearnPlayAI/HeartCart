@@ -2781,9 +2781,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = req.user as any;
       const { productId, quantity, itemPrice, attributeValues } = req.body;
       
-      // Debug: Log the incoming request data
-      console.log(`🔍 CART ROUTE DEBUG - Request body:`, req.body);
-      console.log(`🔍 CART ROUTE DEBUG - itemPrice value:`, itemPrice, typeof itemPrice);
+      // Debug: Log the incoming request data with explicit output
+      console.error(`=== CART DEBUG START ===`);
+      console.error(`Request body:`, JSON.stringify(req.body, null, 2));
+      console.error(`itemPrice extracted:`, itemPrice, typeof itemPrice);
+      console.error(`=== CART DEBUG END ===`);
       
       try {
         // Check if product exists with comprehensive error handling
