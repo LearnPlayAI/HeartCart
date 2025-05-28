@@ -47,16 +47,18 @@ const AIRecommendedProducts = () => {
   const productsToShow = recommendations?.products.length ? recommendations.products : fallbackProducts;
   
   return (
-    <section className="mb-8 bg-white rounded-lg shadow-md p-4">
-      <div className="flex items-center mb-4">
-        <h2 className="text-xl font-bold flex-1">Recommended For You</h2>
-        <span className="text-xs bg-[#FF69B4]/10 text-[#FF69B4] px-2 py-1 rounded-full flex items-center">
-          <Bot className="mr-1 h-3 w-3" /> AI Powered
-        </span>
+    <section className="mb-4 md:mb-8 bg-white rounded-lg shadow-md overflow-hidden">
+      <div className="bg-gradient-to-r from-[#FF69B4] to-[#FF1493] p-4">
+        <div className="flex items-center">
+          <h2 className="text-white text-xl font-bold flex-1">Recommended For You</h2>
+          <span className="text-xs bg-white/20 text-white px-2 py-1 rounded-full flex items-center">
+            <Bot className="mr-1 h-3 w-3" /> AI Powered
+          </span>
+        </div>
       </div>
-      
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {isLoading ? (
+      <div className="p-4 bg-[#ff68b32e]">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {isLoading ? (
           // Show skeleton loaders while loading
           Array.from({ length: 4 }).map((_, index) => (
             <Card key={index} className="animate-pulse">
@@ -123,6 +125,7 @@ const AIRecommendedProducts = () => {
             Sign in to see personalized recommendations
           </div>
         )}
+        </div>
       </div>
     </section>
   );
