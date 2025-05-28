@@ -498,7 +498,7 @@ const ProductDetailView = ({
               <img 
                 src={currentImage || (product.imageUrl ? ensureValidImageUrl(product.imageUrl) : '')} 
                 alt={product.name || 'Product image'} 
-                className="w-full h-auto object-contain aspect-square"
+                className="w-full h-auto object-contain aspect-square max-h-[300px] sm:max-h-[400px] md:max-h-[500px] lg:max-h-[600px]"
               />
               
               {/* Discount Badge - positioned in lower right */}
