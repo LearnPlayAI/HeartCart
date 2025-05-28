@@ -99,12 +99,12 @@ const CartDrawer = () => {
                     </div>
                     
                     {/* Display selected attributes */}
-                    {item.selectedAttributes && Object.keys(item.selectedAttributes).length > 0 && (
+                    {item.attributeSelections && Object.keys(item.attributeSelections).length > 0 && (
                       <div className="mt-1 text-xs text-gray-600">
-                        {Object.entries(item.selectedAttributes).map(([attributeId, selection]) => (
-                          <div key={attributeId} className="flex items-center gap-1">
-                            <span className="font-medium">{selection.attributeName}:</span>
-                            <span>{selection.displayValue || selection.value}</span>
+                        {Object.entries(item.attributeSelections).map(([attributeName, value]) => (
+                          <div key={attributeName} className="flex items-center gap-1">
+                            <span className="font-medium">{attributeName}:</span>
+                            <span className="bg-gray-100 px-2 py-0.5 rounded text-gray-700">{value}</span>
                           </div>
                         ))}
                       </div>
