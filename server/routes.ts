@@ -2839,10 +2839,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
         
-        // Calculate item price - get the product's current price
-        const itemPrice = product.price || 0;
+        // Calculate item price - use sale price if available, otherwise regular price
+        const itemPrice = product.salePrice || product.price || 0;
         
-        // Add user ID, combination hash, and calculated price to the cart item data
+        // Add user ID, combination hash, calculated price, and timestamp to the cart item data
         const cartItemData = {
           productId,
           quantity,
@@ -2850,7 +2850,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           userId: user.id,
           combinationHash,
           itemPrice,
-          // Note: createdAt will be set by database default
+          createdAt: new Date().toISOString(),
         };
         
         const cartItem = await storage.addToCart(cartItemData);

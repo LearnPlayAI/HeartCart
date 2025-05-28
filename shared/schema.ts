@@ -340,7 +340,6 @@ export const insertProductSchema = createInsertSchema(products).omit({
 
 export const insertCartItemSchema = createInsertSchema(cartItems).omit({
   id: true,
-  createdAt: true,
 });
 
 export const insertOrderSchema = createInsertSchema(orders).omit({
