@@ -1624,7 +1624,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.log(`Created optimized version at ${newOptimizedKey}`);
             
             // If the optimized version was created successfully, use it as the source for moving
-            sourceKey = newOptimizedKey;
+            optimizedKey = newOptimizedKey;
           } catch (optimizeError) {
             console.error(`Failed to optimize image before moving:`, optimizeError);
             // Continue with original file if optimization fails
