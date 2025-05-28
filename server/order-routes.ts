@@ -6,6 +6,9 @@ import { isAuthenticated } from "./auth-middleware";
 import { sendSuccess, sendError } from "./api-response";
 import { insertOrderSchema, insertOrderItemSchema } from "@shared/schema";
 import { logger } from "./logger";
+import multer from "multer";
+import path from "path";
+import fs from "fs/promises";
 
 // Define the order creation schema that matches the checkout form structure
 const checkoutOrderSchema = z.object({
@@ -37,6 +40,41 @@ const checkoutOrderSchema = z.object({
 });
 
 const router = express.Router();
+
+// Configure multer for PDF uploads
+const storage_multer = multer.diskStorage({
+  destination: async (req, file, cb) => {
+    const orderId = req.params.id;
+    const uploadDir = `/root/POPS/${orderId}`;
+    
+    try {
+      await fs.mkdir(uploadDir, { recursive: true });
+      cb(null, uploadDir);
+    } catch (error) {
+      cb(error, '');
+    }
+  },
+  filename: (req, file, cb) => {
+    // Use original filename or create a default PDF name
+    const filename = file.originalname || `proof-of-payment-${Date.now()}.pdf`;
+    cb(null, filename);
+  },
+});
+
+const upload = multer({
+  storage: storage_multer,
+  fileFilter: (req, file, cb) => {
+    // Only allow PDF files
+    if (file.mimetype === 'application/pdf') {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF files are allowed'), false);
+    }
+  },
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+});
 
 // Create order schema validation
 const createOrderSchema = z.object({
@@ -238,6 +276,58 @@ router.get("/:id", isAuthenticated, asyncHandler(async (req: Request, res: Respo
   } catch (error) {
     logger.error("Error fetching order", { error, orderId: req.params.id, userId: req.user?.id });
     return sendError(res, "Failed to fetch order", 500);
+  }
+}));
+
+// Upload proof of payment
+router.post("/:id/upload-proof", isAuthenticated, upload.single('proofOfPayment'), asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const orderId = parseInt(req.params.id);
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return sendError(res, "User not authenticated", 401);
+    }
+
+    if (isNaN(orderId)) {
+      return sendError(res, "Invalid order ID", 400);
+    }
+
+    if (!req.file) {
+      return sendError(res, "No file uploaded", 400);
+    }
+
+    // First check if the order belongs to the user
+    const order = await storage.getOrderById(orderId);
+    if (!order) {
+      return sendError(res, "Order not found", 404);
+    }
+
+    if (order.userId !== userId) {
+      return sendError(res, "Unauthorized", 403);
+    }
+
+    logger.info("Proof of payment uploaded", {
+      orderId,
+      orderNumber: order.orderNumber,
+      userId,
+      filename: req.file.filename,
+      filepath: req.file.path,
+      filesize: req.file.size,
+    });
+
+    return sendSuccess(res, {
+      message: "Proof of payment uploaded successfully",
+      filename: req.file.filename,
+      filepath: req.file.path,
+    });
+  } catch (error) {
+    logger.error("Error uploading proof of payment", { 
+      error: error instanceof Error ? error.message : String(error),
+      orderId: req.params.id,
+      userId: req.user?.id 
+    });
+    return sendError(res, "Failed to upload proof of payment", 500);
   }
 }));
 
