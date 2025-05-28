@@ -2768,6 +2768,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         productId: z.coerce.number().positive("Product ID is required"),
         quantity: z.coerce.number().int().positive("Quantity must be a positive integer"),
         itemPrice: z.coerce.number().positive("Item price is required"),
+        combinationHash: z.string().nullable().optional(),
+        selectedAttributes: z.any().nullable().optional(),
         attributeValues: z.array(z.object({
           attributeId: z.coerce.number().positive(),
           optionId: z.coerce.number().positive().optional(),
