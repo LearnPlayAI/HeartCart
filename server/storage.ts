@@ -1301,18 +1301,22 @@ export class DatabaseStorage implements IStorage {
             return sql`${acc} OR ${condition}`;
           });
           
-          const result = await db.execute(sql`
-            SELECT p.* 
-            FROM products p 
-            INNER JOIN categories c ON p.category_id = c.id 
-            WHERE ${options?.includeInactive ? sql`TRUE` : sql`p.is_active = TRUE`}
-            AND c.is_active = TRUE
-            AND (${combinedSearchCondition})
-            LIMIT ${limit}
-            OFFSET ${offset}
-          `);
+          const result = await db.select({
+            products: products
+          })
+            .from(products)
+            .innerJoin(categories, eq(products.categoryId, categories.id))
+            .where(
+              and(
+                options?.includeInactive ? undefined : eq(products.isActive, true),
+                eq(categories.isActive, true),
+                or(...searchConditions)
+              )
+            )
+            .limit(limit)
+            .offset(offset);
           
-          productList = result.rows as Product[];
+          productList = result.map((row: any) => row.products) as Product[];
           console.log(`Found ${productList.length} products with category join`);
         } catch (joinError) {
           console.error(
