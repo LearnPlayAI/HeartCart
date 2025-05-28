@@ -813,12 +813,87 @@ export class DatabaseStorage implements IStorage {
     },
   ): Promise<Product[]> {
     try {
+      console.log("CRITICAL DEBUG - getAllProducts called with attributeFilters:", attributeFilters);
+      
+      // First, apply attribute filtering if needed
+      let attributeFilteredProductIds: number[] | null = null;
+      
+      if (attributeFilters && attributeFilters.length > 0) {
+        console.log("CRITICAL DEBUG - Processing attribute filters:", JSON.stringify(attributeFilters, null, 2));
+        
+        attributeFilteredProductIds = [];
+        
+        for (const filter of attributeFilters) {
+          if (filter.selectedOptions && filter.selectedOptions.length > 0) {
+            console.log("CRITICAL DEBUG - Processing filter:", filter);
+            
+            // Get the attribute option IDs for the selected values
+            const optionIds: number[] = [];
+            
+            for (const optionValue of filter.selectedOptions) {
+              const optionResults = await db
+                .select({ id: attributeOptions.id })
+                .from(attributeOptions)
+                .where(eq(attributeOptions.value, optionValue));
+              
+              console.log(`CRITICAL DEBUG - Option value "${optionValue}" maps to IDs:`, optionResults);
+              optionResults.forEach(opt => optionIds.push(opt.id));
+            }
+            
+            if (optionIds.length > 0) {
+              console.log("CRITICAL DEBUG - Looking for products with option IDs:", optionIds);
+              
+              // Find products that have ANY of the selected option IDs in their selected_options
+              const productResults = await db
+                .select({ productId: productAttributes.productId })
+                .from(productAttributes)
+                .where(
+                  and(
+                    eq(productAttributes.attributeId, filter.attributeId),
+                    sql`${productAttributes.selectedOptions} && ${optionIds}`
+                  )
+                );
+              
+              console.log("CRITICAL DEBUG - Products found for this filter:", productResults);
+              
+              const currentFilterProductIds = productResults.map(p => p.productId);
+              
+              if (attributeFilteredProductIds.length === 0) {
+                // First filter - set the base
+                attributeFilteredProductIds = currentFilterProductIds;
+              } else {
+                // Subsequent filters - intersect with existing results
+                attributeFilteredProductIds = attributeFilteredProductIds.filter(id => 
+                  currentFilterProductIds.includes(id)
+                );
+              }
+              
+              console.log("CRITICAL DEBUG - Filtered product IDs after this filter:", attributeFilteredProductIds);
+            }
+          }
+        }
+        
+        console.log("CRITICAL DEBUG - Final attribute filtered product IDs:", attributeFilteredProductIds);
+        
+        // If no products match the attribute filters, return empty array
+        if (attributeFilteredProductIds.length === 0) {
+          console.log("CRITICAL DEBUG - No products match attribute filters, returning empty array");
+          return [];
+        }
+      }
+      
       // Create conditions array
       const conditions: SQL<unknown>[] = [];
 
       // Only filter active products if not explicitly including inactive ones
       if (!options?.includeInactive) {
         conditions.push(eq(products.isActive, true));
+      }
+      
+      // Add attribute filter condition if we have filtered product IDs
+      if (attributeFilteredProductIds !== null && attributeFilteredProductIds.length > 0) {
+        conditions.push(sql`${products.id} = ANY(${attributeFilteredProductIds})`);
+        console.log("CRITICAL DEBUG - Added attribute filter condition for product IDs:", attributeFilteredProductIds);
       }
 
       // Add category filter if provided
@@ -954,9 +1029,9 @@ export class DatabaseStorage implements IStorage {
         }
 
         // Apply attribute filters if provided
-        console.log("Checking attribute filters:", attributeFilters, "Length:", attributeFilters ? attributeFilters.length : 0);
+        console.log("CRITICAL DEBUG - Checking attribute filters:", attributeFilters, "Length:", attributeFilters ? attributeFilters.length : 0);
         if (attributeFilters && attributeFilters.length > 0) {
-          console.log("Processing attribute filters:", JSON.stringify(attributeFilters, null, 2));
+          console.log("CRITICAL DEBUG - Processing attribute filters:", JSON.stringify(attributeFilters, null, 2));
           
           // For each attribute filter, find products that have the required attribute options
           let filteredProductIds: number[] = [];
