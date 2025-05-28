@@ -21,8 +21,12 @@ import type { StandardApiResponse } from '@/types/api';
 
 const SearchResults = () => {
   const [location] = useLocation();
-  const searchParams = new URLSearchParams(location.split('?')[1]);
+  const urlParams = location.includes('?') ? location.split('?')[1] : '';
+  const searchParams = new URLSearchParams(urlParams);
   const query = searchParams.get('q') || '';
+  
+  console.log('Search page - location:', location);
+  console.log('Search page - query:', query);
   const [sortBy, setSortBy] = useState('default');
   const [page, setPage] = useState(1);
   const limit = 20;
