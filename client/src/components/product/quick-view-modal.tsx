@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/compone
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { StarIcon, ShoppingCart, ExternalLink } from 'lucide-react';
+import { StarIcon, ShoppingCart, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
@@ -39,6 +39,7 @@ interface QuickViewModalProps {
 export default function QuickViewModal({ open, onOpenChange, productSlug, productId }: QuickViewModalProps) {
   const [quantity, setQuantity] = useState(1);
   const [selectedAttributes, setSelectedAttributes] = useState<Record<number, string>>({});
+  const [currentImage, setCurrentImage] = useState<string | null>(null);
   const { addItem } = useCart();
   const [, navigate] = useLocation();
   const { toast } = useToast();
@@ -127,6 +128,35 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
     }));
   };
 
+  // Navigate between images in quick view
+  const navigateQuickViewImage = (direction: 'prev' | 'next') => {
+    if (!product) return;
+    
+    // Create array of all available images
+    const allImages = [];
+    if (product.imageUrl) {
+      allImages.push(product.imageUrl);
+    }
+    if (product.additionalImages) {
+      allImages.push(...product.additionalImages);
+    }
+    
+    if (allImages.length <= 1) return; // No navigation needed for single image
+    
+    // Find current image index
+    const currentImageUrl = currentImage || product.imageUrl;
+    const currentIndex = allImages.findIndex(img => ensureValidImageUrl(img) === currentImageUrl);
+    
+    let newIndex;
+    if (direction === 'prev') {
+      newIndex = currentIndex <= 0 ? allImages.length - 1 : currentIndex - 1;
+    } else {
+      newIndex = currentIndex >= allImages.length - 1 ? 0 : currentIndex + 1;
+    }
+    
+    setCurrentImage(ensureValidImageUrl(allImages[newIndex]));
+  };
+
   // Show skeletons while loading
   if (isLoadingProduct) {
     return (
@@ -196,13 +226,53 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
         </DialogDescription>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Product Image */}
-          <div>
+          <div className="relative group">
             <img 
-              src={product.imageUrl ? ensureValidImageUrl(product.imageUrl) : 
-                  (product.originalImageObjectKey ? ensureValidImageUrl(product.originalImageObjectKey) : '')} 
+              src={currentImage || (product.imageUrl ? ensureValidImageUrl(product.imageUrl) : 
+                  (product.originalImageObjectKey ? ensureValidImageUrl(product.originalImageObjectKey) : ''))} 
               alt={product.name} 
               className="w-full h-auto object-cover rounded-md"
             />
+            
+            {/* Navigation Arrows - only show if there are multiple images */}
+            {(() => {
+              const allImages = [];
+              if (product.imageUrl) allImages.push(product.imageUrl);
+              if (product.additionalImages) allImages.push(...product.additionalImages);
+              
+              if (allImages.length > 1) {
+                return (
+                  <>
+                    {/* Left Arrow */}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute left-2 top-1/2 -translate-y-1/2 bg-[#FF69B4] hover:bg-[#FF69B4]/90 shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-white"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigateQuickViewImage('prev');
+                      }}
+                    >
+                      <ChevronLeft className="h-5 w-5" />
+                    </Button>
+                    
+                    {/* Right Arrow */}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 bg-[#FF69B4] hover:bg-[#FF69B4]/90 shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-white"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigateQuickViewImage('next');
+                      }}
+                    >
+                      <ChevronRight className="h-5 w-5" />
+                    </Button>
+                  </>
+                );
+              }
+              return null;
+            })()}
           </div>
           
           {/* Product Info */}
