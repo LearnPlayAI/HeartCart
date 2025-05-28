@@ -199,12 +199,22 @@ export default function CheckoutPage() {
       const result = await response.json();
       console.log("Order creation successful:", result);
       
-      // Ensure we have a proper success response
-      if (!result.success) {
-        throw new Error(result.error?.message || "Order creation failed");
+      // Check for successful response
+      if (result.success && result.data) {
+        return result;
       }
       
-      return result;
+      // If we have an error in the response, throw it
+      if (result.error) {
+        throw new Error(result.error.message || "Order creation failed");
+      }
+      
+      // If no success flag but we have data, assume success
+      if (result.data) {
+        return { success: true, data: result.data };
+      }
+      
+      throw new Error("Invalid response from server");
     },
     onSuccess: (data) => {
       console.log("Order mutation success:", data);
