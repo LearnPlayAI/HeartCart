@@ -117,16 +117,37 @@ const ProductListing = () => {
     isLoading: isLoadingProducts,
     error: productsError
   } = useQuery<StandardApiResponse<Product[], { total?: number, totalPages?: number }>>({
-    queryKey: searchQuery ? ['/api/search', { 
-      q: searchQuery,
-      limit, 
-      offset: (page - 1) * limit
-    }] : ['/api/products', { 
-      limit, 
-      offset: (page - 1) * limit,
-      categoryId: selectedCategoryId,
-      includeChildren: searchParams.get('includeChildren') === 'true'
-    }],
+    queryKey: searchQuery ? ['/api/search', searchQuery, page] : ['/api/products', page, selectedCategoryId],
+    queryFn: async () => {
+      if (searchQuery) {
+        const searchParams = new URLSearchParams({
+          q: searchQuery,
+          limit: limit.toString(),
+          offset: ((page - 1) * limit).toString()
+        });
+        const response = await fetch(`/api/search?${searchParams}`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      } else {
+        const productParams = new URLSearchParams({
+          limit: limit.toString(),
+          offset: ((page - 1) * limit).toString()
+        });
+        if (selectedCategoryId) {
+          productParams.append('categoryId', selectedCategoryId.toString());
+        }
+        if (searchParams.get('includeChildren') === 'true') {
+          productParams.append('includeChildren', 'true');
+        }
+        const response = await fetch(`/api/products?${productParams}`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      }
+    }
   });
   const products = productsResponse?.success ? productsResponse.data : [];
   const totalPages = productsResponse?.meta?.totalPages || 1;
