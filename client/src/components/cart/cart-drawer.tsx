@@ -20,7 +20,7 @@ const CartDrawer = () => {
   
   // Use the cart summary data which already includes all calculations
   const { subtotal, finalTotal, totalDiscount } = cartSummary;
-  const shipping = subtotal > 0 ? 50 : 0; // R50 shipping fee
+  const shipping = subtotal > 0 ? 85 : 0; // R85 PUDO courier shipping fee
   const total = finalTotal + shipping;
   
   // Close cart on ESC key
