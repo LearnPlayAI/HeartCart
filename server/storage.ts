@@ -1025,6 +1025,11 @@ export class DatabaseStorage implements IStorage {
           }
         }
 
+        // Apply all conditions to the main query
+        if (conditions.length > 0) {
+          query = query.where(and(...conditions));
+        }
+
         // Apply sorting if specified
         if (filterOptions?.sort) {
           switch (filterOptions.sort) {
