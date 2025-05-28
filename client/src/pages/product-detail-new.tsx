@@ -375,6 +375,11 @@ const ProductDetailView = ({
   
   // Add to cart handler (memoized to prevent re-renders)
   const handleAddToCart = useCallback(() => {
+    console.log('🔍 ADD TO CART CLICKED - Starting debug');
+    console.log('🔍 Product:', product);
+    console.log('🔍 Product Attributes:', productAttributes);
+    console.log('🔍 Selected Attributes:', selectedAttributes);
+    
     if (!product) return;
     
     // Check if product has required attributes that need to be selected
