@@ -71,27 +71,31 @@ export default function PricingPage() {
   const itemsPerPage = 20;
 
   // Fetch products
-  // Fetch products using search endpoint when there's a search query, otherwise use regular products endpoint
+  // Always fetch all products using the regular endpoint that has complete data
   const { data: productsResponse, isLoading: isProductsLoading, error: productsError } = useQuery({
-    queryKey: searchQuery.trim() ? ['/api/search', searchQuery.trim()] : ['/api/products'],
+    queryKey: ['/api/products'],
     queryFn: async () => {
-      if (searchQuery.trim()) {
-        // Use the powerful search endpoint that searches across all product fields
-        const searchParams = new URLSearchParams({
-          q: searchQuery.trim(),
-          limit: '1000', // Get all matching results for client-side filtering and sorting
-          offset: '0'
-        });
-        const response = await fetch(`/api/search?${searchParams}`);
-        if (!response.ok) throw new Error('Failed to search products');
-        return response.json();
-      } else {
-        // Use regular products endpoint when no search query
-        const response = await fetch('/api/products');
-        if (!response.ok) throw new Error('Failed to fetch products');
-        return response.json();
-      }
+      const response = await fetch('/api/products');
+      if (!response.ok) throw new Error('Failed to fetch products');
+      return response.json();
     }
+  });
+
+  // Fetch search results separately when there's a search query
+  const { data: searchResponse } = useQuery({
+    queryKey: ['/api/search', searchQuery.trim()],
+    queryFn: async () => {
+      if (!searchQuery.trim()) return { data: [] };
+      const searchParams = new URLSearchParams({
+        q: searchQuery.trim(),
+        limit: '1000',
+        offset: '0'
+      });
+      const response = await fetch(`/api/search?${searchParams}`);
+      if (!response.ok) throw new Error('Failed to search products');
+      return response.json();
+    },
+    enabled: !!searchQuery.trim()
   });
 
   // Fetch categories
@@ -164,9 +168,17 @@ export default function PricingPage() {
     return Array.from(catalogSet).sort();
   }, [enrichedProducts]);
 
-  // Apply additional filters (search is already handled by the API)
+  // Apply additional filters including search
   const filteredProducts = useMemo(() => {
+    const searchResults = searchResponse?.data || [];
+    
     return enrichedProducts.filter((product: any) => {
+      // Search filter - if there's a search query, only show products that match the search
+      if (searchQuery.trim() && searchResults.length > 0) {
+        const searchResultIds = searchResults.map((p: any) => p.id);
+        if (!searchResultIds.includes(product.id)) return false;
+      }
+      
       // Category filter
       if (categoryFilter && categoryFilter !== 'all' && product.categoryName !== categoryFilter) {
         return false;
@@ -184,7 +196,7 @@ export default function PricingPage() {
 
       return true;
     });
-  }, [enrichedProducts, categoryFilter, supplierFilter, catalogFilter]);
+  }, [enrichedProducts, categoryFilter, supplierFilter, catalogFilter, searchQuery, searchResponse]);
 
   // Sort products
   const sortedProducts = useMemo(() => {
