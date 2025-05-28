@@ -815,14 +815,16 @@ const ProductListing = () => {
                                     />
                                     <label 
                                       htmlFor={`attr-${attribute.id}-${option.id}`} 
-                                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                                >
-                                  {option.value}
-                                </label>
+                                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                    >
+                                      {option.value}
+                                    </label>
+                                  </div>
+                                ))}
                               </div>
-                            ))}
-                          </div>
-                        </div>
+                            </AccordionContent>
+                          </AccordionItem>
+                        </Accordion>
                       ))}
                     </div>
                   </AccordionContent>
