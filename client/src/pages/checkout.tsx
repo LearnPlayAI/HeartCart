@@ -174,25 +174,17 @@ export default function CheckoutPage() {
   // Create order mutation
   const createOrderMutation = useMutation({
     mutationFn: async (orderData: any) => {
+      console.log("Making API request with data:", orderData);
       const response = await apiRequest("POST", "/api/orders", orderData);
-      return response.json();
-    },
-    onSuccess: (data) => {
-      toast({
-        title: "Order Created Successfully!",
-        description: `Order #${data.orderNumber} has been placed.`
-      });
+      console.log("API response:", response);
       
-      // Clear cart and redirect to order confirmation
-      queryClient.invalidateQueries({ queryKey: ["/api/cart"] });
-      navigate(`/order-confirmation/${data.id}`);
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Order Failed",
-        description: error.message || "Failed to create order. Please try again.",
-        variant: "destructive"
-      });
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("API error response:", errorText);
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+      
+      return response.json();
     }
   });
 
@@ -270,13 +262,16 @@ export default function CheckoutPage() {
       const result = await createOrderMutation.mutateAsync(orderData);
       console.log("Order creation result:", result);
       
+      // Clear cart and redirect to order confirmation
+      queryClient.invalidateQueries({ queryKey: ["/api/cart"] });
+      
       toast({
         title: "Order Placed Successfully!",
         description: "Your order has been submitted and you will receive a confirmation email shortly.",
       });
       
       // Navigate to order confirmation
-      navigate(`/order-confirmation/${result.orderId || result.id}`);
+      navigate(`/order-confirmation/${result.data?.id || result.id}`);
     } catch (error) {
       console.error("Checkout error:", error);
       toast({
