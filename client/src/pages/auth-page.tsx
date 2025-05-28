@@ -21,10 +21,14 @@ const loginSchema = z.object({
 
 // Define the registration form schema
 const registerSchema = z.object({
-  username: z.string().min(3, "Username must be at least 3 characters"),
+  username: z.string().min(3, "Username must be at least 3 characters")
+    .regex(/^[a-zA-Z0-9_]+$/, "Username can only contain letters, numbers, and underscores"),
   email: z.string().email("Please enter a valid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   confirmPassword: z.string().min(6, "Password must be at least 6 characters"),
+  acceptTerms: z.boolean().refine(val => val === true, {
+    message: "You must accept the terms and conditions"
+  })
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords do not match",
   path: ["confirmPassword"],
@@ -65,6 +69,7 @@ export default function AuthPage() {
       email: "",
       password: "",
       confirmPassword: "",
+      acceptTerms: false,
     },
   });
 
@@ -91,10 +96,8 @@ export default function AuthPage() {
 
   // Handle register submit
   const onRegisterSubmit = (data: RegisterFormData) => {
-    // Remove confirmPassword from data before sending
-    const { confirmPassword, ...userData } = data;
-    
-    registerMutation.mutate(userData, {
+    // Send all data including confirmPassword and acceptTerms as expected by backend
+    registerMutation.mutate(data, {
       onSuccess: () => {
         toast({
           title: "Registration successful!",
@@ -324,6 +327,29 @@ export default function AuthPage() {
                               </div>
                             </FormControl>
                             <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={registerForm.control}
+                        name="acceptTerms"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                            <FormControl>
+                              <input
+                                type="checkbox"
+                                checked={field.value}
+                                onChange={field.onChange}
+                                className="mt-1"
+                              />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                              <FormLabel className="text-sm font-normal">
+                                I accept the terms and conditions
+                              </FormLabel>
+                              <FormMessage />
+                            </div>
                           </FormItem>
                         )}
                       />
