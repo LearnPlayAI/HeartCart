@@ -782,8 +782,9 @@ const ProductListing = () => {
                       <h3 className="text-sm font-medium">{getAttributeDisplayName(attribute)}</h3>
                       <div className="space-y-1.5">
                         {attribute.options.map(option => (
-                          <div key={option.id} className="flex items-center space-x-2">
+                          <>
                             <Checkbox 
+                              key={option.id}
                               id={`attr-${attribute.id}-${option.id}`}
                               checked={isAttributeOptionSelected(attribute.id, option.value)}
                               onCheckedChange={(checked) => handleAttributeFilterChange(
@@ -799,7 +800,7 @@ const ProductListing = () => {
                             >
                               {option.value}
                             </label>
-                          </div>
+                          </>
                         ))}
                       </div>
                     </div>
