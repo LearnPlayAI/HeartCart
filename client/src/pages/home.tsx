@@ -35,7 +35,21 @@ const Home = () => {
                 <h2 className="text-white text-lg font-bold">Categories</h2>
               </div>
               <div className="p-4 bg-[#ff68b32e]">
-                <CategorySidebar className="border-none p-0" />
+                <CategorySidebar 
+                  className="border-none p-0" 
+                  isFilterMode={true}
+                  onCategoryFilter={(categoryId, includeChildren) => {
+                    // Navigate to products page with category filter
+                    const params = new URLSearchParams();
+                    if (categoryId) {
+                      params.set('categoryId', categoryId.toString());
+                      if (includeChildren) {
+                        params.set('includeChildren', 'true');
+                      }
+                    }
+                    window.location.href = `/products?${params.toString()}`;
+                  }}
+                />
               </div>
             </div>
           </div>
