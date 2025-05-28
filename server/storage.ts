@@ -2367,7 +2367,8 @@ export class DatabaseStorage implements IStorage {
       return newOrder;
     } catch (error) {
       logger.error(`Error in order creation process`, {
-        error,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
         userId: order.userId,
       });
       throw error;
