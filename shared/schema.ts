@@ -642,6 +642,27 @@ export const suppliersRelations = relations(suppliers, ({ many }) => ({
   catalogs: many(catalogs)
 }));
 
+// Orders relations
+export const ordersRelations = relations(orders, ({ one, many }) => ({
+  user: one(users, {
+    fields: [orders.userId],
+    references: [users.id]
+  }),
+  orderItems: many(orderItems)
+}));
+
+// Order items relations
+export const orderItemsRelations = relations(orderItems, ({ one }) => ({
+  order: one(orders, {
+    fields: [orderItems.orderId],
+    references: [orders.id]
+  }),
+  product: one(products, {
+    fields: [orderItems.productId],
+    references: [products.id]
+  })
+}));
+
 // Product Drafts table for storing work-in-progress products
 export const productDrafts = pgTable("product_drafts", {
   id: serial("id").primaryKey(),
