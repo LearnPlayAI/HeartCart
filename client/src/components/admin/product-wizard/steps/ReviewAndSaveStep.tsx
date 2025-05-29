@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { useLocation } from 'wouter';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -38,6 +39,7 @@ export const ReviewAndSaveStep: React.FC<ReviewAndSaveStepProps> = ({
   isLoading = false 
 }) => {
   const { toast } = useToast();
+  const [, navigate] = useLocation();
   const [isPublishing, setIsPublishing] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [showPublishDialog, setShowPublishDialog] = useState(false);
@@ -199,10 +201,10 @@ export const ReviewAndSaveStep: React.FC<ReviewAndSaveStepProps> = ({
             queryClient.invalidateQueries({ queryKey: ['/api/product-drafts'] });
             queryClient.refetchQueries({ queryKey: ['/api/product-drafts'] });
             
-            // Redirect to product management page with published tab active
+            // Navigate to product management page with published tab active
             setTimeout(() => {
-              // This is the correct URL format for the product management page
-              window.location.href = `/admin/product-management?tab=published`;
+              // Navigate using router instead of forcing page reload
+              navigate(`/admin/product-management?tab=published`);
             }, 1000);
           },
           onError: () => {
@@ -214,7 +216,7 @@ export const ReviewAndSaveStep: React.FC<ReviewAndSaveStepProps> = ({
             });
             
             setTimeout(() => {
-              window.location.href = `/admin/product-management?tab=published`;
+              navigate(`/admin/product-management?tab=published`);
             }, 1000);
           }
         });

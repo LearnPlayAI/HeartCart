@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useLocation } from 'wouter';
 import { formatDistanceToNow } from 'date-fns';
 import { apiRequest } from '@/lib/queryClient';
 import {
@@ -65,6 +66,7 @@ interface PublishedProduct {
 }
 
 export const PublishedProducts: React.FC = () => {
+  const [, navigate] = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [supplierFilter, setSupplierFilter] = useState('');
@@ -316,8 +318,8 @@ export const PublishedProducts: React.FC = () => {
                                   
                                   if (result.success && result.data?.draftId) {
                                     console.log(`Navigating to wizard with draft ID: ${result.data.draftId}`);
-                                    // Navigate to wizard with the draft ID
-                                    window.location.href = `/admin/product-wizard/${result.data.draftId}`;
+                                    // Navigate to wizard with the draft ID using router
+                                    navigate(`/admin/product-wizard/${result.data.draftId}`);
                                   } else {
                                     throw new Error('Invalid response: missing draft ID');
                                   }
