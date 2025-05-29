@@ -85,7 +85,9 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
   const [showAiDialog, setShowAiDialog] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   
-  // No local state for category selection - use draft data as single source of truth
+  // Local state for category selection UI (controlled by user input)
+  const [currentParentId, setCurrentParentId] = useState<number | null>(null);
+  const [currentChildId, setCurrentChildId] = useState<number | null>(null);
 
   // Fetch categories for the dropdown
   const { data: categoriesData, isLoading: isCategoriesLoading } = useQuery({
@@ -145,32 +147,35 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
     return categoriesWithParents.filter((cat: any) => !cat.parentId);
   }, [categoriesWithParents]);
 
-  // Derive current category info from draft data (single source of truth)
-  const currentCategory = React.useMemo(() => {
-    if (!draft.categoryId || !categoriesWithParents.length) return null;
-    return categoriesWithParents.find((cat: any) => cat.id === draft.categoryId);
+  // Initialize local state from draft data when categories are loaded
+  React.useEffect(() => {
+    if (draft.categoryId && categoriesWithParents.length > 0) {
+      const currentCategory = categoriesWithParents.find((cat: any) => cat.id === draft.categoryId);
+      if (currentCategory) {
+        if (currentCategory.parentId) {
+          // This is a child category
+          setCurrentParentId(currentCategory.parentId);
+          setCurrentChildId(currentCategory.id);
+        } else {
+          // This is a parent category
+          setCurrentParentId(currentCategory.id);
+          setCurrentChildId(null);
+        }
+      }
+    }
   }, [draft.categoryId, categoriesWithParents]);
-
-  // Derive parent and child from current category
-  const selectedParentCategoryId = React.useMemo(() => {
-    if (!currentCategory) return null;
-    return currentCategory.parentId || currentCategory.id;
-  }, [currentCategory]);
-
-  const selectedChildCategoryId = React.useMemo(() => {
-    if (!currentCategory || !currentCategory.parentId) return null;
-    return currentCategory.id;
-  }, [currentCategory]);
 
   // Get child categories for the selected parent
   const childCategories = React.useMemo(() => {
-    if (!selectedParentCategoryId) return [];
-    return categoriesWithParents.filter((cat: any) => cat.parentId === selectedParentCategoryId);
-  }, [categoriesWithParents, selectedParentCategoryId]);
+    if (!currentParentId) return [];
+    return categoriesWithParents.filter((cat: any) => cat.parentId === currentParentId);
+  }, [categoriesWithParents, currentParentId]);
 
   // Handle parent category selection
   const handleParentCategoryChange = (parentId: string) => {
     const parentIdNum = Number(parentId);
+    setCurrentParentId(parentIdNum);
+    setCurrentChildId(null); // Clear child selection when parent changes
     // Update form with parent category (no child selected)
     form.setValue('categoryId', parentIdNum);
   };
@@ -179,11 +184,13 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
   const handleChildCategoryChange = (childId: string) => {
     if (childId === "clear-selection") {
       // User is deselecting the child category, set to parent category
-      if (selectedParentCategoryId) {
-        form.setValue('categoryId', selectedParentCategoryId);
+      setCurrentChildId(null);
+      if (currentParentId) {
+        form.setValue('categoryId', currentParentId);
       }
     } else {
       const childIdNum = Number(childId);
+      setCurrentChildId(childIdNum);
       // Set categoryId to child category when child is selected
       form.setValue('categoryId', childIdNum);
     }
@@ -515,7 +522,7 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
               <Label htmlFor="parent-category">Parent Category*</Label>
               <Select
                 onValueChange={handleParentCategoryChange}
-                value={selectedParentCategoryId?.toString() || undefined}
+                value={currentParentId?.toString() || undefined}
               >
                 <SelectTrigger className="h-9 sm:h-10" id="parent-category">
                   <SelectValue placeholder="Select parent category" />
@@ -540,16 +547,16 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
             {/* Category Selection - Child Category */}
             <div>
               <Label htmlFor="child-category">
-                Child Category {selectedParentCategoryId && childCategories.length > 0 && "(Optional)"}
+                Child Category {currentParentId && childCategories.length > 0 && "(Optional)"}
               </Label>
               <Select
                 onValueChange={handleChildCategoryChange}
-                value={selectedChildCategoryId ? selectedChildCategoryId.toString() : undefined}
-                disabled={!selectedParentCategoryId || childCategories.length === 0}
+                value={currentChildId ? currentChildId.toString() : undefined}
+                disabled={!currentParentId || childCategories.length === 0}
               >
                 <SelectTrigger className="h-9 sm:h-10" id="child-category">
                   <SelectValue placeholder={
-                    !selectedParentCategoryId 
+                    !currentParentId 
                       ? "Select parent category first" 
                       : childCategories.length === 0 
                         ? "No child categories available"
@@ -557,7 +564,7 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
                   } />
                 </SelectTrigger>
                 <SelectContent>
-                  {selectedChildCategoryId && (
+                  {currentChildId && (
                     <SelectItem value="clear-selection">
                       <span className="text-muted-foreground">Clear selection</span>
                     </SelectItem>
