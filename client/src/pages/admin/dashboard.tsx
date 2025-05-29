@@ -355,10 +355,14 @@ function BusinessOverview() {
   const activeProducts = products.filter((product: any) => product.isActive);
   const lowStockProducts = products.filter((product: any) => product.stockLevel <= 10);
 
+  // Calculate total customers from orders (unique customers who made purchases)
+  const uniqueCustomerEmails = new Set(orders.map((order: any) => order.customerEmail));
+  const totalCustomers = uniqueCustomerEmails.size;
+
   const businessCards = [
     {
       title: "Total Customers",
-      value: users?.length || 0,
+      value: totalCustomers,
       description: `${thisMonthUsers.length} new this month`,
       icon: Users,
       color: "text-blue-600",
