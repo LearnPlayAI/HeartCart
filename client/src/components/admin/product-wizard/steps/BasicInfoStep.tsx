@@ -171,23 +171,31 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
     }
   }, [draft.categoryId, categoriesWithParents]);
 
-  // Update the draft's category selection state when categories load
+  // Reset and reinitialize category state when step becomes active
   React.useEffect(() => {
-    if (!selectedParentCategoryId && !selectedChildCategoryId && draft.categoryId && categoriesWithParents.length > 0) {
+    if (draft.categoryId && categoriesWithParents.length > 0) {
       const currentCategory = categoriesWithParents.find((cat: any) => cat.id === draft.categoryId);
       if (currentCategory) {
         if (currentCategory.parentId) {
-          // This is a child category
-          setSelectedParentCategoryId(currentCategory.parentId);
-          setSelectedChildCategoryId(currentCategory.id);
+          // This is a child category - ensure both parent and child are set
+          if (selectedParentCategoryId !== currentCategory.parentId) {
+            setSelectedParentCategoryId(currentCategory.parentId);
+          }
+          if (selectedChildCategoryId !== currentCategory.id) {
+            setSelectedChildCategoryId(currentCategory.id);
+          }
         } else {
           // This is a parent category
-          setSelectedParentCategoryId(currentCategory.id);
-          setSelectedChildCategoryId(null);
+          if (selectedParentCategoryId !== currentCategory.id) {
+            setSelectedParentCategoryId(currentCategory.id);
+          }
+          if (selectedChildCategoryId !== null) {
+            setSelectedChildCategoryId(null);
+          }
         }
       }
     }
-  }, [categoriesWithParents, draft.categoryId, selectedParentCategoryId, selectedChildCategoryId]);
+  }, [draft, categoriesWithParents, selectedParentCategoryId, selectedChildCategoryId]);
 
   // Handle parent category selection
   const handleParentCategoryChange = (parentId: string) => {
@@ -569,7 +577,7 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
               </Label>
               <Select
                 onValueChange={handleChildCategoryChange}
-                value={selectedChildCategoryId?.toString() || ""}
+                value={selectedChildCategoryId ? selectedChildCategoryId.toString() : undefined}
                 disabled={!selectedParentCategoryId || childCategories.length === 0}
               >
                 <SelectTrigger className="h-9 sm:h-10" id="child-category">
