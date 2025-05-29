@@ -3499,7 +3499,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       try {
         // Get all orders with their items using Drizzle relations
-        const orders = await db.query.orders.findMany({
+        const ordersData = await db.query.orders.findMany({
           orderBy: [desc(orders.createdAt)],
           with: {
             orderItems: {
@@ -3518,12 +3518,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         
         logger.info('Admin orders fetched successfully', { 
-          orderCount: orders.length 
+          orderCount: ordersData.length 
         });
         
         return res.json({
           success: true,
-          data: orders
+          data: ordersData
         });
       } catch (error) {
         logger.error('Error fetching admin orders', { 
