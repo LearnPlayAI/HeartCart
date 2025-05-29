@@ -102,11 +102,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
         quantity: 1
       });
       
-      toast({
-        title: "Added to cart",
-        description: `${product.name} has been added to your cart.`,
-        duration: 2000,
-      });
+
     } catch (error) {
       console.error('Error adding item to cart:', error);
       

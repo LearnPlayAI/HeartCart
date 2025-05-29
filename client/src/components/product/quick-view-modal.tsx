@@ -205,10 +205,7 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
       selectedAttributes: selectedAttributes,
     });
     
-    toast({
-      title: "Added to cart",
-      description: `${product.name} added to your cart`,
-    });
+
     
     // Close the modal after adding to cart
     onOpenChange(false);

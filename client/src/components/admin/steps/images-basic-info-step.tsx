@@ -105,10 +105,7 @@ export default function ImagesBasicInfoStep({
         }));
         setUploadedImages(prev => [...prev, ...newImages]);
         
-        toast({
-          title: "Upload Complete",
-          description: `Successfully uploaded ${data.files.length} images`,
-        });
+
       } else if (Array.isArray(data)) {
         // Handle multiple images from existing product
         setUploadedImages(prev => [...prev, ...data]);
@@ -154,10 +151,7 @@ export default function ImagesBasicInfoStep({
             uploadedImages.filter((_, i) => i !== index)
           );
           
-          toast({
-            title: "Image Removed",
-            description: "The temporary image has been removed",
-          });
+
           return;
         }
         
