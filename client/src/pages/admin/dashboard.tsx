@@ -322,8 +322,12 @@ function BusinessOverview() {
   const products = productsResponse?.data || [];
   const users = usersResponse?.data || [];
 
-  // Debug logging to check actual data
+  // Debug logging to check actual data and API responses
   console.log('Business Overview Debug:');
+  console.log('Raw API Responses:');
+  console.log('ordersResponse:', ordersResponse);
+  console.log('productsResponse:', productsResponse);
+  console.log('usersResponse:', usersResponse);
   console.log('Orders count:', orders.length, 'Orders data:', orders);
   console.log('Products count:', products.length, 'Products data:', products);
   console.log('Users count:', users.length, 'Users data:', users);
