@@ -156,9 +156,6 @@ export const orders = pgTable("orders", {
   
   // EFT Proof of Payment
   eftPop: text("eftPop"), // File path to the EFT proof of payment PDF document
-  updatedAt: text("updatedAt").default(String(new Date().toISOString())).notNull(),
-  shippedAt: text("shippedAt"),
-  deliveredAt: text("deliveredAt"),
 });
 
 // Order items table - camelCase version with full attribute support

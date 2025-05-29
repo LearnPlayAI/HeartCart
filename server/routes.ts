@@ -18,6 +18,7 @@ import {
   insertOrderItemSchema,
   insertCategorySchema,
   insertProductSchema,
+  orders,
   insertProductImageSchema,
   insertPricingSchema,
   insertSupplierSchema,
