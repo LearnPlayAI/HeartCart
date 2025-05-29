@@ -3527,8 +3527,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       } catch (error) {
         logger.error('Error fetching admin orders', { 
-          error, 
-          adminId: user.id
+          error
         });
         
         return res.status(500).json({
@@ -3635,7 +3634,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         logger.info('Order status updated', { 
-          adminId: user.id, 
           orderId, 
           newStatus: status 
         });
@@ -3648,7 +3646,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (error) {
         logger.error('Error updating order status', { 
           error, 
-          adminId: user.id, 
           orderId 
         });
         

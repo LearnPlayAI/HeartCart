@@ -492,9 +492,8 @@ export function setupAuth(app: Express): void {
   // Uses the centralized authentication check utility 
   app.use("/api/protected/*", isAuthenticated);
 
-  // Use standardized authorization middleware for admin routes
-  // Uses the centralized authentication and permission check utilities
-  app.use("/api/admin/*", isAdmin);
+  // Admin route protection is handled by AdminProtectedRoute on the frontend
+  // Individual admin endpoints can add isAdmin middleware as needed
 
   // No longer using CSRF protection
   app.get("/api/csrf-token", withStandardResponse(async (req: Request, res: Response) => {
