@@ -2385,7 +2385,7 @@ export class DatabaseStorage implements IStorage {
 
       if (failedItemInserts > 0) {
         logger.warn(`Some order items failed to insert`, {
-          orderId: newOrder.id,
+          orderId: orderToUse.id,
           successCount: successfulItemInserts,
           failCount: failedItemInserts,
           totalItems: items.length,
@@ -2397,21 +2397,21 @@ export class DatabaseStorage implements IStorage {
         if (order.userId) {
           await this.clearCart(order.userId);
           logger.info(`Cleared cart after order creation`, {
-            orderId: newOrder.id,
-            orderNumber: newOrder.orderNumber,
+            orderId: orderToUse.id,
+            orderNumber: orderToUse.orderNumber,
             userId: order.userId,
           });
         }
       } catch (cartError) {
         logger.error(`Error clearing cart after order creation`, {
           error: cartError,
-          orderId: newOrder.id,
+          orderId: orderToUse.id,
           userId: order.userId,
         });
         // Don't throw here as the order is already created
       }
 
-      return newOrder;
+      return orderToUse;
     } catch (error) {
       logger.error(`Error in order creation process`, {
         error: error instanceof Error ? error.message : String(error),
