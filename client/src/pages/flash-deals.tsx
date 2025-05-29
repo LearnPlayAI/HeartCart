@@ -13,7 +13,7 @@ const FlashDealsPage = () => {
     data: Product[];
   }
   
-  const { data: response, isLoading, error } = useQuery<ApiResponse>({
+  const { data: response, isLoading, error, refetch } = useQuery<ApiResponse>({
     queryKey: ['/api/flash-deals', { limit: 50 }], // Get more deals for the dedicated page
   });
   
@@ -70,7 +70,7 @@ const FlashDealsPage = () => {
             <p className="text-gray-600 mb-6">Something went wrong while fetching the deals. Please try again.</p>
             <button 
               className="px-6 py-3 rounded-md border border-[#FF69B4] text-[#FF69B4] hover:bg-[#FF69B4] hover:text-white transition-colors"
-              onClick={() => window.location.reload()}
+              onClick={() => refetch()}
             >
               Retry
             </button>

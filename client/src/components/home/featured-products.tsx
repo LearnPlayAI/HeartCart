@@ -63,7 +63,7 @@ const FeaturedProductsSection = () => {
               <Button 
                 variant="outline"
                 className="border-[#FF69B4] text-[#FF69B4] hover:bg-[#FF69B4] hover:text-white"
-                onClick={() => window.location.reload()}
+                onClick={() => refetch()}
               >
                 Retry
               </Button>
