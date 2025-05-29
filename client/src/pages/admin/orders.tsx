@@ -899,7 +899,10 @@ export default function AdminOrdersPage() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={getStatusConfig(order.status).variant}>
+                          <Badge 
+                            variant={getStatusConfig(order.status).variant}
+                            className={getStatusConfig(order.status).className}
+                          >
                             {getStatusConfig(order.status).label}
                           </Badge>
                         </TableCell>
