@@ -503,9 +503,9 @@ function RecentOrders() {
 function TopProducts() {
   // Fetch data with same queries as pricing page
   const { data: productsResponse, isLoading: isProductsLoading } = useQuery({
-    queryKey: ['/api/admin/products'],
+    queryKey: ['/api/products'],
     queryFn: async () => {
-      const response = await fetch('/api/admin/products');
+      const response = await fetch('/api/products');
       if (!response.ok) throw new Error('Failed to fetch products');
       return response.json();
     }
@@ -543,16 +543,9 @@ function TopProducts() {
   const catalogs = catalogsResponse?.data || [];
   const orders = ordersResponse?.data || [];
 
-  console.log('Debug - Raw products length:', products.length);
-  console.log('Debug - Categories length:', categories.length);
-  console.log('Debug - Catalogs length:', catalogs.length);
-
   // Calculate derived pricing data - EXACT same logic as pricing page
   const enrichedProducts = useMemo(() => {
-    console.log('Debug - Running enrichment with products:', products.length);
-    
     if (!products || products.length === 0) {
-      console.log('Debug - No products to enrich');
       return [];
     }
 
@@ -610,18 +603,12 @@ function TopProducts() {
 
   // Get top 5 products by sales quantity
   const topProducts = useMemo(() => {
-    console.log('Debug - enrichedProducts length:', enrichedProducts.length);
-    console.log('Debug - salesData keys:', Object.keys(salesData));
-    
     if (Object.keys(salesData).length === 0 || enrichedProducts.length === 0) {
       // Fallback: show top products by price when no sales data
-      const fallbackProducts = enrichedProducts
+      return enrichedProducts
         .filter((p: any) => p.isActive !== false) // Show active products or products without isActive field
         .sort((a: any, b: any) => (b.salePrice || b.price || 0) - (a.salePrice || a.price || 0))
         .slice(0, 5);
-      
-      console.log('Debug - Using fallback products:', fallbackProducts.length);
-      return fallbackProducts;
     }
 
     // Get products with sales data, sorted by units sold
@@ -629,8 +616,6 @@ function TopProducts() {
       .filter((product: any) => salesData[product.name])
       .sort((a: any, b: any) => salesData[b.name].quantity - salesData[a.name].quantity)
       .slice(0, 5);
-    
-    console.log('Debug - Products with sales:', productsWithSales.length);
     
     // If no products have sales data, fall back to top products by price
     if (productsWithSales.length === 0) {
