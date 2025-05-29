@@ -2413,10 +2413,12 @@ export class DatabaseStorage implements IStorage {
       // If userId is null, return all orders (admin function)
       if (userId === null) {
         try {
-          const results = await db
-            .select()
-            .from(orders)
-            .orderBy(desc(orders.createdAt));
+          const results = await db.query.orders.findMany({
+            orderBy: [desc(orders.createdAt)],
+            with: {
+              orderItems: true
+            }
+          });
 
           logger.info(`Retrieved all orders for admin view`, {
             count: results.length,
@@ -2427,17 +2429,19 @@ export class DatabaseStorage implements IStorage {
           logger.error(`Error fetching all orders (admin function)`, {
             error: adminOrdersError,
           });
-          throw adminOrdersError; // Rethrow so the route handler can catch it and send a proper error response
+          throw adminOrdersError;
         }
       }
 
       // Return orders for specific user
       try {
-        const results = await db
-          .select()
-          .from(orders)
-          .where(eq(orders.userId, userId))
-          .orderBy(desc(orders.createdAt));
+        const results = await db.query.orders.findMany({
+          where: eq(orders.userId, userId),
+          orderBy: [desc(orders.createdAt)],
+          with: {
+            orderItems: true
+          }
+        });
 
         logger.info(`Retrieved orders for user`, {
           userId,
@@ -2450,7 +2454,7 @@ export class DatabaseStorage implements IStorage {
           error: userOrdersError,
           userId,
         });
-        throw userOrdersError; // Rethrow so the route handler can catch it and send a proper error response
+        throw userOrdersError;
       }
     } catch (error) {
       logger.error(`Error in order retrieval process`, {
@@ -2458,7 +2462,52 @@ export class DatabaseStorage implements IStorage {
         userType: userId === null ? "admin" : "user",
         userId,
       });
-      throw error; // Rethrow so the route handler can catch it and send a proper error response
+      throw error;
+    }
+  }
+
+  async updateOrderTracking(
+    id: number,
+    trackingNumber: string,
+  ): Promise<Order | undefined> {
+    try {
+      // First check if the order exists
+      const [existingOrder] = await db
+        .select()
+        .from(orders)
+        .where(eq(orders.id, id));
+
+      if (!existingOrder) {
+        logger.warn(`Attempted to update tracking of non-existent order`, {
+          orderId: id,
+          trackingNumber,
+        });
+        return undefined;
+      }
+
+      // Update the order with the new tracking number
+      const [updatedOrder] = await db
+        .update(orders)
+        .set({
+          trackingNumber,
+        })
+        .where(eq(orders.id, id))
+        .returning();
+
+      logger.info(`Updated order tracking number`, {
+        orderId: id,
+        trackingNumber,
+        userId: updatedOrder.userId,
+      });
+
+      return updatedOrder;
+    } catch (error) {
+      logger.error(`Error updating order tracking number`, {
+        error,
+        orderId: id,
+        trackingNumber,
+      });
+      throw error;
     }
   }
 

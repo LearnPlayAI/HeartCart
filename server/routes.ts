@@ -3688,6 +3688,147 @@ export async function registerRoutes(app: Express): Promise<Server> {
     })
   );
 
+  // Update order tracking number (admin-only)
+  app.patch(
+    "/api/admin/orders/:id/tracking", 
+    isAuthenticated, 
+    validateRequest({
+      params: z.object({
+        id: z.coerce.number().positive("Order ID is required")
+      }),
+      body: z.object({
+        trackingNumber: z.string().min(1, "Tracking number is required")
+      })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const { id } = req.params;
+      const { trackingNumber } = req.body;
+      const orderId = Number(id);
+      const user = req.user as any;
+      
+      try {
+        // Check if user is admin
+        if (user.role !== 'admin') {
+          throw new ForbiddenError("Only administrators can update tracking numbers");
+        }
+        
+        // Get the order to verify it exists
+        const order = await storage.getOrderById(orderId);
+        if (!order) {
+          throw new NotFoundError(`Order with ID ${orderId} not found`, "order");
+        }
+        
+        // Update the tracking number
+        const updatedOrder = await storage.updateOrderTracking(orderId, trackingNumber);
+        if (!updatedOrder) {
+          throw new AppError(
+            "Failed to update tracking number.",
+            ErrorCode.DATABASE_ERROR,
+            500
+          );
+        }
+        
+        return res.json({
+          success: true,
+          data: updatedOrder,
+          message: `Tracking number updated successfully for order #${orderId}.`
+        });
+      } catch (error) {
+        // Log detailed error information
+        logger.error('Error updating order tracking', { 
+          error, 
+          userId: user.id,
+          orderId,
+          trackingNumber
+        });
+        
+        // Check for specific error types
+        if (error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof AppError) {
+          throw error;
+        }
+        
+        // Return generic error for unexpected issues
+        throw new AppError(
+          "Failed to update the tracking number. Please try again.",
+          ErrorCode.INTERNAL_SERVER_ERROR,
+          500,
+          { originalError: error }
+        );
+      }
+    })
+  );
+
+  // Update order status (admin-only) - using new admin prefix for consistency
+  app.patch(
+    "/api/admin/orders/:id/status", 
+    isAuthenticated, 
+    validateRequest({
+      params: z.object({
+        id: z.coerce.number().positive("Order ID is required")
+      }),
+      body: z.object({
+        status: z.enum(['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'], {
+          errorMap: () => ({ message: "Invalid status value" })
+        })
+      })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const { id } = req.params;
+      const { status } = req.body;
+      const orderId = Number(id);
+      const user = req.user as any;
+      
+      try {
+        // Check if user is admin
+        if (user.role !== 'admin') {
+          throw new ForbiddenError("Only administrators can update order status");
+        }
+        
+        // Get the order to verify it exists
+        const order = await storage.getOrderById(orderId);
+        if (!order) {
+          throw new NotFoundError(`Order with ID ${orderId} not found`, "order");
+        }
+        
+        const previousStatus = order.status;
+        
+        // Update the status
+        const updatedOrder = await storage.updateOrderStatus(orderId, status);
+        if (!updatedOrder) {
+          throw new AppError(
+            "Failed to update order status.",
+            ErrorCode.DATABASE_ERROR,
+            500
+          );
+        }
+        
+        return res.json({
+          success: true,
+          data: updatedOrder,
+          message: `Order status updated from "${previousStatus}" to "${status}".`
+        });
+      } catch (error) {
+        logger.error('Error updating order status', { 
+          error, 
+          userId: user.id,
+          orderId,
+          newStatus: status
+        });
+        
+        if (error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof AppError) {
+          throw error;
+        }
+        
+        throw new AppError(
+          "Failed to update the order status. Please try again.",
+          ErrorCode.INTERNAL_SERVER_ERROR,
+          500,
+          { originalError: error }
+        );
+      }
+    })
+  );
+
   // AI RECOMMENDATION ROUTES - Available to all users (logged in or not)
   app.get(
     "/api/recommendations",
