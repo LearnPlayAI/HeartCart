@@ -130,8 +130,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Store data in the standardized format for consistency
       queryClient.setQueryData(["/api/user"], { success: true, data: user });
       
-      // Force refetch to ensure components re-render with new data
-      await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      // Force refetch to ensure components re-render with fresh data
+      await refetch();
       
       // Log login success (dev only)
       if (process.env.NODE_ENV === 'development') {
@@ -195,11 +195,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return undefined;
     },
     onSuccess: async () => {
-      // Clear authentication data and force immediate re-render
+      // Clear authentication data immediately
       queryClient.setQueryData(["/api/user"], { success: true, data: null });
       
-      // Force refetch to ensure components re-render with cleared user data
-      await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      // Force refetch to ensure components re-render with fresh data
+      await refetch();
       
       // Show success message
       toast({
