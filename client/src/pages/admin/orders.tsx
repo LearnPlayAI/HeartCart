@@ -116,7 +116,7 @@ const getStatusConfig = (status: string) => {
     confirmed: {
       color: "bg-blue-100 text-blue-800 border-blue-200",
       icon: CheckCircle,
-      label: "Confirmed"
+      label: "Payment Received"
     },
     processing: {
       color: "bg-purple-100 text-purple-800 border-purple-200",
@@ -420,7 +420,7 @@ function OrderDetailsDialog({ order, open, onOpenChange }: {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="confirmed">Confirmed</SelectItem>
+                        <SelectItem value="confirmed">Payment Received</SelectItem>
                         <SelectItem value="processing">Processing</SelectItem>
                         <SelectItem value="shipped">Shipped</SelectItem>
                         <SelectItem value="delivered">Delivered</SelectItem>
@@ -657,7 +657,16 @@ export default function AdminOrdersPage() {
       order.customerEmail.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === "all" || order.status === statusFilter;
-    const matchesPayment = paymentFilter === "all" || order.paymentStatus === paymentFilter;
+    
+    // Special logic for payment filter: "paid" should show orders with status "confirmed"
+    let matchesPayment = true;
+    if (paymentFilter !== "all") {
+      if (paymentFilter === "paid") {
+        matchesPayment = order.status === "confirmed";
+      } else {
+        matchesPayment = order.paymentStatus === paymentFilter;
+      }
+    }
 
     return matchesSearch && matchesStatus && matchesPayment;
   });
