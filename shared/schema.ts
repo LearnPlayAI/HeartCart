@@ -27,7 +27,7 @@ export const users = pgTable("users", {
 // Categories table
 export const categories = pgTable("categories", {
   id: serial("id").primaryKey(),
-  name: text("name").notNull().unique(),
+  name: text("name").notNull(),
   slug: text("slug").notNull().unique(),
   description: text("description"),
   icon: text("icon"),
@@ -39,7 +39,10 @@ export const categories = pgTable("categories", {
   // Added timestamp fields to match database structure
   createdAt: text("created_at").default(String(new Date().toISOString())).notNull(),
   updatedAt: text("updated_at").default(String(new Date().toISOString())).notNull(),
-});
+}, (table) => ({
+  // Allow same category names under different parents
+  nameParentUnique: unique().on(table.name, table.parentId),
+}));
 
 // Relations will be defined after all tables are created
 

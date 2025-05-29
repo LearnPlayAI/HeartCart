@@ -795,9 +795,15 @@ export class DatabaseStorage implements IStorage {
     categoryData: Partial<InsertCategory>,
   ): Promise<Category | undefined> {
     try {
+      // Add updatedAt timestamp
+      const updateData = {
+        ...categoryData,
+        updatedAt: new Date().toISOString()
+      };
+
       const [updatedCategory] = await db
         .update(categories)
-        .set(categoryData)
+        .set(updateData)
         .where(eq(categories.id, id))
         .returning();
       return updatedCategory;
