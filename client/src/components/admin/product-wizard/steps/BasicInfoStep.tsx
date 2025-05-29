@@ -304,6 +304,97 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
       form.setValue('onSale', true);
     }
   };
+
+  // Category creation mutation
+  const createCategoryMutation = useMutation({
+    mutationFn: async (data: { 
+      name: string; 
+      slug: string; 
+      description: string; 
+      parentId?: number;
+      level: number;
+      displayOrder: number;
+    }) => {
+      const response = await fetch("/api/categories", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to create category");
+      }
+
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error?.message || "Failed to create category");
+      }
+      return result.data;
+    },
+    onSuccess: (newCategory) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
+      
+      // Reset form fields
+      setNewCategoryName("");
+      setNewCategorySlug("");
+      setNewCategoryDescription("");
+      setNewCategoryParentId(null);
+      setNewCategoryLevel(0);
+      setNewCategoryDisplayOrder(0);
+      setIsCreateDialogOpen(false);
+
+      // Auto-select the newly created category
+      form.setValue('categoryId', newCategory.id);
+
+      toast({
+        title: "Success",
+        description: "Category created successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: String(error),
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Handle category creation
+  const handleCreateCategory = () => {
+    if (!newCategoryName) {
+      toast({
+        title: "Error",
+        description: "Category name is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const slug = newCategorySlug || slugify(newCategoryName, { lower: true, strict: true });
+    const parentId = newCategoryParentId ? parseInt(newCategoryParentId) : undefined;
+    const level = parentId ? 1 : 0;
+
+    createCategoryMutation.mutate({
+      name: newCategoryName,
+      slug,
+      description: newCategoryDescription,
+      parentId,
+      level,
+      displayOrder: newCategoryDisplayOrder,
+    });
+  };
+
+  // Update category level when parent changes
+  React.useEffect(() => {
+    if (newCategoryParentId) {
+      setNewCategoryLevel(1);
+    } else {
+      setNewCategoryLevel(0);
+    }
+  }, [newCategoryParentId]);
   
   // Function to generate AI-powered description suggestions
   const generateDescriptionSuggestions = async () => {
@@ -525,6 +616,29 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
                 </FormItem>
               )}
             />
+
+            {/* Add Category Button */}
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">Category Selection</span>
+              <Button 
+                type="button"
+                variant="outline"
+                size="sm"
+                className="space-x-2"
+                onClick={() => {
+                  setNewCategoryName("");
+                  setNewCategorySlug("");
+                  setNewCategoryDescription("");
+                  setNewCategoryParentId(null);
+                  setNewCategoryLevel(0);
+                  setNewCategoryDisplayOrder(0);
+                  setIsCreateDialogOpen(true);
+                }}
+              >
+                <Plus className="h-4 w-4" />
+                <span>Add Category</span>
+              </Button>
+            </div>
 
             {/* Category Selection - Parent Category */}
             <div>
@@ -943,6 +1057,105 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
         </Form>
       </CardContent>
     </Card>
+
+    {/* Create Category Dialog */}
+    <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Create New Category</DialogTitle>
+          <DialogDescription>
+            Add a new category to organize your products.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="grid gap-2">
+            <Label htmlFor="name">Name*</Label>
+            <Input 
+              id="name" 
+              value={newCategoryName} 
+              onChange={(e) => setNewCategoryName(e.target.value)} 
+              placeholder="Category Name" 
+            />
+          </div>
+          
+          <div className="grid gap-2">
+            <Label htmlFor="parent">Parent Category</Label>
+            <Select value={newCategoryParentId || "none"} onValueChange={(value) => setNewCategoryParentId(value === "none" ? null : value)}>
+              <SelectTrigger id="parent">
+                <SelectValue placeholder="No Parent (Main Category)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No Parent (Main Category)</SelectItem>
+                {parentCategories.map((cat: any) => (
+                  <SelectItem key={cat.id} value={cat.id.toString()}>
+                    {cat.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-sm text-muted-foreground">
+              Current level: {newCategoryLevel} {newCategoryLevel === 0 ? "(Main Category)" : "(Subcategory)"}
+            </p>
+          </div>
+          
+          <div className="grid gap-2">
+            <Label htmlFor="slug">Slug</Label>
+            <div className="flex gap-2">
+              <Input 
+                id="slug" 
+                value={newCategorySlug} 
+                onChange={(e) => setNewCategorySlug(e.target.value)} 
+                placeholder={slugify(newCategoryName, { lower: true, strict: true }) || "category-slug"} 
+              />
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setNewCategorySlug(slugify(newCategoryName, { lower: true, strict: true }))}
+              >
+                Generate
+              </Button>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              The URL-friendly version of the name.
+            </p>
+          </div>
+          
+          <div className="grid gap-2">
+            <Label htmlFor="displayOrder">Display Order</Label>
+            <Input 
+              id="displayOrder" 
+              type="number" 
+              value={newCategoryDisplayOrder} 
+              onChange={(e) => setNewCategoryDisplayOrder(parseInt(e.target.value))} 
+            />
+            <p className="text-sm text-muted-foreground">
+              Controls the display order within the same level.
+            </p>
+          </div>
+          
+          <div className="grid gap-2">
+            <Label htmlFor="description">Description</Label>
+            <Textarea 
+              id="description"
+              value={newCategoryDescription} 
+              onChange={(e) => setNewCategoryDescription(e.target.value)} 
+              placeholder="Category description" 
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button 
+            onClick={handleCreateCategory} 
+            disabled={createCategoryMutation.isPending}
+          >
+            {createCategoryMutation.isPending && (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            )}
+            Create Category
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
     </>
   );
 };
