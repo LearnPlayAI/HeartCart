@@ -3527,12 +3527,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       } catch (error) {
         logger.error('Error fetching admin orders', { 
-          error
+          error: error instanceof Error ? {
+            message: error.message,
+            stack: error.stack
+          } : error
         });
         
         return res.status(500).json({
           success: false,
-          error: { message: "Failed to fetch orders" }
+          error: { 
+            message: "Failed to fetch orders",
+            details: error instanceof Error ? error.message : 'Unknown error'
+          }
         });
       }
     })
