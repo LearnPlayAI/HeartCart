@@ -521,27 +521,27 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
             {/* Category Selection - Child Category */}
             <div>
               <Label htmlFor="child-category">
-                Child Category {currentParentId && childCategories.length > 0 && "(Optional)"}
+                Child Category {parentCategoryId && childCategories.length > 0 && "(Optional)"}
               </Label>
               <Select
                 onValueChange={(value) => {
                   if (value === "clear-selection") {
-                    setCurrentChildId(null);
-                    if (currentParentId) {
-                      form.setValue('categoryId', currentParentId);
+                    // User is clearing child selection, save parent category
+                    if (parentCategoryId) {
+                      form.setValue('categoryId', parentCategoryId);
                     }
                   } else {
+                    // User selected a child category, save child category
                     const childIdNum = Number(value);
-                    setCurrentChildId(childIdNum);
                     form.setValue('categoryId', childIdNum);
                   }
                 }}
-                value={currentChildId ? currentChildId.toString() : undefined}
-                disabled={!currentParentId || childCategories.length === 0}
+                value={childCategoryId ? childCategoryId.toString() : undefined}
+                disabled={!parentCategoryId || childCategories.length === 0}
               >
                 <SelectTrigger className="h-9 sm:h-10" id="child-category">
                   <SelectValue placeholder={
-                    !currentParentId 
+                    !parentCategoryId 
                       ? "Select parent category first" 
                       : childCategories.length === 0 
                         ? "No child categories available"
@@ -549,7 +549,7 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
                   } />
                 </SelectTrigger>
                 <SelectContent>
-                  {currentChildId && (
+                  {childCategoryId && (
                     <SelectItem value="clear-selection">
                       <span className="text-muted-foreground">Clear selection</span>
                     </SelectItem>
