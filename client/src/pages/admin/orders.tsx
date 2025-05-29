@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { 
   Search, 
   Package, 
@@ -27,7 +29,9 @@ import {
   RefreshCw,
   DollarSign,
   AlertCircle,
-  Package2
+  Package2,
+  Grid3X3,
+  List
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -660,6 +664,7 @@ export default function AdminOrdersPage() {
   const [paymentFilter, setPaymentFilter] = useState<string>("all");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showDetails, setShowDetails] = useState(false);
+  const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
 
   const { data: ordersResponse, isLoading, error, refetch } = useQuery({
     queryKey: ['/api/admin/orders'],
@@ -786,36 +791,148 @@ export default function AdminOrdersPage() {
                   <SelectItem value="failed">Failed</SelectItem>
                 </SelectContent>
               </Select>
+
+              {/* View Toggle */}
+              <ToggleGroup type="single" value={viewMode} onValueChange={(value) => value && setViewMode(value as "cards" | "table")}>
+                <ToggleGroupItem value="cards" aria-label="Card view">
+                  <Grid3X3 className="h-4 w-4" />
+                </ToggleGroupItem>
+                <ToggleGroupItem value="table" aria-label="Table view">
+                  <List className="h-4 w-4" />
+                </ToggleGroupItem>
+              </ToggleGroup>
             </div>
           </CardContent>
         </Card>
 
-        {/* Orders Grid */}
+        {/* Orders Display */}
         {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[...Array(6)].map((_, i) => (
-              <Card key={i} className="animate-pulse">
-                <CardContent className="p-4">
-                  <div className="space-y-3">
-                    <div className="h-4 bg-muted rounded w-3/4"></div>
-                    <div className="h-3 bg-muted rounded w-1/2"></div>
-                    <div className="h-3 bg-muted rounded w-2/3"></div>
-                    <div className="h-8 bg-muted rounded"></div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          viewMode === "cards" ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[...Array(6)].map((_, i) => (
+                <Card key={i} className="animate-pulse">
+                  <CardContent className="p-4">
+                    <div className="space-y-3">
+                      <div className="h-4 bg-muted rounded w-3/4"></div>
+                      <div className="h-3 bg-muted rounded w-1/2"></div>
+                      <div className="h-3 bg-muted rounded w-2/3"></div>
+                      <div className="h-8 bg-muted rounded"></div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Order</TableHead>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead className="w-[100px]">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {[...Array(6)].map((_, i) => (
+                      <TableRow key={i} className="animate-pulse">
+                        <TableCell><div className="h-4 bg-muted rounded w-20"></div></TableCell>
+                        <TableCell><div className="h-4 bg-muted rounded w-32"></div></TableCell>
+                        <TableCell><div className="h-6 bg-muted rounded w-16"></div></TableCell>
+                        <TableCell><div className="h-4 bg-muted rounded w-16"></div></TableCell>
+                        <TableCell><div className="h-4 bg-muted rounded w-20"></div></TableCell>
+                        <TableCell><div className="h-8 bg-muted rounded w-8"></div></TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )
         ) : filteredOrders.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredOrders.map((order) => (
-              <OrderCard
-                key={order.id}
-                order={order}
-                onViewDetails={handleViewDetails}
-              />
-            ))}
-          </div>
+          viewMode === "cards" ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredOrders.map((order) => (
+                <OrderCard
+                  key={order.id}
+                  order={order}
+                  onViewDetails={handleViewDetails}
+                />
+              ))}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Order</TableHead>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Payment</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead className="w-[100px]">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredOrders.map((order) => (
+                      <TableRow key={order.id}>
+                        <TableCell className="font-medium">
+                          <div>
+                            <div className="font-semibold">{order.orderNumber}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {order.orderItems.length} item{order.orderItems.length !== 1 ? 's' : ''}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{order.customerName}</div>
+                            <div className="text-sm text-muted-foreground">{order.customerEmail}</div>
+                            {order.customerPhone && (
+                              <div className="text-xs text-muted-foreground">{order.customerPhone}</div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={getStatusConfig(order.status).variant}>
+                            {getStatusConfig(order.status).label}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant={order.paymentMethod === "eft" ? "secondary" : "default"}
+                            className="text-xs"
+                          >
+                            {order.paymentMethod?.toUpperCase() || "N/A"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {formatCurrency(order.totalAmount)}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {formatDate(order.createdAt)}
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleViewDetails(order)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )
         ) : (
           <Card>
             <CardContent className="p-8 text-center">
