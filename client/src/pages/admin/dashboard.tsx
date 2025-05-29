@@ -504,7 +504,17 @@ function TopProducts() {
     queryKey: ["/api/admin/products"],
   });
 
-  if (isLoadingOrders || isLoadingProducts) {
+  // Fetch categories for proper markup calculations
+  const { data: categoriesResponse, isLoading: isLoadingCategories } = useQuery({
+    queryKey: ['/api/categories']
+  });
+
+  // Fetch catalogs for complete product information
+  const { data: catalogsResponse, isLoading: isLoadingCatalogs } = useQuery({
+    queryKey: ['/api/catalogs']
+  });
+
+  if (isLoadingOrders || isLoadingProducts || isLoadingCategories || isLoadingCatalogs) {
     return (
       <div className="flex items-center justify-center p-8">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -513,7 +523,35 @@ function TopProducts() {
   }
 
   const orders = ordersResponse?.data || [];
-  const products = productsResponse?.data || [];
+  const rawProducts = productsResponse?.data || [];
+  const categories = categoriesResponse?.data || [];
+  const catalogs = catalogsResponse?.data || [];
+
+  // Enrich products with the same calculations as pricing page
+  const products = rawProducts.map((product: any) => {
+    const category = categories.find((cat: any) => cat.id === product.categoryId);
+    const catalog = catalogs.find((cat: any) => cat.id === product.catalogId);
+    
+    // Calculate TMY markup percentage (profit margin between cost and sale price)
+    const effectivePrice = product.salePrice || product.regularPrice;
+    const tmyMarkup = product.costPrice > 0 
+      ? ((effectivePrice - product.costPrice) / product.costPrice * 100) 
+      : 0;
+    
+    // Calculate customer discount percentage (discount between regular and sale price)
+    const customerDiscount = product.salePrice && product.regularPrice > 0
+      ? ((product.regularPrice - product.salePrice) / product.regularPrice * 100)
+      : 0;
+
+    return {
+      ...product,
+      categoryName: category?.name || 'Uncategorized',
+      catalogName: catalog?.name || 'No Catalog',
+      tmyMarkup: Number(tmyMarkup.toFixed(2)),
+      customerDiscount: Number(customerDiscount.toFixed(2)),
+      effectivePrice
+    };
+  });
 
   if (!Array.isArray(orders) || !Array.isArray(products) || orders.length === 0) {
     return (
@@ -561,21 +599,14 @@ function TopProducts() {
       .sort((a: any, b: any) => (b.regularPrice || 0) - (a.regularPrice || 0))
       .slice(0, 5)
       .map((product: any) => {
-        const costPrice = product.costPrice || 0;
-        const regularPrice = product.regularPrice || 0;
-        const salePrice = product.onSale ? product.salePrice || regularPrice : regularPrice;
-        const markup = costPrice > 0 ? ((regularPrice - costPrice) / costPrice * 100) : 0;
-        const discount = product.onSale && product.salePrice ? 
-          ((regularPrice - product.salePrice) / regularPrice * 100) : 0;
-        
         return {
           id: product.id,
           name: product.name,
           imageUrl: product.imageUrl,
           quantity: product.stockLevel || 0,
-          revenue: regularPrice,
-          markupPercentage: markup,
-          discountPercentage: discount
+          revenue: product.regularPrice || 0,
+          markupPercentage: product.tmyMarkup || 0,
+          discountPercentage: product.customerDiscount || 0
         };
       });
 
@@ -666,13 +697,10 @@ function TopProducts() {
         </div>
         <div className="divide-y">
           {topProducts.map((product, index) => {
-            // Find the full product details to get markup/discount info
-            const fullProduct = products.find((p: any) => p.name === product.name);
-            const costPrice = fullProduct?.costPrice || 0;
-            const regularPrice = fullProduct?.regularPrice || 0;
-            const markup = costPrice > 0 ? ((regularPrice - costPrice) / costPrice * 100) : 0;
-            const discount = fullProduct?.onSale && fullProduct?.salePrice ? 
-              ((regularPrice - fullProduct.salePrice) / regularPrice * 100) : 0;
+            // Find the enriched product details with calculated markup/discount
+            const enrichedProduct = products.find((p: any) => p.name === product.name);
+            const markup = enrichedProduct?.tmyMarkup || 0;
+            const discount = enrichedProduct?.customerDiscount || 0;
 
             return (
               <div key={index} className="px-4 py-3">
@@ -680,9 +708,9 @@ function TopProducts() {
                   <div className="col-span-2 flex items-center space-x-3">
                     {/* Product Thumbnail */}
                     <div className="w-12 h-12 bg-gray-100 rounded-md overflow-hidden flex-shrink-0">
-                      {fullProduct?.imageUrl ? (
+                      {enrichedProduct?.imageUrl ? (
                         <img 
-                          src={fullProduct.imageUrl} 
+                          src={enrichedProduct.imageUrl} 
                           alt={product.name}
                           className="w-full h-full object-cover"
                         />
