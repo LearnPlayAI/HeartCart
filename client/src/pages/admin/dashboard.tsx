@@ -303,7 +303,9 @@ function BusinessOverview() {
     queryKey: ["/api/admin/users"],
   });
 
-  if (isLoadingOrders || isLoadingProducts || isLoadingUsers) {
+  // Wait for all data to be loaded before rendering
+  if (isLoadingOrders || isLoadingProducts || isLoadingUsers || 
+      !ordersResponse || !productsResponse || !usersResponse) {
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
         {[1, 2, 3, 4].map((i) => (
@@ -321,16 +323,6 @@ function BusinessOverview() {
   const orders = ordersResponse?.data || [];
   const products = productsResponse?.data || [];
   const users = usersResponse?.data || [];
-
-  // Debug logging to check actual data and API responses
-  console.log('Business Overview Debug:');
-  console.log('Raw API Responses:');
-  console.log('ordersResponse:', ordersResponse);
-  console.log('productsResponse:', productsResponse);
-  console.log('usersResponse:', usersResponse);
-  console.log('Orders count:', orders.length, 'Orders data:', orders);
-  console.log('Products count:', products.length, 'Products data:', products);
-  console.log('Users count:', users.length, 'Users data:', users);
 
   if (!Array.isArray(orders) || !Array.isArray(products) || !Array.isArray(users)) {
     return (
