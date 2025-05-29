@@ -247,7 +247,7 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="absolute left-2 top-1/2 -translate-y-1/2 bg-[#FF69B4] hover:bg-[#FF69B4]/90 shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-white"
+                      className="absolute left-2 top-1/2 -translate-y-1/2 bg-[#FF69B4] hover:bg-[#FF69B4]/90 shadow-md opacity-80 transition-opacity duration-200 text-white"
                       onClick={(e) => {
                         e.stopPropagation();
                         navigateQuickViewImage('prev');
@@ -260,7 +260,7 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="absolute right-2 top-1/2 -translate-y-1/2 bg-[#FF69B4] hover:bg-[#FF69B4]/90 shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-white"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 bg-[#FF69B4] hover:bg-[#FF69B4]/90 shadow-md opacity-80 transition-opacity duration-200 text-white"
                       onClick={(e) => {
                         e.stopPropagation();
                         navigateQuickViewImage('next');
