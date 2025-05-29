@@ -130,6 +130,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Store data in the standardized format for consistency
       queryClient.setQueryData(["/api/user"], { success: true, data: user });
       
+      // Invalidate user-related queries to ensure fresh data
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/cart"] });
+      
       // Log login success (dev only)
       if (process.env.NODE_ENV === 'development') {
         console.log('Login successful, user data stored in cache');
@@ -192,9 +196,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return undefined;
     },
     onSuccess: () => {
-      // Clear authentication data immediately
+      // Clear authentication data and force immediate re-render
       queryClient.setQueryData(["/api/user"], { success: true, data: null });
+      
+      // Invalidate all auth-related queries to trigger re-fetch
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/cart"] });
+      
+      // Clear all cached data to ensure fresh state
       queryClient.clear();
       
       // Show success message
