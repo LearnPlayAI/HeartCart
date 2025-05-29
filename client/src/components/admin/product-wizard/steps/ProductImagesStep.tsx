@@ -25,7 +25,7 @@ type ImageFormValues = z.infer<typeof imageSchema>;
 
 interface ProductImagesStepProps {
   draft: ProductDraft;
-  onSave: (data: any) => void;
+  onSave: (data: any, autoAdvance?: boolean) => void;
   isLoading: boolean;
 }
 

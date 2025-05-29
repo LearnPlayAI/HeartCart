@@ -37,7 +37,7 @@ type AdditionalInfoFormValues = z.infer<typeof additionalInfoSchema>;
 
 interface AdditionalInfoStepProps {
   draft: ProductDraft;
-  onSave: (data: any) => void;
+  onSave: (data: any, autoAdvance?: boolean) => void;
   isLoading: boolean;
 }
 
@@ -62,7 +62,7 @@ export const AdditionalInfoStep: React.FC<AdditionalInfoStepProps> = ({ draft, o
 
   // Handle form submission
   const onSubmit = (data: AdditionalInfoFormValues) => {
-    onSave(data);
+    onSave(data, true);
   };
 
   // Watch values to enable/disable related fields

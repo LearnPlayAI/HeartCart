@@ -71,7 +71,7 @@ type BasicInfoFormValues = z.infer<typeof basicInfoSchema>;
 
 interface BasicInfoStepProps {
   draft: ProductDraft;
-  onSave: (data: any) => void;
+  onSave: (data: any, autoAdvance?: boolean) => void;
   onSaveAndPublish?: (data: any) => void;
   isLoading: boolean;
   isPublishing?: boolean;
