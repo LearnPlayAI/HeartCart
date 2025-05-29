@@ -143,11 +143,14 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
     return categoriesWithParents.filter((cat: any) => !cat.parentId);
   }, [categoriesWithParents]);
 
-  // Determine parent and child categories from the current categoryId in the draft
+  // Get the current categoryId from the form (this will be the source of truth)
+  const formCategoryId = form.watch('categoryId');
+  
+  // Determine parent and child categories from the current form categoryId
   const currentCategory = React.useMemo(() => {
-    if (!draft.categoryId || !categoriesWithParents.length) return null;
-    return categoriesWithParents.find((cat: any) => cat.id === draft.categoryId);
-  }, [draft.categoryId, categoriesWithParents]);
+    if (!formCategoryId || !categoriesWithParents.length) return null;
+    return categoriesWithParents.find((cat: any) => cat.id === formCategoryId);
+  }, [formCategoryId, categoriesWithParents]);
 
   const parentCategoryId = React.useMemo(() => {
     if (!currentCategory) return null;
@@ -536,7 +539,7 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
                     form.setValue('categoryId', childIdNum);
                   }
                 }}
-                value={childCategoryId ? childCategoryId.toString() : undefined}
+                value={childCategoryId ? childCategoryId.toString() : ""}
                 disabled={!parentCategoryId || childCategories.length === 0}
               >
                 <SelectTrigger className="h-9 sm:h-10" id="child-category">
