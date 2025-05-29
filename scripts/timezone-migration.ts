@@ -32,8 +32,8 @@ const tablesWithTimestamps = [
   { table: 'attribute_discount_rules', columns: [
     'created_at', 'updated_at', 'start_date', 'end_date'
   ]},
-  { table: 'ai_recommendations', columns: ['created_at'] },
-  { table: 'ai_settings', columns: ['created_at', 'updated_at'] },
+  { table: 'aiRecommendations', columns: ['createdAt'] },
+  { table: 'aiSettings', columns: ['createdAt', 'updatedAt'] },
   { table: 'session', columns: ['expire'] }
 ];
 

@@ -196,14 +196,14 @@ export const productImages = pgTable("product_images", {
 });
 
 // AI Recommendations table
-export const aiRecommendations = pgTable("ai_recommendations", {
+export const aiRecommendations = pgTable("aiRecommendations", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id),
-  productIds: integer("product_ids").array(),
+  userId: integer("userId").references(() => users.id),
+  productIds: integer("productIds").array(),
   reason: text("reason"),
-  aiResponse: jsonb("ai_response"),
-  createdAt: text("created_at").default(String(new Date().toISOString())).notNull(),
-  updatedAt: text("updated_at").default(String(new Date().toISOString())).notNull(),
+  aiResponse: jsonb("aiResponse"),
+  createdAt: text("createdAt").default(String(new Date().toISOString())).notNull(),
+  updatedAt: text("updatedAt").default(String(new Date().toISOString())).notNull(),
 });
 
 // Pricing settings table for category-specific markup percentages
@@ -221,13 +221,13 @@ export const pricing = pgTable("pricing", {
 });
 
 // AI Settings table for configuring AI model usage
-export const aiSettings = pgTable("ai_settings", {
+export const aiSettings = pgTable("aiSettings", {
   id: serial("id").primaryKey(),
-  settingName: text("setting_name").notNull().unique(),
-  settingValue: text("setting_value").notNull(),
+  settingName: text("settingName").notNull().unique(),
+  settingValue: text("settingValue").notNull(),
   description: text("description"),
-  createdAt: text("created_at").default(String(new Date().toISOString())).notNull(),
-  updatedAt: text("updated_at").default(String(new Date().toISOString())).notNull(),
+  createdAt: text("createdAt").default(String(new Date().toISOString())).notNull(),
+  updatedAt: text("updatedAt").default(String(new Date().toISOString())).notNull(),
 });
 
 // Suppliers table
