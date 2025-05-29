@@ -159,7 +159,7 @@ const SearchResults = () => {
         </div>
         
         {/* Search Results */}
-        {(isLoading || initialLoading) ? (
+        {isLoading ? (
           <div className="space-y-6">
             {/* Prominent Loading Indicator */}
             <div className="flex items-center justify-center py-12 bg-gradient-to-r from-pink-50 to-purple-50 rounded-lg border-2 border-dashed border-pink-200">

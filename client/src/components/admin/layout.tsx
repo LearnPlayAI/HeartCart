@@ -59,12 +59,7 @@ function Navigation({ className }: { className?: string }) {
       })}
       
       <button
-        onClick={() => logoutMutation.mutate(undefined, {
-          onSuccess: () => {
-            // Navigate to home page after successful logout
-            window.location.href = '/';
-          }
-        })}
+        onClick={() => logoutMutation.mutate()}
         className="w-full flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:bg-pink-50 hover:text-pink-700"
         disabled={logoutMutation.isPending}
       >

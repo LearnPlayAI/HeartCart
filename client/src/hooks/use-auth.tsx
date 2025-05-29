@@ -8,6 +8,7 @@ import { User, InsertUser } from "@shared/schema";
 import { apiRequest, getQueryFn, queryClient } from "../lib/queryClient";
 import { useToast } from "../hooks/use-toast";
 import { StandardApiResponse } from "@/types/api";
+import { useLocation } from "wouter";
 
 type AuthContextType = {
   user: User | null;
@@ -23,6 +24,7 @@ type LoginData = Pick<InsertUser, "email" | "password">;
 export const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
+  const [, navigate] = useLocation();
   const {
     data: response,
     error,
@@ -190,7 +192,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return undefined;
     },
     onSuccess: () => {
-      // Clear all cached data
+      // Clear all cached data immediately
       queryClient.clear();
       
       // Clear user data in cache with standardized format
@@ -201,6 +203,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         title: "Logged out successfully",
         description: "You have been signed out.",
       });
+      
+      // Navigate to home page using router navigation
+      navigate("/");
     },
     onError: (error: Error) => {
       toast({
