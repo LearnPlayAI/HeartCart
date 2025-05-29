@@ -168,7 +168,7 @@ const getPaymentStatusConfig = (status: string) => {
 };
 
 // Order Statistics Component
-function OrderStats({ orders }: { orders: Order[] }) {
+function OrderStats({ orders, onFilterChange }: { orders: Order[]; onFilterChange: (filter: string) => void }) {
   const stats = {
     total: orders.length,
     pending: orders.filter(o => o.status === 'pending').length,
@@ -185,7 +185,7 @@ function OrderStats({ orders }: { orders: Order[] }) {
     <div className="space-y-4 mb-6">
       {/* Main statistics row */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <Card>
+        <Card className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => onFilterChange("all")}>
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
               <Package2 className="h-4 w-4 text-muted-foreground" />
@@ -197,7 +197,7 @@ function OrderStats({ orders }: { orders: Order[] }) {
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => onFilterChange("pending")}>
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
               <Clock className="h-4 w-4 text-yellow-600" />
@@ -209,7 +209,7 @@ function OrderStats({ orders }: { orders: Order[] }) {
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => onFilterChange("processing")}>
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
               <Package className="h-4 w-4 text-purple-600" />
@@ -221,7 +221,7 @@ function OrderStats({ orders }: { orders: Order[] }) {
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => onFilterChange("shipped")}>
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
               <Truck className="h-4 w-4 text-orange-600" />
@@ -233,7 +233,7 @@ function OrderStats({ orders }: { orders: Order[] }) {
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => onFilterChange("delivered")}>
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
               <CheckCircle className="h-4 w-4 text-green-600" />
@@ -245,7 +245,7 @@ function OrderStats({ orders }: { orders: Order[] }) {
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => onFilterChange("pending")}>
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
               <AlertCircle className="h-4 w-4 text-yellow-600" />
@@ -272,7 +272,7 @@ function OrderStats({ orders }: { orders: Order[] }) {
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => onFilterChange("confirmed")}>
           <CardContent className="p-4">
             <div className="flex items-center space-x-3">
               <CheckCircle className="h-5 w-5 text-blue-600" />
@@ -284,7 +284,7 @@ function OrderStats({ orders }: { orders: Order[] }) {
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => onFilterChange("pending")}>
           <CardContent className="p-4">
             <div className="flex items-center space-x-3">
               <Clock className="h-5 w-5 text-yellow-600" />
@@ -715,6 +715,13 @@ export default function AdminOrdersPage() {
     setShowDetails(true);
   };
 
+  const handleStatisticFilter = (filterValue: string) => {
+    setStatusFilter(filterValue);
+    // Clear search and payment filters when using statistic filtering for cleaner experience
+    setSearchTerm("");
+    setPaymentFilter("all");
+  };
+
   if (error) {
     return (
       <AdminLayout>
@@ -760,7 +767,7 @@ export default function AdminOrdersPage() {
         </div>
 
         {/* Statistics */}
-        <OrderStats orders={orders} />
+        <OrderStats orders={orders} onFilterChange={handleStatisticFilter} />
 
         {/* Filters */}
         <Card>
