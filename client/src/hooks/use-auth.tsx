@@ -8,6 +8,7 @@ import { User, InsertUser } from "@shared/schema";
 import { apiRequest, getQueryFn, queryClient } from "../lib/queryClient";
 import { useToast } from "../hooks/use-toast";
 import { StandardApiResponse } from "@/types/api";
+import { useLocation } from "wouter";
 
 type AuthContextType = {
   user: User | null;
@@ -23,6 +24,7 @@ type LoginData = Pick<InsertUser, "email" | "password">;
 export const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
+  const [, navigate] = useLocation();
   const {
     data: response,
     error,
@@ -190,21 +192,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return undefined;
     },
     onSuccess: () => {
-      // Show success message first
+      // Clear authentication data immediately
+      queryClient.setQueryData(["/api/user"], { success: true, data: null });
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      queryClient.clear();
+      
+      // Show success message
       toast({
         title: "Logged out successfully",
         description: "You have been signed out.",
       });
       
-      // Clear authentication data with a slight delay to prevent context errors
-      setTimeout(() => {
-        queryClient.setQueryData(["/api/user"], { success: true, data: null });
-        queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-        queryClient.clear();
-        
-        // Force navigation after state is cleared
-        window.location.href = "/";
-      }, 50);
+      // Navigate using router instead of forcing page reload
+      navigate("/");
     },
     onError: (error: Error) => {
       toast({
