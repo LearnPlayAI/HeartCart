@@ -770,7 +770,7 @@ export default function AdminCategories() {
                                                   onCheckedChange={(checked) => handleVisibilityToggle(child.id, checked)}
                                                   className="data-[state=checked]:bg-green-500"
                                                 />
-                                                <span className="ml-2 text-xs text-muted-foreground">
+                                                <span className="ml-2 text-xs text-[#000000]">
                                                   {child.isActive ? 'Visible' : 'Hidden'}
                                                 </span>
                                               </div>
