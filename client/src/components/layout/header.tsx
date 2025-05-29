@@ -31,17 +31,8 @@ const Header = () => {
   const { toast } = useToast();
   
   const handleLogout = () => {
-    logoutMutation.mutate(undefined, {
-      onSuccess: () => {
-        toast({
-          title: "Logged out successfully",
-          description: "You have been logged out of your account",
-          duration: 3000,
-        });
-        // Force a full page reload to ensure authentication state is reflected in the UI
-        window.location.href = '/';
-      }
-    });
+    // Use the centralized logout mutation which already handles navigation
+    logoutMutation.mutate();
   };
   
   const { data: categoriesResponse } = useQuery<StandardApiResponse<Category[]>>({

@@ -197,8 +197,8 @@ const ProfilePage: React.FC = () => {
         description: "You have been logged out successfully.",
         duration: 3000,
       });
-      // Force a full page reload to ensure authentication state is reflected in the UI
-      window.location.href = '/';
+      // Navigate using router instead of forcing page reload
+      navigate('/');
     },
     onError: (error) => {
       toast({

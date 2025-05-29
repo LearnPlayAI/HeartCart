@@ -103,8 +103,8 @@ export default function AuthPage() {
           title: "Registration successful!",
           description: "Your account has been created successfully.",
         });
-        // Force a full page reload to ensure authentication state is reflected in the UI
-        window.location.href = '/';
+        // Navigate using router instead of forcing page reload
+        navigate('/');
       },
       onError: (error: Error) => {
         toast({
