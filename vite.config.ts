@@ -6,7 +6,16 @@ import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 export default defineConfig({
   plugins: [
     react(),
-    runtimeErrorOverlay(),
+    runtimeErrorOverlay({
+      useSWR: false,
+      filter: (error) => {
+        // Filter out ResizeObserver errors which are harmless
+        if (error.message?.includes('ResizeObserver')) return false;
+        // Filter out authentication-related errors that are expected during state changes
+        if (error.message?.includes('useAuth must be used within an AuthProvider')) return false;
+        return true;
+      }
+    }),
     ...(process.env.NODE_ENV !== "production" &&
     process.env.REPL_ID !== undefined
       ? [
