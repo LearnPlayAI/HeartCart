@@ -123,7 +123,7 @@ export class BatchUploadService {
   async logBatchError(error: InsertBatchUploadError): Promise<void> {
     try {
       // Validate batchUploadId is a valid number
-      if (isNaN(error.batchUploadId) || error.batchUploadId <= 0) {
+      if (!error.batchUploadId || isNaN(error.batchUploadId) || error.batchUploadId <= 0) {
         console.warn(`Invalid batch ID in error log: ${error.batchUploadId}`);
         return;
       }
@@ -148,23 +148,23 @@ export class BatchUploadService {
     try {
       const statusFields: Partial<BatchUpload> = {
         status,
-        updatedAt: new Date(),
+        updatedAt: new Date().toISOString(),
       };
       
       // Add appropriate timestamp based on status
       switch (status) {
         case BATCH_STATUSES.COMPLETED:
-          statusFields.completedAt = new Date();
+          statusFields.completedAt = new Date().toISOString();
           break;
         case BATCH_STATUSES.CANCELLED:
-          statusFields.canceledAt = new Date();
+          statusFields.canceledAt = new Date().toISOString();
           break;
         case BATCH_STATUSES.PAUSED:
-          statusFields.pausedAt = new Date();
+          statusFields.pausedAt = new Date().toISOString();
           break;
         case BATCH_STATUSES.RESUMABLE:
         case BATCH_STATUSES.RETRYING:
-          statusFields.resumedAt = new Date();
+          statusFields.resumedAt = new Date().toISOString();
           break;
       }
       
@@ -200,7 +200,7 @@ export class BatchUploadService {
       // Update batch status to processing
       await this.updateBatchStatus(batchId, BATCH_STATUSES.PROCESSING, {
         fileName: file.path,
-        originalFilename: file.originalname,
+        fileOriginalName: file.originalname,
       });
 
       // Parse and process the CSV file
@@ -1466,7 +1466,7 @@ export class BatchUploadService {
         
         // Clear previous errors for this batch to start fresh
         try {
-          await db.delete(batchUploadErrors).where(eq(batchUploadErrors.batchId, batchId));
+          await db.delete(batchUploadErrors).where(eq(batchUploadErrors.batchUploadId, batchId));
           console.log(`Cleared previous errors for batch ${batchId}`);
         } catch (clearError) {
           console.error(`Failed to clear previous errors for batch ${batchId}:`, clearError);
@@ -1592,7 +1592,7 @@ export class BatchUploadService {
       // Delete related errors
       await tx
         .delete(batchUploadErrors)
-        .where(eq(batchUploadErrors.batchId, batchId));
+        .where(eq(batchUploadErrors.batchUploadId, batchId));
         
       // Delete the batch upload
       await tx
