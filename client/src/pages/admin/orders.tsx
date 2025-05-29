@@ -118,7 +118,7 @@ function OrderDetails({ order }: { order: OrderWithItems }) {
         <div>
           <h3 className="text-lg font-semibold">Order #{order.id}</h3>
           <p className="text-sm text-muted-foreground">
-            Placed on {formatShortDate(order.createdAt)} by {order.user.fullName || order.user.username}
+            Placed on {formatShortDate(order.createdAt)} by {order.user?.email || order.user?.username || "Unknown"}
           </p>
         </div>
         <div className="flex items-center gap-2">
