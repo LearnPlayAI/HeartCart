@@ -631,14 +631,13 @@ export default function AdminCategories() {
           </div>
         ) : categoryView === 'tree' ? (
           // Tree View for hierarchical display with drag and drop
-          <div className="border rounded-md">
+          (<div className="border rounded-md">
             <div className="p-3 bg-slate-100 border-b">
               <p className="flex items-center text-sm text-muted-foreground">
                 <ArrowUpDown className="h-4 w-4 mr-2" />
                 <span>Drag items to reorder categories and subcategories</span>
               </p>
             </div>
-            
             <DragDropContext onDragEnd={handleDragEnd}>
               <Droppable droppableId="main-categories" type="MAIN_CATEGORY">
                 {(provided) => (
@@ -662,7 +661,7 @@ export default function AdminCategories() {
                               snapshot.isDragging ? "bg-slate-100 shadow-lg" : ""
                             )}
                           >
-                            <div className="p-4 bg-slate-50 flex justify-between items-center">
+                            <div className="p-4 flex justify-between items-center bg-[#ff6bb3]">
                               <div className="flex items-center">
                                 <div
                                   {...provided.dragHandleProps}
@@ -829,10 +828,10 @@ export default function AdminCategories() {
                 )}
               </Droppable>
             </DragDropContext>
-          </div>
+          </div>)
         ) : (
           // Grid View
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          (<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {categories
               ?.filter(category => filterLevel === null || category.level?.toString() === filterLevel)
               .map((category) => (
@@ -911,7 +910,7 @@ export default function AdminCategories() {
                 </CardContent>
               </Card>
             ))}
-          </div>
+          </div>)
         )}
         
         {/* Create Dialog */}
