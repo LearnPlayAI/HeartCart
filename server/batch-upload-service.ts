@@ -122,9 +122,9 @@ export class BatchUploadService {
    */
   async logBatchError(error: InsertBatchUploadError): Promise<void> {
     try {
-      // Validate batchId is a valid number
-      if (isNaN(error.batchId) || error.batchId <= 0) {
-        console.warn(`Invalid batch ID in error log: ${error.batchId}`);
+      // Validate batchUploadId is a valid number
+      if (isNaN(error.batchUploadId) || error.batchUploadId <= 0) {
+        console.warn(`Invalid batch ID in error log: ${error.batchUploadId}`);
         return;
       }
       
@@ -239,9 +239,9 @@ export class BatchUploadService {
       
       // Log the system error
       await this.logBatchError({
-        batchId,
-        errorType: ERROR_TYPES.SYSTEM,
-        errorMessage: `System error: ${errorMessage}`,
+        batchUploadId: batchId,
+        type: ERROR_TYPES.SYSTEM,
+        message: `System error: ${errorMessage}`,
         severity: ERROR_SEVERITY.ERROR,
       });
 
@@ -328,13 +328,12 @@ export class BatchUploadService {
                 // Log validation errors
                 for (const error of validationResult.errors) {
                   await self.logBatchError({
-                    batchId,
-                    rowNumber: totalRecords,
-                    errorType: ERROR_TYPES.VALIDATION,
-                    errorMessage: error.message,
+                    batchUploadId: batchId,
+                    row: totalRecords,
+                    type: ERROR_TYPES.VALIDATION,
+                    message: error.message,
                     severity: error.severity,
                     field: error.field,
-                    rawData: row,
                   });
                 }
                 
@@ -385,12 +384,11 @@ export class BatchUploadService {
                   : 'Unknown processing error';
                 
                 await self.logBatchError({
-                  batchId,
-                  rowNumber: totalRecords,
-                  errorType: ERROR_TYPES.PROCESSING,
-                  errorMessage,
+                  batchUploadId: batchId,
+                  row: totalRecords,
+                  type: ERROR_TYPES.PROCESSING,
+                  message: errorMessage,
                   severity: ERROR_SEVERITY.ERROR,
-                  rawData: row,
                 });
                 errors.push({
                   row: totalRecords,
@@ -406,12 +404,11 @@ export class BatchUploadService {
               const errorMessage = error instanceof Error ? error.message : 'Unknown error';
               
               await self.logBatchError({
-                batchId,
-                rowNumber: totalRecords,
-                errorType: ERROR_TYPES.SYSTEM,
-                errorMessage: `System error: ${errorMessage}`,
+                batchUploadId: batchId,
+                row: totalRecords,
+                type: ERROR_TYPES.SYSTEM,
+                message: `System error: ${errorMessage}`,
                 severity: ERROR_SEVERITY.ERROR,
-                rawData: row,
               });
               errors.push({
                 row: totalRecords,
