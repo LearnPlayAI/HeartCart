@@ -543,8 +543,19 @@ function TopProducts() {
   const catalogs = catalogsResponse?.data || [];
   const orders = ordersResponse?.data || [];
 
+  console.log('Debug - Raw products length:', products.length);
+  console.log('Debug - Categories length:', categories.length);
+  console.log('Debug - Catalogs length:', catalogs.length);
+
   // Calculate derived pricing data - EXACT same logic as pricing page
   const enrichedProducts = useMemo(() => {
+    console.log('Debug - Running enrichment with products:', products.length);
+    
+    if (!products || products.length === 0) {
+      console.log('Debug - No products to enrich');
+      return [];
+    }
+
     return products.map((product: any) => {
       const category = categories.find((cat: any) => cat.id === product.categoryId);
       const catalog = catalogs.find((cat: any) => cat.id === product.catalogId);
