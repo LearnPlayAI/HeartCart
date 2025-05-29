@@ -171,30 +171,7 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
     return categoriesWithParents.filter((cat: any) => cat.parentId === currentParentId);
   }, [categoriesWithParents, currentParentId]);
 
-  // Handle parent category selection
-  const handleParentCategoryChange = (parentId: string) => {
-    const parentIdNum = Number(parentId);
-    setCurrentParentId(parentIdNum);
-    setCurrentChildId(null); // Clear child selection when parent changes
-    // Update form with parent category (no child selected)
-    form.setValue('categoryId', parentIdNum);
-  };
 
-  // Handle child category selection
-  const handleChildCategoryChange = (childId: string) => {
-    if (childId === "clear-selection") {
-      // User is deselecting the child category, set to parent category
-      setCurrentChildId(null);
-      if (currentParentId) {
-        form.setValue('categoryId', currentParentId);
-      }
-    } else {
-      const childIdNum = Number(childId);
-      setCurrentChildId(childIdNum);
-      // Set categoryId to child category when child is selected
-      form.setValue('categoryId', childIdNum);
-    }
-  };
 
   // Update form values when draft changes
   useEffect(() => {
@@ -521,7 +498,12 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
             <div>
               <Label htmlFor="parent-category">Parent Category*</Label>
               <Select
-                onValueChange={handleParentCategoryChange}
+                onValueChange={(value) => {
+                  const parentIdNum = Number(value);
+                  setCurrentParentId(parentIdNum);
+                  setCurrentChildId(null);
+                  form.setValue('categoryId', parentIdNum);
+                }}
                 value={currentParentId?.toString() || undefined}
               >
                 <SelectTrigger className="h-9 sm:h-10" id="parent-category">
@@ -550,7 +532,18 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
                 Child Category {currentParentId && childCategories.length > 0 && "(Optional)"}
               </Label>
               <Select
-                onValueChange={handleChildCategoryChange}
+                onValueChange={(value) => {
+                  if (value === "clear-selection") {
+                    setCurrentChildId(null);
+                    if (currentParentId) {
+                      form.setValue('categoryId', currentParentId);
+                    }
+                  } else {
+                    const childIdNum = Number(value);
+                    setCurrentChildId(childIdNum);
+                    form.setValue('categoryId', childIdNum);
+                  }
+                }}
                 value={currentChildId ? currentChildId.toString() : undefined}
                 disabled={!currentParentId || childCategories.length === 0}
               >
