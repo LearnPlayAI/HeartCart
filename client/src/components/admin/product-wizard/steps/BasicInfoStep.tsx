@@ -85,10 +85,6 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
   const [showAiDialog, setShowAiDialog] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   
-  // Local state for category selection UI (controlled by user input)
-  const [currentParentId, setCurrentParentId] = useState<number | null>(null);
-  const [currentChildId, setCurrentChildId] = useState<number | null>(null);
-
   // Fetch categories for the dropdown
   const { data: categoriesData, isLoading: isCategoriesLoading } = useQuery({
     queryKey: ['/api/categories'],
@@ -147,29 +143,27 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
     return categoriesWithParents.filter((cat: any) => !cat.parentId);
   }, [categoriesWithParents]);
 
-  // Initialize local state from draft data when categories are loaded
-  React.useEffect(() => {
-    if (draft.categoryId && categoriesWithParents.length > 0) {
-      const currentCategory = categoriesWithParents.find((cat: any) => cat.id === draft.categoryId);
-      if (currentCategory) {
-        if (currentCategory.parentId) {
-          // This is a child category
-          setCurrentParentId(currentCategory.parentId);
-          setCurrentChildId(currentCategory.id);
-        } else {
-          // This is a parent category
-          setCurrentParentId(currentCategory.id);
-          setCurrentChildId(null);
-        }
-      }
-    }
+  // Determine parent and child categories from the current categoryId in the draft
+  const currentCategory = React.useMemo(() => {
+    if (!draft.categoryId || !categoriesWithParents.length) return null;
+    return categoriesWithParents.find((cat: any) => cat.id === draft.categoryId);
   }, [draft.categoryId, categoriesWithParents]);
+
+  const parentCategoryId = React.useMemo(() => {
+    if (!currentCategory) return null;
+    return currentCategory.parentId || currentCategory.id;
+  }, [currentCategory]);
+
+  const childCategoryId = React.useMemo(() => {
+    if (!currentCategory || !currentCategory.parentId) return null;
+    return currentCategory.id;
+  }, [currentCategory]);
 
   // Get child categories for the selected parent
   const childCategories = React.useMemo(() => {
-    if (!currentParentId) return [];
-    return categoriesWithParents.filter((cat: any) => cat.parentId === currentParentId);
-  }, [categoriesWithParents, currentParentId]);
+    if (!parentCategoryId) return [];
+    return categoriesWithParents.filter((cat: any) => cat.parentId === parentCategoryId);
+  }, [categoriesWithParents, parentCategoryId]);
 
 
 
@@ -500,11 +494,9 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
               <Select
                 onValueChange={(value) => {
                   const parentIdNum = Number(value);
-                  setCurrentParentId(parentIdNum);
-                  setCurrentChildId(null);
                   form.setValue('categoryId', parentIdNum);
                 }}
-                value={currentParentId?.toString() || undefined}
+                value={parentCategoryId?.toString() || undefined}
               >
                 <SelectTrigger className="h-9 sm:h-10" id="parent-category">
                   <SelectValue placeholder="Select parent category" />
