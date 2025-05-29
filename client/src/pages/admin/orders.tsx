@@ -167,7 +167,7 @@ function OrderDetails({ order }: { order: OrderWithItems }) {
               </div>
             </div>
             <div className="divide-y">
-              {order.items.map((item) => (
+              {order.items?.map((item) => (
                 <div key={item.id} className="px-4 py-3">
                   <div className="grid grid-cols-6 gap-4 items-center">
                     <div className="col-span-3 flex items-center gap-3">
