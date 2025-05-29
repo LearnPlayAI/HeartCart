@@ -1,78 +1,201 @@
 import { AdminLayout } from "@/components/admin/layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, ShoppingCart, Users, BarChart, DollarSign } from "lucide-react";
+import { 
+  Loader2, 
+  ShoppingCart, 
+  Users, 
+  Package, 
+  DollarSign, 
+  TrendingUp, 
+  AlertCircle,
+  CheckCircle,
+  Clock,
+  Truck,
+  BarChart3,
+  Eye,
+  Calendar
+} from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { useDateFormat } from "@/hooks/use-date-format";
 
+// Define interfaces for our data
+interface Order {
+  id: number;
+  userId: number;
+  orderNumber: string;
+  status: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  shippingAddress: string;
+  shippingCity: string;
+  shippingPostalCode: string;
+  shippingMethod: string;
+  shippingCost: number;
+  paymentMethod: string;
+  paymentStatus: string;
+  subtotalAmount: number;
+  totalAmount: number;
+  customerNotes?: string;
+  adminNotes?: string;
+  trackingNumber?: string;
+  createdAt: string;
+  updatedAt?: string;
+  shippedAt?: string;
+  deliveredAt?: string;
+  eftPop?: string;
+  orderItems: any[];
+  user?: {
+    id: number;
+    username: string;
+    email: string;
+  };
+}
+
+interface Product {
+  id: number;
+  name: string;
+  isActive: boolean;
+  stockLevel: number;
+  regularPrice: number;
+  onSale: boolean;
+  salePrice?: number;
+  createdAt: string;
+}
+
+interface User {
+  id: number;
+  username: string;
+  email: string;
+  createdAt: string;
+  role: string;
+}
+
 /**
- * Admin Dashboard Overview Cards
+ * Financial Statistics Component
  */
-function DashboardCards() {
-  // Fetch order stats
-  const { data: orderStats, isLoading: isLoadingOrders } = useQuery<{
-    total: number;
-    pending: number;
-    completed: number;
-    revenue: number;
-  }>({
-    queryKey: ["/api/admin/stats/orders"],
-    queryFn: async () => {
-      // Use dummy data for now, will be replaced with actual API call
-      return {
-        total: 126,
-        pending: 8,
-        completed: 118,
-        revenue: 43280.50
-      };
-    },
+function FinancialStats() {
+  const { data: response, isLoading: isLoadingOrders } = useQuery({
+    queryKey: ["/api/admin/orders"],
   });
 
-  // Fetch customer stats
-  const { data: customerStats, isLoading: isLoadingCustomers } = useQuery<{
-    total: number;
-    newThisMonth: number;
-  }>({
-    queryKey: ["/api/admin/stats/customers"],
-    queryFn: async () => {
-      // Use dummy data for now, will be replaced with actual API call
-      return {
-        total: 853,
-        newThisMonth: 48
-      };
-    },
-  });
-
-  // Fetch product stats
-  const { data: productStats, isLoading: isLoadingProducts } = useQuery<{
-    total: number;
-    availableToOrder: number;
-  }>({
-    queryKey: ["/api/admin/stats/products"],
-    queryFn: async () => {
-      // Use dummy data for now, will be replaced with actual API call
-      return {
-        total: 208,
-        availableToOrder: 208
-      };
-    },
-  });
-
-  if (isLoadingOrders || isLoadingCustomers || isLoadingProducts) {
+  if (isLoadingOrders) {
     return (
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {[1, 2, 3, 4].map((i) => (
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
+        {[1, 2, 3].map((i) => (
           <Card key={i} className="animate-pulse">
-            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardTitle className="text-sm font-medium">
-                <div className="h-4 bg-gray-200 rounded w-24"></div>
-              </CardTitle>
-              <div className="h-8 w-8 bg-gray-200 rounded-full"></div>
+            <CardHeader className="pb-2">
+              <div className="h-4 bg-gray-200 rounded w-32 mb-2"></div>
+              <div className="h-8 bg-gray-200 rounded w-24"></div>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold h-7 bg-gray-200 rounded w-16 mb-2"></div>
-              <div className="text-xs text-muted-foreground h-3 bg-gray-200 rounded w-32"></div>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
+  const orders = response?.data || [];
+  if (!Array.isArray(orders) || orders.length === 0) {
+    return (
+      <div className="grid gap-4 md:grid-cols-3 mb-6">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Revenue</CardTitle>
+            <div className="text-2xl font-bold text-green-600">{formatCurrency(0)}</div>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <p className="text-xs text-muted-foreground">No orders yet</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Payments Received</CardTitle>
+            <div className="text-2xl font-bold text-blue-600">{formatCurrency(0)}</div>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <p className="text-xs text-muted-foreground">No confirmed payments</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Payments Pending</CardTitle>
+            <div className="text-2xl font-bold text-yellow-600">{formatCurrency(0)}</div>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <p className="text-xs text-muted-foreground">No pending payments</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Calculate financial statistics
+  const totalRevenue = orders.reduce((sum: number, order: any) => sum + (order.totalAmount || 0), 0);
+  const paymentsReceived = orders
+    .filter((order: any) => order.status === "confirmed")
+    .reduce((sum: number, order: any) => sum + (order.totalAmount || 0), 0);
+  const paymentsPending = orders
+    .filter((order: any) => order.status === "pending")
+    .reduce((sum: number, order: any) => sum + (order.totalAmount || 0), 0);
+
+  return (
+    <div className="grid gap-4 md:grid-cols-3 mb-6">
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium text-muted-foreground">Total Revenue</CardTitle>
+          <div className="text-2xl font-bold text-green-600">{formatCurrency(totalRevenue)}</div>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <p className="text-xs text-muted-foreground">All-time revenue from {orders.length} orders</p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium text-muted-foreground">Payments Received</CardTitle>
+          <div className="text-2xl font-bold text-blue-600">{formatCurrency(paymentsReceived)}</div>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <p className="text-xs text-muted-foreground">
+            Confirmed payments ({orders.filter(o => o.status === "confirmed").length} orders)
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium text-muted-foreground">Payments Pending</CardTitle>
+          <div className="text-2xl font-bold text-yellow-600">{formatCurrency(paymentsPending)}</div>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <p className="text-xs text-muted-foreground">
+            Awaiting payment ({orders.filter(o => o.status === "pending").length} orders)
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+/**
+ * Order Status Overview Component
+ */
+function OrderStatusOverview() {
+  const { data: response, isLoading } = useQuery({
+    queryKey: ["/api/admin/orders"],
+  });
+
+  if (isLoading) {
+    return (
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6 mb-6">
+        {[1, 2, 3, 4, 5, 6].map((i) => (
+          <Card key={i} className="animate-pulse">
+            <CardContent className="p-4">
+              <div className="h-4 bg-gray-200 rounded w-16 mb-2"></div>
+              <div className="h-6 bg-gray-200 rounded w-8"></div>
             </CardContent>
           </Card>
         ))}
@@ -80,49 +203,175 @@ function DashboardCards() {
     );
   }
 
-  const cards = [
+  const orders = response?.data || [];
+  if (!Array.isArray(orders)) return null;
+
+  const stats = {
+    total: orders.length,
+    pending: orders.filter((order: any) => order.status === "pending").length,
+    confirmed: orders.filter((order: any) => order.status === "confirmed").length,
+    processing: orders.filter((order: any) => order.status === "processing").length,
+    shipped: orders.filter((order: any) => order.status === "shipped").length,
+    delivered: orders.filter((order: any) => order.status === "delivered").length,
+  };
+
+  const statusCards = [
     {
-      title: "Total Revenue",
-      value: formatCurrency(orderStats?.revenue || 0),
-      description: `From ${orderStats?.total || 0} orders`,
-      icon: DollarSign,
-      iconColor: "text-green-500",
-      iconBg: "bg-green-100",
-    },
-    {
-      title: "Orders",
-      value: orderStats?.total || 0,
-      description: `${orderStats?.pending || 0} pending orders`,
+      label: "Total Orders",
+      value: stats.total,
       icon: ShoppingCart,
-      iconColor: "text-pink-500",
-      iconBg: "bg-pink-100",
+      color: "text-gray-600",
+      bgColor: "bg-gray-100"
     },
     {
-      title: "Customers",
-      value: customerStats?.total || 0,
-      description: `${customerStats?.newThisMonth || 0} new this month`,
-      icon: Users,
-      iconColor: "text-blue-500",
-      iconBg: "bg-blue-100",
+      label: "Pending",
+      value: stats.pending,
+      icon: Clock,
+      color: "text-yellow-600",
+      bgColor: "bg-yellow-100"
     },
     {
-      title: "Products",
-      value: productStats?.total || 0,
-      description: `${productStats?.availableToOrder || 0} available to order`,
-      icon: BarChart,
-      iconColor: "text-purple-500",
-      iconBg: "bg-purple-100",
+      label: "Confirmed",
+      value: stats.confirmed,
+      icon: CheckCircle,
+      color: "text-blue-600",
+      bgColor: "bg-blue-100"
+    },
+    {
+      label: "Processing",
+      value: stats.processing,
+      icon: Package,
+      color: "text-purple-600",
+      bgColor: "bg-purple-100"
+    },
+    {
+      label: "Shipped",
+      value: stats.shipped,
+      icon: Truck,
+      color: "text-orange-600",
+      bgColor: "bg-orange-100"
+    },
+    {
+      label: "Delivered",
+      value: stats.delivered,
+      icon: CheckCircle,
+      color: "text-green-600",
+      bgColor: "bg-green-100"
     },
   ];
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      {cards.map((card, i) => (
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6 mb-6">
+      {statusCards.map((card, i) => (
+        <Card key={i}>
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-2">
+              <div className={`p-1 rounded-full ${card.bgColor}`}>
+                <card.icon className={`h-4 w-4 ${card.color}`} />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{card.value}</p>
+                <p className="text-xs text-muted-foreground">{card.label}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Business Overview Component
+ */
+function BusinessOverview() {
+  const { data: ordersResponse, isLoading: isLoadingOrders } = useQuery({
+    queryKey: ["/api/admin/orders"],
+  });
+
+  const { data: productsResponse, isLoading: isLoadingProducts } = useQuery({
+    queryKey: ["/api/admin/products"],
+  });
+
+  const { data: usersResponse, isLoading: isLoadingUsers } = useQuery({
+    queryKey: ["/api/admin/users"],
+  });
+
+  if (isLoadingOrders || isLoadingProducts || isLoadingUsers) {
+    return (
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+        {[1, 2, 3, 4].map((i) => (
+          <Card key={i} className="animate-pulse">
+            <CardHeader className="pb-2">
+              <div className="h-4 bg-gray-200 rounded w-24 mb-2"></div>
+              <div className="h-6 bg-gray-200 rounded w-16"></div>
+            </CardHeader>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
+  // Calculate current month stats
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+
+  const thisMonthOrders = orders?.filter(order => {
+    const orderDate = new Date(order.createdAt);
+    return orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear;
+  }) || [];
+
+  const thisMonthUsers = users?.filter(user => {
+    const userDate = new Date(user.createdAt);
+    return userDate.getMonth() === currentMonth && userDate.getFullYear() === currentYear;
+  }) || [];
+
+  const activeProducts = products?.filter(product => product.isActive) || [];
+  const lowStockProducts = products?.filter(product => product.stockLevel <= 10) || [];
+
+  const businessCards = [
+    {
+      title: "Total Customers",
+      value: users?.length || 0,
+      description: `${thisMonthUsers.length} new this month`,
+      icon: Users,
+      color: "text-blue-600",
+      bgColor: "bg-blue-100"
+    },
+    {
+      title: "Active Products",
+      value: activeProducts.length,
+      description: `${products?.length || 0} total products`,
+      icon: Package,
+      color: "text-green-600",
+      bgColor: "bg-green-100"
+    },
+    {
+      title: "Monthly Orders",
+      value: thisMonthOrders.length,
+      description: `${orders?.length || 0} total orders`,
+      icon: BarChart3,
+      color: "text-purple-600",
+      bgColor: "bg-purple-100"
+    },
+    {
+      title: "Low Stock Items",
+      value: lowStockProducts.length,
+      description: "Products with ≤10 units",
+      icon: AlertCircle,
+      color: "text-red-600",
+      bgColor: "bg-red-100"
+    },
+  ];
+
+  return (
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+      {businessCards.map((card, i) => (
         <Card key={i}>
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
-            <div className={`p-2 rounded-full ${card.iconBg}`}>
-              <card.icon className={`h-4 w-4 ${card.iconColor}`} />
+            <div className={`p-2 rounded-full ${card.bgColor}`}>
+              <card.icon className={`h-4 w-4 ${card.color}`} />
             </div>
           </CardHeader>
           <CardContent>
@@ -140,48 +389,8 @@ function DashboardCards() {
  */
 function RecentOrders() {
   const { formatShortDate } = useDateFormat();
-  const { data: recentOrders, isLoading } = useQuery<any[]>({
-    queryKey: ["/api/admin/orders/recent"],
-    queryFn: async () => {
-      // Use dummy data for now, will be replaced with actual API call
-      return [
-        {
-          id: 8743,
-          customer: "John Doe",
-          status: "Processing",
-          total: 238.50,
-          date: "2025-05-05T14:23:00Z",
-        },
-        {
-          id: 8742,
-          customer: "Alice Smith",
-          status: "Shipped",
-          total: 129.99,
-          date: "2025-05-05T11:45:00Z",
-        },
-        {
-          id: 8741,
-          customer: "Bob Johnson",
-          status: "Delivered",
-          total: 547.20,
-          date: "2025-05-04T16:30:00Z",
-        },
-        {
-          id: 8740,
-          customer: "Emma Wilson",
-          status: "Delivered",
-          total: 89.99,
-          date: "2025-05-04T10:15:00Z",
-        },
-        {
-          id: 8739,
-          customer: "Michael Brown",
-          status: "Delivered",
-          total: 325.75,
-          date: "2025-05-03T15:40:00Z",
-        },
-      ];
-    },
+  const { data: orders, isLoading } = useQuery<Order[]>({
+    queryKey: ["/api/admin/orders"],
   });
 
   if (isLoading) {
@@ -192,12 +401,44 @@ function RecentOrders() {
     );
   }
 
+  if (!orders || orders.length === 0) {
+    return (
+      <div className="text-center p-8">
+        <p className="text-muted-foreground">No recent orders found</p>
+      </div>
+    );
+  }
+
+  // Get the 5 most recent orders
+  const recentOrders = orders
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 5);
+
+  const getStatusBadgeStyle = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'confirmed':
+        return 'bg-blue-100 text-blue-800';
+      case 'processing':
+        return 'bg-purple-100 text-purple-800';
+      case 'shipped':
+        return 'bg-orange-100 text-orange-800';
+      case 'delivered':
+        return 'bg-green-100 text-green-800';
+      case 'cancelled':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="rounded-md border">
         <div className="px-4 py-3 font-medium bg-muted/50">
           <div className="grid grid-cols-5 gap-4">
-            <div>Order ID</div>
+            <div>Order Number</div>
             <div>Customer</div>
             <div>Status</div>
             <div>Date</div>
@@ -205,26 +446,21 @@ function RecentOrders() {
           </div>
         </div>
         <div className="divide-y">
-          {recentOrders?.map((order) => (
+          {recentOrders.map((order) => (
             <div key={order.id} className="px-4 py-3">
               <div className="grid grid-cols-5 gap-4">
-                <div className="font-medium">#{order.id}</div>
-                <div>{order.customer}</div>
+                <div className="font-medium">{order.orderNumber}</div>
+                <div>{order.customerName}</div>
                 <div>
-                  <span className={`
-                    inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                    ${order.status === 'Processing' ? 'bg-blue-100 text-blue-800' : 
-                      order.status === 'Shipped' ? 'bg-yellow-100 text-yellow-800' : 
-                      'bg-green-100 text-green-800'}
-                  `}>
-                    {order.status}
-                  </span>
+                  <Badge className={`${getStatusBadgeStyle(order.status)} border-0`}>
+                    {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                  </Badge>
                 </div>
                 <div className="text-muted-foreground">
-                  {formatShortDate(order.date)}
+                  {formatShortDate(order.createdAt)}
                 </div>
                 <div className="text-right font-medium">
-                  {formatCurrency(order.total)}
+                  {formatCurrency(order.totalAmount)}
                 </div>
               </div>
             </div>
@@ -239,49 +475,60 @@ function RecentOrders() {
  * Top Products Component
  */
 function TopProducts() {
-  const { data: topProducts, isLoading } = useQuery<any[]>({
-    queryKey: ["/api/admin/products/top"],
-    queryFn: async () => {
-      // Use dummy data for now, will be replaced with actual API call
-      return [
-        {
-          name: "Samsung Galaxy S21",
-          category: "Electronics",
-          sales: 48,
-          revenue: 38352.00,
-        },
-        {
-          name: "Wireless Earbuds",
-          category: "Electronics",
-          sales: 64,
-          revenue: 5116.80,
-        },
-        {
-          name: "Casual Denim Jacket",
-          category: "Fashion",
-          sales: 37,
-          revenue: 2589.63,
-        },
-        {
-          name: "Ceramic Coffee Mug",
-          category: "Home & Kitchen",
-          sales: 89,
-          revenue: 1424.00,
-        },
-        {
-          name: "Fitness Tracker Watch",
-          category: "Electronics",
-          sales: 32,
-          revenue: 3839.68,
-        },
-      ];
-    },
+  const { data: orders, isLoading: isLoadingOrders } = useQuery<Order[]>({
+    queryKey: ["/api/admin/orders"],
   });
 
-  if (isLoading) {
+  const { data: products, isLoading: isLoadingProducts } = useQuery<Product[]>({
+    queryKey: ["/api/admin/products"],
+  });
+
+  if (isLoadingOrders || isLoadingProducts) {
     return (
       <div className="flex items-center justify-center p-8">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!orders || !products || orders.length === 0) {
+    return (
+      <div className="text-center p-8">
+        <p className="text-muted-foreground">No order data available to calculate top products</p>
+      </div>
+    );
+  }
+
+  // Calculate product sales from order items
+  const productSales = new Map<number, { name: string; quantity: number; revenue: number }>();
+  
+  orders.forEach(order => {
+    order.orderItems.forEach((item: any) => {
+      const productId = item.productId;
+      const existing = productSales.get(productId);
+      
+      if (existing) {
+        existing.quantity += item.quantity;
+        existing.revenue += item.totalPrice;
+      } else {
+        productSales.set(productId, {
+          name: item.productName || 'Unknown Product',
+          quantity: item.quantity,
+          revenue: item.totalPrice
+        });
+      }
+    });
+  });
+
+  // Convert to array and sort by revenue
+  const topProducts = Array.from(productSales.values())
+    .sort((a, b) => b.revenue - a.revenue)
+    .slice(0, 5);
+
+  if (topProducts.length === 0) {
+    return (
+      <div className="text-center p-8">
+        <p className="text-muted-foreground">No product sales data available</p>
       </div>
     );
   }
@@ -290,20 +537,18 @@ function TopProducts() {
     <div className="space-y-4">
       <div className="rounded-md border">
         <div className="px-4 py-3 font-medium bg-muted/50">
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div>Product</div>
-            <div>Category</div>
             <div className="text-right">Units Sold</div>
             <div className="text-right">Revenue</div>
           </div>
         </div>
         <div className="divide-y">
-          {topProducts?.map((product, index) => (
+          {topProducts.map((product, index) => (
             <div key={index} className="px-4 py-3">
-              <div className="grid grid-cols-4 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div className="font-medium">{product.name}</div>
-                <div>{product.category}</div>
-                <div className="text-right">{product.sales}</div>
+                <div className="text-right">{product.quantity}</div>
                 <div className="text-right font-medium">
                   {formatCurrency(product.revenue)}
                 </div>
@@ -322,30 +567,69 @@ function TopProducts() {
 export default function AdminDashboard() {
   return (
     <AdminLayout>
-      <div className="flex flex-col space-y-6">
+      <div className="flex flex-col space-y-6 p-4 md:p-6">
+        {/* Header */}
         <div className="space-y-0.5">
-          <h2 className="text-2xl font-bold tracking-tight">Dashboard</h2>
+          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
           <p className="text-muted-foreground">
-            Overview of your store's performance and recent activity
+            Real-time overview of your store's performance and key metrics
           </p>
         </div>
 
-        {/* Stats Overview Cards */}
-        <DashboardCards />
+        {/* Financial Statistics */}
+        <div>
+          <h2 className="text-lg font-semibold mb-4">Financial Overview</h2>
+          <FinancialStats />
+        </div>
+
+        {/* Order Status Overview */}
+        <div>
+          <h2 className="text-lg font-semibold mb-4">Order Status Breakdown</h2>
+          <OrderStatusOverview />
+        </div>
+
+        {/* Business Overview */}
+        <div>
+          <h2 className="text-lg font-semibold mb-4">Business Metrics</h2>
+          <BusinessOverview />
+        </div>
         
-        {/* Recent Orders & Top Products */}
-        <Tabs defaultValue="recent-orders" className="mt-6">
-          <TabsList className="grid w-full md:w-[400px] grid-cols-2">
-            <TabsTrigger value="recent-orders">Recent Orders</TabsTrigger>
-            <TabsTrigger value="top-products">Top Products</TabsTrigger>
-          </TabsList>
-          <TabsContent value="recent-orders" className="mt-6">
-            <RecentOrders />
-          </TabsContent>
-          <TabsContent value="top-products" className="mt-6">
-            <TopProducts />
-          </TabsContent>
-        </Tabs>
+        {/* Recent Activity */}
+        <div>
+          <h2 className="text-lg font-semibold mb-4">Recent Activity</h2>
+          <Tabs defaultValue="recent-orders" className="w-full">
+            <TabsList className="grid w-full md:w-[400px] grid-cols-2">
+              <TabsTrigger value="recent-orders">Recent Orders</TabsTrigger>
+              <TabsTrigger value="top-products">Top Products</TabsTrigger>
+            </TabsList>
+            <TabsContent value="recent-orders" className="mt-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Latest Orders</CardTitle>
+                  <CardDescription>
+                    Most recent customer orders and their status
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <RecentOrders />
+                </CardContent>
+              </Card>
+            </TabsContent>
+            <TabsContent value="top-products" className="mt-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Best Selling Products</CardTitle>
+                  <CardDescription>
+                    Products ranked by revenue generated
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <TopProducts />
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
     </AdminLayout>
   );
