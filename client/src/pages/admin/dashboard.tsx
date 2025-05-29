@@ -610,26 +610,29 @@ function TopProducts() {
     });
   }, [products, categories, catalogs]);
 
-  // Calculate sales data from orders
+  // Calculate sales data from orders - ONLY PAID ORDERS (exclude pending)
   const salesData = useMemo(() => {
     const productSales: { [key: string]: { quantity: number; revenue: number } } = {};
 
-    orders.forEach((order: Order) => {
-      if (order.orderItems && Array.isArray(order.orderItems)) {
-        order.orderItems.forEach((item: any) => {
-          const productName = item.productName || item.name || 'Unknown Product';
-          const quantity = item.quantity || 0;
-          const price = item.price || item.unitPrice || 0;
+    // Only include orders that are paid for (exclude pending orders)
+    orders
+      .filter((order: Order) => order.status !== 'pending')
+      .forEach((order: Order) => {
+        if (order.orderItems && Array.isArray(order.orderItems)) {
+          order.orderItems.forEach((item: any) => {
+            const productName = item.productName || item.name || 'Unknown Product';
+            const quantity = item.quantity || 0;
+            const price = item.price || item.unitPrice || 0;
 
-          if (!productSales[productName]) {
-            productSales[productName] = { quantity: 0, revenue: 0 };
-          }
+            if (!productSales[productName]) {
+              productSales[productName] = { quantity: 0, revenue: 0 };
+            }
 
-          productSales[productName].quantity += quantity;
-          productSales[productName].revenue += (quantity * price);
-        });
-      }
-    });
+            productSales[productName].quantity += quantity;
+            productSales[productName].revenue += (quantity * price);
+          });
+        }
+      });
 
     return productSales;
   }, [orders]);
