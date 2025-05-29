@@ -495,11 +495,11 @@ function RecentOrders() {
  * Top Products Component
  */
 function TopProducts() {
-  const { data: orders, isLoading: isLoadingOrders } = useQuery<Order[]>({
+  const { data: ordersResponse, isLoading: isLoadingOrders } = useQuery({
     queryKey: ["/api/admin/orders"],
   });
 
-  const { data: products, isLoading: isLoadingProducts } = useQuery<Product[]>({
+  const { data: productsResponse, isLoading: isLoadingProducts } = useQuery({
     queryKey: ["/api/admin/products"],
   });
 
@@ -511,7 +511,10 @@ function TopProducts() {
     );
   }
 
-  if (!orders || !products || orders.length === 0) {
+  const orders = ordersResponse?.data || [];
+  const products = productsResponse?.data || [];
+
+  if (!Array.isArray(orders) || !Array.isArray(products) || orders.length === 0) {
     return (
       <div className="text-center p-8">
         <p className="text-muted-foreground">No order data available to calculate top products</p>
@@ -522,22 +525,27 @@ function TopProducts() {
   // Calculate product sales from order items
   const productSales = new Map<number, { name: string; quantity: number; revenue: number }>();
   
-  orders.forEach(order => {
-    order.orderItems.forEach((item: any) => {
-      const productId = item.productId;
-      const existing = productSales.get(productId);
-      
-      if (existing) {
-        existing.quantity += item.quantity;
-        existing.revenue += item.totalPrice;
-      } else {
-        productSales.set(productId, {
-          name: item.productName || 'Unknown Product',
-          quantity: item.quantity,
-          revenue: item.totalPrice
-        });
-      }
-    });
+  orders.forEach((order: any) => {
+    // Check if order has orderItems array
+    if (order.orderItems && Array.isArray(order.orderItems)) {
+      order.orderItems.forEach((item: any) => {
+        const productId = item.productId;
+        const existing = productSales.get(productId);
+        
+        if (existing) {
+          existing.quantity += item.quantity || 1;
+          existing.revenue += item.totalPrice || (item.unitPrice * item.quantity) || 0;
+        } else {
+          // Find product name from products array
+          const product = products.find((p: any) => p.id === productId);
+          productSales.set(productId, {
+            name: product?.name || item.productName || 'Unknown Product',
+            quantity: item.quantity || 1,
+            revenue: item.totalPrice || (item.unitPrice * item.quantity) || 0
+          });
+        }
+      });
+    }
   });
 
   // Convert to array and sort by revenue
@@ -546,9 +554,52 @@ function TopProducts() {
     .slice(0, 5);
 
   if (topProducts.length === 0) {
+    // Fallback: Show top products by regular price and stock level
+    const fallbackProducts = products
+      .filter((product: any) => product.isActive)
+      .sort((a: any, b: any) => (b.regularPrice || 0) - (a.regularPrice || 0))
+      .slice(0, 5)
+      .map((product: any) => ({
+        name: product.name,
+        quantity: product.stockLevel || 0,
+        revenue: product.regularPrice || 0
+      }));
+
+    if (fallbackProducts.length === 0) {
+      return (
+        <div className="text-center p-8">
+          <p className="text-muted-foreground">No product data available</p>
+        </div>
+      );
+    }
+
     return (
-      <div className="text-center p-8">
-        <p className="text-muted-foreground">No product sales data available</p>
+      <div className="space-y-4">
+        <div className="text-sm text-muted-foreground mb-4">
+          Showing products by price (order data not available yet)
+        </div>
+        <div className="rounded-md border">
+          <div className="px-4 py-3 font-medium bg-muted/50">
+            <div className="grid grid-cols-3 gap-4">
+              <div>Product</div>
+              <div className="text-right">Stock Level</div>
+              <div className="text-right">Price</div>
+            </div>
+          </div>
+          <div className="divide-y">
+            {fallbackProducts.map((product, index) => (
+              <div key={index} className="px-4 py-3">
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="font-medium">{product.name}</div>
+                  <div className="text-right">{product.quantity}</div>
+                  <div className="text-right font-medium">
+                    {formatCurrency(product.revenue)}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
