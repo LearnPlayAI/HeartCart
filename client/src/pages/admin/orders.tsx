@@ -168,7 +168,7 @@ function OrderStats({ orders }: { orders: Order[] }) {
   const stats = {
     total: orders.length,
     pending: orders.filter(o => o.status === 'pending').length,
-    processing: orders.filter(o => ['confirmed', 'processing'].includes(o.status)).length,
+    processing: orders.filter(o => o.status === 'processing').length,
     shipped: orders.filter(o => o.status === 'shipped').length,
     delivered: orders.filter(o => o.status === 'delivered').length,
     totalRevenue: orders.reduce((sum, o) => sum + o.totalAmount, 0),
@@ -176,90 +176,96 @@ function OrderStats({ orders }: { orders: Order[] }) {
   };
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-6">
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center space-x-2">
-            <Package2 className="h-4 w-4 text-muted-foreground" />
-            <div>
-              <p className="text-2xl font-bold">{stats.total}</p>
-              <p className="text-xs text-muted-foreground">Total Orders</p>
+    <div className="space-y-4 mb-6">
+      {/* Main statistics row */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-2">
+              <Package2 className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <p className="text-2xl font-bold">{stats.total}</p>
+                <p className="text-xs text-muted-foreground">Total Orders</p>
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-2">
+              <Clock className="h-4 w-4 text-yellow-600" />
+              <div>
+                <p className="text-2xl font-bold">{stats.pending}</p>
+                <p className="text-xs text-muted-foreground">Pending</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-2">
+              <Package className="h-4 w-4 text-purple-600" />
+              <div>
+                <p className="text-2xl font-bold">{stats.processing}</p>
+                <p className="text-xs text-muted-foreground">Processing</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-2">
+              <Truck className="h-4 w-4 text-orange-600" />
+              <div>
+                <p className="text-2xl font-bold">{stats.shipped}</p>
+                <p className="text-xs text-muted-foreground">Shipped</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-2">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <div>
+                <p className="text-2xl font-bold">{stats.delivered}</p>
+                <p className="text-xs text-muted-foreground">Delivered</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-2">
+              <AlertCircle className="h-4 w-4 text-yellow-600" />
+              <div>
+                <p className="text-2xl font-bold">{stats.pendingPayments}</p>
+                <p className="text-xs text-muted-foreground">Pending Payments</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
       
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center space-x-2">
-            <Clock className="h-4 w-4 text-yellow-600" />
-            <div>
-              <p className="text-2xl font-bold">{stats.pending}</p>
-              <p className="text-xs text-muted-foreground">Pending</p>
+      {/* Revenue row - wider and separate */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="md:col-span-1">
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-3">
+              <DollarSign className="h-5 w-5 text-green-600" />
+              <div>
+                <p className="text-2xl font-bold">{formatCurrency(stats.totalRevenue)}</p>
+                <p className="text-sm text-muted-foreground">Total Revenue</p>
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center space-x-2">
-            <Package className="h-4 w-4 text-purple-600" />
-            <div>
-              <p className="text-2xl font-bold">{stats.processing}</p>
-              <p className="text-xs text-muted-foreground">Processing</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center space-x-2">
-            <Truck className="h-4 w-4 text-orange-600" />
-            <div>
-              <p className="text-2xl font-bold">{stats.shipped}</p>
-              <p className="text-xs text-muted-foreground">Shipped</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center space-x-2">
-            <CheckCircle className="h-4 w-4 text-green-600" />
-            <div>
-              <p className="text-2xl font-bold">{stats.delivered}</p>
-              <p className="text-xs text-muted-foreground">Delivered</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center space-x-2">
-            <DollarSign className="h-4 w-4 text-green-600" />
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold truncate">{formatCurrency(stats.totalRevenue)}</p>
-              <p className="text-xs text-muted-foreground">Total Revenue</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center space-x-2">
-            <AlertCircle className="h-4 w-4 text-yellow-600" />
-            <div>
-              <p className="text-2xl font-bold">{stats.pendingPayments}</p>
-              <p className="text-xs text-muted-foreground">Pending Payments</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
