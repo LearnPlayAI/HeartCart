@@ -190,11 +190,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return undefined;
     },
     onSuccess: () => {
-      // Clear all cached data immediately
-      queryClient.clear();
-      
-      // Clear user data in cache with standardized format
+      // Clear user data in cache immediately to trigger UI update
       queryClient.setQueryData(["/api/user"], { success: true, data: null });
+      
+      // Invalidate queries to refresh authentication state
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      
+      // Clear all other cached data
+      queryClient.clear();
       
       // Show success message
       toast({
@@ -202,8 +205,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: "You have been signed out.",
       });
       
-      // Force a clean reload to ensure proper state reset
-      window.location.href = "/";
+      // No navigation needed - let the auth state change handle the redirect
     },
     onError: (error: Error) => {
       toast({
