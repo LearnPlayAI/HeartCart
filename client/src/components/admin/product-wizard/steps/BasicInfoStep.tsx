@@ -2,16 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
-import type { Supplier, Catalog } from '@shared/schema';
+import type { Supplier, Catalog, Category } from '@shared/schema';
+import { slugify } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Loader2, Wand2 } from 'lucide-react';
+import { Loader2, Wand2, Plus } from 'lucide-react';
 import { 
   Form, 
   FormControl, 
@@ -47,7 +48,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ProductDraft } from '../ProductWizard';
-import slugify from 'slugify';
 
 // Validation schema for the basic information step
 const basicInfoSchema = z.object({
@@ -79,11 +79,21 @@ interface BasicInfoStepProps {
 
 export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onSaveAndPublish, isLoading, isPublishing }) => {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [isNameTouched, setIsNameTouched] = useState(false);
   const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
   const [aiDescriptionSuggestions, setAiDescriptionSuggestions] = useState<string[]>([]);
   const [showAiDialog, setShowAiDialog] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  
+  // Category creation modal state
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [newCategorySlug, setNewCategorySlug] = useState("");
+  const [newCategoryDescription, setNewCategoryDescription] = useState("");
+  const [newCategoryParentId, setNewCategoryParentId] = useState<string | null>(null);
+  const [newCategoryLevel, setNewCategoryLevel] = useState<number>(0);
+  const [newCategoryDisplayOrder, setNewCategoryDisplayOrder] = useState<number>(0);
   
   // Fetch categories for the dropdown
   const { data: categoriesData, isLoading: isCategoriesLoading } = useQuery({
