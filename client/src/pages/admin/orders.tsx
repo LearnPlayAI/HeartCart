@@ -267,9 +267,7 @@ function OrderStats({ orders }: { orders: Order[] }) {
 // Order Card Component
 function OrderCard({ order, onViewDetails }: { order: Order; onViewDetails: (order: Order) => void }) {
   const statusConfig = getStatusConfig(order.status);
-  const paymentConfig = getPaymentStatusConfig(order.paymentStatus);
   const StatusIcon = statusConfig.icon;
-  const PaymentIcon = paymentConfig.icon;
 
   return (
     <Card className="hover:shadow-lg transition-shadow">
@@ -281,14 +279,10 @@ function OrderCard({ order, onViewDetails }: { order: Order; onViewDetails: (ord
               <h3 className="font-semibold text-sm text-blue-600">#{order.orderNumber}</h3>
               <p className="text-xs text-muted-foreground">{formatDate(order.createdAt)}</p>
             </div>
-            <div className="flex flex-col items-end space-y-1">
+            <div className="flex items-end">
               <Badge className={`${statusConfig.color} border text-xs`}>
                 <StatusIcon className="h-3 w-3 mr-1" />
                 {statusConfig.label}
-              </Badge>
-              <Badge className={`${paymentConfig.color} border text-xs`}>
-                <PaymentIcon className="h-3 w-3 mr-1" />
-                {paymentConfig.label}
               </Badge>
             </div>
           </div>
@@ -351,7 +345,6 @@ function OrderDetailsDialog({ order, open, onOpenChange }: {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
-      toast({ description: "Order status updated successfully" });
     },
     onError: (error) => {
       console.error('Status update error:', error);
@@ -368,8 +361,6 @@ function OrderDetailsDialog({ order, open, onOpenChange }: {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
-      refetch(); // Force immediate refetch
-      toast({ description: "Tracking number updated successfully" });
       setTrackingInput("");
     },
     onError: () => {
