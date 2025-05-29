@@ -6481,14 +6481,6 @@ export class DatabaseStorage implements IStorage {
       switch (step) {
         case "basic-info":
         case 0: // Handle numeric equivalent
-          // Debug logging for categoryId specifically
-          logger.debug("Basic-info step categoryId processing:", {
-            draftId: id,
-            incomingCategoryId: draftData.categoryId,
-            existingCategoryId: existingDraft.categoryId,
-            categoryIdType: typeof draftData.categoryId
-          });
-          
           updateData = {
             ...updateData,
             name: draftData.name,
