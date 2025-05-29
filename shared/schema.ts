@@ -591,6 +591,10 @@ export type InsertAttributeOption = z.infer<typeof insertAttributeOptionSchema>;
 export type ProductAttribute = typeof productAttributes.$inferSelect;
 export type InsertProductAttribute = z.infer<typeof insertProductAttributeSchema>;
 
+// Batch upload insert types (defined after schemas)
+export type InsertBatchUpload = z.infer<typeof insertBatchUploadSchema>;
+export type InsertBatchUploadError = z.infer<typeof insertBatchUploadErrorSchema>;
+
 // Define all table relations after all tables and types are defined
 export const categoriesRelations = relations(categories, ({ one, many }) => ({
   parent: one(categories, {
