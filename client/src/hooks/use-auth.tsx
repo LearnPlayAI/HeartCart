@@ -126,9 +126,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Handle direct response format (fallback)
       return data;
     },
-    onSuccess: (user: User) => {
+    onSuccess: async (user: User) => {
       // Store data in the standardized format for consistency
       queryClient.setQueryData(["/api/user"], { success: true, data: user });
+      
+      // Force refetch to ensure components re-render with new data
+      await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       
       // Log login success (dev only)
       if (process.env.NODE_ENV === 'development') {
@@ -191,12 +194,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Return void instead of null to match the return type declaration
       return undefined;
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       // Clear authentication data and force immediate re-render
       queryClient.setQueryData(["/api/user"], { success: true, data: null });
       
-      // Invalidate user query to trigger re-render immediately
-      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      // Force refetch to ensure components re-render with cleared user data
+      await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       
       // Show success message
       toast({
