@@ -147,6 +147,9 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
     return categoriesWithParents.filter((cat: any) => !cat.parentId);
   }, [categoriesWithParents]);
 
+  // Track if user manually cleared child selection
+  const [userClearedChild, setUserClearedChild] = React.useState(false);
+
   // Get child categories for the selected parent
   const childCategories = React.useMemo(() => {
     if (!selectedParentCategoryId) return [];
@@ -173,7 +176,7 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
 
   // Reset and reinitialize category state when step becomes active
   React.useEffect(() => {
-    if (draft.categoryId && categoriesWithParents.length > 0) {
+    if (draft.categoryId && categoriesWithParents.length > 0 && !userClearedChild) {
       const currentCategory = categoriesWithParents.find((cat: any) => cat.id === draft.categoryId);
       if (currentCategory) {
         if (currentCategory.parentId) {
@@ -195,13 +198,14 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
         }
       }
     }
-  }, [draft, categoriesWithParents, selectedParentCategoryId, selectedChildCategoryId]);
+  }, [draft, categoriesWithParents, selectedParentCategoryId, selectedChildCategoryId, userClearedChild]);
 
   // Handle parent category selection
   const handleParentCategoryChange = (parentId: string) => {
     const parentIdNum = Number(parentId);
     setSelectedParentCategoryId(parentIdNum);
     setSelectedChildCategoryId(null); // Reset child selection
+    setUserClearedChild(false); // Reset the cleared flag when changing parent
     
     // Update form with parent category
     form.setValue('categoryId', parentIdNum);
@@ -212,11 +216,17 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
     if (childId === "clear-selection") {
       // User is deselecting the child category
       setSelectedChildCategoryId(null);
+      setUserClearedChild(true); // Mark that user manually cleared
       // Set categoryId to parent category when child is cleared
       form.setValue('categoryId', selectedParentCategoryId || 0);
+      // Force a small delay to prevent auto-reselection
+      setTimeout(() => {
+        setUserClearedChild(true);
+      }, 100);
     } else {
       const childIdNum = Number(childId);
       setSelectedChildCategoryId(childIdNum);
+      setUserClearedChild(false); // Reset the flag when selecting a child
       // Set categoryId to child category when child is selected
       form.setValue('categoryId', childIdNum);
     }
