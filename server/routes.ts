@@ -4,6 +4,8 @@ import { sendError } from "./api-response";
 import { storage } from "./storage";
 import { ZodError } from "zod";
 import { logger } from "./logger";
+import { db } from "./db";
+import { desc, eq } from "drizzle-orm";
 import crypto from "crypto";
 import { cleanupOrphanedDraftImages, cleanupAllOrphanedDraftImages } from "./clean-orphaned-images";
 // Import AI routes separately
@@ -3490,64 +3492,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     })
   );
 
-  // Admin-only route to get all orders (must be above the /api/orders/:id route due to route matching order)
+  // Clean admin orders API - get all orders with proper relations
   app.get(
     "/api/admin/orders", 
     isAuthenticated, 
-    validateRequest({
-      query: z.object({
-        status: z.enum(['pending', 'processing', 'shipped', 'delivered', 'cancelled']).optional(),
-        userId: z.coerce.number().positive().optional(),
-        limit: z.coerce.number().int().positive().optional().default(20),
-        offset: z.coerce.number().int().min(0).optional().default(0)
-      }).optional()
-    }),
     asyncHandler(async (req: Request, res: Response) => {
       const user = req.user as any;
       
       // Check if user is admin
       if (user.role !== 'admin') {
-        throw new ForbiddenError("Only administrators can access all orders");
+        return res.status(403).json({
+          success: false,
+          error: { message: "Admin access required" }
+        });
       }
       
-      const { status, userId, limit = 20, offset = 0 } = req.query;
-      
       try {
-        // Get all orders with optional filtering
-        const orders = await storage.getOrdersByUser(userId ? Number(userId) : null);
-        
-        // For pagination metadata, just use the fetched orders count
-        const totalOrderCount = orders.length;
-        
-        return res.json({
-          success: true,
-          data: orders,
-          meta: {
-            count: orders.length,
-            total: totalOrderCount,
-            page: Math.floor(Number(offset) / Number(limit)) + 1,
-            pages: Math.ceil(totalOrderCount / Number(limit)),
-            filters: {
-              status: status || 'all',
-              userId: userId || 'all'
+        // Get all orders with their items using Drizzle relations
+        const orders = await db.query.orders.findMany({
+          orderBy: [desc(orders.createdAt)],
+          with: {
+            orderItems: {
+              with: {
+                product: true
+              }
+            },
+            user: {
+              columns: {
+                id: true,
+                username: true,
+                email: true
+              }
             }
           }
         });
-      } catch (error) {
-        // Log detailed error information with context
-        logger.error('Error retrieving admin orders', { 
-          error, 
+        
+        logger.info('Admin orders fetched successfully', { 
           adminId: user.id, 
-          filters: { status, userId, limit, offset }
+          orderCount: orders.length 
         });
         
-        // Return generic error
-        throw new AppError(
-          "Failed to retrieve orders. Please try again.",
-          ErrorCode.INTERNAL_SERVER_ERROR,
-          500,
-          { originalError: error }
-        );
+        return res.json({
+          success: true,
+          data: orders
+        });
+      } catch (error) {
+        logger.error('Error fetching admin orders', { 
+          error, 
+          adminId: user.id
+        });
+        
+        return res.status(500).json({
+          success: false,
+          error: { message: "Failed to fetch orders" }
+        });
       }
     })
   );
@@ -3613,41 +3611,143 @@ export async function registerRoutes(app: Express): Promise<Server> {
     })
   );
   
-  // Update order status (admin-only)
+  // Clean admin order status update API
   app.patch(
-    "/api/orders/:id/status", 
+    "/api/admin/orders/:id/status", 
     isAuthenticated, 
-    validateRequest({
-      params: z.object({
-        id: z.coerce.number().positive("Order ID is required")
-      }),
-      body: z.object({
-        status: z.enum(['pending', 'processing', 'shipped', 'delivered', 'cancelled'], {
-          errorMap: () => ({ message: "Invalid status value. Must be one of: pending, processing, shipped, delivered, cancelled" })
-        })
-      })
-    }),
     asyncHandler(async (req: Request, res: Response) => {
-      const { id } = req.params;
-      const { status } = req.body;
-      const orderId = Number(id);
       const user = req.user as any;
+      const orderId = Number(req.params.id);
+      const { status } = req.body;
+      
+      // Check if user is admin
+      if (user.role !== 'admin') {
+        return res.status(403).json({
+          success: false,
+          error: { message: "Admin access required" }
+        });
+      }
+      
+      // Validate status
+      const validStatuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
+      if (!status || !validStatuses.includes(status)) {
+        return res.status(400).json({
+          success: false,
+          error: { message: "Invalid status. Must be one of: " + validStatuses.join(', ') }
+        });
+      }
       
       try {
-        // Check if user is admin
-        if (user.role !== 'admin') {
-          throw new ForbiddenError("Only administrators can update order status");
+        // Update the order status directly using Drizzle
+        const [updatedOrder] = await db
+          .update(orders)
+          .set({ 
+            status, 
+            updatedAt: new Date().toISOString() 
+          })
+          .where(eq(orders.id, orderId))
+          .returning();
+        
+        if (!updatedOrder) {
+          return res.status(404).json({
+            success: false,
+            error: { message: "Order not found" }
+          });
         }
         
-        // Get the order to verify it exists and capture previous status
-        const order = await storage.getOrderById(orderId);
-        if (!order) {
-          throw new NotFoundError(`Order with ID ${orderId} not found`, "order");
+        logger.info('Order status updated', { 
+          adminId: user.id, 
+          orderId, 
+          newStatus: status 
+        });
+        
+        return res.json({
+          success: true,
+          data: updatedOrder,
+          message: `Order status updated to ${status}`
+        });
+      } catch (error) {
+        logger.error('Error updating order status', { 
+          error, 
+          adminId: user.id, 
+          orderId 
+        });
+        
+        return res.status(500).json({
+          success: false,
+          error: { message: "Failed to update order status" }
+        });
+      }
+    })
+  );
+
+  // Clean admin tracking number update API
+  app.patch(
+    "/api/admin/orders/:id/tracking", 
+    isAuthenticated, 
+    asyncHandler(async (req: Request, res: Response) => {
+      const user = req.user as any;
+      const orderId = Number(req.params.id);
+      const { trackingNumber } = req.body;
+      
+      // Check if user is admin
+      if (user.role !== 'admin') {
+        return res.status(403).json({
+          success: false,
+          error: { message: "Admin access required" }
+        });
+      }
+      
+      if (!trackingNumber || trackingNumber.trim() === '') {
+        return res.status(400).json({
+          success: false,
+          error: { message: "Tracking number is required" }
+        });
+      }
+      
+      try {
+        // Update the tracking number directly using Drizzle
+        const [updatedOrder] = await db
+          .update(orders)
+          .set({ 
+            trackingNumber: trackingNumber.trim(),
+            updatedAt: new Date().toISOString() 
+          })
+          .where(eq(orders.id, orderId))
+          .returning();
+        
+        if (!updatedOrder) {
+          return res.status(404).json({
+            success: false,
+            error: { message: "Order not found" }
+          });
         }
         
-        const previousStatus = order.status;
+        logger.info('Order tracking number updated', { 
+          adminId: user.id, 
+          orderId, 
+          trackingNumber 
+        });
         
-        // Update the status
+        return res.json({
+          success: true,
+          data: updatedOrder,
+          message: "Tracking number updated successfully"
+        });
+      } catch (error) {
+        logger.error('Error updating tracking number', { 
+          error, 
+          adminId: user.id, 
+          orderId 
+        });
+        
+        return res.status(500).json({
+          success: false,
+          error: { message: "Failed to update tracking number" }
+        });
+      }
+    })
+  );
         const updatedOrder = await storage.updateOrderStatus(orderId, status);
         if (!updatedOrder) {
           throw new AppError(
