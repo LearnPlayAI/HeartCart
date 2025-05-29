@@ -150,20 +150,27 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
   // Get child categories for the selected parent
   const childCategories = React.useMemo(() => {
     if (!selectedParentCategoryId) return [];
-    return categoriesWithParents.filter((cat: any) => cat.parentId === selectedParentCategoryId);
+    const children = categoriesWithParents.filter((cat: any) => cat.parentId === selectedParentCategoryId);
+    console.log('Child categories for parent', selectedParentCategoryId, ':', children);
+    return children;
   }, [categoriesWithParents, selectedParentCategoryId]);
 
   // Initialize category selection state based on draft
   React.useEffect(() => {
     if (draft.categoryId && categoriesWithParents.length > 0) {
+      console.log('Initializing categories. Draft categoryId:', draft.categoryId);
+      console.log('Available categories:', categoriesWithParents);
       const currentCategory = categoriesWithParents.find((cat: any) => cat.id === draft.categoryId);
+      console.log('Found current category:', currentCategory);
       if (currentCategory) {
         if (currentCategory.parentId) {
           // This is a child category
+          console.log('Setting parent category:', currentCategory.parentId, 'and child category:', currentCategory.id);
           setSelectedParentCategoryId(currentCategory.parentId);
           setSelectedChildCategoryId(currentCategory.id);
         } else {
           // This is a parent category
+          console.log('Setting parent category only:', currentCategory.id);
           setSelectedParentCategoryId(currentCategory.id);
           setSelectedChildCategoryId(null);
         }
