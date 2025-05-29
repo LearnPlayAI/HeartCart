@@ -658,11 +658,13 @@ export default function AdminOrdersPage() {
     
     const matchesStatus = statusFilter === "all" || order.status === statusFilter;
     
-    // Special logic for payment filter: "paid" should show orders with status "confirmed"
+    // Special logic for payment filter: map payment filter to order status
     let matchesPayment = true;
     if (paymentFilter !== "all") {
       if (paymentFilter === "paid") {
         matchesPayment = order.status === "confirmed";
+      } else if (paymentFilter === "pending") {
+        matchesPayment = order.status === "pending";
       } else {
         matchesPayment = order.paymentStatus === paymentFilter;
       }
