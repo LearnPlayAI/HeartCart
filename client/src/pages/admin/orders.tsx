@@ -350,6 +350,7 @@ function OrderDetailsDialog({ order, open, onOpenChange }: {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
+      refetch(); // Force immediate refetch
       toast({ description: "Order status updated successfully" });
     },
     onError: () => {
@@ -366,6 +367,7 @@ function OrderDetailsDialog({ order, open, onOpenChange }: {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
+      refetch(); // Force immediate refetch
       toast({ description: "Tracking number updated successfully" });
       setTrackingInput("");
     },
