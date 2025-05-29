@@ -21,7 +21,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { 
   Plus, Search, MoreVertical, Edit, Trash2, Copy, ExternalLink, 
   Check, X, Clock, Loader2, Filter, SortAsc, SortDesc, 
-  FileQuestion, ShoppingCart, FileCheck, Eye, AlertCircle
+  FileQuestion, ShoppingCart, FileCheck, Eye, AlertCircle, Package
 } from 'lucide-react';
 
 // Types
@@ -32,6 +32,8 @@ interface ProductDraft {
   wizardStep: string;
   categoryId: number | null;
   images: any[];
+  imageUrls?: string[];
+  mainImageIndex?: number;
   createdAt: string;
   lastModified: string; // Date in ISO format string
   updatedAt: string;
@@ -258,7 +260,7 @@ export const DraftDashboard: React.FC = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Name</TableHead>
+                    <TableHead>Product</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Last Updated</TableHead>
                     <TableHead>Progress</TableHead>
@@ -269,10 +271,23 @@ export const DraftDashboard: React.FC = () => {
                   {filteredDrafts.map((draft: ProductDraft) => (
                     <TableRow key={draft.id}>
                       <TableCell className="font-medium">
-                        <div>
-                          <div>{draft.name}</div>
-                          <div className="text-sm text-muted-foreground truncate max-w-[300px]">
-                            {draft.slug}
+                        <div className="flex items-center gap-3">
+                          {draft.imageUrls && draft.imageUrls.length > 0 ? (
+                            <img 
+                              src={draft.imageUrls[draft.mainImageIndex || 0]} 
+                              alt={draft.name}
+                              className="h-10 w-10 rounded object-cover"
+                            />
+                          ) : (
+                            <div className="h-10 w-10 rounded bg-muted flex items-center justify-center">
+                              <Package className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                          )}
+                          <div>
+                            <div className="font-medium">{draft.name}</div>
+                            <div className="text-sm text-muted-foreground truncate max-w-[300px]">
+                              {draft.slug}
+                            </div>
                           </div>
                         </div>
                       </TableCell>
