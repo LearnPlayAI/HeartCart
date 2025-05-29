@@ -346,7 +346,7 @@ function OrderDetailsDialog({ order, open, onOpenChange }: {
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ orderId, status }: { orderId: number; status: string }) => {
-      return await apiRequest(`/api/admin/orders/${orderId}/status`, 'PATCH', { status });
+      return await apiRequest('PATCH', `/api/admin/orders/${orderId}/status`, { status });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
@@ -362,7 +362,7 @@ function OrderDetailsDialog({ order, open, onOpenChange }: {
 
   const updateTrackingMutation = useMutation({
     mutationFn: async ({ orderId, trackingNumber }: { orderId: number; trackingNumber: string }) => {
-      return await apiRequest(`/api/admin/orders/${orderId}/tracking`, 'PATCH', { trackingNumber });
+      return await apiRequest('PATCH', `/api/admin/orders/${orderId}/tracking`, { trackingNumber });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
