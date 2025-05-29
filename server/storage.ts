@@ -2283,22 +2283,36 @@ export class DatabaseStorage implements IStorage {
     items: InsertOrderItem[],
   ): Promise<Order> {
     try {
-      // Generate a unique order number
-      const orderNumber = `TMY-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+      // Generate a temporary order number for initial insert
+      const tempOrderNumber = `TMY-TEMP-${Date.now()}`;
       
-      // Create the order with generated order number
-      const orderWithNumber = {
+      // Create the order with temporary order number
+      const orderWithTempNumber = {
         ...order,
-        orderNumber,
+        orderNumber: tempOrderNumber,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
 
-      const [newOrder] = await db.insert(orders).values(orderWithNumber).returning();
+      const [newOrder] = await db.insert(orders).values(orderWithTempNumber).returning();
+
+      // Generate the final order number using the actual OrderID and date
+      const orderDate = new Date().toISOString().split('T')[0].replace(/-/g, ''); // YYYYMMDD format
+      const finalOrderNumber = `TMY-${newOrder.id}-${orderDate}`;
+
+      // Update the order with the final order number
+      const [updatedOrder] = await db
+        .update(orders)
+        .set({ orderNumber: finalOrderNumber })
+        .where(eq(orders.id, newOrder.id))
+        .returning();
+
+      // Use the updated order for the rest of the process
+      const orderToUse = updatedOrder;
 
       logger.info(`Created new order`, {
-        orderId: newOrder.id,
-        orderNumber: newOrder.orderNumber,
+        orderId: orderToUse.id,
+        orderNumber: orderToUse.orderNumber,
         userId: order.userId,
         status: order.status,
         itemCount: items.length,
@@ -2315,7 +2329,7 @@ export class DatabaseStorage implements IStorage {
             .insert(orderItems)
             .values({
               ...item,
-              orderId: newOrder.id,
+              orderId: orderToUse.id,
               createdAt: new Date().toISOString(),
             })
             .returning();
@@ -2323,7 +2337,7 @@ export class DatabaseStorage implements IStorage {
           successfulItemInserts++;
 
           logger.debug(`Added item to order`, {
-            orderId: newOrder.id,
+            orderId: orderToUse.id,
             orderItemId: orderItem.id,
             productId: item.productId,
             productName: item.productName,
@@ -2344,14 +2358,14 @@ export class DatabaseStorage implements IStorage {
                 .where(eq(products.id, item.productId));
 
               logger.debug(`Updated product sold count`, {
-                orderId: newOrder.id,
+                orderId: orderToUse.id,
                 productId: item.productId,
                 quantitySold: item.quantity,
               });
             } catch (updateError) {
               logger.error(`Error updating sold count for product`, {
                 error: updateError,
-                orderId: newOrder.id,
+                orderId: orderToUse.id,
                 productId: item.productId,
                 quantity: item.quantity,
               });
@@ -2362,7 +2376,7 @@ export class DatabaseStorage implements IStorage {
           failedItemInserts++;
           logger.error(`Error inserting order item`, {
             error: itemError,
-            orderId: newOrder.id,
+            orderId: orderToUse.id,
             productId: item.productId,
             itemIndex: successfulItemInserts + failedItemInserts - 1,
           });
