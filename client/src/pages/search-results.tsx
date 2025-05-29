@@ -33,9 +33,6 @@ const SearchResults = () => {
   const [page, setPage] = useState(1);
   const limit = 20;
   
-  // Show initial loading state before API call starts
-  const [initialLoading, setInitialLoading] = useState(true);
-  
   const { 
     data: response,
     isLoading, 
@@ -58,17 +55,12 @@ const SearchResults = () => {
       return response.json();
     },
     enabled: query.length > 0,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    refetchOnWindowFocus: false, // Don't refetch on window focus
   });
   
   // Extract products from standardized API response
   const products = response?.success ? response.data : [];
-  
-  // Turn off initial loading once we have data or error
-  useEffect(() => {
-    if (!isLoading) {
-      setInitialLoading(false);
-    }
-  }, [isLoading]);
   
   // Reset page when query changes
   useEffect(() => {

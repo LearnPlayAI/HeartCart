@@ -190,8 +190,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return undefined;
     },
     onSuccess: () => {
+      // Clear all cached data
+      queryClient.clear();
+      
       // Clear user data in cache with standardized format
       queryClient.setQueryData(["/api/user"], { success: true, data: null });
+      
+      // Show success message
+      toast({
+        title: "Logged out successfully",
+        description: "You have been signed out.",
+      });
     },
     onError: (error: Error) => {
       toast({

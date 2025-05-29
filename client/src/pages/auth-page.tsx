@@ -81,8 +81,8 @@ export default function AuthPage() {
           title: "Login successful!",
           description: "Welcome back to TemuSA.",
         });
-        // Force a full page reload to ensure authentication state is reflected in the UI
-        window.location.href = '/';
+        // Navigate without full page reload
+        navigate("/");
       },
       onError: (error: Error) => {
         toast({
