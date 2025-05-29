@@ -670,7 +670,7 @@ export default function AdminCategories() {
                                   <GripVertical className="h-5 w-5 text-muted-foreground" />
                                 </div>
                                 <h3 className="font-medium">{item.category.name}</h3>
-                                <Badge variant="outline" className="ml-2">Level 0</Badge>
+                                <Badge variant="outline" className="ml-2 bg-[#22c55e]">Level 0</Badge>
                                 <Badge 
                                   variant="secondary" 
                                   className="ml-2"
@@ -683,7 +683,7 @@ export default function AdminCategories() {
                                     onCheckedChange={(checked) => handleVisibilityToggle(item.category.id, checked)}
                                     className="data-[state=checked]:bg-green-500"
                                   />
-                                  <span className="ml-2 text-xs text-muted-foreground">
+                                  <span className="ml-2 text-xs text-[#000000]">
                                     {item.category.isActive ? 'Visible' : 'Hidden'}
                                   </span>
                                 </div>
@@ -757,7 +757,7 @@ export default function AdminCategories() {
                                               </div>
                                               <ChevronRight className="h-4 w-4 mr-2 text-muted-foreground" />
                                               <span className="font-medium">{child.name}</span>
-                                              <Badge variant="outline" className="ml-2">Level 1</Badge>
+                                              <Badge variant="outline" className="ml-2 bg-[#22c55e]">Level 1</Badge>
                                               <Badge 
                                                 variant="secondary" 
                                                 className="ml-2"
