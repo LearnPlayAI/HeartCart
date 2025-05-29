@@ -900,8 +900,8 @@ export default function AdminOrdersPage() {
                         </TableCell>
                         <TableCell>
                           <Badge 
-                            variant={getStatusConfig(order.status).variant}
-                            className={getStatusConfig(order.status).className}
+                            variant="outline"
+                            className={`${getStatusConfig(order.status).color} border`}
                           >
                             {getStatusConfig(order.status).label}
                           </Badge>
