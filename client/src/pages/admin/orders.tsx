@@ -172,7 +172,7 @@ function OrderStats({ orders }: { orders: Order[] }) {
     shipped: orders.filter(o => o.status === 'shipped').length,
     delivered: orders.filter(o => o.status === 'delivered').length,
     totalRevenue: orders.reduce((sum, o) => sum + o.totalAmount, 0),
-    pendingPayments: orders.filter(o => o.paymentStatus === 'pending').length
+    pendingPayments: orders.filter(o => o.status === 'pending').length
   };
 
   return (
@@ -241,8 +241,8 @@ function OrderStats({ orders }: { orders: Order[] }) {
         <CardContent className="p-4">
           <div className="flex items-center space-x-2">
             <DollarSign className="h-4 w-4 text-green-600" />
-            <div>
-              <p className="text-lg font-bold">{formatCurrency(stats.totalRevenue)}</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold truncate">{formatCurrency(stats.totalRevenue)}</p>
               <p className="text-xs text-muted-foreground">Total Revenue</p>
             </div>
           </div>
