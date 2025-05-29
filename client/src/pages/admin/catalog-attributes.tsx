@@ -188,10 +188,7 @@ function CatalogAttributesPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/catalogs", catalogId, "attributes"] });
-      toast({
-        title: "Attribute added to catalog successfully",
-        variant: "default",
-      });
+      
     },
     onError: (error: Error) => {
       toast({
@@ -227,10 +224,7 @@ function CatalogAttributesPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/catalogs", catalogId, "attributes"] });
       setAttributeDialogOpen(false);
-      toast({
-        title: "Catalog attribute updated successfully",
-        variant: "default",
-      });
+      
     },
     onError: (error: Error) => {
       toast({
@@ -263,10 +257,7 @@ function CatalogAttributesPage() {
       setSelectedAttribute(null);
       setConfirmDeleteDialogOpen(false);
       setItemToDelete(null);
-      toast({
-        title: "Attribute removed from catalog successfully",
-        variant: "default",
-      });
+      
     },
     onError: (error: Error) => {
       toast({
@@ -305,10 +296,7 @@ function CatalogAttributesPage() {
         queryKey: ["/api/catalogs", catalogId, "attributes", selectedAttribute?.attributeId, "options"] 
       });
       setOptionDialogOpen(false);
-      toast({
-        title: "Option created successfully",
-        variant: "default",
-      });
+      
     },
     onError: (error: Error) => {
       toast({
@@ -349,10 +337,7 @@ function CatalogAttributesPage() {
       });
       setOptionDialogOpen(false);
       setOptionMetadataDialogOpen(false);
-      toast({
-        title: "Option updated successfully",
-        variant: "default",
-      });
+      
     },
     onError: (error: Error) => {
       toast({
@@ -388,10 +373,7 @@ function CatalogAttributesPage() {
       });
       setConfirmDeleteDialogOpen(false);
       setItemToDelete(null);
-      toast({
-        title: "Option deleted successfully",
-        variant: "default",
-      });
+      
     },
     onError: (error: Error) => {
       toast({
@@ -429,10 +411,7 @@ function CatalogAttributesPage() {
       queryClient.invalidateQueries({ 
         queryKey: ["/api/catalogs", catalogId, "attributes", selectedAttribute?.attributeId, "options"] 
       });
-      toast({
-        title: "Options reordered successfully",
-        variant: "default",
-      });
+      
     },
     onError: (error: Error) => {
       toast({

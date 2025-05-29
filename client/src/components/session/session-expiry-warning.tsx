@@ -34,10 +34,7 @@ export function SessionExpiryWarning() {
       if (response.ok) {
         setShowWarning(false);
         setLastActivity(Date.now());
-        toast({
-          title: "Session refreshed",
-          description: "Your session has been successfully extended.",
-        });
+        
       } else {
         // If refresh fails, show error and redirect will happen automatically
         toast({

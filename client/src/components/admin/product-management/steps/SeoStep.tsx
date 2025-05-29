@@ -103,10 +103,7 @@ export function SeoStep({ onNext }: SeoStepProps) {
     // Update slug
     handleFieldChange('slug', slugifiedName);
     
-    toast({
-      title: 'Slug Generated',
-      description: 'A URL-friendly slug has been generated from the product name',
-    });
+    
   };
   
   // Generate meta fields from product details
@@ -146,10 +143,7 @@ export function SeoStep({ onNext }: SeoStepProps) {
     handleFieldChange('metaDescription', metaDescription);
     handleFieldChange('pageTitle', pageTitle);
     
-    toast({
-      title: 'Meta Fields Generated',
-      description: 'Meta title, description, and page title have been generated',
-    });
+    
   };
   
   // Explicitly save changes
@@ -158,10 +152,7 @@ export function SeoStep({ onNext }: SeoStepProps) {
       await saveDraft();
       setHasChanges(false);
       
-      toast({
-        title: 'Changes Saved',
-        description: 'SEO information has been saved successfully',
-      });
+      
     } catch (err) {
       toast({
         title: 'Error',

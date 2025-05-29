@@ -103,10 +103,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
-      toast({
-        title: "Added to cart",
-        description: "Item successfully added to your cart",
-      });
+      
     },
     onError: (error) => {
       // Check if the error is authentication related
@@ -177,10 +174,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
-      toast({
-        title: "Cart cleared",
-        description: "All items have been removed from your cart",
-      });
+      
     },
     onError: (error) => {
       toast({

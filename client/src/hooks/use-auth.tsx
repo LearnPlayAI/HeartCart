@@ -202,10 +202,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await refetch();
       
       // Show success message
-      toast({
-        title: "Logged out successfully",
-        description: "You have been signed out.",
-      });
+      
       
       // Navigate using router instead of forcing page reload
       navigate("/");

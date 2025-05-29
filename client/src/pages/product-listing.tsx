@@ -1029,11 +1029,7 @@ const ProductListing = () => {
                                     product,
                                     quantity: 1
                                   });
-                                  toast({
-                                    title: "Added to cart",
-                                    description: `${product.name} has been added to your cart.`,
-                                    duration: 2000,
-                                  });
+                                  
                                 }}
                               >
                                 Add to Cart

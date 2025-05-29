@@ -72,10 +72,7 @@ export function ImagesStep({ onNext }: ImagesStepProps) {
         
         debouncedSave();
         
-        toast({
-          title: 'Image Uploaded',
-          description: 'The product image has been uploaded successfully.',
-        });
+        
       }
     },
     onError: (error) => {

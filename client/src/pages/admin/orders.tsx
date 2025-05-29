@@ -100,10 +100,7 @@ function OrderDetails({ order }: { order: OrderWithItems }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
-      toast({
-        title: "Status updated",
-        description: "The order status has been updated successfully",
-      });
+      
     },
     onError: (error) => {
       toast({

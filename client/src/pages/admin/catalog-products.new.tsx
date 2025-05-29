@@ -151,10 +151,7 @@ export default function CatalogProducts() {
       return await response.json();
     },
     onSuccess: () => {
-      toast({
-        title: "Product deleted",
-        description: `${selectedProduct?.name} has been deleted.`,
-      });
+      
       queryClient.invalidateQueries({ queryKey: [`/api/catalogs/${catalogId}/products`] });
       setShowDeleteDialog(false);
       setSelectedProduct(null);
@@ -179,10 +176,7 @@ export default function CatalogProducts() {
       return await response.json();
     },
     onSuccess: (_, variables) => {
-      toast({
-        title: `Products ${variables.active ? 'activated' : 'deactivated'}`,
-        description: `${selectedProducts.length} products have been ${variables.active ? 'activated' : 'deactivated'}.`,
-      });
+      
       queryClient.invalidateQueries({ queryKey: [`/api/catalogs/${catalogId}/products`] });
       setSelectedProducts([]);
     },
@@ -206,10 +200,7 @@ export default function CatalogProducts() {
       return await response.json();
     },
     onSuccess: () => {
-      toast({
-        title: "Products reordered",
-        description: "Product display order has been updated.",
-      });
+      
       queryClient.invalidateQueries({ queryKey: [`/api/catalogs/${catalogId}/products`] });
     },
     onError: (error: any) => {

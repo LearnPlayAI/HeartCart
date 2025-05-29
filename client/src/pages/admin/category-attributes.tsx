@@ -319,10 +319,7 @@ function CategoryAttributesPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/categories", categoryId, "attributes"] });
-      toast({
-        title: "Attribute added to category successfully",
-        variant: "default",
-      });
+      
     },
     onError: (error: Error) => {
       toast({
@@ -359,10 +356,7 @@ function CategoryAttributesPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/categories", categoryId, "attributes"] });
       setAttributeDialogOpen(false);
-      toast({
-        title: "Category attribute updated successfully",
-        variant: "default",
-      });
+      
     },
     onError: (error: Error) => {
       toast({
@@ -396,10 +390,7 @@ function CategoryAttributesPage() {
       setSelectedAttribute(null);
       setConfirmDeleteDialogOpen(false);
       setItemToDelete(null);
-      toast({
-        title: "Attribute removed from category successfully",
-        variant: "default",
-      });
+      
     },
     onError: (error: Error) => {
       toast({
@@ -439,10 +430,7 @@ function CategoryAttributesPage() {
         queryKey: ["/api/categories", categoryId, "attributes", selectedAttribute?.attributeId, "options"] 
       });
       setOptionDialogOpen(false);
-      toast({
-        title: "Option created successfully",
-        variant: "default",
-      });
+      
     },
     onError: (error: Error) => {
       toast({
@@ -484,10 +472,7 @@ function CategoryAttributesPage() {
       });
       setOptionDialogOpen(false);
       setOptionMetadataDialogOpen(false);
-      toast({
-        title: "Option updated successfully",
-        variant: "default",
-      });
+      
     },
     onError: (error: Error) => {
       toast({
@@ -524,10 +509,7 @@ function CategoryAttributesPage() {
       });
       setConfirmDeleteDialogOpen(false);
       setItemToDelete(null);
-      toast({
-        title: "Option deleted successfully",
-        variant: "default",
-      });
+      
     },
     onError: (error: Error) => {
       toast({
@@ -566,10 +548,7 @@ function CategoryAttributesPage() {
       queryClient.invalidateQueries({ 
         queryKey: ["/api/categories", categoryId, "attributes", selectedAttribute?.attributeId, "options"] 
       });
-      toast({
-        title: "Options reordered successfully",
-        variant: "default",
-      });
+      
     },
     onError: (error: Error) => {
       toast({

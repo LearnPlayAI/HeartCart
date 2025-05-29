@@ -177,10 +177,7 @@ function GlobalAttributesPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/attributes"] });
       setAttributeDialogOpen(false);
-      toast({
-        title: "Attribute created successfully",
-        variant: "default",
-      });
+      
     },
     onError: (error: Error) => {
       toast({
@@ -201,10 +198,7 @@ function GlobalAttributesPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/attributes"] });
       setAttributeDialogOpen(false);
-      toast({
-        title: "Attribute updated successfully",
-        variant: "default",
-      });
+      
     },
     onError: (error: Error) => {
       toast({
@@ -238,10 +232,7 @@ function GlobalAttributesPage() {
       setSelectedAttribute(null);
       setConfirmDeleteDialogOpen(false);
       setItemToDelete(null);
-      toast({
-        title: "Attribute deleted successfully",
-        variant: "default",
-      });
+      
     },
     onError: (error: Error) => {
       toast({
@@ -311,10 +302,7 @@ function GlobalAttributesPage() {
         }
       }, 300);
       
-      toast({
-        title: "Option created successfully",
-        variant: "default",
-      });
+      
     },
     onError: (error: Error) => {
       toast({
@@ -353,10 +341,7 @@ function GlobalAttributesPage() {
       });
       setOptionDialogOpen(false);
       setOptionMetadataDialogOpen(false);
-      toast({
-        title: "Option updated successfully",
-        variant: "default",
-      });
+      
     },
     onError: (error: Error) => {
       toast({
@@ -428,10 +413,7 @@ function GlobalAttributesPage() {
       
       setConfirmDeleteDialogOpen(false);
       setItemToDelete(null);
-      toast({
-        title: "Option deleted successfully",
-        variant: "default",
-      });
+      
     },
     onError: (error: Error) => {
       toast({
@@ -458,10 +440,7 @@ function GlobalAttributesPage() {
       queryClient.invalidateQueries({ 
         queryKey: ["/api/attributes", selectedAttribute?.id, "options"] 
       });
-      toast({
-        title: "Options reordered successfully",
-        variant: "default",
-      });
+      
     },
     onError: (error: Error) => {
       toast({

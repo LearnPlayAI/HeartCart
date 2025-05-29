@@ -63,10 +63,7 @@ const ProductImageManager = ({ productId, onBackgroundRemoved }: ProductImageMan
       return result.data;
     },
     onSuccess: () => {
-      toast({
-        title: "Main image updated",
-        description: "The main product image has been updated",
-      });
+      
       queryClient.invalidateQueries({ queryKey: [`/api/products/${productId}/images`] });
     },
     onError: (error: Error) => {
@@ -97,10 +94,7 @@ const ProductImageManager = ({ productId, onBackgroundRemoved }: ProductImageMan
       return result.data;
     },
     onSuccess: () => {
-      toast({
-        title: "Background removal requested",
-        description: "The background removal process has been initiated",
-      });
+      
       queryClient.invalidateQueries({ queryKey: [`/api/products/${productId}/images`] });
       
       if (onBackgroundRemoved) {
@@ -135,10 +129,7 @@ const ProductImageManager = ({ productId, onBackgroundRemoved }: ProductImageMan
       return result.data;
     },
     onSuccess: () => {
-      toast({
-        title: "Image deleted",
-        description: "The product image has been deleted",
-      });
+      
       queryClient.invalidateQueries({ queryKey: [`/api/products/${productId}/images`] });
       setSelectedImage(null);
     },

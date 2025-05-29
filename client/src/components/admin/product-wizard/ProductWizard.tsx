@@ -240,10 +240,7 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ draftId, initialDa
         queryClient.invalidateQueries({ queryKey: ['/api/product-drafts', data.data.id] });
         
         // Notify the user
-        toast({
-          title: 'Draft Created',
-          description: 'Started working on your new product',
-        });
+        
         
         console.log(`Draft created successfully with ID: ${data.data.id}`);
       } else {
@@ -325,10 +322,7 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ draftId, initialDa
     onSuccess: (data) => {
       if (data.success) {
         queryClient.invalidateQueries({ queryKey: ['/api/product-drafts', draftId] });
-        toast({
-          title: 'Step Saved',
-          description: 'Your changes have been saved',
-        });
+        
         
         // If auto-advancing, move to the next step
         if (isAutoAdvancing) {
@@ -366,10 +360,7 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ draftId, initialDa
     },
     onSuccess: (data) => {
       if (data.success) {
-        toast({
-          title: 'Deleted',
-          description: 'Product draft has been discarded',
-        });
+        
         setLocation('/admin/catalog');
       } else {
         toast({
@@ -397,10 +388,7 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ draftId, initialDa
     },
     onSuccess: (data) => {
       if (data.success) {
-        toast({
-          title: 'Success',
-          description: `Product ${editMode ? 'updated' : 'created'} successfully`,
-        });
+        
         
         // Determine redirect destination based on context
         const currentPath = window.location.pathname;

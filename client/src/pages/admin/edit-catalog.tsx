@@ -74,10 +74,7 @@ export default function EditCatalog() {
       return result;
     },
     onSuccess: () => {
-      toast({
-        title: "Catalog updated",
-        description: "The catalog has been updated successfully.",
-      });
+      
       queryClient.invalidateQueries({ queryKey: ["/api/catalogs"] });
       queryClient.invalidateQueries({ queryKey: [`/api/catalogs/${catalogId}`] });
       setLocation("/admin/catalogs");

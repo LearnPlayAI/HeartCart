@@ -96,10 +96,7 @@ function AttributeEditorPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/attributes"] });
-      toast({
-        title: "Attribute created successfully",
-        variant: "default",
-      });
+      
       navigate("/admin/attributes");
     },
     onError: (error: Error) => {
@@ -135,10 +132,7 @@ function AttributeEditorPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/attributes"] });
-      toast({
-        title: "Attribute updated successfully",
-        variant: "default",
-      });
+      
       navigate("/admin/attributes");
     },
     onError: (error: Error) => {

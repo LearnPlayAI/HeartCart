@@ -153,10 +153,7 @@ const OrderDetail: React.FC = () => {
   // Copy to clipboard function
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text).then(() => {
-      toast({
-        title: "Copied!",
-        description: `${label} copied to clipboard`,
-      });
+      
     });
   };
 
@@ -179,10 +176,7 @@ const OrderDetail: React.FC = () => {
     },
     onSuccess: (data) => {
       setProofOfPayment(data.url);
-      toast({
-        title: "Upload Successful",
-        description: "Proof of payment uploaded successfully",
-      });
+      
     },
     onError: (error) => {
       toast({
@@ -211,10 +205,7 @@ const OrderDetail: React.FC = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/orders/${orderId}`] });
-      toast({
-        title: "Order Updated",
-        description: "Order has been marked as paid",
-      });
+      
     },
     onError: (error) => {
       toast({

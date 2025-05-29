@@ -158,10 +158,7 @@ export default function ProductForm({ productId, onSuccess }: ProductFormProps) 
       return res.json();
     },
     onSuccess: (data) => {
-      toast({
-        title: 'Product created',
-        description: 'The product has been created successfully',
-      });
+      
       queryClient.invalidateQueries({ queryKey: ['/api/products'] });
       if (onSuccess) {
         onSuccess();
@@ -199,10 +196,7 @@ export default function ProductForm({ productId, onSuccess }: ProductFormProps) 
       return res.json();
     },
     onSuccess: () => {
-      toast({
-        title: 'Product updated',
-        description: 'The product has been updated successfully',
-      });
+      
       queryClient.invalidateQueries({ queryKey: ['/api/products'] });
       queryClient.invalidateQueries({ queryKey: ['/api/products', productId] });
       if (onSuccess) {
@@ -480,10 +474,7 @@ export default function ProductForm({ productId, onSuccess }: ProductFormProps) 
                         }
                         
                         try {
-                          toast({
-                            title: "Generating tags",
-                            description: "Using AI to generate product tags based on your product details..."
-                          });
+                          
                           
                           const response = await fetch('/api/ai/generate-tags', {
                             method: 'POST',
@@ -518,10 +509,7 @@ export default function ProductForm({ productId, onSuccess }: ProductFormProps) 
                             
                             form.setValue('tags', uniqueTags);
                             
-                            toast({
-                              title: "Tags generated",
-                              description: `Successfully added ${data.tags.length} tags to your product.`
-                            });
+                            
                           }
                         } catch (error) {
                           toast({
@@ -776,10 +764,7 @@ export default function ProductForm({ productId, onSuccess }: ProductFormProps) 
                           }
                           
                           // Show success message
-                          toast({
-                            title: 'Product details updated',
-                            description: 'AI-suggested details have been applied to the form',
-                          });
+                          
                         }}
                       />
                     </div>

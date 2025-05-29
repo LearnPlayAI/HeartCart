@@ -227,10 +227,7 @@ function ProductAttributesPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/products", productId, "attributes"] });
-      toast({
-        title: "Attribute added to product successfully",
-        variant: "default",
-      });
+      
     },
     onError: (error: Error) => {
       toast({
@@ -267,10 +264,7 @@ function ProductAttributesPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/products", productId, "attributes"] });
       setAttributeDialogOpen(false);
-      toast({
-        title: "Product attribute updated successfully",
-        variant: "default",
-      });
+      
     },
     onError: (error: Error) => {
       toast({
@@ -304,10 +298,7 @@ function ProductAttributesPage() {
       setSelectedAttribute(null);
       setConfirmDeleteDialogOpen(false);
       setItemToDelete(null);
-      toast({
-        title: "Attribute removed from product successfully",
-        variant: "default",
-      });
+      
     },
     onError: (error: Error) => {
       toast({
@@ -347,10 +338,7 @@ function ProductAttributesPage() {
         queryKey: ["/api/products", productId, "attributes", selectedAttribute?.attributeId, "options"] 
       });
       setOptionDialogOpen(false);
-      toast({
-        title: "Option created successfully",
-        variant: "default",
-      });
+      
     },
     onError: (error: Error) => {
       toast({
@@ -392,10 +380,7 @@ function ProductAttributesPage() {
       });
       setOptionDialogOpen(false);
       setOptionMetadataDialogOpen(false);
-      toast({
-        title: "Option updated successfully",
-        variant: "default",
-      });
+      
     },
     onError: (error: Error) => {
       toast({
@@ -432,10 +417,7 @@ function ProductAttributesPage() {
       });
       setConfirmDeleteDialogOpen(false);
       setItemToDelete(null);
-      toast({
-        title: "Option deleted successfully",
-        variant: "default",
-      });
+      
     },
     onError: (error: Error) => {
       toast({
@@ -471,10 +453,7 @@ function ProductAttributesPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/products", productId, "attribute-values"] });
       setAttributeValueDialogOpen(false);
-      toast({
-        title: "Attribute value added successfully",
-        variant: "default",
-      });
+      
     },
     onError: (error: Error) => {
       toast({
@@ -511,10 +490,7 @@ function ProductAttributesPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/products", productId, "attribute-values"] });
       setAttributeValueDialogOpen(false);
-      toast({
-        title: "Attribute value updated successfully",
-        variant: "default",
-      });
+      
     },
     onError: (error: Error) => {
       toast({
@@ -547,10 +523,7 @@ function ProductAttributesPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/products", productId, "attribute-values"] });
       setConfirmDeleteDialogOpen(false);
       setItemToDelete(null);
-      toast({
-        title: "Attribute value deleted successfully",
-        variant: "default",
-      });
+      
     },
     onError: (error: Error) => {
       toast({
@@ -589,10 +562,7 @@ function ProductAttributesPage() {
       queryClient.invalidateQueries({ 
         queryKey: ["/api/products", productId, "attributes", selectedAttribute?.attributeId, "options"] 
       });
-      toast({
-        title: "Options reordered successfully",
-        variant: "default",
-      });
+      
     },
     onError: (error: Error) => {
       toast({

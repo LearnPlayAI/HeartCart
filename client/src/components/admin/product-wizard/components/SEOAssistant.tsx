@@ -77,10 +77,7 @@ export const SEOAssistant: React.FC<SEOAssistantProps> = ({
 
       if (data.success && data.data && data.data.suggestions && data.data.suggestions.length > 0) {
         setSuggestions(data.data.suggestions);
-        toast({
-          title: 'SEO suggestions generated',
-          description: `Generated ${data.data.suggestions.length} SEO optimization suggestions.`,
-        });
+        
       } else {
         // Handle specific error codes from the API service
         if (data.error?.code === 'MISSING_API_KEY') {
@@ -126,10 +123,7 @@ export const SEOAssistant: React.FC<SEOAssistantProps> = ({
         metaDescription: suggestion.metaDescription,
         keywords: suggestion.keywords,
       });
-      toast({
-        title: 'SEO data applied',
-        description: 'AI-generated SEO data has been applied to your product.',
-      });
+      
     }
   };
 

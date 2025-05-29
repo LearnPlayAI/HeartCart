@@ -147,13 +147,7 @@ function AuthTestDashboard() {
   const handleTestPassword = async () => {
     try {
       const result = await testPasswordValidation(testPassword);
-      toast({
-        title: result.data.valid ? 'Password Valid' : 'Password Invalid',
-        description: result.data.valid 
-          ? 'The password meets all requirements' 
-          : `Invalid password: ${result.data.errors.join(', ')}`,
-        variant: result.data.valid ? 'default' : 'destructive',
-      });
+      
     } catch (error) {
       toast({
         title: 'Test Failed',
@@ -172,11 +166,7 @@ function AuthTestDashboard() {
     try {
       const result = await runSystemTests();
       setSystemTestResults(result.data);
-      toast({
-        title: `System Tests ${result.data.status === 'passed' ? 'Passed' : 'Failed'}`,
-        description: `${result.data.failedTests.length} failed tests out of 4 total tests`,
-        variant: result.data.status === 'passed' ? 'default' : 'destructive',
-      });
+      
     } catch (error) {
       toast({
         title: 'System Tests Failed',
@@ -197,11 +187,7 @@ function AuthTestDashboard() {
     try {
       const result = await testSessionPersistence();
       setSessionPersistenceResults(result.data);
-      toast({
-        title: `Session Persistence ${result.data.status === 'success' ? 'Good' : 'Issue Detected'}`,
-        description: result.data.diagnostics,
-        variant: result.data.status === 'success' ? 'default' : 'destructive',
-      });
+      
     } catch (error) {
       toast({
         title: 'Session Test Failed',
@@ -222,11 +208,7 @@ function AuthTestDashboard() {
     try {
       const result = await testSessionTimeout();
       setSessionTimeoutResults(result.data);
-      toast({
-        title: `Session Status: ${result.data.status}`,
-        description: result.data.diagnosis,
-        variant: result.data.status === 'active' ? 'default' : 'destructive',
-      });
+      
     } catch (error) {
       toast({
         title: 'Session Timeout Test Failed',

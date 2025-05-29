@@ -122,11 +122,7 @@ export const ReviewAndSaveStep: React.FC<ReviewAndSaveStepProps> = ({
     },
     onSuccess: (data) => {
       if (data.success) {
-        toast({
-          title: 'Status Updated',
-          description: 'The product draft status has been updated successfully.',
-          variant: 'default',
-        });
+        
         
         // Invalidate all relevant queries to trigger UI refresh
         queryClient.invalidateQueries({ queryKey: ['/api/product-drafts', draft.id] });
@@ -180,11 +176,7 @@ export const ReviewAndSaveStep: React.FC<ReviewAndSaveStepProps> = ({
     },
     onSuccess: (data) => {
       if (data.success) {
-        toast({
-          title: 'Product Published',
-          description: 'Your product has been successfully published to the store.',
-          variant: 'default',
-        });
+        
         
         // Invalidate all queries immediately to update UI
         queryClient.invalidateQueries({ queryKey: ['/api/product-drafts'] });

@@ -275,10 +275,7 @@ export function ImageStep() {
         markStepComplete('images');
         
         // Show success toast
-        toast({
-          title: 'Image uploaded',
-          description: `${file.name} has been uploaded successfully.`,
-        });
+        
       } catch (imgError) {
         // The image failed to load after uploading
         console.error('Error verifying uploaded image:', imgError);
@@ -287,11 +284,7 @@ export function ImageStep() {
         console.log('Adding image anyway, even though preloading failed');
         addImage(imageUrl, objectKey);
         
-        toast({
-          title: 'Image uploaded',
-          description: 'Image uploaded but preview may be delayed.',
-          variant: 'default',
-        });
+        
       }
     } catch (error) {
       // Clear progress interval if it's still running

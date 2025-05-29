@@ -119,10 +119,7 @@ function AttributeOptionEditorPage() {
         queryKey: ["/api/attributes", attributeId, "options"] 
       });
       setOptionFormOpen(false);
-      toast({
-        title: "Option created successfully",
-        variant: "default",
-      });
+      
     },
     onError: (error: Error) => {
       toast({
@@ -167,10 +164,7 @@ function AttributeOptionEditorPage() {
       });
       setOptionFormOpen(false);
       setMetadataEditorOpen(false);
-      toast({
-        title: "Option updated successfully",
-        variant: "default",
-      });
+      
     },
     onError: (error: Error) => {
       toast({
@@ -204,10 +198,7 @@ function AttributeOptionEditorPage() {
       });
       setConfirmDeleteOpen(false);
       setOptionToDelete(null);
-      toast({
-        title: "Option deleted successfully",
-        variant: "default",
-      });
+      
     },
     onError: (error: Error) => {
       toast({
@@ -243,10 +234,7 @@ function AttributeOptionEditorPage() {
       queryClient.invalidateQueries({ 
         queryKey: ["/api/attributes", attributeId, "options"] 
       });
-      toast({
-        title: "Options reordered successfully",
-        variant: "default",
-      });
+      
     },
     onError: (error: Error) => {
       toast({

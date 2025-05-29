@@ -80,10 +80,7 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ draft, onS
       // Invalidate the draft query to refresh the draft data
       queryClient.invalidateQueries({ queryKey: ['/api/product-drafts', draft.id] });
       
-      toast({
-        title: 'Images Uploaded',
-        description: `Successfully uploaded ${data.data.imageUrls.length - (draft.imageUrls?.length || 0)} image(s)`,
-      });
+      
     },
     onError: (error) => {
       setUploadingImages(false);
@@ -121,10 +118,7 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ draft, onS
       // Invalidate the draft query to refresh the draft data
       queryClient.invalidateQueries({ queryKey: ['/api/product-drafts', draft.id] });
       
-      toast({
-        title: 'Image Deleted',
-        description: 'Successfully deleted image',
-      });
+      
     },
     onError: (error) => {
       toast({
@@ -158,10 +152,7 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ draft, onS
       // Invalidate the draft query to refresh the draft data
       queryClient.invalidateQueries({ queryKey: ['/api/product-drafts', draft.id] });
       
-      toast({
-        title: 'Images Reordered',
-        description: 'Successfully reordered images',
-      });
+      
     },
     onError: (error) => {
       toast({

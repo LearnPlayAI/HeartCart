@@ -145,10 +145,7 @@ export default function AdminCatalogs() {
       return result;
     },
     onSuccess: (result, catalog) => {
-      toast({
-        title: catalog.isActive ? "Catalog deactivated" : "Catalog activated",
-        description: result.message || `${catalog.name} has been ${catalog.isActive ? 'deactivated' : 'activated'} with ${result.data?.productsUpdated || 0} products updated.`,
-      });
+      
       queryClient.invalidateQueries({ queryKey: ["/api/catalogs"] });
     },
     onError: (error: any) => {
@@ -176,10 +173,7 @@ export default function AdminCatalogs() {
       return result;
     },
     onSuccess: () => {
-      toast({
-        title: "Catalog deleted",
-        description: `${selectedCatalog?.name} has been deleted.`,
-      });
+      
       queryClient.invalidateQueries({ queryKey: ["/api/catalogs"] });
       setShowDeleteDialog(false);
       setSelectedCatalog(null);

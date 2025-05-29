@@ -62,10 +62,7 @@ export const AIDescriptionAssistant: React.FC<AIDescriptionAssistantProps> = ({
 
       if (data.success && data.data && data.data.suggestions && data.data.suggestions.length > 0) {
         setSuggestions(data.data.suggestions);
-        toast({
-          title: 'Suggestions generated',
-          description: `Generated ${data.data.suggestions.length} description suggestions.`,
-        });
+        
       } else {
         // Handle specific error codes from the API service
         if (data.error?.code === 'MISSING_API_KEY') {
@@ -106,10 +103,7 @@ export const AIDescriptionAssistant: React.FC<AIDescriptionAssistantProps> = ({
   const applySuggestion = () => {
     if (selectedSuggestion !== null && suggestions[selectedSuggestion]) {
       onApplySuggestion(suggestions[selectedSuggestion]);
-      toast({
-        title: 'Description applied',
-        description: 'AI-generated description has been applied.',
-      });
+      
     }
   };
 

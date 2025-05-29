@@ -293,10 +293,7 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
     form.setValue('description', description);
     setShowAiDialog(false);
     
-    toast({
-      title: 'Description Applied',
-      description: 'The AI-generated description has been applied.'
-    });
+    
   };
   
   // Handle sale price changes

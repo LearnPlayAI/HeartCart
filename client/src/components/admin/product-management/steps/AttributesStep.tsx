@@ -137,10 +137,7 @@ export function AttributesStep({ onNext }: AttributesStepProps) {
       setSelectedAttributeId(null);
       setIsAddingAttribute(false);
       
-      toast({
-        title: 'Attribute Added',
-        description: 'The attribute has been added to the product.',
-      });
+      
     },
     onError: (error) => {
       toast({
@@ -162,10 +159,7 @@ export function AttributesStep({ onNext }: AttributesStepProps) {
       // Refetch the product attributes
       draftAttributes.refetch();
       
-      toast({
-        title: 'Attribute Removed',
-        description: 'The attribute has been removed from the product.',
-      });
+      
     },
     onError: (error) => {
       toast({
@@ -200,10 +194,7 @@ export function AttributesStep({ onNext }: AttributesStepProps) {
       setCustomDisplayValue('');
       setCustomColor('');
       
-      toast({
-        title: 'Value Added',
-        description: 'The attribute value has been added to the product.',
-      });
+      
     },
     onError: (error) => {
       toast({
@@ -225,10 +216,7 @@ export function AttributesStep({ onNext }: AttributesStepProps) {
       // Refetch the product attributes
       draftAttributes.refetch();
       
-      toast({
-        title: 'Value Removed',
-        description: 'The attribute value has been removed from the product.',
-      });
+      
     },
     onError: (error) => {
       toast({

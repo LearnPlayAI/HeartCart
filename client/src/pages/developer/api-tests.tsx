@@ -256,10 +256,7 @@ function ApiTestsPage() {
         success: true,
         data: data
       });
-      toast({
-        title: 'All API Tests Completed',
-        description: 'API tests run successfully',
-      });
+      
     },
     onError: (error: Error) => {
       toast({
@@ -320,10 +317,7 @@ function ApiTestsPage() {
         break;
     }
     
-    toast({
-      title: `Running ${testName} Test`,
-      description: 'The test is being executed, please wait for results to appear.',
-    });
+    
   };
 
   // Filter states for endpoint availability table

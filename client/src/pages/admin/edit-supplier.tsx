@@ -66,10 +66,7 @@ export default function EditSupplier() {
       return result;
     },
     onSuccess: () => {
-      toast({
-        title: "Supplier updated",
-        description: "The supplier has been updated successfully.",
-      });
+      
       queryClient.invalidateQueries({ queryKey: ["/api/suppliers"] });
       queryClient.invalidateQueries({ queryKey: [`/api/suppliers/${supplierId}`] });
       setLocation("/admin/suppliers");

@@ -233,10 +233,7 @@ const ProfilePage: React.FC = () => {
       });
     },
     onSuccess: () => {
-      toast({
-        title: "Profile updated successfully!",
-        description: "Your profile information has been saved.",
-      });
+      
       queryClient.invalidateQueries({ queryKey: ['/api/user'] });
     },
     onError: (error: any) => {
@@ -252,10 +249,7 @@ const ProfilePage: React.FC = () => {
   const handleLogout = async () => {
     try {
       await apiRequest('/api/auth/logout', { method: 'POST' });
-      toast({
-        title: "Logged out successfully",
-        description: "See you next time!",
-      });
+      
       navigate('/');
     } catch (error) {
       toast({

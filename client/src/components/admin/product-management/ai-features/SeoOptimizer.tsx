@@ -93,10 +93,7 @@ export function SeoOptimizer({ className }: SeoOptimizerProps) {
       // Update local keywords state
       setKeywords(seoResult.keywords);
       
-      toast({
-        title: 'SEO Updated',
-        description: 'The product SEO information has been updated.',
-      });
+      
     } catch (error) {
       console.error('Error updating SEO:', error);
       toast({

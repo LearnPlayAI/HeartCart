@@ -123,10 +123,7 @@ export default function AdminCategories() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
       queryClient.invalidateQueries({ queryKey: ["/api/categories/main/with-children"] });
-      toast({
-        title: "Category created",
-        description: "The category has been created successfully",
-      });
+      
       setNewName("");
       setNewSlug("");
       setNewDescription("");
@@ -183,10 +180,7 @@ export default function AdminCategories() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
       queryClient.invalidateQueries({ queryKey: ["/api/categories/main/with-children"] });
-      toast({
-        title: "Category updated",
-        description: "The category has been updated successfully",
-      });
+      
       setIsEditDialogOpen(false);
     },
     onError: (error) => {
@@ -218,10 +212,7 @@ export default function AdminCategories() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
       queryClient.invalidateQueries({ queryKey: ["/api/categories/main/with-children"] });
-      toast({
-        title: "Category deleted",
-        description: "The category has been deleted successfully",
-      });
+      
       setIsDeleteDialogOpen(false);
     },
     onError: (error) => {
@@ -257,10 +248,7 @@ export default function AdminCategories() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
       queryClient.invalidateQueries({ queryKey: ["/api/categories/main/with-children"] });
-      toast({
-        title: "Display order updated",
-        description: "The category display order has been updated",
-      });
+      
     },
     onError: (error) => {
       toast({
@@ -318,11 +306,7 @@ export default function AdminCategories() {
         }
       }
       
-      toast({
-        title: "Visibility updated",
-        description: description,
-        duration: 5000, // Show for 5 seconds due to potentially longer message
-      });
+      
     },
     onError: (error) => {
       toast({

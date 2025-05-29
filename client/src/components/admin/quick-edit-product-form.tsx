@@ -86,10 +86,7 @@ export function QuickEditProductForm({
       return await response.json();
     },
     onSuccess: () => {
-      toast({
-        title: "Product updated",
-        description: "Product has been successfully updated.",
-      });
+      
       queryClient.invalidateQueries({ queryKey: [`/api/catalogs/${product.catalogId}/products`] });
       onSaved();
     },

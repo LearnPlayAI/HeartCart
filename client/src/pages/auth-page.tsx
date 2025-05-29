@@ -77,10 +77,7 @@ export default function AuthPage() {
   const onLoginSubmit = (data: LoginFormData) => {
     loginMutation.mutate(data, {
       onSuccess: () => {
-        toast({
-          title: "Login successful!",
-          description: "Welcome back to TemuSA.",
-        });
+        
         // Navigate without full page reload
         navigate("/");
       },
@@ -99,10 +96,7 @@ export default function AuthPage() {
     // Send all data including confirmPassword and acceptTerms as expected by backend
     registerMutation.mutate(data, {
       onSuccess: () => {
-        toast({
-          title: "Registration successful!",
-          description: "Your account has been created successfully.",
-        });
+        
         // Navigate using router instead of forcing page reload
         navigate('/');
       },

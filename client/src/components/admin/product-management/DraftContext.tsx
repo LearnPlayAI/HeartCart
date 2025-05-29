@@ -211,10 +211,7 @@ export function DraftProvider({ children, initialDraftId }: DraftProviderProps) 
         // Update drafts list with the new draft
         setDrafts(prev => [newDraft, ...prev]);
         
-        toast({
-          title: 'Draft Created',
-          description: 'New product draft has been created. You can now edit it.',
-        });
+        
         
         return newDraft;
       } else {
@@ -318,10 +315,7 @@ export function DraftProvider({ children, initialDraftId }: DraftProviderProps) 
         // Update in drafts list
         setDrafts(prev => prev.map(d => d.id === draftId ? response.data : d));
         
-        toast({
-          title: 'Product Published',
-          description: 'The product has been published successfully.',
-        });
+        
         
         // If there's a published product ID, redirect to the product
         if (response.data.publishedProductId) {
@@ -365,10 +359,7 @@ export function DraftProvider({ children, initialDraftId }: DraftProviderProps) 
       if (response.success) {
         setDraft(null);
         
-        toast({
-          title: 'Draft Deleted',
-          description: 'The product draft has been deleted.',
-        });
+        
         
         // Redirect to the products list
         setLocation('/admin/product-management');
@@ -456,10 +447,7 @@ export function DraftProvider({ children, initialDraftId }: DraftProviderProps) 
         // Refresh the drafts list
         await refreshDrafts();
         
-        toast({
-          title: 'Draft Deleted',
-          description: 'The draft has been deleted successfully.',
-        });
+        
         
         return true;
       } else {

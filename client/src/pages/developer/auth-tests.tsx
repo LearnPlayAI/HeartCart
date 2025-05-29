@@ -227,10 +227,7 @@ function AuthTestsPage() {
       // Also refresh user count
       refetchUserCount();
       
-      toast({
-        title: 'All tests completed',
-        description: 'Authentication tests have been run successfully',
-      });
+      
     },
     onError: (error: Error) => {
       toast({
@@ -272,10 +269,7 @@ function AuthTestsPage() {
         success: true,
         data: data
       });
-      toast({
-        title: 'Validation Tests Completed',
-        description: 'Password validation tests run successfully',
-      });
+      
     },
     onError: (error: Error) => {
       toast({
@@ -302,10 +296,7 @@ function AuthTestsPage() {
         success: true,
         data: data
       });
-      toast({
-        title: 'Credential Tests Completed',
-        description: 'Credential verification tests run successfully',
-      });
+      
     },
     onError: (error: Error) => {
       toast({
@@ -329,10 +320,7 @@ function AuthTestsPage() {
         success: true,
         data: data
       });
-      toast({
-        title: 'Session Tests Completed',
-        description: 'Session management tests run successfully',
-      });
+      
     },
     onError: (error: Error) => {
       toast({
@@ -356,10 +344,7 @@ function AuthTestsPage() {
         success: true,
         data: data
       });
-      toast({
-        title: 'System Tests Completed',
-        description: 'System authentication tests run successfully',
-      });
+      
     },
     onError: (error: Error) => {
       toast({
@@ -383,10 +368,7 @@ function AuthTestsPage() {
         success: true,
         data: data
       });
-      toast({
-        title: 'Validation System Tests Completed',
-        description: 'Schema validation tests run successfully',
-      });
+      
     },
     onError: (error: Error) => {
       toast({

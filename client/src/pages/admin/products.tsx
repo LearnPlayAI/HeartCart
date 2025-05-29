@@ -102,10 +102,7 @@ export default function AdminProducts() {
         }
         
         queryClient.invalidateQueries({ queryKey: ["/api/products"] });
-        toast({
-          title: "Product deleted",
-          description: "The product has been successfully deleted",
-        });
+        
       } catch (error) {
         toast({
           title: "Error",

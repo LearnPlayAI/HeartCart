@@ -259,10 +259,7 @@ function DatabaseTestsPage() {
         success: true,
         data: data
       });
-      toast({
-        title: 'All Database Tests Completed',
-        description: 'Database tests run successfully',
-      });
+      
     },
     onError: (error: Error) => {
       toast({
@@ -323,10 +320,7 @@ function DatabaseTestsPage() {
         break;
     }
     
-    toast({
-      title: `Running ${testName} Test`,
-      description: 'The test is being executed, please wait for results to appear.',
-    });
+    
   };
 
   return (

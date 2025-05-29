@@ -38,10 +38,7 @@ export default function AddCatalog() {
       return result;
     },
     onSuccess: () => {
-      toast({
-        title: "Catalog created",
-        description: "The catalog has been created successfully.",
-      });
+      
       queryClient.invalidateQueries({ queryKey: ["/api/catalogs"] });
       setLocation("/admin/catalogs");
     },

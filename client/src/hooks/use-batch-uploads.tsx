@@ -60,10 +60,7 @@ export function useBatchUploads() {
       return result.data;
     },
     onSuccess: () => {
-      toast({
-        title: "Batch upload created",
-        description: "The batch upload job has been created successfully.",
-      });
+      
       queryClient.invalidateQueries({ queryKey: ["/api/batch-upload"] });
     },
     onError: (error: Error) => {
@@ -93,10 +90,7 @@ export function useBatchUploads() {
       return result.data;
     },
     onSuccess: (data) => {
-      toast({
-        title: "CSV file uploaded",
-        description: "The CSV file has been uploaded and is being processed.",
-      });
+      
       queryClient.invalidateQueries({ queryKey: ["/api/batch-upload"] });
     },
     onError: (error: Error) => {
@@ -118,10 +112,7 @@ export function useBatchUploads() {
       return result.data;
     },
     onSuccess: () => {
-      toast({
-        title: "Batch upload deleted",
-        description: "The batch upload has been deleted successfully.",
-      });
+      
       queryClient.invalidateQueries({ queryKey: ["/api/batch-upload"] });
     },
     onError: (error: Error) => {
@@ -158,10 +149,7 @@ export function useBatchUploads() {
       return result.data;
     },
     onSuccess: () => {
-      toast({
-        title: "Batch cancelled",
-        description: "The batch upload has been cancelled successfully.",
-      });
+      
       queryClient.invalidateQueries({ queryKey: ["/api/batch-upload"] });
     },
     onError: (error: Error) => {
@@ -183,10 +171,7 @@ export function useBatchUploads() {
       return result.data;
     },
     onSuccess: () => {
-      toast({
-        title: "Batch paused",
-        description: "The batch upload has been paused successfully. You can resume it later.",
-      });
+      
       queryClient.invalidateQueries({ queryKey: ["/api/batch-upload"] });
     },
     onError: (error: Error) => {
@@ -208,10 +193,7 @@ export function useBatchUploads() {
       return result.data;
     },
     onSuccess: () => {
-      toast({
-        title: "Batch resumed",
-        description: "The batch upload has been resumed successfully.",
-      });
+      
       queryClient.invalidateQueries({ queryKey: ["/api/batch-upload"] });
     },
     onError: (error: Error) => {
@@ -233,10 +215,7 @@ export function useBatchUploads() {
       return result.data;
     },
     onSuccess: () => {
-      toast({
-        title: "Batch retry started",
-        description: "The batch upload retry has started successfully.",
-      });
+      
       queryClient.invalidateQueries({ queryKey: ["/api/batch-upload"] });
     },
     onError: (error: Error) => {
@@ -269,10 +248,7 @@ export function useBatchUploads() {
       window.URL.revokeObjectURL(downloadUrl);
       document.body.removeChild(a);
 
-      toast({
-        title: "Template CSV downloaded",
-        description: "The template CSV file has been downloaded successfully.",
-      });
+      
     } catch (error) {
       toast({
         title: "Error downloading template",

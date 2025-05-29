@@ -124,11 +124,7 @@ const ProfilePage: React.FC = () => {
       await apiRequest('PUT', `/api/users/${user.id}`, data);
     },
     onSuccess: () => {
-      toast({
-        title: "Profile updated",
-        description: "Your profile has been updated successfully.",
-        duration: 3000,
-      });
+      
       refetchUser();
     },
     onError: (error) => {
@@ -147,11 +143,7 @@ const ProfilePage: React.FC = () => {
       await apiRequest('POST', '/api/logout', {});
     },
     onSuccess: () => {
-      toast({
-        title: "Logout successful",
-        description: "You have been logged out successfully.",
-        duration: 3000,
-      });
+      
       // Navigate using router instead of forcing page reload
       navigate('/');
     },

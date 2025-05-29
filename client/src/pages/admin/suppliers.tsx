@@ -121,10 +121,7 @@ export default function AdminSuppliers() {
       return result;
     },
     onSuccess: () => {
-      toast({
-        title: "Supplier deleted",
-        description: `${selectedSupplier?.name} has been deleted.`,
-      });
+      
       queryClient.invalidateQueries({ queryKey: ["/api/suppliers"] });
       setShowDeleteDialog(false);
       setSelectedSupplier(null);

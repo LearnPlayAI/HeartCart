@@ -30,10 +30,7 @@ export default function AddSupplier() {
       return result;
     },
     onSuccess: () => {
-      toast({
-        title: "Supplier created",
-        description: "The supplier has been created successfully.",
-      });
+      
       queryClient.invalidateQueries({ queryKey: ["/api/suppliers"] });
       setLocation("/admin/suppliers");
     },

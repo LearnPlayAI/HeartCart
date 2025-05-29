@@ -172,10 +172,7 @@ export default function ImagesBasicInfoStep({
           uploadedImages.filter((_, i) => i !== index)
         );
         
-        toast({
-          title: "Image Deleted",
-          description: "The image has been removed successfully",
-        });
+
       } catch (error: any) {
         console.error("Image deletion error:", error);
         toast({
@@ -226,10 +223,7 @@ export default function ImagesBasicInfoStep({
       }));
       setUploadedImages(updatedImages);
       
-      toast({
-        title: "Main Image Updated",
-        description: "The main product image has been updated",
-      });
+      
     } catch (error: any) {
       console.error("Error setting main image:", error);
       toast({
@@ -876,10 +870,7 @@ export default function ImagesBasicInfoStep({
               onClick={() => {
                 if (!aiSuggestions) return;
                 if (Object.keys(aiSuggestions).length === 0) {
-                  toast({ 
-                    title: "No suggestions available", 
-                    description: "Try running the AI analysis again" 
-                  });
+                  
                   return;
                 }
                 
@@ -890,10 +881,7 @@ export default function ImagesBasicInfoStep({
                   }
                 });
                 
-                toast({
-                  title: "All suggestions applied",
-                  description: "AI suggestions have been applied to the product",
-                });
+                
               }}
             >
               Apply All Suggestions

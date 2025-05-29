@@ -222,10 +222,7 @@ export default function CheckoutPage() {
       // Clear cart and show success
       queryClient.invalidateQueries({ queryKey: ["/api/cart"] });
       
-      toast({
-        title: "Order Placed Successfully!",
-        description: `Order #${data.data?.orderNumber || data.orderNumber || 'N/A'} has been created.`,
-      });
+      
       
       // Navigate to order confirmation
       navigate(`/order-confirmation/${data.data?.id || data.id}`);

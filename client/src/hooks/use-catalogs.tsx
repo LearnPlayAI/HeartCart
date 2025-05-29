@@ -49,10 +49,7 @@ export function useCatalogs() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/catalogs"] });
-      toast({
-        title: "Success",
-        description: "Catalog created successfully",
-      });
+      
     },
     onError: (error: Error) => {
       toast({
@@ -77,10 +74,7 @@ export function useCatalogs() {
           queryKey: ["/api/suppliers", variables.data.supplierId, "catalogs"]
         });
       }
-      toast({
-        title: "Success",
-        description: "Catalog updated successfully",
-      });
+      
     },
     onError: (error: Error) => {
       toast({
@@ -99,10 +93,7 @@ export function useCatalogs() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/catalogs"] });
-      toast({
-        title: "Success",
-        description: "Catalog deleted successfully",
-      });
+      
     },
     onError: (error: Error) => {
       toast({

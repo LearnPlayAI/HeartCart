@@ -72,10 +72,7 @@ export const DraftDashboard: React.FC = () => {
     },
     onSuccess: (data) => {
       if (data.success) {
-        toast({
-          title: 'Draft Created',
-          description: `The draft "${data.data.name}" was created successfully.`,
-        });
+        
         setIsCreateDialogOpen(false);
         setNewDraftName('');
         queryClient.invalidateQueries({ queryKey: ['/api/product-drafts'] });
@@ -125,10 +122,7 @@ export const DraftDashboard: React.FC = () => {
     },
     onSuccess: (data) => {
       if (data.success) {
-        toast({
-          title: 'Draft Deleted',
-          description: 'The product draft was deleted successfully.',
-        });
+        
         queryClient.invalidateQueries({ queryKey: ['/api/product-drafts'] });
       } else {
         toast({

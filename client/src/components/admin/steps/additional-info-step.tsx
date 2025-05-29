@@ -658,10 +658,7 @@ function AttributeOptionSelector({
         queryKey: ['/api/global-attributes', attributeId, 'options']
       });
       
-      toast({
-        title: "Option created",
-        description: `The option "${newOption.value}" was created successfully.`,
-      });
+      
     } catch (error) {
       console.error('Error creating option:', error);
       toast({

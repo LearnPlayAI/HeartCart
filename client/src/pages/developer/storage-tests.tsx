@@ -202,10 +202,7 @@ function StorageTestsPage() {
         success: true,
         data: data
       });
-      toast({
-        title: 'All Storage Tests Completed',
-        description: 'Storage tests run successfully',
-      });
+      
     },
     onError: (error: Error) => {
       toast({
@@ -480,11 +477,7 @@ function StorageTestsPage() {
                         .then(res => res.json())
                         .then(data => {
                           if (data.success) {
-                            toast({
-                              title: 'API Methods Test',
-                              description: 'API Methods test completed',
-                              variant: 'default'
-                            });
+                            
                           }
                         });
                     }}
@@ -501,11 +494,7 @@ function StorageTestsPage() {
                         .then(res => res.json())
                         .then(data => {
                           if (data.success) {
-                            toast({
-                              title: 'Buckets Test',
-                              description: 'Buckets test completed',
-                              variant: 'default'
-                            });
+                            
                           }
                         });
                     }}
@@ -522,11 +511,7 @@ function StorageTestsPage() {
                         .then(res => res.json())
                         .then(data => {
                           if (data.success) {
-                            toast({
-                              title: 'File Operations Test',
-                              description: 'File operations test completed',
-                              variant: 'default'
-                            });
+                            
                           }
                         });
                     }}
@@ -543,11 +528,7 @@ function StorageTestsPage() {
                         .then(res => res.json())
                         .then(data => {
                           if (data.success) {
-                            toast({
-                              title: 'Filename Utils Test',
-                              description: 'Filename utilities test completed',
-                              variant: 'default'
-                            });
+                            
                           }
                         });
                     }}
@@ -564,11 +545,7 @@ function StorageTestsPage() {
                         .then(res => res.json())
                         .then(data => {
                           if (data.success) {
-                            toast({
-                              title: 'All Tests',
-                              description: 'All file system tests completed',
-                              variant: 'default'
-                            });
+                            
                           }
                         });
                     }}

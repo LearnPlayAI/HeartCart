@@ -92,11 +92,7 @@ const FileUrlTests: React.FC = () => {
         }
       }));
       
-      toast({
-        title: 'URL Test Passed',
-        description: `Successfully loaded image: ${file.name}`,
-        variant: 'default'
-      });
+      
     };
     img.onerror = () => {
       setCheckedFiles(prev => ({
@@ -124,11 +120,7 @@ const FileUrlTests: React.FC = () => {
   // Test all files in the current folder
   const testAllFiles = () => {
     if (!files || files.length === 0) {
-      toast({
-        title: 'No Files to Test',
-        description: 'There are no files available to test in this folder.',
-        variant: 'default'
-      });
+      
       return;
     }
     
@@ -145,11 +137,7 @@ const FileUrlTests: React.FC = () => {
   // Run a special test for filenames with spaces
   const testSpacesHandling = () => {
     if (!files || files.length === 0) {
-      toast({
-        title: 'No Files to Test',
-        description: 'There are no files available to test in this folder.',
-        variant: 'default'
-      });
+      
       return;
     }
     
@@ -157,11 +145,7 @@ const FileUrlTests: React.FC = () => {
     const filesWithSpaces = files.filter(file => file.name.includes(' '));
     
     if (filesWithSpaces.length === 0) {
-      toast({
-        title: 'No Files with Spaces',
-        description: 'There are no files with spaces in their names in this folder.',
-        variant: 'default'
-      });
+      
       return;
     }
     
@@ -174,11 +158,7 @@ const FileUrlTests: React.FC = () => {
   // Test URL encoding for special characters
   const testSpecialChars = () => {
     if (!files || files.length === 0) {
-      toast({
-        title: 'No Files to Test',
-        description: 'There are no files available to test in this folder.',
-        variant: 'default'
-      });
+      
       return;
     }
     
@@ -190,11 +170,7 @@ const FileUrlTests: React.FC = () => {
     const filesWithSpecialChars = files.filter(file => hasSpecialChars(file.name));
     
     if (filesWithSpecialChars.length === 0) {
-      toast({
-        title: 'No Files with Special Characters',
-        description: 'There are no files with special characters in their names in this folder.',
-        variant: 'default'
-      });
+      
       return;
     }
     

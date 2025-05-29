@@ -108,10 +108,7 @@ const ProductImageUploader = ({ productId, onUploadComplete }: ProductImageUploa
     setCropModalOpen(false);
     setSelectedFileIndex(null);
     
-    toast({
-      title: 'Image cropped',
-      description: 'The image has been cropped successfully',
-    });
+    
   };
   
   const uploadFiles = async () => {
@@ -223,10 +220,7 @@ const ProductImageUploader = ({ productId, onUploadComplete }: ProductImageUploa
     
     // Display toast with upload results
     if (successCount > 0) {
-      toast({
-        title: 'Upload complete',
-        description: `Successfully uploaded ${successCount} of ${filesToUpload.length} files`,
-      });
+      
       
       // Invalidate the product images cache
       queryClient.invalidateQueries({ queryKey: [`/api/products/${productId}/images`] });

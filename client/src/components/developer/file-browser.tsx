@@ -184,11 +184,7 @@ const FileBrowser: React.FC = () => {
       return await apiRequest('/api/file-browser/buckets/set', 'POST', { bucketId });
     },
     onSuccess: () => {
-      toast({
-        title: 'Storage Bucket Changed',
-        description: 'Storage bucket has been switched successfully.',
-        variant: 'default'
-      });
+      
       // Refetch folders and reset path
       setCurrentPath('');
       refetchFolders();
@@ -263,11 +259,7 @@ const FileBrowser: React.FC = () => {
       return await apiRequest('/api/file-browser/folders', 'POST', { folderPath });
     },
     onSuccess: () => {
-      toast({
-        title: 'Folder Created',
-        description: 'The new folder was created successfully.',
-        variant: 'default'
-      });
+      
       setNewFolderName('');
       setShowCreateFolder(false);
       
@@ -323,11 +315,7 @@ const FileBrowser: React.FC = () => {
       });
     },
     onSuccess: () => {
-      toast({
-        title: 'File Uploaded',
-        description: 'The file was uploaded successfully.',
-        variant: 'default'
-      });
+      
       setUploadFile(null);
       setIsUploading(false);
       
@@ -352,11 +340,7 @@ const FileBrowser: React.FC = () => {
       return await apiRequest(`/api/file-browser/files/${encodeURIComponent(filePath)}`, 'DELETE');
     },
     onSuccess: () => {
-      toast({
-        title: 'File Deleted',
-        description: 'The file was deleted successfully.',
-        variant: 'default'
-      });
+      
       setFileToDelete(null);
       
       // Refetch files

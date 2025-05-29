@@ -114,29 +114,20 @@ export const ExampleProductImagesStep: React.FC<ProductImagesStepProps> = ({ cla
   // Handle image deletion
   const handleDeleteImage = (index: number) => {
     fileUpload.removeFile(index);
-    toast({
-      title: "Image removed",
-      description: "The image has been removed from the product"
-    });
+    
   };
   
   // Handle setting an image as the main image
   const handleSetMainImage = (index: number) => {
     fileUpload.setMainImage(index);
-    toast({
-      title: "Main image set",
-      description: "The selected image is now the main product image"
-    });
+    
   };
   
   // Handle upload of all images to server (for manual upload button)
   const handleUploadImages = async () => {
     try {
       await fileUpload.uploadAllFiles();
-      toast({
-        title: "Images uploaded",
-        description: "All images have been successfully uploaded"
-      });
+      
     } catch (error) {
       toast({
         title: "Upload failed",

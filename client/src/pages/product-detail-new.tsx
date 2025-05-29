@@ -436,11 +436,7 @@ const ProductDetailView = ({
     
     addItem(cartItem);
     
-    toast({
-      title: "Added to cart",
-      description: `${quantity} x ${product.name} has been added to your cart.`,
-      duration: 2000,
-    });
+    
   }, [product, selectedAttributes, productAttributes, quantity, addItem, toast]);
   
   // Render star ratings (memoized to prevent re-renders)

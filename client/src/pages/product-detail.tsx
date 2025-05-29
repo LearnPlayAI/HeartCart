@@ -374,11 +374,7 @@ const ProductDetailContent = ({
     
     addToCart(cartItem);
     
-    toast({
-      title: "Added to cart",
-      description: `${quantity} x ${product.name} has been added to your cart.`,
-      duration: 2000,
-    });
+    
   };
   
   const renderStars = (rating: number | null = 0) => {

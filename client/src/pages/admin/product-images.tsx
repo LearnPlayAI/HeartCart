@@ -102,10 +102,7 @@ export default function ProductImages() {
       clearInterval(interval);
       setUploadProgress(100);
       
-      toast({
-        title: "Upload complete",
-        description: `Successfully uploaded ${files.length} image(s).`,
-      });
+      
       
       // Reset state
       setFiles([]);
@@ -141,20 +138,14 @@ export default function ProductImages() {
     // Remove from local state
     setExistingImages(prev => prev.filter(url => url !== imageUrl));
     
-    toast({
-      title: "Image removed",
-      description: "The image has been removed from this product.",
-    });
+    
   };
   
   const handleSetThumbnail = (imageUrl: string) => {
     // This is a placeholder - in a real implementation, you would update via your API
     // For example: POST /api/products/{id}/thumbnail
     
-    toast({
-      title: "Thumbnail updated",
-      description: "This image has been set as the product thumbnail.",
-    });
+    
   };
 
   if (isLoading) {

@@ -557,10 +557,7 @@ export const AttributesStep: React.FC<AttributesStepProps> = ({ draft, onSave, i
           }
           
           // Show success message
-          toast({
-            title: "Option created",
-            description: `Added "${newOption.data.displayValue}" option to ${currentAttribute.displayName}`,
-          });
+          
         }
       } else {
         const errorData = await response.json();

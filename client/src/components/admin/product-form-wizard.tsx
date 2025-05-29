@@ -307,17 +307,11 @@ export default function ProductFormWizard({ productId, catalogId, onSuccess }: P
           }
         } catch (error) {
           console.error('Failed to process temporary images:', error);
-          toast({
-            title: 'Image Processing Warning',
-            description: 'Product was created, but there was an issue with some images',
-          });
+          
         }
       }
       
-      toast({
-        title: 'Product created',
-        description: 'The product has been created successfully',
-      });
+      
       
       // Invalidate all relevant queries
       queryClient.invalidateQueries({ queryKey: ['/api/products'] });
@@ -363,10 +357,7 @@ export default function ProductFormWizard({ productId, catalogId, onSuccess }: P
       }
       
       const updatedProduct = response.data;
-      toast({
-        title: 'Product updated',
-        description: 'The product has been updated successfully',
-      });
+      
       
       // Invalidate product queries
       queryClient.invalidateQueries({ queryKey: ['/api/products'] });
@@ -548,11 +539,7 @@ export default function ProductFormWizard({ productId, catalogId, onSuccess }: P
         break;
       // Display market research data in a toast notification
       case 'marketResearch':
-        toast({
-          title: "Market Research",
-          description: value,
-          duration: 10000, // Show for 10 seconds
-        });
+        
         break;
     }
   };
@@ -582,10 +569,7 @@ export default function ProductFormWizard({ productId, catalogId, onSuccess }: P
       
       if (priceSuggestion) {
         form.setValue('price', priceSuggestion.suggestedPrice);
-        toast({
-          title: "Price Suggested",
-          description: `AI suggested a selling price of R${priceSuggestion.suggestedPrice.toFixed(2)} 
-          (${priceSuggestion.markupPercentage}% markup from ${priceSuggestion.markupSource})`,
+        `,
         });
       }
     } catch (error: any) {
@@ -627,10 +611,7 @@ export default function ProductFormWizard({ productId, catalogId, onSuccess }: P
       
       if (suggestion.tags && suggestion.tags.length > 0) {
         form.setValue('tags', suggestion.tags);
-        toast({
-          title: "Tags Generated",
-          description: `AI generated ${suggestion.tags.length} tags for your product`,
-        });
+        
       }
     } catch (error: any) {
       toast({
@@ -668,10 +649,7 @@ export default function ProductFormWizard({ productId, catalogId, onSuccess }: P
       applyAISuggestion('suggestedPrice', aiSuggestions.suggestedPrice);
     }
 
-    toast({
-      title: "Applied AI Suggestions",
-      description: "All AI suggestions have been applied to the form",
-    });
+    
   };
 
   // Loading state

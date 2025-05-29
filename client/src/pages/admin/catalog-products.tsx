@@ -201,10 +201,7 @@ function ProductAttributesDialog({
       return await response.json();
     },
     onSuccess: () => {
-      toast({
-        title: "Attribute value added",
-        description: "The attribute value has been added successfully."
-      });
+      
       refetchValues();
       setNewAttributeValue({
         attributeId: '',
@@ -228,10 +225,7 @@ function ProductAttributesDialog({
       return await response.json();
     },
     onSuccess: () => {
-      toast({
-        title: "Attribute value deleted",
-        description: "The attribute value has been removed."
-      });
+      
       refetchValues();
       refetchCombinations();
     },
@@ -551,10 +545,7 @@ export default function CatalogProducts() {
       return data.data;
     },
     onSuccess: () => {
-      toast({
-        title: "Product deleted",
-        description: `${selectedProduct?.name} has been deleted.`,
-      });
+      
       queryClient.invalidateQueries({ queryKey: [`/api/catalogs/${catalogId}/products`] });
       setShowDeleteDialog(false);
       setSelectedProduct(null);
@@ -585,10 +576,7 @@ export default function CatalogProducts() {
       return result.data;
     },
     onSuccess: (_, variables) => {
-      toast({
-        title: `Products ${variables.active ? 'activated' : 'deactivated'}`,
-        description: `${selectedProducts.length} products have been ${variables.active ? 'activated' : 'deactivated'}.`,
-      });
+      
       queryClient.invalidateQueries({ queryKey: [`/api/catalogs/${catalogId}/products`] });
       setSelectedProducts([]);
     },
@@ -617,10 +605,7 @@ export default function CatalogProducts() {
       return result.data;
     },
     onSuccess: () => {
-      toast({
-        title: "Products reordered",
-        description: "Product display order has been updated.",
-      });
+      
       queryClient.invalidateQueries({ queryKey: [`/api/catalogs/${catalogId}/products`] });
     },
     onError: (error: any) => {
@@ -646,11 +631,7 @@ export default function CatalogProducts() {
     
     try {
       // Show loading toast with the fixed ID
-      toast({
-        id: toastId,
-        title: "Creating product draft",
-        description: "Please wait while we prepare the product for editing...",
-      });
+      
       
       // Call API to reuse existing draft (same as published products edit)
       const response = await apiRequest(
@@ -668,11 +649,7 @@ export default function CatalogProducts() {
       
       if (result.success && result.data) {
         // Success toast - replaces the loading toast by using same ID
-        toast({
-          id: toastId,
-          title: "Draft created",
-          description: "You can now edit the product in the wizard.",
-        });
+        
         
         // Navigate to product wizard with the draft ID
         navigate(`/admin/product-wizard/${result.data.draftId}`);
@@ -753,10 +730,7 @@ export default function CatalogProducts() {
 
       await Promise.all(deletePromises);
 
-      toast({
-        title: "Products deleted successfully",
-        description: `${selectedProducts.length} products have been deleted.`,
-      });
+      
 
       // Refresh the products list and clear selection
       queryClient.invalidateQueries({ queryKey: [`/api/catalogs/${catalogId}/products`] });

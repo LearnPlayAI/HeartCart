@@ -130,20 +130,14 @@ export const ProductImagesStepRefactored: React.FC<ProductImagesStepProps> = ({ 
   const handleDeleteImage = (index: number) => {
     fileUpload.removeFile(index);
     
-    toast({
-      title: "Image removed",
-      description: "The image has been removed from the product"
-    });
+    
   };
   
   // Handle setting an image as the main image
   const handleSetMainImage = (index: number) => {
     fileUpload.setMainImage(index);
     
-    toast({
-      title: "Main image set",
-      description: "The selected image is now the main product image"
-    });
+    
   };
   
   // Upload all pending images
@@ -151,10 +145,7 @@ export const ProductImagesStepRefactored: React.FC<ProductImagesStepProps> = ({ 
     try {
       await fileUpload.uploadAllFiles();
       
-      toast({
-        title: "Images uploaded",
-        description: "All images have been successfully uploaded"
-      });
+      
     } catch (error) {
       toast({
         title: "Upload failed",

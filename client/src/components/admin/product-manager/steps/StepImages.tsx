@@ -84,10 +84,7 @@ export const StepImages: React.FC<StepComponentProps> = ({
         setImages((prev) => [...prev, data.data.url]);
         setImageObjectKeys((prev) => [...prev, data.data.objectKey]);
         
-        toast({
-          title: 'Image Uploaded',
-          description: 'Your image has been uploaded successfully',
-        });
+        
       } else {
         toast({
           title: 'Upload Failed',

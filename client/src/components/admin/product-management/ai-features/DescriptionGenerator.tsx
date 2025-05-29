@@ -103,10 +103,7 @@ export function DescriptionGenerator({ className }: DescriptionGeneratorProps) {
       updateDraft({ description });
       await saveDraft();
       
-      toast({
-        title: 'Description Updated',
-        description: 'The product description has been updated.',
-      });
+      
       
       // Close the generator
       setGeneratedDescriptions([]);

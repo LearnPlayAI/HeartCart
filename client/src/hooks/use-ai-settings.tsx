@@ -41,11 +41,7 @@ export function useUpdateAIModel() {
     },
     onSuccess: (data) => {
       if (data.success) {
-        toast({
-          title: "Success",
-          description: data.message,
-          variant: "default",
-        });
+        
       } else {
         toast({
           title: "Warning",

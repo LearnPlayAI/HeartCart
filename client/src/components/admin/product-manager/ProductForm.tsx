@@ -118,10 +118,7 @@ export const ProductForm: React.FC<ProductFormSharedProps> = ({
       if (data.success && data.data?.id) {
         setDraftId(data.data.id);
         queryClient.invalidateQueries({ queryKey: ['/api/product-drafts', data.data.id] });
-        toast({
-          title: 'Draft Created',
-          description: 'Started your new product'
-        });
+        
       } else {
         toast({
           title: 'Error',
@@ -184,10 +181,7 @@ export const ProductForm: React.FC<ProductFormSharedProps> = ({
     onSuccess: (data) => {
       if (data.success) {
         queryClient.invalidateQueries({ queryKey: ['/api/product-drafts', draftId] });
-        toast({
-          title: 'Saved',
-          description: 'Step saved successfully'
-        });
+        
       } else {
         toast({
           title: 'Error',
@@ -214,10 +208,7 @@ export const ProductForm: React.FC<ProductFormSharedProps> = ({
     },
     onSuccess: (data) => {
       if (data.success) {
-        toast({
-          title: 'Deleted',
-          description: 'Product draft has been discarded'
-        });
+        
         setLocation('/admin/catalog');
       } else {
         toast({
@@ -245,10 +236,7 @@ export const ProductForm: React.FC<ProductFormSharedProps> = ({
     },
     onSuccess: (data) => {
       if (data.success) {
-        toast({
-          title: 'Success',
-          description: `Product ${editMode ? 'updated' : 'created'} successfully`
-        });
+        
         setLocation('/admin/catalog');
       } else {
         toast({
