@@ -27,7 +27,7 @@ import React, { Suspense } from "react";
 import AdminDashboard from "@/pages/admin/dashboard";
 import AdminProducts from "@/pages/admin/products";
 import AdminCategories from "@/pages/admin/categories";
-import AdminOrders from "@/pages/admin/orders-new";
+import AdminOrders from "@/pages/admin/orders";
 import AdminPricing from "@/pages/admin/pricing";
 import AdminAISettings from "@/pages/admin/ai-settings";
 import AdminSuppliers from "@/pages/admin/suppliers";
