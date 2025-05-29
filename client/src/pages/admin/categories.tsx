@@ -731,10 +731,7 @@ export default function AdminCategories() {
                                   <div
                                     ref={provided.innerRef}
                                     {...provided.droppableProps}
-                                    className={cn(
-                                      "pl-8 pr-4 py-2",
-                                      snapshot.isDraggingOver ? "bg-pink-50" : ""
-                                    )}
+                                    className="pl-8 pr-4 py-2 bg-[#4531a83d]"
                                   >
                                     {item.children.map((child, index) => (
                                       <Draggable 
