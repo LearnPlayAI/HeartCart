@@ -149,6 +149,8 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
 
   // Track if user manually cleared child selection
   const [userClearedChild, setUserClearedChild] = React.useState(false);
+  // Track if user is actively making category changes
+  const [userIsChangingCategories, setUserIsChangingCategories] = React.useState(false);
 
   // Get child categories for the selected parent
   const childCategories = React.useMemo(() => {
@@ -176,7 +178,7 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
 
   // Reset and reinitialize category state when step becomes active
   React.useEffect(() => {
-    if (draft.categoryId && categoriesWithParents.length > 0 && !userClearedChild) {
+    if (draft.categoryId && categoriesWithParents.length > 0 && !userClearedChild && !userIsChangingCategories) {
       const currentCategory = categoriesWithParents.find((cat: any) => cat.id === draft.categoryId);
       if (currentCategory) {
         if (currentCategory.parentId) {
@@ -198,10 +200,11 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
         }
       }
     }
-  }, [draft, categoriesWithParents, selectedParentCategoryId, selectedChildCategoryId, userClearedChild]);
+  }, [draft, categoriesWithParents, selectedParentCategoryId, selectedChildCategoryId, userClearedChild, userIsChangingCategories]);
 
   // Handle parent category selection
   const handleParentCategoryChange = (parentId: string) => {
+    setUserIsChangingCategories(true); // Mark that user is making changes
     const parentIdNum = Number(parentId);
     setSelectedParentCategoryId(parentIdNum);
     setSelectedChildCategoryId(null); // Reset child selection
@@ -209,20 +212,23 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
     
     // Update form with parent category
     form.setValue('categoryId', parentIdNum);
+    
+    // Reset the flag after a brief delay
+    setTimeout(() => {
+      setUserIsChangingCategories(false);
+    }, 200);
   };
 
   // Handle child category selection
   const handleChildCategoryChange = (childId: string) => {
+    setUserIsChangingCategories(true); // Mark that user is making changes
+    
     if (childId === "clear-selection") {
       // User is deselecting the child category
       setSelectedChildCategoryId(null);
       setUserClearedChild(true); // Mark that user manually cleared
       // Set categoryId to parent category when child is cleared
       form.setValue('categoryId', selectedParentCategoryId || 0);
-      // Force a small delay to prevent auto-reselection
-      setTimeout(() => {
-        setUserClearedChild(true);
-      }, 100);
     } else {
       const childIdNum = Number(childId);
       setSelectedChildCategoryId(childIdNum);
@@ -230,6 +236,11 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
       // Set categoryId to child category when child is selected
       form.setValue('categoryId', childIdNum);
     }
+    
+    // Reset the flag after a brief delay
+    setTimeout(() => {
+      setUserIsChangingCategories(false);
+    }, 200);
   };
 
   // Update form values when draft changes
