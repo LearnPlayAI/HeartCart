@@ -6,17 +6,8 @@ import { useLocation } from 'wouter';
 import { useAuth } from '@/hooks/use-auth';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Loader2, Save, Trash2, AlertTriangle, ChevronRight, CheckCircle2 } from 'lucide-react';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import { Loader2, Save, AlertTriangle, ChevronRight, CheckCircle2 } from 'lucide-react';
+
 import { BasicInfoStep } from './steps/BasicInfoStep';
 import ProductImagesStep from './steps/ProductImagesStep';
 import { AdditionalInfoStep } from './steps/AdditionalInfoStep';
@@ -188,7 +179,7 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ draftId, initialDa
   const queryClient = useQueryClient();
   const [currentStep, setCurrentStep] = useState<ProductDraftStep>('basic-info');
   const [internalDraftId, setInternalDraftId] = useState<number | null>(draftId || null);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
   const [isAutoAdvancing, setIsAutoAdvancing] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
 
@@ -578,10 +569,7 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ draftId, initialDa
     publishDraftMutation.mutate();
   };
 
-  // Handle deleting the draft
-  const handleDelete = () => {
-    setShowDeleteDialog(true);
-  };
+
 
   // Determine if a step is completed
   const isStepCompleted = (step: string) => {
@@ -670,15 +658,7 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ draftId, initialDa
       </Tabs>
 
       <div className="flex justify-between mt-6 pt-4 border-t">
-        <Button
-          variant="destructive"
-          onClick={handleDelete}
-          disabled={deleteDraftMutation.isPending}
-        >
-          {deleteDraftMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          <Trash2 className="mr-2 h-4 w-4" />
-          Discard
-        </Button>
+
 
         <div className="flex gap-2">
           {currentStep !== 'review' ? (
@@ -704,24 +684,7 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ draftId, initialDa
         </div>
       </div>
 
-      {/* Delete confirmation dialog */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete this draft and all associated data. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => deleteDraftMutation.mutate()}>
-              {deleteDraftMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+
     </div>
   );
 };
