@@ -303,9 +303,8 @@ function BusinessOverview() {
     queryKey: ["/api/admin/users"],
   });
 
-  // Wait for all data to be loaded before rendering
-  if (isLoadingOrders || isLoadingProducts || isLoadingUsers || 
-      !ordersResponse || !productsResponse || !usersResponse) {
+  // Show loading state only while queries are actually loading
+  if (isLoadingOrders || isLoadingProducts || isLoadingUsers) {
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
         {[1, 2, 3, 4].map((i) => (
