@@ -84,6 +84,10 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
   const [aiDescriptionSuggestions, setAiDescriptionSuggestions] = useState<string[]>([]);
   const [showAiDialog, setShowAiDialog] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  
+  // State for category selection
+  const [selectedParentCategoryId, setSelectedParentCategoryId] = useState<number | null>(null);
+  const [selectedChildCategoryId, setSelectedChildCategoryId] = useState<number | null>(null);
 
   // Fetch categories for the dropdown
   const { data: categoriesData, isLoading: isCategoriesLoading } = useQuery({
@@ -123,6 +127,68 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
       isFeatured: draft.isFeatured || false,
     },
   });
+
+  // Organize categories into parent/child relationships
+  const categoriesWithParents = React.useMemo(() => {
+    const categories = categoriesData?.data || [];
+    
+    // Create a map for quick lookup
+    const categoryMap = new Map(categories.map((cat: any) => [cat.id, cat]));
+    
+    // Add parent information to each category
+    return categories.map((category: any) => ({
+      ...category,
+      parent: category.parentId ? categoryMap.get(category.parentId) : null
+    }));
+  }, [categoriesData]);
+
+  // Get parent categories (categories with no parentId)
+  const parentCategories = React.useMemo(() => {
+    return categoriesWithParents.filter((cat: any) => !cat.parentId);
+  }, [categoriesWithParents]);
+
+  // Get child categories for the selected parent
+  const childCategories = React.useMemo(() => {
+    if (!selectedParentCategoryId) return [];
+    return categoriesWithParents.filter((cat: any) => cat.parentId === selectedParentCategoryId);
+  }, [categoriesWithParents, selectedParentCategoryId]);
+
+  // Initialize category selection state based on draft
+  React.useEffect(() => {
+    if (draft.categoryId && categoriesWithParents.length > 0) {
+      const currentCategory = categoriesWithParents.find((cat: any) => cat.id === draft.categoryId);
+      if (currentCategory) {
+        if (currentCategory.parentId) {
+          // This is a child category
+          setSelectedParentCategoryId(currentCategory.parentId);
+          setSelectedChildCategoryId(currentCategory.id);
+        } else {
+          // This is a parent category
+          setSelectedParentCategoryId(currentCategory.id);
+          setSelectedChildCategoryId(null);
+        }
+      }
+    }
+  }, [draft.categoryId, categoriesWithParents]);
+
+  // Handle parent category selection
+  const handleParentCategoryChange = (parentId: string) => {
+    const parentIdNum = Number(parentId);
+    setSelectedParentCategoryId(parentIdNum);
+    setSelectedChildCategoryId(null); // Reset child selection
+    
+    // Update form with parent category
+    form.setValue('categoryId', parentIdNum);
+  };
+
+  // Handle child category selection
+  const handleChildCategoryChange = (childId: string) => {
+    const childIdNum = Number(childId);
+    setSelectedChildCategoryId(childIdNum);
+    
+    // Update form with child category
+    form.setValue('categoryId', childIdNum);
+  };
 
   // Update form values when draft changes
   useEffect(() => {
@@ -445,38 +511,73 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
               )}
             />
 
-            {/* Category Selection */}
+            {/* Category Selection - Parent Category */}
+            <FormItem>
+              <FormLabel>Parent Category*</FormLabel>
+              <Select
+                onValueChange={handleParentCategoryChange}
+                value={selectedParentCategoryId?.toString() || undefined}
+              >
+                <FormControl>
+                  <SelectTrigger className="h-9 sm:h-10">
+                    <SelectValue placeholder="Select parent category" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {isCategoriesLoading ? (
+                    <div className="flex items-center justify-center p-2">
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      <span>Loading categories...</span>
+                    </div>
+                  ) : (
+                    parentCategories.map((category: any) => (
+                      <SelectItem key={category.id} value={category.id.toString()}>
+                        {category.name}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </FormItem>
+
+            {/* Category Selection - Child Category */}
+            <FormItem>
+              <FormLabel>Child Category {selectedParentCategoryId && childCategories.length > 0 && "(Optional)"}</FormLabel>
+              <Select
+                onValueChange={handleChildCategoryChange}
+                value={selectedChildCategoryId?.toString() || undefined}
+                disabled={!selectedParentCategoryId || childCategories.length === 0}
+              >
+                <FormControl>
+                  <SelectTrigger className="h-9 sm:h-10">
+                    <SelectValue placeholder={
+                      !selectedParentCategoryId 
+                        ? "Select parent category first" 
+                        : childCategories.length === 0 
+                          ? "No child categories available"
+                          : "Select child category (optional)"
+                    } />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {childCategories.map((category: any) => (
+                    <SelectItem key={category.id} value={category.id.toString()}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormItem>
+
+            {/* Hidden field to maintain form validation */}
             <FormField
               control={form.control}
               name="categoryId"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Category*</FormLabel>
-                  <Select
-                    onValueChange={(value) => field.onChange(Number(value))}
-                    defaultValue={field.value?.toString() || undefined}
-                    value={field.value?.toString() || undefined}
-                  >
-                    <FormControl>
-                      <SelectTrigger className="h-9 sm:h-10">
-                        <SelectValue placeholder="Select a category" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {isCategoriesLoading ? (
-                        <div className="flex items-center justify-center p-2">
-                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                          <span>Loading categories...</span>
-                        </div>
-                      ) : (
-                        categoriesData?.data?.map((category: any) => (
-                          <SelectItem key={category.id} value={category.id.toString()}>
-                            {category.name}
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
+                <FormItem className="hidden">
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
