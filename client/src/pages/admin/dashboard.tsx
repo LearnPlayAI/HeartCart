@@ -2,6 +2,8 @@ import { AdminLayout } from "@/components/admin/layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { 
@@ -11,13 +13,15 @@ import {
   Package, 
   DollarSign, 
   TrendingUp, 
+  TrendingDown,
   AlertCircle,
   CheckCircle,
   Clock,
   Truck,
   BarChart3,
   Eye,
-  Calendar
+  Calendar,
+  Edit
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { useDateFormat } from "@/hooks/use-date-format";
@@ -623,131 +627,204 @@ function TopProducts() {
         <div className="text-sm text-muted-foreground mb-4">
           Showing products by price (order data not available yet)
         </div>
-        <div className="rounded-md border">
-          <div className="px-4 py-3 font-medium bg-muted/50">
-            <div className="grid grid-cols-6 gap-4 items-center">
-              <div className="col-span-2">Product</div>
-              <div className="text-right">Stock</div>
-              <div className="text-right">Price</div>
-              <div className="text-right">TMY Markup %</div>
-              <div className="text-right">Discount %</div>
-            </div>
-          </div>
-          <div className="divide-y">
-            {fallbackProducts.map((product, index) => (
-              <div key={index} className="px-4 py-3">
-                <div className="grid grid-cols-6 gap-4 items-center">
-                  <div className="col-span-2 flex items-center space-x-3">
-                    {/* Product Thumbnail */}
-                    <div className="w-12 h-12 bg-gray-100 rounded-md overflow-hidden flex-shrink-0">
-                      {product.imageUrl ? (
-                        <img 
-                          src={product.imageUrl} 
-                          alt={product.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Package className="w-6 h-6 text-gray-400" />
-                        </div>
-                      )}
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Product</TableHead>
+              <TableHead className="text-right">Stock Level</TableHead>
+              <TableHead className="text-right">Price</TableHead>
+              <TableHead className="text-right">Profit Margin</TableHead>
+              <TableHead className="text-right">TMY Markup %</TableHead>
+              <TableHead className="text-right">Cust Discount %</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {fallbackProducts.map((product, index) => {
+              const markup = product.markupPercentage;
+              const discount = product.discountPercentage;
+              const costPrice = products.find((p: any) => p.id === product.id)?.costPrice || 0;
+              const profitMargin = costPrice > 0 ? ((product.revenue - costPrice) / product.revenue * 100) : 0;
+
+              return (
+                <TableRow key={index} className="hover:bg-muted/50">
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center overflow-hidden">
+                        {product.imageUrl ? (
+                          <img 
+                            src={product.imageUrl} 
+                            alt={product.name}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <Package className="h-6 w-6 text-muted-foreground" />
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <Link 
+                          href={`/admin/pricing?search=${encodeURIComponent(product.name)}`}
+                          className="font-medium hover:text-blue-600 hover:underline transition-colors truncate block"
+                        >
+                          {product.name}
+                        </Link>
+                        <p className="text-sm text-muted-foreground truncate">
+                          High priority product
+                        </p>
+                      </div>
                     </div>
-                    {/* Product Title - Clickable */}
-                    <Link 
-                      href={`/admin/pricing?search=${encodeURIComponent(product.name)}`}
-                      className="font-medium hover:text-blue-600 hover:underline transition-colors"
-                    >
-                      {product.name}
-                    </Link>
-                  </div>
-                  <div className="text-right">{product.quantity}</div>
-                  <div className="text-right font-medium">
+                  </TableCell>
+                  <TableCell className="text-right font-mono">{product.quantity}</TableCell>
+                  <TableCell className="text-right font-mono">
                     {formatCurrency(product.revenue)}
-                  </div>
-                  <div className="text-right">
-                    <span className={`font-medium ${product.markupPercentage > 50 ? 'text-green-600' : product.markupPercentage > 25 ? 'text-yellow-600' : 'text-red-600'}`}>
-                      {product.markupPercentage.toFixed(1)}%
+                  </TableCell>
+                  <TableCell className="text-right font-mono">
+                    <span className={profitMargin > 30 ? 'text-green-600' : profitMargin > 15 ? 'text-yellow-600' : 'text-red-600'}>
+                      {profitMargin.toFixed(1)}%
                     </span>
-                  </div>
-                  <div className="text-right">
-                    <span className="font-medium text-blue-600">
-                      {product.discountPercentage.toFixed(1)}%
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      {markup > 0 ? (
+                        <TrendingUp className="h-4 w-4 text-green-600" />
+                      ) : (
+                        <TrendingDown className="h-4 w-4 text-red-600" />
+                      )}
+                      <span className={`font-semibold ${
+                        markup > 0 ? 'text-green-600' : 'text-red-600'
+                      }`}>
+                        {markup.toFixed(1)}%
+                      </span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {discount > 0 ? (
+                      <Badge className="font-mono bg-pink-500 hover:bg-pink-600 text-white">
+                        {discount.toFixed(1)}%
+                      </Badge>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.location.href = `/admin/products/edit/${product.id}`}
+                      className="hover:bg-primary hover:text-primary-foreground"
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      <div className="rounded-md border">
-        <div className="px-4 py-3 font-medium bg-muted/50">
-          <div className="grid grid-cols-6 gap-4 items-center">
-            <div className="col-span-2">Product</div>
-            <div className="text-right">Units Sold</div>
-            <div className="text-right">Revenue</div>
-            <div className="text-right">TMY Markup %</div>
-            <div className="text-right">Discount %</div>
-          </div>
-        </div>
-        <div className="divide-y">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Product</TableHead>
+            <TableHead className="text-right">Units Sold</TableHead>
+            <TableHead className="text-right">Revenue</TableHead>
+            <TableHead className="text-right">Profit</TableHead>
+            <TableHead className="text-right">TMY Markup %</TableHead>
+            <TableHead className="text-right">Cust Discount %</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {topProducts.map((product, index) => {
             // Find the enriched product details with calculated markup/discount
             const enrichedProduct = products.find((p: any) => p.name === product.name);
             const markup = enrichedProduct?.tmyMarkup || 0;
             const discount = enrichedProduct?.customerDiscount || 0;
+            const costPrice = enrichedProduct?.costPrice || 0;
+            const profit = product.revenue - (costPrice * product.quantity);
 
             return (
-              <div key={index} className="px-4 py-3">
-                <div className="grid grid-cols-6 gap-4 items-center">
-                  <div className="col-span-2 flex items-center space-x-3">
-                    {/* Product Thumbnail */}
-                    <div className="w-12 h-12 bg-gray-100 rounded-md overflow-hidden flex-shrink-0">
+              <TableRow key={index} className="hover:bg-muted/50">
+                <TableCell>
+                  <div className="flex items-center gap-3">
+                    <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center overflow-hidden">
                       {enrichedProduct?.imageUrl ? (
                         <img 
                           src={enrichedProduct.imageUrl} 
                           alt={product.name}
-                          className="w-full h-full object-cover"
+                          className="h-full w-full object-cover"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Package className="w-6 h-6 text-gray-400" />
-                        </div>
+                        <Package className="h-6 w-6 text-muted-foreground" />
                       )}
                     </div>
-                    {/* Product Title - Clickable */}
-                    <Link 
-                      href={`/admin/pricing?search=${encodeURIComponent(product.name)}`}
-                      className="font-medium hover:text-blue-600 hover:underline transition-colors"
-                    >
-                      {product.name}
-                    </Link>
+                    <div className="min-w-0">
+                      <Link 
+                        href={`/admin/pricing?search=${encodeURIComponent(product.name)}`}
+                        className="font-medium hover:text-blue-600 hover:underline transition-colors truncate block"
+                      >
+                        {product.name}
+                      </Link>
+                      <p className="text-sm text-muted-foreground truncate">
+                        {enrichedProduct?.supplier || 'No supplier'}
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-right">{product.quantity}</div>
-                  <div className="text-right font-medium">
-                    {formatCurrency(product.revenue)}
-                  </div>
-                  <div className="text-right">
-                    <span className={`font-medium ${markup > 50 ? 'text-green-600' : markup > 25 ? 'text-yellow-600' : 'text-red-600'}`}>
+                </TableCell>
+                <TableCell className="text-right font-mono">{product.quantity}</TableCell>
+                <TableCell className="text-right font-mono">
+                  {formatCurrency(product.revenue)}
+                </TableCell>
+                <TableCell className="text-right font-mono">
+                  <span className={profit > 0 ? 'text-green-600' : 'text-red-600'}>
+                    {formatCurrency(profit)}
+                  </span>
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex items-center justify-end gap-1">
+                    {markup > 0 ? (
+                      <TrendingUp className="h-4 w-4 text-green-600" />
+                    ) : (
+                      <TrendingDown className="h-4 w-4 text-red-600" />
+                    )}
+                    <span className={`font-semibold ${
+                      markup > 0 ? 'text-green-600' : 'text-red-600'
+                    }`}>
                       {markup.toFixed(1)}%
                     </span>
                   </div>
-                  <div className="text-right">
-                    <span className="font-medium text-blue-600">
+                </TableCell>
+                <TableCell className="text-right">
+                  {discount > 0 ? (
+                    <Badge className="font-mono bg-pink-500 hover:bg-pink-600 text-white">
                       {discount.toFixed(1)}%
-                    </span>
-                  </div>
-                </div>
-              </div>
+                    </Badge>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
+                </TableCell>
+                <TableCell className="text-right">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.location.href = `/admin/products/edit/${enrichedProduct?.id}`}
+                    className="hover:bg-primary hover:text-primary-foreground"
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit
+                  </Button>
+                </TableCell>
+              </TableRow>
             );
           })}
-        </div>
-      </div>
+        </TableBody>
+      </Table>
     </div>
   );
 }
