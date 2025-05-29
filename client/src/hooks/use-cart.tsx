@@ -92,6 +92,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       console.log('🔍 CLEAN CART MUTATION - Adding item:', cartItem);
       
       const res = await apiRequest('POST', '/api/cart', cartItem);
+      
+      // Check for 401 authentication error before parsing JSON
+      if (res.status === 401) {
+        setLocation('/auth');
+        return;
+      }
+      
       const data: StandardApiResponse<any> = await res.json();
       
       if (!data.success) {
@@ -106,13 +113,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       
     },
     onError: (error) => {
-      // Check if the error is authentication related
-      if (error.message === 'AUTHENTICATION_REQUIRED') {
-        // Redirect to auth page instead of showing error toast
-        setLocation('/auth');
-        return;
-      }
-      
+      // Only show error toast for non-authentication errors
       toast({
         title: "Error",
         description: error.message || "Failed to add item to cart",
@@ -125,6 +126,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const updateCartMutation = useMutation({
     mutationFn: async ({ id, quantity }: { id: number; quantity: number }) => {
       const res = await apiRequest('PUT', `/api/cart/${id}`, { quantity });
+      
+      // Check for 401 authentication error before parsing JSON
+      if (res.status === 401) {
+        setLocation('/auth');
+        return;
+      }
+      
       const data: StandardApiResponse<any> = await res.json();
       if (!data.success) {
         throw new Error(data.error?.message || "Failed to update cart item");
@@ -136,7 +144,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     onError: (error) => {
       toast({
         title: "Error",
-        description: error.message || "Please log in to update your cart",
+        description: error.message || "Failed to update cart item",
         variant: "destructive"
       });
     }
@@ -146,6 +154,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const removeFromCartMutation = useMutation({
     mutationFn: async (id: number) => {
       const res = await apiRequest('DELETE', `/api/cart/${id}`);
+      
+      // Check for 401 authentication error before parsing JSON
+      if (res.status === 401) {
+        setLocation('/auth');
+        return;
+      }
+      
       const data: StandardApiResponse<any> = await res.json();
       if (!data.success) {
         throw new Error(data.error?.message || "Failed to remove item from cart");
@@ -157,7 +172,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     onError: (error) => {
       toast({
         title: "Error",
-        description: error.message || "Please log in to modify your cart",
+        description: error.message || "Failed to remove item from cart",
         variant: "destructive"
       });
     }
@@ -167,6 +182,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const clearCartMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest('DELETE', '/api/cart');
+      
+      // Check for 401 authentication error before parsing JSON
+      if (res.status === 401) {
+        setLocation('/auth');
+        return;
+      }
+      
       const data: StandardApiResponse<any> = await res.json();
       if (!data.success) {
         throw new Error(data.error?.message || "Failed to clear cart");
@@ -179,7 +201,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     onError: (error) => {
       toast({
         title: "Error",
-        description: error.message || "Please log in to modify your cart",
+        description: error.message || "Failed to clear cart",
         variant: "destructive"
       });
     }
