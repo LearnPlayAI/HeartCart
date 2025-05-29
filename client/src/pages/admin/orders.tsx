@@ -419,7 +419,7 @@ export default function AdminOrders() {
                     <div key={order.id} className="px-4 py-3">
                       <div className="grid grid-cols-6 gap-4 items-center">
                         <div className="font-medium">#{order.id}</div>
-                        <div>{order.user?.username || "Unknown"}</div>
+                        <div>{order.user?.email || "Unknown"}</div>
                         <div className="flex items-center text-muted-foreground">
                           <CalendarIcon className="mr-1 h-3 w-3" />
                           {formatShortDate(order.createdAt)}
