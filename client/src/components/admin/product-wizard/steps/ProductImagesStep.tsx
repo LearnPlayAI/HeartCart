@@ -212,7 +212,7 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ draft, onS
 
   // Handle form submission
   const onSubmit = (data: ImageFormValues) => {
-    onSave(data);
+    onSave(data, true);
   };
 
   // Set an image as the main image

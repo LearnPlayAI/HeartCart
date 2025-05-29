@@ -585,6 +585,14 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ draftId, initialDa
     }
   };
 
+  // Handle saving step data with optional auto-advancement
+  const handleStepSave = (stepData: any, autoAdvance: boolean = false) => {
+    if (autoAdvance) {
+      setIsAutoAdvancing(true);
+    }
+    updateStepMutation.mutate({ step: currentStep, stepData });
+  };
+
   // Loading state
   if (isDraftLoading || createDraftMutation.isPending || isLoadingUser) {
     return (
@@ -648,7 +656,7 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ draftId, initialDa
           <TabsContent key={step.id} value={step.id} className="pt-4">
             <CurrentStepComponent
               draft={draft as ProductDraft}
-              onSave={handleSaveStep}
+              onSave={handleStepSave}
               onSaveAndPublish={step.id === 'basic-info' ? handleSaveAndPublish : undefined}
               isLoading={updateStepMutation.isPending}
               isPublishing={isPublishing}

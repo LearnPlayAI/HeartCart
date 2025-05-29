@@ -204,8 +204,8 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
 
     console.log('BasicInfoStep submitting data:', data);
     
-    // Pass the validated data to parent component for saving
-    onSave(data);
+    // Pass the validated data to parent component for saving with auto-advancement
+    onSave(data, true);
   };
 
   // Handle name input changes
