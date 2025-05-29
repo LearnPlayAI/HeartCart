@@ -497,174 +497,179 @@ function RecentOrders() {
 }
 
 /**
- * Top Products Component
+ * Top Products Component - Uses same enrichment logic as pricing page
  */
 function TopProducts() {
-  const { data: ordersResponse, isLoading: isLoadingOrders } = useQuery({
-    queryKey: ["/api/admin/orders"],
+  // Fetch data with same queries as pricing page
+  const { data: productsResponse, isLoading: isProductsLoading } = useQuery({
+    queryKey: ['/api/admin/products'],
+    queryFn: async () => {
+      const response = await fetch('/api/admin/products');
+      if (!response.ok) throw new Error('Failed to fetch products');
+      return response.json();
+    }
   });
 
-  const { data: productsResponse, isLoading: isLoadingProducts } = useQuery({
-    queryKey: ["/api/admin/products"],
+  const { data: categoriesResponse } = useQuery({
+    queryKey: ['/api/categories'],
+    queryFn: async () => {
+      const response = await fetch('/api/categories');
+      if (!response.ok) throw new Error('Failed to fetch categories');
+      return response.json();
+    }
   });
 
-  // Fetch categories for proper markup calculations
-  const { data: categoriesResponse, isLoading: isLoadingCategories } = useQuery({
-    queryKey: ['/api/categories']
+  const { data: catalogsResponse } = useQuery({
+    queryKey: ['/api/catalogs'],
+    queryFn: async () => {
+      const response = await fetch('/api/catalogs');
+      if (!response.ok) throw new Error('Failed to fetch catalogs');
+      return response.json();
+    }
   });
 
-  // Fetch catalogs for complete product information
-  const { data: catalogsResponse, isLoading: isLoadingCatalogs } = useQuery({
-    queryKey: ['/api/catalogs']
+  const { data: ordersResponse } = useQuery({
+    queryKey: ['/api/admin/orders'],
+    queryFn: async () => {
+      const response = await fetch('/api/admin/orders');
+      if (!response.ok) throw new Error('Failed to fetch orders');
+      return response.json();
+    }
   });
 
-  if (isLoadingOrders || isLoadingProducts || isLoadingCategories || isLoadingCatalogs) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
-  const orders = ordersResponse?.data || [];
-  const rawProducts = productsResponse?.data || [];
+  const products = productsResponse?.data || [];
   const categories = categoriesResponse?.data || [];
   const catalogs = catalogsResponse?.data || [];
+  const orders = ordersResponse?.data || [];
 
-  // Enrich products with the same calculations as pricing page
-  const products = rawProducts.map((product: any) => {
-    const category = categories.find((cat: any) => cat.id === product.categoryId);
-    const catalog = catalogs.find((cat: any) => cat.id === product.catalogId);
-    
-    // Calculate TMY markup percentage (profit margin between cost and sale price)
-    const effectivePrice = product.salePrice || product.regularPrice;
-    const tmyMarkup = product.costPrice > 0 
-      ? ((effectivePrice - product.costPrice) / product.costPrice * 100) 
-      : 0;
-    
-    // Calculate customer discount percentage (discount between regular and sale price)
-    const customerDiscount = product.salePrice && product.regularPrice > 0
-      ? ((product.regularPrice - product.salePrice) / product.regularPrice * 100)
-      : 0;
+  // Calculate derived pricing data - EXACT same logic as pricing page
+  const enrichedProducts = useMemo(() => {
+    return products.map((product: any) => {
+      const category = categories.find((cat: any) => cat.id === product.categoryId);
+      const catalog = catalogs.find((cat: any) => cat.id === product.catalogId);
+      
+      // Calculate TMY markup percentage (profit margin between cost and sale price)
+      const effectivePrice = product.salePrice || product.price;
+      const tmyMarkup = product.costPrice > 0 
+        ? ((effectivePrice - product.costPrice) / product.costPrice * 100) 
+        : 0;
+      
+      // Calculate customer discount percentage (discount between regular and sale price)
+      const customerDiscount = product.salePrice && product.price > 0
+        ? ((product.price - product.salePrice) / product.price * 100)
+        : 0;
 
-    return {
-      ...product,
-      categoryName: category?.name || 'Uncategorized',
-      catalogName: catalog?.name || 'No Catalog',
-      tmyMarkup: Number(tmyMarkup.toFixed(2)),
-      customerDiscount: Number(customerDiscount.toFixed(2)),
-      effectivePrice
-    };
-  });
+      return {
+        ...product,
+        categoryName: category?.name || 'Uncategorized',
+        parentCategoryName: category?.parent?.name || 'No Parent',
+        childCategoryName: category?.name || 'Uncategorized',
+        catalogName: catalog?.name || 'No Catalog',
+        tmyMarkup: Number(tmyMarkup.toFixed(2)),
+        customerDiscount: Number(customerDiscount.toFixed(2)),
+        effectivePrice
+      };
+    });
+  }, [products, categories, catalogs]);
 
-  if (!Array.isArray(orders) || !Array.isArray(products) || orders.length === 0) {
+  // Calculate sales data from orders
+  const salesData = useMemo(() => {
+    const productSales: { [key: string]: { quantity: number; revenue: number } } = {};
+
+    orders.forEach((order: Order) => {
+      if (order.orderItems && Array.isArray(order.orderItems)) {
+        order.orderItems.forEach((item: any) => {
+          const productName = item.productName || item.name || 'Unknown Product';
+          const quantity = item.quantity || 0;
+          const price = item.price || item.unitPrice || 0;
+
+          if (!productSales[productName]) {
+            productSales[productName] = { quantity: 0, revenue: 0 };
+          }
+
+          productSales[productName].quantity += quantity;
+          productSales[productName].revenue += (quantity * price);
+        });
+      }
+    });
+
+    return productSales;
+  }, [orders]);
+
+  // Get top 5 products by sales quantity
+  const topProducts = useMemo(() => {
+    if (Object.keys(salesData).length === 0) {
+      // Fallback: show top products by price when no sales data
+      return enrichedProducts
+        .filter((p: any) => p.isActive)
+        .sort((a: any, b: any) => (b.salePrice || b.price || 0) - (a.salePrice || a.price || 0))
+        .slice(0, 5);
+    }
+
+    // Get products with sales data, sorted by units sold
+    return enrichedProducts
+      .filter((product: any) => salesData[product.name])
+      .sort((a: any, b: any) => salesData[b.name].quantity - salesData[a.name].quantity)
+      .slice(0, 5);
+  }, [enrichedProducts, salesData]);
+
+  if (isProductsLoading) {
     return (
-      <div className="text-center p-8">
-        <p className="text-muted-foreground">No order data available to calculate top products</p>
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading products...</p>
+        </div>
       </div>
     );
   }
 
-  // Calculate product sales from order items
-  const productSales = new Map<number, { name: string; quantity: number; revenue: number }>();
-  
-  orders.forEach((order: any) => {
-    // Check if order has orderItems array
-    if (order.orderItems && Array.isArray(order.orderItems)) {
-      order.orderItems.forEach((item: any) => {
-        const productId = item.productId;
-        const existing = productSales.get(productId);
-        
-        if (existing) {
-          existing.quantity += item.quantity || 1;
-          existing.revenue += item.totalPrice || (item.unitPrice * item.quantity) || 0;
-        } else {
-          // Find product name from products array
-          const product = products.find((p: any) => p.id === productId);
-          productSales.set(productId, {
-            name: product?.name || item.productName || 'Unknown Product',
-            quantity: item.quantity || 1,
-            revenue: item.totalPrice || (item.unitPrice * item.quantity) || 0
-          });
-        }
-      });
-    }
-  });
-
-  // Convert to array and sort by revenue
-  const topProducts = Array.from(productSales.values())
-    .sort((a, b) => b.revenue - a.revenue)
-    .slice(0, 5);
-
   if (topProducts.length === 0) {
-    // Fallback: Show top products by regular price and stock level
-    const fallbackProducts = products
-      .filter((product: any) => product.isActive)
-      .sort((a: any, b: any) => (b.regularPrice || 0) - (a.regularPrice || 0))
-      .slice(0, 5)
-      .map((product: any) => {
-        return {
-          id: product.id,
-          name: product.name,
-          imageUrl: product.imageUrl,
-          quantity: product.stockLevel || 0,
-          revenue: product.regularPrice || 0,
-          markupPercentage: product.tmyMarkup || 0,
-          discountPercentage: product.customerDiscount || 0
-        };
-      });
-
-    if (fallbackProducts.length === 0) {
-      return (
-        <div className="text-center p-8">
-          <p className="text-muted-foreground">No product data available</p>
-        </div>
-      );
-    }
-
     return (
-      <div className="space-y-4">
+      <div className="text-center py-12">
+        <Package className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+        <h3 className="text-lg font-semibold mb-2">No Products Found</h3>
+        <p className="text-muted-foreground">No products available to display.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {Object.keys(salesData).length === 0 && (
         <div className="text-sm text-muted-foreground mb-4">
-          Showing products by price (order data not available yet)
+          Products ranked by revenue generated
         </div>
+      )}
+      
+      {/* Desktop Table - Using exact same structure as pricing page */}
+      <div className="hidden lg:block">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Product</TableHead>
-              <TableHead className="text-right">Stock Level</TableHead>
-              <TableHead className="text-right">Price</TableHead>
-              <TableHead className="text-right">Profit Margin</TableHead>
+              <TableHead className="text-right">Units Sold</TableHead>
+              <TableHead className="text-right">Revenue</TableHead>
+              <TableHead className="text-right">Profit</TableHead>
               <TableHead className="text-right">TMY Markup %</TableHead>
               <TableHead className="text-right">Cust Discount %</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {fallbackProducts.map((product, index) => {
-              // Find the enriched product details
-              const enrichedProduct = products.find((p: any) => p.id === product.id);
+            {topProducts.map((product: any) => {
+              const productSales = salesData[product.name] || { quantity: 0, revenue: 0 };
               
-              // Calculate revenue: units sold x item sell price
-              const unitPrice = enrichedProduct?.salePrice || enrichedProduct?.price || 0;
-              const revenue = product.quantity * unitPrice;
+              // Calculate revenue: units sold × item sell price
+              const unitPrice = product.salePrice || product.price || 0;
+              const calculatedRevenue = productSales.quantity * unitPrice;
               
-              // Calculate profit: revenue - (items sold x cost price)
-              const costPrice = enrichedProduct?.costPrice || 0;
-              const profit = revenue - (product.quantity * costPrice);
-              
-              // Calculate TMY Markup % exactly as in pricing page: ((effectivePrice - costPrice) / costPrice * 100)
-              const effectivePrice = enrichedProduct?.salePrice || enrichedProduct?.price || 0;
-              const tmyMarkup = costPrice > 0 
-                ? ((effectivePrice - costPrice) / costPrice * 100) 
-                : 0;
-              
-              // Calculate Customer Discount % exactly as in pricing page: ((regularPrice - salePrice) / regularPrice * 100)
-              const customerDiscount = enrichedProduct?.salePrice && enrichedProduct?.price > 0
-                ? ((enrichedProduct.price - enrichedProduct.salePrice) / enrichedProduct.price * 100)
-                : 0;
+              // Calculate profit: revenue - (items sold × cost price)
+              const costPrice = product.costPrice || 0;
+              const profit = calculatedRevenue - (productSales.quantity * costPrice);
 
               return (
-                <TableRow key={index} className="hover:bg-muted/50">
+                <TableRow key={product.id} className="hover:bg-muted/50">
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center overflow-hidden">
@@ -686,48 +691,50 @@ function TopProducts() {
                           {product.name}
                         </Link>
                         <p className="text-sm text-muted-foreground truncate">
-                          {enrichedProduct?.supplier || 'No supplier'}
+                          {product.supplier || 'No supplier'}
                         </p>
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="text-right font-mono">{product.quantity}</TableCell>
-                  <TableCell className="text-right font-mono">
-                    {formatCurrency(revenue)}
-                  </TableCell>
+                  
+                  <TableCell className="text-right font-mono">{productSales.quantity}</TableCell>
+                  <TableCell className="text-right font-mono">{formatCurrency(calculatedRevenue)}</TableCell>
                   <TableCell className="text-right font-mono">
                     <span className={profit > 0 ? 'text-green-600' : 'text-red-600'}>
                       {formatCurrency(profit)}
                     </span>
                   </TableCell>
+                  
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
-                      {tmyMarkup > 0 ? (
+                      {product.tmyMarkup > 0 ? (
                         <TrendingUp className="h-4 w-4 text-green-600" />
                       ) : (
                         <TrendingDown className="h-4 w-4 text-red-600" />
                       )}
                       <span className={`font-semibold ${
-                        tmyMarkup > 0 ? 'text-green-600' : 'text-red-600'
+                        product.tmyMarkup > 0 ? 'text-green-600' : 'text-red-600'
                       }`}>
-                        {tmyMarkup.toFixed(2)}%
+                        {product.tmyMarkup}%
                       </span>
                     </div>
                   </TableCell>
+                  
                   <TableCell className="text-right">
-                    {customerDiscount > 0 ? (
+                    {product.customerDiscount > 0 ? (
                       <Badge className="font-mono bg-pink-500 hover:bg-pink-600 text-white">
-                        {customerDiscount.toFixed(2)}%
+                        {product.customerDiscount}%
                       </Badge>
                     ) : (
                       <span className="text-muted-foreground">—</span>
                     )}
                   </TableCell>
+                  
                   <TableCell className="text-right">
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => window.location.href = `/admin/products/edit/${enrichedProduct?.id}`}
+                      onClick={() => window.location.href = `/admin/products/edit/${product.id}`}
                       className="hover:bg-primary hover:text-primary-foreground"
                     >
                       <Edit className="h-4 w-4 mr-2" />
@@ -740,123 +747,86 @@ function TopProducts() {
           </TableBody>
         </Table>
       </div>
-    );
-  }
 
-  return (
-    <div className="space-y-4">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Product</TableHead>
-            <TableHead className="text-right">Units Sold</TableHead>
-            <TableHead className="text-right">Revenue</TableHead>
-            <TableHead className="text-right">Profit</TableHead>
-            <TableHead className="text-right">TMY Markup %</TableHead>
-            <TableHead className="text-right">Cust Discount %</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {topProducts.map((product, index) => {
-            // Find the enriched product details
-            const enrichedProduct = products.find((p: any) => p.name === product.name);
-            
-            // Calculate revenue: units sold x item sell price
-            const unitPrice = enrichedProduct?.salePrice || enrichedProduct?.price || 0;
-            const revenue = product.quantity * unitPrice;
-            
-            // Calculate profit: revenue - (items sold x cost price)
-            const costPrice = enrichedProduct?.costPrice || 0;
-            const profit = revenue - (product.quantity * costPrice);
-            
-            // Calculate TMY Markup % exactly as in pricing page: ((effectivePrice - costPrice) / costPrice * 100)
-            const effectivePrice = enrichedProduct?.salePrice || enrichedProduct?.price || 0;
-            const tmyMarkup = costPrice > 0 
-              ? ((effectivePrice - costPrice) / costPrice * 100) 
-              : 0;
-            
-            // Calculate Customer Discount % exactly as in pricing page: ((regularPrice - salePrice) / regularPrice * 100)
-            const customerDiscount = enrichedProduct?.salePrice && enrichedProduct?.price > 0
-              ? ((enrichedProduct.price - enrichedProduct.salePrice) / enrichedProduct.price * 100)
-              : 0;
+      {/* Mobile Cards - Same as pricing page structure */}
+      <div className="lg:hidden space-y-4">
+        {topProducts.map((product: any) => {
+          const productSales = salesData[product.name] || { quantity: 0, revenue: 0 };
+          const unitPrice = product.salePrice || product.price || 0;
+          const calculatedRevenue = productSales.quantity * unitPrice;
+          const costPrice = product.costPrice || 0;
+          const profit = calculatedRevenue - (productSales.quantity * costPrice);
 
-            return (
-              <TableRow key={index} className="hover:bg-muted/50">
-                <TableCell>
-                  <div className="flex items-center gap-3">
-                    <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center overflow-hidden">
-                      {enrichedProduct?.imageUrl ? (
-                        <img 
-                          src={enrichedProduct.imageUrl} 
-                          alt={product.name}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <Package className="h-6 w-6 text-muted-foreground" />
-                      )}
-                    </div>
-                    <div className="min-w-0">
-                      <Link 
-                        href={`/admin/pricing?search=${encodeURIComponent(product.name)}`}
-                        className="font-medium hover:text-blue-600 hover:underline transition-colors truncate block"
-                      >
-                        {product.name}
-                      </Link>
-                      <p className="text-sm text-muted-foreground truncate">
-                        {enrichedProduct?.supplier || 'No supplier'}
-                      </p>
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell className="text-right font-mono">{product.quantity}</TableCell>
-                <TableCell className="text-right font-mono">
-                  {formatCurrency(revenue)}
-                </TableCell>
-                <TableCell className="text-right font-mono">
-                  <span className={profit > 0 ? 'text-green-600' : 'text-red-600'}>
-                    {formatCurrency(profit)}
-                  </span>
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex items-center justify-end gap-1">
-                    {tmyMarkup > 0 ? (
-                      <TrendingUp className="h-4 w-4 text-green-600" />
+          return (
+            <Card key={product.id}>
+              <CardContent className="p-4">
+                <div className="flex items-start gap-4">
+                  <div className="h-16 w-16 rounded-lg bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
+                    {product.imageUrl ? (
+                      <img 
+                        src={product.imageUrl} 
+                        alt={product.name}
+                        className="h-full w-full object-cover"
+                      />
                     ) : (
-                      <TrendingDown className="h-4 w-4 text-red-600" />
+                      <Package className="h-8 w-8 text-muted-foreground" />
                     )}
-                    <span className={`font-semibold ${
-                      tmyMarkup > 0 ? 'text-green-600' : 'text-red-600'
-                    }`}>
-                      {tmyMarkup.toFixed(2)}%
-                    </span>
                   </div>
-                </TableCell>
-                <TableCell className="text-right">
-                  {customerDiscount > 0 ? (
-                    <Badge className="font-mono bg-pink-500 hover:bg-pink-600 text-white">
-                      {customerDiscount.toFixed(2)}%
-                    </Badge>
-                  ) : (
-                    <span className="text-muted-foreground">—</span>
-                  )}
-                </TableCell>
-                <TableCell className="text-right">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => window.location.href = `/admin/products/edit/${enrichedProduct?.id}`}
-                    className="hover:bg-primary hover:text-primary-foreground"
-                  >
-                    <Edit className="h-4 w-4 mr-2" />
-                    Edit
-                  </Button>
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
+                  <div className="flex-1 min-w-0">
+                    <Link 
+                      href={`/admin/pricing?search=${encodeURIComponent(product.name)}`}
+                      className="font-medium hover:text-blue-600 hover:underline transition-colors block truncate"
+                    >
+                      {product.name}
+                    </Link>
+                    <p className="text-sm text-muted-foreground truncate">{product.supplier || 'No supplier'}</p>
+                    
+                    <div className="grid grid-cols-2 gap-4 mt-3 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Units Sold:</span>
+                        <div className="font-mono">{productSales.quantity}</div>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Revenue:</span>
+                        <div className="font-mono">{formatCurrency(calculatedRevenue)}</div>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Profit:</span>
+                        <div className={`font-mono ${profit > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {formatCurrency(profit)}
+                        </div>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">TMY Markup:</span>
+                        <div className={`font-semibold ${product.tmyMarkup > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {product.tmyMarkup}%
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between mt-4">
+                      {product.customerDiscount > 0 && (
+                        <Badge className="font-mono bg-pink-500 hover:bg-pink-600 text-white">
+                          {product.customerDiscount}% Discount
+                        </Badge>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.location.href = `/admin/products/edit/${product.id}`}
+                        className="ml-auto"
+                      >
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
     </div>
   );
 }
