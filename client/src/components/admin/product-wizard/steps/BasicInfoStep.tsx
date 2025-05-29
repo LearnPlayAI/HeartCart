@@ -150,27 +150,20 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
   // Get child categories for the selected parent
   const childCategories = React.useMemo(() => {
     if (!selectedParentCategoryId) return [];
-    const children = categoriesWithParents.filter((cat: any) => cat.parentId === selectedParentCategoryId);
-    console.log('Child categories for parent', selectedParentCategoryId, ':', children);
-    return children;
+    return categoriesWithParents.filter((cat: any) => cat.parentId === selectedParentCategoryId);
   }, [categoriesWithParents, selectedParentCategoryId]);
 
   // Initialize category selection state based on draft
   React.useEffect(() => {
     if (draft.categoryId && categoriesWithParents.length > 0) {
-      console.log('Initializing categories. Draft categoryId:', draft.categoryId);
-      console.log('Available categories:', categoriesWithParents);
       const currentCategory = categoriesWithParents.find((cat: any) => cat.id === draft.categoryId);
-      console.log('Found current category:', currentCategory);
       if (currentCategory) {
         if (currentCategory.parentId) {
           // This is a child category
-          console.log('Setting parent category:', currentCategory.parentId, 'and child category:', currentCategory.id);
           setSelectedParentCategoryId(currentCategory.parentId);
           setSelectedChildCategoryId(currentCategory.id);
         } else {
           // This is a parent category
-          console.log('Setting parent category only:', currentCategory.id);
           setSelectedParentCategoryId(currentCategory.id);
           setSelectedChildCategoryId(null);
         }
@@ -208,11 +201,17 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
 
   // Handle child category selection
   const handleChildCategoryChange = (childId: string) => {
-    const childIdNum = Number(childId);
-    setSelectedChildCategoryId(childIdNum);
-    
-    // Update form with child category
-    form.setValue('categoryId', childIdNum);
+    if (childId === "clear") {
+      // User is deselecting the child category
+      setSelectedChildCategoryId(null);
+      // Set categoryId to parent category when child is cleared
+      form.setValue('categoryId', selectedParentCategoryId || 0);
+    } else {
+      const childIdNum = Number(childId);
+      setSelectedChildCategoryId(childIdNum);
+      // Set categoryId to child category when child is selected
+      form.setValue('categoryId', childIdNum);
+    }
   };
 
   // Update form values when draft changes
@@ -570,7 +569,7 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
               </Label>
               <Select
                 onValueChange={handleChildCategoryChange}
-                value={selectedChildCategoryId?.toString() || undefined}
+                value={selectedChildCategoryId?.toString() || ""}
                 disabled={!selectedParentCategoryId || childCategories.length === 0}
               >
                 <SelectTrigger className="h-9 sm:h-10" id="child-category">
@@ -583,6 +582,11 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
                   } />
                 </SelectTrigger>
                 <SelectContent>
+                  {selectedChildCategoryId && (
+                    <SelectItem value="clear">
+                      <span className="text-muted-foreground">Clear selection</span>
+                    </SelectItem>
+                  )}
                   {childCategories.map((category: any) => (
                     <SelectItem key={category.id} value={category.id.toString()}>
                       {category.name}
