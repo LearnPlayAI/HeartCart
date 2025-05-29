@@ -312,22 +312,41 @@ function BusinessOverview() {
     );
   }
 
+  const orders = ordersResponse?.data || [];
+  const products = productsResponse?.data || [];
+  const users = usersResponse?.data || [];
+
+  if (!Array.isArray(orders) || !Array.isArray(products) || !Array.isArray(users)) {
+    return (
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+        {[1, 2, 3, 4].map((i) => (
+          <Card key={i}>
+            <CardContent className="p-4">
+              <div className="text-sm font-medium text-muted-foreground">No Data</div>
+              <div className="text-2xl font-bold">0</div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
   // Calculate current month stats
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
 
-  const thisMonthOrders = orders?.filter(order => {
+  const thisMonthOrders = orders.filter((order: any) => {
     const orderDate = new Date(order.createdAt);
     return orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear;
-  }) || [];
+  });
 
-  const thisMonthUsers = users?.filter(user => {
+  const thisMonthUsers = users.filter((user: any) => {
     const userDate = new Date(user.createdAt);
     return userDate.getMonth() === currentMonth && userDate.getFullYear() === currentYear;
-  }) || [];
+  });
 
-  const activeProducts = products?.filter(product => product.isActive) || [];
-  const lowStockProducts = products?.filter(product => product.stockLevel <= 10) || [];
+  const activeProducts = products.filter((product: any) => product.isActive);
+  const lowStockProducts = products.filter((product: any) => product.stockLevel <= 10);
 
   const businessCards = [
     {
@@ -389,7 +408,7 @@ function BusinessOverview() {
  */
 function RecentOrders() {
   const { formatShortDate } = useDateFormat();
-  const { data: orders, isLoading } = useQuery<Order[]>({
+  const { data: response, isLoading } = useQuery({
     queryKey: ["/api/admin/orders"],
   });
 
@@ -401,7 +420,8 @@ function RecentOrders() {
     );
   }
 
-  if (!orders || orders.length === 0) {
+  const orders = response?.data || [];
+  if (!Array.isArray(orders) || orders.length === 0) {
     return (
       <div className="text-center p-8">
         <p className="text-muted-foreground">No recent orders found</p>
@@ -411,7 +431,7 @@ function RecentOrders() {
 
   // Get the 5 most recent orders
   const recentOrders = orders
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 5);
 
   const getStatusBadgeStyle = (status: string) => {
