@@ -351,33 +351,7 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ draftId, initialDa
     },
   });
 
-  // Delete a draft
-  const deleteDraftMutation = useMutation({
-    mutationFn: async () => {
-      if (!draftId) throw new Error('No draft ID available');
-      const response = await apiRequest('DELETE', `/api/product-drafts/${draftId}`);
-      return response.json();
-    },
-    onSuccess: (data) => {
-      if (data.success) {
-        
-        setLocation('/admin/catalog');
-      } else {
-        toast({
-          title: 'Error',
-          description: data.error?.message || 'Failed to delete draft',
-          variant: 'destructive',
-        });
-      }
-    },
-    onError: (error: any) => {
-      toast({
-        title: 'Error',
-        description: `Failed to delete: ${error.message || 'Unknown error'}`,
-        variant: 'destructive',
-      });
-    },
-  });
+
 
   // Publish a draft to create/update the actual product
   const publishDraftMutation = useMutation({

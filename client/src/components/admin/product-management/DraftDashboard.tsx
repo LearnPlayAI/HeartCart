@@ -49,7 +49,7 @@ export const DraftDashboard: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newDraftName, setNewDraftName] = useState('');
-  const [draftToDelete, setDraftToDelete] = useState<number | null>(null);
+
   const [newDraftLoading, setNewDraftLoading] = useState(false);
   
   // Fetch product drafts
@@ -100,46 +100,7 @@ export const DraftDashboard: React.FC = () => {
     }
   });
   
-  // Delete draft mutation
-  const deleteDraftMutation = useMutation({
-    mutationFn: async (draftId: number) => {
-      console.log(`Attempting to delete draft with ID: ${draftId}`);
-      try {
-        // Add a credentials flag to ensure cookies are sent
-        const response = await apiRequest('DELETE', `/api/product-drafts/${draftId}`, null, {
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        console.log('Delete draft response:', response);
-        return response.json();
-      } catch (error) {
-        console.error('Error deleting draft:', error);
-        throw error;
-      }
-    },
-    onSuccess: (data) => {
-      if (data.success) {
-        
-        queryClient.invalidateQueries({ queryKey: ['/api/product-drafts'] });
-      } else {
-        toast({
-          title: 'Deletion Failed',
-          description: data.error?.message || 'Failed to delete the product draft.',
-          variant: 'destructive',
-        });
-      }
-    },
-    onError: (error: any) => {
-      toast({
-        title: 'Deletion Failed',
-        description: 'An error occurred while deleting the product draft.',
-        variant: 'destructive',
-      });
-    }
-  });
+
   
   // Handle create draft
   const handleCreateDraft = () => {
@@ -156,11 +117,7 @@ export const DraftDashboard: React.FC = () => {
     createDraftMutation.mutate(newDraftName);
   };
   
-  // Handle delete draft
-  const handleDeleteDraft = (draftId: number) => {
-    setDraftToDelete(null);
-    deleteDraftMutation.mutate(draftId);
-  };
+
   
   // Filter drafts based on search query and exclude published products
   const filteredDrafts = draftsData?.data?.filter((draft: ProductDraft) => {
@@ -383,13 +340,6 @@ export const DraftDashboard: React.FC = () => {
                                 </Link>
                               </DropdownMenuItem>
                             )}
-                            <DropdownMenuItem
-                              onSelect={() => setDraftToDelete(draft.id)}
-                              className="text-destructive focus:text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete Draft
-                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -449,26 +399,7 @@ export const DraftDashboard: React.FC = () => {
         </DialogContent>
       </Dialog>
       
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!draftToDelete} onOpenChange={(open) => !open && setDraftToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete this product draft and all associated data. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={() => draftToDelete && handleDeleteDraft(draftToDelete)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+
     </div>
   );
 };
