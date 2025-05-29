@@ -11,7 +11,7 @@ const FeaturedProductsSection = () => {
   const limit = 10;
   const { toast } = useToast();
   
-  const { data: response, isLoading, isFetching, error } = useQuery<StandardApiResponse<Product[]>>({
+  const { data: response, isLoading, isFetching, error, refetch } = useQuery<StandardApiResponse<Product[]>>({
     queryKey: ['/api/featured-products', { limit, offset: (page - 1) * limit }],
   });
   

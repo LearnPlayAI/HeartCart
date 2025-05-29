@@ -38,7 +38,7 @@ export function CategorySidebar({
   }
   
   // Fetch main categories with their children using the new API endpoint
-  const { data: response, isLoading, error } = useQuery<ApiResponse>({
+  const { data: response, isLoading, error, refetch } = useQuery<ApiResponse>({
     queryKey: ["/api/categories/main/with-children"],
   });
   
@@ -136,7 +136,7 @@ export function CategorySidebar({
             <div className="text-red-500 mb-2 text-sm">Failed to load categories</div>
             <button 
               className="px-3 py-1 text-xs rounded-md border border-pink-600 text-pink-600 hover:bg-pink-50 transition-colors"
-              onClick={() => window.location.reload()}
+              onClick={() => refetch()}
             >
               Retry
             </button>

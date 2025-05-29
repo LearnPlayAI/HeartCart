@@ -30,7 +30,7 @@ const CategoriesShowcase = () => {
     data: Category[];
   }
   
-  const { data: response, isLoading, error } = useQuery<ApiResponse>({
+  const { data: response, isLoading, error, refetch } = useQuery<ApiResponse>({
     queryKey: ['/api/categories'],
   });
   
@@ -63,7 +63,7 @@ const CategoriesShowcase = () => {
             <div className="text-red-500 mb-2">Failed to load categories</div>
             <button 
               className="px-4 py-2 rounded-md border border-[#FF69B4] text-[#FF69B4] hover:bg-[#FF69B4] hover:text-white transition-colors"
-              onClick={() => window.location.reload()}
+              onClick={() => refetch()}
             >
               Retry
             </button>
