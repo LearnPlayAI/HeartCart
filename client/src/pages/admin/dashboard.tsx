@@ -352,7 +352,11 @@ function BusinessOverview() {
     return userDate.getMonth() === currentMonth && userDate.getFullYear() === currentYear;
   });
 
-  const activeProducts = products.filter((product: any) => product.isActive);
+  // Debug logging to check product data structure
+  console.log('Products data:', products.slice(0, 2)); // Show first 2 products for debugging
+  console.log('Sample product isActive values:', products.map((p: any) => ({ id: p.id, name: p.name, isActive: p.isActive, is_active: p.is_active })).slice(0, 3));
+  
+  const activeProducts = products.filter((product: any) => product.isActive === true);
   const lowStockProducts = products.filter((product: any) => product.stockLevel <= 10);
 
   // Calculate total customers from orders (unique customers who made purchases)
