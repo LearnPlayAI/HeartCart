@@ -82,9 +82,9 @@ export default function AdminCategories() {
   
   // Fetch hierarchical category data for tree view
   const { data: hierarchicalCategoriesResponse } = useQuery<{success: boolean, data: Array<{ category: Category, children: Category[] }>}>({
-    queryKey: ["/api/categories/main/with-children"],
+    queryKey: ["/api/categories/main/with-children", "forAdminPage"],
     queryFn: async () => {
-      const response = await fetch("/api/categories/main/with-children");
+      const response = await fetch("/api/categories/main/with-children?forAdminPage=true");
       if (!response.ok) throw new Error("Failed to fetch hierarchical categories");
       return await response.json();
     },

@@ -349,7 +349,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const user = req.user as any;
     const isAdmin = user && user.role === 'admin';
     
-    const options = { includeInactive: isAdmin };
+    // Only include inactive categories if explicitly requested by admin for admin pages
+    const forAdminPage = req.query.forAdminPage === 'true';
+    const includeInactive = isAdmin && forAdminPage;
+    
+    const options = { includeInactive };
     const mainCategoriesWithChildren = await storage.getMainCategoriesWithChildren(options);
     return mainCategoriesWithChildren;
   }));
