@@ -85,9 +85,7 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
   const [showAiDialog, setShowAiDialog] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   
-  // State for category selection
-  const [selectedParentCategoryId, setSelectedParentCategoryId] = useState<number | null>(null);
-  const [selectedChildCategoryId, setSelectedChildCategoryId] = useState<number | null>(null);
+  // No local state for category selection - use draft data as single source of truth
 
   // Fetch categories for the dropdown
   const { data: categoriesData, isLoading: isCategoriesLoading } = useQuery({
@@ -147,10 +145,22 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
     return categoriesWithParents.filter((cat: any) => !cat.parentId);
   }, [categoriesWithParents]);
 
-  // Track if user manually cleared child selection
-  const [userClearedChild, setUserClearedChild] = React.useState(false);
-  // Track if user is actively making category changes
-  const [userIsChangingCategories, setUserIsChangingCategories] = React.useState(false);
+  // Derive current category info from draft data (single source of truth)
+  const currentCategory = React.useMemo(() => {
+    if (!draft.categoryId || !categoriesWithParents.length) return null;
+    return categoriesWithParents.find((cat: any) => cat.id === draft.categoryId);
+  }, [draft.categoryId, categoriesWithParents]);
+
+  // Derive parent and child from current category
+  const selectedParentCategoryId = React.useMemo(() => {
+    if (!currentCategory) return null;
+    return currentCategory.parentId || currentCategory.id;
+  }, [currentCategory]);
+
+  const selectedChildCategoryId = React.useMemo(() => {
+    if (!currentCategory || !currentCategory.parentId) return null;
+    return currentCategory.id;
+  }, [currentCategory]);
 
   // Get child categories for the selected parent
   const childCategories = React.useMemo(() => {
@@ -158,89 +168,25 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
     return categoriesWithParents.filter((cat: any) => cat.parentId === selectedParentCategoryId);
   }, [categoriesWithParents, selectedParentCategoryId]);
 
-  // Initialize category selection state based on draft
-  React.useEffect(() => {
-    if (draft.categoryId && categoriesWithParents.length > 0) {
-      const currentCategory = categoriesWithParents.find((cat: any) => cat.id === draft.categoryId);
-      if (currentCategory) {
-        if (currentCategory.parentId) {
-          // This is a child category
-          setSelectedParentCategoryId(currentCategory.parentId);
-          setSelectedChildCategoryId(currentCategory.id);
-        } else {
-          // This is a parent category
-          setSelectedParentCategoryId(currentCategory.id);
-          setSelectedChildCategoryId(null);
-        }
-      }
-    }
-  }, [draft.categoryId, categoriesWithParents]);
-
-  // Reset and reinitialize category state when step becomes active
-  React.useEffect(() => {
-    if (draft.categoryId && categoriesWithParents.length > 0 && !userClearedChild && !userIsChangingCategories) {
-      const currentCategory = categoriesWithParents.find((cat: any) => cat.id === draft.categoryId);
-      if (currentCategory) {
-        if (currentCategory.parentId) {
-          // This is a child category - ensure both parent and child are set
-          if (selectedParentCategoryId !== currentCategory.parentId) {
-            setSelectedParentCategoryId(currentCategory.parentId);
-          }
-          if (selectedChildCategoryId !== currentCategory.id) {
-            setSelectedChildCategoryId(currentCategory.id);
-          }
-        } else {
-          // This is a parent category
-          if (selectedParentCategoryId !== currentCategory.id) {
-            setSelectedParentCategoryId(currentCategory.id);
-          }
-          if (selectedChildCategoryId !== null) {
-            setSelectedChildCategoryId(null);
-          }
-        }
-      }
-    }
-  }, [draft, categoriesWithParents, selectedParentCategoryId, selectedChildCategoryId, userClearedChild, userIsChangingCategories]);
-
   // Handle parent category selection
   const handleParentCategoryChange = (parentId: string) => {
-    setUserIsChangingCategories(true); // Mark that user is making changes
     const parentIdNum = Number(parentId);
-    setSelectedParentCategoryId(parentIdNum);
-    setSelectedChildCategoryId(null); // Reset child selection
-    setUserClearedChild(false); // Reset the cleared flag when changing parent
-    
-    // Update form with parent category
+    // Update form with parent category (no child selected)
     form.setValue('categoryId', parentIdNum);
-    
-    // Reset the flag after a brief delay
-    setTimeout(() => {
-      setUserIsChangingCategories(false);
-    }, 200);
   };
 
   // Handle child category selection
   const handleChildCategoryChange = (childId: string) => {
-    setUserIsChangingCategories(true); // Mark that user is making changes
-    
     if (childId === "clear-selection") {
-      // User is deselecting the child category
-      setSelectedChildCategoryId(null);
-      setUserClearedChild(true); // Mark that user manually cleared
-      // Set categoryId to parent category when child is cleared
-      form.setValue('categoryId', selectedParentCategoryId || 0);
+      // User is deselecting the child category, set to parent category
+      if (selectedParentCategoryId) {
+        form.setValue('categoryId', selectedParentCategoryId);
+      }
     } else {
       const childIdNum = Number(childId);
-      setSelectedChildCategoryId(childIdNum);
-      setUserClearedChild(false); // Reset the flag when selecting a child
       // Set categoryId to child category when child is selected
       form.setValue('categoryId', childIdNum);
     }
-    
-    // Reset the flag after a brief delay
-    setTimeout(() => {
-      setUserIsChangingCategories(false);
-    }, 200);
   };
 
   // Update form values when draft changes
