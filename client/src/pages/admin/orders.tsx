@@ -346,24 +346,15 @@ function OrderDetailsDialog({ order, open, onOpenChange }: {
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ orderId, status }: { orderId: number; status: string }) => {
-      try {
-        const response = await apiRequest('PATCH', `/api/admin/orders/${orderId}/status`, { status });
-        const result = await response.json();
-        console.log('Status update response:', result);
-        return result;
-      } catch (error) {
-        console.error('Status update error:', error);
-        throw error;
-      }
+      const response = await apiRequest('PATCH', `/api/admin/orders/${orderId}/status`, { status });
+      return await response.json();
     },
-    onSuccess: (data) => {
-      console.log('Status update success:', data);
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
-      refetch(); // Force immediate refetch
       toast({ description: "Order status updated successfully" });
     },
     onError: (error) => {
-      console.error('Status update mutation error:', error);
+      console.error('Status update error:', error);
       toast({ 
         variant: "destructive",
         description: "Failed to update order status" 
