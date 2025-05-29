@@ -124,6 +124,28 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
     },
   });
 
+  // Update form values when draft data changes (e.g., after page refresh)
+  React.useEffect(() => {
+    if (draft) {
+      form.reset({
+        name: draft.name || '',
+        slug: draft.slug || '',
+        sku: draft.sku || '',
+        description: draft.description || '',
+        categoryId: draft.categoryId || 0,
+        supplierId: draft.supplierId || 0,
+        catalogId: draft.catalogId || 0,
+        regularPrice: draft.regularPrice || 0,
+        salePrice: draft.salePrice || null,
+        costPrice: draft.costPrice || null,
+        onSale: draft.onSale || false,
+        stockLevel: draft.stockLevel || 0,
+        isActive: draft.isActive !== undefined ? draft.isActive : true,
+        isFeatured: draft.isFeatured || false,
+      });
+    }
+  }, [draft, form]);
+
   // Organize categories into parent/child relationships
   const categoriesWithParents = React.useMemo(() => {
     const categories = categoriesData?.data || [];
