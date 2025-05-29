@@ -124,9 +124,10 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
     },
   });
 
-  // Update form values when draft data changes (e.g., after page refresh)
+  // Update form values when draft data AND categories data are both available
   React.useEffect(() => {
-    if (draft) {
+    if (draft && categoriesData?.data?.length > 0) {
+      console.log('Resetting form with draft categoryId:', draft.categoryId);
       form.reset({
         name: draft.name || '',
         slug: draft.slug || '',
@@ -144,7 +145,7 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
         isFeatured: draft.isFeatured || false,
       });
     }
-  }, [draft, form]);
+  }, [draft, categoriesData, form]);
 
   // Organize categories into parent/child relationships
   const categoriesWithParents = React.useMemo(() => {
