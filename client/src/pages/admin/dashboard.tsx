@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { 
   Loader2, 
   ShoppingCart, 
@@ -501,6 +501,39 @@ function RecentOrders() {
  * Top Products Component - Uses same enrichment logic as pricing page
  */
 function TopProducts() {
+  const [, setLocation] = useLocation();
+
+  // Handle edit product - EXACT same function as pricing page
+  const handleEditProduct = async (productId: number) => {
+    try {
+      // Set flag to indicate we came from pricing page
+      sessionStorage.setItem('cameFromPricing', 'true');
+      
+      // Call API to create or reuse existing draft
+      const response = await fetch(`/api/product-drafts/create-from-published/${productId}`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        console.error("Failed to create product draft");
+        return;
+      }
+      
+      // Get the draft data
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        // Navigate to product wizard with the draft ID
+        setLocation(`/admin/product-wizard/${result.data.draftId}`);
+      } else {
+        console.error("Invalid response from server");
+      }
+    } catch (error) {
+      console.error("Error creating product draft:", error);
+    }
+  };
+
   // Fetch data with same queries as pricing page
   const { data: productsResponse, isLoading: isProductsLoading } = useQuery({
     queryKey: ['/api/products'],
@@ -749,7 +782,7 @@ function TopProducts() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => window.location.href = `/admin/products/edit/${product.id}`}
+                      onClick={() => handleEditProduct(product.id)}
                       className="hover:bg-primary hover:text-primary-foreground"
                     >
                       <Edit className="h-4 w-4 mr-2" />
