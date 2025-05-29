@@ -148,23 +148,23 @@ export class BatchUploadService {
     try {
       const statusFields: Partial<BatchUpload> = {
         status,
-        updatedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString().toISOString(),
       };
       
       // Add appropriate timestamp based on status
       switch (status) {
         case BATCH_STATUSES.COMPLETED:
-          statusFields.completedAt = new Date().toISOString();
+          statusFields.completedAt = new Date().toISOString().toISOString();
           break;
         case BATCH_STATUSES.CANCELLED:
-          statusFields.canceledAt = new Date().toISOString();
+          statusFields.canceledAt = new Date().toISOString().toISOString();
           break;
         case BATCH_STATUSES.PAUSED:
-          statusFields.pausedAt = new Date().toISOString();
+          statusFields.pausedAt = new Date().toISOString().toISOString();
           break;
         case BATCH_STATUSES.RESUMABLE:
         case BATCH_STATUSES.RETRYING:
-          statusFields.resumedAt = new Date().toISOString();
+          statusFields.resumedAt = new Date().toISOString().toISOString();
           break;
       }
       
@@ -328,7 +328,8 @@ export class BatchUploadService {
                 // Log validation errors
                 for (const error of validationResult.errors) {
                   await self.logBatchError({
-                    batchUploadId: batchId,
+        batchUploadId: batchId,
+                    batchUploadId: batchUploadId: batchId,
                     row: totalRecords,
                     type: ERROR_TYPES.VALIDATION,
                     message: error.message,
@@ -384,7 +385,8 @@ export class BatchUploadService {
                   : 'Unknown processing error';
                 
                 await self.logBatchError({
-                  batchUploadId: batchId,
+        batchUploadId: batchId,
+                  batchUploadId: batchUploadId: batchId,
                   row: totalRecords,
                   type: ERROR_TYPES.PROCESSING,
                   message: errorMessage,
@@ -404,7 +406,8 @@ export class BatchUploadService {
               const errorMessage = error instanceof Error ? error.message : 'Unknown error';
               
               await self.logBatchError({
-                batchUploadId: batchId,
+        batchUploadId: batchId,
+                batchUploadId: batchUploadId: batchId,
                 row: totalRecords,
                 type: ERROR_TYPES.SYSTEM,
                 message: `System error: ${errorMessage}`,
@@ -773,7 +776,7 @@ export class BatchUploadService {
           .set({
             selectedOptions: selectedOptionIds,
             textValue: textValue,
-            updatedAt: new Date()
+            updatedAt: new Date().toISOString()
           })
           .where(eq(productAttributes.id, existingProductAttribute.id));
       } else {
@@ -1006,14 +1009,15 @@ export class BatchUploadService {
       try {
         // Update batch status to cancelled
         await this.updateBatchStatus(batchId, BATCH_STATUSES.CANCELLED, {
-          canceledAt: new Date(), // Add cancellation timestamp for tracking
+          canceledAt: new Date().toISOString(), // Add cancellation timestamp for tracking
         });
         
         // Log the system event for audit trail
         await this.logBatchError({
-          batchId,
-          errorType: ERROR_TYPES.SYSTEM,
-          errorMessage: `Batch was manually cancelled while in ${batch.status} state`,
+        batchUploadId: batchId,
+          batchUploadId: batchId,
+          type: ERROR_TYPES.SYSTEM,
+          message: `Batch was manually cancelled while in ${batch.status} state`,
           severity: ERROR_SEVERITY.INFO, // This is an informational message, not an error
         });
         
@@ -1041,9 +1045,10 @@ export class BatchUploadService {
       // Attempt to log the error to the database for the batch
       try {
         await this.logBatchError({
-          batchId,
-          errorType: ERROR_TYPES.SYSTEM,
-          errorMessage: `Failed to cancel batch: ${errorMessage}`,
+        batchUploadId: batchId,
+          batchUploadId: batchId,
+          type: ERROR_TYPES.SYSTEM,
+          message: `Failed to cancel batch: ${errorMessage}`,
           severity: ERROR_SEVERITY.ERROR,
         });
       } catch (logError) {
@@ -1114,14 +1119,15 @@ export class BatchUploadService {
         // This ensures we can resume from the correct position later
         await this.updateBatchStatus(batchId, BATCH_STATUSES.PAUSED, {
           lastProcessedRow: batch.processedRecords || 0,
-          pausedAt: new Date() // Add timestamp for when the batch was paused
+          pausedAt: new Date().toISOString() // Add timestamp for when the batch was paused
         });
         
         // Log the system event for audit trail
         await this.logBatchError({
-          batchId,
-          errorType: ERROR_TYPES.SYSTEM,
-          errorMessage: `Batch was manually paused at row ${batch.processedRecords || 0}`,
+        batchUploadId: batchId,
+          batchUploadId: batchId,
+          type: ERROR_TYPES.SYSTEM,
+          message: `Batch was manually paused at row ${batch.processedRecords || 0}`,
           severity: ERROR_SEVERITY.INFO, // This is an informational message, not an error
         });
         
@@ -1149,9 +1155,10 @@ export class BatchUploadService {
       // Attempt to log the error to the database for the batch
       try {
         await this.logBatchError({
-          batchId,
-          errorType: ERROR_TYPES.SYSTEM,
-          errorMessage: `Failed to pause batch: ${errorMessage}`,
+        batchUploadId: batchId,
+          batchUploadId: batchId,
+          type: ERROR_TYPES.SYSTEM,
+          message: `Failed to pause batch: ${errorMessage}`,
           severity: ERROR_SEVERITY.ERROR,
         });
       } catch (logError) {
@@ -1219,9 +1226,10 @@ export class BatchUploadService {
       if (!batch.fileName) {
         console.error(`No file path associated with batch ID ${batchId}`);
         await this.logBatchError({
-          batchId,
-          errorType: ERROR_TYPES.SYSTEM,
-          errorMessage: 'Cannot resume batch: No file path stored with batch',
+        batchUploadId: batchId,
+          batchUploadId: batchId,
+          type: ERROR_TYPES.SYSTEM,
+          message: 'Cannot resume batch: No file path stored with batch',
           severity: ERROR_SEVERITY.ERROR,
         });
         
@@ -1237,9 +1245,10 @@ export class BatchUploadService {
       if (!fs.existsSync(batch.fileName)) {
         console.error(`CSV file not found for batch ID ${batchId}: ${batch.fileName}`);
         await this.logBatchError({
-          batchId,
-          errorType: ERROR_TYPES.SYSTEM,
-          errorMessage: `Cannot resume batch: File not found at ${batch.fileName}`,
+        batchUploadId: batchId,
+          batchUploadId: batchId,
+          type: ERROR_TYPES.SYSTEM,
+          message: `Cannot resume batch: File not found at ${batch.fileName}`,
           severity: ERROR_SEVERITY.ERROR,
         });
         
@@ -1258,21 +1267,22 @@ export class BatchUploadService {
       try {
         // Update batch status to processing before starting
         await this.updateBatchStatus(batchId, BATCH_STATUSES.PROCESSING, {
-          resumedAt: new Date(), // Add timestamp for when the batch was resumed
+          resumedAt: new Date().toISOString(), // Add timestamp for when the batch was resumed
         });
         
         // Log the system event for audit trail
         await this.logBatchError({
-          batchId,
-          errorType: ERROR_TYPES.SYSTEM,
-          errorMessage: `Batch is being resumed from row ${batch.lastProcessedRow || 0}`,
+        batchUploadId: batchId,
+          batchUploadId: batchId,
+          type: ERROR_TYPES.SYSTEM,
+          message: `Batch is being resumed from row ${batch.lastProcessedRow || 0}`,
           severity: ERROR_SEVERITY.INFO,
         });
         
         // Process the CSV file from the last processed row
         // This handles the actual data processing and product creation
         const results = await this.parseAndProcessCsv(
-          batchId, 
+          batchUploadId: batchId, 
           batch.fileName, 
           batch.lastProcessedRow || 0
         );
@@ -1290,16 +1300,17 @@ export class BatchUploadService {
           processedRecords,
           successCount,
           errorCount,
-          completedAt: finalStatus === BATCH_STATUSES.COMPLETED ? new Date() : undefined
+          completedAt: finalStatus === BATCH_STATUSES.COMPLETED ? new Date().toISOString() : undefined
         });
         
         console.log(`Resume completed for batch ${batchId}: ${processedRecords}/${totalRecords} records processed, ${successCount} succeeded, ${errorCount} failed`);
         
         // Log completion event
         await this.logBatchError({
-          batchId,
-          errorType: ERROR_TYPES.SYSTEM,
-          errorMessage: `Resume completed with status: ${finalStatus}. Stats: ${processedRecords}/${totalRecords} processed, ${successCount} successful, ${errorCount} errors.`,
+        batchUploadId: batchId,
+          batchUploadId: batchId,
+          type: ERROR_TYPES.SYSTEM,
+          message: `Resume completed with status: ${finalStatus}. Stats: ${processedRecords}/${totalRecords} processed, ${successCount} successful, ${errorCount} errors.`,
           severity: results.success ? ERROR_SEVERITY.INFO : ERROR_SEVERITY.WARNING,
         });
         
@@ -1334,15 +1345,16 @@ export class BatchUploadService {
       try {
         // Log the system error
         await this.logBatchError({
-          batchId,
-          errorType: ERROR_TYPES.SYSTEM,
-          errorMessage: `Resume error: ${errorMessage}`,
+        batchUploadId: batchId,
+          batchUploadId: batchId,
+          type: ERROR_TYPES.SYSTEM,
+          message: `Resume error: ${errorMessage}`,
           severity: ERROR_SEVERITY.ERROR,
         });
         
         // Update batch status to failed
         await this.updateBatchStatus(batchId, BATCH_STATUSES.FAILED, {
-          failedAt: new Date()
+          failedAt: new Date().toISOString()
         });
       } catch (logError) {
         // Just log to console if we can't log to the database
@@ -1408,9 +1420,10 @@ export class BatchUploadService {
       if (!batch.fileName) {
         console.error(`No file path associated with batch ID ${batchId}`);
         await this.logBatchError({
-          batchId,
-          errorType: ERROR_TYPES.SYSTEM,
-          errorMessage: 'Cannot retry batch: No file path stored with batch',
+        batchUploadId: batchId,
+          batchUploadId: batchId,
+          type: ERROR_TYPES.SYSTEM,
+          message: 'Cannot retry batch: No file path stored with batch',
           severity: ERROR_SEVERITY.ERROR,
         });
         
@@ -1426,9 +1439,10 @@ export class BatchUploadService {
       if (!fs.existsSync(batch.fileName)) {
         console.error(`CSV file not found for batch ID ${batchId}: ${batch.fileName}`);
         await this.logBatchError({
-          batchId,
-          errorType: ERROR_TYPES.SYSTEM,
-          errorMessage: `Cannot retry batch: File not found at ${batch.fileName}`,
+        batchUploadId: batchId,
+          batchUploadId: batchId,
+          type: ERROR_TYPES.SYSTEM,
+          message: `Cannot retry batch: File not found at ${batch.fileName}`,
           severity: ERROR_SEVERITY.ERROR,
         });
         
@@ -1453,14 +1467,15 @@ export class BatchUploadService {
           processedRecords: 0,
           successCount: 0,
           errorCount: 0,
-          startedAt: new Date(), // Reset start time for this retry attempt
+          startedAt: new Date().toISOString(), // Reset start time for this retry attempt
         });
         
         // Log the retry event for audit trail
         await this.logBatchError({
-          batchId,
-          errorType: ERROR_TYPES.SYSTEM,
-          errorMessage: `Starting retry attempt #${retryCount}`,
+        batchUploadId: batchId,
+          batchUploadId: batchId,
+          type: ERROR_TYPES.SYSTEM,
+          message: `Starting retry attempt #${retryCount}`,
           severity: ERROR_SEVERITY.INFO,
         });
         
@@ -1484,17 +1499,18 @@ export class BatchUploadService {
           processedRecords: results.processedRecords,
           successCount: results.successRecords,
           errorCount: results.failedRecords,
-          completedAt: finalStatus === BATCH_STATUSES.COMPLETED ? new Date() : undefined,
-          failedAt: finalStatus === BATCH_STATUSES.FAILED ? new Date() : undefined
+          completedAt: finalStatus === BATCH_STATUSES.COMPLETED ? new Date().toISOString() : undefined,
+          failedAt: finalStatus === BATCH_STATUSES.FAILED ? new Date().toISOString() : undefined
         });
         
         console.log(`Retry completed for batch ${batchId}: ${results.processedRecords}/${results.totalRecords} records processed, ${results.successRecords} succeeded, ${results.failedRecords} failed`);
         
         // Log completion event
         await this.logBatchError({
-          batchId,
-          errorType: ERROR_TYPES.SYSTEM,
-          errorMessage: `Retry #${retryCount} completed with status: ${finalStatus}. Stats: ${results.processedRecords}/${results.totalRecords} processed, ${results.successRecords} successful, ${results.failedRecords} errors.`,
+        batchUploadId: batchId,
+          batchUploadId: batchId,
+          type: ERROR_TYPES.SYSTEM,
+          message: `Retry #${retryCount} completed with status: ${finalStatus}. Stats: ${results.processedRecords}/${results.totalRecords} processed, ${results.successRecords} successful, ${results.failedRecords} errors.`,
           severity: results.success ? ERROR_SEVERITY.INFO : ERROR_SEVERITY.WARNING,
         });
         
@@ -1529,15 +1545,16 @@ export class BatchUploadService {
       try {
         // Log the system error
         await this.logBatchError({
-          batchId,
-          errorType: ERROR_TYPES.SYSTEM,
-          errorMessage: `Retry error: ${errorMessage}`,
+        batchUploadId: batchId,
+          batchUploadId: batchId,
+          type: ERROR_TYPES.SYSTEM,
+          message: `Retry error: ${errorMessage}`,
           severity: ERROR_SEVERITY.ERROR,
         });
         
         // Update batch status to failed
         await this.updateBatchStatus(batchId, BATCH_STATUSES.FAILED, {
-          failedAt: new Date()
+          failedAt: new Date().toISOString()
         });
       } catch (logError) {
         // Just log to console if we can't log to the database
@@ -1580,7 +1597,7 @@ export class BatchUploadService {
     return await db
       .select()
       .from(batchUploadErrors)
-      .where(eq(batchUploadErrors.batchId, batchId))
+      .where(eq(batchUploadErrors.batchUploadId, batchId))
       .orderBy(batchUploadErrors.createdAt);
   }
 
