@@ -179,13 +179,17 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
     if (!currentCategory) return null;
     // If current category has a parent, return the parent ID
     // If current category IS a parent (no parentId), return its own ID
-    return currentCategory.parentId || currentCategory.id;
+    const parentId = currentCategory.parentId || currentCategory.id;
+    console.log('Parent category calculation:', { currentCategory, parentId });
+    return parentId;
   }, [currentCategory]);
 
   const childCategoryId = React.useMemo(() => {
     if (!currentCategory) return null;
     // Only return child ID if current category actually has a parent
-    return currentCategory.parentId ? currentCategory.id : null;
+    const childId = currentCategory.parentId ? currentCategory.id : null;
+    console.log('Child category calculation:', { currentCategory, childId });
+    return childId;
   }, [currentCategory]);
 
   // Get child categories for the selected parent
