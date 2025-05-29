@@ -390,12 +390,14 @@ export default function AdminOrdersPage() {
   const [paymentFilter, setPaymentFilter] = useState<string>("all");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
-  const { data: orders, isLoading, error } = useQuery({
+  const { data: ordersResponse, isLoading, error } = useQuery({
     queryKey: ['/api/admin/orders'],
     queryFn: () => apiRequest('/api/admin/orders')
   });
 
-  const filteredOrders = orders?.filter((order: Order) => {
+  const orders = ordersResponse?.data || [];
+
+  const filteredOrders = orders.filter((order: Order) => {
     const matchesSearch = 
       order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -405,14 +407,14 @@ export default function AdminOrdersPage() {
     const matchesPayment = paymentFilter === "all" || order.paymentStatus === paymentFilter;
 
     return matchesSearch && matchesStatus && matchesPayment;
-  }) || [];
+  });
 
   const stats = {
-    total: orders?.length || 0,
-    pending: orders?.filter((o: Order) => o.status === 'pending').length || 0,
-    processing: orders?.filter((o: Order) => ['confirmed', 'processing'].includes(o.status)).length || 0,
-    shipped: orders?.filter((o: Order) => o.status === 'shipped').length || 0,
-    delivered: orders?.filter((o: Order) => o.status === 'delivered').length || 0
+    total: orders.length,
+    pending: orders.filter((o: Order) => o.status === 'pending').length,
+    processing: orders.filter((o: Order) => ['confirmed', 'processing'].includes(o.status)).length,
+    shipped: orders.filter((o: Order) => o.status === 'shipped').length,
+    delivered: orders.filter((o: Order) => o.status === 'delivered').length
   };
 
   if (error) {
