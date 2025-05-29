@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "wouter";
 import { 
   Loader2, 
   ShoppingCart, 
@@ -559,11 +560,24 @@ function TopProducts() {
       .filter((product: any) => product.isActive)
       .sort((a: any, b: any) => (b.regularPrice || 0) - (a.regularPrice || 0))
       .slice(0, 5)
-      .map((product: any) => ({
-        name: product.name,
-        quantity: product.stockLevel || 0,
-        revenue: product.regularPrice || 0
-      }));
+      .map((product: any) => {
+        const costPrice = product.costPrice || 0;
+        const regularPrice = product.regularPrice || 0;
+        const salePrice = product.onSale ? product.salePrice || regularPrice : regularPrice;
+        const markup = costPrice > 0 ? ((regularPrice - costPrice) / costPrice * 100) : 0;
+        const discount = product.onSale && product.salePrice ? 
+          ((regularPrice - product.salePrice) / regularPrice * 100) : 0;
+        
+        return {
+          id: product.id,
+          name: product.name,
+          imageUrl: product.imageUrl,
+          quantity: product.stockLevel || 0,
+          revenue: regularPrice,
+          markupPercentage: markup,
+          discountPercentage: discount
+        };
+      });
 
     if (fallbackProducts.length === 0) {
       return (
@@ -580,20 +594,54 @@ function TopProducts() {
         </div>
         <div className="rounded-md border">
           <div className="px-4 py-3 font-medium bg-muted/50">
-            <div className="grid grid-cols-3 gap-4">
-              <div>Product</div>
-              <div className="text-right">Stock Level</div>
+            <div className="grid grid-cols-6 gap-4 items-center">
+              <div className="col-span-2">Product</div>
+              <div className="text-right">Stock</div>
               <div className="text-right">Price</div>
+              <div className="text-right">TMY Markup %</div>
+              <div className="text-right">Discount %</div>
             </div>
           </div>
           <div className="divide-y">
             {fallbackProducts.map((product, index) => (
               <div key={index} className="px-4 py-3">
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="font-medium">{product.name}</div>
+                <div className="grid grid-cols-6 gap-4 items-center">
+                  <div className="col-span-2 flex items-center space-x-3">
+                    {/* Product Thumbnail */}
+                    <div className="w-12 h-12 bg-gray-100 rounded-md overflow-hidden flex-shrink-0">
+                      {product.imageUrl ? (
+                        <img 
+                          src={product.imageUrl} 
+                          alt={product.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Package className="w-6 h-6 text-gray-400" />
+                        </div>
+                      )}
+                    </div>
+                    {/* Product Title - Clickable */}
+                    <Link 
+                      href={`/admin/pricing?search=${encodeURIComponent(product.name)}`}
+                      className="font-medium hover:text-blue-600 hover:underline transition-colors"
+                    >
+                      {product.name}
+                    </Link>
+                  </div>
                   <div className="text-right">{product.quantity}</div>
                   <div className="text-right font-medium">
                     {formatCurrency(product.revenue)}
+                  </div>
+                  <div className="text-right">
+                    <span className={`font-medium ${product.markupPercentage > 50 ? 'text-green-600' : product.markupPercentage > 25 ? 'text-yellow-600' : 'text-red-600'}`}>
+                      {product.markupPercentage.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-medium text-blue-600">
+                      {product.discountPercentage.toFixed(1)}%
+                    </span>
                   </div>
                 </div>
               </div>
@@ -608,24 +656,68 @@ function TopProducts() {
     <div className="space-y-4">
       <div className="rounded-md border">
         <div className="px-4 py-3 font-medium bg-muted/50">
-          <div className="grid grid-cols-3 gap-4">
-            <div>Product</div>
+          <div className="grid grid-cols-6 gap-4 items-center">
+            <div className="col-span-2">Product</div>
             <div className="text-right">Units Sold</div>
             <div className="text-right">Revenue</div>
+            <div className="text-right">TMY Markup %</div>
+            <div className="text-right">Discount %</div>
           </div>
         </div>
         <div className="divide-y">
-          {topProducts.map((product, index) => (
-            <div key={index} className="px-4 py-3">
-              <div className="grid grid-cols-3 gap-4">
-                <div className="font-medium">{product.name}</div>
-                <div className="text-right">{product.quantity}</div>
-                <div className="text-right font-medium">
-                  {formatCurrency(product.revenue)}
+          {topProducts.map((product, index) => {
+            // Find the full product details to get markup/discount info
+            const fullProduct = products.find((p: any) => p.name === product.name);
+            const costPrice = fullProduct?.costPrice || 0;
+            const regularPrice = fullProduct?.regularPrice || 0;
+            const markup = costPrice > 0 ? ((regularPrice - costPrice) / costPrice * 100) : 0;
+            const discount = fullProduct?.onSale && fullProduct?.salePrice ? 
+              ((regularPrice - fullProduct.salePrice) / regularPrice * 100) : 0;
+
+            return (
+              <div key={index} className="px-4 py-3">
+                <div className="grid grid-cols-6 gap-4 items-center">
+                  <div className="col-span-2 flex items-center space-x-3">
+                    {/* Product Thumbnail */}
+                    <div className="w-12 h-12 bg-gray-100 rounded-md overflow-hidden flex-shrink-0">
+                      {fullProduct?.imageUrl ? (
+                        <img 
+                          src={fullProduct.imageUrl} 
+                          alt={product.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Package className="w-6 h-6 text-gray-400" />
+                        </div>
+                      )}
+                    </div>
+                    {/* Product Title - Clickable */}
+                    <Link 
+                      href={`/admin/pricing?search=${encodeURIComponent(product.name)}`}
+                      className="font-medium hover:text-blue-600 hover:underline transition-colors"
+                    >
+                      {product.name}
+                    </Link>
+                  </div>
+                  <div className="text-right">{product.quantity}</div>
+                  <div className="text-right font-medium">
+                    {formatCurrency(product.revenue)}
+                  </div>
+                  <div className="text-right">
+                    <span className={`font-medium ${markup > 50 ? 'text-green-600' : markup > 25 ? 'text-yellow-600' : 'text-red-600'}`}>
+                      {markup.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-medium text-blue-600">
+                      {discount.toFixed(1)}%
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
