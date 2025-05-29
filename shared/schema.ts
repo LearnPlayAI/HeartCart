@@ -264,6 +264,48 @@ export const catalogs = pgTable("catalogs", {
   updatedAt: text("updated_at").default(String(new Date().toISOString())).notNull(),
 });
 
+// Batch Upload tables for bulk product imports
+export const batchUploads = pgTable("batchUploads", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  status: varchar("status", { length: 50 }).notNull().default("pending"),
+  catalogId: integer("catalogId").references(() => catalogs.id),
+  userId: integer("userId").references(() => users.id),
+  totalRecords: integer("totalRecords"),
+  processedRecords: integer("processedRecords"),
+  successCount: integer("successCount"),
+  errorCount: integer("errorCount"),
+  warnings: jsonb("warnings"),
+  fileOriginalName: varchar("fileOriginalName", { length: 255 }),
+  fileName: varchar("fileName", { length: 255 }),
+  createdAt: text("createdAt").default(String(new Date().toISOString())).notNull(),
+  updatedAt: text("updatedAt").default(String(new Date().toISOString())).notNull(),
+  completedAt: text("completedAt"),
+  lastProcessedRow: integer("lastProcessedRow").default(0),
+  processingStrategy: varchar("processingStrategy", { length: 50 }).default("sequential"),
+  retryCount: integer("retryCount").default(0),
+  maxRetries: integer("maxRetries").default(3),
+  catalogCapacity: integer("catalogCapacity"),
+  catalogCurrentCount: integer("catalogCurrentCount"),
+  canceledAt: text("canceledAt"),
+  pausedAt: text("pausedAt"),
+  resumedAt: text("resumedAt"),
+  failedAt: text("failedAt"),
+  startedAt: text("startedAt"),
+});
+
+export const batchUploadErrors = pgTable("batchUploadErrors", {
+  id: serial("id").primaryKey(),
+  batchUploadId: integer("batchUploadId").references(() => batchUploads.id, { onDelete: "cascade" }),
+  row: integer("row"),
+  field: varchar("field", { length: 255 }),
+  message: text("message").notNull(),
+  type: varchar("type", { length: 50 }).notNull(),
+  severity: varchar("severity", { length: 50 }).notNull(),
+  createdAt: text("createdAt").default(String(new Date().toISOString())).notNull(),
+});
+
 // =============================================================================
 // NEW ATTRIBUTE SYSTEM TABLES
 // Implementing the new hierarchical attribute system design
@@ -444,6 +486,19 @@ export const insertCatalogSchema = createInsertSchema(catalogs).omit({
   endDate: z.string().or(z.date()).nullable().optional(),
 });
 
+export const insertBatchUploadSchema = createInsertSchema(batchUploads).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBatchUploadErrorSchema = createInsertSchema(batchUploadErrors).omit({
+  id: true,
+  createdAt: true,
+});
+
+
+
 // =============================================================================
 // NEW ATTRIBUTE SYSTEM INSERT SCHEMAS
 // =============================================================================
@@ -514,6 +569,9 @@ export type InsertSupplier = z.infer<typeof insertSupplierSchema>;
 
 export type Catalog = typeof catalogs.$inferSelect;
 export type InsertCatalog = z.infer<typeof insertCatalogSchema>;
+
+export type BatchUpload = typeof batchUploads.$inferSelect;
+export type BatchUploadError = typeof batchUploadErrors.$inferSelect;
 
 // =============================================================================
 // NEW ATTRIBUTE SYSTEM TYPES
@@ -775,54 +833,6 @@ export const productAttributesRelations = relations(productAttributes, ({ one })
 // - attributeOptions
 // - productAttributes
 
-// Batch upload tables - for mass product upload tracking
-export const batchUploads = pgTable("batch_uploads", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  description: text("description"),
-  userId: integer("user_id").references(() => users.id),
-  totalRecords: integer("total_records").default(0),
-  processedRecords: integer("processed_records").default(0),
-  successCount: integer("success_count").default(0),
-  errorCount: integer("error_count").default(0),
-  // Extended status options: pending, processing, completed, failed, cancelled, paused, resumable
-  status: text("status").notNull().default("pending"),
-  catalogId: integer("catalog_id").references(() => catalogs.id),
-  originalFilename: text("file_original_name"),
-  fileName: text("file_name"),
-  warnings: jsonb("warnings").default([]),
-  // New fields for enhanced batch management
-  lastProcessedRow: integer("last_processed_row").default(0),
-  processingStrategy: text("processing_strategy").default("sequential"), // sequential, parallel
-  retryCount: integer("retry_count").default(0),
-  maxRetries: integer("max_retries").default(3),
-  // New fields for capacity checks and tracking
-  catalogCapacity: integer("catalog_capacity"),
-  catalogCurrentCount: integer("catalog_current_count"),
-  // Timestamps (as text strings with ISO format)
-  createdAt: text("created_at").default(String(new Date().toISOString())).notNull(),
-  updatedAt: text("updated_at").default(String(new Date().toISOString())).notNull(),
-  // Event timestamps (as text strings with ISO format)
-  startedAt: text("started_at"),
-  completedAt: text("completed_at"),
-  canceledAt: text("canceled_at"),
-  pausedAt: text("paused_at"),
-  resumedAt: text("resumed_at"),
-  failedAt: text("failed_at"),
-});
-
-// Batch upload error logs for detailed error tracking
-export const batchUploadErrors = pgTable("batch_upload_errors", {
-  id: serial("id").primaryKey(),
-  batchId: integer("batch_upload_id").references(() => batchUploads.id, { onDelete: "cascade" }).notNull(),
-  rowNumber: integer("row"),
-  errorType: text("type").notNull(), // validation, processing, db, etc.
-  errorMessage: text("message").notNull(),
-  severity: text("severity").default("error"), // error, warning
-  field: text("field"), // The specific field that caused the error
-  createdAt: text("created_at").default(String(new Date().toISOString())),
-});
-
 // Attribute Discount Rules and their relations have been completely removed
 // As part of the centralized attribute system refactoring, product attributes
 // no longer affect pricing anywhere in the application.
@@ -834,55 +844,6 @@ export const batchUploadErrors = pgTable("batch_upload_errors", {
  * - InsertAttributeDiscountRule type
  * - insertAttributeDiscountRuleSchema
  */
-
-// Create insert schema for batch uploads
-export const insertBatchUploadSchema = createInsertSchema(batchUploads).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-  completedAt: true,
-  canceledAt: true,
-  pausedAt: true,
-  resumedAt: true,
-  processedRecords: true,
-  successCount: true,
-  errorCount: true,
-  warnings: true,
-  lastProcessedRow: true,
-  retryCount: true,
-});
-
-// Create insert schema for batch upload errors
-export const insertBatchUploadErrorSchema = createInsertSchema(batchUploadErrors).omit({
-  id: true,
-  createdAt: true,
-});
-
-// Export batch upload types
-export type BatchUpload = typeof batchUploads.$inferSelect;
-export type InsertBatchUpload = z.infer<typeof insertBatchUploadSchema>;
-export type BatchUploadError = typeof batchUploadErrors.$inferSelect;
-export type InsertBatchUploadError = z.infer<typeof insertBatchUploadErrorSchema>;
-
-// Define batch upload relations
-export const batchUploadsRelations = relations(batchUploads, ({ one, many }) => ({
-  user: one(users, {
-    fields: [batchUploads.userId],
-    references: [users.id]
-  }),
-  catalog: one(catalogs, {
-    fields: [batchUploads.catalogId],
-    references: [catalogs.id]
-  }),
-  errors: many(batchUploadErrors)
-}));
-
-export const batchUploadErrorsRelations = relations(batchUploadErrors, ({ one }) => ({
-  batchUpload: one(batchUploads, {
-    fields: [batchUploadErrors.batchId],
-    references: [batchUploads.id]
-  })
-}));
 
 // Export ProductDraft type
 export type ProductDraft = typeof productDrafts.$inferSelect;
