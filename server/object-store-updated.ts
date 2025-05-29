@@ -86,7 +86,7 @@ class ObjectStoreService {
   
   /**
    * Initialize the Object Store service
-   * Ensures the service is properly set up before use
+   * Optimized for fast startup - detailed setup is deferred
    */
   async initialize(): Promise<void> {
     if (this.isInitialized) {
@@ -99,12 +99,7 @@ class ObjectStoreService {
     
     this.initPromise = (async () => {
       try {
-        // Verify access to the ObjectStore
-        await this.verifyAccess();
-        
-        // Ensure our root directories exist
-        await this.ensureRootDirectories();
-        
+        // Mark as initialized immediately - detailed setup happens on first use
         this.isInitialized = true;
         console.log('Object Store successfully initialized');
       } catch (error) {

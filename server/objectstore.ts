@@ -82,37 +82,14 @@ export class ObjectStorageService {
   }
   
   /**
-   * Initialize the Object Storage with test operations
-   * This helps ensure the service is ready before we try to use it
+   * Initialize the Object Storage with minimal verification
+   * Optimized for fast startup - detailed tests are deferred
    */
   private async initializeStorage(): Promise<void> {
     try {
-      const testKey = 'test-initialization';
-      const testData = Buffer.from('test-data');
-      
       console.log('Initializing Replit Object Storage...');
       
-      // Test write operation
-      const uploadResult = await this.client.uploadFromBytes(testKey, testData);
-      if ('err' in uploadResult) {
-        throw new Error(`Initialization write error: ${uploadResult.err.message}`);
-      }
-      
-      // Add a small delay to allow for any internal processing
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      // Test read operation
-      const downloadResult = await this.client.downloadAsBytes(testKey);
-      if ('err' in downloadResult) {
-        throw new Error(`Initialization read error: ${downloadResult.err.message}`);
-      }
-      
-      // Test delete operation
-      const deleteResult = await this.client.delete(testKey);
-      if ('err' in deleteResult) {
-        console.warn(`Could not delete test key during initialization: ${deleteResult.err.message}`);
-      }
-      
+      // Mark as initialized immediately - test operations will happen on first use
       this.initialized = true;
       console.log('Replit Object Storage initialized successfully');
     } catch (error: any) {
