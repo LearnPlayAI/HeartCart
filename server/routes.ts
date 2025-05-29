@@ -533,6 +533,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     })
   );
 
+  // Delete category route
+  app.delete(
+    "/api/categories/:id", 
+    isAuthenticated, 
+    isAdmin,
+    validateRequest({ params: idSchema }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const categoryId = Number(req.params.id);
+      
+      // Check if category has subcategories
+      const subcategories = await storage.getCategoriesByParent(categoryId);
+      if (subcategories && subcategories.length > 0) {
+        throw new AppError(
+          "Cannot delete category that has subcategories. Please delete subcategories first.",
+          ErrorCode.VALIDATION_ERROR,
+          400
+        );
+      }
+      
+      // Check if category has products
+      const products = await storage.getProductsByCategory(categoryId, undefined, undefined, {
+        includeInactive: true,
+        includeCategoryInactive: true
+      });
+      if (products && products.length > 0) {
+        throw new AppError(
+          "Cannot delete category that has products. Please move or delete products first.",
+          ErrorCode.VALIDATION_ERROR,
+          400
+        );
+      }
+      
+      // Delete the category
+      const success = await storage.deleteCategory(categoryId);
+      
+      if (!success) {
+        throw new NotFoundError(`Category with ID ${categoryId} not found`, 'category');
+      }
+      
+      res.json({ 
+        success: true, 
+        message: "Category deleted successfully",
+        data: { id: categoryId }
+      });
+    })
+  );
+
   // CATEGORY ATTRIBUTE ROUTES - Removed as part of attribute system redesign
 
   // Category attribute routes - removed as part of attribute system redesign

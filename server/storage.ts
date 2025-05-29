@@ -819,6 +819,20 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async deleteCategory(id: number): Promise<boolean> {
+    try {
+      const result = await db
+        .delete(categories)
+        .where(eq(categories.id, id))
+        .returning();
+      
+      return result.length > 0;
+    } catch (error) {
+      console.error(`Error deleting category ${id}:`, error);
+      throw error;
+    }
+  }
+
   // Product operations
   async getAllProducts(
     limit = 20,
