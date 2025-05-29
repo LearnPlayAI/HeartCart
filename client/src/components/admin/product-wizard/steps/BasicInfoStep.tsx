@@ -201,7 +201,7 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
 
   // Handle child category selection
   const handleChildCategoryChange = (childId: string) => {
-    if (childId === "clear") {
+    if (childId === "clear-selection") {
       // User is deselecting the child category
       setSelectedChildCategoryId(null);
       // Set categoryId to parent category when child is cleared
@@ -583,7 +583,7 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
                 </SelectTrigger>
                 <SelectContent>
                   {selectedChildCategoryId && (
-                    <SelectItem value="clear">
+                    <SelectItem value="clear-selection">
                       <span className="text-muted-foreground">Clear selection</span>
                     </SelectItem>
                   )}
