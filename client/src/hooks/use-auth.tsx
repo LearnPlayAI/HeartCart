@@ -190,22 +190,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return undefined;
     },
     onSuccess: () => {
-      // Clear user data in cache immediately to trigger UI update
-      queryClient.setQueryData(["/api/user"], { success: true, data: null });
-      
-      // Invalidate queries to refresh authentication state
-      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-      
-      // Clear all other cached data
-      queryClient.clear();
-      
-      // Show success message
+      // Show success message first
       toast({
         title: "Logged out successfully",
         description: "You have been signed out.",
       });
       
-      // No navigation needed - let the auth state change handle the redirect
+      // Clear authentication data with a slight delay to prevent context errors
+      setTimeout(() => {
+        queryClient.setQueryData(["/api/user"], { success: true, data: null });
+        queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+        queryClient.clear();
+        
+        // Force navigation after state is cleared
+        window.location.href = "/";
+      }, 50);
     },
     onError: (error: Error) => {
       toast({
