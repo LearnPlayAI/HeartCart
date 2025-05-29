@@ -641,10 +641,27 @@ function TopProducts() {
           </TableHeader>
           <TableBody>
             {fallbackProducts.map((product, index) => {
-              const markup = product.markupPercentage;
-              const discount = product.discountPercentage;
-              const costPrice = products.find((p: any) => p.id === product.id)?.costPrice || 0;
-              const profitMargin = costPrice > 0 ? ((product.revenue - costPrice) / product.revenue * 100) : 0;
+              // Find the enriched product details
+              const enrichedProduct = products.find((p: any) => p.id === product.id);
+              
+              // Calculate revenue: units sold x item sell price
+              const unitPrice = enrichedProduct?.salePrice || enrichedProduct?.price || 0;
+              const revenue = product.quantity * unitPrice;
+              
+              // Calculate profit: revenue - (items sold x cost price)
+              const costPrice = enrichedProduct?.costPrice || 0;
+              const profit = revenue - (product.quantity * costPrice);
+              
+              // Calculate TMY Markup % exactly as in pricing page: ((effectivePrice - costPrice) / costPrice * 100)
+              const effectivePrice = enrichedProduct?.salePrice || enrichedProduct?.price || 0;
+              const tmyMarkup = costPrice > 0 
+                ? ((effectivePrice - costPrice) / costPrice * 100) 
+                : 0;
+              
+              // Calculate Customer Discount % exactly as in pricing page: ((regularPrice - salePrice) / regularPrice * 100)
+              const customerDiscount = enrichedProduct?.salePrice && enrichedProduct?.price > 0
+                ? ((enrichedProduct.price - enrichedProduct.salePrice) / enrichedProduct.price * 100)
+                : 0;
 
               return (
                 <TableRow key={index} className="hover:bg-muted/50">
@@ -669,38 +686,38 @@ function TopProducts() {
                           {product.name}
                         </Link>
                         <p className="text-sm text-muted-foreground truncate">
-                          High priority product
+                          {enrichedProduct?.supplier || 'No supplier'}
                         </p>
                       </div>
                     </div>
                   </TableCell>
                   <TableCell className="text-right font-mono">{product.quantity}</TableCell>
                   <TableCell className="text-right font-mono">
-                    {formatCurrency(product.revenue)}
+                    {formatCurrency(revenue)}
                   </TableCell>
                   <TableCell className="text-right font-mono">
-                    <span className={profitMargin > 30 ? 'text-green-600' : profitMargin > 15 ? 'text-yellow-600' : 'text-red-600'}>
-                      {profitMargin.toFixed(1)}%
+                    <span className={profit > 0 ? 'text-green-600' : 'text-red-600'}>
+                      {formatCurrency(profit)}
                     </span>
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
-                      {markup > 0 ? (
+                      {tmyMarkup > 0 ? (
                         <TrendingUp className="h-4 w-4 text-green-600" />
                       ) : (
                         <TrendingDown className="h-4 w-4 text-red-600" />
                       )}
                       <span className={`font-semibold ${
-                        markup > 0 ? 'text-green-600' : 'text-red-600'
+                        tmyMarkup > 0 ? 'text-green-600' : 'text-red-600'
                       }`}>
-                        {markup.toFixed(1)}%
+                        {tmyMarkup.toFixed(2)}%
                       </span>
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
-                    {discount > 0 ? (
+                    {customerDiscount > 0 ? (
                       <Badge className="font-mono bg-pink-500 hover:bg-pink-600 text-white">
-                        {discount.toFixed(1)}%
+                        {customerDiscount.toFixed(2)}%
                       </Badge>
                     ) : (
                       <span className="text-muted-foreground">—</span>
@@ -710,7 +727,7 @@ function TopProducts() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => window.location.href = `/admin/products/edit/${product.id}`}
+                      onClick={() => window.location.href = `/admin/products/edit/${enrichedProduct?.id}`}
                       className="hover:bg-primary hover:text-primary-foreground"
                     >
                       <Edit className="h-4 w-4 mr-2" />
@@ -742,12 +759,27 @@ function TopProducts() {
         </TableHeader>
         <TableBody>
           {topProducts.map((product, index) => {
-            // Find the enriched product details with calculated markup/discount
+            // Find the enriched product details
             const enrichedProduct = products.find((p: any) => p.name === product.name);
-            const markup = enrichedProduct?.tmyMarkup || 0;
-            const discount = enrichedProduct?.customerDiscount || 0;
+            
+            // Calculate revenue: units sold x item sell price
+            const unitPrice = enrichedProduct?.salePrice || enrichedProduct?.price || 0;
+            const revenue = product.quantity * unitPrice;
+            
+            // Calculate profit: revenue - (items sold x cost price)
             const costPrice = enrichedProduct?.costPrice || 0;
-            const profit = product.revenue - (costPrice * product.quantity);
+            const profit = revenue - (product.quantity * costPrice);
+            
+            // Calculate TMY Markup % exactly as in pricing page: ((effectivePrice - costPrice) / costPrice * 100)
+            const effectivePrice = enrichedProduct?.salePrice || enrichedProduct?.price || 0;
+            const tmyMarkup = costPrice > 0 
+              ? ((effectivePrice - costPrice) / costPrice * 100) 
+              : 0;
+            
+            // Calculate Customer Discount % exactly as in pricing page: ((regularPrice - salePrice) / regularPrice * 100)
+            const customerDiscount = enrichedProduct?.salePrice && enrichedProduct?.price > 0
+              ? ((enrichedProduct.price - enrichedProduct.salePrice) / enrichedProduct.price * 100)
+              : 0;
 
             return (
               <TableRow key={index} className="hover:bg-muted/50">
@@ -779,7 +811,7 @@ function TopProducts() {
                 </TableCell>
                 <TableCell className="text-right font-mono">{product.quantity}</TableCell>
                 <TableCell className="text-right font-mono">
-                  {formatCurrency(product.revenue)}
+                  {formatCurrency(revenue)}
                 </TableCell>
                 <TableCell className="text-right font-mono">
                   <span className={profit > 0 ? 'text-green-600' : 'text-red-600'}>
@@ -788,22 +820,22 @@ function TopProducts() {
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-1">
-                    {markup > 0 ? (
+                    {tmyMarkup > 0 ? (
                       <TrendingUp className="h-4 w-4 text-green-600" />
                     ) : (
                       <TrendingDown className="h-4 w-4 text-red-600" />
                     )}
                     <span className={`font-semibold ${
-                      markup > 0 ? 'text-green-600' : 'text-red-600'
+                      tmyMarkup > 0 ? 'text-green-600' : 'text-red-600'
                     }`}>
-                      {markup.toFixed(1)}%
+                      {tmyMarkup.toFixed(2)}%
                     </span>
                   </div>
                 </TableCell>
                 <TableCell className="text-right">
-                  {discount > 0 ? (
+                  {customerDiscount > 0 ? (
                     <Badge className="font-mono bg-pink-500 hover:bg-pink-600 text-white">
-                      {discount.toFixed(1)}%
+                      {customerDiscount.toFixed(2)}%
                     </Badge>
                   ) : (
                     <span className="text-muted-foreground">—</span>
