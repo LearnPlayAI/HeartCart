@@ -512,17 +512,15 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
             />
 
             {/* Category Selection - Parent Category */}
-            <FormItem>
-              <FormLabel>Parent Category*</FormLabel>
+            <div>
+              <Label htmlFor="parent-category">Parent Category*</Label>
               <Select
                 onValueChange={handleParentCategoryChange}
                 value={selectedParentCategoryId?.toString() || undefined}
               >
-                <FormControl>
-                  <SelectTrigger className="h-9 sm:h-10">
-                    <SelectValue placeholder="Select parent category" />
-                  </SelectTrigger>
-                </FormControl>
+                <SelectTrigger className="h-9 sm:h-10" id="parent-category">
+                  <SelectValue placeholder="Select parent category" />
+                </SelectTrigger>
                 <SelectContent>
                   {isCategoriesLoading ? (
                     <div className="flex items-center justify-center p-2">
@@ -538,27 +536,27 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
                   )}
                 </SelectContent>
               </Select>
-            </FormItem>
+            </div>
 
             {/* Category Selection - Child Category */}
-            <FormItem>
-              <FormLabel>Child Category {selectedParentCategoryId && childCategories.length > 0 && "(Optional)"}</FormLabel>
+            <div>
+              <Label htmlFor="child-category">
+                Child Category {selectedParentCategoryId && childCategories.length > 0 && "(Optional)"}
+              </Label>
               <Select
                 onValueChange={handleChildCategoryChange}
                 value={selectedChildCategoryId?.toString() || undefined}
                 disabled={!selectedParentCategoryId || childCategories.length === 0}
               >
-                <FormControl>
-                  <SelectTrigger className="h-9 sm:h-10">
-                    <SelectValue placeholder={
-                      !selectedParentCategoryId 
-                        ? "Select parent category first" 
-                        : childCategories.length === 0 
-                          ? "No child categories available"
-                          : "Select child category (optional)"
-                    } />
-                  </SelectTrigger>
-                </FormControl>
+                <SelectTrigger className="h-9 sm:h-10" id="child-category">
+                  <SelectValue placeholder={
+                    !selectedParentCategoryId 
+                      ? "Select parent category first" 
+                      : childCategories.length === 0 
+                        ? "No child categories available"
+                        : "Select child category (optional)"
+                  } />
+                </SelectTrigger>
                 <SelectContent>
                   {childCategories.map((category: any) => (
                     <SelectItem key={category.id} value={category.id.toString()}>
@@ -567,7 +565,7 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
                   ))}
                 </SelectContent>
               </Select>
-            </FormItem>
+            </div>
 
             {/* Hidden field to maintain form validation */}
             <FormField
