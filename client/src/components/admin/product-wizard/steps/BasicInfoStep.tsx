@@ -373,9 +373,25 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
       return;
     }
 
-    const slug = newCategorySlug || slugify(newCategoryName, { lower: true, strict: true });
     const parentId = newCategoryParentId ? parseInt(newCategoryParentId) : undefined;
     const level = parentId ? 1 : 0;
+    
+    // Generate slug with parent-child format for child categories
+    let slug = newCategorySlug;
+    if (!slug) {
+      const childSlug = slugify(newCategoryName, { lower: true, strict: true });
+      if (parentId) {
+        // Find parent category to get its slug
+        const parentCategory = parentCategories.find((cat: any) => cat.id === parentId);
+        if (parentCategory) {
+          slug = `${parentCategory.slug}-${childSlug}`;
+        } else {
+          slug = childSlug;
+        }
+      } else {
+        slug = childSlug;
+      }
+    }
 
     createCategoryMutation.mutate({
       name: newCategoryName,
@@ -1105,18 +1121,36 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
                 id="slug" 
                 value={newCategorySlug} 
                 onChange={(e) => setNewCategorySlug(e.target.value)} 
-                placeholder={slugify(newCategoryName, { lower: true, strict: true }) || "category-slug"} 
+                placeholder={(() => {
+                  const childSlug = slugify(newCategoryName, { lower: true, strict: true }) || "category-slug";
+                  if (newCategoryParentId) {
+                    const parentCategory = parentCategories.find((cat: any) => cat.id === parseInt(newCategoryParentId));
+                    return parentCategory ? `${parentCategory.slug}-${childSlug}` : childSlug;
+                  }
+                  return childSlug;
+                })()} 
               />
               <Button 
                 type="button" 
                 variant="outline" 
-                onClick={() => setNewCategorySlug(slugify(newCategoryName, { lower: true, strict: true }))}
+                onClick={() => {
+                  const childSlug = slugify(newCategoryName, { lower: true, strict: true });
+                  if (newCategoryParentId) {
+                    const parentCategory = parentCategories.find((cat: any) => cat.id === parseInt(newCategoryParentId));
+                    setNewCategorySlug(parentCategory ? `${parentCategory.slug}-${childSlug}` : childSlug);
+                  } else {
+                    setNewCategorySlug(childSlug);
+                  }
+                }}
               >
                 Generate
               </Button>
             </div>
             <p className="text-sm text-muted-foreground">
-              The URL-friendly version of the name.
+              {newCategoryParentId ? 
+                "Format: parent-category-child-category" : 
+                "The URL-friendly version of the name."
+              }
             </p>
           </div>
           
