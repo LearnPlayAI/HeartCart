@@ -809,6 +809,47 @@ export class Storage {
     }
   }
 
+  async getProductAttributeValues(productId: number): Promise<any[]> {
+    try {
+      // Get all available attribute options for this product's attributes
+      const result = await db.execute(sql`
+        SELECT 
+          pa.product_id,
+          pa.attribute_id,
+          ao.id as attribute_option_id,
+          ao.value,
+          ao.display_value,
+          ao.sort_order,
+          a.name as attribute_name,
+          a.display_name as attribute_display_name,
+          a.attribute_type
+        FROM product_attributes pa
+        JOIN attributes a ON pa.attribute_id = a.id
+        JOIN attribute_options ao ON a.id = ao.attribute_id
+        WHERE pa.product_id = ${productId}
+        ORDER BY a.sort_order, ao.sort_order
+      `);
+      
+      return result.rows.map(row => ({
+        productId: row.product_id,
+        attributeId: row.attribute_id,
+        attributeOptionId: row.attribute_option_id,
+        valueText: row.display_value || row.value,
+        value: row.value,
+        displayValue: row.display_value,
+        sortOrder: row.sort_order,
+        attribute: {
+          name: row.attribute_name,
+          displayName: row.attribute_display_name,
+          type: row.attribute_type
+        }
+      }));
+    } catch (error) {
+      console.error('Error fetching product attribute values:', error);
+      return [];
+    }
+  }
+
   async searchProducts(query: string, limit: number = 20, offset: number = 0): Promise<Product[]> {
     try {
       const searchPattern = `%${query.toLowerCase()}%`;

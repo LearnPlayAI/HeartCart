@@ -91,34 +91,22 @@ router.get('/product/:productId/attributes', asyncHandler(async (req: Request, r
           }
         }
         
-        // Only show selected options - no fallback to all options
-        if (selectedOptionIds.length > 0) {
-          // Get all available options for this attribute
-          const allOptions = await storage.getAttributeOptions(attributeId);
-          
-          // Filter to only show selected options
-          const selectedOptions = allOptions.filter(opt => selectedOptionIds.includes(opt.id));
-          logger.debug('Filtered selected options', { 
-            productId, 
-            attributeId, 
-            totalOptions: allOptions.length,
-            selectedCount: selectedOptions.length,
-            selectedOptionIds 
-          });
-          
-          attributeGroups[attributeId].options = selectedOptions.map(opt => ({
-            id: opt.id,
-            value: opt.value,
-            displayValue: opt.displayValue || opt.value
-          }));
-        } else {
-          // No selected options found - show empty options array
-          logger.debug('No selected options found, showing empty options', { 
-            productId, 
-            attributeId
-          });
-          attributeGroups[attributeId].options = [];
-        }
+        // Show all available options for the user to choose from
+        const allOptions = await storage.getAttributeOptions(attributeId);
+        
+        logger.debug('Showing all available options for attribute', { 
+          productId, 
+          attributeId, 
+          totalOptions: allOptions.length,
+          selectedOptionIds 
+        });
+        
+        attributeGroups[attributeId].options = allOptions.map(opt => ({
+          id: opt.id,
+          value: opt.value,
+          displayValue: opt.display_value || opt.value,
+          selected: selectedOptionIds.includes(opt.id)
+        }));
         attributeGroups[attributeId].optionsLoaded = true;
       }
     }
@@ -167,7 +155,12 @@ router.get('/product/:productId/attribute-values', asyncHandler(async (req: Requ
     
     sendSuccess(res, formattedAttributeValues);
   } catch (error) {
-    logger.error('Failed to retrieve product attribute values', { error, path: req.path });
+    logger.error('Failed to retrieve product attribute values', { 
+      error: error instanceof Error ? error.message : String(error), 
+      stack: error instanceof Error ? error.stack : undefined,
+      path: req.path,
+      productId 
+    });
     sendError(res, 'Failed to retrieve product attribute values', 500);
   }
 }));
