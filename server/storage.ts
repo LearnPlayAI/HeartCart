@@ -4324,6 +4324,9 @@ export class DatabaseStorage implements IStorage {
               .leftJoin(suppliers, eq(catalogs.supplierId, suppliers.id))
               .orderBy(asc(catalogs.name));
 
+        // Debug: Log the SQL query being generated
+        console.log('Generated SQL query:', query.toSQL());
+        
         const catalogData = await query;
         
         // Debug log to see what we're getting from the database
@@ -6200,9 +6203,19 @@ export class DatabaseStorage implements IStorage {
   async getAllCatalogs(): Promise<Catalog[]> {
     try {
       const result = await db.query.catalogs.findMany({
+        with: {
+          supplier: true
+        },
         orderBy: [asc(catalogs.id)],
       });
-      return result || [];
+      
+      // Transform the result to include supplierName field for compatibility
+      const catalogsWithSupplierNames = result.map(catalog => ({
+        ...catalog,
+        supplierName: catalog.supplier?.name || null
+      }));
+      
+      return catalogsWithSupplierNames || [];
     } catch (error) {
       logger.error("Error fetching all catalogs", { error });
       return [];
