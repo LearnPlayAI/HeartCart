@@ -597,16 +597,23 @@ export class Storage {
 
   async getCartItemById(cartItemId: number): Promise<any | null> {
     try {
-      // For now, return null as cart functionality needs to be implemented
-      return null;
+      const result = await db
+        .select()
+        .from(cartItems)
+        .where(eq(cartItems.id, cartItemId))
+        .limit(1);
+      
+      return result.length > 0 ? result[0] : null;
     } catch (error) {
       throw error;
     }
   }
 
-  async removeFromCart(userId: number, cartItemId: number): Promise<void> {
+  async removeFromCart(cartItemId: number): Promise<void> {
     try {
-      // For now, do nothing as cart functionality needs to be implemented
+      await db
+        .delete(cartItems)
+        .where(eq(cartItems.id, cartItemId));
     } catch (error) {
       throw error;
     }
@@ -614,8 +621,16 @@ export class Storage {
 
   async updateCartItemQuantity(cartItemId: number, quantity: number): Promise<any> {
     try {
-      // For now, return success response as cart functionality needs to be implemented
-      return { success: true };
+      const result = await db
+        .update(cartItems)
+        .set({ 
+          quantity, 
+          updatedAt: new Date() 
+        })
+        .where(eq(cartItems.id, cartItemId))
+        .returning();
+      
+      return result[0];
     } catch (error) {
       throw error;
     }
