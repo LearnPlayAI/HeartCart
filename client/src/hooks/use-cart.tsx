@@ -16,6 +16,7 @@ type CartContextType = {
   addItem: (item: Omit<CartItemWithDiscounts, 'id' | 'discountData' | 'totalDiscount' | 'itemPrice'>) => void;
   updateItemQuantity: (id: number, quantity: number) => void;
   removeItem: (id: number) => void;
+  removeAttributeOption: (cartItemId: number, attributeName: string, attributeValue: string) => void;
   clearCart: () => void;
   cartSummary: CartSummary;
   isLoading: boolean;
@@ -29,6 +30,7 @@ const defaultCartContext: CartContextType = {
   addItem: () => {},
   updateItemQuantity: () => {},
   removeItem: () => {},
+  removeAttributeOption: () => {},
   clearCart: () => {},
   cartSummary: {
     itemCount: 0,
@@ -206,6 +208,37 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       });
     }
   });
+
+  // Remove attribute option mutation
+  const removeAttributeOptionMutation = useMutation({
+    mutationFn: async ({ cartItemId, attributeName, attributeValue }: { cartItemId: number, attributeName: string, attributeValue: string }) => {
+      const res = await apiRequest('PATCH', `/api/cart/${cartItemId}/remove-attribute`, {
+        attributeName,
+        attributeValue
+      });
+      
+      // Check for 401 authentication error before parsing JSON
+      if (res.status === 401) {
+        setLocation('/auth');
+        return;
+      }
+      
+      const data: StandardApiResponse<any> = await res.json();
+      if (!data.success) {
+        throw new Error(data.error?.message || "Failed to remove attribute option");
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to remove attribute option",
+        variant: "destructive"
+      });
+    }
+  });
   
   const openCart = () => setIsOpen(true);
   const closeCart = () => setIsOpen(false);
@@ -241,6 +274,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   
   const clearCart = () => {
     clearCartMutation.mutate();
+  };
+
+  const removeAttributeOption = (cartItemId: number, attributeName: string, attributeValue: string) => {
+    removeAttributeOptionMutation.mutate({ cartItemId, attributeName, attributeValue });
   };
   
   return (

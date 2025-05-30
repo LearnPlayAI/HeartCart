@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { XCircle, ShoppingBag, Plus, Minus, Trash2, Tag as TagIcon } from 'lucide-react';
+import { XCircle, ShoppingBag, Plus, Minus, Trash2, Tag as TagIcon, X } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
