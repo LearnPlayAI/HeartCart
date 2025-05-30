@@ -7,6 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { formatCurrency } from '@/lib/utils';
 import { Link } from 'wouter';
 import type { Product } from '@shared/schema';
+import ProductCard from '@/components/product/product-card';
 
 type AiRecommendationResponse = {
   products: Product[];
@@ -72,53 +73,11 @@ const AIRecommendedProducts = () => {
           ))
         ) : productsToShow?.length ? (
           productsToShow.map((product) => (
-            <Link 
-              key={product.id} 
-              href={`/product/${product.slug}`}
-              className="product-card bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
-            >
-              <div className="relative">
-                <img 
-                  src={product.imageUrl}
-                  alt={product.name}
-                  className="w-full h-40 object-cover"
-                />
-                
-                {/* Discount Badge - positioned in lower right */}
-                {product.discountLabel && (
-                  <div className="absolute bottom-2 right-2">
-                    <Badge 
-                      className="bg-blue-500 hover:bg-blue-600 text-white text-xs px-2 py-1 rounded-md shadow-sm"
-                    >
-                      {product.discountLabel}
-                    </Badge>
-                  </div>
-                )}
-              </div>
-              <div className="p-3">
-                <h3 className="text-sm font-medium text-gray-800 mb-1 line-clamp-2">
-                  {product.name}
-                </h3>
-                <div className="flex items-baseline mb-2">
-                  <span className="text-[#FF69B4] font-bold">
-                    {product.salePrice 
-                      ? formatCurrency(product.salePrice) 
-                      : formatCurrency(product.price)}
-                  </span>
-                  {product.salePrice && (
-                    <span className="text-gray-500 text-xs ml-1 line-through">
-                      {formatCurrency(product.price)}
-                    </span>
-                  )}
-                </div>
-                <div className="text-xs text-gray-500">
-                  <div className="flex items-center">
-                    <Bot className="text-[#FF69B4] mr-1 h-3 w-3" />
-                    {recommendations?.reason || 'Based on your browsing'}
-                  </div>
-                </div>
-              </div>
-            </Link>
+            <ProductCard
+              key={product.id}
+              product={product}
+              showAddToCart={true}
+            />
           ))
         ) : (
           <div className="col-span-4 py-8 text-center text-gray-500">

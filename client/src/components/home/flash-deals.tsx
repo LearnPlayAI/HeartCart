@@ -71,6 +71,7 @@ const FlashDealsSection = () => {
                   product={product}
                   isFlashDeal={true}
                   soldPercentage={soldPercentage}
+                  showAddToCart={true}
                 />
               );
             }))
