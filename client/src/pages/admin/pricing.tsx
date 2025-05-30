@@ -72,12 +72,21 @@ export default function PricingPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
 
-  // Fetch products
-  // Always fetch all products using the regular endpoint that has complete data
+  // Fetch products with category filtering support
   const { data: productsResponse, isLoading: isProductsLoading, error: productsError } = useQuery({
-    queryKey: ['/api/products'],
+    queryKey: ['/api/products', parentCategoryFilter],
     queryFn: async () => {
-      const response = await fetch('/api/products');
+      const params = new URLSearchParams({
+        limit: '1000', // Get all products to ensure we don't miss any due to pagination
+        offset: '0'
+      });
+      
+      // If a parent category is selected, pass it to the backend for hierarchical filtering
+      if (parentCategoryFilter && parentCategoryFilter !== 'all' && parentCategoryFilter !== '') {
+        params.append('category', parentCategoryFilter);
+      }
+      
+      const response = await fetch(`/api/products?${params}`);
       if (!response.ok) throw new Error('Failed to fetch products');
       return response.json();
     }
