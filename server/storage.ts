@@ -950,6 +950,7 @@ export class DatabaseStorage implements IStorage {
     options?: { includeInactive?: boolean; includeCategoryInactive?: boolean },
   ): Promise<Product[]> {
     try {
+      console.log('getAllProducts called with:', { limit, offset, categoryId, search, options });
 
       // Create conditions array
       const conditions: SQL<unknown>[] = [];
