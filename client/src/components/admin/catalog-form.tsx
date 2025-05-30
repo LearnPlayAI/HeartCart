@@ -39,7 +39,6 @@ const catalogFormSchema = z.object({
   startDate: z.date(),
   endDate: z.date().nullable().optional(), // Allow null
   defaultMarkupPercentage: z.coerce.number().min(0).default(0), // Changed from markupPercentage to defaultMarkupPercentage
-  freeShipping: z.boolean().default(false),
 });
 
 type CatalogFormValues = z.infer<typeof catalogFormSchema>;
@@ -73,7 +72,6 @@ export function CatalogForm({
       startDate: new Date(),
       endDate: null,
       defaultMarkupPercentage: 0, // Changed from markupPercentage to defaultMarkupPercentage
-      freeShipping: false,
       ...initialData,
     },
   });
@@ -314,28 +312,6 @@ export function CatalogForm({
               )}
             />
           </div>
-
-          <FormField
-            control={form.control}
-            name="freeShipping"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-center justify-between space-x-2 space-y-0 rounded-md border p-4">
-                <div className="space-y-0.5">
-                  <FormLabel>Free Shipping</FormLabel>
-                  <FormDescription>
-                    All products in this catalog will have free shipping
-                  </FormDescription>
-                </div>
-                <FormControl>
-                  <Switch
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
 
           <FormField
             control={form.control}
