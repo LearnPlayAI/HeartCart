@@ -4295,6 +4295,7 @@ export class DatabaseStorage implements IStorage {
 
   // Catalog operations
   async getAllCatalogs(activeOnly = true): Promise<any[]> {
+    console.log('DEBUG: getAllCatalogs() WITH activeOnly parameter called, activeOnly =', activeOnly);
     try {
       // Get catalogs with supplier information using raw SQL to ensure it works
       try {
@@ -4335,6 +4336,9 @@ export class DatabaseStorage implements IStorage {
 
         const result = await db.execute(sql.raw(sqlQuery));
         const catalogData = result.rows;
+        
+        // Debug log to see what we're getting from raw SQL
+        console.log('Raw SQL result:', JSON.stringify(catalogData, null, 2));
 
         // Add product count for each catalog
         try {
@@ -6205,6 +6209,7 @@ export class DatabaseStorage implements IStorage {
    * @returns Array of all catalogs
    */
   async getAllCatalogs(): Promise<Catalog[]> {
+    console.log('DEBUG: getAllCatalogs() WITHOUT activeOnly parameter called');
     try {
       // Use raw SQL to ensure we get supplier names correctly
       const sqlQuery = `
@@ -6225,6 +6230,7 @@ export class DatabaseStorage implements IStorage {
       `;
 
       const result = await db.execute(sql.raw(sqlQuery));
+      console.log('DEBUG: Raw SQL result from method without activeOnly:', JSON.stringify(result.rows, null, 2));
       return result.rows as any[];
     } catch (error) {
       logger.error("Error fetching all catalogs", { error });
