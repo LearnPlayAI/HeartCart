@@ -104,7 +104,7 @@ export interface IStorage {
   // API Testing support methods
   getProductWithSlug(): Promise<Product | undefined>;
   getAllOrders(): Promise<Order[]>;
-  getAllCatalogs(): Promise<Catalog[]>;
+
   getAllAttributes(): Promise<Attribute[]>;
 
   // Session store for authentication testing
