@@ -50,7 +50,7 @@ import {
 } from "@shared/schema";
 
 import { db } from "./db";
-import { eq, desc, asc, and, or, isNull, sql, inArray, like } from "drizzle-orm";
+import { eq, desc, asc, and, or, isNull, sql, inArray, like, ilike } from "drizzle-orm";
 
 export class Storage {
   // User operations
@@ -642,6 +642,73 @@ export class Storage {
     try {
       // For now, return success response as cart functionality needs to be implemented
       return { success: true };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async searchProducts(query: string, limit: number = 20, offset: number = 0): Promise<Product[]> {
+    try {
+      const searchPattern = `%${query.toLowerCase()}%`;
+      const searchResults = await db
+        .select()
+        .from(products)
+        .where(
+          and(
+            eq(products.isActive, true),
+            or(
+              like(sql`LOWER(${products.name})`, searchPattern),
+              like(sql`LOWER(${products.description})`, searchPattern),
+              like(sql`LOWER(${products.sku})`, searchPattern)
+            )
+          )
+        )
+        .limit(limit)
+        .offset(offset)
+        .orderBy(desc(products.createdAt));
+      
+      return searchResults;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async getUserProductDrafts(userId: number): Promise<ProductDraft[]> {
+    try {
+      const drafts = await db
+        .select()
+        .from(productDrafts)
+        .where(eq(productDrafts.userId, userId))
+        .orderBy(desc(productDrafts.updatedAt));
+      
+      return drafts;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async getProductDraft(id: number): Promise<ProductDraft | null> {
+    try {
+      const [draft] = await db
+        .select()
+        .from(productDrafts)
+        .where(eq(productDrafts.id, id))
+        .limit(1);
+      
+      return draft || null;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async saveProductDraft(draftData: InsertProductDraft): Promise<ProductDraft> {
+    try {
+      const [draft] = await db
+        .insert(productDrafts)
+        .values(draftData)
+        .returning();
+      
+      return draft;
     } catch (error) {
       throw error;
     }
