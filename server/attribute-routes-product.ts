@@ -91,22 +91,30 @@ router.get('/product/:productId/attributes', asyncHandler(async (req: Request, r
           }
         }
         
-        // Show all available options for the user to choose from
-        const allOptions = await storage.getAttributeOptions(attributeId);
-        
-        logger.debug('Showing all available options for attribute', { 
-          productId, 
-          attributeId, 
-          totalOptions: allOptions.length,
-          selectedOptionIds 
-        });
-        
-        attributeGroups[attributeId].options = allOptions.map(opt => ({
-          id: opt.id,
-          value: opt.value,
-          displayValue: opt.display_value || opt.value,
-          selected: selectedOptionIds.includes(opt.id)
-        }));
+        // Only show the specific options assigned to this product during creation
+        if (selectedOptionIds.length > 0) {
+          const allOptions = await storage.getAttributeOptions(attributeId);
+          
+          // Filter to only show the product-specific options
+          const productOptions = allOptions.filter(opt => selectedOptionIds.includes(opt.id));
+          
+          logger.debug('Showing product-specific options for attribute', { 
+            productId, 
+            attributeId, 
+            totalAvailableOptions: allOptions.length,
+            productSpecificOptions: productOptions.length,
+            selectedOptionIds 
+          });
+          
+          attributeGroups[attributeId].options = productOptions.map(opt => ({
+            id: opt.id,
+            value: opt.value,
+            displayValue: opt.display_value || opt.value
+          }));
+        } else {
+          // No options assigned to this product for this attribute
+          attributeGroups[attributeId].options = [];
+        }
         attributeGroups[attributeId].optionsLoaded = true;
       }
     }
