@@ -4556,31 +4556,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const isAdmin = user && user.role === 'admin';
       const activeOnly = isAdmin ? false : req.query.activeOnly !== 'false';
       
-      // Get catalogs with supplier information directly
-      const catalogData = await db
-        .select({
-          id: catalogs.id,
-          name: catalogs.name,
-          description: catalogs.description,
-          supplierId: catalogs.supplierId,
-          supplierName: suppliers.name,
-          isActive: catalogs.isActive,
-          defaultMarkupPercentage: catalogs.defaultMarkupPercentage,
-          startDate: catalogs.startDate,
-          endDate: catalogs.endDate,
-          createdAt: catalogs.createdAt,
-          updatedAt: catalogs.updatedAt,
-          coverImage: catalogs.coverImage,
-          tags: catalogs.tags,
-        })
-        .from(catalogs)
-        .leftJoin(suppliers, eq(catalogs.supplierId, suppliers.id))
-        .where(activeOnly ? eq(catalogs.isActive, true) : undefined)
-        .orderBy(asc(catalogs.name));
+      // Get catalogs first (simple query to avoid SQL syntax issues)
+      console.log('Fetching catalogs...');
+      const catalogsQuery = db.select().from(catalogs);
+      
+      if (activeOnly) {
+        catalogsQuery.where(eq(catalogs.isActive, true));
+      }
+      
+      const catalogData = await catalogsQuery.orderBy(asc(catalogs.name));
+      console.log('Catalogs fetched:', catalogData.length);
+      
+      // Get suppliers separately
+      console.log('Fetching suppliers...');
+      const suppliersData = await db.select().from(suppliers);
+      console.log('Suppliers fetched:', suppliersData.length);
+      
+      // Manually join the data
+      const catalogsWithSuppliers = catalogData.map(catalog => {
+        const supplier = suppliersData.find(s => s.id === catalog.supplierId);
+        return {
+          ...catalog,
+          supplierName: supplier?.name || 'Unknown Supplier'
+        };
+      });
 
       // Add product count for each catalog
       const catalogsWithProductCount = await Promise.all(
-        catalogData.map(async (catalog) => {
+        catalogsWithSuppliers.map(async (catalog) => {
           try {
             // Count products in this catalog
             const productsQuery = await db
