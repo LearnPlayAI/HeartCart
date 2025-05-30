@@ -2099,14 +2099,32 @@ export class DatabaseStorage implements IStorage {
       console.log(`🔍 NEW CART DEBUG - Received cartItem:`, cartItem);
       console.log(`🔍 NEW CART DEBUG - itemPrice value:`, cartItem.itemPrice, typeof cartItem.itemPrice);
       
-      // Check if the item is already in the cart (same user and product)
-      const [existingItem] = await db
+      // Check if the item is already in the cart (same user, product, and attribute selections)
+      const existingItems = await db
         .select()
         .from(cartItems)
         .where(and(
           eq(cartItems.userId, cartItem.userId),
           eq(cartItems.productId, cartItem.productId)
         ));
+      
+      // Find existing item with matching attribute selections
+      const existingItem = existingItems.find(item => {
+        const existingSelections = item.attributeSelections || {};
+        const newSelections = cartItem.attributeSelections || {};
+        
+        // Compare attribute selections - must be exact match
+        const existingKeys = Object.keys(existingSelections).sort();
+        const newKeys = Object.keys(newSelections).sort();
+        
+        if (existingKeys.length !== newKeys.length) {
+          return false;
+        }
+        
+        return existingKeys.every(key => 
+          existingSelections[key] === newSelections[key]
+        );
+      });
 
       if (existingItem) {
         // Update quantity for existing item
