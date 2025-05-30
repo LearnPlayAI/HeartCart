@@ -92,12 +92,33 @@ const ProductCard: React.FC<ProductCardProps> = ({
     ? calculateDiscount(product.price, product.salePrice)
     : 0;
   
-  const handleAddToCart = (e: React.MouseEvent) => {
+  const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
     try {
-      // Use base price (sale price if available, otherwise regular price)
+      // Check if product has required attributes by fetching attributes
+      const attributesResponse = await fetch(`/api/product-attributes/product/${product.id}/attributes`);
+      const attributesData = await attributesResponse.json();
+      
+      if (attributesData.success && attributesData.data.length > 0) {
+        // Check if any attributes are required
+        const hasRequiredAttributes = attributesData.data.some((attr: any) => attr.isRequired);
+        
+        if (hasRequiredAttributes) {
+          // Open quick view modal instead of adding directly to cart
+          setQuickViewOpen(true);
+          toast({
+            title: "Please select options",
+            description: "This product has options that need to be selected. Please choose your preferences in the quick view.",
+            variant: "default",
+            duration: 4000,
+          });
+          return;
+        }
+      }
+      
+      // If no required attributes, add directly to cart
       const basePrice = product.salePrice || product.price;
       
       addItem({
