@@ -4293,8 +4293,8 @@ export class DatabaseStorage implements IStorage {
           .where(activeOnly ? eq(catalogs.isActive, true) : undefined)
           .orderBy(asc(catalogs.name));
         
-        // Debug: Log the catalog data to see what we're getting
-        console.log('🔍 CATALOG DEBUG - Raw catalog data:', JSON.stringify(catalogData, null, 2));
+        console.log('🔍 CATALOG DEBUG - Raw catalog data from DB:', JSON.stringify(catalogData, null, 2));
+        console.log('🔍 CATALOG DEBUG - Number of catalogs found:', catalogData.length);
 
         // Add product count for each catalog
         try {
