@@ -4274,40 +4274,27 @@ export class DatabaseStorage implements IStorage {
     try {
       // Get catalogs with supplier information
       try {
-        const query = activeOnly
-          ? db
-              .select({
-                id: catalogs.id,
-                name: catalogs.name,
-                description: catalogs.description,
-                supplierId: catalogs.supplierId,
-                supplierName: suppliers.name,
-                isActive: catalogs.isActive,
-                defaultMarkupPercentage: catalogs.defaultMarkupPercentage,
-                startDate: catalogs.startDate,
-                endDate: catalogs.endDate,
-                createdAt: catalogs.createdAt,
-              })
-              .from(catalogs)
-              .leftJoin(suppliers, eq(catalogs.supplierId, suppliers.id))
-              .where(eq(catalogs.isActive, true))
-              .orderBy(asc(catalogs.name))
-          : db
-              .select({
-                id: catalogs.id,
-                name: catalogs.name,
-                description: catalogs.description,
-                supplierId: catalogs.supplierId,
-                supplierName: suppliers.name,
-                isActive: catalogs.isActive,
-                defaultMarkupPercentage: catalogs.defaultMarkupPercentage,
-                startDate: catalogs.startDate,
-                endDate: catalogs.endDate,
-                createdAt: catalogs.createdAt,
-              })
-              .from(catalogs)
-              .leftJoin(suppliers, eq(catalogs.supplierId, suppliers.id))
-              .orderBy(asc(catalogs.name));
+        // Use a more explicit approach to ensure proper column mapping
+        const baseQuery = db
+          .select({
+            id: catalogs.id,
+            name: catalogs.name,
+            description: catalogs.description,
+            supplierId: catalogs.supplierId,
+            supplierName: sql<string>`${suppliers.name}`.as('supplier_name'),
+            isActive: catalogs.isActive,
+            defaultMarkupPercentage: catalogs.defaultMarkupPercentage,
+            startDate: catalogs.startDate,
+            endDate: catalogs.endDate,
+            createdAt: catalogs.createdAt,
+          })
+          .from(catalogs)
+          .leftJoin(suppliers, eq(catalogs.supplierId, suppliers.id))
+          .orderBy(asc(catalogs.name));
+
+        const query = activeOnly 
+          ? baseQuery.where(eq(catalogs.isActive, true))
+          : baseQuery;
 
         const catalogData = await query;
         

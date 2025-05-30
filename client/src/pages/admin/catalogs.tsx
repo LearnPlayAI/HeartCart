@@ -145,8 +145,13 @@ export default function AdminCatalogs() {
       return result;
     },
     onSuccess: (result, catalog) => {
-      
-      queryClient.invalidateQueries({ queryKey: ["/api/catalogs"] });
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const key = query.queryKey;
+          return Array.isArray(key) && key[0] === "/api/catalogs";
+        }
+      });
+      refetch(); // Force a fresh fetch
     },
     onError: (error: any) => {
       toast({
@@ -173,8 +178,13 @@ export default function AdminCatalogs() {
       return result;
     },
     onSuccess: () => {
-      
-      queryClient.invalidateQueries({ queryKey: ["/api/catalogs"] });
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const key = query.queryKey;
+          return Array.isArray(key) && key[0] === "/api/catalogs";
+        }
+      });
+      refetch(); // Force a fresh fetch
       setShowDeleteDialog(false);
       setSelectedCatalog(null);
     },
