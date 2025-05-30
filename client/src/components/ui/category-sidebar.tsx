@@ -25,10 +25,16 @@ export function CategorySidebar({
   const [expandedCategories, setExpandedCategories] = useState<Record<number, boolean>>({});
   const [location] = useLocation();
   
+  // Define the interface for categories with children
+  interface CategoryWithChildren {
+    category: Category;
+    children: Category[];
+  }
+  
   // Define the standardized API response type
   interface ApiResponse {
     success: boolean;
-    data: Category[];
+    data: CategoryWithChildren[];
   }
   
   // Fetch main categories with their children using the new API endpoint
@@ -36,11 +42,8 @@ export function CategorySidebar({
     queryKey: ["/api/categories/main/with-children"],
   });
   
-  // Extract the categories from the standardized response and convert to expected format
-  const categoriesWithChildren = response?.success ? response.data.map(category => ({
-    category: category,
-    children: [] // For now, we'll use empty children array since the API returns flat categories
-  })) : [];
+  // Extract the categories with children from the standardized response
+  const categoriesWithChildren = response?.success ? response.data : [];
   
   // Log any errors that occur during data fetching
   React.useEffect(() => {

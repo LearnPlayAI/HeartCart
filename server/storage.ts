@@ -431,13 +431,22 @@ export class Storage {
 
   async getMainCategoriesWithChildren(): Promise<any[]> {
     try {
-      const mainCategories = await db
+      // Get all categories
+      const allCategories = await db
         .select()
         .from(categories)
-        .where(isNull(categories.parentId))
         .orderBy(asc(categories.name));
       
-      return mainCategories;
+      // Get main categories (no parent)
+      const mainCategories = allCategories.filter(cat => cat.parentId === null);
+      
+      // Build hierarchical structure
+      const result = mainCategories.map(mainCategory => ({
+        category: mainCategory,
+        children: allCategories.filter(cat => cat.parentId === mainCategory.id)
+      }));
+      
+      return result;
     } catch (error) {
       throw error;
     }
