@@ -26,7 +26,7 @@ type Category = {
 
 const Header = () => {
   const [, navigate] = useLocation();
-  const { cartItems, openCart } = useCart();
+  const { cartItems, openCart, cartSummary } = useCart();
   const { user, logoutMutation } = useAuth();
   const { toast } = useToast();
   
@@ -126,9 +126,9 @@ const Header = () => {
                   onClick={openCart}
                 >
                   <ShoppingCart className="h-5 w-5 text-gray-700 hover:text-[#FF69B4]" />
-                  {cartItems.length > 0 && (
+                  {cartSummary.itemCount > 0 && (
                     <span className="absolute -top-2 -right-2 bg-[#FF69B4] text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                      {cartItems.length}
+                      {cartSummary.itemCount}
                     </span>
                   )}
                 </Button>

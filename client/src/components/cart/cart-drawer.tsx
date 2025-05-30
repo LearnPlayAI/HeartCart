@@ -45,7 +45,7 @@ const CartDrawer = () => {
       <SheetContent className="w-full sm:max-w-md p-0 flex flex-col h-full">
         <SheetHeader className="p-4 border-b border-gray-200 bg-[#FF69B4] text-white">
           <SheetTitle className="text-white flex justify-between items-center">
-            <span>Your Cart ({cartItems.length})</span>
+            <span>Your Cart ({cartSummary.itemCount})</span>
             <Button 
               variant="ghost" 
               size="icon" 
