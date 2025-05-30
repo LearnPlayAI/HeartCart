@@ -4222,7 +4222,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw new ForbiddenError("Only administrators can manage suppliers");
       }
       
+      // Log the incoming request body for debugging
+      console.log('🔍 SUPPLIER ROUTE DEBUG - Request body:', req.body);
+      
       const supplierData = insertSupplierSchema.parse(req.body);
+      console.log('🔍 SUPPLIER ROUTE DEBUG - Parsed supplier data:', supplierData);
       
       // Check if supplier with same name already exists
       const existingSupplier = await storage.getSupplierByName(supplierData.name);
@@ -4234,7 +4238,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
       }
       
+      console.log('🔍 SUPPLIER ROUTE DEBUG - About to call storage.createSupplier');
       const supplier = await storage.createSupplier(supplierData);
+      console.log('🔍 SUPPLIER ROUTE DEBUG - Successfully created supplier:', supplier);
       
       return res.status(201).json({
         success: true,
@@ -4243,6 +4249,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       // Log detailed error information with context
+      console.log('🔍 SUPPLIER ROUTE DEBUG - Caught error:', {
+        error,
+        errorType: error?.constructor?.name,
+        message: error?.message,
+        stack: error?.stack,
+        isZodError: error instanceof z.ZodError,
+        zodIssues: error instanceof z.ZodError ? error.issues : undefined
+      });
+      
       logger.error('Error creating supplier', { 
         error,
         userId: user.id,
