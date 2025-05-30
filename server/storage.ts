@@ -38,7 +38,6 @@ import {
   productDrafts,
   type ProductDraft,
   type InsertProductDraft,
-  // Centralized attribute system imports - we've removed the hierarchy to simplify
   attributes,
   type Attribute,
   type InsertAttribute,
@@ -4358,54 +4357,94 @@ export class DatabaseStorage implements IStorage {
       throw error;
     }
   }
-                    : null,
-                  productsCount: Number(count),
-                };
-              } catch (productCountError) {
-                console.error(
-                  `Error counting products for catalog ${catalog.id}:`,
-                  productCountError,
-                );
-                // Return the catalog with a zero product count in case of an error
-                return {
-                  ...catalog,
-                  startDate: catalog.startDate
-                    ? new Date(catalog.startDate).toISOString()
-                    : null,
-                  endDate: catalog.endDate
-                    ? new Date(catalog.endDate).toISOString()
-                    : null,
-                  createdAt: catalog.createdAt
-                    ? new Date(catalog.createdAt).toISOString()
-                    : null,
-                  productsCount: 0,
-                };
-              }
-            }),
-          );
 
-          console.log('🔍 CATALOG DEBUG - Final result with product counts:', JSON.stringify(catalogsWithProductCount, null, 2));
-          return catalogsWithProductCount;
-        } catch (productCountsError) {
-          console.error(
-            "Error while getting product counts for catalogs:",
-            productCountsError,
-          );
-          throw productCountsError; // Rethrow so the route handler can catch it and send a proper error response
-        }
-      } catch (catalogsQueryError) {
-        console.error(
-          `Error fetching catalogs (activeOnly=${activeOnly}):`,
-          catalogsQueryError,
-        );
-        throw catalogsQueryError; // Rethrow so the route handler can catch it and send a proper error response
-      }
+  async updateCatalog(id: number, catalogData: any): Promise<any> {
+    try {
+      const [updatedCatalog] = await db
+        .update(catalogs)
+        .set(catalogData)
+        .where(eq(catalogs.id, id))
+        .returning();
+      
+      return updatedCatalog;
     } catch (error) {
-      console.error(
-        `Error in getAllCatalogs (activeOnly=${activeOnly}):`,
-        error,
-      );
-      throw error; // Rethrow so the route handler can catch it and send a proper error response
+      throw error;
+    }
+  }
+
+  async deleteCatalog(id: number): Promise<void> {
+    try {
+      await db.delete(catalogs).where(eq(catalogs.id, id));
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  // Product operations
+  async getAllProducts(activeOnly = true): Promise<any[]> {
+    try {
+      const productsQuery = db
+        .select()
+        .from(products)
+        .orderBy(asc(products.name));
+      
+      if (activeOnly) {
+        productsQuery.where(eq(products.isActive, true));
+      }
+      
+      const allProducts = await productsQuery;
+      return allProducts;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async getProductById(id: number): Promise<any | null> {
+    try {
+      const [product] = await db
+        .select()
+        .from(products)
+        .where(eq(products.id, id))
+        .limit(1);
+      
+      return product || null;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async createProduct(productData: any): Promise<any> {
+    try {
+      const [newProduct] = await db
+        .insert(products)
+        .values(productData)
+        .returning();
+      
+      return newProduct;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async updateProduct(id: number, productData: any): Promise<any> {
+    try {
+      const [updatedProduct] = await db
+        .update(products)
+        .set(productData)
+        .where(eq(products.id, id))
+        .returning();
+      
+      return updatedProduct;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async deleteProduct(id: number): Promise<void> {
+    try {
+      await db.delete(products).where(eq(products.id, id));
+    } catch (error) {
+      throw error;
     }
   }
 
