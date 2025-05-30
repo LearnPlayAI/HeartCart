@@ -1023,22 +1023,24 @@ export class DatabaseStorage implements IStorage {
       // or we filtered by a specific category that is active
 
       try {
-        // Apply base conditions
+        // Apply base conditions and search
         let query = db.select().from(products);
-
-        if (conditions.length > 0) {
-          query = query.where(and(...conditions));
-        }
-
+        
+        // Combine all conditions
+        const allConditions = [...conditions];
+        
         // Add search condition if provided
         if (search) {
           const searchTerm = `%${search}%`;
-          query = query.where(
-            or(
-              like(products.name, searchTerm),
-              like(products.description || "", searchTerm),
-            ),
+          const searchConditions = or(
+            like(products.name, searchTerm),
+            like(products.description || "", searchTerm),
           );
+          allConditions.push(searchConditions);
+        }
+
+        if (allConditions.length > 0) {
+          query = query.where(and(...allConditions));
         }
 
         const productList = await query.limit(limit).offset(offset);
