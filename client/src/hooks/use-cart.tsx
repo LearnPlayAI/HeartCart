@@ -62,7 +62,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   
   // Safe extraction of cart items from the standardized response format
   // If response is not available or doesn't have success/data properties, fall back to empty array
-  const cartItems = (responseData?.success ? responseData.data : []);
+  const cartItems = (responseData?.success ? responseData.data : []) || [];
   
   // Calculate cart summary with simplified approach
   // Since we're using database persistence, the pricing calculations are done server-side
