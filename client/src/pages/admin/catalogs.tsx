@@ -159,7 +159,9 @@ export default function AdminCatalogs() {
 
   const { mutate: deleteCatalog, isPending: isDeleting } = useMutation({
     mutationFn: async (id: number) => {
-      const response = await apiRequest("DELETE", `/api/catalogs/${id}`);
+      const response = await apiRequest("POST", `/api/catalogs/${id}`, {
+        _method: 'DELETE'
+      });
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || "Failed to delete catalog");

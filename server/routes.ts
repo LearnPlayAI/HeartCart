@@ -4834,6 +4834,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }));
 
+  // Shared catalog deletion handler
+  const handleCatalogDeletion = async (req: Request, res: Response) => {
+    const user = req.user as any;
+    const id = parseInt(req.params.id);
+    
+    try {
+      if (user.role !== 'admin') {
+        throw new ForbiddenError("Only administrators can manage catalogs");
+      }
+      
+      // Check if catalog exists
+      const catalog = await storage.getCatalogById(id);
+      if (!catalog) {
+        throw new NotFoundError(`Catalog with ID ${id} not found`, "catalog");
+      }
+      
+      // Check if catalog has products
+      const catalogProducts = await storage.getProductsByCatalogId(id, true);
+      
+      // Delete all products in the catalog if there are any
+      if (catalogProducts.length > 0) {
+        logger.info(`Deleting ${catalogProducts.length} products from catalog "${catalog.name}" (ID: ${id})`);
+        
+        // Delete all product images from object storage first
+        for (const product of catalogProducts) {
+          try {
+            // Get all images for this product
+            const productImages = await storage.getProductImages(product.id);
+            
+            // Delete each image from object storage
+            for (const image of productImages) {
+              try {
+                if (image.objectKey) {
+                  await objectStore.deleteFile(image.objectKey);
+                  logger.debug(`Deleted product image from object storage: ${image.objectKey}`);
+                }
+              } catch (imageError) {
+                logger.warn(`Failed to delete image ${image.objectKey} from object storage:`, imageError);
+              }
+            }
+            
+            // Delete the product images from database
+            await storage.deleteProductImages(product.id);
+            
+            // Delete the product itself
+            await storage.deleteProduct(product.id);
+            logger.debug(`Deleted product "${product.name}" (ID: ${product.id})`);
+          } catch (productError) {
+            logger.error(`Failed to delete product ${product.id}:`, productError);
+            throw productError;
+          }
+        }
+      }
+      
+      // Finally, delete the catalog itself
+      const success = await storage.deleteCatalog(id);
+      
+      if (!success) {
+        throw new AppError("Failed to delete catalog", ErrorCode.OPERATION_FAILED, 500);
+      }
+      
+      logger.info(`Successfully deleted catalog "${catalog.name}" (ID: ${id}) and ${catalogProducts.length} associated products`);
+      
+      return res.json({
+        success: true,
+        message: `Catalog "${catalog.name}" and ${catalogProducts.length} associated products have been deleted successfully.`
+      });
+      
+    } catch (error) {
+      logger.error("Error deleting catalog:", error);
+      throw error;
+    }
+  };
+
+  // Handle catalog deletion via POST with _method override (for compatibility)
+  app.post("/api/catalogs/:id", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
+    if (req.body._method === 'DELETE') {
+      return handleCatalogDeletion(req, res);
+    }
+    
+    // If not a delete operation, return method not allowed
+    return res.status(405).json({
+      success: false,
+      error: { message: "Method not allowed for this endpoint" }
+    });
+  }));
+
   app.delete("/api/catalogs/:id", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
     const user = req.user as any;
     const id = parseInt(req.params.id);
