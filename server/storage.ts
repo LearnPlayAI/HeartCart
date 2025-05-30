@@ -505,7 +505,12 @@ export class Storage {
 
   async getAllAttributes(): Promise<any[]> {
     try {
-      return await db.select().from(attributes).orderBy(attributes.sortOrder, attributes.name);
+      const result = await db.execute(sql`
+        SELECT id, name, display_name, description, attribute_type, is_required, is_filterable, sort_order
+        FROM attributes 
+        ORDER BY sort_order, name
+      `);
+      return result.rows;
     } catch (error) {
       throw error;
     }
