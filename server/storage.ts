@@ -509,6 +509,25 @@ export class Storage {
     }
   }
 
+  async getProductAttributes(productId: number): Promise<any[]> {
+    try {
+      // For now, return empty array as attributes functionality is not yet implemented
+      // This allows the cart functionality to work without breaking
+      return [];
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async getProductGlobalAttributes(productId: number): Promise<any[]> {
+    try {
+      // For now, return empty array as attributes functionality is not yet implemented
+      return [];
+    } catch (error) {
+      throw error;
+    }
+  }
+
   async getCartItemsWithProducts(userId: number): Promise<any[]> {
     try {
       const cartItemsWithProducts = await db

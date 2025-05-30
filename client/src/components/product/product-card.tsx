@@ -98,7 +98,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
     
     try {
       // Check if product has required attributes by fetching attributes
-      const attributesResponse = await fetch(`/api/product-attributes/product/${product.id}/attributes`);
+      const attributesResponse = await fetch(`/api/products/${product.id}/attributes`);
       const attributesData = await attributesResponse.json();
       
       if (attributesData.success && attributesData.data.length > 0) {
