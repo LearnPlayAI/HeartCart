@@ -60,7 +60,8 @@ export default function PricingPage() {
   
   // Search and filter states
   const [searchQuery, setSearchQuery] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<string>('');
+  const [parentCategoryFilter, setParentCategoryFilter] = useState<string>('');
+  const [childCategoryFilter, setChildCategoryFilter] = useState<string>('');
   const [supplierFilter, setSupplierFilter] = useState<string>('');
   const [catalogFilter, setCatalogFilter] = useState<string>('');
   const [sortField, setSortField] = useState<SortField>('name');
@@ -122,6 +123,30 @@ export default function PricingPage() {
   const categories = categoriesResponse?.data || [];
   const catalogs = catalogsResponse?.data || [];
 
+  // Organize categories into parent/child relationships
+  const categoriesWithParents = useMemo(() => {
+    // Create a map for quick lookup
+    const categoryMap = new Map(categories.map((cat: any) => [cat.id, cat]));
+    
+    // Add parent information to each category
+    return categories.map((category: any) => ({
+      ...category,
+      parent: category.parentId ? categoryMap.get(category.parentId) : null
+    }));
+  }, [categories]);
+
+  // Get parent categories (categories with no parentId)
+  const parentCategories = useMemo(() => {
+    return categoriesWithParents.filter((cat: any) => !cat.parentId);
+  }, [categoriesWithParents]);
+
+  // Get child categories for the selected parent
+  const availableChildCategories = useMemo(() => {
+    if (!parentCategoryFilter) return [];
+    const parentId = parseInt(parentCategoryFilter);
+    return categoriesWithParents.filter((cat: any) => cat.parentId === parentId);
+  }, [categoriesWithParents, parentCategoryFilter]);
+
   // Calculate derived pricing data
   const enrichedProducts = useMemo(() => {
     return products.map((product: ProductPricingData) => {
@@ -179,9 +204,26 @@ export default function PricingPage() {
         if (!searchResultIds.includes(product.id)) return false;
       }
       
-      // Category filter
-      if (categoryFilter && categoryFilter !== 'all' && product.categoryName !== categoryFilter) {
-        return false;
+      // Parent category filter
+      if (parentCategoryFilter && parentCategoryFilter !== 'all') {
+        const parentId = parseInt(parentCategoryFilter);
+        const productCategory = categoriesWithParents.find((cat: any) => cat.id === product.categoryId);
+        if (productCategory) {
+          // Check if product's category is the parent or a child of the parent
+          const isParentCategory = productCategory.id === parentId;
+          const isChildOfParent = productCategory.parentId === parentId;
+          if (!isParentCategory && !isChildOfParent) {
+            return false;
+          }
+        }
+      }
+
+      // Child category filter
+      if (childCategoryFilter && childCategoryFilter !== 'all') {
+        const childId = parseInt(childCategoryFilter);
+        if (product.categoryId !== childId) {
+          return false;
+        }
       }
 
       // Supplier filter
@@ -196,7 +238,7 @@ export default function PricingPage() {
 
       return true;
     });
-  }, [enrichedProducts, categoryFilter, supplierFilter, catalogFilter, searchQuery, searchResponse]);
+  }, [enrichedProducts, parentCategoryFilter, childCategoryFilter, supplierFilter, catalogFilter, searchQuery, searchResponse, categoriesWithParents]);
 
   // Sort products
   const sortedProducts = useMemo(() => {
@@ -314,14 +356,15 @@ export default function PricingPage() {
   // Clear filters
   const clearFilters = () => {
     setSearchQuery('');
-    setCategoryFilter('all');
+    setParentCategoryFilter('');
+    setChildCategoryFilter('');
     setSupplierFilter('all');
     setCatalogFilter('all');
     setCurrentPage(1);
   };
 
   // Active filters count
-  const activeFiltersCount = [searchQuery, categoryFilter, supplierFilter, catalogFilter].filter(Boolean).length;
+  const activeFiltersCount = [searchQuery, parentCategoryFilter, childCategoryFilter, supplierFilter, catalogFilter].filter(Boolean).length;
 
   if (productsError) {
     return (
@@ -396,16 +439,45 @@ export default function PricingPage() {
             </div>
 
             {/* Filter Row */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Parent Category Filter */}
+              <Select value={parentCategoryFilter} onValueChange={(value) => {
+                setParentCategoryFilter(value);
+                setChildCategoryFilter(''); // Clear child when parent changes
+              }}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Filter by category" />
+                  <SelectValue placeholder="Filter by parent category" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  {uniqueCategories.map((category) => (
-                    <SelectItem key={category} value={category || 'unknown'}>
-                      {category}
+                  <SelectItem value="all">All Parent Categories</SelectItem>
+                  {parentCategories.map((category: any) => (
+                    <SelectItem key={category.id} value={category.id.toString()}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Child Category Filter */}
+              <Select 
+                value={childCategoryFilter} 
+                onValueChange={setChildCategoryFilter}
+                disabled={!parentCategoryFilter || availableChildCategories.length === 0}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={
+                    !parentCategoryFilter 
+                      ? "Select parent first" 
+                      : availableChildCategories.length === 0 
+                        ? "No child categories"
+                        : "Filter by child category"
+                  } />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Child Categories</SelectItem>
+                  {availableChildCategories.map((category: any) => (
+                    <SelectItem key={category.id} value={category.id.toString()}>
+                      {category.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
