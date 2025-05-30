@@ -4577,8 +4577,8 @@ export class DatabaseStorage implements IStorage {
         supplier_id: catalog.supplierId,
         default_markup_percentage: catalog.defaultMarkupPercentage || 0,
         is_active: catalog.isActive !== undefined ? catalog.isActive : true,
-        start_date: catalog.startDate ? catalog.startDate : null,
-        end_date: catalog.endDate ? catalog.endDate : null,
+        start_date: catalog.startDate ? String(catalog.startDate) : null,
+        end_date: catalog.endDate ? String(catalog.endDate) : null,
       };
 
       // Only include optional fields if they have values
@@ -4602,6 +4602,7 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error('Error in createCatalog:', error);
       console.error('Error details:', error instanceof Error ? error.message : 'Unknown error');
+      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
       throw error;
     }
   }
