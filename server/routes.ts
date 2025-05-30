@@ -4692,15 +4692,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('DEBUG: About to parse with insertCatalogSchema');
       
       const catalogData = insertCatalogSchema.parse(req.body);
-      console.log('DEBUG: Parsed catalog data:', catalogData);
+      console.log('🔍 CATALOG ROUTE DEBUG - Parsed catalog data:', catalogData);
       
       // Verify the supplier exists
+      console.log('🔍 CATALOG ROUTE DEBUG - Checking supplier exists...');
       const supplier = await storage.getSupplierById(catalogData.supplierId);
       if (!supplier) {
         throw new NotFoundError(`Supplier with ID ${catalogData.supplierId} not found`, "supplier");
       }
+      console.log('🔍 CATALOG ROUTE DEBUG - Supplier found:', supplier.name);
       
       // Check if a catalog with the same name already exists for this supplier
+      console.log('🔍 CATALOG ROUTE DEBUG - Checking for existing catalog...');
       const existingCatalog = await storage.getCatalogByNameAndSupplierId(
         catalogData.name, 
         catalogData.supplierId
@@ -4713,8 +4716,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           409
         );
       }
+      console.log('🔍 CATALOG ROUTE DEBUG - No existing catalog found, proceeding...');
       
+      console.log('🔍 CATALOG ROUTE DEBUG - About to call storage.createCatalog');
       const catalog = await storage.createCatalog(catalogData);
+      console.log('🔍 CATALOG ROUTE DEBUG - Successfully created catalog:', catalog);
       
       return res.status(201).json({
         success: true,
