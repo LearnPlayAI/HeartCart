@@ -4371,6 +4371,101 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }));
 
+  // Deactivate supplier (soft delete with cascade)
+  app.patch("/api/suppliers/:id/deactivate", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    const id = parseInt(req.params.id);
+    
+    try {
+      if (user.role !== 'admin') {
+        throw new ForbiddenError("Only administrators can manage suppliers");
+      }
+      
+      // Check if supplier exists
+      const supplier = await storage.getSupplierById(id);
+      if (!supplier) {
+        throw new NotFoundError(`Supplier with ID ${id} not found`, "supplier");
+      }
+      
+      if (!supplier.isActive) {
+        throw new AppError(
+          `Supplier "${supplier.name}" is already inactive`,
+          ErrorCode.INVALID_STATE,
+          400
+        );
+      }
+      
+      // Deactivate the supplier
+      const updatedSupplier = await storage.updateSupplier(id, { isActive: false });
+      
+      if (!updatedSupplier) {
+        throw new AppError(
+          "Failed to deactivate supplier due to a database error.",
+          ErrorCode.DATABASE_ERROR,
+          500
+        );
+      }
+      
+      // Cascade deactivation to catalogs and products
+      try {
+        const supplierCatalogs = await storage.getCatalogsBySupplierId(id, false); // Get all catalogs
+        
+        let totalProductsUpdated = 0;
+        for (const catalog of supplierCatalogs) {
+          // Update catalog to inactive
+          await storage.updateCatalog(catalog.id, { isActive: false });
+          
+          // Update all products in this catalog to inactive
+          const productsUpdated = await storage.bulkUpdateCatalogProducts(catalog.id, { isActive: false });
+          totalProductsUpdated += productsUpdated;
+        }
+        
+        logger.info(`Supplier ${id} deactivated: cascaded updates`, { 
+          catalogs: supplierCatalogs.length, 
+          products: totalProductsUpdated 
+        });
+        
+        return res.json({
+          success: true,
+          data: updatedSupplier,
+          message: `Supplier "${updatedSupplier.name}" deactivated successfully. ${supplierCatalogs.length} catalogs and ${totalProductsUpdated} products were also deactivated.`
+        });
+      } catch (cascadeError) {
+        // Log cascade error but don't fail the main operation
+        logger.warn('Error during cascade deactivation of supplier assets', { 
+          error: cascadeError, 
+          supplierId: id
+        });
+        
+        return res.json({
+          success: true,
+          data: updatedSupplier,
+          message: `Supplier "${updatedSupplier.name}" deactivated successfully, but some catalogs or products may not have been deactivated.`
+        });
+      }
+    } catch (error) {
+      // Log detailed error information with context
+      logger.error('Error deactivating supplier', { 
+        error,
+        userId: user.id,
+        supplierId: id
+      });
+      
+      // Check for specific error types
+      if (error instanceof ForbiddenError || error instanceof NotFoundError || error instanceof AppError) {
+        throw error;
+      }
+      
+      // Return generic error for unexpected issues
+      throw new AppError(
+        "Failed to deactivate supplier. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
+    }
+  }));
+
   app.delete("/api/suppliers/:id", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
     const user = req.user as any;
     const id = parseInt(req.params.id);
@@ -4387,16 +4482,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Check if supplier has associated catalogs
-      const supplierCatalogs = await storage.getCatalogsBySupplierId(id, false);
+      const supplierCatalogs = await storage.getCatalogsBySupplierId(id, false); // Get all catalogs, including inactive
+      
       if (supplierCatalogs.length > 0) {
+        // Check if any products exist in any of the catalogs
+        let totalProducts = 0;
+        for (const catalog of supplierCatalogs) {
+          const productCount = await storage.getProductCountByCatalogId(catalog.id);
+          totalProducts += productCount;
+        }
+        
+        if (totalProducts > 0) {
+          throw new AppError(
+            `Cannot delete supplier "${supplier.name}" because it has ${supplierCatalogs.length} catalogs with ${totalProducts} products. Delete all products and catalogs first, or deactivate the supplier instead.`,
+            ErrorCode.DEPENDENT_ENTITIES_EXIST,
+            409
+          );
+        }
+        
         throw new AppError(
-          `Cannot delete supplier "${supplier.name}" because it has ${supplierCatalogs.length} catalogs associated with it. Deactivate the supplier instead.`,
+          `Cannot delete supplier "${supplier.name}" because it has ${supplierCatalogs.length} catalogs associated with it. Delete all catalogs first, or deactivate the supplier instead.`,
           ErrorCode.DEPENDENT_ENTITIES_EXIST,
           409
         );
       }
       
-      const success = await storage.deleteSupplier(id);
+      const success = await storage.hardDeleteSupplier(id);
       
       if (!success) {
         throw new AppError(

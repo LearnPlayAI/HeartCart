@@ -24,7 +24,8 @@ import {
   MoreVertical,
   Edit,
   Trash,
-  RefreshCw
+  RefreshCw,
+  UserX
 } from "lucide-react";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";

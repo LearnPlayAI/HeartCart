@@ -263,7 +263,9 @@ export interface IStorage {
     id: number,
     supplierData: Partial<InsertSupplier>,
   ): Promise<Supplier | undefined>;
-  deleteSupplier(id: number): Promise<boolean>;
+  deleteSupplier(id: number): Promise<boolean>; // Soft delete (set inactive)
+  hardDeleteSupplier(id: number): Promise<boolean>; // Hard delete from database
+  getProductCountByCatalogId(catalogId: number): Promise<number>;
 
   // Catalog operations
   getAllCatalogs(activeOnly?: boolean): Promise<Catalog[]>;
@@ -278,6 +280,7 @@ export interface IStorage {
     catalogData: Partial<InsertCatalog>,
   ): Promise<Catalog | undefined>;
   deleteCatalog(id: number): Promise<boolean>;
+  bulkUpdateCatalogProducts(catalogId: number, updates: Partial<InsertProduct>): Promise<number>;
   getProductsByCatalogId(
     catalogId: number,
     activeOnly?: boolean,
@@ -4229,7 +4232,7 @@ export class DatabaseStorage implements IStorage {
         .update(suppliers)
         .set({
           isActive: false,
-          updatedAt: new Date(),
+          updatedAt: new Date().toISOString(),
         })
         .where(eq(suppliers.id, id))
         .returning();
@@ -4237,6 +4240,32 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error(`Error soft-deleting supplier ${id}:`, error);
       throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
+  }
+
+  async hardDeleteSupplier(id: number): Promise<boolean> {
+    try {
+      // Hard deletion - actually remove from database
+      const result = await db
+        .delete(suppliers)
+        .where(eq(suppliers.id, id));
+      return true; // If no error thrown, deletion was successful
+    } catch (error) {
+      console.error(`Error hard-deleting supplier ${id}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
+  }
+
+  async getProductCountByCatalogId(catalogId: number): Promise<number> {
+    try {
+      const result = await db
+        .select({ count: count() })
+        .from(products)
+        .where(eq(products.catalogId, catalogId));
+      return result[0]?.count ?? 0;
+    } catch (error) {
+      console.error(`Error counting products for catalog ${catalogId}:`, error);
+      throw error;
     }
   }
 
@@ -4573,7 +4602,7 @@ export class DatabaseStorage implements IStorage {
         .update(catalogs)
         .set({
           isActive: false,
-          updatedAt: new Date(),
+          updatedAt: new Date().toISOString(),
         })
         .where(eq(catalogs.id, id))
         .returning();
@@ -4581,6 +4610,22 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error(`Error soft-deleting catalog ${id}:`, error);
       throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
+  }
+
+  async bulkUpdateCatalogProducts(catalogId: number, updates: Partial<InsertProduct>): Promise<number> {
+    try {
+      const result = await db
+        .update(products)
+        .set({
+          ...updates,
+          updatedAt: new Date().toISOString(),
+        })
+        .where(eq(products.catalogId, catalogId));
+      return result.rowCount || 0;
+    } catch (error) {
+      console.error(`Error bulk updating products for catalog ${catalogId}:`, error);
+      throw error;
     }
   }
 
