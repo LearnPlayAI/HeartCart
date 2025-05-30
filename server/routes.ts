@@ -4688,7 +4688,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw new ForbiddenError("Only administrators can manage catalogs");
       }
       
+      console.log('DEBUG: Request body received:', req.body);
+      console.log('DEBUG: About to parse with insertCatalogSchema');
+      
       const catalogData = insertCatalogSchema.parse(req.body);
+      console.log('DEBUG: Parsed catalog data:', catalogData);
       
       // Verify the supplier exists
       const supplier = await storage.getSupplierById(catalogData.supplierId);
