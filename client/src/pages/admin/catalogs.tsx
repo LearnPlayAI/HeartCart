@@ -76,15 +76,25 @@ export default function CatalogsPage() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [filterStatus, setFilterStatus] = useState<"all" | "active" | "inactive">("all");
 
-  const {
-    data: catalogs,
-    isLoading,
-    refetch,
-  } = useQuery<Catalog[]>({
+  const { data: catalogsResponse, isLoading, refetch } = useQuery<{ success: boolean, data: Catalog[], error?: { message: string } }>({
     queryKey: ["/api/catalogs", searchQuery],
-    queryFn: () =>
-      apiRequest(`/api/catalogs?activeOnly=false&q=${encodeURIComponent(searchQuery)}`),
+    queryFn: async () => {
+      const response = await fetch(`/api/catalogs?activeOnly=false&q=${encodeURIComponent(searchQuery)}`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch catalogs");
+      }
+      
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error?.message || "Failed to fetch catalogs");
+      }
+      
+      return result;
+    }
   });
+  
+  // Extract data from standardized response
+  const catalogs = catalogsResponse?.data;
 
   const toggleStatusMutation = useMutation({
     mutationFn: (catalog: Catalog) =>
