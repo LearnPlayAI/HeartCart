@@ -4570,18 +4570,25 @@ export class DatabaseStorage implements IStorage {
   async createCatalog(catalog: InsertCatalog): Promise<Catalog> {
     try {
       // Map camelCase frontend data to snake_case database column names
-      const catalogData = {
+      // Only include fields that exist in the catalogs table schema
+      const catalogData: any = {
         name: catalog.name,
         description: catalog.description,
         supplier_id: catalog.supplierId,
         default_markup_percentage: catalog.defaultMarkupPercentage || 0,
         is_active: catalog.isActive !== undefined ? catalog.isActive : true,
-        cover_image: catalog.coverImage,
-        tags: catalog.tags,
         start_date: catalog.startDate ? catalog.startDate : null,
         end_date: catalog.endDate ? catalog.endDate : null,
-        // created_at and updated_at will be handled by default values
       };
+
+      // Only include optional fields if they have values
+      if (catalog.coverImage) {
+        catalogData.cover_image = catalog.coverImage;
+      }
+      
+      if (catalog.tags && catalog.tags.length > 0) {
+        catalogData.tags = catalog.tags;
+      }
 
       console.log('DEBUG: Creating catalog with data:', catalogData);
 
@@ -4594,6 +4601,7 @@ export class DatabaseStorage implements IStorage {
       return newCatalog;
     } catch (error) {
       console.error('Error in createCatalog:', error);
+      console.error('Error details:', error instanceof Error ? error.message : 'Unknown error');
       throw error;
     }
   }
