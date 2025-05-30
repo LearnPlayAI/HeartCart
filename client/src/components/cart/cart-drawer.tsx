@@ -45,16 +45,8 @@ const CartDrawer = () => {
     <Sheet open={isOpen} onOpenChange={closeCart}>
       <SheetContent className="w-full sm:max-w-md p-0 flex flex-col h-full">
         <SheetHeader className="p-4 border-b border-gray-200 bg-[#FF69B4] text-white">
-          <SheetTitle className="text-white flex justify-between items-center">
-            <span>Your Cart ({cartSummary.itemCount})</span>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={closeCart}
-              className="text-white hover:text-gray-200 transition-colors"
-            >
-              <XCircle className="h-5 w-5" />
-            </Button>
+          <SheetTitle className="text-white">
+            Your Cart ({cartSummary.itemCount})
           </SheetTitle>
         </SheetHeader>
         
