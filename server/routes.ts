@@ -4553,7 +4553,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const isAdmin = user && user.role === 'admin';
       const activeOnly = isAdmin ? false : req.query.activeOnly !== 'false';
       
-      const catalogs = await storage.getAllCatalogs(activeOnly);
+      // Get catalogs with supplier information directly
+      const catalogData = await db
+        .select({
+          id: catalogs.id,
+          name: catalogs.name,
+          description: catalogs.description,
+          supplierId: catalogs.supplierId,
+          supplierName: suppliers.name,
+          isActive: catalogs.isActive,
+          defaultMarkupPercentage: catalogs.defaultMarkupPercentage,
+          startDate: catalogs.startDate,
+          endDate: catalogs.endDate,
+          createdAt: catalogs.createdAt,
+          updatedAt: catalogs.updatedAt,
+          coverImage: catalogs.coverImage,
+          tags: catalogs.tags,
+        })
+        .from(catalogs)
+        .leftJoin(suppliers, eq(catalogs.supplierId, suppliers.id))
+        .where(activeOnly ? eq(catalogs.isActive, true) : undefined)
+        .orderBy(asc(catalogs.name));
+
+      // Add product count for each catalog
+      const catalogsWithProductCount = await Promise.all(
+        catalogData.map(async (catalog) => {
+          try {
+            // Count products in this catalog
+            const productsQuery = await db
+              .select({ count: sql<number>`count(*)` })
+              .from(products)
+              .where(
+                activeOnly
+                  ? and(
+                      eq(products.catalogId, catalog.id),
+                      eq(products.isActive, true)
+                    )
+                  : eq(products.catalogId, catalog.id)
+              );
+
+            const count = productsQuery[0]?.count || 0;
+
+            return {
+              ...catalog,
+              productsCount: Number(count)
+            };
+          } catch (error) {
+            return {
+              ...catalog,
+              productsCount: 0
+            };
+          }
+        })
+      );
       
       // Add cache-control headers to prevent caching during debugging
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -4562,9 +4614,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       return res.json({
         success: true,
-        data: catalogs,
+        data: catalogsWithProductCount,
         meta: {
-          count: catalogs.length,
+          count: catalogsWithProductCount.length,
           activeOnly
         }
       });

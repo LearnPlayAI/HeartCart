@@ -4332,20 +4332,32 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-                const [result] = await productsQuery;
-                const count = result?.count || 0;
+  async getCatalogById(id: number): Promise<any | null> {
+    try {
+      const [catalog] = await db
+        .select()
+        .from(catalogs)
+        .where(eq(catalogs.id, id))
+        .limit(1);
+      
+      return catalog || null;
+    } catch (error) {
+      throw error;
+    }
+  }
 
-                // Format all dates as ISO strings
-                return {
-                  ...catalog,
-                  startDate: catalog.startDate
-                    ? new Date(catalog.startDate).toISOString()
-                    : null,
-                  endDate: catalog.endDate
-                    ? new Date(catalog.endDate).toISOString()
-                    : null,
-                  createdAt: catalog.createdAt
-                    ? new Date(catalog.createdAt).toISOString()
+  async createCatalog(catalogData: any): Promise<any> {
+    try {
+      const [newCatalog] = await db
+        .insert(catalogs)
+        .values(catalogData)
+        .returning();
+      
+      return newCatalog;
+    } catch (error) {
+      throw error;
+    }
+  }
                     : null,
                   productsCount: Number(count),
                 };
