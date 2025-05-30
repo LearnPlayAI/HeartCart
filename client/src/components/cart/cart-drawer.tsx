@@ -14,6 +14,7 @@ const CartDrawer = () => {
     closeCart, 
     updateItemQuantity, 
     removeItem,
+    removeAttributeOption,
     cartSummary,
     isLoading
   } = useCart();
@@ -107,13 +108,29 @@ const CartDrawer = () => {
                             {Array.isArray(value) ? (
                               <div className="flex gap-1 flex-wrap">
                                 {value.map((val, index) => (
-                                  <span key={index} className="px-2 py-0.5 rounded bg-[#ff69b4] text-[#ffffff]">
+                                  <span key={index} className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#ff69b4] text-[#ffffff]">
                                     {val}
+                                    <button
+                                      onClick={() => removeAttributeOption(item.id, attributeName, val)}
+                                      className="ml-1 hover:bg-white/20 rounded-full p-0.5 transition-colors"
+                                      title={`Remove ${val}`}
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </button>
                                   </span>
                                 ))}
                               </div>
                             ) : (
-                              <span className="bg-gray-100 px-2 py-0.5 rounded text-gray-700">{value}</span>
+                              <span className="inline-flex items-center gap-1 bg-gray-100 px-2 py-0.5 rounded text-gray-700">
+                                {value}
+                                <button
+                                  onClick={() => removeAttributeOption(item.id, attributeName, value)}
+                                  className="ml-1 hover:bg-gray-300 rounded-full p-0.5 transition-colors"
+                                  title={`Remove ${value}`}
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </span>
                             )}
                           </div>
                         ))}

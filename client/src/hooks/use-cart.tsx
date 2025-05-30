@@ -290,6 +290,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         addItem,
         updateItemQuantity,
         removeItem,
+        removeAttributeOption,
         clearCart,
         cartSummary,
         isLoading

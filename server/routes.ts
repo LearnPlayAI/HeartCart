@@ -3291,6 +3291,128 @@ export async function registerRoutes(app: Express): Promise<Server> {
     })
   );
 
+  // Remove attribute option from cart item
+  app.patch(
+    "/api/cart/:id/remove-attribute", 
+    isAuthenticated, 
+    validateRequest({
+      params: z.object({
+        id: z.coerce.number().positive("Cart item ID is required")
+      }),
+      body: z.object({
+        attributeName: z.string().min(1, "Attribute name is required"),
+        attributeValue: z.string().min(1, "Attribute value is required")
+      })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const { id } = req.params;
+      const { attributeName, attributeValue } = req.body;
+      const cartItemId = Number(id);
+      const user = req.user as any;
+      
+      try {
+        // Check if cart item exists
+        const cartItem = await storage.getCartItemById(cartItemId);
+        
+        if (!cartItem) {
+          throw new NotFoundError(`Cart item with ID ${cartItemId} not found`, "cartItem");
+        }
+        
+        // Verify ownership
+        if (cartItem.userId !== user.id) {
+          throw new ForbiddenError(`Cannot modify cart item ${cartItemId} that doesn't belong to you`);
+        }
+        
+        // Parse current attribute selections
+        const currentSelections = cartItem.attributeSelections || {};
+        
+        if (!currentSelections[attributeName]) {
+          throw new BadRequestError(`Attribute "${attributeName}" not found in cart item`);
+        }
+        
+        // Handle both array and single value attributes
+        let updatedSelections = { ...currentSelections };
+        
+        if (Array.isArray(currentSelections[attributeName])) {
+          // Remove specific value from array
+          const valueArray = currentSelections[attributeName] as string[];
+          const filteredArray = valueArray.filter(val => val !== attributeValue);
+          
+          if (filteredArray.length === valueArray.length) {
+            throw new BadRequestError(`Attribute value "${attributeValue}" not found in "${attributeName}"`);
+          }
+          
+          if (filteredArray.length === 0) {
+            // If no values left, remove the attribute entirely
+            delete updatedSelections[attributeName];
+          } else {
+            updatedSelections[attributeName] = filteredArray;
+          }
+        } else {
+          // Single value attribute
+          if (currentSelections[attributeName] !== attributeValue) {
+            throw new BadRequestError(`Attribute value "${attributeValue}" does not match current value`);
+          }
+          
+          // Remove the entire attribute
+          delete updatedSelections[attributeName];
+        }
+        
+        // If no attributes left, decrease quantity by 1
+        const hasAttributes = Object.keys(updatedSelections).length > 0;
+        
+        if (!hasAttributes && cartItem.quantity === 1) {
+          // Remove entire cart item if no attributes and quantity is 1
+          await storage.removeFromCart(cartItemId);
+          
+          return res.json({
+            success: true,
+            data: { removed: true },
+            message: "Item removed from cart"
+          });
+        } else if (!hasAttributes) {
+          // Decrease quantity by 1 if no attributes left but quantity > 1
+          const newQuantity = cartItem.quantity - 1;
+          const updatedItem = await storage.updateCartItemQuantity(cartItemId, newQuantity);
+          
+          return res.json({
+            success: true,
+            data: updatedItem,
+            message: `Removed ${attributeName}: ${attributeValue}, quantity decreased to ${newQuantity}`
+          });
+        } else {
+          // Update attribute selections
+          const updatedItem = await storage.updateCartItemAttributes(cartItemId, updatedSelections);
+          
+          return res.json({
+            success: true,
+            data: updatedItem,
+            message: `Removed ${attributeName}: ${attributeValue} from cart item`
+          });
+        }
+      } catch (error) {
+        logger.error('Error removing attribute option from cart item', { 
+          error, 
+          userId: user.id,
+          cartItemId,
+          attributeName,
+          attributeValue
+        });
+        
+        if (error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof BadRequestError) {
+          throw error;
+        }
+        
+        throw new AppError(
+          "Failed to remove attribute option. Please try again.",
+          ErrorCode.INTERNAL_SERVER_ERROR,
+          500,
+          { originalError: error }
+        );
+      }
+    })
+  );
+
   // ORDER ROUTES
   app.post(
     "/api/orders", 
