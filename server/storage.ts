@@ -4310,6 +4310,9 @@ export class DatabaseStorage implements IStorage {
               .orderBy(asc(catalogs.name));
 
         const catalogData = await query;
+        
+        // Debug: Log the catalog data to see what we're getting
+        console.log('🔍 CATALOG DEBUG - Raw catalog data:', JSON.stringify(catalogData, null, 2));
 
         // Add product count for each catalog
         try {
