@@ -208,13 +208,29 @@ export default function PricingPage() {
       if (parentCategoryFilter && parentCategoryFilter !== 'all') {
         const parentId = parseInt(parentCategoryFilter);
         const productCategory = categoriesWithParents.find((cat: any) => cat.id === product.categoryId);
+        
+        // Debug logging
+        if (parentCategoryFilter === '24') { // Assuming Computers has ID 24
+          console.log('Debug - Product:', product.name, 'CategoryId:', product.categoryId);
+          console.log('Debug - ProductCategory found:', productCategory);
+          console.log('Debug - Parent ID we are filtering by:', parentId);
+        }
+        
         if (productCategory) {
           // Check if product's category is the parent or a child of the parent
           const isParentCategory = productCategory.id === parentId;
           const isChildOfParent = productCategory.parentId === parentId;
+          
+          if (parentCategoryFilter === '24') {
+            console.log('Debug - isParentCategory:', isParentCategory, 'isChildOfParent:', isChildOfParent);
+          }
+          
           if (!isParentCategory && !isChildOfParent) {
             return false;
           }
+        } else {
+          // If no category found, exclude the product
+          return false;
         }
       }
 
