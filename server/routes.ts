@@ -4550,95 +4550,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // CATALOG ROUTES
   app.get("/api/catalogs", asyncHandler(async (req: Request, res: Response) => {
     try {
-      // For admin users, show all catalogs regardless of active status
-      // For regular users, only show active catalogs
-      const user = req.user as any;
-      const isAdmin = user && user.role === 'admin';
-      const activeOnly = isAdmin ? false : req.query.activeOnly !== 'false';
-      
-      // Get catalogs first (simple query to avoid SQL syntax issues)
-      console.log('Fetching catalogs...');
-      const catalogsQuery = db.select().from(catalogs);
-      
-      if (activeOnly) {
-        catalogsQuery.where(eq(catalogs.isActive, true));
-      }
-      
-      const catalogData = await catalogsQuery.orderBy(asc(catalogs.name));
-      console.log('Catalogs fetched:', catalogData.length);
-      
-      // Get suppliers separately
-      console.log('Fetching suppliers...');
-      const suppliersData = await db.select().from(suppliers);
-      console.log('Suppliers fetched:', suppliersData.length);
-      
-      // Manually join the data
-      const catalogsWithSuppliers = catalogData.map(catalog => {
-        const supplier = suppliersData.find(s => s.id === catalog.supplierId);
-        return {
-          ...catalog,
-          supplierName: supplier?.name || 'Unknown Supplier'
-        };
-      });
-
-      // Add product count for each catalog
-      const catalogsWithProductCount = await Promise.all(
-        catalogsWithSuppliers.map(async (catalog) => {
-          try {
-            // Count products in this catalog
-            const productsQuery = await db
-              .select({ count: sql<number>`count(*)` })
-              .from(products)
-              .where(
-                activeOnly
-                  ? and(
-                      eq(products.catalogId, catalog.id),
-                      eq(products.isActive, true)
-                    )
-                  : eq(products.catalogId, catalog.id)
-              );
-
-            const count = productsQuery[0]?.count || 0;
-
-            return {
-              ...catalog,
-              productsCount: Number(count)
-            };
-          } catch (error) {
-            return {
-              ...catalog,
-              productsCount: 0
-            };
-          }
-        })
-      );
-      
-      // Add cache-control headers to prevent caching during debugging
-      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-      res.setHeader('Pragma', 'no-cache');
-      res.setHeader('Expires', '0');
+      // Use storage method instead of direct database queries
+      const catalogData = await storage.getAllCatalogs();
       
       return res.json({
         success: true,
-        data: catalogsWithProductCount,
+        data: catalogData,
         meta: {
-          count: catalogsWithProductCount.length,
-          activeOnly
+          count: catalogData.length
         }
       });
     } catch (error) {
-      // Log detailed error information
-      console.error('Detailed catalog error:', error);
-      logger.error('Error retrieving catalogs', { 
-        error: error instanceof Error ? {
-          message: error.message,
-          stack: error.stack,
-          name: error.name
-        } : error,
-        query: req.query
-      });
-      
-      // Return generic error
+      console.error('Catalog error:', error);
       throw new AppError(
         "Failed to retrieve catalogs. Please try again.",
         ErrorCode.INTERNAL_SERVER_ERROR,

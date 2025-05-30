@@ -95,6 +95,18 @@ export class Storage {
     }
   }
 
+  async getUser(id: number): Promise<User | null> {
+    try {
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, id));
+      return user || null;
+    } catch (error) {
+      throw error;
+    }
+  }
+
   // Supplier operations
   async getAllSuppliers(activeOnly = true): Promise<Supplier[]> {
     try {
