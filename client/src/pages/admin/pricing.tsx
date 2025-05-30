@@ -173,7 +173,7 @@ export default function PricingPage() {
     return products.map((product: ProductPricingData) => {
       const category = categories.find((cat: Category) => cat.id === product.categoryId);
       const catalog = catalogs.find((cat: any) => cat.id === product.catalogId);
-      const supplier = suppliers.find((sup: any) => sup.id === product.supplier);
+      const supplier = suppliers.find((sup: any) => sup.id === parseInt(product.supplier || '0'));
       
       // Calculate TMY markup percentage (profit margin between cost and sale price)
       const effectivePrice = product.salePrice || product.price;
