@@ -4298,42 +4298,36 @@ export class DatabaseStorage implements IStorage {
     try {
       // Get catalogs with supplier information
       try {
+        const baseSelect = {
+          id: catalogs.id,
+          name: catalogs.name,
+          description: catalogs.description,
+          supplierId: catalogs.supplierId,
+          supplierName: suppliers.name,
+          isActive: catalogs.isActive,
+          defaultMarkupPercentage: catalogs.defaultMarkupPercentage,
+          startDate: catalogs.startDate,
+          endDate: catalogs.endDate,
+          createdAt: catalogs.createdAt,
+        };
+
         const query = activeOnly
           ? db
-              .select({
-                id: catalogs.id,
-                name: catalogs.name,
-                description: catalogs.description,
-                supplierId: catalogs.supplierId,
-                supplierName: suppliers.name,
-                isActive: catalogs.isActive,
-                defaultMarkupPercentage: catalogs.defaultMarkupPercentage,
-                startDate: catalogs.startDate,
-                endDate: catalogs.endDate,
-                createdAt: catalogs.createdAt,
-              })
+              .select(baseSelect)
               .from(catalogs)
               .leftJoin(suppliers, eq(catalogs.supplierId, suppliers.id))
               .where(eq(catalogs.isActive, true))
               .orderBy(asc(catalogs.name))
           : db
-              .select({
-                id: catalogs.id,
-                name: catalogs.name,
-                description: catalogs.description,
-                supplierId: catalogs.supplierId,
-                supplierName: suppliers.name,
-                isActive: catalogs.isActive,
-                defaultMarkupPercentage: catalogs.defaultMarkupPercentage,
-                startDate: catalogs.startDate,
-                endDate: catalogs.endDate,
-                createdAt: catalogs.createdAt,
-              })
+              .select(baseSelect)
               .from(catalogs)
               .leftJoin(suppliers, eq(catalogs.supplierId, suppliers.id))
               .orderBy(asc(catalogs.name));
 
         const catalogData = await query;
+        
+        // Debug log to see what we're getting from the database
+        console.log('Raw catalog data from query:', JSON.stringify(catalogData, null, 2));
 
         // Add product count for each catalog
         try {
