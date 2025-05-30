@@ -7,9 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ProductSearch } from '@/components/ui/product-search';
 import { useToast } from '@/hooks/use-toast';
 import { 
-  Search, 
+  Search,
   Filter, 
   Edit, 
   Package, 
@@ -210,7 +211,7 @@ export default function PricingPage() {
         const productCategory = categoriesWithParents.find((cat: any) => cat.id === product.categoryId);
         
         // Debug logging
-        if (parentCategoryFilter === '24') { // Assuming Computers has ID 24
+        if (parentCategoryFilter === '36') { // Computers has ID 36
           console.log('Debug - Product:', product.name, 'CategoryId:', product.categoryId);
           console.log('Debug - ProductCategory found:', productCategory);
           console.log('Debug - Parent ID we are filtering by:', parentId);
