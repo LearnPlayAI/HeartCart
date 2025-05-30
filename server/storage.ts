@@ -4569,41 +4569,37 @@ export class DatabaseStorage implements IStorage {
 
   async createCatalog(catalog: InsertCatalog): Promise<Catalog> {
     try {
-      // Map camelCase frontend data to snake_case database column names
-      // Only include fields that exist in the catalogs table schema
-      const catalogData: any = {
-        name: catalog.name,
-        description: catalog.description,
-        supplier_id: catalog.supplierId,
-        default_markup_percentage: catalog.defaultMarkupPercentage || 0,
-        is_active: catalog.isActive !== undefined ? catalog.isActive : true,
-        start_date: catalog.startDate ? String(catalog.startDate) : null,
-        end_date: catalog.endDate ? String(catalog.endDate) : null,
-      };
-
-      // Only include optional fields if they have values
-      if (catalog.coverImage) {
-        catalogData.cover_image = catalog.coverImage;
-      }
+      const now = new Date().toISOString();
       
-      if (catalog.tags && catalog.tags.length > 0) {
-        catalogData.tags = catalog.tags;
-      }
-
-      console.log('DEBUG: Creating catalog with data:', catalogData);
-
+      // Log the catalog data being inserted for debugging
+      console.log('🔍 CATALOG DEBUG - About to insert:', {
+        ...catalog,
+        createdAt: now,
+        updatedAt: now,
+      });
+      
       const [newCatalog] = await db
         .insert(catalogs)
-        .values(catalogData)
+        .values({
+          ...catalog,
+          createdAt: now,
+          updatedAt: now,
+        })
         .returning();
-
-      console.log('DEBUG: Created catalog:', newCatalog);
+        
+      console.log('🔍 CATALOG DEBUG - Successfully created:', newCatalog);
       return newCatalog;
     } catch (error) {
-      console.error('Error in createCatalog:', error);
-      console.error('Error details:', error instanceof Error ? error.message : 'Unknown error');
-      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
-      throw error;
+      console.error(`🔍 CATALOG DEBUG - Error creating catalog "${catalog.name}":`, error);
+      console.error('🔍 CATALOG DEBUG - Error details:', {
+        message: error?.message,
+        stack: error?.stack,
+        code: error?.code,
+        detail: error?.detail,
+        name: error?.name,
+        fullError: error
+      });
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
   }
 
