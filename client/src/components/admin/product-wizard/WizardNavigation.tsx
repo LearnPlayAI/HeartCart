@@ -96,24 +96,26 @@ export function WizardNavigation({ onComplete }: WizardNavigationProps) {
   };
   
   return (
-    <div className="space-y-6">
-      {/* Step Indicator - Mobile Optimized */}
-      <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0 pb-2">
-        <div className="flex justify-between items-center min-w-[500px] sm:min-w-0">
+    <div className="bg-white/60 backdrop-blur-sm rounded-2xl border border-white/20 shadow-lg p-6 space-y-6">
+      {/* Enhanced Step Indicator */}
+      <div className="overflow-x-auto -mx-2 px-2 pb-2">
+        <div className="flex justify-between items-center min-w-[600px] sm:min-w-0">
           <TooltipProvider>
             {steps.map((step, index) => {
               const status = getStepStatus(step.id);
-              // Make all steps clickable, regardless of status
               const isClickable = true;
               
               return (
                 <div key={step.id} className="flex items-center flex-1">
                   {index > 0 && (
-                    <div 
-                      className={`flex-1 h-1 mx-1 sm:mx-2 rounded ${
-                        status === 'upcoming' ? 'bg-muted' : 'bg-primary/60'
-                      }`}
-                    />
+                    <div className="flex-1 h-0.5 mx-2 sm:mx-3 relative">
+                      <div className="absolute inset-0 bg-slate-200 rounded-full"></div>
+                      <div 
+                        className={`absolute inset-0 rounded-full transition-all duration-500 ${
+                          status === 'upcoming' ? 'w-0 bg-slate-200' : 'w-full bg-gradient-to-r from-blue-500 to-purple-500'
+                        }`}
+                      />
+                    </div>
                   )}
                   
                   <Tooltip>
@@ -122,50 +124,60 @@ export function WizardNavigation({ onComplete }: WizardNavigationProps) {
                         type="button"
                         disabled={!isClickable}
                         onClick={() => isClickable && handleStepClick(step.id)}
-                        className={`relative flex flex-col items-center group ${
-                          !isClickable ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
+                        className={`relative flex flex-col items-center group transition-all duration-300 ${
+                          !isClickable ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:scale-105'
                         }`}
                       >
                         <div 
-                          className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center border ${
+                          className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center border-2 transition-all duration-300 shadow-lg ${
                             status === 'current' 
-                              ? 'bg-primary text-primary-foreground border-primary' 
+                              ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white border-blue-400 shadow-blue-200' 
                               : status === 'complete' 
-                              ? 'bg-pink-200 text-pink-700 border-pink-400' 
+                              ? 'bg-gradient-to-r from-emerald-500 to-green-500 text-white border-emerald-400 shadow-emerald-200' 
                               : status === 'error'
-                              ? 'bg-destructive/10 text-destructive border-destructive'
-                              : 'bg-muted text-muted-foreground border-muted-foreground/30'
+                              ? 'bg-gradient-to-r from-red-500 to-pink-500 text-white border-red-400 shadow-red-200'
+                              : 'bg-white text-slate-500 border-slate-300 shadow-slate-100 group-hover:bg-slate-50 group-hover:border-slate-400'
                           }`}
                         >
-                          {getStatusIcon(status) || (index + 1)}
+                          {getStatusIcon(status) || (
+                            <span className="font-semibold text-sm sm:text-base">
+                              {index + 1}
+                            </span>
+                          )}
                         </div>
-                        {/* Only show labels on larger screens */}
+                        
+                        {/* Enhanced labels with better spacing */}
                         <span 
-                          className={`mt-1 sm:mt-2 text-xs sm:text-sm hidden sm:inline ${
+                          className={`mt-2 sm:mt-3 text-xs sm:text-sm font-medium text-center leading-tight transition-colors duration-300 ${
                             status === 'current' 
-                              ? 'font-medium text-primary'
+                              ? 'text-blue-700'
                               : status === 'complete'
-                              ? 'font-medium text-pink-600'
+                              ? 'text-emerald-700'
                               : status === 'error'
-                              ? 'font-medium text-destructive'
-                              : 'text-muted-foreground'
+                              ? 'text-red-700'
+                              : 'text-slate-600 group-hover:text-slate-800'
                           }`}
                         >
                           {step.label}
                         </span>
+                        
+                        {/* Status indicator dot */}
+                        {status === 'current' && (
+                          <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full animate-pulse border-2 border-white"></div>
+                        )}
                       </button>
                     </TooltipTrigger>
-                    <TooltipContent>
-                      <div className="text-xs sm:text-sm">
-                        <p className="font-semibold">{step.label}</p>
-                        <p>
+                    <TooltipContent className="bg-white/90 backdrop-blur-sm border border-white/20 shadow-lg">
+                      <div className="text-sm">
+                        <p className="font-semibold text-slate-800">{step.label}</p>
+                        <p className="text-slate-600">
                           {status === 'error' 
-                            ? 'Step has validation errors'
+                            ? 'Step has validation errors - click to review'
                             : status === 'complete' 
-                            ? 'Step complete'
+                            ? 'Step completed successfully'
                             : status === 'current' 
-                            ? 'Current step'
-                            : 'Click to navigate'
+                            ? 'Currently working on this step'
+                            : 'Click to navigate to this step'
                           }
                         </p>
                       </div>
@@ -178,48 +190,21 @@ export function WizardNavigation({ onComplete }: WizardNavigationProps) {
         </div>
       </div>
       
-      {/* Navigation Buttons - Mobile Optimized */}
-      <div className="flex justify-between mt-6">
-        <Button
-          variant="outline"
-          onClick={handlePrevious}
-          disabled={steps[0].id === state.currentStep}
-          size="sm"
-          // Adjust button size for mobile/desktop
-          className="h-9 px-3 sm:h-10 sm:px-4 gap-1"
-        >
-          <ChevronLeftIcon className="h-4 w-4" />
-          <span className="hidden sm:inline">Previous</span>
-        </Button>
-        
-        {state.currentStep !== 'review' ? (
-          <Button
-            onClick={handleNext}
-            // Adjust button size for mobile/desktop
-            className="h-9 px-3 sm:h-10 sm:px-4 gap-1"
-          >
-            <span className="hidden sm:inline">Next</span>
-            <span className="inline sm:hidden">Next</span>
-            <ChevronRightIcon className="h-4 w-4" />
-          </Button>
-        ) : (
-          <Button
-            onClick={() => {
-              // First validate the step
-              const isValid = validateCurrentStep();
-              if (isValid && onComplete) {
-                // Only call onComplete if validation passes
-                onComplete();
-              }
-            }}
-            variant="default"
-            // Adjust button size for mobile/desktop
-            className="h-9 px-3 sm:h-10 sm:px-4 gap-1"
-          >
-            <span>Complete</span>
-            <CheckIcon className="h-4 w-4" />
-          </Button>
-        )}
+      {/* Progress Bar */}
+      <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+        <div 
+          className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full transition-all duration-500 ease-in-out"
+          style={{ 
+            width: `${((steps.findIndex(step => step.id === state.currentStep) + 1) / steps.length) * 100}%` 
+          }}
+        />
+      </div>
+      
+      {/* Step counter */}
+      <div className="text-center">
+        <span className="text-sm text-slate-600 font-medium">
+          Step {steps.findIndex(step => step.id === state.currentStep) + 1} of {steps.length}
+        </span>
       </div>
     </div>
   );
