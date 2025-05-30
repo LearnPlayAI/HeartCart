@@ -198,16 +198,26 @@ const ProductCard: React.FC<ProductCardProps> = ({
             {product.name}
           </h3>
           
-          <div className="flex items-baseline mt-1">
-            <span className="text-[#FF69B4] font-bold text-lg">
-              {formatCurrency(product.salePrice || product.price)}
-            </span>
-            {product.salePrice && (
-              <span className="text-gray-500 text-xs ml-1 line-through">
-                {formatCurrency(product.price)}
+          <div className="flex items-baseline justify-between mt-1">
+            <div className="flex items-baseline">
+              <span className="text-[#FF69B4] font-bold text-lg">
+                {formatCurrency(product.salePrice || product.price)}
               </span>
+              {product.salePrice && (
+                <span className="text-gray-500 text-xs ml-1 line-through">
+                  {formatCurrency(product.price)}
+                </span>
+              )}
+            </div>
+            
+            {/* Discount Percentage Badge */}
+            {product.salePrice && product.price && (
+              <div className="ml-2">
+                <Badge className="bg-[#FF69B4] hover:bg-[#FF1493] text-white text-xs px-2 py-1 rounded-md font-medium">
+                  {Math.round(((product.price - product.salePrice) / product.price) * 100)}% OFF
+                </Badge>
+              </div>
             )}
-
           </div>
           
           {isFlashDeal && (
