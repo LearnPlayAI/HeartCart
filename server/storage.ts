@@ -252,61 +252,28 @@ export class Storage {
   // Product operations
   async getAllProducts(activeOnly = true, limit?: number, offset?: number): Promise<Product[]> {
     try {
-      // Use a direct query approach without chaining
+      // Start with base query
+      let query = db.select().from(products);
+
+      // Apply where clause if needed
       if (activeOnly) {
-        if (limit !== undefined && limit > 0) {
-          if (offset !== undefined && offset > 0) {
-            // Active products with limit and offset
-            return await db
-              .select()
-              .from(products)
-              .where(eq(products.isActive, true))
-              .orderBy(asc(products.name))
-              .limit(limit)
-              .offset(offset);
-          } else {
-            // Active products with limit only
-            return await db
-              .select()
-              .from(products)
-              .where(eq(products.isActive, true))
-              .orderBy(asc(products.name))
-              .limit(limit);
-          }
-        } else {
-          // Active products without pagination
-          return await db
-            .select()
-            .from(products)
-            .where(eq(products.isActive, true))
-            .orderBy(asc(products.name));
-        }
-      } else {
-        if (limit !== undefined && limit > 0) {
-          if (offset !== undefined && offset > 0) {
-            // All products with limit and offset
-            return await db
-              .select()
-              .from(products)
-              .orderBy(asc(products.name))
-              .limit(limit)
-              .offset(offset);
-          } else {
-            // All products with limit only
-            return await db
-              .select()
-              .from(products)
-              .orderBy(asc(products.name))
-              .limit(limit);
-          }
-        } else {
-          // All products without pagination
-          return await db
-            .select()
-            .from(products)
-            .orderBy(asc(products.name));
-        }
+        query = query.where(eq(products.isActive, true));
       }
+
+      // Apply ordering
+      query = query.orderBy(asc(products.name));
+
+      // Apply pagination
+      if (limit && limit > 0) {
+        query = query.limit(limit);
+      }
+      if (offset && offset > 0) {
+        query = query.offset(offset);
+      }
+
+      const result = await query;
+      console.log(`getAllProducts: Found ${result.length} products (activeOnly: ${activeOnly}, limit: ${limit}, offset: ${offset})`);
+      return result;
     } catch (error) {
       console.error('Error in getAllProducts:', error);
       throw error;
