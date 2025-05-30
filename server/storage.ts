@@ -474,6 +474,28 @@ export class Storage {
       throw error;
     }
   }
+
+  async getProductCount(activeOnly = true): Promise<number> {
+    try {
+      const result = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(products)
+        .where(activeOnly ? eq(products.isActive, true) : undefined);
+      
+      return result[0].count;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async getAllAttributes(): Promise<any[]> {
+    try {
+      // For now, return empty array as attributes functionality is not yet implemented
+      return [];
+    } catch (error) {
+      throw error;
+    }
+  }
 }
 
 export const storage = new Storage();

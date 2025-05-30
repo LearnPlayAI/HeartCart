@@ -94,15 +94,17 @@ export function CategorySidebar({
     if (categorySlug && categoriesWithChildren && categoriesWithChildren.length > 0) {
       // Find which parent category contains this slug in its children
       categoriesWithChildren.forEach((item) => {
-        const childMatches = item.children.some(
-          (child) => child.slug === categorySlug
-        );
-        
-        if (childMatches) {
-          setExpandedCategories(prev => ({
-            ...prev,
-            [item.category.id]: true
-          }));
+        if (item && item.category && item.children) {
+          const childMatches = item.children.some(
+            (child) => child && child.slug === categorySlug
+          );
+          
+          if (childMatches && item.category.id) {
+            setExpandedCategories(prev => ({
+              ...prev,
+              [item.category.id]: true
+            }));
+          }
         }
       });
     }
