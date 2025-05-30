@@ -1043,11 +1043,10 @@ export class DatabaseStorage implements IStorage {
           query = query.where(and(...allConditions));
         }
 
-        console.log(`🔍 PRODUCT QUERY DEBUG - CategoryId: ${categoryId}, Conditions count: ${allConditions.length}, Search: ${search}`);
+        // Add proper sorting
+        query = query.orderBy(products.displayOrder, products.id);
         
         const productList = await query.limit(limit).offset(offset);
-        
-        console.log(`🔍 PRODUCT RESULTS DEBUG - Found ${productList.length} products, First product: ${productList[0]?.name} (categoryId: ${productList[0]?.categoryId})`);
 
         // Enrich products with main image URLs
         return await this.enrichProductsWithMainImage(productList);

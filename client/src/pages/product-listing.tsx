@@ -136,7 +136,7 @@ const ProductListing = () => {
           offset: ((page - 1) * limit).toString()
         });
         if (selectedCategoryId) {
-          productParams.append('categoryId', selectedCategoryId.toString());
+          productParams.append('category', selectedCategoryId.toString());
         }
         if (searchParams.get('includeChildren') === 'true') {
           productParams.append('includeChildren', 'true');
