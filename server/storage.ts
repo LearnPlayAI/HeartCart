@@ -6203,40 +6203,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  /**
-   * Get all catalogs in the system
-   * Used for API testing to discover available catalog IDs
-   * @returns Array of all catalogs
-   */
-  async getAllCatalogs(): Promise<Catalog[]> {
-    console.log('DEBUG: getAllCatalogs() WITHOUT activeOnly parameter called');
-    try {
-      // Use raw SQL to ensure we get supplier names correctly
-      const sqlQuery = `
-        SELECT 
-          c.id,
-          c.name,
-          c.description,
-          c.supplier_id as "supplierId",
-          s.name as "supplierName",
-          c.is_active as "isActive",
-          c.default_markup_percentage as "defaultMarkupPercentage",
-          c.start_date as "startDate",
-          c.end_date as "endDate",
-          c.created_at as "createdAt"
-        FROM catalogs c
-        LEFT JOIN suppliers s ON c.supplier_id = s.id
-        ORDER BY c.name
-      `;
 
-      const result = await db.execute(sql.raw(sqlQuery));
-      console.log('DEBUG: Raw SQL result from method without activeOnly:', JSON.stringify(result.rows, null, 2));
-      return result.rows as any[];
-    } catch (error) {
-      logger.error("Error fetching all catalogs", { error });
-      return [];
-    }
-  }
 
   /**
    * Session store for authentication - this is initialized in the constructor
