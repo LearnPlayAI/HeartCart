@@ -678,8 +678,8 @@ export class Storage {
       const drafts = await db
         .select()
         .from(productDrafts)
-        .where(eq(productDrafts.userId, userId))
-        .orderBy(desc(productDrafts.updatedAt));
+        .where(eq(productDrafts.createdBy, userId))
+        .orderBy(desc(productDrafts.lastModified));
       
       return drafts;
     } catch (error) {

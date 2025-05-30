@@ -641,31 +641,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = req.user as any;
       const isAdmin = user && user.role === 'admin';
       
-      const options = { 
-        includeInactive: isAdmin, 
-        includeCategoryInactive: isAdmin 
-      };
+      // For admin requests without pagination params, return all products
+      const isAdminAllRequest = isAdmin && !limit && !offset;
+      const actualLimit = isAdminAllRequest ? undefined : Number(limit || 20);
+      const actualOffset = isAdminAllRequest ? undefined : Number(offset || 0);
+      
+      // Only show active products for non-admin users, show all for admin
+      const activeOnly = !isAdmin;
       
       // Get both products and total count
       const [products, totalCount] = await Promise.all([
         storage.getAllProducts(
-          true, // activeOnly
-          Number(limit), 
-          Number(offset)
+          activeOnly,
+          actualLimit, 
+          actualOffset
         ),
-        storage.getProductCount(true) // activeOnly
+        storage.getProductCount(activeOnly)
       ]);
       
       // Calculate pagination metadata
-      const totalPages = Math.ceil(totalCount / Number(limit));
+      const totalPages = actualLimit ? Math.ceil(totalCount / actualLimit) : 1;
       
       return {
         data: products,
         meta: {
           total: totalCount,
           totalPages,
-          limit: Number(limit),
-          offset: Number(offset)
+          limit: actualLimit || products.length,
+          offset: actualOffset || 0
         }
       };
     }));
@@ -1104,15 +1107,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       try {
-        const products = await storage.searchProducts(query as string, Number(limit), Number(offset), options);
+        const products = await storage.searchProducts(query as string, Number(limit), Number(offset));
+        
+        // Get total count for proper pagination
+        const totalResults = await storage.searchProducts(query as string, 1000, 0); // Get all results to count
         
         res.json({
           success: true,
           data: products,
           meta: {
             query: query as string,
-            total: products.length,
-            totalPages: Math.ceil(products.length / Number(limit)),
+            total: totalResults.length,
+            totalPages: Math.ceil(totalResults.length / Number(limit)),
             limit: Number(limit),
             offset: Number(offset)
           }
