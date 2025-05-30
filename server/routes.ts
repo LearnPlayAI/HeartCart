@@ -2951,17 +2951,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           requestedQuantity: quantity
         });
         
-        // Create simplified cart item data without deprecated combination logic
-        const cartItemData = {
+        // Add item to cart with correct parameter order
+        const cartItem = await storage.addToCart(
+          user.id,
           productId,
           quantity,
-          userId: user.id,
           itemPrice,
-          attributeSelections: attributeSelections || {},
-          createdAt: new Date().toISOString(),
-        };
-        
-        const cartItem = await storage.addToCart(cartItemData);
+          attributeSelections || {}
+        );
         
         // Set status code to 201 Created
         res.status(201).json({

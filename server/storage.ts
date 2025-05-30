@@ -582,7 +582,9 @@ export class Storage {
             productId,
             quantity,
             itemPrice: itemPrice.toString(),
-            attributeSelections: attributeSelections || {}
+            attributeSelections: attributeSelections || {},
+            createdAt: new Date(),
+            updatedAt: new Date()
           })
           .returning();
         
