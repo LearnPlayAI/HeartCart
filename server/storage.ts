@@ -869,38 +869,47 @@ export class DatabaseStorage implements IStorage {
 
       // Add category filter if provided
       if (categoryId) {
-        conditions.push(eq(products.categoryId, categoryId));
+        try {
+          // Get the category with its children to support parent category filtering
+          const categoryWithChildren = await this.getCategoryWithChildren(
+            categoryId,
+            { includeInactive: options?.includeCategoryInactive }
+          );
+
+          // If category doesn't exist or is inactive, return 0
+          if (!categoryWithChildren) {
+            return 0;
+          }
+
+          // Collect all category IDs to filter by (parent + children)
+          const categoryIds = [categoryId];
+          if (categoryWithChildren.children.length > 0) {
+            categoryIds.push(...categoryWithChildren.children.map(child => child.id));
+          }
+
+          // Filter products by any of these category IDs
+          conditions.push(inArray(products.categoryId, categoryIds));
+        } catch (categoryError) {
+          console.error(
+            `Error checking category ${categoryId} and children for count:`,
+            categoryError,
+          );
+          throw categoryError;
+        }
       }
 
       // Build count query
       let countQuery = db.select({ count: sql<number>`count(*)` }).from(products);
 
       // Add joins for category filtering if needed
-      if (!options?.includeCategoryInactive) {
-        if (categoryId) {
-          // Check if specific category is active
-          const categoryQuery = db
-            .select()
-            .from(categories)
-            .where(
-              and(
-                eq(categories.id, categoryId),
-                eq(categories.isActive, true),
-              ),
-            );
-
-          const [category] = await categoryQuery;
-          if (!category) {
-            return 0;
-          }
-        } else {
-          // Join with categories to exclude products from inactive categories
-          countQuery = db
-            .select({ count: sql<number>`count(*)` })
-            .from(products)
-            .innerJoin(categories, eq(products.categoryId, categories.id))
-            .where(and(...conditions, eq(categories.isActive, true)));
-        }
+      if (!options?.includeCategoryInactive && !categoryId) {
+        // Only join with categories if we're not filtering by category
+        // and we need to exclude products from inactive categories
+        countQuery = db
+          .select({ count: sql<number>`count(*)` })
+          .from(products)
+          .innerJoin(categories, eq(products.categoryId, categories.id))
+          .where(and(...conditions, eq(categories.isActive, true)));
       }
 
       // Apply conditions if no join was needed
@@ -951,36 +960,32 @@ export class DatabaseStorage implements IStorage {
 
       // Add category filter if provided
       if (categoryId) {
-        conditions.push(eq(products.categoryId, categoryId));
+        try {
+          // Get the category with its children to support parent category filtering
+          const categoryWithChildren = await this.getCategoryWithChildren(
+            categoryId,
+            { includeInactive: options?.includeCategoryInactive }
+          );
 
-        // If we're not including products with inactive categories,
-        // add a join to check if the category is active
-        if (!options?.includeCategoryInactive) {
-          try {
-            // First get the specified category to check if it's active
-            const categoryQuery = db
-              .select()
-              .from(categories)
-              .where(
-                and(
-                  eq(categories.id, categoryId),
-                  eq(categories.isActive, true),
-                ),
-              );
-
-            const [category] = await categoryQuery;
-
-            // If category doesn't exist or is inactive, return empty array
-            if (!category) {
-              return [];
-            }
-          } catch (categoryError) {
-            console.error(
-              `Error checking if category ${categoryId} is active:`,
-              categoryError,
-            );
-            throw categoryError; // Rethrow so the route handler can catch it and send a proper error response
+          // If category doesn't exist or is inactive, return empty array
+          if (!categoryWithChildren) {
+            return [];
           }
+
+          // Collect all category IDs to filter by (parent + children)
+          const categoryIds = [categoryId];
+          if (categoryWithChildren.children.length > 0) {
+            categoryIds.push(...categoryWithChildren.children.map(child => child.id));
+          }
+
+          // Filter products by any of these category IDs
+          conditions.push(inArray(products.categoryId, categoryIds));
+        } catch (categoryError) {
+          console.error(
+            `Error checking category ${categoryId} and children:`,
+            categoryError,
+          );
+          throw categoryError; // Rethrow so the route handler can catch it and send a proper error response
         }
       } else if (!options?.includeCategoryInactive) {
         try {
