@@ -257,6 +257,7 @@ export interface IStorage {
   // Supplier operations
   getAllSuppliers(activeOnly?: boolean): Promise<Supplier[]>;
   getSupplierById(id: number): Promise<Supplier | undefined>;
+  getSupplierByName(name: string): Promise<Supplier | undefined>;
   createSupplier(supplier: InsertSupplier): Promise<Supplier>;
   updateSupplier(
     id: number,
@@ -4148,6 +4149,19 @@ export class DatabaseStorage implements IStorage {
       return supplier;
     } catch (error) {
       console.error(`Error fetching supplier with ID ${id}:`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
+  }
+
+  async getSupplierByName(name: string): Promise<Supplier | undefined> {
+    try {
+      const [supplier] = await db
+        .select()
+        .from(suppliers)
+        .where(eq(suppliers.name, name));
+      return supplier;
+    } catch (error) {
+      console.error(`Error fetching supplier with name "${name}":`, error);
       throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
   }
