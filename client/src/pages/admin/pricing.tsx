@@ -145,16 +145,16 @@ export default function PricingPage() {
     }));
   }, [categories]);
 
-  // Get parent categories (categories with no parentId)
+  // Get parent categories (categories with no parentId) - only active ones
   const parentCategories = useMemo(() => {
-    return categoriesWithParents.filter((cat: any) => !cat.parentId);
+    return categoriesWithParents.filter((cat: any) => !cat.parentId && cat.isActive);
   }, [categoriesWithParents]);
 
-  // Get child categories for the selected parent
+  // Get child categories for the selected parent - only active ones
   const availableChildCategories = useMemo(() => {
     if (!parentCategoryFilter) return [];
     const parentId = parseInt(parentCategoryFilter);
-    return categoriesWithParents.filter((cat: any) => cat.parentId === parentId);
+    return categoriesWithParents.filter((cat: any) => cat.parentId === parentId && cat.isActive);
   }, [categoriesWithParents, parentCategoryFilter]);
 
   // Calculate derived pricing data

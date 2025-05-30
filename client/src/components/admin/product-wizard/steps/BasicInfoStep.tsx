@@ -170,9 +170,9 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
     }));
   }, [categoriesData]);
 
-  // Get parent categories (categories with no parentId)
+  // Get parent categories (categories with no parentId) - only active ones
   const parentCategories = React.useMemo(() => {
-    return categoriesWithParents.filter((cat: any) => !cat.parentId);
+    return categoriesWithParents.filter((cat: any) => !cat.parentId && cat.isActive);
   }, [categoriesWithParents]);
 
   // Get the current categoryId from the form (this will be the source of truth)
@@ -197,10 +197,10 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
     return currentCategory.parentId ? currentCategory.id : null;
   }, [currentCategory]);
 
-  // Get child categories for the selected parent
+  // Get child categories for the selected parent - only active ones
   const childCategories = React.useMemo(() => {
     if (!parentCategoryId) return [];
-    return categoriesWithParents.filter((cat: any) => cat.parentId === parentCategoryId);
+    return categoriesWithParents.filter((cat: any) => cat.parentId === parentCategoryId && cat.isActive);
   }, [categoriesWithParents, parentCategoryId]);
 
 
