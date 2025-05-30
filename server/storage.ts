@@ -28,6 +28,9 @@ import {
   type InsertPricing,
   aiSettings,
   type AiSetting,
+  attributes,
+  attributeOptions,
+  productAttributes,
   type InsertAiSetting,
   suppliers,
   type Supplier,
@@ -502,8 +505,7 @@ export class Storage {
 
   async getAllAttributes(): Promise<any[]> {
     try {
-      // For now, return empty array as attributes functionality is not yet implemented
-      return [];
+      return await db.select().from(attributes).orderBy(attributes.sortOrder, attributes.name);
     } catch (error) {
       throw error;
     }
@@ -511,11 +513,64 @@ export class Storage {
 
   async getProductAttributes(productId: number): Promise<any[]> {
     try {
-      // For now, return empty array as attributes functionality is not yet implemented
-      // This allows the cart functionality to work without breaking
-      return [];
+      // Get product attributes with their options using raw SQL for better control
+      const result = await db.execute(sql`
+        SELECT 
+          pa.id,
+          pa.product_id,
+          pa.attribute_id,
+          pa.selected_options,
+          a.name,
+          a.display_name,
+          a.attribute_type,
+          a.is_required
+        FROM product_attributes pa
+        JOIN attributes a ON pa.attribute_id = a.id
+        WHERE pa.product_id = ${productId}
+        ORDER BY pa.sort_order, a.sort_order
+      `);
+      
+      // Process results to include available options
+      const attributesWithOptions = [];
+      
+      for (const row of result.rows) {
+        // Get available options for this attribute
+        const optionsResult = await db.execute(sql`
+          SELECT id, value, display_value, sort_order
+          FROM attribute_options
+          WHERE attribute_id = ${row.attribute_id}
+          ORDER BY sort_order, display_value
+        `);
+        
+        // Parse selected options if they exist
+        let selectedOptions = [];
+        if (row.selected_options) {
+          try {
+            selectedOptions = JSON.parse(row.selected_options);
+          } catch (e) {
+            selectedOptions = [];
+          }
+        }
+        
+        attributesWithOptions.push({
+          id: row.id,
+          productId: row.product_id,
+          attribute: {
+            id: row.attribute_id,
+            name: row.name,
+            displayName: row.display_name || row.name,
+            attributeType: row.attribute_type,
+            isRequired: row.is_required
+          },
+          options: optionsResult.rows,
+          selectedOptions: selectedOptions
+        });
+      }
+      
+      return attributesWithOptions;
     } catch (error) {
-      throw error;
+      console.error('Error fetching product attributes:', error);
+      return [];
     }
   }
 
@@ -665,8 +720,7 @@ export class Storage {
 
   async getAttributeOptions(attributeId: number): Promise<any[]> {
     try {
-      // For now, return empty array as attributes functionality is not yet implemented
-      return [];
+      return await this.db.select().from(attributeOptions).where(eq(attributeOptions.attributeId, attributeId)).orderBy(attributeOptions.sortOrder);
     } catch (error) {
       throw error;
     }
