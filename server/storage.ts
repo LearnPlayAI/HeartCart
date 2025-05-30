@@ -252,26 +252,63 @@ export class Storage {
   // Product operations
   async getAllProducts(activeOnly = true, limit?: number, offset?: number): Promise<Product[]> {
     try {
-      let productsQuery = db
-        .select()
-        .from(products)
-        .orderBy(asc(products.name));
-      
+      // Use a direct query approach without chaining
       if (activeOnly) {
-        productsQuery = productsQuery.where(eq(products.isActive, true));
+        if (limit !== undefined && limit > 0) {
+          if (offset !== undefined && offset > 0) {
+            // Active products with limit and offset
+            return await db
+              .select()
+              .from(products)
+              .where(eq(products.isActive, true))
+              .orderBy(asc(products.name))
+              .limit(limit)
+              .offset(offset);
+          } else {
+            // Active products with limit only
+            return await db
+              .select()
+              .from(products)
+              .where(eq(products.isActive, true))
+              .orderBy(asc(products.name))
+              .limit(limit);
+          }
+        } else {
+          // Active products without pagination
+          return await db
+            .select()
+            .from(products)
+            .where(eq(products.isActive, true))
+            .orderBy(asc(products.name));
+        }
+      } else {
+        if (limit !== undefined && limit > 0) {
+          if (offset !== undefined && offset > 0) {
+            // All products with limit and offset
+            return await db
+              .select()
+              .from(products)
+              .orderBy(asc(products.name))
+              .limit(limit)
+              .offset(offset);
+          } else {
+            // All products with limit only
+            return await db
+              .select()
+              .from(products)
+              .orderBy(asc(products.name))
+              .limit(limit);
+          }
+        } else {
+          // All products without pagination
+          return await db
+            .select()
+            .from(products)
+            .orderBy(asc(products.name));
+        }
       }
-      
-      if (limit !== undefined) {
-        productsQuery = productsQuery.limit(limit);
-      }
-      
-      if (offset !== undefined) {
-        productsQuery = productsQuery.offset(offset);
-      }
-      
-      const allProducts = await productsQuery;
-      return allProducts;
     } catch (error) {
+      console.error('Error in getAllProducts:', error);
       throw error;
     }
   }
@@ -527,7 +564,7 @@ export class Storage {
             isActive: products.isActive,
             catalogId: products.catalogId,
             categoryId: products.categoryId,
-            image: products.image,
+            imageUrl: products.imageUrl,
             isFeatured: products.isFeatured,
             isFlashDeal: products.isFlashDeal,
             tags: products.tags,
