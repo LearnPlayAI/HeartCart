@@ -96,115 +96,195 @@ export function WizardNavigation({ onComplete }: WizardNavigationProps) {
   };
   
   return (
-    <div className="bg-white/60 backdrop-blur-sm rounded-2xl border border-white/20 shadow-lg p-6 space-y-6">
-      {/* Enhanced Step Indicator */}
-      <div className="overflow-x-auto -mx-2 px-2 pb-2">
-        <div className="flex justify-between items-center min-w-[600px] sm:min-w-0">
-          <TooltipProvider>
-            {steps.map((step, index) => {
-              const status = getStepStatus(step.id);
-              const isClickable = true;
-              
-              return (
-                <div key={step.id} className="flex items-center flex-1">
-                  {index > 0 && (
-                    <div className="flex-1 h-0.5 mx-2 sm:mx-3 relative">
-                      <div className="absolute inset-0 bg-slate-200 rounded-full"></div>
-                      <div 
-                        className={`absolute inset-0 rounded-full transition-all duration-500 ${
-                          status === 'upcoming' ? 'w-0 bg-slate-200' : 'w-full bg-gradient-to-r from-blue-500 to-purple-500'
-                        }`}
-                      />
-                    </div>
-                  )}
-                  
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        type="button"
-                        disabled={!isClickable}
-                        onClick={() => isClickable && handleStepClick(step.id)}
-                        className={`relative flex flex-col items-center group transition-all duration-300 ${
-                          !isClickable ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:scale-105'
-                        }`}
-                      >
-                        <div 
-                          className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center border-2 transition-all duration-300 shadow-lg ${
-                            status === 'current' 
-                              ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white border-blue-400 shadow-blue-200' 
-                              : status === 'complete' 
-                              ? 'bg-gradient-to-r from-emerald-500 to-green-500 text-white border-emerald-400 shadow-emerald-200' 
-                              : status === 'error'
-                              ? 'bg-gradient-to-r from-red-500 to-pink-500 text-white border-red-400 shadow-red-200'
-                              : 'bg-white text-slate-500 border-slate-300 shadow-slate-100 group-hover:bg-slate-50 group-hover:border-slate-400'
-                          }`}
-                        >
-                          {getStatusIcon(status) || (
-                            <span className="font-semibold text-sm sm:text-base">
-                              {index + 1}
-                            </span>
-                          )}
-                        </div>
-                        
-                        {/* Enhanced labels with better spacing */}
-                        <span 
-                          className={`mt-2 sm:mt-3 text-xs sm:text-sm font-medium text-center leading-tight transition-colors duration-300 ${
-                            status === 'current' 
-                              ? 'text-blue-700'
-                              : status === 'complete'
-                              ? 'text-emerald-700'
-                              : status === 'error'
-                              ? 'text-red-700'
-                              : 'text-slate-600 group-hover:text-slate-800'
-                          }`}
-                        >
-                          {step.label}
-                        </span>
-                        
-                        {/* Status indicator dot */}
-                        {status === 'current' && (
-                          <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full animate-pulse border-2 border-white"></div>
-                        )}
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent className="bg-white/90 backdrop-blur-sm border border-white/20 shadow-lg">
-                      <div className="text-sm">
-                        <p className="font-semibold text-slate-800">{step.label}</p>
-                        <p className="text-slate-600">
-                          {status === 'error' 
-                            ? 'Step has validation errors - click to review'
-                            : status === 'complete' 
-                            ? 'Step completed successfully'
-                            : status === 'current' 
-                            ? 'Currently working on this step'
-                            : 'Click to navigate to this step'
-                          }
-                        </p>
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-              );
-            })}
-          </TooltipProvider>
+    <div className="bg-white rounded-3xl border border-slate-200 shadow-xl p-8 space-y-8">
+      {/* Header with step information */}
+      <div className="text-center space-y-2">
+        <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          Product Creation Wizard
+        </h2>
+        <div className="flex items-center justify-center gap-2 text-sm text-slate-600">
+          <span className="bg-blue-100 px-3 py-1 rounded-full font-medium text-blue-800">
+            Step {steps.findIndex(step => step.id === state.currentStep) + 1} of {steps.length}
+          </span>
+          <span>•</span>
+          <span>{steps.find(step => step.id === state.currentStep)?.label}</span>
         </div>
       </div>
-      
-      {/* Progress Bar */}
-      <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+
+      {/* Enhanced Step Indicator */}
+      <div className="relative">
+        {/* Background line */}
+        <div className="absolute top-6 left-0 right-0 h-0.5 bg-slate-200 rounded-full"></div>
+        
+        {/* Progress line */}
         <div 
-          className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full transition-all duration-500 ease-in-out"
+          className="absolute top-6 left-0 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all duration-700 ease-out"
           style={{ 
-            width: `${((steps.findIndex(step => step.id === state.currentStep) + 1) / steps.length) * 100}%` 
+            width: `${((steps.findIndex(step => step.id === state.currentStep)) / (steps.length - 1)) * 100}%` 
           }}
         />
+
+        <div className="relative overflow-x-auto">
+          <div className="flex justify-between items-start min-w-[800px] lg:min-w-0 px-4">
+            <TooltipProvider>
+              {steps.map((step, index) => {
+                const status = getStepStatus(step.id);
+                const isClickable = true;
+                const isCurrent = status === 'current';
+                const isComplete = status === 'complete';
+                const isError = status === 'error';
+                
+                return (
+                  <div key={step.id} className="flex flex-col items-center relative">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          disabled={!isClickable}
+                          onClick={() => isClickable && handleStepClick(step.id)}
+                          className={`
+                            relative z-10 flex flex-col items-center group transition-all duration-300 p-2 rounded-2xl
+                            ${!isClickable ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:scale-105'}
+                            ${isCurrent ? 'bg-blue-50' : 'hover:bg-slate-50'}
+                          `}
+                        >
+                          {/* Step Circle */}
+                          <div 
+                            className={`
+                              w-12 h-12 rounded-full flex items-center justify-center border-3 transition-all duration-300 mb-3 relative
+                              ${isCurrent 
+                                ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white border-transparent shadow-lg scale-110' 
+                                : isComplete 
+                                ? 'bg-gradient-to-r from-emerald-500 to-green-500 text-white border-transparent shadow-md' 
+                                : isError
+                                ? 'bg-gradient-to-r from-red-500 to-pink-500 text-white border-transparent shadow-md'
+                                : 'bg-white text-slate-600 border-slate-300 shadow-sm group-hover:border-slate-400 group-hover:shadow-md'
+                              }
+                            `}
+                          >
+                            {isCurrent && (
+                              <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full opacity-20 animate-pulse"></div>
+                            )}
+                            
+                            {getStatusIcon(status) || (
+                              <span className="font-bold text-base relative z-10">
+                                {index + 1}
+                              </span>
+                            )}
+                          </div>
+                          
+                          {/* Step Label */}
+                          <div className="text-center max-w-20">
+                            <span 
+                              className={`
+                                text-sm font-semibold leading-tight transition-colors duration-300 block
+                                ${isCurrent 
+                                  ? 'text-blue-700'
+                                  : isComplete
+                                  ? 'text-emerald-700'
+                                  : isError
+                                  ? 'text-red-700'
+                                  : 'text-slate-600 group-hover:text-slate-800'
+                                }
+                              `}
+                            >
+                              {step.label}
+                            </span>
+                            
+                            {/* Status badge */}
+                            <div className="mt-1">
+                              {isCurrent && (
+                                <span className="inline-block w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
+                              )}
+                              {isComplete && (
+                                <span className="text-xs text-emerald-600 font-medium">Complete</span>
+                              )}
+                              {isError && (
+                                <span className="text-xs text-red-600 font-medium">Error</span>
+                              )}
+                            </div>
+                          </div>
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent 
+                        className="bg-slate-900 text-white border-slate-700 shadow-xl max-w-xs"
+                        side="bottom"
+                        sideOffset={10}
+                      >
+                        <div className="space-y-2">
+                          <p className="font-semibold text-white">{step.label}</p>
+                          <p className="text-slate-300 text-sm">
+                            {isError 
+                              ? 'This step has validation errors. Click to review and fix them.'
+                              : isComplete 
+                              ? 'This step has been completed successfully.'
+                              : isCurrent 
+                              ? 'You are currently working on this step.'
+                              : 'Click to jump to this step.'
+                            }
+                          </p>
+                          {!isCurrent && (
+                            <p className="text-xs text-slate-400">
+                              Click to navigate
+                            </p>
+                          )}
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                );
+              })}
+            </TooltipProvider>
+          </div>
+        </div>
       </div>
-      
-      {/* Step counter */}
-      <div className="text-center">
-        <span className="text-sm text-slate-600 font-medium">
-          Step {steps.findIndex(step => step.id === state.currentStep) + 1} of {steps.length}
-        </span>
+
+      {/* Progress Summary */}
+      <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-6 border border-blue-100">
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <h3 className="font-semibold text-slate-800">Progress Overview</h3>
+            <p className="text-sm text-slate-600">
+              {steps.filter(step => getStepStatus(step.id) === 'complete').length} of {steps.length} steps completed
+            </p>
+          </div>
+          
+          <div className="flex items-center gap-4">
+            <div className="text-right">
+              <div className="text-2xl font-bold text-blue-600">
+                {Math.round(((steps.findIndex(step => step.id === state.currentStep) + 1) / steps.length) * 100)}%
+              </div>
+              <div className="text-xs text-slate-600">Complete</div>
+            </div>
+            
+            {/* Circular progress */}
+            <div className="relative w-16 h-16">
+              <svg className="w-16 h-16 transform -rotate-90" viewBox="0 0 64 64">
+                <circle
+                  cx="32"
+                  cy="32"
+                  r="28"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                  fill="none"
+                  className="text-slate-200"
+                />
+                <circle
+                  cx="32"
+                  cy="32"
+                  r="28"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                  fill="none"
+                  strokeDasharray={`${2 * Math.PI * 28}`}
+                  strokeDashoffset={`${2 * Math.PI * 28 * (1 - ((steps.findIndex(step => step.id === state.currentStep) + 1) / steps.length))}`}
+                  className="text-blue-500 transition-all duration-700 ease-out"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
