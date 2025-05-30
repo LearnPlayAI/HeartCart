@@ -124,8 +124,8 @@ export default function AuthPage() {
 
           <Tabs defaultValue="login" value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">Sign In</TabsTrigger>
-              <TabsTrigger value="register">Register</TabsTrigger>
+              <TabsTrigger value="login" className="data-[state=active]:bg-[#ff69b4] data-[state=active]:text-white">Sign In</TabsTrigger>
+              <TabsTrigger value="register" className="data-[state=active]:bg-[#ff69b4] data-[state=active]:text-white">Register</TabsTrigger>
             </TabsList>
 
             {/* Login Form */}
