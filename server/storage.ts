@@ -428,6 +428,43 @@ export class Storage {
       throw error;
     }
   }
+
+  async getMainCategoriesWithChildren(): Promise<any[]> {
+    try {
+      const mainCategories = await db
+        .select()
+        .from(categories)
+        .where(isNull(categories.parentId))
+        .orderBy(asc(categories.name));
+      
+      return mainCategories;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async getCategoryWithChildren(id: number): Promise<any> {
+    try {
+      const category = await this.getCategoryById(id);
+      return category;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async getCategoryBySlug(slug: string): Promise<Category | null> {
+    try {
+      const [category] = await db
+        .select()
+        .from(categories)
+        .where(eq(categories.slug, slug))
+        .limit(1);
+      
+      return category || null;
+    } catch (error) {
+      throw error;
+    }
+  }
 }
 
 export const storage = new Storage();
