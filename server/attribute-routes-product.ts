@@ -62,17 +62,34 @@ router.get('/product/:productId/attributes', asyncHandler(async (req: Request, r
         };
       }
       
-      // Get options for this attribute
+      // Get only the selected options for this product attribute
       if (!attributeGroups[attributeId].optionsLoaded) {
-        const options = await storage.getAttributeOptions(attributeId);
-        if (options && options.length > 0) {
-          attributeGroups[attributeId].options = options.map(opt => ({
+        // Parse the selected_options JSON array
+        let selectedOptionIds: number[] = [];
+        if (prodAttr.selectedOptions) {
+          try {
+            selectedOptionIds = JSON.parse(prodAttr.selectedOptions);
+          } catch (e) {
+            logger.error('Failed to parse selected_options for product attribute', { 
+              productId, 
+              attributeId, 
+              selectedOptions: prodAttr.selectedOptions 
+            });
+          }
+        }
+        
+        if (selectedOptionIds.length > 0) {
+          // Get only the options that are selected for this product
+          const allOptions = await storage.getAttributeOptions(attributeId);
+          const selectedOptions = allOptions.filter(opt => selectedOptionIds.includes(opt.id));
+          
+          attributeGroups[attributeId].options = selectedOptions.map(opt => ({
             id: opt.id,
             value: opt.value,
             displayValue: opt.displayValue || opt.value
           }));
-          attributeGroups[attributeId].optionsLoaded = true;
         }
+        attributeGroups[attributeId].optionsLoaded = true;
       }
     }
     
