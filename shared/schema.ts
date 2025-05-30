@@ -100,20 +100,16 @@ export const products = pgTable("products", {
   };
 });
 
-// Cart items table - simplified without deprecated combination logic
+// Cart items table - match exact database schema
 export const cartItems = pgTable("cart_items", {
   id: serial("id").primaryKey(),
   userId: integer("userId").notNull().references(() => users.id),
   productId: integer("productId").notNull().references(() => products.id),
   quantity: integer("quantity").notNull().default(1),
   itemPrice: decimal("itemPrice", { precision: 10, scale: 2 }).notNull(),
-  attributeSelections: jsonb("attributeSelections").default('{}').notNull(), // Store selected attributes like {gender: "For Him", size: "Large"}
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
-}, (table) => {
-  return {
-    userProductUnique: unique().on(table.userId, table.productId),
-  };
+  attributeSelections: jsonb("attributeSelections").default('{}').notNull(),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow(),
 });
 
 // Orders table - camelCase version with comprehensive order management
