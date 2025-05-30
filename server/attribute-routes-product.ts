@@ -69,6 +69,12 @@ router.get('/product/:productId/attributes', asyncHandler(async (req: Request, r
         if (prodAttr.selectedOptions) {
           try {
             selectedOptionIds = JSON.parse(prodAttr.selectedOptions);
+            logger.debug('Parsed selected options for product attribute', { 
+              productId, 
+              attributeId, 
+              selectedOptionIds,
+              rawSelectedOptions: prodAttr.selectedOptions 
+            });
           } catch (e) {
             logger.error('Failed to parse selected_options for product attribute', { 
               productId, 
@@ -78,12 +84,34 @@ router.get('/product/:productId/attributes', asyncHandler(async (req: Request, r
           }
         }
         
+        // Get all available options for this attribute
+        const allOptions = await storage.getAttributeOptions(attributeId);
+        
         if (selectedOptionIds.length > 0) {
-          // Get only the options that are selected for this product
-          const allOptions = await storage.getAttributeOptions(attributeId);
+          // Filter to only show selected options
           const selectedOptions = allOptions.filter(opt => selectedOptionIds.includes(opt.id));
+          logger.debug('Filtered selected options', { 
+            productId, 
+            attributeId, 
+            totalOptions: allOptions.length,
+            selectedCount: selectedOptions.length,
+            selectedOptionIds 
+          });
           
           attributeGroups[attributeId].options = selectedOptions.map(opt => ({
+            id: opt.id,
+            value: opt.value,
+            displayValue: opt.displayValue || opt.value
+          }));
+        } else {
+          // Fallback: if no selected options found, show all options (for backwards compatibility)
+          logger.debug('No selected options found, showing all options as fallback', { 
+            productId, 
+            attributeId, 
+            totalOptions: allOptions.length 
+          });
+          
+          attributeGroups[attributeId].options = allOptions.map(opt => ({
             id: opt.id,
             value: opt.value,
             displayValue: opt.displayValue || opt.value
