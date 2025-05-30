@@ -66,6 +66,7 @@ export default function AdminSuppliers() {
   const [searchQuery, setSearchQuery] = useState("");
   // No longer using modal dialog for adding suppliers
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showDeactivateDialog, setShowDeactivateDialog] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
   
   // Query suppliers from API - set queryKey to include a parameter forcing inactive suppliers to be shown
@@ -106,6 +107,11 @@ export default function AdminSuppliers() {
     setShowDeleteDialog(true);
   };
 
+  const handleDeactivateClick = (supplier: Supplier) => {
+    setSelectedSupplier(supplier);
+    setShowDeactivateDialog(true);
+  };
+
   const { mutate: deleteSupplier, isPending: isDeleting } = useMutation({
     mutationFn: async (id: number) => {
       const response = await apiRequest("DELETE", `/api/suppliers/${id}`);
@@ -139,6 +145,45 @@ export default function AdminSuppliers() {
   const confirmDelete = () => {
     if (selectedSupplier) {
       deleteSupplier(selectedSupplier.id);
+    }
+  };
+
+  const { mutate: deactivateSupplier, isPending: isDeactivating } = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await apiRequest("PATCH", `/api/suppliers/${id}/deactivate`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to deactivate supplier");
+      }
+      
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error?.message || "Failed to deactivate supplier");
+      }
+      
+      return result;
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/suppliers"] });
+      setShowDeactivateDialog(false);
+      setSelectedSupplier(null);
+      toast({
+        title: "Success",
+        description: result.message || "Supplier deactivated successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to deactivate supplier",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  const confirmDeactivate = () => {
+    if (selectedSupplier) {
+      deactivateSupplier(selectedSupplier.id);
     }
   };
 
@@ -252,6 +297,17 @@ export default function AdminSuppliers() {
                             </div>
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
+                          {supplier.isActive && (
+                            <DropdownMenuItem asChild>
+                              <div 
+                                className="flex items-center cursor-pointer text-orange-600"
+                                onClick={() => handleDeactivateClick(supplier)}
+                              >
+                                <UserX className="mr-2 h-4 w-4" />
+                                Deactivate
+                              </div>
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem asChild>
                             <div 
                               className="flex items-center cursor-pointer text-red-600"
@@ -322,6 +378,40 @@ export default function AdminSuppliers() {
                 </>
               ) : (
                 "Delete"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Deactivate Confirmation Dialog */}
+      <Dialog open={showDeactivateDialog} onOpenChange={setShowDeactivateDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Confirm Deactivation</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to deactivate this supplier? This will also deactivate all associated catalogs and products.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            {selectedSupplier && (
+              <p className="font-medium">
+                Deactivating: {selectedSupplier.name}
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeactivateDialog(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={confirmDeactivate} disabled={isDeactivating}>
+              {isDeactivating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deactivating...
+                </>
+              ) : (
+                "Deactivate"
               )}
             </Button>
           </DialogFooter>
