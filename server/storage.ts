@@ -2099,51 +2099,56 @@ export class DatabaseStorage implements IStorage {
       console.log(`🔍 NEW CART DEBUG - Received cartItem:`, cartItem);
       console.log(`🔍 NEW CART DEBUG - itemPrice value:`, cartItem.itemPrice, typeof cartItem.itemPrice);
       
-      // Check if the item is already in the cart (same user, product, and attribute selections)
-      const existingItems = await db
+      // Check if the item is already in the cart (same user and product)
+      const [existingItem] = await db
         .select()
         .from(cartItems)
         .where(and(
           eq(cartItems.userId, cartItem.userId),
           eq(cartItems.productId, cartItem.productId)
         ));
-      
-      // Find existing item with matching attribute selections
-      const existingItem = existingItems.find(item => {
-        const existingSelections = item.attributeSelections || {};
-        const newSelections = cartItem.attributeSelections || {};
-        
-        // Compare attribute selections - must be exact match
-        const existingKeys = Object.keys(existingSelections).sort();
-        const newKeys = Object.keys(newSelections).sort();
-        
-        if (existingKeys.length !== newKeys.length) {
-          return false;
-        }
-        
-        return existingKeys.every(key => 
-          existingSelections[key] === newSelections[key]
-        );
-      });
 
       if (existingItem) {
-        // Update quantity for existing item
+        // Update quantity and merge attribute selections
         const newQuantity = existingItem.quantity + cartItem.quantity;
+        const existingSelections = existingItem.attributeSelections || {};
+        const newSelections = cartItem.attributeSelections || {};
+        
+        // Merge attribute selections - if same attribute has different values, make it an array
+        const mergedSelections: any = { ...existingSelections };
+        
+        for (const [key, value] of Object.entries(newSelections)) {
+          if (mergedSelections[key] && mergedSelections[key] !== value) {
+            // Convert to array if different values for same attribute
+            if (Array.isArray(mergedSelections[key])) {
+              if (!mergedSelections[key].includes(value)) {
+                mergedSelections[key].push(value);
+              }
+            } else {
+              mergedSelections[key] = [mergedSelections[key], value];
+            }
+          } else if (!mergedSelections[key]) {
+            mergedSelections[key] = value;
+          }
+        }
+
         const [updatedItem] = await db
           .update(cartItems)
           .set({ 
             quantity: newQuantity,
+            attributeSelections: mergedSelections,
             updatedAt: new Date()
           })
           .where(eq(cartItems.id, existingItem.id))
           .returning();
 
-        logger.info(`Updated quantity for existing cart item`, {
+        logger.info(`Updated cart item with merged attributes`, {
           cartItemId: existingItem.id,
           productId: cartItem.productId,
           userId: cartItem.userId,
           oldQuantity: existingItem.quantity,
           newQuantity: newQuantity,
+          mergedSelections
         });
 
         return updatedItem;
