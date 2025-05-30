@@ -129,9 +129,20 @@ export default function PricingPage() {
     }
   });
 
+  // Fetch suppliers
+  const { data: suppliersResponse } = useQuery({
+    queryKey: ['/api/suppliers'],
+    queryFn: async () => {
+      const response = await fetch('/api/suppliers');
+      if (!response.ok) throw new Error('Failed to fetch suppliers');
+      return response.json();
+    }
+  });
+
   const products = productsResponse?.data || [];
   const categories = categoriesResponse?.data || [];
   const catalogs = catalogsResponse?.data || [];
+  const suppliers = suppliersResponse?.data || [];
 
   // Organize categories into parent/child relationships
   const categoriesWithParents = useMemo(() => {
@@ -162,6 +173,7 @@ export default function PricingPage() {
     return products.map((product: ProductPricingData) => {
       const category = categories.find((cat: Category) => cat.id === product.categoryId);
       const catalog = catalogs.find((cat: any) => cat.id === product.catalogId);
+      const supplier = suppliers.find((sup: any) => sup.id === product.supplier);
       
       // Calculate TMY markup percentage (profit margin between cost and sale price)
       const effectivePrice = product.salePrice || product.price;
@@ -180,12 +192,13 @@ export default function PricingPage() {
         parentCategoryName: category?.parent?.name || 'No Parent',
         childCategoryName: category?.name || 'Uncategorized',
         catalogName: catalog?.name || 'No Catalog',
+        supplierName: supplier?.name || 'No Supplier',
         tmyMarkup: Number(tmyMarkup.toFixed(2)),
         customerDiscount: Number(customerDiscount.toFixed(2)),
         effectivePrice
       };
     });
-  }, [products, categories, catalogs]);
+  }, [products, categories, catalogs, suppliers]);
 
   // Get unique values for filters
   const uniqueCategories = useMemo(() => {
@@ -194,7 +207,7 @@ export default function PricingPage() {
   }, [enrichedProducts]);
 
   const uniqueSuppliers = useMemo(() => {
-    const supplierSet = new Set(enrichedProducts.filter((p: any) => p.supplier).map((p: any) => p.supplier));
+    const supplierSet = new Set(enrichedProducts.filter((p: any) => p.supplierName).map((p: any) => p.supplierName));
     return Array.from(supplierSet).sort();
   }, [enrichedProducts]);
 
@@ -253,7 +266,7 @@ export default function PricingPage() {
       }
 
       // Supplier filter
-      if (supplierFilter && supplierFilter !== 'all' && product.supplier !== supplierFilter) {
+      if (supplierFilter && supplierFilter !== 'all' && product.supplierName !== supplierFilter) {
         return false;
       }
 
