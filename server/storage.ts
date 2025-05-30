@@ -548,6 +548,24 @@ export class Storage {
       throw error;
     }
   }
+
+  async getAttributeOptions(attributeId: number): Promise<any[]> {
+    try {
+      // For now, return empty array as attributes functionality is not yet implemented
+      return [];
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async updateCartItemAttributes(cartItemId: number, attributeSelections: any): Promise<any> {
+    try {
+      // For now, return success response as cart functionality needs to be implemented
+      return { success: true };
+    } catch (error) {
+      throw error;
+    }
+  }
 }
 
 export const storage = new Storage();

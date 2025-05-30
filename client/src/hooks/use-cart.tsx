@@ -110,9 +110,18 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       console.log('🔍 CLEAN CART MUTATION - Success:', data);
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
       
+      // Show success toast
+      toast({
+        title: "Added to Cart",
+        description: `Added ${variables.quantity} item(s) to your cart`,
+        variant: "default"
+      });
+      
+      // Open cart to show the added item
+      setIsOpen(true);
     },
     onError: (error) => {
       // Only show error toast for non-authentication errors
