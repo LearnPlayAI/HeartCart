@@ -30,7 +30,7 @@ const checkoutOrderSchema = z.object({
     productId: z.number(),
     quantity: z.number().min(1),
     unitPrice: z.number().min(0),
-    productAttributes: z.record(z.string()).optional(),
+    productAttributes: z.record(z.union([z.string(), z.array(z.string())])).optional(),
   })),
   shippingMethod: z.string(),
   shippingCost: z.number(),
@@ -81,20 +81,24 @@ const createOrderSchema = z.object({
     productId: z.number(),
     quantity: z.number(),
     unitPrice: z.number(),
-    productAttributes: z.record(z.string()).optional()
+    productAttributes: z.record(z.union([z.string(), z.array(z.string())])).optional()
   })),
   subtotal: z.number(),
   total: z.number()
 });
 
 // Helper function to generate attribute display text
-function generateAttributeDisplayText(attributes: Record<string, string>): string {
+function generateAttributeDisplayText(attributes: Record<string, string | string[]>): string {
   if (!attributes || Object.keys(attributes).length === 0) {
     return "";
   }
   
   return Object.entries(attributes)
-    .map(([key, value]) => `${key}: ${value}`)
+    .map(([key, value]) => {
+      // Handle both string and array values
+      const displayValue = Array.isArray(value) ? value.join(", ") : value;
+      return `${key}: ${displayValue}`;
+    })
     .join(", ");
 }
 
