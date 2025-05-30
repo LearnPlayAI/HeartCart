@@ -930,6 +930,31 @@ const ProductListing = () => {
               </Select>
             </div>
             
+            {/* Top Pagination */}
+            {filteredProducts.length > 0 && (
+              <div className="flex justify-center mb-6">
+                <Button 
+                  variant="outline"
+                  className="border-[#FF69B4] text-[#FF69B4] hover:bg-[#FF69B4] hover:text-white mr-2"
+                  disabled={page === 1}
+                  onClick={() => setPage(prev => Math.max(prev - 1, 1))}
+                >
+                  Previous
+                </Button>
+                <span className="flex items-center mx-4 text-sm text-gray-600">
+                  Page {page} of {totalPages}
+                </span>
+                <Button 
+                  variant="outline"
+                  className="border-[#FF69B4] text-[#FF69B4] hover:bg-[#FF69B4] hover:text-white"
+                  disabled={page >= totalPages}
+                  onClick={() => setPage(prev => Math.min(prev + 1, totalPages))}
+                >
+                  Next
+                </Button>
+              </div>
+            )}
+            
             {isLoadingProducts ? (
               <div className={
                 viewMode === 'grid' 
