@@ -98,17 +98,20 @@ export class Storage {
   // Supplier operations
   async getAllSuppliers(activeOnly = true): Promise<Supplier[]> {
     try {
-      const suppliersQuery = db
-        .select()
-        .from(suppliers)
-        .orderBy(asc(suppliers.name));
-      
       if (activeOnly) {
-        suppliersQuery.where(eq(suppliers.isActive, true));
+        const allSuppliers = await db
+          .select()
+          .from(suppliers)
+          .where(eq(suppliers.isActive, true))
+          .orderBy(asc(suppliers.name));
+        return allSuppliers;
+      } else {
+        const allSuppliers = await db
+          .select()
+          .from(suppliers)
+          .orderBy(asc(suppliers.name));
+        return allSuppliers;
       }
-      
-      const allSuppliers = await suppliersQuery;
-      return allSuppliers;
     } catch (error) {
       throw error;
     }
@@ -166,17 +169,20 @@ export class Storage {
   // Catalog operations
   async getAllCatalogs(activeOnly = true): Promise<Catalog[]> {
     try {
-      const catalogsQuery = db
-        .select()
-        .from(catalogs)
-        .orderBy(asc(catalogs.name));
-      
       if (activeOnly) {
-        catalogsQuery.where(eq(catalogs.isActive, true));
+        const allCatalogs = await db
+          .select()
+          .from(catalogs)
+          .where(eq(catalogs.isActive, true))
+          .orderBy(asc(catalogs.name));
+        return allCatalogs;
+      } else {
+        const allCatalogs = await db
+          .select()
+          .from(catalogs)
+          .orderBy(asc(catalogs.name));
+        return allCatalogs;
       }
-      
-      const allCatalogs = await catalogsQuery;
-      return allCatalogs;
     } catch (error) {
       throw error;
     }
