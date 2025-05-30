@@ -289,6 +289,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     removeAttributeOptionMutation.mutate({ cartItemId, attributeName, attributeValue });
   };
   
+  // Add comprehensive loading state that includes all mutation states
+  const isLoadingState = cartQuery.isLoading || cartQuery.isFetching || addToCartMutation.isPending || updateCartMutation.isPending || removeFromCartMutation.isPending;
+  
   return (
     <CartContext.Provider 
       value={{
