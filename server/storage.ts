@@ -1059,6 +1059,13 @@ export class DatabaseStorage implements IStorage {
         
         console.log('Products found:', productList.length);
         console.log('First few products with category IDs:', productList.slice(0, 5).map(p => ({ id: p.id, name: p.name, categoryId: p.categoryId })));
+        
+        // Check if any products have category ID 37 (Accessories under Computers)
+        const categoryId37Products = productList.filter(p => p.categoryId === 37);
+        console.log('Products with category ID 37:', categoryId37Products.length);
+        if (categoryId37Products.length > 0) {
+          console.log('Category 37 products:', categoryId37Products.map(p => ({ id: p.id, name: p.name, categoryId: p.categoryId })));
+        }
 
         // Enrich products with main image URLs
         return await this.enrichProductsWithMainImage(productList);
