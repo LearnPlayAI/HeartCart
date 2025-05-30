@@ -250,15 +250,23 @@ export class Storage {
   }
 
   // Product operations
-  async getAllProducts(activeOnly = true): Promise<Product[]> {
+  async getAllProducts(activeOnly = true, limit?: number, offset?: number): Promise<Product[]> {
     try {
-      const productsQuery = db
+      let productsQuery = db
         .select()
         .from(products)
         .orderBy(asc(products.name));
       
       if (activeOnly) {
-        productsQuery.where(eq(products.isActive, true));
+        productsQuery = productsQuery.where(eq(products.isActive, true));
+      }
+      
+      if (limit !== undefined) {
+        productsQuery = productsQuery.limit(limit);
+      }
+      
+      if (offset !== undefined) {
+        productsQuery = productsQuery.offset(offset);
       }
       
       const allProducts = await productsQuery;
