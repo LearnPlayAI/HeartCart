@@ -58,6 +58,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     staleTime: 0,
     refetchOnWindowFocus: true,
     refetchOnMount: true,
+    refetchInterval: false,
+    networkMode: 'always',
   });
   
   // Safe extraction of cart items from the standardized response format
@@ -153,7 +155,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       return data;
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
       await refetch();
     },
     onError: (error) => {
@@ -183,7 +184,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       return data;
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
       await refetch();
     },
     onError: (error) => {
