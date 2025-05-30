@@ -215,6 +215,10 @@ export interface IStorage {
     id: number,
     quantity: number,
   ): Promise<CartItem | undefined>;
+  updateCartItemAttributes(
+    id: number,
+    attributeSelections: Record<string, any>
+  ): Promise<CartItem | undefined>;
   removeFromCart(id: number): Promise<boolean>;
   clearCart(userId: number): Promise<boolean>;
 
@@ -2352,6 +2356,53 @@ export class DatabaseStorage implements IStorage {
         userId,
       });
       throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
+  }
+
+  async updateCartItemAttributes(
+    id: number,
+    attributeSelections: Record<string, any>
+  ): Promise<CartItem | undefined> {
+    try {
+      // First, retrieve the cart item to check if it exists
+      const [cartItem] = await db
+        .select()
+        .from(cartItems)
+        .where(eq(cartItems.id, id));
+
+      if (!cartItem) {
+        logger.warn(`Attempted to update attributes for non-existent cart item`, {
+          cartItemId: id,
+        });
+        return undefined;
+      }
+
+      // Update the attribute selections
+      const [updatedItem] = await db
+        .update(cartItems)
+        .set({ 
+          attributeSelections,
+          updatedAt: new Date()
+        })
+        .where(eq(cartItems.id, id))
+        .returning();
+
+      logger.info(`Updated cart item attributes`, {
+        cartItemId: id,
+        productId: cartItem.productId,
+        userId: cartItem.userId,
+        previousSelections: cartItem.attributeSelections,
+        newSelections: attributeSelections,
+      });
+
+      return updatedItem;
+    } catch (error) {
+      logger.error(`Error updating cart item attributes`, {
+        error,
+        cartItemId: id,
+        attributeSelections,
+      });
+      throw error;
     }
   }
 
