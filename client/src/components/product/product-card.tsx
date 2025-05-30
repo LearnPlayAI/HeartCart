@@ -198,13 +198,13 @@ const ProductCard: React.FC<ProductCardProps> = ({
             {product.name}
           </h3>
           
-          <div className="flex items-baseline justify-between mt-1">
-            <div className="flex items-baseline">
+          <div className="flex items-start justify-between mt-1">
+            <div className="flex flex-col">
               <span className="text-[#FF69B4] font-bold text-lg">
                 {formatCurrency(product.salePrice || product.price)}
               </span>
               {product.salePrice && (
-                <span className="text-gray-500 text-xs ml-1 line-through">
+                <span className="text-gray-500 text-xs line-through">
                   {formatCurrency(product.price)}
                 </span>
               )}
