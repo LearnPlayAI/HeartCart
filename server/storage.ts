@@ -1056,6 +1056,9 @@ export class DatabaseStorage implements IStorage {
         query = query.orderBy(products.displayOrder, products.id);
         
         const productList = await query.limit(limit).offset(offset);
+        
+        console.log('Products found:', productList.length);
+        console.log('First few products with category IDs:', productList.slice(0, 5).map(p => ({ id: p.id, name: p.name, categoryId: p.categoryId })));
 
         // Enrich products with main image URLs
         return await this.enrichProductsWithMainImage(productList);
