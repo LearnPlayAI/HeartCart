@@ -4550,14 +4550,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // CATALOG ROUTES
   app.get("/api/catalogs", asyncHandler(async (req: Request, res: Response) => {
     try {
-      // Use storage method instead of direct database queries
-      const catalogData = await storage.getAllCatalogs();
+      const activeOnly = req.query.activeOnly !== 'false';
+      
+      // Get all catalogs
+      const catalogData = await storage.getAllCatalogs(activeOnly);
+      
+      // Get all suppliers for lookup
+      const suppliersData = await storage.getAllSuppliers(false); // Get all suppliers including inactive
+      
+      // Enhanced catalog data with supplier names and product counts
+      console.log('Catalog data:', catalogData.length, 'catalogs');
+      console.log('Suppliers data:', suppliersData.length, 'suppliers');
+      
+      const enhancedCatalogs = await Promise.all(
+        catalogData.map(async (catalog) => {
+          console.log('Processing catalog:', catalog.id, 'supplierId:', catalog.supplierId);
+          
+          // Find supplier name
+          const supplier = suppliersData.find(s => s.id === catalog.supplierId);
+          console.log('Found supplier:', supplier?.name || 'None');
+          
+          // Count products in this catalog
+          let productCount = 0;
+          try {
+            const products = await storage.getAllProducts(false); // Get all products
+            productCount = products.filter(p => p.catalogId === catalog.id).length;
+            console.log('Product count for catalog', catalog.id, ':', productCount);
+          } catch (error) {
+            console.log('Error counting products for catalog', catalog.id, error);
+          }
+          
+          const enhanced = {
+            ...catalog,
+            supplierName: supplier?.name || 'No supplier',
+            productsCount: productCount
+          };
+          
+          console.log('Enhanced catalog:', enhanced.id, enhanced.supplierName, enhanced.productsCount);
+          return enhanced;
+        })
+      );
+      
+      console.log('Final enhanced catalogs:', enhancedCatalogs.length);
       
       return res.json({
         success: true,
-        data: catalogData,
+        data: enhancedCatalogs,
         meta: {
-          count: catalogData.length
+          count: enhancedCatalogs.length,
+          activeOnly
         }
       });
     } catch (error) {
