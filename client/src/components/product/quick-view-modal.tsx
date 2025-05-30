@@ -218,10 +218,7 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
       productId: product.id,
       quantity: quantity,
       itemPrice: basePrice,
-      attributeSelections,
-      discountData: null,
-      totalDiscount: 0,
-      product: product
+      attributeSelections
     });
     
 
