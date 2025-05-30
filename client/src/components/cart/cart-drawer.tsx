@@ -43,7 +43,7 @@ const CartDrawer = () => {
   
   return (
     <Sheet open={isOpen} onOpenChange={closeCart}>
-      <SheetContent className="w-full sm:max-w-md p-0 flex flex-col h-full">
+      <SheetContent className="w-full sm:max-w-md p-0 flex flex-col h-full [&>button]:hidden">
         <SheetHeader className="p-4 border-b border-gray-200 bg-[#FF69B4] text-white relative">
           <SheetTitle className="text-white">
             Your Cart ({cartSummary.itemCount})
