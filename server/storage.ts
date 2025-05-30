@@ -4375,6 +4375,7 @@ export class DatabaseStorage implements IStorage {
             }),
           );
 
+          console.log('🔍 CATALOG DEBUG - Final result with product counts:', JSON.stringify(catalogsWithProductCount, null, 2));
           return catalogsWithProductCount;
         } catch (productCountsError) {
           console.error(
