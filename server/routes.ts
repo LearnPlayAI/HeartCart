@@ -3332,6 +3332,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Handle both array and single value attributes
         let updatedSelections = { ...currentSelections };
+        let shouldDecreaseQuantity = false;
         
         if (Array.isArray(currentSelections[attributeName])) {
           // Remove specific value from array
@@ -3341,6 +3342,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (filteredArray.length === valueArray.length) {
             throw new BadRequestError(`Attribute value "${attributeValue}" not found in "${attributeName}"`);
           }
+          
+          // Removing any attribute option should decrease quantity by 1
+          shouldDecreaseQuantity = true;
           
           if (filteredArray.length === 0) {
             // If no values left, remove the attribute entirely
@@ -3356,32 +3360,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Remove the entire attribute
           delete updatedSelections[attributeName];
+          shouldDecreaseQuantity = true;
         }
         
-        // If no attributes left, decrease quantity by 1
-        const hasAttributes = Object.keys(updatedSelections).length > 0;
-        
-        if (!hasAttributes && cartItem.quantity === 1) {
-          // Remove entire cart item if no attributes and quantity is 1
-          await storage.removeFromCart(cartItemId);
-          
-          return res.json({
-            success: true,
-            data: { removed: true },
-            message: "Item removed from cart"
-          });
-        } else if (!hasAttributes) {
-          // Decrease quantity by 1 if no attributes left but quantity > 1
-          const newQuantity = cartItem.quantity - 1;
-          const updatedItem = await storage.updateCartItemQuantity(cartItemId, newQuantity);
-          
-          return res.json({
-            success: true,
-            data: updatedItem,
-            message: `Removed ${attributeName}: ${attributeValue}, quantity decreased to ${newQuantity}`
-          });
+        // Always decrease quantity when removing attribute options
+        if (shouldDecreaseQuantity) {
+          if (cartItem.quantity === 1) {
+            // Remove entire cart item if quantity would become 0
+            await storage.removeFromCart(cartItemId);
+            
+            return res.json({
+              success: true,
+              data: { removed: true },
+              message: "Item removed from cart"
+            });
+          } else {
+            // Decrease quantity by 1 and update attributes
+            const newQuantity = cartItem.quantity - 1;
+            
+            // Update both quantity and attributes
+            await storage.updateCartItemQuantity(cartItemId, newQuantity);
+            const updatedItem = await storage.updateCartItemAttributes(cartItemId, updatedSelections);
+            
+            return res.json({
+              success: true,
+              data: { ...updatedItem, quantity: newQuantity },
+              message: `Removed ${attributeName}: ${attributeValue}, quantity decreased to ${newQuantity}`
+            });
+          }
         } else {
-          // Update attribute selections
+          // This case shouldn't happen with current logic, but keeping for safety
           const updatedItem = await storage.updateCartItemAttributes(cartItemId, updatedSelections);
           
           return res.json({
