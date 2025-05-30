@@ -143,6 +143,11 @@ export interface IStorage {
   ): Promise<Category | undefined>;
 
   // Product operations
+  getProductCount(
+    categoryId?: number,
+    search?: string,
+    options?: { includeInactive?: boolean; includeCategoryInactive?: boolean },
+  ): Promise<number>;
   getAllProducts(
     limit?: number,
     offset?: number,
