@@ -4331,6 +4331,9 @@ export class DatabaseStorage implements IStorage {
       throw error;
     }
   }
+                      .select({ count: sql<number>`count(*)` })
+                      .from(products)
+                      .where(eq(products.catalogId, catalog.id));
 
                 const [result] = await productsQuery;
                 const count = result?.count || 0;
