@@ -840,6 +840,86 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Product operations
+  async getProductCount(
+    categoryId?: number,
+    search?: string,
+    options?: { includeInactive?: boolean; includeCategoryInactive?: boolean },
+  ): Promise<number> {
+    try {
+      // Create conditions array
+      const conditions: SQL<unknown>[] = [];
+
+      // Only filter active products if not explicitly including inactive ones
+      if (!options?.includeInactive) {
+        conditions.push(eq(products.isActive, true));
+      }
+
+      // Add category filter if provided
+      if (categoryId) {
+        conditions.push(eq(products.categoryId, categoryId));
+      }
+
+      // Build count query
+      let countQuery = db.select({ count: sql<number>`count(*)` }).from(products);
+
+      // Add joins for category filtering if needed
+      if (!options?.includeCategoryInactive) {
+        if (categoryId) {
+          // Check if specific category is active
+          const categoryQuery = db
+            .select()
+            .from(categories)
+            .where(
+              and(
+                eq(categories.id, categoryId),
+                eq(categories.isActive, true),
+              ),
+            );
+
+          const [category] = await categoryQuery;
+          if (!category) {
+            return 0;
+          }
+        } else {
+          // Join with categories to exclude products from inactive categories
+          countQuery = db
+            .select({ count: sql<number>`count(*)` })
+            .from(products)
+            .innerJoin(categories, eq(products.categoryId, categories.id))
+            .where(and(...conditions, eq(categories.isActive, true)));
+        }
+      }
+
+      // Apply conditions if no join was needed
+      if (options?.includeCategoryInactive || categoryId) {
+        if (conditions.length > 0) {
+          countQuery = countQuery.where(and(...conditions));
+        }
+      }
+
+      // Add search condition if provided
+      if (search) {
+        const searchTerm = `%${search}%`;
+        const searchCondition = or(
+          like(products.name, searchTerm),
+          like(products.description || "", searchTerm),
+        );
+        
+        if (countQuery.where) {
+          countQuery = countQuery.where(searchCondition);
+        } else {
+          countQuery = countQuery.where(searchCondition);
+        }
+      }
+
+      const [{ count }] = await countQuery;
+      return count;
+    } catch (error) {
+      console.error(`Error getting product count:`, error);
+      throw error;
+    }
+  }
+
   async getAllProducts(
     limit = 20,
     offset = 0,
