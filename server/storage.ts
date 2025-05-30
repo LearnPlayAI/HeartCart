@@ -581,10 +581,64 @@ export class Storage {
 
   async getProductGlobalAttributes(productId: number): Promise<any[]> {
     try {
-      // For now, return empty array as attributes functionality is not yet implemented
-      return [];
+      // Get product attributes with their options using raw SQL for better control
+      const result = await db.execute(sql`
+        SELECT 
+          pa.id,
+          pa.product_id,
+          pa.attribute_id,
+          pa.selected_options,
+          a.name,
+          a.display_name,
+          a.attribute_type,
+          a.is_required
+        FROM product_attributes pa
+        JOIN attributes a ON pa.attribute_id = a.id
+        WHERE pa.product_id = ${productId}
+        ORDER BY pa.sort_order, a.sort_order
+      `);
+      
+      // Process results to include available options
+      const attributesWithOptions = [];
+      
+      for (const row of result.rows) {
+        // Get available options for this attribute
+        const optionsResult = await db.execute(sql`
+          SELECT id, value, display_value, sort_order
+          FROM attribute_options
+          WHERE attribute_id = ${row.attribute_id}
+          ORDER BY sort_order, display_value
+        `);
+        
+        // Parse selected options if they exist
+        let selectedOptions = [];
+        if (row.selected_options) {
+          try {
+            selectedOptions = JSON.parse(row.selected_options);
+          } catch (e) {
+            selectedOptions = [];
+          }
+        }
+        
+        attributesWithOptions.push({
+          id: row.id,
+          productId: row.product_id,
+          attribute: {
+            id: row.attribute_id,
+            name: row.name,
+            displayName: row.display_name || row.name,
+            attributeType: row.attribute_type,
+            isRequired: row.is_required
+          },
+          options: optionsResult.rows,
+          selectedOptions: selectedOptions
+        });
+      }
+      
+      return attributesWithOptions;
     } catch (error) {
-      throw error;
+      console.error('Error fetching product global attributes:', error);
+      return [];
     }
   }
 
@@ -717,7 +771,7 @@ export class Storage {
 
   async clearCart(userId: number): Promise<void> {
     try {
-      // For now, do nothing as cart functionality needs to be implemented
+      await db.delete(cartItems).where(eq(cartItems.userId, userId));
     } catch (error) {
       throw error;
     }
@@ -725,16 +779,31 @@ export class Storage {
 
   async getAttributeOptions(attributeId: number): Promise<any[]> {
     try {
-      return await this.db.select().from(attributeOptions).where(eq(attributeOptions.attributeId, attributeId)).orderBy(attributeOptions.sortOrder);
+      const result = await db.execute(sql`
+        SELECT id, value, display_value, sort_order
+        FROM attribute_options
+        WHERE attribute_id = ${attributeId}
+        ORDER BY sort_order, display_value
+      `);
+      return result.rows;
     } catch (error) {
-      throw error;
+      console.error('Error fetching attribute options:', error);
+      return [];
     }
   }
 
   async updateCartItemAttributes(cartItemId: number, attributeSelections: any): Promise<any> {
     try {
-      // For now, return success response as cart functionality needs to be implemented
-      return { success: true };
+      const result = await db
+        .update(cartItems)
+        .set({ 
+          attributeSelections,
+          updatedAt: new Date() 
+        })
+        .where(eq(cartItems.id, cartItemId))
+        .returning();
+      
+      return result[0];
     } catch (error) {
       throw error;
     }
