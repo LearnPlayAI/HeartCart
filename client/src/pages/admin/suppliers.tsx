@@ -127,11 +127,16 @@ export default function AdminSuppliers() {
       
       return result;
     },
-    onSuccess: () => {
-      
-      queryClient.invalidateQueries({ queryKey: ["/api/suppliers"] });
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ 
+        predicate: (query) => query.queryKey[0] === "/api/suppliers" 
+      });
       setShowDeleteDialog(false);
       setSelectedSupplier(null);
+      toast({
+        title: "Success",
+        description: result.message || "Supplier deleted successfully",
+      });
     },
     onError: (error: any) => {
       toast({
@@ -164,7 +169,9 @@ export default function AdminSuppliers() {
       return result;
     },
     onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/suppliers"] });
+      queryClient.invalidateQueries({ 
+        predicate: (query) => query.queryKey[0] === "/api/suppliers" 
+      });
       setShowDeactivateDialog(false);
       setSelectedSupplier(null);
       toast({

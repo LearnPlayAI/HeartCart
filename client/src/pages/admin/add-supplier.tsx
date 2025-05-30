@@ -29,9 +29,14 @@ export default function AddSupplier() {
       
       return result;
     },
-    onSuccess: () => {
-      
-      queryClient.invalidateQueries({ queryKey: ["/api/suppliers"] });
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ 
+        predicate: (query) => query.queryKey[0] === "/api/suppliers" 
+      });
+      toast({
+        title: "Success",
+        description: result.message || "Supplier created successfully",
+      });
       setLocation("/admin/suppliers");
     },
     onError: (error: any) => {
