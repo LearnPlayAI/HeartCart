@@ -67,7 +67,10 @@ export default function EditSupplier() {
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ 
-        predicate: (query) => query.queryKey[0] === "/api/suppliers" 
+        predicate: (query) => {
+          const key = query.queryKey;
+          return Array.isArray(key) && key[0] === "/api/suppliers";
+        }
       });
       queryClient.invalidateQueries({ queryKey: [`/api/suppliers/${supplierId}`] });
       toast({

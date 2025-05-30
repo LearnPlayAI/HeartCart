@@ -129,7 +129,10 @@ export default function AdminSuppliers() {
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ 
-        predicate: (query) => query.queryKey[0] === "/api/suppliers" 
+        predicate: (query) => {
+          const key = query.queryKey;
+          return Array.isArray(key) && key[0] === "/api/suppliers";
+        }
       });
       setShowDeleteDialog(false);
       setSelectedSupplier(null);
@@ -170,7 +173,10 @@ export default function AdminSuppliers() {
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ 
-        predicate: (query) => query.queryKey[0] === "/api/suppliers" 
+        predicate: (query) => {
+          const key = query.queryKey;
+          return Array.isArray(key) && key[0] === "/api/suppliers";
+        }
       });
       setShowDeactivateDialog(false);
       setSelectedSupplier(null);
