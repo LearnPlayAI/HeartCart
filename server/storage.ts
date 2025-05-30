@@ -101,7 +101,7 @@ export class Storage {
       const suppliersQuery = db
         .select()
         .from(suppliers)
-        .orderBy(asc(suppliers.companyName));
+        .orderBy(asc(suppliers.name));
       
       if (activeOnly) {
         suppliersQuery.where(eq(suppliers.isActive, true));

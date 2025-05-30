@@ -5,7 +5,7 @@ import { storage } from "./storage";
 import { ZodError } from "zod";
 import { logger } from "./logger";
 import { db } from "./db";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, asc, and, sql } from "drizzle-orm";
 import crypto from "crypto";
 import { cleanupOrphanedDraftImages, cleanupAllOrphanedDraftImages } from "./clean-orphaned-images";
 // Import AI routes separately
@@ -22,7 +22,10 @@ import {
   insertProductImageSchema,
   insertPricingSchema,
   insertSupplierSchema,
-  insertCatalogSchema
+  insertCatalogSchema,
+  catalogs,
+  suppliers,
+  products
 } from "@shared/schema";
 import { objectStore, STORAGE_FOLDERS } from "./object-store";
 import { setupAuth } from "./auth";
@@ -4622,8 +4625,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       // Log detailed error information
+      console.error('Detailed catalog error:', error);
       logger.error('Error retrieving catalogs', { 
-        error,
+        error: error instanceof Error ? {
+          message: error.message,
+          stack: error.stack,
+          name: error.name
+        } : error,
         query: req.query
       });
       
