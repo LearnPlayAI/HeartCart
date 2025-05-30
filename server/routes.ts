@@ -5065,12 +5065,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw new ValidationError("Invalid pagination parameters");
       }
       
-      console.log(`Calling getProductsByCatalogId with: catalogId=${catalogId}, activeOnly=${!activeOnly}, limit=${limit}, offset=${offset}`);
-      const products = await storage.getProductsByCatalogId(catalogId, !activeOnly, limit, offset);
+      console.log(`Calling getProductsByCatalogId with: catalogId=${catalogId}, activeOnly=${activeOnly}, limit=${limit}, offset=${offset}`);
+      const products = await storage.getProductsByCatalogId(catalogId, activeOnly, limit, offset);
       
       // Get total count for pagination
-      console.log(`Calling getProductCountByCatalogId with: catalogId=${catalogId}, includeInactive=${!activeOnly}`);
-      const totalCount = await storage.getProductCountByCatalogId(catalogId, !activeOnly);
+      console.log(`Calling getProductCountByCatalogId with: catalogId=${catalogId}, includeInactive=${activeOnly}`);
+      const totalCount = await storage.getProductCountByCatalogId(catalogId, activeOnly);
       
       console.log(`Successfully retrieved ${products.length} products with total count ${totalCount}`);
       

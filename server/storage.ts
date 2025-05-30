@@ -319,21 +319,70 @@ export class Storage {
 
   async getProductsByCatalogId(catalogId: number, activeOnly = true, limit = 20, offset = 0): Promise<Product[]> {
     try {
-      let query = db
-        .select()
-        .from(products)
-        .where(eq(products.catalogId, catalogId));
+      const conditions = [eq(products.catalogId, catalogId)];
       
       if (activeOnly) {
-        query = query.where(eq(products.isActive, true));
+        conditions.push(eq(products.isActive, true));
       }
       
-      const catalogProducts = await query
+      const catalogProducts = await db
+        .select()
+        .from(products)
+        .where(and(...conditions))
         .limit(limit)
         .offset(offset)
         .orderBy(asc(products.name));
       
       return catalogProducts;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async getFeaturedProducts(limit = 10): Promise<Product[]> {
+    try {
+      const featuredProducts = await db
+        .select()
+        .from(products)
+        .where(and(eq(products.isActive, true), eq(products.isFeatured, true)))
+        .limit(limit)
+        .orderBy(desc(products.id));
+      
+      return featuredProducts;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async getFlashDeals(limit = 6): Promise<Product[]> {
+    try {
+      const flashDeals = await db
+        .select()
+        .from(products)
+        .where(and(eq(products.isActive, true), eq(products.isFlashDeal, true)))
+        .limit(limit)
+        .orderBy(desc(products.id));
+      
+      return flashDeals;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async getProductCountByCatalogId(catalogId: number, activeOnly = true): Promise<number> {
+    try {
+      const conditions = [eq(products.catalogId, catalogId)];
+      
+      if (activeOnly) {
+        conditions.push(eq(products.isActive, true));
+      }
+      
+      const result = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(products)
+        .where(and(...conditions));
+      
+      return result[0]?.count || 0;
     } catch (error) {
       throw error;
     }
