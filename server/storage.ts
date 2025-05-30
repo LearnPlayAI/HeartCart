@@ -507,8 +507,41 @@ export class Storage {
 
   async getCartItemsWithProducts(userId: number): Promise<any[]> {
     try {
-      // For now, return empty array as cart functionality needs to be implemented
-      return [];
+      const cartItemsWithProducts = await db
+        .select({
+          id: cartItems.id,
+          userId: cartItems.userId,
+          productId: cartItems.productId,
+          quantity: cartItems.quantity,
+          itemPrice: cartItems.itemPrice,
+          attributeSelections: cartItems.attributeSelections,
+          createdAt: cartItems.createdAt,
+          updatedAt: cartItems.updatedAt,
+          product: {
+            id: products.id,
+            name: products.name,
+            description: products.description,
+            price: products.price,
+            salePrice: products.salePrice,
+            sku: products.sku,
+            isActive: products.isActive,
+            catalogId: products.catalogId,
+            categoryId: products.categoryId,
+            image: products.image,
+            isFeatured: products.isFeatured,
+            isFlashDeal: products.isFlashDeal,
+            tags: products.tags,
+            metaTitle: products.metaTitle,
+            metaDescription: products.metaDescription,
+            createdAt: products.createdAt
+          }
+        })
+        .from(cartItems)
+        .innerJoin(products, eq(cartItems.productId, products.id))
+        .where(eq(cartItems.userId, userId))
+        .orderBy(desc(cartItems.createdAt));
+      
+      return cartItemsWithProducts;
     } catch (error) {
       throw error;
     }
@@ -516,8 +549,41 @@ export class Storage {
 
   async addToCart(userId: number, productId: number, quantity: number, itemPrice: number, attributeSelections: any = {}): Promise<any> {
     try {
-      // For now, return success response as cart functionality needs to be implemented
-      return { success: true, message: 'Item added to cart successfully' };
+      // Check if the item already exists in cart
+      const existingItem = await db
+        .select()
+        .from(cartItems)
+        .where(and(eq(cartItems.userId, userId), eq(cartItems.productId, productId)))
+        .limit(1);
+
+      if (existingItem.length > 0) {
+        // Update quantity if item already exists
+        const [updatedItem] = await db
+          .update(cartItems)
+          .set({ 
+            quantity: existingItem[0].quantity + quantity,
+            attributeSelections: attributeSelections,
+            updatedAt: new Date()
+          })
+          .where(eq(cartItems.id, existingItem[0].id))
+          .returning();
+        
+        return updatedItem;
+      } else {
+        // Add new item to cart
+        const [newCartItem] = await db
+          .insert(cartItems)
+          .values({
+            userId,
+            productId,
+            quantity,
+            itemPrice: itemPrice.toString(),
+            attributeSelections: attributeSelections || {}
+          })
+          .returning();
+        
+        return newCartItem;
+      }
     } catch (error) {
       throw error;
     }
