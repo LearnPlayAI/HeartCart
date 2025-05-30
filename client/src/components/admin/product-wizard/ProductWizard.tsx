@@ -626,29 +626,105 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ draftId, initialDa
       </h2>
 
       <Tabs value={currentStep} onValueChange={handleStepChange} className="w-full">
-        {/* Mobile-optimized TabsList - scrollable on small screens */}
-        <div className="overflow-x-auto pb-2 -mx-6 px-6">
-          <TabsList className="grid grid-cols-7 mb-6 min-w-[700px] md:min-w-0">
-            {WIZARD_STEPS.map((step) => (
-              <TabsTrigger 
-                key={step.id} 
-                value={step.id}
-                className="relative"
-              >
-                <span className="flex items-center">
-                  {isStepCompleted(step.id) && (
-                    <CheckCircle2 className="w-4 h-4 text-green-500 mr-1" />
-                  )}
-                  {/* Hide label text on smallest screens, show icon only */}
-                  <span className="hidden xs:inline">{step.label}</span>
-                  {/* Show step number on smallest screens */}
-                  <span className="inline xs:hidden">
-                    {WIZARD_STEPS.findIndex(s => s.id === step.id) + 1}
-                  </span>
-                </span>
-              </TabsTrigger>
-            ))}
-          </TabsList>
+        {/* Enhanced Modern TabsList with Progress Tracking */}
+        <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 mb-8 border border-blue-100 shadow-sm">
+          {/* Progress Header */}
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              Product Creation Progress
+            </h3>
+            <div className="text-sm font-medium text-gray-600">
+              Step {WIZARD_STEPS.findIndex(s => s.id === currentStep) + 1} of {WIZARD_STEPS.length}
+            </div>
+          </div>
+          
+          {/* Progress Bar */}
+          <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
+            <div 
+              className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-500"
+              style={{ 
+                width: `${((WIZARD_STEPS.findIndex(s => s.id === currentStep) + 1) / WIZARD_STEPS.length) * 100}%` 
+              }}
+            />
+          </div>
+
+          {/* Enhanced Steps Navigation */}
+          <div className="overflow-x-auto pb-2">
+            <TabsList className="grid grid-cols-7 min-w-[700px] md:min-w-0 bg-white/50 backdrop-blur-sm border border-white/20 shadow-sm">
+              {WIZARD_STEPS.map((step, index) => {
+                const stepNumber = index + 1;
+                const isCompleted = isStepCompleted(step.id);
+                const isCurrent = currentStep === step.id;
+                
+                return (
+                  <TabsTrigger 
+                    key={step.id} 
+                    value={step.id}
+                    className={`
+                      relative px-3 py-3 rounded-md transition-all duration-300 hover:shadow-md
+                      ${isCurrent 
+                        ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg transform scale-105' 
+                        : isCompleted
+                        ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                        : 'bg-white hover:bg-gray-50'
+                      }
+                    `}
+                  >
+                    <div className="flex items-center justify-center flex-col space-y-1">
+                      {/* Step Circle with Number or Icon */}
+                      <div className={`
+                        w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold
+                        ${isCurrent 
+                          ? 'bg-white/20 text-white ring-2 ring-white/30 animate-pulse' 
+                          : isCompleted
+                          ? 'bg-green-500 text-white'
+                          : 'bg-gray-200 text-gray-600'
+                        }
+                      `}>
+                        {isCompleted ? (
+                          <CheckCircle2 className="w-5 h-5" />
+                        ) : (
+                          stepNumber
+                        )}
+                      </div>
+                      
+                      {/* Step Label */}
+                      <span className={`
+                        text-xs font-medium text-center
+                        ${isCurrent ? 'text-white' : isCompleted ? 'text-green-700' : 'text-gray-600'}
+                        hidden xs:block
+                      `}>
+                        {step.label}
+                      </span>
+                      
+                      {/* Mobile: Show only step number */}
+                      <span className={`
+                        text-xs font-medium
+                        ${isCurrent ? 'text-white' : isCompleted ? 'text-green-700' : 'text-gray-600'}
+                        xs:hidden
+                      `}>
+                        {stepNumber}
+                      </span>
+                    </div>
+                    
+                    {/* Active Step Indicator */}
+                    {isCurrent && (
+                      <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-white rounded-full" />
+                    )}
+                  </TabsTrigger>
+                );
+              })}
+            </TabsList>
+          </div>
+          
+          {/* Current Step Info */}
+          <div className="mt-4 text-center">
+            <p className="text-sm text-gray-600">
+              Currently editing: <span className="font-semibold text-gray-800">
+                {WIZARD_STEPS.find(s => s.id === currentStep)?.label}
+              </span>
+            </p>
+          </div>
         </div>
 
         {/* Mobile-friendly content area */}
