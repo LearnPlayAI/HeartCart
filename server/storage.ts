@@ -4271,34 +4271,113 @@ export class DatabaseStorage implements IStorage {
 
   // Catalog operations
   async getAllCatalogs(activeOnly = true): Promise<any[]> {
+    console.log('🔍 CATALOG DEBUG - getAllCatalogs called with activeOnly:', activeOnly);
+    
     try {
-      // Get catalogs with supplier information
+      // First get simple catalogs
+      console.log('🔍 CATALOG DEBUG - Getting basic catalogs...');
+      const basicCatalogs = await db
+        .select()
+        .from(catalogs)
+        .where(activeOnly ? eq(catalogs.isActive, true) : undefined)
+        .orderBy(asc(catalogs.name));
+      
+      console.log('🔍 CATALOG DEBUG - Basic catalogs:', JSON.stringify(basicCatalogs, null, 2));
+      
+      // Now try to add supplier information
+      console.log('🔍 CATALOG DEBUG - Adding supplier information...');
+      const catalogsWithSuppliers = await Promise.all(
+        basicCatalogs.map(async (catalog) => {
+          try {
+            let supplierName = null;
+            if (catalog.supplierId) {
+              const supplier = await db
+                .select({ name: suppliers.name })
+                .from(suppliers)
+                .where(eq(suppliers.id, catalog.supplierId))
+                .limit(1);
+              
+              supplierName = supplier[0]?.name || null;
+            }
+            
+            console.log(`🔍 CATALOG DEBUG - Catalog ${catalog.name}: supplierId=${catalog.supplierId}, supplierName=${supplierName}`);
+            
+            return {
+              ...catalog,
+              supplierName
+            };
+          } catch (error) {
+            console.error('🔍 CATALOG DEBUG - Error getting supplier for catalog:', catalog.id, error);
+            return {
+              ...catalog,
+              supplierName: null
+            };
+          }
+        })
+      );
+
+      console.log('🔍 CATALOG DEBUG - Adding product counts...');
+      
+      // Add product count for each catalog
+      const catalogsWithProductCount = await Promise.all(
+        catalogsWithSuppliers.map(async (catalog) => {
+          try {
+            // Count products in this catalog
+            const productsQuery = await db
+              .select({ count: sql<number>`count(*)` })
+              .from(products)
+              .where(
+                activeOnly
+                  ? and(
+                      eq(products.catalogId, catalog.id),
+                      eq(products.isActive, true)
+                    )
+                  : eq(products.catalogId, catalog.id)
+              );
+
+            const count = productsQuery[0]?.count || 0;
+            
+            console.log(`🔍 CATALOG DEBUG - Catalog ${catalog.name}: productsCount=${count}`);
+
+            return {
+              ...catalog,
+              productsCount: count
+            };
+          } catch (error) {
+            console.error('🔍 CATALOG DEBUG - Error getting product count for catalog:', catalog.id, error);
+            return {
+              ...catalog,
+              productsCount: 0
+            };
+          }
+        })
+      );
+
+      console.log('🔍 CATALOG DEBUG - Final result:', JSON.stringify(catalogsWithProductCount, null, 2));
+      
+      return catalogsWithProductCount;
+        
+    } catch (error) {
+      console.error('🔍 CATALOG DEBUG - Error in getAllCatalogs:', error);
+      // Fallback to basic catalogs if enhanced query fails
       try {
-        // First get the basic catalog data with proper supplier mapping
-        const catalogData = await db
-          .select({
-            id: catalogs.id,
-            name: catalogs.name,
-            description: catalogs.description,
-            supplierId: catalogs.supplierId,
-            supplierName: suppliers.name,
-            isActive: catalogs.isActive,
-            defaultMarkupPercentage: catalogs.defaultMarkupPercentage,
-            startDate: catalogs.startDate,
-            endDate: catalogs.endDate,
-            createdAt: catalogs.createdAt,
-          })
+        const basicCatalogs = await db
+          .select()
           .from(catalogs)
-          .leftJoin(suppliers, eq(catalogs.supplierId, suppliers.id))
           .where(activeOnly ? eq(catalogs.isActive, true) : undefined)
           .orderBy(asc(catalogs.name));
         
-        console.log('🔍 CATALOG DEBUG - Raw catalog data from DB:', JSON.stringify(catalogData, null, 2));
-        console.log('🔍 CATALOG DEBUG - Number of catalogs found:', catalogData.length);
-
-        // Add product count for each catalog
-        try {
-          const catalogsWithProductCount = await Promise.all(
+        return basicCatalogs.map(catalog => ({
+          ...catalog,
+          supplierName: null,
+          productsCount: 0
+        }));
+      } catch (fallbackError) {
+        console.error('🔍 CATALOG DEBUG - Fallback query also failed:', fallbackError);
+        throw error;
+      }
+    }
+  }
             catalogData.map(async (catalog) => {
               try {
                 // Count products in this catalog
