@@ -4274,14 +4274,14 @@ export class DatabaseStorage implements IStorage {
     try {
       // Get catalogs with supplier information
       try {
-        // Use a more explicit approach to ensure proper column mapping
-        const baseQuery = db
+        // First get the basic catalog data with proper supplier mapping
+        const catalogData = await db
           .select({
             id: catalogs.id,
             name: catalogs.name,
             description: catalogs.description,
             supplierId: catalogs.supplierId,
-            supplierName: sql<string>`${suppliers.name}`.as('supplier_name'),
+            supplierName: suppliers.name,
             isActive: catalogs.isActive,
             defaultMarkupPercentage: catalogs.defaultMarkupPercentage,
             startDate: catalogs.startDate,
@@ -4290,13 +4290,8 @@ export class DatabaseStorage implements IStorage {
           })
           .from(catalogs)
           .leftJoin(suppliers, eq(catalogs.supplierId, suppliers.id))
+          .where(activeOnly ? eq(catalogs.isActive, true) : undefined)
           .orderBy(asc(catalogs.name));
-
-        const query = activeOnly 
-          ? baseQuery.where(eq(catalogs.isActive, true))
-          : baseQuery;
-
-        const catalogData = await query;
         
         // Debug: Log the catalog data to see what we're getting
         console.log('🔍 CATALOG DEBUG - Raw catalog data:', JSON.stringify(catalogData, null, 2));
