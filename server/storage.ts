@@ -4568,25 +4568,34 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createCatalog(catalog: InsertCatalog): Promise<Catalog> {
-    const now = new Date();
+    try {
+      // Map camelCase frontend data to snake_case database column names
+      const catalogData = {
+        name: catalog.name,
+        description: catalog.description,
+        supplier_id: catalog.supplierId,
+        default_markup_percentage: catalog.defaultMarkupPercentage || 0,
+        is_active: catalog.isActive !== undefined ? catalog.isActive : true,
+        cover_image: catalog.coverImage,
+        tags: catalog.tags,
+        start_date: catalog.startDate ? catalog.startDate : null,
+        end_date: catalog.endDate ? catalog.endDate : null,
+        // created_at and updated_at will be handled by default values
+      };
 
-    // Convert startDate and endDate strings to Date objects if provided
-    const catalogValues = {
-      ...catalog,
-      startDate: catalog.startDate ? new Date(catalog.startDate) : null,
-      endDate: catalog.endDate ? new Date(catalog.endDate) : null,
-    };
+      console.log('DEBUG: Creating catalog with data:', catalogData);
 
-    // Remove createdAt and updatedAt from the payload since these are handled by Drizzle
-    delete catalogValues["createdAt"];
-    delete catalogValues["updatedAt"];
+      const [newCatalog] = await db
+        .insert(catalogs)
+        .values(catalogData)
+        .returning();
 
-    const [newCatalog] = await db
-      .insert(catalogs)
-      .values(catalogValues)
-      .returning();
-
-    return newCatalog;
+      console.log('DEBUG: Created catalog:', newCatalog);
+      return newCatalog;
+    } catch (error) {
+      console.error('Error in createCatalog:', error);
+      throw error;
+    }
   }
 
   async updateCatalog(
