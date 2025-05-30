@@ -864,32 +864,7 @@ export default function CatalogProducts() {
               {product.isActive ? "Active" : "Inactive"}
             </Badge>
           </TableCell>
-          <TableCell>
-            <div className="flex items-center gap-2">
-              {product.thumbnailUrl ? (
-                <div className="h-8 w-8 rounded border overflow-hidden">
-                  <img 
-                    src={product.thumbnailUrl} 
-                    alt={product.name} 
-                    className="h-full w-full object-cover" 
-                  />
-                </div>
-              ) : (
-                <div className="h-8 w-8 rounded border bg-muted flex items-center justify-center">
-                  <Package className="h-4 w-4 text-muted-foreground" />
-                </div>
-              )}
-              <Button 
-                size="sm" 
-                variant="ghost"
-                className="text-xs h-8 px-2"
-                onClick={() => navigate(`/admin/products/${product.id}/images`)}
-              >
-                <PlusSquare className="h-3 w-3 mr-1" />
-                Upload Images
-              </Button>
-            </div>
-          </TableCell>
+
           <TableCell className="text-right">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -1055,7 +1030,6 @@ export default function CatalogProducts() {
                 <TableHead>Category</TableHead>
                 <TableHead>Price</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Images</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -1068,7 +1042,7 @@ export default function CatalogProducts() {
                   >
                     {productsLoading ? (
                       <TableRow>
-                        <TableCell colSpan={8} className="text-center py-10">
+                        <TableCell colSpan={7} className="text-center py-10">
                           <div className="flex justify-center">
                             <Loader2 className="h-8 w-8 animate-spin text-pink-500" />
                           </div>
