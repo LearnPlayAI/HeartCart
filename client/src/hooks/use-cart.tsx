@@ -51,11 +51,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   
   // Get cart items from server with improved typing for discount fields
   // API now returns StandardApiResponse format
-  const { data: responseData, isLoading } = useQuery<StandardApiResponse<CartItemWithDiscounts[]>>({
+  const { data: responseData, isLoading, refetch } = useQuery<StandardApiResponse<CartItemWithDiscounts[]>>({
     queryKey: ['/api/cart'],
     retry: false,
     gcTime: 0,
     staleTime: 0,
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
   });
   
   // Safe extraction of cart items from the standardized response format
@@ -150,9 +152,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
-      queryClient.refetchQueries({ queryKey: ['/api/cart'] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
+      await refetch();
     },
     onError: (error) => {
       toast({
@@ -180,9 +182,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
-      queryClient.refetchQueries({ queryKey: ['/api/cart'] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
+      await refetch();
     },
     onError: (error) => {
       toast({
