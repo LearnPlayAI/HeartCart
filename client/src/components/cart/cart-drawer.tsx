@@ -107,7 +107,7 @@ const CartDrawer = () => {
                             {Array.isArray(value) ? (
                               <div className="flex gap-1 flex-wrap">
                                 {value.map((val, index) => (
-                                  <span key={index} className="px-2 py-0.5 rounded text-gray-700 bg-[#ff69b4]">
+                                  <span key={index} className="px-2 py-0.5 rounded bg-[#ff69b4] text-[#ffffff]">
                                     {val}
                                   </span>
                                 ))}
