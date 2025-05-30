@@ -64,11 +64,17 @@ router.get('/product/:productId/attributes', asyncHandler(async (req: Request, r
       
       // Get only the selected options for this product attribute
       if (!attributeGroups[attributeId].optionsLoaded) {
-        // Parse the selected_options JSON array
+        // Parse the selected_options - it can be either a JSON string or already an array
         let selectedOptionIds: number[] = [];
         if (prodAttr.selectedOptions) {
           try {
-            selectedOptionIds = JSON.parse(prodAttr.selectedOptions);
+            // Check if it's already an array
+            if (Array.isArray(prodAttr.selectedOptions)) {
+              selectedOptionIds = prodAttr.selectedOptions;
+            } else {
+              // Try to parse as JSON string
+              selectedOptionIds = JSON.parse(prodAttr.selectedOptions);
+            }
             logger.debug('Parsed selected options for product attribute', { 
               productId, 
               attributeId, 
@@ -79,15 +85,17 @@ router.get('/product/:productId/attributes', asyncHandler(async (req: Request, r
             logger.error('Failed to parse selected_options for product attribute', { 
               productId, 
               attributeId, 
-              selectedOptions: prodAttr.selectedOptions 
+              selectedOptions: prodAttr.selectedOptions,
+              error: e 
             });
           }
         }
         
-        // Get all available options for this attribute
-        const allOptions = await storage.getAttributeOptions(attributeId);
-        
+        // Only show selected options - no fallback to all options
         if (selectedOptionIds.length > 0) {
+          // Get all available options for this attribute
+          const allOptions = await storage.getAttributeOptions(attributeId);
+          
           // Filter to only show selected options
           const selectedOptions = allOptions.filter(opt => selectedOptionIds.includes(opt.id));
           logger.debug('Filtered selected options', { 
@@ -104,18 +112,12 @@ router.get('/product/:productId/attributes', asyncHandler(async (req: Request, r
             displayValue: opt.displayValue || opt.value
           }));
         } else {
-          // Fallback: if no selected options found, show all options (for backwards compatibility)
-          logger.debug('No selected options found, showing all options as fallback', { 
+          // No selected options found - show empty options array
+          logger.debug('No selected options found, showing empty options', { 
             productId, 
-            attributeId, 
-            totalOptions: allOptions.length 
+            attributeId
           });
-          
-          attributeGroups[attributeId].options = allOptions.map(opt => ({
-            id: opt.id,
-            value: opt.value,
-            displayValue: opt.displayValue || opt.value
-          }));
+          attributeGroups[attributeId].options = [];
         }
         attributeGroups[attributeId].optionsLoaded = true;
       }
