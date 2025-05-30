@@ -148,9 +148,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       if (!data.success) {
         throw new Error(data.error?.message || "Failed to update cart item");
       }
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
+      queryClient.refetchQueries({ queryKey: ['/api/cart'] });
     },
     onError: (error) => {
       toast({
@@ -176,9 +178,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       if (!data.success) {
         throw new Error(data.error?.message || "Failed to remove item from cart");
       }
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
+      queryClient.refetchQueries({ queryKey: ['/api/cart'] });
     },
     onError: (error) => {
       toast({
@@ -290,7 +294,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   };
   
   // Add comprehensive loading state that includes all mutation states
-  const isLoadingState = cartQuery.isLoading || cartQuery.isFetching || addToCartMutation.isPending || updateCartMutation.isPending || removeFromCartMutation.isPending;
+  const isLoadingState = isLoading || addToCartMutation.isPending || updateCartMutation.isPending || removeFromCartMutation.isPending;
   
   return (
     <CartContext.Provider 
@@ -305,7 +309,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         removeAttributeOption,
         clearCart,
         cartSummary,
-        isLoading
+        isLoading: isLoadingState
       }}
     >
       {children}
