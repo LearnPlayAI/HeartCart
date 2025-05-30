@@ -4155,6 +4155,14 @@ export class DatabaseStorage implements IStorage {
   async createSupplier(supplier: InsertSupplier): Promise<Supplier> {
     try {
       const now = new Date().toISOString();
+      
+      // Log the supplier data being inserted for debugging
+      console.log('🔍 SUPPLIER DEBUG - About to insert:', {
+        ...supplier,
+        createdAt: now,
+        updatedAt: now,
+      });
+      
       const [newSupplier] = await db
         .insert(suppliers)
         .values({
@@ -4163,9 +4171,19 @@ export class DatabaseStorage implements IStorage {
           updatedAt: now,
         })
         .returning();
+        
+      console.log('🔍 SUPPLIER DEBUG - Successfully created:', newSupplier);
       return newSupplier;
     } catch (error) {
-      console.error(`Error creating supplier "${supplier.name}":`, error);
+      console.error(`🔍 SUPPLIER DEBUG - Error creating supplier "${supplier.name}":`, error);
+      console.error('🔍 SUPPLIER DEBUG - Error details:', {
+        message: error?.message,
+        stack: error?.stack,
+        code: error?.code,
+        detail: error?.detail,
+        name: error?.name,
+        fullError: error
+      });
       throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
   }
