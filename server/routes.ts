@@ -5,7 +5,7 @@ import { storage } from "./storage";
 import { ZodError } from "zod";
 import { logger } from "./logger";
 import { db } from "./db";
-import { desc, eq, asc, and, sql } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import crypto from "crypto";
 import { cleanupOrphanedDraftImages, cleanupAllOrphanedDraftImages } from "./clean-orphaned-images";
 // Import AI routes separately
@@ -22,10 +22,7 @@ import {
   insertProductImageSchema,
   insertPricingSchema,
   insertSupplierSchema,
-  insertCatalogSchema,
-  catalogs,
-  suppliers,
-  products
+  insertCatalogSchema
 } from "@shared/schema";
 import { objectStore, STORAGE_FOLDERS } from "./object-store";
 import { setupAuth } from "./auth";
@@ -641,34 +638,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = req.user as any;
       const isAdmin = user && user.role === 'admin';
       
-      // For admin requests without pagination params, return all products
-      const isAdminAllRequest = isAdmin && !limit && !offset;
-      const actualLimit = isAdminAllRequest ? undefined : Number(limit || 20);
-      const actualOffset = isAdminAllRequest ? undefined : Number(offset || 0);
-      
-      // Only show active products for non-admin users, show all for admin
-      const activeOnly = !isAdmin;
+      const options = { 
+        includeInactive: isAdmin, 
+        includeCategoryInactive: isAdmin 
+      };
       
       // Get both products and total count
       const [products, totalCount] = await Promise.all([
         storage.getAllProducts(
-          activeOnly,
-          actualLimit, 
-          actualOffset
+          Number(limit), 
+          Number(offset), 
+          categoryId ? Number(categoryId) : undefined, 
+          search as string | undefined, 
+          options
         ),
-        storage.getProductCount(activeOnly)
+        storage.getProductCount(
+          categoryId ? Number(categoryId) : undefined, 
+          search as string | undefined, 
+          options
+        )
       ]);
       
       // Calculate pagination metadata
-      const totalPages = actualLimit ? Math.ceil(totalCount / actualLimit) : 1;
+      const totalPages = Math.ceil(totalCount / Number(limit));
       
       return {
         data: products,
         meta: {
           total: totalCount,
           totalPages,
-          limit: actualLimit || products.length,
-          offset: actualOffset || 0
+          limit: Number(limit),
+          offset: Number(offset)
         }
       };
     }));
@@ -1107,18 +1107,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       try {
-        const products = await storage.searchProducts(query as string, Number(limit), Number(offset));
-        
-        // Get total count for proper pagination
-        const totalResults = await storage.searchProducts(query as string, 1000, 0); // Get all results to count
+        const products = await storage.searchProducts(query as string, Number(limit), Number(offset), options);
         
         res.json({
           success: true,
           data: products,
           meta: {
             query: query as string,
-            total: totalResults.length,
-            totalPages: Math.ceil(totalResults.length / Number(limit)),
+            total: products.length,
+            totalPages: Math.ceil(products.length / Number(limit)),
             limit: Number(limit),
             offset: Number(offset)
           }
@@ -2957,14 +2954,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           requestedQuantity: quantity
         });
         
-        // Add item to cart with correct parameter order
-        const cartItem = await storage.addToCart(
-          user.id,
+        // Create simplified cart item data without deprecated combination logic
+        const cartItemData = {
           productId,
           quantity,
+          userId: user.id,
           itemPrice,
-          attributeSelections || {}
-        );
+          attributeSelections: attributeSelections || {},
+          createdAt: new Date().toISOString(),
+        };
+        
+        const cartItem = await storage.addToCart(cartItemData);
         
         // Set status code to 201 Created
         res.status(201).json({
@@ -4547,36 +4547,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // CATALOG ROUTES
   app.get("/api/catalogs", asyncHandler(async (req: Request, res: Response) => {
     try {
-      const activeOnly = req.query.activeOnly !== 'false';
+      // For admin users, show all catalogs regardless of active status
+      // For regular users, only show active catalogs
+      const user = req.user as any;
+      const isAdmin = user && user.role === 'admin';
+      const activeOnly = isAdmin ? false : req.query.activeOnly !== 'false';
       
-      // Get all catalogs
-      const catalogData = await storage.getAllCatalogs(activeOnly);
-      
-      // Get all suppliers and products for lookup
-      const suppliersData = await storage.getAllSuppliers(false);
-      const productsData = await storage.getAllProducts(false);
-      
-      // Enhanced catalog data with supplier names and product counts
-      const enhancedCatalogs = catalogData.map(catalog => {
-        const supplier = suppliersData.find(s => s.id === catalog.supplierId);
-        const productCount = productsData.filter(p => p.catalogId === catalog.id).length;
-        
-        return {
-          ...catalog,
-          supplierName: supplier?.name || 'No supplier',
-          productsCount: productCount
-        };
-      });
+      const catalogs = await storage.getAllCatalogs(activeOnly);
       
       return res.json({
         success: true,
-        data: enhancedCatalogs,
+        data: catalogs,
         meta: {
-          count: enhancedCatalogs.length,
+          count: catalogs.length,
           activeOnly
         }
       });
     } catch (error) {
+      // Log detailed error information
+      logger.error('Error retrieving catalogs', { 
+        error,
+        query: req.query
+      });
+      
+      // Return generic error
       throw new AppError(
         "Failed to retrieve catalogs. Please try again.",
         ErrorCode.INTERNAL_SERVER_ERROR,
@@ -5062,12 +5056,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw new ValidationError("Invalid pagination parameters");
       }
       
-      console.log(`Calling getProductsByCatalogId with: catalogId=${catalogId}, activeOnly=${activeOnly}, limit=${limit}, offset=${offset}`);
-      const products = await storage.getProductsByCatalogId(catalogId, activeOnly, limit, offset);
+      console.log(`Calling getProductsByCatalogId with: catalogId=${catalogId}, activeOnly=${!activeOnly}, limit=${limit}, offset=${offset}`);
+      const products = await storage.getProductsByCatalogId(catalogId, !activeOnly, limit, offset);
       
       // Get total count for pagination
-      console.log(`Calling getProductCountByCatalogId with: catalogId=${catalogId}, includeInactive=${activeOnly}`);
-      const totalCount = await storage.getProductCountByCatalogId(catalogId, activeOnly);
+      console.log(`Calling getProductCountByCatalogId with: catalogId=${catalogId}, includeInactive=${!activeOnly}`);
+      const totalCount = await storage.getProductCountByCatalogId(catalogId, !activeOnly);
       
       console.log(`Successfully retrieved ${products.length} products with total count ${totalCount}`);
       

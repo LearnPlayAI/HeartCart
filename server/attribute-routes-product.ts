@@ -91,28 +91,32 @@ router.get('/product/:productId/attributes', asyncHandler(async (req: Request, r
           }
         }
         
-        // Only show the specific options assigned to this product during creation
+        // Only show selected options - no fallback to all options
         if (selectedOptionIds.length > 0) {
+          // Get all available options for this attribute
           const allOptions = await storage.getAttributeOptions(attributeId);
           
-          // Filter to only show the product-specific options
-          const productOptions = allOptions.filter(opt => selectedOptionIds.includes(opt.id));
-          
-          logger.debug('Showing product-specific options for attribute', { 
+          // Filter to only show selected options
+          const selectedOptions = allOptions.filter(opt => selectedOptionIds.includes(opt.id));
+          logger.debug('Filtered selected options', { 
             productId, 
             attributeId, 
-            totalAvailableOptions: allOptions.length,
-            productSpecificOptions: productOptions.length,
+            totalOptions: allOptions.length,
+            selectedCount: selectedOptions.length,
             selectedOptionIds 
           });
           
-          attributeGroups[attributeId].options = productOptions.map(opt => ({
+          attributeGroups[attributeId].options = selectedOptions.map(opt => ({
             id: opt.id,
             value: opt.value,
-            displayValue: opt.display_value || opt.value
+            displayValue: opt.displayValue || opt.value
           }));
         } else {
-          // No options assigned to this product for this attribute
+          // No selected options found - show empty options array
+          logger.debug('No selected options found, showing empty options', { 
+            productId, 
+            attributeId
+          });
           attributeGroups[attributeId].options = [];
         }
         attributeGroups[attributeId].optionsLoaded = true;
@@ -163,12 +167,7 @@ router.get('/product/:productId/attribute-values', asyncHandler(async (req: Requ
     
     sendSuccess(res, formattedAttributeValues);
   } catch (error) {
-    logger.error('Failed to retrieve product attribute values', { 
-      error: error instanceof Error ? error.message : String(error), 
-      stack: error instanceof Error ? error.stack : undefined,
-      path: req.path,
-      productId 
-    });
+    logger.error('Failed to retrieve product attribute values', { error, path: req.path });
     sendError(res, 'Failed to retrieve product attribute values', 500);
   }
 }));

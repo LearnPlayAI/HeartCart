@@ -51,20 +51,16 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   
   // Get cart items from server with improved typing for discount fields
   // API now returns StandardApiResponse format
-  const { data: responseData, isLoading, refetch } = useQuery<StandardApiResponse<CartItemWithDiscounts[]>>({
+  const { data: responseData, isLoading } = useQuery<StandardApiResponse<CartItemWithDiscounts[]>>({
     queryKey: ['/api/cart'],
     retry: false,
     gcTime: 0,
     staleTime: 0,
-    refetchOnWindowFocus: true,
-    refetchOnMount: true,
-    refetchInterval: false,
-    networkMode: 'always',
   });
   
   // Safe extraction of cart items from the standardized response format
   // If response is not available or doesn't have success/data properties, fall back to empty array
-  const cartItems = (responseData?.success ? responseData.data : []) || [];
+  const cartItems = (responseData?.success ? responseData.data : []);
   
   // Calculate cart summary with simplified approach
   // Since we're using database persistence, the pricing calculations are done server-side
@@ -114,18 +110,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       console.log('🔍 CLEAN CART MUTATION - Success:', data);
       return data;
     },
-    onSuccess: (data, variables) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
       
-      // Show success toast
-      toast({
-        title: "Added to Cart",
-        description: `Added ${variables.quantity} item(s) to your cart`,
-        variant: "default"
-      });
-      
-      // Open cart to show the added item
-      setIsOpen(true);
     },
     onError: (error) => {
       // Only show error toast for non-authentication errors
@@ -152,10 +139,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       if (!data.success) {
         throw new Error(data.error?.message || "Failed to update cart item");
       }
-      return data;
     },
-    onSuccess: async () => {
-      await refetch();
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
     },
     onError: (error) => {
       toast({
@@ -181,10 +167,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       if (!data.success) {
         throw new Error(data.error?.message || "Failed to remove item from cart");
       }
-      return data;
     },
-    onSuccess: async () => {
-      await refetch();
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
     },
     onError: (error) => {
       toast({
@@ -295,9 +280,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     removeAttributeOptionMutation.mutate({ cartItemId, attributeName, attributeValue });
   };
   
-  // Add comprehensive loading state that includes all mutation states
-  const isLoadingState = isLoading || addToCartMutation.isPending || updateCartMutation.isPending || removeFromCartMutation.isPending;
-  
   return (
     <CartContext.Provider 
       value={{
@@ -311,7 +293,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         removeAttributeOption,
         clearCart,
         cartSummary,
-        isLoading: isLoadingState
+        isLoading
       }}
     >
       {children}

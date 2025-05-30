@@ -25,7 +25,7 @@ export function CategorySidebar({
   const [expandedCategories, setExpandedCategories] = useState<Record<number, boolean>>({});
   const [location] = useLocation();
   
-  // Define the interface for categories with children
+  // Define the interface for the categories with children response
   interface CategoryWithChildren {
     category: Category;
     children: Category[];
@@ -94,17 +94,15 @@ export function CategorySidebar({
     if (categorySlug && categoriesWithChildren && categoriesWithChildren.length > 0) {
       // Find which parent category contains this slug in its children
       categoriesWithChildren.forEach((item) => {
-        if (item && item.category && item.children) {
-          const childMatches = item.children.some(
-            (child) => child && child.slug === categorySlug
-          );
-          
-          if (childMatches && item.category.id) {
-            setExpandedCategories(prev => ({
-              ...prev,
-              [item.category.id]: true
-            }));
-          }
+        const childMatches = item.children.some(
+          (child) => child.slug === categorySlug
+        );
+        
+        if (childMatches) {
+          setExpandedCategories(prev => ({
+            ...prev,
+            [item.category.id]: true
+          }));
         }
       });
     }

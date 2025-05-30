@@ -51,51 +51,24 @@ export default function AdminProducts() {
   });
   const categories = categoriesResponse?.data;
 
-  // Fetch all products
-  const { data: allProductsResponse, isLoading: loadingAllProducts } = useQuery<{ success: boolean, data: Product[] }>({
-    queryKey: ["/api/admin/products"],
+  // Fetch products with filtering
+  const { data: productsResponse, isLoading: loadingProducts } = useQuery<{ success: boolean, data: Product[] }>({
+    queryKey: ["/api/products", searchTerm, categoryFilter],
     queryFn: async () => {
-      const response = await fetch("/api/admin/products");
+      let url = "/api/products";
+      const params = new URLSearchParams();
+      
+      if (searchTerm) params.append("search", searchTerm);
+      if (categoryFilter && categoryFilter !== "all") params.append("category", categoryFilter);
+      
+      if (params.toString()) url += `?${params.toString()}`;
+      
+      const response = await fetch(url);
       if (!response.ok) throw new Error("Failed to fetch products");
       return await response.json();
     },
   });
-
-  // Fetch search results when there's a search term
-  const { data: searchResponse, isLoading: loadingSearch } = useQuery<{ success: boolean, data: Product[] }>({
-    queryKey: ["/api/search", searchTerm.trim()],
-    queryFn: async () => {
-      if (!searchTerm.trim()) return { data: [] };
-      const searchParams = new URLSearchParams({
-        q: searchTerm.trim(),
-        limit: '1000',
-        offset: '0'
-      });
-      const response = await fetch(`/api/search?${searchParams}`);
-      if (!response.ok) throw new Error("Failed to search products");
-      return response.json();
-    },
-    enabled: !!searchTerm.trim()
-  });
-
-  // Determine which products to display
-  const loadingProducts = loadingAllProducts || loadingSearch;
-  let products: Product[] = [];
-
-  if (searchTerm.trim()) {
-    // Use search results when searching
-    products = searchResponse?.data || [];
-  } else {
-    // Use all products when not searching
-    products = allProductsResponse?.data || [];
-  }
-
-  // Apply category filter
-  if (categoryFilter && categoryFilter !== "all") {
-    products = products.filter(product => 
-      product.categoryId === parseInt(categoryFilter)
-    );
-  }
+  const products = productsResponse?.data;
 
   // Pagination logic
   const indexOfLastItem = currentPage * itemsPerPage;

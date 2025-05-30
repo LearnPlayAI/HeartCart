@@ -170,24 +170,15 @@ export default function PricingPage() {
 
   // Apply additional filters including search
   const filteredProducts = useMemo(() => {
-    let baseProducts = enrichedProducts;
+    const searchResults = searchResponse?.data || [];
     
-    // If there's a search query, use search results as the base
-    if (searchQuery.trim()) {
-      const searchResults = searchResponse?.data || [];
-      if (searchResults.length === 0 && searchResponse) {
-        // If search returned no results, show empty array
-        return [];
+    return enrichedProducts.filter((product: any) => {
+      // Search filter - if there's a search query, only show products that match the search
+      if (searchQuery.trim() && searchResults.length > 0) {
+        const searchResultIds = searchResults.map((p: any) => p.id);
+        if (!searchResultIds.includes(product.id)) return false;
       }
-      if (searchResults.length > 0) {
-        // Filter enriched products to only include search results
-        const searchResultIds = new Set(searchResults.map((p: any) => p.id));
-        baseProducts = enrichedProducts.filter((product: any) => searchResultIds.has(product.id));
-      }
-    }
-    
-    // Apply additional filters to the base products
-    return baseProducts.filter((product: any) => {
+      
       // Category filter
       if (categoryFilter && categoryFilter !== 'all' && product.categoryName !== categoryFilter) {
         return false;
