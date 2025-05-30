@@ -97,9 +97,14 @@ const ProductCard: React.FC<ProductCardProps> = ({
     e.stopPropagation();
     
     try {
+      // Use base price (sale price if available, otherwise regular price)
+      const basePrice = product.salePrice || product.price;
+      
       addItem({
         productId: product.id,
-        quantity: 1
+        quantity: 1,
+        itemPrice: basePrice,
+        attributeSelections: {}
       });
       
 

@@ -211,7 +211,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const closeCart = () => setIsOpen(false);
   
   // Clean addItem implementation that extracts only what the server needs
-  const addItem = (item: Omit<CartItemWithDiscounts, 'id' | 'discountData' | 'totalDiscount'>) => {
+  const addItem = (item: Omit<CartItemWithDiscounts, 'id' | 'discountData' | 'totalDiscount'> & { itemPrice: number }) => {
     console.log('🔍 ADD ITEM DEBUG - Received item in cart hook:', item);
     console.log('🔍 ADD ITEM DEBUG - attributeSelections field:', item.attributeSelections);
     

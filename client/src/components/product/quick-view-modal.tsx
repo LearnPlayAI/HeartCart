@@ -199,10 +199,29 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
       }
     }
     
+    // Use base price (sale price if available, otherwise regular price)
+    const basePrice = product.salePrice || product.price;
+    
+    // Format attribute selections for the cart
+    const attributeSelections: Record<string, string> = {};
+    if (productAttributes && productAttributes.length > 0) {
+      productAttributes.forEach(attr => {
+        const selectedValue = selectedAttributes[attr.id];
+        if (selectedValue) {
+          const attributeName = attr.displayName || attr.name;
+          attributeSelections[attributeName] = selectedValue;
+        }
+      });
+    }
+    
     addItem({
       productId: product.id,
       quantity: quantity,
-      selectedAttributes: selectedAttributes,
+      itemPrice: basePrice,
+      attributeSelections,
+      discountData: null,
+      totalDiscount: 0,
+      product: product
     });
     
 
