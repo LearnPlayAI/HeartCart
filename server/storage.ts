@@ -4296,41 +4296,45 @@ export class DatabaseStorage implements IStorage {
   // Catalog operations
   async getAllCatalogs(activeOnly = true): Promise<any[]> {
     try {
-      // Get catalogs with supplier information
+      // Get catalogs with supplier information using raw SQL to ensure it works
       try {
-        const baseSelect = {
-          id: catalogs.id,
-          name: catalogs.name,
-          description: catalogs.description,
-          supplierId: catalogs.supplierId,
-          supplierName: suppliers.name,
-          isActive: catalogs.isActive,
-          defaultMarkupPercentage: catalogs.defaultMarkupPercentage,
-          startDate: catalogs.startDate,
-          endDate: catalogs.endDate,
-          createdAt: catalogs.createdAt,
-        };
+        const sqlQuery = activeOnly 
+          ? `
+            SELECT 
+              c.id,
+              c.name,
+              c.description,
+              c.supplier_id as "supplierId",
+              s.name as "supplierName",
+              c.is_active as "isActive",
+              c.default_markup_percentage as "defaultMarkupPercentage",
+              c.start_date as "startDate",
+              c.end_date as "endDate",
+              c.created_at as "createdAt"
+            FROM catalogs c
+            LEFT JOIN suppliers s ON c.supplier_id = s.id
+            WHERE c.is_active = true
+            ORDER BY c.name
+          `
+          : `
+            SELECT 
+              c.id,
+              c.name,
+              c.description,
+              c.supplier_id as "supplierId",
+              s.name as "supplierName",
+              c.is_active as "isActive",
+              c.default_markup_percentage as "defaultMarkupPercentage",
+              c.start_date as "startDate",
+              c.end_date as "endDate",
+              c.created_at as "createdAt"
+            FROM catalogs c
+            LEFT JOIN suppliers s ON c.supplier_id = s.id
+            ORDER BY c.name
+          `;
 
-        const query = activeOnly
-          ? db
-              .select(baseSelect)
-              .from(catalogs)
-              .leftJoin(suppliers, eq(catalogs.supplierId, suppliers.id))
-              .where(eq(catalogs.isActive, true))
-              .orderBy(asc(catalogs.name))
-          : db
-              .select(baseSelect)
-              .from(catalogs)
-              .leftJoin(suppliers, eq(catalogs.supplierId, suppliers.id))
-              .orderBy(asc(catalogs.name));
-
-        // Debug: Log the SQL query being generated
-        console.log('Generated SQL query:', query.toSQL());
-        
-        const catalogData = await query;
-        
-        // Debug log to see what we're getting from the database
-        console.log('Raw catalog data from query:', JSON.stringify(catalogData, null, 2));
+        const result = await db.execute(sql.raw(sqlQuery));
+        const catalogData = result.rows;
 
         // Add product count for each catalog
         try {
@@ -6202,20 +6206,26 @@ export class DatabaseStorage implements IStorage {
    */
   async getAllCatalogs(): Promise<Catalog[]> {
     try {
-      const result = await db.query.catalogs.findMany({
-        with: {
-          supplier: true
-        },
-        orderBy: [asc(catalogs.id)],
-      });
-      
-      // Transform the result to include supplierName field for compatibility
-      const catalogsWithSupplierNames = result.map(catalog => ({
-        ...catalog,
-        supplierName: catalog.supplier?.name || null
-      }));
-      
-      return catalogsWithSupplierNames || [];
+      // Use raw SQL to ensure we get supplier names correctly
+      const sqlQuery = `
+        SELECT 
+          c.id,
+          c.name,
+          c.description,
+          c.supplier_id as "supplierId",
+          s.name as "supplierName",
+          c.is_active as "isActive",
+          c.default_markup_percentage as "defaultMarkupPercentage",
+          c.start_date as "startDate",
+          c.end_date as "endDate",
+          c.created_at as "createdAt"
+        FROM catalogs c
+        LEFT JOIN suppliers s ON c.supplier_id = s.id
+        ORDER BY c.name
+      `;
+
+      const result = await db.execute(sql.raw(sqlQuery));
+      return result.rows as any[];
     } catch (error) {
       logger.error("Error fetching all catalogs", { error });
       return [];
