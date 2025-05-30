@@ -4658,18 +4658,14 @@ export class DatabaseStorage implements IStorage {
 
   async deleteCatalog(id: number): Promise<boolean> {
     try {
-      // We use soft deletion by setting isActive to false
-      const [updatedCatalog] = await db
-        .update(catalogs)
-        .set({
-          isActive: false,
-          updatedAt: new Date().toISOString(),
-        })
+      // Use hard deletion for catalogs - completely remove from database
+      const [deletedCatalog] = await db
+        .delete(catalogs)
         .where(eq(catalogs.id, id))
         .returning();
-      return !!updatedCatalog;
+      return !!deletedCatalog;
     } catch (error) {
-      console.error(`Error soft-deleting catalog ${id}:`, error);
+      console.error(`Error deleting catalog ${id}:`, error);
       throw error; // Rethrow so the route handler can catch it and send a proper error response
     }
   }
