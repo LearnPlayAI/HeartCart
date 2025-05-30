@@ -317,6 +317,28 @@ export class Storage {
     }
   }
 
+  async getProductsByCatalogId(catalogId: number, activeOnly = true, limit = 20, offset = 0): Promise<Product[]> {
+    try {
+      let query = db
+        .select()
+        .from(products)
+        .where(eq(products.catalogId, catalogId));
+      
+      if (activeOnly) {
+        query = query.where(eq(products.isActive, true));
+      }
+      
+      const catalogProducts = await query
+        .limit(limit)
+        .offset(offset)
+        .orderBy(asc(products.name));
+      
+      return catalogProducts;
+    } catch (error) {
+      throw error;
+    }
+  }
+
   // Category operations
   async getAllCategories(): Promise<Category[]> {
     try {
