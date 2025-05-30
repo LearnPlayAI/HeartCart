@@ -4567,6 +4567,24 @@ export class DatabaseStorage implements IStorage {
     return catalog;
   }
 
+  async getCatalogByNameAndSupplierId(name: string, supplierId: number): Promise<Catalog | undefined> {
+    try {
+      const [catalog] = await db
+        .select()
+        .from(catalogs)
+        .where(and(
+          eq(catalogs.name, name),
+          eq(catalogs.supplierId, supplierId)
+        ))
+        .limit(1);
+
+      return catalog;
+    } catch (error) {
+      console.error('Error checking for existing catalog:', error);
+      throw error;
+    }
+  }
+
   async createCatalog(catalog: InsertCatalog): Promise<Catalog> {
     try {
       const now = new Date().toISOString();
