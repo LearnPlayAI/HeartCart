@@ -312,7 +312,7 @@ export function MassUploadStep6({ data, onUpdate, onComplete, onPrevious }: Mass
                     <TableHead className="w-[60px]">Status</TableHead>
                     <TableHead className="w-[100px]">SKU</TableHead>
                     <TableHead>Product</TableHead>
-                    <TableHead>Draft ID</TableHead>
+                    <TableHead>Action Taken</TableHead>
                     <TableHead>Supplier URL</TableHead>
                     <TableHead className="w-[150px]">Actions</TableHead>
                   </TableRow>
@@ -342,9 +342,28 @@ export function MassUploadStep6({ data, onUpdate, onComplete, onPrevious }: Mass
                       </TableCell>
                       
                       <TableCell>
-                        {product.draftId ? (
-                          <Badge variant="outline">#{product.draftId}</Badge>
-                        ) : (
+                        {(product as any).created && (
+                          <div className="space-y-1">
+                            <Badge variant="default" className="bg-green-600">New Product Created</Badge>
+                            <div className="text-xs text-muted-foreground">Draft #{product.draftId}</div>
+                          </div>
+                        )}
+                        {(product as any).updated && (
+                          <div className="space-y-1">
+                            <Badge variant="default" className="bg-blue-600">Price Updated</Badge>
+                            <div className="text-xs text-muted-foreground">Product #{product.existingProduct?.id}</div>
+                          </div>
+                        )}
+                        {(product as any).skipped && (
+                          <Badge variant="secondary">Skipped</Badge>
+                        )}
+                        {!((product as any).created || (product as any).updated || (product as any).skipped) && product.draftId && (
+                          <div className="space-y-1">
+                            <Badge variant="default" className="bg-green-600">Draft Created</Badge>
+                            <div className="text-xs text-muted-foreground">#{product.draftId}</div>
+                          </div>
+                        )}
+                        {!((product as any).created || (product as any).updated || (product as any).skipped) && !product.draftId && (
                           <Badge variant="destructive">Failed</Badge>
                         )}
                       </TableCell>
