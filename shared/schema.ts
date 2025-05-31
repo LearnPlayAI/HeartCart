@@ -711,6 +711,7 @@ export const productDrafts = pgTable("product_drafts", {
   
   // Supplier information
   supplierId: integer("supplier_id").references(() => suppliers.id),
+  supplierUrl: text("supplier_url"), // URL to supplier's product page for easy image sourcing
   
   // Physical properties
   weight: text("weight"),
@@ -799,6 +800,7 @@ export const insertProductDraftSchema = createInsertSchema(productDrafts, {
   discountData: z.any().optional(),
   rating: z.number().optional().nullable(),
   reviewCount: z.number().int().optional().nullable(),
+  supplierUrl: z.string().optional().nullable(),
 }).omit({ 
   id: true 
 });
