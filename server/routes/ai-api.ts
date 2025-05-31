@@ -200,15 +200,35 @@ router.post('/enhance-product', asyncHandler(async (req, res) => {
     console.log('AI Response Text:', text);
     console.log('AI Response length:', text.length);
     console.log('First 200 chars:', text.substring(0, 200));
+    
+    // Clean the response and extract JSON
+    let enhancedData: any = null;
     try {
-      // Extract JSON part from the response if it's not a pure JSON
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      const jsonString = jsonMatch ? jsonMatch[0] : text;
-      console.log('JSON Match found:', !!jsonMatch);
-      console.log('Extracted JSON String:', jsonString);
-      const enhancedData = JSON.parse(jsonString);
-      console.log('Successfully parsed JSON:', enhancedData);
+      // First try to parse the response as direct JSON
+      enhancedData = JSON.parse(text);
+      console.log('Successfully parsed direct JSON:', enhancedData);
+    } catch (directParseError) {
+      console.log('Direct JSON parse failed, trying regex extraction...');
       
+      try {
+        // Extract JSON part from the response if it's not a pure JSON
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const jsonString = jsonMatch[0];
+          console.log('Extracted JSON String:', jsonString);
+          enhancedData = JSON.parse(jsonString);
+          console.log('Successfully parsed extracted JSON:', enhancedData);
+        } else {
+          console.log('No JSON found in response');
+          throw new Error('No valid JSON found in AI response');
+        }
+      } catch (extractParseError) {
+        console.log('JSON extraction failed:', extractParseError);
+        throw extractParseError;
+      }
+    }
+    
+    if (enhancedData) {
       res.json({
         success: true,
         data: {
@@ -217,8 +237,8 @@ router.post('/enhance-product', asyncHandler(async (req, res) => {
           rawResponse: text,
         },
       });
-    } catch (jsonError) {
-      console.error('Error parsing JSON from AI response:', jsonError);
+    } else {
+      // Fallback if no valid JSON could be parsed
       res.json({
         success: true,
         data: {
