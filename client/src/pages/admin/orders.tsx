@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Link } from "wouter";
 import { AdminLayout } from "@/components/admin/layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -594,15 +595,16 @@ function OrderDetailsDialog({
                                 </p>
                               </div>
                             </div>
-                            <Button
-                              onClick={() => onViewPdf(order)}
-                              size="sm"
-                              variant="outline"
-                              className="border-green-300 text-green-700 hover:bg-green-100"
-                            >
-                              <FileText className="h-4 w-4 mr-2" />
-                              View PDF
-                            </Button>
+                            <Link href={`/admin/orders/${order.id}`}>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="border-green-300 text-green-700 hover:bg-green-100"
+                              >
+                                <Eye className="h-4 w-4 mr-2" />
+                                View Details
+                              </Button>
+                            </Link>
                           </div>
                         </div>
 

@@ -30,6 +30,7 @@ import AdminDashboard from "@/pages/admin/dashboard";
 import AdminProducts from "@/pages/admin/products";
 import AdminCategories from "@/pages/admin/categories";
 import AdminOrders from "@/pages/admin/orders";
+import AdminOrderDetail from "@/pages/admin/order-detail";
 import AdminPricing from "@/pages/admin/pricing";
 import AdminAISettings from "@/pages/admin/ai-settings";
 import AdminSuppliers from "@/pages/admin/suppliers";
@@ -213,6 +214,7 @@ function App() {
               <AdminProtectedRoute path="/admin/attributes/:id/options" component={AttributeOptionEditor} />
               <AdminProtectedRoute path="/admin/pricing" component={AdminPricing} />
               <AdminProtectedRoute path="/admin/orders" component={AdminOrders} />
+              <AdminProtectedRoute path="/admin/orders/:id" component={AdminOrderDetail} />
               <AdminProtectedRoute path="/admin/ai-settings" component={AdminAISettings} />
               <AdminProtectedRoute path="/admin/batch-upload" component={BatchUpload} />
               <AdminProtectedRoute path="/admin/auth-test" component={AuthTestDashboard} />
