@@ -107,6 +107,14 @@ const seoOptimizationSchema = z.object({
   additionalInfo: z.string().optional(),
 });
 
+// Schema for product enhancement request
+const enhanceProductSchema = z.object({
+  productName: z.string().min(1, 'Product name is required'),
+  productDescription: z.string().min(1, 'Product description is required'),
+  categoryName: z.string().optional(),
+  brand: z.string().optional(),
+});
+
 /**
  * Generate SEO-optimized content using AI
  * 
@@ -160,6 +168,66 @@ router.post('/optimize-seo', asyncHandler(async (req, res) => {
     res.status(400).json({
       success: false,
       message: error instanceof Error ? error.message : 'Failed to optimize SEO',
+    });
+  }
+}));
+
+/**
+ * Enhance Product Title and Description using AI
+ * 
+ * POST /api/ai/enhance-product
+ */
+router.post('/enhance-product', asyncHandler(async (req, res) => {
+  try {
+    // Validate the request body
+    const validatedData = enhanceProductSchema.parse(req.body);
+    
+    // Get the Gemini Pro model
+    const model = genAI.getGenerativeModel({
+      model: "gemini-pro",
+      safetySettings,
+    });
+    
+    // Create the prompt for product enhancement
+    const prompt = createProductEnhancementPrompt(validatedData);
+    
+    // Generate content
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+    
+    // Try to parse JSON from the response
+    try {
+      // Extract JSON part from the response if it's not a pure JSON
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      const jsonString = jsonMatch ? jsonMatch[0] : text;
+      const enhancedData = JSON.parse(jsonString);
+      
+      res.json({
+        success: true,
+        data: {
+          title: enhancedData.title || validatedData.productName,
+          description: enhancedData.description || validatedData.productDescription,
+          rawResponse: text,
+        },
+      });
+    } catch (jsonError) {
+      console.error('Error parsing JSON from AI response:', jsonError);
+      res.json({
+        success: true,
+        data: {
+          title: validatedData.productName,
+          description: validatedData.productDescription,
+          rawResponse: text,
+        },
+      });
+    }
+  } catch (error) {
+    console.error('Error enhancing product:', error);
+    
+    res.status(400).json({
+      success: false,
+      message: error instanceof Error ? error.message : 'Failed to enhance product',
     });
   }
 }));
@@ -263,6 +331,62 @@ Remember to:
 - Use relevant keywords specific to the South African market
 - Ensure the keywords are actually relevant to the product
 - Consider search intent with your suggestions
+`.trim();
+
+  return prompt;
+}
+
+/**
+ * Create a prompt for product enhancement
+ */
+function createProductEnhancementPrompt(data: z.infer<typeof enhanceProductSchema>): string {
+  const prompt = `
+You are a professional e-commerce marketing expert specializing in product copywriting for the South African market.
+
+TASK:
+Analyze and enhance the provided product title and description to improve marketing appeal while maintaining accuracy and technical specifications.
+
+PRODUCT DETAILS:
+- Current Title: ${data.productName}
+- Current Description: ${data.productDescription}
+${data.categoryName ? `- Category: ${data.categoryName}` : ''}
+${data.brand ? `- Brand: ${data.brand}` : ''}
+
+REQUIREMENTS:
+1. Create an improved, marketing-focused product title (keep under 80 characters)
+2. Rewrite the product description with better marketing language
+3. Preserve ALL technical specifications and important details
+4. Extract specifications and list them as bullet points with "-" at the end
+5. Focus on correct spelling, grammar, and proper technical terminology
+6. Use persuasive language that appeals to South African consumers
+7. Maintain authenticity - don't add features that aren't mentioned
+
+FORMATTING RULES:
+- Main description should be engaging and persuasive
+- Follow with specifications as bullet points using "-" format
+- Each specification should be on a new line
+- Keep technical accuracy intact
+
+FORMAT YOUR RESPONSE AS A JSON OBJECT:
+{
+  "title": "Enhanced marketing-focused product title under 80 characters",
+  "description": "Enhanced marketing description followed by specifications as bullet points with - format. Each spec on new line."
+}
+
+Example format for description:
+"Discover our premium widget that delivers exceptional performance for your needs. Perfect for professionals and enthusiasts alike.
+
+- Material: High-grade aluminum alloy
+- Dimensions: 15cm x 10cm x 5cm  
+- Weight: 250g
+- Warranty: 2 years manufacturer guarantee"
+
+Remember to:
+- Improve spelling and grammar in the original text
+- Use proper technical terminology
+- Make the title more compelling while staying accurate
+- Keep all original specifications intact
+- Add marketing appeal without false claims
 `.trim();
 
   return prompt;

@@ -417,8 +417,8 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
     }
   }, [newCategoryParentId]);
   
-  // Function to generate AI-powered description suggestions
-  const generateDescriptionSuggestions = async () => {
+  // Function to enhance existing product title and description using AI
+  const enhanceProductWithAI = async () => {
     try {
       setIsGeneratingDescription(true);
       setAiError(null);
@@ -427,7 +427,25 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
       const formValues = form.getValues();
       const productName = formValues.name;
       const currentDescription = formValues.description || '';
-      const brandName = formValues.brand || '';
+      
+      // Validate required fields
+      if (!productName.trim()) {
+        toast({
+          title: 'Product Name Required',
+          description: 'Please enter a product name before using AI enhancement.',
+          variant: 'destructive'
+        });
+        return;
+      }
+      
+      if (!currentDescription.trim()) {
+        toast({
+          title: 'Description Required',
+          description: 'Please enter a product description before using AI enhancement.',
+          variant: 'destructive'
+        });
+        return;
+      }
       
       // Get category name from the selected categoryId
       let categoryName = '';
@@ -436,43 +454,46 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
         categoryName = category?.name || '';
       }
       
-      // Get product images if available to enhance AI descriptions
-      let imageUrls: string[] = [];
-      if (draft.imageUrls && draft.imageUrls.length > 0) {
-        // Filter out any undefined or empty image URLs
-        imageUrls = draft.imageUrls
-          .filter(url => url && typeof url === 'string' && !url.includes('undefined'))
-          .slice(0, 3); // Limit to 3 images to avoid token limits
-      }
-      
-      // API request to generate descriptions
-      const response = await apiRequest('/api/ai/suggest-description', {
-        method: 'POST',
-        data: {
-          productName,
-          currentDescription,
-          categoryName,
-          brandName,
-          keyFeatures: [], // You could add key features here in the future
-          imageUrls: imageUrls.length > 0 ? imageUrls : undefined
-        }
+      // API request to enhance product
+      const response = await apiRequest('POST', '/api/ai/enhance-product', {
+        productName,
+        productDescription: currentDescription,
+        categoryName,
+        brand: formValues.brand || undefined,
       });
       
-      if (response.success && response.data.suggestions) {
-        setAiDescriptionSuggestions(response.data.suggestions);
-        setShowAiDialog(true);
+      const data = await response.json();
+      
+      if (data.success && data.data) {
+        // Apply the enhanced title and description
+        if (data.data.title) {
+          form.setValue('name', data.data.title);
+          // Update the product name in real-time for the heading
+          if (onProductNameChange) {
+            onProductNameChange(data.data.title);
+          }
+        }
+        
+        if (data.data.description) {
+          form.setValue('description', data.data.description);
+        }
+        
+        toast({
+          title: 'AI Enhancement Complete',
+          description: 'Your product title and description have been enhanced with better marketing language.',
+        });
       } else {
-        throw new Error(response.error?.message || 'Failed to generate descriptions');
+        throw new Error(data.message || 'Failed to enhance product');
       }
     } catch (error) {
-      console.error('Error generating AI descriptions:', error);
+      console.error('Error enhancing product:', error);
       const errorMessage = error instanceof Error 
         ? error.message 
         : 'Something went wrong. Please try again.';
       
       setAiError(errorMessage);
       toast({
-        title: 'AI Generation Failed',
+        title: 'AI Enhancement Failed',
         description: errorMessage,
         variant: 'destructive'
       });
