@@ -147,6 +147,8 @@ const MyOrdersPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   // Fetch user data
   const { data: userResponse } = useQuery<{success: boolean; data: UserType}>({
@@ -184,7 +186,29 @@ const MyOrdersPage: React.FC = () => {
       
       const matchesStatus = statusFilter === 'all' || order.status.toLowerCase() === statusFilter;
       
-      return matchesSearch && matchesStatus;
+      // Date range filtering
+      const orderDate = new Date(order.createdAt);
+      const matchesDateRange = (() => {
+        if (!dateFrom && !dateTo) return true;
+        if (dateFrom && !dateTo) {
+          const fromDate = new Date(dateFrom);
+          return orderDate >= fromDate;
+        }
+        if (!dateFrom && dateTo) {
+          const toDate = new Date(dateTo);
+          toDate.setHours(23, 59, 59, 999); // Include the entire day
+          return orderDate <= toDate;
+        }
+        if (dateFrom && dateTo) {
+          const fromDate = new Date(dateFrom);
+          const toDate = new Date(dateTo);
+          toDate.setHours(23, 59, 59, 999); // Include the entire day
+          return orderDate >= fromDate && orderDate <= toDate;
+        }
+        return true;
+      })();
+      
+      return matchesSearch && matchesStatus && matchesDateRange;
     });
 
     // Sort orders
@@ -247,9 +271,9 @@ const MyOrdersPage: React.FC = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
               {/* Search */}
-              <div className="relative">
+              <div className="relative md:col-span-2 lg:col-span-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input
                   placeholder="Search orders..."
@@ -274,6 +298,28 @@ const MyOrdersPage: React.FC = () => {
                 </SelectContent>
               </Select>
 
+              {/* Date From */}
+              <div>
+                <Input
+                  type="date"
+                  placeholder="From date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+
+              {/* Date To */}
+              <div>
+                <Input
+                  type="date"
+                  placeholder="To date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+
               {/* Sort By */}
               <Select value={sortBy} onValueChange={setSortBy}>
                 <SelectTrigger>
@@ -294,9 +340,64 @@ const MyOrdersPage: React.FC = () => {
                   setSearchTerm('');
                   setStatusFilter('all');
                   setSortBy('newest');
+                  setDateFrom('');
+                  setDateTo('');
                 }}
+                className="w-full"
               >
                 Clear Filters
+              </Button>
+            </div>
+            
+            {/* Quick Date Range Buttons */}
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => {
+                  const today = new Date();
+                  const sevenDaysAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+                  setDateFrom(sevenDaysAgo.toISOString().split('T')[0]);
+                  setDateTo(today.toISOString().split('T')[0]);
+                }}
+              >
+                Last 7 Days
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => {
+                  const today = new Date();
+                  const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+                  setDateFrom(thirtyDaysAgo.toISOString().split('T')[0]);
+                  setDateTo(today.toISOString().split('T')[0]);
+                }}
+              >
+                Last 30 Days
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => {
+                  const today = new Date();
+                  const ninetyDaysAgo = new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000);
+                  setDateFrom(ninetyDaysAgo.toISOString().split('T')[0]);
+                  setDateTo(today.toISOString().split('T')[0]);
+                }}
+              >
+                Last 3 Months
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => {
+                  const today = new Date();
+                  const oneYearAgo = new Date(today.getTime() - 365 * 24 * 60 * 60 * 1000);
+                  setDateFrom(oneYearAgo.toISOString().split('T')[0]);
+                  setDateTo(today.toISOString().split('T')[0]);
+                }}
+              >
+                Last Year
               </Button>
             </div>
           </CardContent>
