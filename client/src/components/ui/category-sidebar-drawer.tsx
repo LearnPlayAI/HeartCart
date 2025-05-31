@@ -33,8 +33,8 @@ export function CategorySidebarDrawer({ className, onCategorySelect }: CategoryS
           <Menu className="h-5 w-5" />
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="p-0 w-80">
-        <CategorySidebar onCategorySelect={handleCategorySelect} />
+      <SheetContent side="left" className="p-0 w-80 h-full flex flex-col">
+        <CategorySidebar onCategorySelect={handleCategorySelect} className="h-full" />
       </SheetContent>
     </Sheet>
   );

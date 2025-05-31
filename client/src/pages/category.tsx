@@ -276,8 +276,8 @@ const CategoryPage = () => {
           {/* Filters Sidebar */}
           <div 
             className={`${
-              isFilterOpen ? 'fixed inset-0 z-40 bg-white p-4' : 'hidden'
-            } md:relative md:block md:w-64 md:flex-shrink-0`}
+              isFilterOpen ? 'fixed inset-0 z-40 bg-white p-4 overflow-y-auto' : 'hidden'
+            } md:relative md:block md:w-64 md:flex-shrink-0 md:max-h-[calc(100vh-8rem)] md:overflow-visible`}
           >
             {isFilterOpen && (
               <>
@@ -298,8 +298,8 @@ const CategoryPage = () => {
             )}
             
             {/* Desktop Category Sidebar */}
-            <div className="hidden md:block mb-6">
-              <CategorySidebar className="border rounded-md shadow-sm" />
+            <div className="hidden md:block mb-6 max-h-64 overflow-hidden">
+              <CategorySidebar className="border rounded-md shadow-sm h-full" />
             </div>
             
             <div className="hidden md:flex justify-between items-center mb-4">

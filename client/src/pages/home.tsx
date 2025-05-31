@@ -33,13 +33,13 @@ const Home = () => {
         <div className="flex flex-col md:flex-row gap-2 md:gap-6 mt-1 md:mt-2">
           {/* Category Sidebar - Hidden on mobile */}
           <div className="hidden md:block w-64 flex-shrink-0">
-            <div className="bg-white rounded-lg shadow-md overflow-hidden sticky top-20">
-              <div className="bg-gradient-to-r from-[#FF69B4] to-[#FF1493] p-4">
+            <div className="bg-white rounded-lg shadow-md overflow-hidden sticky top-20 max-h-[calc(100vh-6rem)]">
+              <div className="bg-gradient-to-r from-[#FF69B4] to-[#FF1493] p-4 flex-shrink-0">
                 <h2 className="text-white text-lg font-bold">Categories</h2>
               </div>
-              <div className="p-4 bg-[#ff68b32e]">
+              <div className="p-4 bg-[#ff68b32e] h-full overflow-hidden">
                 <CategorySidebar 
-                  className="border-none p-0" 
+                  className="border-none p-0 h-full" 
                   isFilterMode={true}
                   onCategoryFilter={(categoryId, includeChildren) => {
                     // Navigate to products page with category filter using React Router
