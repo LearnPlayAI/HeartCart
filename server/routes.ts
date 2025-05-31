@@ -117,6 +117,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication with our new auth module
   setupAuth(app);
   
+  // Register PDF proof endpoint BEFORE response wrapper to serve raw PDF data
+  app.get('/api/orders/:id/proof', async (req, res) => {
+    try {
+      const orderId = parseInt(req.params.id);
+      const order = await storage.getOrder(orderId);
+      
+      if (!order) {
+        return res.status(404).json({ success: false, error: "Order not found" });
+      }
+      
+      if (!order.eftPop) {
+        return res.status(404).json({ success: false, error: "No proof of payment found for this order" });
+      }
+      
+      // Get the PDF from object store
+      const { data: fileData } = await objectStore.getFileAsBuffer(order.eftPop);
+      
+      // Set appropriate headers for PDF viewing
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `inline; filename="proof-of-payment-${order.orderNumber}.pdf"`);
+      res.setHeader('Content-Length', fileData.length.toString());
+      
+      // Send raw PDF data directly
+      res.end(fileData);
+    } catch (error) {
+      res.status(500).json({ success: false, error: "Failed to retrieve proof of payment" });
+    }
+  });
+  
   // Apply response wrapper middleware to standardize API responses
   app.use(responseWrapperMiddleware);
   

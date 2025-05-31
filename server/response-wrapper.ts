@@ -41,8 +41,14 @@ export function responseWrapperMiddleware(req: Request, res: Response, next: Nex
   
   // Override res.send to handle non-JSON responses
   res.send = function(body) {
+    const contentType = res.get('Content-Type');
     // If not a JSON response, just use original send
-    if (typeof body !== 'object' || res.get('Content-Type')?.includes('text/')) {
+    if (typeof body !== 'object' || 
+        contentType?.includes('text/') || 
+        contentType?.includes('application/pdf') ||
+        contentType?.includes('image/') ||
+        contentType?.includes('video/') ||
+        contentType?.includes('audio/')) {
       return originalSend.call(this, body);
     }
     
