@@ -255,39 +255,109 @@ const MyOrdersPage: React.FC = () => {
       
       <div className="container mx-auto px-4 py-6 max-w-6xl">
 
-        {/* Order Summary */}
-        {filteredOrders.length > 0 && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="text-lg">Order Summary</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                <div>
-                  <div className="text-2xl font-bold text-gray-900">{filteredOrders.length}</div>
-                  <div className="text-sm text-gray-600">Total Orders</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-green-600">
-                    {formatCurrency(filteredOrders.reduce((sum, order) => sum + order.totalAmount, 0))}
+        {/* Order Statistics */}
+        {orders && orders.length > 0 && (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
+            <Card 
+              className="cursor-pointer hover:bg-muted/50 transition-colors" 
+              onClick={() => {
+                setStatusFilter('all');
+                setSearchTerm('');
+                setDateFrom('');
+                setDateTo('');
+              }}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-2">
+                  <Package className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-2xl font-bold">{orders.length}</p>
+                    <p className="text-xs text-muted-foreground">Total Orders</p>
                   </div>
-                  <div className="text-sm text-gray-600">Total Spent</div>
                 </div>
-                <div>
-                  <div className="text-2xl font-bold text-blue-600">
-                    {filteredOrders.filter(order => order.status === 'delivered').length}
+              </CardContent>
+            </Card>
+            
+            <Card 
+              className="cursor-pointer hover:bg-muted/50 transition-colors" 
+              onClick={() => {
+                setStatusFilter('pending');
+                setSearchTerm('');
+                setDateFrom('');
+                setDateTo('');
+              }}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-2">
+                  <Clock className="h-4 w-4 text-yellow-600" />
+                  <div>
+                    <p className="text-2xl font-bold">{orders.filter(order => order.status === 'pending').length}</p>
+                    <p className="text-xs text-muted-foreground">Pending Payments</p>
                   </div>
-                  <div className="text-sm text-gray-600">Delivered</div>
                 </div>
-                <div>
-                  <div className="text-2xl font-bold text-purple-600">
-                    {filteredOrders.filter(order => ['pending', 'processing', 'shipped'].includes(order.status)).length}
+              </CardContent>
+            </Card>
+            
+            <Card 
+              className="cursor-pointer hover:bg-muted/50 transition-colors" 
+              onClick={() => {
+                setStatusFilter('processing');
+                setSearchTerm('');
+                setDateFrom('');
+                setDateTo('');
+              }}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-2">
+                  <Package className="h-4 w-4 text-purple-600" />
+                  <div>
+                    <p className="text-2xl font-bold">{orders.filter(order => order.status === 'processing').length}</p>
+                    <p className="text-xs text-muted-foreground">Processing</p>
                   </div>
-                  <div className="text-sm text-gray-600">In Progress</div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+            
+            <Card 
+              className="cursor-pointer hover:bg-muted/50 transition-colors" 
+              onClick={() => {
+                setStatusFilter('shipped');
+                setSearchTerm('');
+                setDateFrom('');
+                setDateTo('');
+              }}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-2">
+                  <Truck className="h-4 w-4 text-orange-600" />
+                  <div>
+                    <p className="text-2xl font-bold">{orders.filter(order => order.status === 'shipped').length}</p>
+                    <p className="text-xs text-muted-foreground">Shipped</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card 
+              className="cursor-pointer hover:bg-muted/50 transition-colors" 
+              onClick={() => {
+                setStatusFilter('delivered');
+                setSearchTerm('');
+                setDateFrom('');
+                setDateTo('');
+              }}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <div>
+                    <p className="text-2xl font-bold">{orders.filter(order => order.status === 'delivered').length}</p>
+                    <p className="text-xs text-muted-foreground">Delivered</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         )}
 
         {/* Filters and Search */}
