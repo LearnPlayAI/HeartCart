@@ -67,7 +67,7 @@ export function MassUploadStep2({ data, onUpdate, onNext, onPrevious }: MassUplo
       throw new Error('CSV file must contain at least a header row and one data row.');
     }
 
-    const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''));
+    const headers = lines[0].split(';').map(h => h.trim().toLowerCase().replace(/"/g, ''));
     const products: CSVProduct[] = [];
 
     // Expected headers mapping
@@ -104,7 +104,7 @@ export function MassUploadStep2({ data, onUpdate, onNext, onPrevious }: MassUplo
 
     // Parse data rows
     for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+      const values = lines[i].split(';').map(v => v.trim().replace(/"/g, ''));
       
       if (values.length < Object.keys(columnIndices).length) {
         console.warn(`Row ${i + 1} has insufficient columns, skipping.`);
