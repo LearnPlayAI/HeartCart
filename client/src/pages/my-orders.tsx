@@ -371,7 +371,7 @@ const MyOrdersPage: React.FC = () => {
                   setDateFrom('');
                   setDateTo('');
                 }}
-                className="w-full"
+                className="w-full bg-[#ff68b4] text-[#ffffff] border-[#ff68b4] hover:bg-[#ff1493] hover:text-[#ffffff]"
               >
                 Clear Filters
               </Button>
