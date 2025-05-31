@@ -190,21 +190,27 @@ const MyOrdersPage: React.FC = () => {
       const orderDate = new Date(order.createdAt);
       const matchesDateRange = (() => {
         if (!dateFrom && !dateTo) return true;
+        
         if (dateFrom && !dateTo) {
           const fromDate = new Date(dateFrom);
+          fromDate.setHours(0, 0, 0, 0); // Start of the day
           return orderDate >= fromDate;
         }
+        
         if (!dateFrom && dateTo) {
           const toDate = new Date(dateTo);
-          toDate.setHours(23, 59, 59, 999); // Include the entire day
+          toDate.setHours(23, 59, 59, 999); // End of the day
           return orderDate <= toDate;
         }
+        
         if (dateFrom && dateTo) {
           const fromDate = new Date(dateFrom);
+          fromDate.setHours(0, 0, 0, 0); // Start of the day
           const toDate = new Date(dateTo);
-          toDate.setHours(23, 59, 59, 999); // Include the entire day
+          toDate.setHours(23, 59, 59, 999); // End of the day
           return orderDate >= fromDate && orderDate <= toDate;
         }
+        
         return true;
       })();
       
@@ -228,7 +234,7 @@ const MyOrdersPage: React.FC = () => {
     });
 
     return filtered;
-  }, [orders, searchTerm, statusFilter, sortBy]);
+  }, [orders, searchTerm, statusFilter, sortBy, dateFrom, dateTo]);
 
   if (!user) {
     return (
