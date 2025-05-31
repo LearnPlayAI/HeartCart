@@ -619,112 +619,112 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ draftId, initialDa
   const CurrentStepComponent = WIZARD_STEPS.find((step) => step.id === currentStep)?.component || BasicInfoStep;
   const draft = draftData?.data || {};
 
-  return (
-    <div className="bg-white shadow-md rounded-lg p-6">
-      <h2 className="text-2xl font-bold mb-6">
-        {editMode ? 'Edit Product' : 'Add New Product'}
-      </h2>
-
-      <Tabs value={currentStep} onValueChange={handleStepChange} className="w-full">
-        {/* Beautiful Step Progress - Same as Mass Upload */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
-          <div className="flex items-center justify-between overflow-x-auto">
-            {WIZARD_STEPS.map((step, index) => {
-              const stepNumber = index + 1;
-              const isCompleted = isStepCompleted(step.id);
-              const isCurrent = currentStep === step.id;
-              const isLast = index === WIZARD_STEPS.length - 1;
-              
-              return (
-                <div key={step.id} className="flex items-center min-w-0">
-                  <div 
-                    className={`flex items-center cursor-pointer transition-all duration-200 ${
-                      isCurrent ? 'transform scale-105' : ''
-                    }`}
-                    onClick={() => handleStepChange(step.id)}
-                  >
-                    <div className={`
-                      w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold border-2 transition-all duration-200
-                      ${isCurrent 
-                        ? 'bg-blue-600 border-blue-600 text-white shadow-lg' 
-                        : isCompleted
-                        ? 'bg-green-500 border-green-500 text-white'
-                        : 'bg-gray-100 border-gray-300 text-gray-600 hover:border-gray-400'
-                      }
-                    `}>
-                      {isCompleted ? (
-                        <CheckCircle2 className="w-5 h-5" />
-                      ) : (
-                        stepNumber
-                      )}
-                    </div>
-                    <div className="ml-3 min-w-0 flex-1">
-                      <div className={`text-sm font-medium truncate ${
-                        isCurrent ? 'text-blue-600' : isCompleted ? 'text-green-600' : 'text-gray-500'
-                      }`}>
-                        {step.label}
-                      </div>
-                      <div className="text-xs text-gray-400 hidden sm:block">
-                        {step.description || `Step ${stepNumber}`}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Connector line */}
-                  {!isLast && (
-                    <div className={`flex-1 h-0.5 mx-4 transition-colors duration-200 ${
-                      isCompleted ? 'bg-green-500' : 'bg-gray-200'
-                    }`} />
+  const StepProgress = () => (
+    <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+      <div className="flex items-center justify-between overflow-x-auto">
+        {WIZARD_STEPS.map((step, index) => {
+          const stepNumber = index + 1;
+          const isCompleted = isStepCompleted(step.id);
+          const isCurrent = currentStep === step.id;
+          const isLast = index === WIZARD_STEPS.length - 1;
+          
+          return (
+            <div key={step.id} className="flex items-center min-w-0">
+              <div 
+                className={`flex items-center cursor-pointer transition-all duration-200 ${
+                  isCurrent ? 'transform scale-105' : ''
+                }`}
+                onClick={() => handleStepChange(step.id)}
+              >
+                <div className={`
+                  w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold border-2 transition-all duration-200
+                  ${isCurrent 
+                    ? 'bg-blue-600 border-blue-600 text-white shadow-lg' 
+                    : isCompleted
+                    ? 'bg-green-500 border-green-500 text-white'
+                    : 'bg-gray-100 border-gray-300 text-gray-600 hover:border-gray-400'
+                  }
+                `}>
+                  {isCompleted ? (
+                    <CheckCircle2 className="w-5 h-5" />
+                  ) : (
+                    stepNumber
                   )}
                 </div>
-              );
-            })}
+                <div className="ml-3 min-w-0 flex-1">
+                  <div className={`text-sm font-medium truncate ${
+                    isCurrent ? 'text-blue-600' : isCompleted ? 'text-green-600' : 'text-gray-500'
+                  }`}>
+                    {step.label}
+                  </div>
+                  <div className="text-xs text-gray-400 hidden sm:block">
+                    {step.description || `Step ${stepNumber}`}
+                  </div>
+                </div>
+              </div>
+              
+              {/* Connector line */}
+              {!isLast && (
+                <div className={`flex-1 h-0.5 mx-4 transition-colors duration-200 ${
+                  isCompleted ? 'bg-green-500' : 'bg-gray-200'
+                }`} />
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      <StepProgress />
+      <div className="bg-white shadow-md rounded-lg p-6">
+        <h2 className="text-2xl font-bold mb-6">
+          {editMode ? 'Edit Product' : 'Add New Product'}
+        </h2>
+
+        <Tabs value={currentStep} onValueChange={handleStepChange} className="w-full">
+          {/* Mobile-friendly content area */}
+          {WIZARD_STEPS.map((step) => (
+            <TabsContent key={step.id} value={step.id} className="pt-4">
+              <CurrentStepComponent
+                draft={draft as ProductDraft}
+                onSave={handleStepSave}
+                onSaveAndPublish={step.id === 'basic-info' ? handleSaveAndPublish : undefined}
+                isLoading={updateStepMutation.isPending}
+                isPublishing={isPublishing}
+              />
+            </TabsContent>
+          ))}
+        </Tabs>
+
+        <div className="flex justify-between mt-6 pt-4 border-t">
+          <div className="flex gap-2">
+            {currentStep !== 'review' ? (
+              <Button
+                onClick={handleNextStep}
+                variant="outline"
+                className="flex items-center"
+              >
+                Next Step
+                <ChevronRight className="ml-1 h-4 w-4" />
+              </Button>
+            ) : (
+              <Button
+                onClick={handlePublish}
+                disabled={publishDraftMutation.isPending}
+                variant="default"
+              >
+                {publishDraftMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                <Save className="mr-2 h-4 w-4" />
+                {editMode ? 'Update Product' : 'Create Product'}
+              </Button>
+            )}
           </div>
         </div>
-
-        {/* Mobile-friendly content area */}
-        {WIZARD_STEPS.map((step) => (
-          <TabsContent key={step.id} value={step.id} className="pt-4">
-            <CurrentStepComponent
-              draft={draft as ProductDraft}
-              onSave={handleStepSave}
-              onSaveAndPublish={step.id === 'basic-info' ? handleSaveAndPublish : undefined}
-              isLoading={updateStepMutation.isPending}
-              isPublishing={isPublishing}
-            />
-          </TabsContent>
-        ))}
-      </Tabs>
-
-      <div className="flex justify-between mt-6 pt-4 border-t">
-
-
-        <div className="flex gap-2">
-          {currentStep !== 'review' ? (
-            <Button
-              onClick={handleNextStep}
-              variant="outline"
-              className="flex items-center"
-            >
-              Next Step
-              <ChevronRight className="ml-1 h-4 w-4" />
-            </Button>
-          ) : (
-            <Button
-              onClick={handlePublish}
-              disabled={publishDraftMutation.isPending}
-              variant="default"
-            >
-              {publishDraftMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              <Save className="mr-2 h-4 w-4" />
-              {editMode ? 'Update Product' : 'Create Product'}
-            </Button>
-          )}
-        </div>
       </div>
-
-
-    </div>
+    </>
   );
 };
 
