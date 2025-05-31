@@ -611,34 +611,6 @@ const ProductListing = () => {
       </Helmet>
       
       <div className="container mx-auto px-4 py-6">
-        {/* Page Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
-            All Products
-          </h1>
-          <p className="mt-2 text-gray-600">
-            Browse our collection of products from local South African suppliers
-          </p>
-        </div>
-        
-        {/* Search Bar */}
-        <div className="mb-6">
-          <form onSubmit={handleSearchSubmit} className="flex gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-              <Input
-                type="search"
-                placeholder="Search products..."
-                className="pl-10"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-            <Button type="submit" className="bg-[#FF69B4] hover:bg-[#FF1493] text-white">
-              Search
-            </Button>
-          </form>
-        </div>
         
         {/* Active Filters */}
         {activeFilters.length > 0 && (
