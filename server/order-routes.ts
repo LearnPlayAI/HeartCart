@@ -303,9 +303,9 @@ router.post("/:id/upload-proof", isAuthenticated, upload.single('proofOfPayment'
       // Store the PDF in object store with the proper path structure
       const objectKey = `POPS/${user.email}/${order.orderNumber}/pdf_file.pdf`;
       
-      await objectStore.uploadFile(
-        req.file.buffer,
+      await objectStore.uploadFromBuffer(
         objectKey,
+        req.file.buffer,
         {
           contentType: 'application/pdf',
           metadata: {
@@ -487,7 +487,7 @@ router.get("/:id/admin/proof-of-payment", isAuthenticated, asyncHandler(async (r
 
     try {
       // Get the PDF from object store
-      const fileData = await objectStore.getFile(order.eftPop);
+      const { data: fileData } = await objectStore.getFileAsBuffer(order.eftPop);
       
       // Set appropriate headers for PDF viewing
       res.setHeader('Content-Type', 'application/pdf');
