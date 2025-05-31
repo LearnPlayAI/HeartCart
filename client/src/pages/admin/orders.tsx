@@ -42,13 +42,8 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 
-// Configure PDF.js worker - try multiple sources for better reliability
-try {
-  pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
-} catch (error) {
-  // Fallback to unpkg
-  pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
-}
+// Configure PDF.js worker
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
 // Types matching the API response structure
 interface OrderItem {
@@ -844,75 +839,33 @@ function PDFViewer({ orderNumber, orderId, isOpen, onClose }: {
   const [pageNumber, setPageNumber] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [pdfData, setPdfData] = useState<ArrayBuffer | null>(null);
 
-  // Fetch PDF data when dialog opens
+  // Add timeout for loading
   useEffect(() => {
-    if (isOpen && !pdfData) {
-      setLoading(true);
-      setError(null);
-      
-      fetch(`/api/orders/${orderId}/proof`, {
-        credentials: 'include', // Include authentication cookies
-      })
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    if (loading && isOpen) {
+      const timeout = setTimeout(() => {
+        if (loading) {
+          setLoading(false);
+          setError('PDF loading timeout - the file may not exist or the server is not responding');
         }
-        
-        const contentType = response.headers.get('content-type');
-        console.log('Response content type:', contentType);
-        console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-        
-        // Check if it's a JSON response (error) instead of PDF
-        if (contentType?.includes('application/json')) {
-          const jsonResponse = await response.json();
-          console.log('JSON response received:', jsonResponse);
-          throw new Error('Server returned JSON instead of PDF - check server logs');
-        }
-        
-        if (!contentType?.includes('application/pdf')) {
-          throw new Error(`Expected PDF but got: ${contentType}`);
-        }
-        
-        const arrayBuffer = await response.arrayBuffer();
-        console.log('PDF ArrayBuffer size:', arrayBuffer.byteLength);
-        return arrayBuffer;
-      })
-      .then((arrayBuffer) => {
-        if (arrayBuffer.byteLength === 0) {
-          throw new Error('PDF file is empty');
-        }
-        setPdfData(arrayBuffer);
-        setLoading(false);
-      })
-      .catch((error) => {
-        console.error('Error fetching PDF:', error);
-        setError(`Failed to load PDF: ${error.message}`);
-        setLoading(false);
-      });
-    }
-  }, [isOpen, orderId, pdfData]);
+      }, 10000); // 10 second timeout
 
-  // Reset state when dialog closes
-  useEffect(() => {
-    if (!isOpen) {
-      setPdfData(null);
-      setNumPages(null);
-      setPageNumber(1);
-      setError(null);
-      setLoading(true);
+      return () => clearTimeout(timeout);
     }
-  }, [isOpen]);
+  }, [loading, isOpen]);
 
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
+    setLoading(false);
+    setError(null);
     console.log('PDF loaded successfully with', numPages, 'pages');
   };
 
   const onDocumentLoadError = (error: Error) => {
-    console.error('PDF rendering error:', error);
-    setError(`Failed to render PDF: ${error.message}`);
+    setLoading(false);
+    setError(`Failed to load PDF: ${error.message}`);
+    console.error('PDF loading error:', error);
+    console.error('PDF URL attempted:', `/api/orders/${orderId}/proof`);
   };
 
   const goToPrevPage = () => setPageNumber(page => Math.max(1, page - 1));
@@ -971,25 +924,19 @@ function PDFViewer({ orderNumber, orderId, isOpen, onClose }: {
               
               <ScrollArea className="h-[600px] border rounded">
                 <div className="flex justify-center p-4">
-                  {pdfData ? (
-                    <Document
-                      file={{ data: pdfData }}
-                      onLoadSuccess={onDocumentLoadSuccess}
-                      onLoadError={onDocumentLoadError}
-                      loading=""
-                    >
-                      <Page 
-                        pageNumber={pageNumber}
-                        width={600}
-                        renderTextLayer={false}
-                        renderAnnotationLayer={false}
-                      />
-                    </Document>
-                  ) : (
-                    <div className="flex items-center justify-center h-[300px] text-gray-500">
-                      Loading PDF...
-                    </div>
-                  )}
+                  <Document
+                    file={`/api/orders/${orderId}/proof`}
+                    onLoadSuccess={onDocumentLoadSuccess}
+                    onLoadError={onDocumentLoadError}
+                    loading=""
+                  >
+                    <Page 
+                      pageNumber={pageNumber}
+                      width={600}
+                      renderTextLayer={false}
+                      renderAnnotationLayer={false}
+                    />
+                  </Document>
                 </div>
               </ScrollArea>
             </div>

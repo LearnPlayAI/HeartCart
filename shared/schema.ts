@@ -157,7 +157,6 @@ export const orders = pgTable("orders", {
   
   // EFT Proof of Payment
   eftPop: text("eftPop"), // File path to the EFT proof of payment PDF document
-  pdfPath: text("pdfPath"), // Object store path to the EFT proof of payment PDF document
 });
 
 // Order items table - camelCase version with full attribute support
