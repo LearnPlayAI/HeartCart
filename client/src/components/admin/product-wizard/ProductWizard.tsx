@@ -424,10 +424,10 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ draftId, initialDa
   const hasDraftBeenCreated = React.useRef(false);
   
   useEffect(() => {
-    // Wait until we know the user's authenticated state and have catalog data
-    if (isLoadingUser || !catalogsData || !suppliersData) return;
+    // Wait until we know the user's authenticated state
+    if (isLoadingUser) return;
     
-    // Make sure user is authenticated before creating a draft
+    // Make sure user is authenticated
     if (!user) {
       toast({
         title: 'Authentication Required',
@@ -438,68 +438,18 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ draftId, initialDa
       return;
     }
     
-    // Create a new draft or load one for editing
-    // Only create a draft if we don't have a draftId AND we haven't already initiated draft creation
-    if (!draftId && !internalDraftId && !hasDraftBeenCreated.current) {
-      // Set the flag to true to prevent multiple creation attempts
-      hasDraftBeenCreated.current = true;
-      
-      // Get default catalog and supplier if available
-      const defaultCatalogId = catalogsData?.data?.[0]?.id || 1;
-      const defaultSupplierId = suppliersData?.data?.[0]?.id || null;
-      
-      // Create initial draft data
-      const initialData: Partial<ProductDraft> = {
-        name: '',
-        description: '',
-        slug: '',
-        categoryId: null,
-        regularPrice: null,
-        salePrice: null,
-        costPrice: null,
-        onSale: false,
-        stockLevel: 0,
-        isActive: true,
-        isFeatured: false,
-        attributes: [],
-        imageUrls: [],
-        imageObjectKeys: [],
-        mainImageIndex: 0,
-        discountLabel: '',
-        specialSaleText: '',
-        specialSaleStart: null,
-        specialSaleEnd: null,
-        isFlashDeal: false,
-        flashDealEnd: null,
-        dimensions: '',
-        weight: '',
-        // SEO fields
-        metaTitle: null,
-        metaDescription: null,
-        metaKeywords: null,
-        canonicalUrl: null,
-        tags: [],
-        // System fields
-        originalProductId: null,
-        catalogId: defaultCatalogId,
-        supplierId: defaultSupplierId,
-        completedSteps: [],
-        draftStatus: 'draft',
-        wizardProgress: {
-          "basic-info": false, 
-          "images": false, 
-          "additional-info": false,
-          "attributes": false,
-          "seo": false,
-          "sales-promotions": false,
-          "review": false
-        }
-      };
-      
-      console.log("Initiating draft creation - one time only");
-      createDraftMutation.mutate(initialData);
+    // If no draftId is provided, redirect to product management
+    // This prevents automatic creation of empty drafts
+    if (!draftId && !internalDraftId) {
+      toast({
+        title: 'No Product Selected',
+        description: 'Please select a product draft to edit or create a new one.',
+        variant: 'destructive',
+      });
+      setLocation('/admin/product-management');
+      return;
     }
-  }, [draftId, internalDraftId, user, isLoadingUser, catalogsData, suppliersData]);
+  }, [draftId, internalDraftId, user, isLoadingUser]);
 
   // Handle step changes
   const handleStepChange = (step: string) => {
