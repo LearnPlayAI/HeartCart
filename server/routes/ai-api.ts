@@ -197,10 +197,12 @@ router.post('/enhance-product', asyncHandler(async (req, res) => {
     const text = response.text();
     
     // Try to parse JSON from the response
+    console.log('AI Response Text:', text);
     try {
       // Extract JSON part from the response if it's not a pure JSON
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       const jsonString = jsonMatch ? jsonMatch[0] : text;
+      console.log('Extracted JSON String:', jsonString);
       const enhancedData = JSON.parse(jsonString);
       
       res.json({
