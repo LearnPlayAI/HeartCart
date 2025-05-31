@@ -5,8 +5,8 @@ import { AdminLayout } from '@/components/admin/layout';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { apiRequest } from '@/lib/queryClient';
 
-// Configure PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+// Configure PDF.js worker - use CDN for reliability
+pdfjs.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
 import { useToast } from '@/hooks/use-toast';
 import {
   Card,
@@ -240,9 +240,19 @@ function PDFViewer({ orderId }: { orderId: number }) {
       {/* PDF Document */}
       <div className="border rounded-lg overflow-hidden bg-white">
         <Document
-          file={pdfUrl}
+          file={{
+            url: pdfUrl,
+            httpHeaders: {
+              'Accept': 'application/pdf',
+            },
+            withCredentials: false,
+          }}
           onLoadSuccess={onDocumentLoadSuccess}
           onLoadError={onDocumentLoadError}
+          options={{
+            cMapUrl: 'https://unpkg.com/pdfjs-dist@3.11.174/cmaps/',
+            cMapPacked: true,
+          }}
           loading={
             <div className="flex items-center justify-center h-96">
               <div className="text-center">
