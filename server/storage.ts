@@ -6358,6 +6358,7 @@ export class DatabaseStorage implements IStorage {
           attributes: productDrafts.attributes,
           attributesData: productDrafts.attributesData,
           supplierId: productDrafts.supplierId,
+          supplierUrl: productDrafts.supplierUrl,
           weight: productDrafts.weight,
           dimensions: productDrafts.dimensions,
           discountLabel: productDrafts.discountLabel,
