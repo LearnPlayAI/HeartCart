@@ -152,182 +152,91 @@ const getPaymentStatusConfig = (paymentStatus: string) => {
   return configs[paymentStatus as keyof typeof configs] || configs.pending;
 };
 
-// PDF Viewer Component with fallback to iframe
+// PDF Download Component 
 function PDFViewer({ orderId }: { orderId: number }) {
-  const [numPages, setNumPages] = useState<number>(0);
-  const [pageNumber, setPageNumber] = useState<number>(1);
-  const [scale, setScale] = useState<number>(1.0);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const [containerWidth, setContainerWidth] = useState<number>(800);
-  const [useIframe, setUseIframe] = useState<boolean>(true); // Start with iframe fallback
-
   const pdfUrl = `/api/orders/${orderId}/proof`;
 
-  // Debug logging for PDF initialization
-  useEffect(() => {
-    console.log('PDFViewer initialized with:', {
-      orderId,
-      pdfUrl,
-      pdfVersion: pdfjs.version,
-      workerSrc: pdfjs.GlobalWorkerOptions.workerSrc
-    });
+  // Download handler for PDF
+  const handleDownload = async () => {
+    try {
+      const response = await fetch(pdfUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `proof-of-payment-order-${orderId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Download failed:', error);
+      // Fallback to direct link
+      window.open(pdfUrl, '_blank');
+    }
+  };
 
-    // Test if PDF.js can fetch the URL directly
-    console.log('🧪 Testing PDF URL fetch...');
-    fetch(pdfUrl)
-      .then(response => {
-        console.log('🧪 Fetch response:', {
-          status: response.status,
-          statusText: response.statusText,
-          headers: Object.fromEntries(response.headers.entries()),
-          url: response.url
-        });
-        return response.arrayBuffer();
-      })
-      .then(buffer => {
-        console.log('🧪 Fetch successful, buffer size:', buffer.byteLength);
-        console.log('🧪 First 20 bytes:', Array.from(new Uint8Array(buffer.slice(0, 20))).map(b => b.toString(16).padStart(2, '0')).join(' '));
-      })
-      .catch(error => {
-        console.error('🧪 Fetch failed:', error);
-      });
-  }, [orderId, pdfUrl]);
-
-  // Handle window resize to adjust PDF width
-  useEffect(() => {
-    const handleResize = () => {
-      const container = document.getElementById('pdf-container');
-      if (container) {
-        setContainerWidth(container.clientWidth - 40); // 40px for padding
-      }
-    };
-
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.target instanceof HTMLInputElement) return; // Don't trigger when typing in inputs
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-medium">Proof of Payment</h3>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDownload}
+            className="flex items-center gap-2"
+          >
+            <Download className="h-4 w-4" />
+            Download PDF
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.open(pdfUrl, '_blank')}
+            className="flex items-center gap-2"
+          >
+            <ExternalLink className="h-4 w-4" />
+            Open in New Tab
+          </Button>
+        </div>
+      </div>
       
-      switch (event.key) {
-        case 'ArrowLeft':
-          event.preventDefault();
-          goToPrevPage();
-          break;
-        case 'ArrowRight':
-          event.preventDefault();
-          goToNextPage();
-          break;
-        case '=':
-        case '+':
-          event.preventDefault();
-          zoomIn();
-          break;
-        case '-':
-          event.preventDefault();
-          zoomOut();
-          break;
-        case '0':
-          event.preventDefault();
-          resetZoom();
-          break;
-        case 'f':
-          if (event.ctrlKey || event.metaKey) {
-            event.preventDefault();
-            fitToWidth();
-          }
-          break;
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [numPages, pageNumber]);
-
-  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
-    console.log('✅ PDF Document loaded successfully!', {
-      numPages,
-      pdfUrl,
-      timestamp: new Date().toISOString()
-    });
-    setNumPages(numPages);
-    setPageNumber(1);
-    setLoading(false);
-    setError(null);
-  };
-
-  const onDocumentLoadError = (error: Error) => {
-    console.error('PDF loading error:', error);
-    console.error('PDF URL:', pdfUrl);
-    console.error('Error details:', error.name, error.message);
-    console.error('PDF.js version:', pdfjs.version);
-    console.error('Worker source:', pdfjs.GlobalWorkerOptions.workerSrc);
-    
-    // Try to fetch the PDF directly to see if it's accessible
-    fetch(pdfUrl)
-      .then(response => {
-        console.log('PDF fetch response:', response.status, response.statusText);
-        console.log('PDF Content-Type:', response.headers.get('Content-Type'));
-        console.log('PDF Content-Length:', response.headers.get('Content-Length'));
-        return response.blob();
-      })
-      .then(blob => {
-        console.log('PDF blob size:', blob.size, 'type:', blob.type);
-      })
-      .catch(fetchError => {
-        console.error('PDF fetch error:', fetchError);
-      });
-    
-    setLoading(false);
-    setError(`Failed to load PDF: ${error.message}`);
-  };
-
-  const onPageLoadSuccess = () => {
-    console.log('Page', pageNumber, 'loaded successfully');
-  };
-
-  const onPageLoadError = (error: Error) => {
-    console.error('Page loading error:', error);
-  };
-
-  const goToPrevPage = () => {
-    setPageNumber(page => Math.max(1, page - 1));
-  };
-
-  const goToNextPage = () => {
-    setPageNumber(page => Math.min(numPages, page + 1));
-  };
-
-  const zoomIn = () => {
-    setScale(scale => Math.min(3.0, scale + 0.25));
-  };
-
-  const zoomOut = () => {
-    setScale(scale => Math.max(0.5, scale - 0.25));
-  };
-
-  const resetZoom = () => {
-    setScale(1.0);
-  };
-
-  const fitToWidth = () => {
-    setScale(containerWidth / 595); // 595 is standard PDF page width in points
-  };
-
-  if (loading) {
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between bg-muted p-3 rounded-lg">
-          <div className="flex items-center space-x-2">
-            <FileText className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium">Proof of Payment Document</span>
+      <div className="border rounded-lg p-8 text-center bg-gray-50">
+        <div className="space-y-6">
+          <div className="flex justify-center">
+            <div className="w-20 h-20 bg-primary/10 rounded-lg flex items-center justify-center">
+              <Download className="h-10 w-10 text-primary" />
+            </div>
+          </div>
+          <div>
+            <h4 className="font-semibold text-gray-900 mb-2">PDF Document Available</h4>
+            <p className="text-sm text-gray-600 mb-6">
+              The proof of payment document is ready for download or viewing in a new tab.
+            </p>
+            <div className="flex justify-center gap-3">
+              <Button
+                onClick={handleDownload}
+                className="flex items-center gap-2"
+              >
+                <Download className="h-4 w-4" />
+                Download Document
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => window.open(pdfUrl, '_blank')}
+                className="flex items-center gap-2"
+              >
+                <ExternalLink className="h-4 w-4" />
+                View in Browser
+              </Button>
+            </div>
           </div>
         </div>
-        <div className="flex items-center justify-center h-96 border rounded-lg bg-white">
+      </div>
+    </div>
+  );
+}
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
             <p className="text-muted-foreground">Loading PDF document...</p>
