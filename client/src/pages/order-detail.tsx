@@ -299,7 +299,7 @@ const OrderDetail: React.FC = () => {
         <div className="mb-6">
           <Button 
             variant="ghost" 
-            onClick={() => navigate('/profile')}
+            onClick={() => navigate('/my-orders')}
             className="mb-4"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
@@ -678,10 +678,10 @@ const OrderDetail: React.FC = () => {
                 <div className="flex justify-between">
                   <span>Status</span>
                   <Badge 
-                    variant={order.paymentStatus === 'paid' ? 'default' : 'secondary'}
-                    className="capitalize"
+                    variant={order.paymentStatus === 'paid' || order.status === 'payment received' ? 'default' : 'secondary'}
+                    className={`capitalize ${(order.paymentStatus === 'paid' || order.status === 'payment received') ? 'bg-green-600 hover:bg-green-700' : ''}`}
                   >
-                    {order.paymentStatus}
+                    {order.status === 'payment received' ? 'Payment Received' : order.paymentStatus}
                   </Badge>
                 </div>
               </CardContent>
