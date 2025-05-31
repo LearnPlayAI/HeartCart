@@ -47,6 +47,7 @@ export interface ProductDraft {
   sku: string | null;
   brand: string | null;
   categoryId: number | null;
+  supplierUrl?: string | null;
   category?: {
     id: number;
     name: string;

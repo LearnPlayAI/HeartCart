@@ -7,7 +7,8 @@ import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Form } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
 import { useDropzone } from 'react-dropzone';
 import { Loader2, X, Upload, ImagePlus, Star, StarOff, MoveVertical, AlertCircle, ExternalLink } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
@@ -19,6 +20,7 @@ const imageSchema = z.object({
   imageUrls: z.array(z.string()),
   imageObjectKeys: z.array(z.string()),
   mainImageIndex: z.number().int().min(0).optional().default(0),
+  supplierUrl: z.string().optional(),
 });
 
 type ImageFormValues = z.infer<typeof imageSchema>;
@@ -42,6 +44,7 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ draft, onS
       imageUrls: draft.imageUrls || [],
       imageObjectKeys: draft.imageObjectKeys || [],
       mainImageIndex: draft.mainImageIndex ?? 0,
+      supplierUrl: draft.supplierUrl || '',
     },
   });
 
@@ -268,7 +271,7 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ draft, onS
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => window.open(draft.supplierUrl, '_blank')}
+                      onClick={() => draft.supplierUrl && window.open(draft.supplierUrl, '_blank')}
                       className="flex items-center gap-2 text-blue-700 border-blue-300 hover:bg-blue-100"
                     >
                       <ExternalLink className="h-4 w-4" />
@@ -277,6 +280,46 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ draft, onS
                   </div>
                 </div>
               )}
+
+              {/* Manual Supplier URL Input */}
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <FormField
+                  control={form.control}
+                  name="supplierUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium text-gray-700">
+                        Supplier URL (Optional)
+                      </FormLabel>
+                      <FormControl>
+                        <div className="flex gap-2">
+                          <Input
+                            {...field}
+                            placeholder="https://supplier-website.com/product-page"
+                            className="flex-1"
+                          />
+                          {field.value && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => window.open(field.value, '_blank')}
+                              className="flex items-center gap-1"
+                            >
+                              <ExternalLink className="h-4 w-4" />
+                              Visit
+                            </Button>
+                          )}
+                        </div>
+                      </FormControl>
+                      <p className="text-xs text-gray-500">
+                        Add or edit the supplier's product page URL for easy reference when sourcing images
+                      </p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <div 
                 {...getRootProps()} 
