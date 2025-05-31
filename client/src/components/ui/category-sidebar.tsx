@@ -110,11 +110,13 @@ export function CategorySidebar({
   
   return (
     <div className={cn("h-full w-full max-w-xs flex flex-col bg-white", className)}>
-      <div className="px-3 py-2 border-b flex-shrink-0">
-        <h2 className="font-semibold text-pink-600">Categories</h2>
-      </div>
+      {!isFilterMode && (
+        <div className="px-3 py-2 border-b flex-shrink-0">
+          <h2 className="font-semibold text-pink-600">Categories</h2>
+        </div>
+      )}
       
-      <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0" style={{ maxHeight: isFilterMode ? '100%' : 'calc(100vh - 120px)' }}>
         {isLoading ? (
           // Show skeleton loaders when loading
           <div className="p-3 space-y-3">
