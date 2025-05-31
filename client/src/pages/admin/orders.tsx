@@ -589,12 +589,15 @@ function OrderDetailsDialog({ order, open, onOpenChange }: {
                               </div>
                             </div>
                             <Button
-                              onClick={() => window.open(`/api/orders/${order.id}/proof`, '_blank')}
+                              onClick={() => {
+                                setSelectedOrderForPdf(order);
+                                setPdfViewerOpen(true);
+                              }}
                               size="sm"
                               variant="outline"
                               className="border-green-300 text-green-700 hover:bg-green-100"
                             >
-                              <Download className="h-4 w-4 mr-2" />
+                              <FileText className="h-4 w-4 mr-2" />
                               View PDF
                             </Button>
                           </div>
@@ -1233,6 +1236,19 @@ export default function AdminOrdersPage() {
           open={showDetails}
           onOpenChange={setShowDetails}
         />
+
+        {/* PDF Viewer Dialog */}
+        {selectedOrderForPdf && (
+          <PDFViewer
+            orderNumber={selectedOrderForPdf.orderNumber}
+            orderId={selectedOrderForPdf.id}
+            isOpen={pdfViewerOpen}
+            onClose={() => {
+              setPdfViewerOpen(false);
+              setSelectedOrderForPdf(null);
+            }}
+          />
+        )}
       </div>
     </AdminLayout>
   );
