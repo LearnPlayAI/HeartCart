@@ -498,16 +498,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     "/api/categories/batch-display-order", 
     isAuthenticated, 
     isAdmin,
-    validateRequest({
-      body: batchDisplayOrderSchema
-    }),
-    withStandardResponse(async (req: Request, res: Response) => {
-      const { updates } = req.body;
+    asyncHandler(async (req: Request, res: Response) => {
+      // Validate the request body manually since we don't need params validation
+      const result = batchDisplayOrderSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: "VALIDATION_ERROR",
+            message: "Invalid request data",
+            details: result.error.flatten()
+          }
+        });
+      }
+      
+      const { updates } = result.data;
       
       // Update all categories in batch
       const updatedCategories = await storage.batchUpdateCategoryDisplayOrder(updates);
       
-      return { updated: updatedCategories.length, categories: updatedCategories };
+      res.json({
+        success: true,
+        data: { updated: updatedCategories.length, categories: updatedCategories }
+      });
     })
   );
 
