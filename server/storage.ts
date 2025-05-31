@@ -789,9 +789,50 @@ export class DatabaseStorage implements IStorage {
 
   async createCategory(category: InsertCategory): Promise<Category> {
     try {
+      // Auto-assign display order if not provided or if it would conflict
+      let finalCategory = { ...category };
+      
+      if (finalCategory.displayOrder === undefined || finalCategory.displayOrder === null) {
+        // Get the highest display order for categories at the same level
+        const siblings = await db
+          .select({ displayOrder: categories.displayOrder })
+          .from(categories)
+          .where(eq(categories.parentId, finalCategory.parentId || null))
+          .orderBy(desc(categories.displayOrder))
+          .limit(1);
+        
+        const maxDisplayOrder = siblings.length > 0 ? (siblings[0].displayOrder || 0) : 0;
+        finalCategory.displayOrder = maxDisplayOrder + 1;
+      } else {
+        // Check if the provided display order conflicts with existing categories
+        const existingCategory = await db
+          .select({ id: categories.id })
+          .from(categories)
+          .where(
+            and(
+              eq(categories.parentId, finalCategory.parentId || null),
+              eq(categories.displayOrder, finalCategory.displayOrder)
+            )
+          )
+          .limit(1);
+        
+        if (existingCategory.length > 0) {
+          // Conflict detected, auto-assign next available order
+          const siblings = await db
+            .select({ displayOrder: categories.displayOrder })
+            .from(categories)
+            .where(eq(categories.parentId, finalCategory.parentId || null))
+            .orderBy(desc(categories.displayOrder))
+            .limit(1);
+          
+          const maxDisplayOrder = siblings.length > 0 ? (siblings[0].displayOrder || 0) : 0;
+          finalCategory.displayOrder = maxDisplayOrder + 1;
+        }
+      }
+
       const [newCategory] = await db
         .insert(categories)
-        .values(category)
+        .values(finalCategory)
         .returning();
       return newCategory;
     } catch (error) {
@@ -808,9 +849,57 @@ export class DatabaseStorage implements IStorage {
     categoryData: Partial<InsertCategory>,
   ): Promise<Category | undefined> {
     try {
+      // Handle display order conflicts when updating
+      let finalUpdateData = { ...categoryData };
+      
+      if (finalUpdateData.displayOrder !== undefined && finalUpdateData.displayOrder !== null) {
+        // Get the current category to check if parentId is changing
+        const currentCategory = await db
+          .select()
+          .from(categories)
+          .where(eq(categories.id, id))
+          .limit(1);
+        
+        if (currentCategory.length > 0) {
+          const current = currentCategory[0];
+          const newParentId = finalUpdateData.parentId !== undefined ? finalUpdateData.parentId : current.parentId;
+          
+          // Check if display order conflicts with existing categories in the same parent
+          const conflictingCategory = await db
+            .select({ id: categories.id })
+            .from(categories)
+            .where(
+              and(
+                eq(categories.parentId, newParentId || null),
+                eq(categories.displayOrder, finalUpdateData.displayOrder),
+                ne(categories.id, id) // Exclude the current category being updated
+              )
+            )
+            .limit(1);
+          
+          if (conflictingCategory.length > 0) {
+            // Conflict detected, auto-assign next available order
+            const siblings = await db
+              .select({ displayOrder: categories.displayOrder })
+              .from(categories)
+              .where(
+                and(
+                  eq(categories.parentId, newParentId || null),
+                  ne(categories.id, id) // Exclude the current category
+                )
+              )
+              .orderBy(desc(categories.displayOrder))
+              .limit(1);
+            
+            const maxDisplayOrder = siblings.length > 0 ? (siblings[0].displayOrder || 0) : 0;
+            finalUpdateData.displayOrder = maxDisplayOrder + 1;
+          }
+        }
+      }
+
       // Add updatedAt timestamp
       const updateData = {
-        ...categoryData,
+        ...finalUpdateData,
         updatedAt: new Date().toISOString()
       };
 
