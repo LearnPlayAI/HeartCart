@@ -121,12 +121,13 @@ export const SEOStep: React.FC<SEOStepProps> = ({
           .slice(0, 3); // Limit to 3 images to avoid token limits
       }
       
-      const response = await apiRequest('POST', '/api/ai/generate-seo', {
+      const response = await apiRequest('POST', '/api/ai/optimize-seo', {
         productName: draft.name,
         productDescription: draft.description || '',
         categoryName,
-        attributes: draft.attributes,
-        imageUrls: imageUrls.length > 0 ? imageUrls : undefined
+        currentTitle: seoData.title || '',
+        currentDescription: seoData.description || '',
+        currentKeywords: seoData.keywords || ''
       });
       
       const data = await response.json();
