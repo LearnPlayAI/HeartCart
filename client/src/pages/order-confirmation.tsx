@@ -180,7 +180,7 @@ export default function OrderConfirmationPage() {
                         className="bg-pink-500 hover:bg-pink-600 text-white"
                       >
                         <Upload className="h-4 w-4 mr-2" />
-                        Upload Proof of Payment
+                        Take me to EFT Details
                       </Button>
                     </div>
                   )}
