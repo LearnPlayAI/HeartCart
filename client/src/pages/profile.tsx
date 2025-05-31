@@ -168,7 +168,11 @@ const formatDate = (dateString: string) => {
 };
 
 const ProfilePage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'profile' | 'orders'>('profile');
+  // Check URL parameters to determine initial tab
+  const urlParams = new URLSearchParams(window.location.search);
+  const initialTab = urlParams.get('tab') === 'orders' ? 'orders' : 'profile';
+  
+  const [activeTab, setActiveTab] = useState<'profile' | 'orders'>(initialTab);
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();

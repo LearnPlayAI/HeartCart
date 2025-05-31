@@ -79,12 +79,12 @@ const Header = () => {
                       {user.username}
                     </div>
                     <DropdownMenuItem asChild>
-                      <Link href="/profile" className="cursor-pointer">
+                      <Link href="/profile?tab=profile" className="cursor-pointer">
                         My Profile
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/profile" className="cursor-pointer">
+                      <Link href="/profile?tab=orders" className="cursor-pointer">
                         My Orders
                       </Link>
                     </DropdownMenuItem>
