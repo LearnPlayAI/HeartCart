@@ -52,46 +52,94 @@ export function MassUploadStep6({ data, onUpdate, onComplete, onPrevious }: Mass
         const product = products[i];
         
         try {
-          const draftData = {
-            name: product.title,
-            sku: product.sku,
-            description: product.description,
-            categoryId: product.childCategoryId || product.parentCategoryId,
-            catalogId: data.catalogId,
-            supplierId: data.supplierId,
-            supplierUrl: product.productUrl, // Add supplier URL from CSV
-            costPrice: product.costPrice.toString(),
-            regularPrice: product.regularPrice.toString(),
-            salePrice: product.salePrice > 0 ? product.salePrice.toString() : null,
-            onSale: product.salePrice > 0,
-            slug: slugify(product.title, { lower: true }),
-            isActive: true,
-            stockLevel: 0,
-            draftStatus: 'draft',
-            wizardProgress: {
-              'basic-info': true,
-              'images': false,
-              'additional-info': false,
-              'attributes': false,
-              'seo': false,
-              'sales-promotions': false,
-              'review': false
+          // Check if this is an existing product with price updates
+          if (product.existingProduct && product.hasPriceChanges) {
+            // Handle price updates for existing product
+            const priceUpdateData: any = {};
+            
+            if (product.priceUpdateOptions?.updateRegularPrice) {
+              priceUpdateData.price = product.regularPrice;
             }
-          };
+            if (product.priceUpdateOptions?.updateSalePrice) {
+              priceUpdateData.salePrice = product.salePrice > 0 ? product.salePrice : null;
+            }
+            if (product.priceUpdateOptions?.updateCostPrice) {
+              priceUpdateData.costPrice = product.costPrice;
+            }
+            
+            // Only update if at least one price option is selected
+            if (Object.keys(priceUpdateData).length > 0) {
+              const response = await apiRequest('PATCH', `/api/products/${product.existingProduct.id}`, priceUpdateData);
+              const result = await response.json();
+              
+              if (result.success) {
+                results.push({
+                  ...product,
+                  draftId: null, // No draft created, existing product updated
+                  updated: true
+                });
+              } else {
+                errors.push(`Failed to update prices for ${product.sku}: ${result.error || 'Unknown error'}`);
+              }
+            } else {
+              // No price updates selected, skip this product
+              results.push({
+                ...product,
+                draftId: null,
+                skipped: true
+              });
+            }
+          } else if (!product.existingProduct) {
+            // Create new product draft
+            const draftData = {
+              name: product.title,
+              sku: product.sku,
+              description: product.description,
+              categoryId: product.childCategoryId || product.parentCategoryId,
+              catalogId: data.catalogId,
+              supplierId: data.supplierId,
+              supplierUrl: product.productUrl,
+              costPrice: product.costPrice.toString(),
+              regularPrice: product.regularPrice.toString(),
+              salePrice: product.salePrice > 0 ? product.salePrice.toString() : null,
+              onSale: product.salePrice > 0,
+              slug: slugify(product.title, { lower: true }),
+              isActive: true,
+              stockLevel: 0,
+              draftStatus: 'draft',
+              wizardProgress: {
+                'basic-info': true,
+                'images': false,
+                'additional-info': false,
+                'attributes': false,
+                'seo': false,
+                'sales-promotions': false,
+                'review': false
+              }
+            };
 
-          const response = await apiRequest('POST', '/api/product-drafts', draftData);
-          const result = await response.json();
-          
-          if (result.success) {
+            const response = await apiRequest('POST', '/api/product-drafts', draftData);
+            const result = await response.json();
+            
+            if (result.success) {
+              results.push({
+                ...product,
+                draftId: result.data.id,
+                created: true
+              });
+            } else {
+              errors.push(`Failed to create draft for ${product.sku}: ${result.error || 'Unknown error'}`);
+            }
+          } else {
+            // Existing product with no price changes, skip
             results.push({
               ...product,
-              draftId: result.data.id
+              draftId: null,
+              skipped: true
             });
-          } else {
-            errors.push(`Failed to create draft for ${product.sku}: ${result.error || 'Unknown error'}`);
           }
         } catch (error: any) {
-          errors.push(`Failed to create draft for ${product.sku}: ${error.message}`);
+          errors.push(`Failed to process ${product.sku}: ${error.message}`);
         }
         
         // Update progress

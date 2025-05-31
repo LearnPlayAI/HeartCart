@@ -69,11 +69,11 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
     },
   });
 
-  // Fetch existing products for duplicate checking
+  // Fetch existing products for duplicate checking and price comparison
   const { data: productsData, isLoading: isLoadingProducts } = useQuery({
-    queryKey: ['/api/products', 'all-skus'],
+    queryKey: ['/api/products', 'all-skus-with-pricing'],
     queryFn: async () => {
-      const response = await apiRequest('GET', '/api/products?fields=sku,name&limit=10000');
+      const response = await apiRequest('GET', '/api/products?fields=sku,name,price,salePrice,costPrice&limit=10000');
       return response.json();
     },
   });
@@ -154,12 +154,38 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
         const errors: string[] = [];
         const warnings: string[] = [];
 
-        // Check for duplicate SKU
+        // Check for duplicate SKU and store existing product data for price comparison
         const duplicateSku = existingProducts.find((p: any) => 
           p.sku && product.sku && p.sku.toLowerCase() === product.sku.toLowerCase()
         );
         if (duplicateSku) {
-          errors.push(`Product with SKU "${product.sku}" already exists`);
+          // Store existing product data for price comparison
+          product.existingProduct = {
+            id: duplicateSku.id,
+            name: duplicateSku.name,
+            price: duplicateSku.price,
+            salePrice: duplicateSku.salePrice,
+            costPrice: duplicateSku.costPrice
+          };
+
+          // Check for price differences
+          const hasRegularPriceChange = Math.abs(duplicateSku.price - product.regularPrice) > 0.01;
+          const hasSalePriceChange = Math.abs((duplicateSku.salePrice || 0) - (product.salePrice || 0)) > 0.01;
+          const hasCostPriceChange = Math.abs(duplicateSku.costPrice - product.costPrice) > 0.01;
+          
+          product.hasPriceChanges = hasRegularPriceChange || hasSalePriceChange || hasCostPriceChange;
+
+          if (product.hasPriceChanges) {
+            warnings.push(`Product with SKU "${product.sku}" exists with different pricing. You can choose to update the prices.`);
+            // Initialize price update options to false by default
+            product.priceUpdateOptions = {
+              updateRegularPrice: false,
+              updateSalePrice: false,
+              updateCostPrice: false
+            };
+          } else {
+            errors.push(`Product with SKU "${product.sku}" already exists with identical pricing`);
+          }
         }
 
         // Check for duplicate name
@@ -447,6 +473,7 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
                     <TableHead className="w-[100px]">SKU</TableHead>
                     <TableHead>Product Title</TableHead>
                     <TableHead>Categories</TableHead>
+                    <TableHead>Price Comparison</TableHead>
                     <TableHead>Issues</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -483,6 +510,89 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
                             {!product.childCategoryId && <XCircle className="h-3 w-3 text-red-500" />}
                           </div>
                         </div>
+                      </TableCell>
+                      
+                      <TableCell>
+                        {product.existingProduct ? (
+                          <div className="space-y-2">
+                            <div className="text-sm font-medium text-blue-600">Product Exists</div>
+                            {product.hasPriceChanges ? (
+                              <div className="space-y-2 p-2 border rounded bg-yellow-50">
+                                <div className="text-xs font-medium text-yellow-700">Price Changes Detected:</div>
+                                
+                                {/* Regular Price Comparison */}
+                                {Math.abs(product.existingProduct.price - product.regularPrice) > 0.01 && (
+                                  <div className="flex items-center justify-between text-xs">
+                                    <div>
+                                      <div>Regular: R{product.existingProduct.price.toFixed(2)} → R{product.regularPrice.toFixed(2)}</div>
+                                    </div>
+                                    <input
+                                      type="checkbox"
+                                      checked={product.priceUpdateOptions?.updateRegularPrice || false}
+                                      onChange={(e) => {
+                                        const updatedProducts = data.products.map(p => 
+                                          p.sku === product.sku 
+                                            ? { ...p, priceUpdateOptions: { ...p.priceUpdateOptions, updateRegularPrice: e.target.checked } }
+                                            : p
+                                        );
+                                        onUpdate({ products: updatedProducts });
+                                      }}
+                                      className="h-3 w-3"
+                                    />
+                                  </div>
+                                )}
+                                
+                                {/* Sale Price Comparison */}
+                                {Math.abs((product.existingProduct.salePrice || 0) - (product.salePrice || 0)) > 0.01 && (
+                                  <div className="flex items-center justify-between text-xs">
+                                    <div>
+                                      <div>Sale: R{(product.existingProduct.salePrice || 0).toFixed(2)} → R{(product.salePrice || 0).toFixed(2)}</div>
+                                    </div>
+                                    <input
+                                      type="checkbox"
+                                      checked={product.priceUpdateOptions?.updateSalePrice || false}
+                                      onChange={(e) => {
+                                        const updatedProducts = data.products.map(p => 
+                                          p.sku === product.sku 
+                                            ? { ...p, priceUpdateOptions: { ...p.priceUpdateOptions, updateSalePrice: e.target.checked } }
+                                            : p
+                                        );
+                                        onUpdate({ products: updatedProducts });
+                                      }}
+                                      className="h-3 w-3"
+                                    />
+                                  </div>
+                                )}
+                                
+                                {/* Cost Price Comparison */}
+                                {Math.abs(product.existingProduct.costPrice - product.costPrice) > 0.01 && (
+                                  <div className="flex items-center justify-between text-xs">
+                                    <div>
+                                      <div>Cost: R{product.existingProduct.costPrice.toFixed(2)} → R{product.costPrice.toFixed(2)}</div>
+                                    </div>
+                                    <input
+                                      type="checkbox"
+                                      checked={product.priceUpdateOptions?.updateCostPrice || false}
+                                      onChange={(e) => {
+                                        const updatedProducts = data.products.map(p => 
+                                          p.sku === product.sku 
+                                            ? { ...p, priceUpdateOptions: { ...p.priceUpdateOptions, updateCostPrice: e.target.checked } }
+                                            : p
+                                        );
+                                        onUpdate({ products: updatedProducts });
+                                      }}
+                                      className="h-3 w-3"
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="text-xs text-green-600">Identical pricing</div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="text-sm text-gray-500">New Product</div>
+                        )}
                       </TableCell>
                       
                       <TableCell>

@@ -32,6 +32,20 @@ export interface CSVProduct {
   childCategoryId?: number;
   // Draft ID after creation
   draftId?: number;
+  // Price comparison data for existing products
+  existingProduct?: {
+    id: number;
+    name: string;
+    price: number;
+    salePrice?: number;
+    costPrice: number;
+  };
+  hasPriceChanges?: boolean;
+  priceUpdateOptions?: {
+    updateRegularPrice?: boolean;
+    updateSalePrice?: boolean;
+    updateCostPrice?: boolean;
+  };
 }
 
 export interface MassUploadData {
