@@ -40,6 +40,7 @@ import {
   FolderTree, 
   Tag, 
   ChevronRight, 
+  ChevronDown,
   Layers,
   GripVertical,
   ArrowUpDown 
@@ -67,6 +68,22 @@ export default function AdminCategories() {
   const [newDisplayOrder, setNewDisplayOrder] = useState<number>(0);
   const [categoryView, setCategoryView] = useState<'grid' | 'tree'>('tree');
   const [filterLevel, setFilterLevel] = useState<string | null>(null);
+  
+  // State for collapsible tree view - track which parent categories are expanded
+  const [expandedCategories, setExpandedCategories] = useState<Set<number>>(new Set());
+  
+  // Toggle category expansion
+  const toggleCategoryExpansion = (categoryId: number) => {
+    setExpandedCategories(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(categoryId)) {
+        newSet.delete(categoryId);
+      } else {
+        newSet.add(categoryId);
+      }
+      return newSet;
+    });
+  };
   
   // Fetch categories
   const { data: categoriesResponse, isLoading } = useQuery<{success: boolean, data: Category[]}>({
@@ -674,6 +691,20 @@ export default function AdminCategories() {
                                 >
                                   <GripVertical className="h-5 w-5 text-muted-foreground" />
                                 </div>
+                                {item.children.length > 0 && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 w-6 p-0 mr-2"
+                                    onClick={() => toggleCategoryExpansion(item.category.id)}
+                                  >
+                                    {expandedCategories.has(item.category.id) ? (
+                                      <ChevronDown className="h-4 w-4 text-white" />
+                                    ) : (
+                                      <ChevronRight className="h-4 w-4 text-white" />
+                                    )}
+                                  </Button>
+                                )}
                                 <h3 className="font-medium">{item.category.name}</h3>
                                 <Badge variant="outline" className="ml-2 bg-[#22c55e]">Level 0</Badge>
                                 <Badge 
@@ -727,7 +758,7 @@ export default function AdminCategories() {
                               </div>
                             </div>
                             
-                            {item.children.length > 0 && (
+                            {item.children.length > 0 && expandedCategories.has(item.category.id) && (
                               <Droppable 
                                 droppableId={`parent-${item.category.id}`} 
                                 type="SUB_CATEGORY"
