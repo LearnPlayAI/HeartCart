@@ -458,35 +458,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     })
   );
   
-  // Create display order schema
-  const displayOrderSchema = z.object({
-    displayOrder: z.number().int()
-  });
-
-  app.put(
-    "/api/categories/:id/display-order", 
-    isAuthenticated, 
-    isAdmin,
-    validateRequest({
-      params: idSchema,
-      body: displayOrderSchema
-    }),
-    withStandardResponse(async (req: Request, res: Response) => {
-      const categoryId = Number(req.params.id);
-      const { displayOrder } = req.body;
-      
-      // Update the category display order
-      const category = await storage.updateCategoryDisplayOrder(categoryId, displayOrder);
-      
-      if (!category) {
-        throw new NotFoundError(`Category with ID ${categoryId} not found`, 'category');
-      }
-      
-      return category;
-    })
-  );
-
-  // Batch update display orders for multiple categories
+  // Batch update display orders for multiple categories (must come before individual route)
   const batchDisplayOrderSchema = z.object({
     updates: z.array(z.object({
       id: z.number().int(),
@@ -521,6 +493,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: true,
         data: { updated: updatedCategories.length, categories: updatedCategories }
       });
+    })
+  );
+
+  // Create display order schema
+  const displayOrderSchema = z.object({
+    displayOrder: z.number().int()
+  });
+
+  app.put(
+    "/api/categories/:id/display-order", 
+    isAuthenticated, 
+    isAdmin,
+    validateRequest({
+      params: idSchema,
+      body: displayOrderSchema
+    }),
+    withStandardResponse(async (req: Request, res: Response) => {
+      const categoryId = Number(req.params.id);
+      const { displayOrder } = req.body;
+      
+      // Update the category display order
+      const category = await storage.updateCategoryDisplayOrder(categoryId, displayOrder);
+      
+      if (!category) {
+        throw new NotFoundError(`Category with ID ${categoryId} not found`, 'category');
+      }
+      
+      return category;
     })
   );
 
