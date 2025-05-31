@@ -458,16 +458,6 @@ export default function AdminOrdersPage() {
     </div>
   );
 }
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
-        <DialogHeader>
-          <DialogTitle className="flex items-center space-x-2">
-            <Package className="h-5 w-5" />
-            <span>Order #{order.orderNumber}</span>
-          </DialogTitle>
-          <DialogDescription>
-            Order placed on {formatDate(order.createdAt)}
-          </DialogDescription>
-        </DialogHeader>
 
         <ScrollArea className="max-h-[calc(90vh-120px)]">
           <div className="space-y-6 p-1">
