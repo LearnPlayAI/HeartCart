@@ -162,6 +162,16 @@ function PDFViewer({ orderId }: { orderId: number }) {
 
   const pdfUrl = `/api/orders/${orderId}/proof`;
 
+  // Debug logging for PDF initialization
+  useEffect(() => {
+    console.log('PDFViewer initialized with:', {
+      orderId,
+      pdfUrl,
+      pdfVersion: pdfjs.version,
+      workerSrc: pdfjs.GlobalWorkerOptions.workerSrc
+    });
+  }, [orderId, pdfUrl]);
+
   // Handle window resize to adjust PDF width
   useEffect(() => {
     const handleResize = () => {
@@ -217,8 +227,13 @@ function PDFViewer({ orderId }: { orderId: number }) {
   }, [numPages, pageNumber]);
 
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
-    console.log('PDF loaded successfully with', numPages, 'pages');
+    console.log('✅ PDF Document loaded successfully!', {
+      numPages,
+      pdfUrl,
+      timestamp: new Date().toISOString()
+    });
     setNumPages(numPages);
+    setPageNumber(1);
     setLoading(false);
     setError(null);
   };
@@ -452,12 +467,20 @@ function PDFViewer({ orderId }: { orderId: number }) {
             file={pdfUrl}
             onLoadSuccess={onDocumentLoadSuccess}
             onLoadError={onDocumentLoadError}
+            onLoadProgress={(progress) => {
+              console.log('📊 PDF Load Progress:', progress);
+            }}
+            onSourceError={(error) => {
+              console.error('🚫 PDF Source Error:', error);
+            }}
+
             options={options}
             loading={
               <div className="flex items-center justify-center h-96">
                 <div className="text-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
                   <p className="text-muted-foreground">Loading PDF...</p>
+                  <p className="text-xs text-muted-foreground mt-2">URL: {pdfUrl}</p>
                 </div>
               </div>
             }
@@ -484,8 +507,17 @@ function PDFViewer({ orderId }: { orderId: number }) {
               renderTextLayer={false}
               renderAnnotationLayer={false}
               className="shadow-lg"
-              onLoadSuccess={onPageLoadSuccess}
-              onLoadError={onPageLoadError}
+              onLoadSuccess={() => {
+                console.log('✅ Page rendered successfully:', pageNumber);
+                onPageLoadSuccess();
+              }}
+              onLoadError={(error) => {
+                console.error('❌ Page render error:', error);
+                onPageLoadError(error);
+              }}
+              onRenderSuccess={() => {
+                console.log('🎨 Page render completed:', pageNumber);
+              }}
             />
           </Document>
         </div>
