@@ -1,0 +1,132 @@
+Recommended Solution: PDF.js Integration
+PDF.js is Mozilla's open-source PDF renderer that's built into most browsers and provides excellent compatibility. It's the most reliable solution for this use case.
+
+Implementation Strategy
+1. Frontend PDF Viewer Component
+Create a dedicated PDF viewer component using PDF.js with these features:
+
+Pan: Click and drag to move around the document
+Zoom: Mouse wheel zoom in/out with zoom controls
+Scroll: Native scrolling through multi-page documents
+Page navigation: Previous/Next page buttons
+Responsive: Adapts to container size
+2. Component Architecture
+// New component structure
+PDFViewerContainer
+├── PDFToolbar (zoom controls, page navigation, download)
+├── PDFCanvas (main viewing area with pan/zoom)
+├── PDFThumbnails (optional sidebar for page navigation)
+└── PDFLoadingState (loading indicators and error handling)
+3. Technical Implementation Details
+PDF.js Integration Options:
+
+PDF.js Express - Pre-built viewer with all controls
+Custom PDF.js - Build custom viewer with exact features needed
+react-pdf library - React wrapper around PDF.js
+Recommended: Custom PDF.js Implementation
+
+More control over UI/UX
+Better integration with existing design system
+Smaller bundle size (only include needed features)
+4. Key Features to Implement
+Core Functionality:
+
+Load PDF from /api/orders/:id/proof endpoint
+Render PDF pages as canvas elements
+Implement zoom (25% to 500%)
+Add pan functionality with mouse drag
+Smooth scrolling between pages
+Keyboard shortcuts (zoom with +/-, page navigation with arrows)
+UI Controls:
+
+Zoom in/out buttons
+Fit to width/height buttons
+Page input field with total page count
+Download button
+Fullscreen toggle
+Print functionality
+Error Handling:
+
+Loading states with progress indicators
+Error messages for failed PDF loads
+Fallback to download link if rendering fails
+Retry mechanism for network issues
+5. Performance Optimizations
+Lazy Loading:
+
+Only render visible pages + 1-2 buffer pages
+Unload off-screen pages to save memory
+Progressive loading for large PDFs
+Canvas Optimization:
+
+Use appropriate resolution based on zoom level
+Implement viewport-based rendering
+Cache rendered pages in memory (with limits)
+Network Optimization:
+
+Stream PDF data instead of loading entire file
+Support for partial content requests
+Cache PDF data in browser storage
+6. Browser Compatibility
+Advantages of PDF.js:
+
+Works in all modern browsers (Chrome, Firefox, Safari, Edge)
+No plugins required
+Handles CORS properly
+Built-in security features
+Mobile-friendly touch gestures
+7. Integration Points
+Backend Requirements:
+
+Ensure /api/orders/:id/proof serves PDF with proper headers
+Add support for range requests for streaming
+Implement proper CORS headers
+Add cache control headers
+Frontend Integration:
+
+Replace current iframe approach
+Integrate with existing order detail layout
+Maintain responsive design
+Add proper loading states
+8. Security Considerations
+PDF.js Benefits:
+
+Runs in sandboxed environment
+No external dependencies
+Handles malformed PDFs safely
+Content Security Policy compatible
+9. Fallback Strategy
+Progressive Enhancement:
+
+Primary: Custom PDF.js viewer
+Fallback 1: Browser's built-in PDF viewer (new tab)
+Fallback 2: Direct download link
+Fallback 3: "PDF not available" message
+10. Implementation Libraries to Consider
+Option 1: react-pdf (Recommended for speed)
+
+npm install react-pdf pdfjs-dist
+Mature React wrapper
+Good documentation
+Active maintenance
+Built-in optimization
+Option 2: PDF.js directly
+
+npm install pdfjs-dist
+Maximum control
+Smaller bundle size
+Custom UI implementation required
+Option 3: @react-pdf-viewer/core
+
+npm install @react-pdf-viewer/core @react-pdf-viewer/default-layout
+Feature-rich out of the box
+Plugin architecture
+Good TypeScript support
+Next Steps
+Choose library (recommend react-pdf for balance of features/effort)
+Create PDFViewer component with all controls
+Replace iframe in order-detail.tsx
+Add proper error handling and loading states
+Test across browsers and devices
+Optimize performance for large PDFs
+This approach will provide a robust, cross-browser compatible PDF viewer that handles all the requirements while avoiding the iframe/CORS issues you're experiencing with Chrome.

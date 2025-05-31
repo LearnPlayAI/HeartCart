@@ -44,7 +44,17 @@ import {
   Package2,
   Receipt,
   MessageSquare,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
+  Download,
 } from 'lucide-react';
+import { Document, Page, pdfjs } from 'react-pdf';
+import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
+import 'react-pdf/dist/esm/Page/TextLayer.css';
+
+// Configure PDF.js worker
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
 // Types
 interface OrderItem {
@@ -133,71 +143,312 @@ const getPaymentStatusConfig = (paymentStatus: string) => {
   return configs[paymentStatus as keyof typeof configs] || configs.pending;
 };
 
-// PDF Viewer Component
+// PDF Viewer Component with full PDF.js implementation
 function PDFViewer({ orderId }: { orderId: number }) {
-  const [pdfError, setPdfError] = useState(false);
+  const [numPages, setNumPages] = useState<number>(0);
+  const [pageNumber, setPageNumber] = useState<number>(1);
+  const [scale, setScale] = useState<number>(1.0);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [containerWidth, setContainerWidth] = useState<number>(800);
+
   const pdfUrl = `/api/orders/${orderId}/proof`;
 
-  // Simple timeout to detect if PDF loads successfully
+  // Handle window resize to adjust PDF width
   useEffect(() => {
-    const timer = setTimeout(() => {
-      // PDF should load within 5 seconds, if not consider showing fallback
-    }, 5000);
-    return () => clearTimeout(timer);
+    const handleResize = () => {
+      const container = document.getElementById('pdf-container');
+      if (container) {
+        setContainerWidth(container.clientWidth - 40); // 40px for padding
+      }
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  return (
-    <div className="space-y-4">
-      {/* PDF Controls */}
-      <div className="flex items-center justify-between bg-muted p-3 rounded-lg">
-        <div className="flex items-center space-x-2">
-          <FileText className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm font-medium">
-            Proof of Payment Document
-          </span>
-        </div>
-        <Button
-          onClick={() => window.open(pdfUrl, '_blank')}
-          size="sm"
-          variant="outline"
-        >
-          <ExternalLink className="h-4 w-4 mr-2" />
-          Open in New Tab
-        </Button>
-      </div>
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.target instanceof HTMLInputElement) return; // Don't trigger when typing in inputs
+      
+      switch (event.key) {
+        case 'ArrowLeft':
+          event.preventDefault();
+          goToPrevPage();
+          break;
+        case 'ArrowRight':
+          event.preventDefault();
+          goToNextPage();
+          break;
+        case '=':
+        case '+':
+          event.preventDefault();
+          zoomIn();
+          break;
+        case '-':
+          event.preventDefault();
+          zoomOut();
+          break;
+        case '0':
+          event.preventDefault();
+          resetZoom();
+          break;
+        case 'f':
+          if (event.ctrlKey || event.metaKey) {
+            event.preventDefault();
+            fitToWidth();
+          }
+          break;
+      }
+    };
 
-      {/* PDF Document viewer */}
-      <div className="border rounded-lg overflow-hidden bg-white relative">
-        <iframe
-          src={pdfUrl}
-          width="100%"
-          height="600"
-          title="Proof of Payment PDF"
-          style={{ 
-            border: 'none',
-            minHeight: '600px'
-          }}
-          onLoad={() => setPdfError(false)}
-          onError={() => setPdfError(true)}
-        />
-        
-        {/* Fallback message - only shows if iframe fails */}
-        {pdfError && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white z-10">
-            <div className="text-center">
-              <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground mb-4">Unable to display PDF in browser</p>
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [numPages, pageNumber]);
+
+  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
+    setNumPages(numPages);
+    setLoading(false);
+    setError(null);
+  };
+
+  const onDocumentLoadError = (error: Error) => {
+    console.error('PDF loading error:', error);
+    setLoading(false);
+    setError('Failed to load PDF document');
+  };
+
+  const goToPrevPage = () => {
+    setPageNumber(page => Math.max(1, page - 1));
+  };
+
+  const goToNextPage = () => {
+    setPageNumber(page => Math.min(numPages, page + 1));
+  };
+
+  const zoomIn = () => {
+    setScale(scale => Math.min(3.0, scale + 0.25));
+  };
+
+  const zoomOut = () => {
+    setScale(scale => Math.max(0.5, scale - 0.25));
+  };
+
+  const resetZoom = () => {
+    setScale(1.0);
+  };
+
+  const fitToWidth = () => {
+    setScale(containerWidth / 595); // 595 is standard PDF page width in points
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between bg-muted p-3 rounded-lg">
+          <div className="flex items-center space-x-2">
+            <FileText className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium">Proof of Payment Document</span>
+          </div>
+        </div>
+        <div className="flex items-center justify-center h-96 border rounded-lg bg-white">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading PDF document...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between bg-muted p-3 rounded-lg">
+          <div className="flex items-center space-x-2">
+            <FileText className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium">Proof of Payment Document</span>
+          </div>
+          <Button
+            onClick={() => window.open(pdfUrl, '_blank')}
+            size="sm"
+            variant="outline"
+          >
+            <ExternalLink className="h-4 w-4 mr-2" />
+            Open in New Tab
+          </Button>
+        </div>
+        <div className="flex items-center justify-center h-96 border rounded-lg bg-white">
+          <div className="text-center">
+            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <p className="text-red-600 mb-4">{error}</p>
+            <div className="space-x-2">
+              <Button 
+                onClick={() => {
+                  setLoading(true);
+                  setError(null);
+                }}
+                variant="outline" 
+                size="sm"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Retry
+              </Button>
               <Button 
                 onClick={() => window.open(pdfUrl, '_blank')} 
                 variant="outline" 
                 size="sm"
               >
                 <ExternalLink className="h-4 w-4 mr-2" />
-                View PDF in New Tab
+                Open in New Tab
               </Button>
             </div>
           </div>
-        )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* PDF Toolbar */}
+      <div className="bg-muted p-3 rounded-lg space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <FileText className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium">Proof of Payment Document</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Button
+              onClick={() => window.open(pdfUrl, '_blank')}
+              size="sm"
+              variant="outline"
+            >
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Open in New Tab
+            </Button>
+            <Button
+              onClick={() => {
+                const link = document.createElement('a');
+                link.href = pdfUrl;
+                link.download = `proof-of-payment-${orderId}.pdf`;
+                link.click();
+              }}
+              size="sm"
+              variant="outline"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Download
+            </Button>
+          </div>
+        </div>
+
+        {/* Navigation and Zoom Controls - Responsive Layout */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          {/* Page Navigation */}
+          <div className="flex items-center justify-center sm:justify-start space-x-2">
+            <Button
+              onClick={goToPrevPage}
+              disabled={pageNumber <= 1}
+              size="sm"
+              variant="outline"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              <span className="hidden sm:inline ml-1">Prev</span>
+            </Button>
+            <span className="text-sm font-medium px-2 whitespace-nowrap">
+              Page {pageNumber} of {numPages}
+            </span>
+            <Button
+              onClick={goToNextPage}
+              disabled={pageNumber >= numPages}
+              size="sm"
+              variant="outline"
+            >
+              <span className="hidden sm:inline mr-1">Next</span>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Zoom Controls */}
+          <div className="flex items-center justify-center space-x-2">
+            <Button onClick={zoomOut} size="sm" variant="outline">
+              <ZoomOut className="h-4 w-4" />
+            </Button>
+            <span className="text-sm font-medium px-2 min-w-[60px] text-center">
+              {Math.round(scale * 100)}%
+            </span>
+            <Button onClick={zoomIn} size="sm" variant="outline">
+              <ZoomIn className="h-4 w-4" />
+            </Button>
+            <Button onClick={resetZoom} size="sm" variant="outline" className="hidden sm:flex">
+              <RotateCcw className="h-4 w-4" />
+            </Button>
+            <Button onClick={fitToWidth} size="sm" variant="outline" className="hidden sm:flex">
+              <span className="text-xs">Fit Width</span>
+            </Button>
+          </div>
+        </div>
+
+        {/* Mobile-only zoom controls */}
+        <div className="flex sm:hidden items-center justify-center space-x-2">
+          <Button onClick={resetZoom} size="sm" variant="outline">
+            <RotateCcw className="h-4 w-4 mr-1" />
+            Reset
+          </Button>
+          <Button onClick={fitToWidth} size="sm" variant="outline">
+            <span className="text-xs">Fit Width</span>
+          </Button>
+        </div>
+      </div>
+
+      {/* PDF Document */}
+      <div 
+        id="pdf-container" 
+        className="border rounded-lg overflow-auto bg-white"
+        style={{ maxHeight: '80vh' }}
+      >
+        <div className="flex justify-center p-4">
+          <Document
+            file={pdfUrl}
+            onLoadSuccess={onDocumentLoadSuccess}
+            onLoadError={onDocumentLoadError}
+            loading={
+              <div className="flex items-center justify-center h-96">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                  <p className="text-muted-foreground">Loading PDF...</p>
+                </div>
+              </div>
+            }
+            error={
+              <div className="flex items-center justify-center h-96">
+                <div className="text-center">
+                  <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+                  <p className="text-red-600 mb-4">Failed to load PDF document</p>
+                  <Button 
+                    onClick={() => window.open(pdfUrl, '_blank')} 
+                    variant="outline" 
+                    size="sm"
+                  >
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Open in New Tab
+                  </Button>
+                </div>
+              </div>
+            }
+          >
+            <Page
+              pageNumber={pageNumber}
+              scale={scale}
+              renderTextLayer={false}
+              renderAnnotationLayer={false}
+              className="shadow-lg"
+            />
+          </Document>
+        </div>
       </div>
     </div>
   );
