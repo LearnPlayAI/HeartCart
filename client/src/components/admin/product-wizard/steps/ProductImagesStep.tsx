@@ -292,22 +292,21 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ draft, onS
                         Supplier URL (Optional)
                       </FormLabel>
                       <FormControl>
-                        <div className="flex gap-2">
+                        <div className="relative">
                           <Input
                             {...field}
                             placeholder="https://supplier-website.com/product-page"
-                            className="flex-1"
+                            className={field.value ? "pr-10" : ""}
                           />
                           {field.value && (
                             <Button
                               type="button"
-                              variant="outline"
+                              variant="ghost"
                               size="sm"
                               onClick={() => window.open(field.value, '_blank')}
-                              className="flex items-center gap-1"
+                              className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 p-0 hover:bg-gray-100"
                             >
-                              <ExternalLink className="h-4 w-4" />
-                              Visit
+                              <ExternalLink className="h-4 w-4 text-gray-500" />
                             </Button>
                           )}
                         </div>
