@@ -294,6 +294,10 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setIsNameTouched(true);
     form.setValue('name', e.target.value);
+    // Update the product name in real-time for the heading
+    if (onProductNameChange) {
+      onProductNameChange(e.target.value);
+    }
   };
 
   // Handle sale price changes
