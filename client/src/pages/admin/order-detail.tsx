@@ -170,6 +170,26 @@ function PDFViewer({ orderId }: { orderId: number }) {
       pdfVersion: pdfjs.version,
       workerSrc: pdfjs.GlobalWorkerOptions.workerSrc
     });
+
+    // Test if PDF.js can fetch the URL directly
+    console.log('🧪 Testing PDF URL fetch...');
+    fetch(pdfUrl)
+      .then(response => {
+        console.log('🧪 Fetch response:', {
+          status: response.status,
+          statusText: response.statusText,
+          headers: Object.fromEntries(response.headers.entries()),
+          url: response.url
+        });
+        return response.arrayBuffer();
+      })
+      .then(buffer => {
+        console.log('🧪 Fetch successful, buffer size:', buffer.byteLength);
+        console.log('🧪 First 20 bytes:', Array.from(new Uint8Array(buffer.slice(0, 20))).map(b => b.toString(16).padStart(2, '0')).join(' '));
+      })
+      .catch(error => {
+        console.error('🧪 Fetch failed:', error);
+      });
   }, [orderId, pdfUrl]);
 
   // Handle window resize to adjust PDF width
