@@ -522,40 +522,7 @@ const MyOrdersPage: React.FC = () => {
           </div>
         )}
 
-        {/* Summary Stats */}
-        {filteredOrders.length > 0 && (
-          <Card className="mt-8">
-            <CardHeader>
-              <CardTitle className="text-lg">Order Summary</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                <div>
-                  <div className="text-2xl font-bold text-gray-900">{filteredOrders.length}</div>
-                  <div className="text-sm text-gray-600">Total Orders</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-green-600">
-                    {formatCurrency(filteredOrders.reduce((sum, order) => sum + order.totalAmount, 0))}
-                  </div>
-                  <div className="text-sm text-gray-600">Total Spent</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-blue-600">
-                    {filteredOrders.filter(order => order.status === 'delivered').length}
-                  </div>
-                  <div className="text-sm text-gray-600">Delivered</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-purple-600">
-                    {filteredOrders.filter(order => ['pending', 'processing', 'shipped'].includes(order.status)).length}
-                  </div>
-                  <div className="text-sm text-gray-600">In Progress</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+
       </div>
     </>
   );
