@@ -1,9 +1,84 @@
 import { GoogleGenerativeAI, Part } from '@google/generative-ai';
 import axios from 'axios';
+import { storage } from './storage';
 
 // Initialize the Gemini API
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash', generationConfig: { temperature: 0.7 } });
+
+// Available AI models
+const AVAILABLE_MODELS = [
+  'gemini-1.5-flash',
+  'gemini-1.5-pro',
+  'gemini-pro'
+];
+
+// Default model
+const DEFAULT_MODEL = 'gemini-1.5-flash';
+
+// Get current AI model from settings
+async function getCurrentModel(): Promise<string> {
+  try {
+    const settings = await storage.getAllAiSettings();
+    const modelSetting = settings.find(s => s.settingName === 'current_model');
+    return modelSetting?.settingValue || DEFAULT_MODEL;
+  } catch (error) {
+    console.log('Using default AI model due to settings error:', error);
+    return DEFAULT_MODEL;
+  }
+}
+
+// Get AI model instance
+async function getModel() {
+  const currentModel = await getCurrentModel();
+  return genAI.getGenerativeModel({ 
+    model: currentModel, 
+    generationConfig: { temperature: 0.7 } 
+  });
+}
+
+// Export functions for AI settings management
+export function getAvailableAiModels(): string[] {
+  return [...AVAILABLE_MODELS];
+}
+
+export async function getCurrentAiModelSetting(): Promise<{ modelName: string; isDefault: boolean }> {
+  const currentModel = await getCurrentModel();
+  return {
+    modelName: currentModel,
+    isDefault: currentModel === DEFAULT_MODEL
+  };
+}
+
+export async function updateAiModel(modelName: string): Promise<boolean> {
+  try {
+    if (!AVAILABLE_MODELS.includes(modelName)) {
+      throw new Error(`Model ${modelName} is not available`);
+    }
+    
+    // Update or create the setting
+    const settings = await storage.getAllAiSettings();
+    const existingSetting = settings.find(s => s.settingName === 'current_model');
+    
+    if (existingSetting) {
+      await storage.saveAiSetting({
+        settingName: existingSetting.settingName,
+        settingValue: modelName,
+        description: existingSetting.description
+      });
+    } else {
+      await storage.saveAiSetting({
+        settingName: 'current_model',
+        settingValue: modelName,
+        description: 'Current AI model for all AI operations'
+      });
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error updating AI model:', error);
+    return false;
+  }
+}
 
 /**
  * Helper function to convert image URLs to base64 for Gemini API
@@ -63,7 +138,8 @@ export async function analyzeProductImage(imageUrl: string): Promise<{
     };
 
     // Send request to Gemini with text prompt and image
-    const result = await model.generateContent([promptText, imagePart]);
+    const aiModel = await getModel();
+    const result = await aiModel.generateContent([promptText, imagePart]);
     const text = result.response.text();
     
     try {
@@ -176,7 +252,8 @@ export async function generateProductDescription(
     }
 
     // Generate content with all the parts
-    const result = await model.generateContent(parts);
+    const aiModel = await getModel();
+    const result = await aiModel.generateContent(parts);
     const text = result.response.text();
     
     try {

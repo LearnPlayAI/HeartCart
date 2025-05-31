@@ -2737,10 +2737,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       try {
         // Get all available models
-        const models = getAvailableAiModels();
+        const models = (await import('./ai-service')).getAvailableAiModels();
         
         // Get current model
-        const currentModel = await getCurrentAiModelSetting();
+        const currentModel = await (await import('./ai-service')).getCurrentAiModelSetting();
         
         // Return standardized response format
         res.json({
@@ -2787,7 +2787,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       try {
         // Validate that the model name is in the available models list
-        const availableModels = getAvailableAiModels();
+        const availableModels = (await import('./ai-service')).getAvailableAiModels();
         if (!availableModels.includes(modelName)) {
           throw new BadRequestError(
             `Model '${modelName}' is not available. Available models: ${availableModels.join(', ')}`,
@@ -2796,7 +2796,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // Update AI model
-        const success = await updateAiModel(modelName);
+        const success = await (await import('./ai-service')).updateAiModel(modelName);
         
         // Return standardized response format
         res.json({
