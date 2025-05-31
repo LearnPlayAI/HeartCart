@@ -626,104 +626,59 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ draftId, initialDa
       </h2>
 
       <Tabs value={currentStep} onValueChange={handleStepChange} className="w-full">
-        {/* Enhanced Modern TabsList with Progress Tracking */}
-        <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 mb-8 border border-blue-100 shadow-sm">
-          {/* Progress Header */}
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              Product Creation Progress
-            </h3>
-            <div className="text-sm font-medium text-gray-600">
-              Step {WIZARD_STEPS.findIndex(s => s.id === currentStep) + 1} of {WIZARD_STEPS.length}
-            </div>
-          </div>
-          
-          {/* Progress Bar */}
-          <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
-            <div 
-              className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-500"
-              style={{ 
-                width: `${((WIZARD_STEPS.findIndex(s => s.id === currentStep) + 1) / WIZARD_STEPS.length) * 100}%` 
-              }}
-            />
-          </div>
-
-          {/* Enhanced Steps Navigation */}
-          <div className="overflow-x-auto pb-2">
-            <TabsList className="grid grid-cols-7 min-w-[700px] md:min-w-0 bg-white/50 backdrop-blur-sm border border-white/20 shadow-sm">
-              {WIZARD_STEPS.map((step, index) => {
-                const stepNumber = index + 1;
-                const isCompleted = isStepCompleted(step.id);
-                const isCurrent = currentStep === step.id;
-                
-                return (
-                  <TabsTrigger 
-                    key={step.id} 
-                    value={step.id}
-                    className={`
-                      relative px-3 py-3 rounded-md transition-all duration-300 hover:shadow-md
-                      ${isCurrent 
-                        ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg transform scale-105' 
-                        : isCompleted
-                        ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                        : 'bg-white hover:bg-gray-50'
-                      }
-                    `}
+        {/* Beautiful Step Progress - Same as Mass Upload */}
+        <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+          <div className="flex items-center justify-between overflow-x-auto">
+            {WIZARD_STEPS.map((step, index) => {
+              const stepNumber = index + 1;
+              const isCompleted = isStepCompleted(step.id);
+              const isCurrent = currentStep === step.id;
+              const isLast = index === WIZARD_STEPS.length - 1;
+              
+              return (
+                <div key={step.id} className="flex items-center min-w-0">
+                  <div 
+                    className={`flex items-center cursor-pointer transition-all duration-200 ${
+                      isCurrent ? 'transform scale-105' : ''
+                    }`}
+                    onClick={() => handleStepChange(step.id)}
                   >
-                    <div className="flex items-center justify-center flex-col space-y-1">
-                      {/* Step Circle with Number or Icon */}
-                      <div className={`
-                        w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold
-                        ${isCurrent 
-                          ? 'bg-white/20 text-white ring-2 ring-white/30 animate-pulse' 
-                          : isCompleted
-                          ? 'bg-green-500 text-white'
-                          : 'bg-gray-200 text-gray-600'
-                        }
-                      `}>
-                        {isCompleted ? (
-                          <CheckCircle2 className="w-5 h-5" />
-                        ) : (
-                          stepNumber
-                        )}
-                      </div>
-                      
-                      {/* Step Label */}
-                      <span className={`
-                        text-xs font-medium text-center
-                        ${isCurrent ? 'text-white' : isCompleted ? 'text-green-700' : 'text-gray-600'}
-                        hidden xs:block
-                      `}>
-                        {step.label}
-                      </span>
-                      
-                      {/* Mobile: Show only step number */}
-                      <span className={`
-                        text-xs font-medium
-                        ${isCurrent ? 'text-white' : isCompleted ? 'text-green-700' : 'text-gray-600'}
-                        xs:hidden
-                      `}>
-                        {stepNumber}
-                      </span>
+                    <div className={`
+                      w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold border-2 transition-all duration-200
+                      ${isCurrent 
+                        ? 'bg-blue-600 border-blue-600 text-white shadow-lg' 
+                        : isCompleted
+                        ? 'bg-green-500 border-green-500 text-white'
+                        : 'bg-gray-100 border-gray-300 text-gray-600 hover:border-gray-400'
+                      }
+                    `}>
+                      {isCompleted ? (
+                        <CheckCircle2 className="w-5 h-5" />
+                      ) : (
+                        stepNumber
+                      )}
                     </div>
-                    
-                    {/* Active Step Indicator */}
-                    {isCurrent && (
-                      <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-white rounded-full" />
-                    )}
-                  </TabsTrigger>
-                );
-              })}
-            </TabsList>
-          </div>
-          
-          {/* Current Step Info */}
-          <div className="mt-4 text-center">
-            <p className="text-sm text-gray-600">
-              Currently editing: <span className="font-semibold text-gray-800">
-                {WIZARD_STEPS.find(s => s.id === currentStep)?.label}
-              </span>
-            </p>
+                    <div className="ml-3 min-w-0 flex-1">
+                      <div className={`text-sm font-medium truncate ${
+                        isCurrent ? 'text-blue-600' : isCompleted ? 'text-green-600' : 'text-gray-500'
+                      }`}>
+                        {step.label}
+                      </div>
+                      <div className="text-xs text-gray-400 hidden sm:block">
+                        {step.description || `Step ${stepNumber}`}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Connector line */}
+                  {!isLast && (
+                    <div className={`flex-1 h-0.5 mx-4 transition-colors duration-200 ${
+                      isCompleted ? 'bg-green-500' : 'bg-gray-200'
+                    }`} />
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
 
