@@ -153,6 +153,7 @@ function App() {
               <AdminProtectedRoute path="/admin/products/manage" component={React.lazy(() => import("@/pages/admin/product-management"))} />
               <AdminProtectedRoute path="/admin/catalogs/:catalogId/products/manage" component={React.lazy(() => import("@/pages/admin/product-management"))} />
               <AdminProtectedRoute path="/admin/product-wizard/:id?" component={React.lazy(() => import("@/pages/admin/product-wizard"))} />
+              <AdminProtectedRoute path="/admin/mass-upload" component={React.lazy(() => import("@/pages/admin/mass-upload"))} />
               
               {/* Redirect current routes to new product management */}
               <Route path="/admin/products/new">
