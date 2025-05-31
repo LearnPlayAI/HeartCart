@@ -373,6 +373,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }));
 
+  // IMPORTANT: All specific named routes must come before parameterized routes
+  // to prevent Express from matching parameters incorrectly
+  
+  app.get("/api/categories/main/with-children", withStandardResponse(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    const isAdmin = user && user.role === 'admin';
+    
+    // Only include inactive categories if explicitly requested by admin for admin pages
+    const forAdminPage = req.query.forAdminPage === 'true';
+    const includeInactive = isAdmin && forAdminPage;
+    
+    const options = { includeInactive };
+    const mainCategoriesWithChildren = await storage.getMainCategoriesWithChildren(options);
+    return mainCategoriesWithChildren;
+  }));
+
+  // Batch update display orders for multiple categories (must come before parameterized routes)
+  const batchDisplayOrderSchema = z.object({
+    updates: z.array(z.object({
+      id: z.number().int(),
+      displayOrder: z.number().int()
+    }))
+  });
+
+  app.put(
+    "/api/categories/batch-display-order", 
+    isAuthenticated, 
+    isAdmin,
+    asyncHandler(async (req: Request, res: Response) => {
+      // Validate the request body manually since we don't need params validation
+      const result = batchDisplayOrderSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: "VALIDATION_ERROR",
+            message: "Invalid request data",
+            details: result.error.flatten()
+          }
+        });
+      }
+      
+      const { updates } = result.data;
+      
+      // Update all categories in batch
+      const updatedCategories = await storage.batchUpdateCategoryDisplayOrder(updates);
+      
+      res.json({
+        success: true,
+        data: { updated: updatedCategories.length, categories: updatedCategories }
+      });
+    })
+  );
+  
+  // Parameterized routes come after specific named routes
   app.get("/api/categories/:slug", withStandardResponse(async (req: Request, res: Response) => {
     const { slug } = req.params;
     const user = req.user as any;
@@ -386,19 +441,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     return category;
-  }));
-  
-  app.get("/api/categories/main/with-children", withStandardResponse(async (req: Request, res: Response) => {
-    const user = req.user as any;
-    const isAdmin = user && user.role === 'admin';
-    
-    // Only include inactive categories if explicitly requested by admin for admin pages
-    const forAdminPage = req.query.forAdminPage === 'true';
-    const includeInactive = isAdmin && forAdminPage;
-    
-    const options = { includeInactive };
-    const mainCategoriesWithChildren = await storage.getMainCategoriesWithChildren(options);
-    return mainCategoriesWithChildren;
   }));
   
   app.get("/api/categories/:id/with-children", withStandardResponse(async (req: Request, res: Response) => {
@@ -458,43 +500,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     })
   );
   
-  // Batch update display orders for multiple categories (must come before individual route)
-  const batchDisplayOrderSchema = z.object({
-    updates: z.array(z.object({
-      id: z.number().int(),
-      displayOrder: z.number().int()
-    }))
-  });
 
-  app.put(
-    "/api/categories/batch-display-order", 
-    isAuthenticated, 
-    isAdmin,
-    asyncHandler(async (req: Request, res: Response) => {
-      // Validate the request body manually since we don't need params validation
-      const result = batchDisplayOrderSchema.safeParse(req.body);
-      if (!result.success) {
-        return res.status(400).json({
-          success: false,
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "Invalid request data",
-            details: result.error.flatten()
-          }
-        });
-      }
-      
-      const { updates } = result.data;
-      
-      // Update all categories in batch
-      const updatedCategories = await storage.batchUpdateCategoryDisplayOrder(updates);
-      
-      res.json({
-        success: true,
-        data: { updated: updatedCategories.length, categories: updatedCategories }
-      });
-    })
-  );
 
   // Create display order schema
   const displayOrderSchema = z.object({
