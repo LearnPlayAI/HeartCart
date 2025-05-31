@@ -311,7 +311,7 @@ function OrderStats({ orders, onFilterChange }: { orders: Order[]; onFilterChang
 }
 
 // Order Card Component
-function OrderCard({ order, onViewDetails }: { order: Order; onViewDetails: (order: Order) => void }) {
+function OrderCard({ order }: { order: Order }) {
   const statusConfig = getStatusConfig(order.status);
   const StatusIcon = statusConfig.icon;
 
@@ -359,15 +359,16 @@ function OrderCard({ order, onViewDetails }: { order: Order; onViewDetails: (ord
           </div>
 
           {/* Action Button */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onViewDetails(order)}
-            className="w-full"
-          >
-            <Eye className="h-4 w-4 mr-1" />
-            View Details
-          </Button>
+          <Link href={`/admin/orders/${order.id}`} className="w-full">
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full"
+            >
+              <Eye className="h-4 w-4 mr-1" />
+              View Details
+            </Button>
+          </Link>
         </div>
       </CardContent>
     </Card>
@@ -954,11 +955,7 @@ export default function AdminOrdersPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [paymentFilter, setPaymentFilter] = useState<string>("all");
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [showDetails, setShowDetails] = useState(false);
   const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
-  const [pdfViewerOpen, setPdfViewerOpen] = useState(false);
-  const [selectedOrderForPdf, setSelectedOrderForPdf] = useState<Order | null>(null);
 
   const { data: ordersResponse, isLoading, error, refetch } = useQuery({
     queryKey: ['/api/admin/orders'],
@@ -1165,7 +1162,6 @@ export default function AdminOrdersPage() {
                 <OrderCard
                   key={order.id}
                   order={order}
-                  onViewDetails={handleViewDetails}
                 />
               ))}
             </div>
@@ -1227,13 +1223,14 @@ export default function AdminOrdersPage() {
                           {formatDate(order.createdAt)}
                         </TableCell>
                         <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleViewDetails(order)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
+                          <Link href={`/admin/orders/${order.id}`}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </Link>
                         </TableCell>
                       </TableRow>
                     ))}

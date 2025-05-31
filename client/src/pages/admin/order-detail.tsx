@@ -83,14 +83,17 @@ export default function AdminOrderDetail() {
     }).format(amount);
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | null | undefined) => {
+    if (!dateString) return 'Not set';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'Invalid date';
     return new Intl.DateTimeFormat('en-ZA', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
-    }).format(new Date(dateString));
+    }).format(date);
   };
 
   const generateAttributeDisplayText = (attributes: Record<string, string>): string => {
