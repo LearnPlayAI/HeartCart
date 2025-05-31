@@ -59,6 +59,7 @@ export function MassUploadStep6({ data, onUpdate, onComplete, onPrevious }: Mass
             categoryId: product.childCategoryId || product.parentCategoryId,
             catalogId: data.catalogId,
             supplierId: data.supplierId,
+            supplierUrl: product.productUrl, // Add supplier URL from CSV
             costPrice: product.costPrice.toString(),
             regularPrice: product.regularPrice.toString(),
             salePrice: product.salePrice > 0 ? product.salePrice.toString() : null,

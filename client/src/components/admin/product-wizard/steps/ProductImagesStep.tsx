@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Form } from '@/components/ui/form';
 import { useDropzone } from 'react-dropzone';
-import { Loader2, X, Upload, ImagePlus, Star, StarOff, MoveVertical, AlertCircle } from 'lucide-react';
+import { Loader2, X, Upload, ImagePlus, Star, StarOff, MoveVertical, AlertCircle, ExternalLink } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { ensureValidImageUrl } from '@/utils/file-manager';
 import { ProductDraft } from '../ProductWizard';
@@ -254,6 +254,30 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ draft, onS
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div className="space-y-4">
+              {/* Supplier URL Link - Only show if available */}
+              {draft.supplierUrl && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-medium text-blue-900">Supplier Product Page</h4>
+                      <p className="text-xs text-blue-700 mt-1">
+                        Visit the supplier's page to find and download product images
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.open(draft.supplierUrl, '_blank')}
+                      className="flex items-center gap-2 text-blue-700 border-blue-300 hover:bg-blue-100"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      View Supplier Page
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               <div 
                 {...getRootProps()} 
                 className={`border-2 border-dashed rounded-lg p-4 sm:p-8 text-center transition-colors ${

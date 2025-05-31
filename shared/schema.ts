@@ -711,7 +711,7 @@ export const productDrafts = pgTable("product_drafts", {
   
   // Supplier information
   supplierId: integer("supplier_id").references(() => suppliers.id),
-  supplierUrl: text("supplier_url"), // URL to supplier's product page for easy image sourcing
+  supplierUrl: text("supplierUrl"), // URL to supplier's product page for easy image sourcing
   
   // Physical properties
   weight: text("weight"),
