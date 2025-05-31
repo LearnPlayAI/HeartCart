@@ -141,7 +141,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { data: fileData } = await objectStore.getFileAsBuffer(order.eftPop);
       logger.info(`PDF route: PDF retrieved successfully`, { size: fileData.length });
       
-      // Set appropriate headers for PDF viewing
+      // Set appropriate headers for PDF viewing in iframe
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `inline; filename="proof-of-payment-${order.orderNumber}.pdf"`);
       res.setHeader('Content-Length', fileData.length.toString());
@@ -150,6 +150,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.setHeader('Access-Control-Allow-Origin', '*');
       res.setHeader('Access-Control-Allow-Methods', 'GET');
       res.setHeader('Access-Control-Allow-Headers', 'Range');
+      res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
       
       // Send raw PDF data directly
       res.end(fileData);

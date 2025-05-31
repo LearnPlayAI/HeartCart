@@ -210,20 +210,42 @@ function PDFViewer({ orderId }: { orderId: number }) {
         </div>
       )}
 
-      {/* PDF Document in iframe */}
+      {/* PDF Document viewer */}
       <div className="border rounded-lg overflow-hidden bg-white" style={{ minHeight: '600px' }}>
-        <iframe
-          src={pdfUrl}
+        <object
+          data={pdfUrl}
+          type="application/pdf"
           width="100%"
           height="600"
-          title="Proof of Payment PDF"
           onLoad={handleIframeLoad}
           onError={handleIframeError}
           style={{ 
             border: 'none',
             display: loading ? 'none' : 'block'
           }}
-        />
+        >
+          <embed
+            src={pdfUrl}
+            type="application/pdf"
+            width="100%"
+            height="600"
+            style={{ border: 'none' }}
+          />
+          <div className="flex items-center justify-center h-96">
+            <div className="text-center">
+              <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground mb-4">PDF viewer not supported in this browser</p>
+              <Button 
+                onClick={() => window.open(pdfUrl, '_blank')} 
+                variant="outline" 
+                size="sm"
+              >
+                <ExternalLink className="h-4 w-4 mr-2" />
+                View PDF in New Tab
+              </Button>
+            </div>
+          </div>
+        </object>
       </div>
     </div>
   );
