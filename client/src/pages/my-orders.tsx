@@ -328,25 +328,23 @@ const MyOrdersPage: React.FC = () => {
 
               {/* Date From */}
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-1 block">From Date</label>
                 <Input
                   type="date"
                   placeholder="From date"
                   value={dateFrom}
                   onChange={(e) => setDateFrom(e.target.value)}
-                  className="w-full bg-[#ff68b4] text-white placeholder-pink-200 border-[#ff68b4] focus:border-[#ff1493] focus:ring-[#ff1493] [&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:invert cursor-pointer"
+                  className="w-full"
                 />
               </div>
 
               {/* Date To */}
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-1 block">To Date</label>
                 <Input
                   type="date"
                   placeholder="To date"
                   value={dateTo}
                   onChange={(e) => setDateTo(e.target.value)}
-                  className="w-full bg-[#ff68b4] text-white placeholder-pink-200 border-[#ff68b4] focus:border-[#ff1493] focus:ring-[#ff1493] [&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:invert cursor-pointer"
+                  className="w-full"
                 />
               </div>
 
