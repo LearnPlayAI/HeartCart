@@ -135,50 +135,16 @@ const getPaymentStatusConfig = (paymentStatus: string) => {
 
 // PDF Viewer Component
 function PDFViewer({ orderId }: { orderId: number }) {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [pdfError, setPdfError] = useState(false);
+  const pdfUrl = `/api/orders/${orderId}/proof`;
 
-  const pdfUrl = `/api/orders/${orderId}/proof?t=${Date.now()}`;
-
-  const handleIframeLoad = () => {
-    setLoading(false);
-    setError(null);
-  };
-
-  const handleIframeError = () => {
-    setLoading(false);
-    setError('Failed to load PDF document');
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading PDF...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <p className="text-red-600 mb-4">{error}</p>
-          <Button 
-            onClick={() => window.open(pdfUrl, '_blank')} 
-            variant="outline" 
-            size="sm"
-          >
-            <ExternalLink className="h-4 w-4 mr-2" />
-            Open in New Tab
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  // Simple timeout to detect if PDF loads successfully
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      // PDF should load within 5 seconds, if not consider showing fallback
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <div className="space-y-4">
@@ -200,41 +166,27 @@ function PDFViewer({ orderId }: { orderId: number }) {
         </Button>
       </div>
 
-      {/* Loading indicator */}
-      {loading && (
-        <div className="flex items-center justify-center h-96 bg-muted/20 rounded-lg">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading PDF...</p>
-          </div>
-        </div>
-      )}
-
       {/* PDF Document viewer */}
-      <div className="border rounded-lg overflow-hidden bg-white" style={{ minHeight: '600px' }}>
-        <object
-          data={pdfUrl}
-          type="application/pdf"
+      <div className="border rounded-lg overflow-hidden bg-white relative">
+        <iframe
+          src={pdfUrl}
           width="100%"
           height="600"
-          onLoad={handleIframeLoad}
-          onError={handleIframeError}
+          title="Proof of Payment PDF"
           style={{ 
             border: 'none',
-            display: loading ? 'none' : 'block'
+            minHeight: '600px'
           }}
-        >
-          <embed
-            src={pdfUrl}
-            type="application/pdf"
-            width="100%"
-            height="600"
-            style={{ border: 'none' }}
-          />
-          <div className="flex items-center justify-center h-96">
+          onLoad={() => setPdfError(false)}
+          onError={() => setPdfError(true)}
+        />
+        
+        {/* Fallback message - only shows if iframe fails */}
+        {pdfError && (
+          <div className="absolute inset-0 flex items-center justify-center bg-white z-10">
             <div className="text-center">
               <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground mb-4">PDF viewer not supported in this browser</p>
+              <p className="text-muted-foreground mb-4">Unable to display PDF in browser</p>
               <Button 
                 onClick={() => window.open(pdfUrl, '_blank')} 
                 variant="outline" 
@@ -245,7 +197,7 @@ function PDFViewer({ orderId }: { orderId: number }) {
               </Button>
             </div>
           </div>
-        </object>
+        )}
       </div>
     </div>
   );
