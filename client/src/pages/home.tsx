@@ -33,7 +33,7 @@ const Home = () => {
         <div className="flex flex-col md:flex-row gap-2 md:gap-6 mt-1 md:mt-2">
           {/* Category Sidebar - Hidden on mobile */}
           <div className="hidden md:block w-64 flex-shrink-0">
-            <div className="bg-white rounded-lg shadow-md overflow-hidden sticky top-20 max-h-[calc(100vh-8rem)] flex flex-col">
+            <div className="bg-white rounded-lg shadow-md overflow-hidden sticky top-20 h-[calc(100vh-8rem)] flex flex-col">
               <div className="bg-gradient-to-r from-[#FF69B4] to-[#FF1493] p-4 flex-shrink-0">
                 <h2 className="text-white text-lg font-bold">Categories</h2>
               </div>

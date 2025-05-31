@@ -116,7 +116,7 @@ export function CategorySidebar({
         </div>
       )}
       
-      <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0" style={{ maxHeight: isFilterMode ? '100%' : 'calc(100vh - 120px)' }}>
+      <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 max-h-full">
         {isLoading ? (
           // Show skeleton loaders when loading
           <div className="p-3 space-y-3">
@@ -146,7 +146,7 @@ export function CategorySidebar({
         ) : !categoriesWithChildren || categoriesWithChildren.length === 0 ? (
           <div className="p-4 text-sm text-muted-foreground">No categories found</div>
         ) : (
-          <div className="p-2 space-y-0.5">
+          <div className="p-2 space-y-0.5 h-full">
             {/* All Categories option for filter mode */}
             {isFilterMode && (
               <div className="rounded-md overflow-hidden mb-2">
