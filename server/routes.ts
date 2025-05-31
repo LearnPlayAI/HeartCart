@@ -486,6 +486,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     })
   );
 
+  // Batch update display orders for multiple categories
+  const batchDisplayOrderSchema = z.object({
+    updates: z.array(z.object({
+      id: z.number().int(),
+      displayOrder: z.number().int()
+    }))
+  });
+
+  app.put(
+    "/api/categories/batch-display-order", 
+    isAuthenticated, 
+    isAdmin,
+    validateRequest({
+      body: batchDisplayOrderSchema
+    }),
+    withStandardResponse(async (req: Request, res: Response) => {
+      const { updates } = req.body;
+      
+      // Update all categories in batch
+      const updatedCategories = await storage.batchUpdateCategoryDisplayOrder(updates);
+      
+      return { updated: updatedCategories.length, categories: updatedCategories };
+    })
+  );
+
   // Create visibility update schema
   const visibilitySchema = z.object({
     isActive: z.boolean(),

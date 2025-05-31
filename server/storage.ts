@@ -141,6 +141,9 @@ export interface IStorage {
     id: number,
     displayOrder: number,
   ): Promise<Category | undefined>;
+  batchUpdateCategoryDisplayOrder(
+    updates: { id: number; displayOrder: number }[]
+  ): Promise<Category[]>;
 
   // Product operations
   getProductCount(
@@ -924,6 +927,27 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error(`Error updating display order for category ${id}:`, error);
       throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
+  }
+
+  async batchUpdateCategoryDisplayOrder(
+    updates: { id: number; displayOrder: number }[]
+  ): Promise<Category[]> {
+    try {
+      const updatedCategories: Category[] = [];
+      
+      // Update each category in the batch
+      for (const update of updates) {
+        const category = await this.updateCategory(update.id, { displayOrder: update.displayOrder });
+        if (category) {
+          updatedCategories.push(category);
+        }
+      }
+      
+      return updatedCategories;
+    } catch (error) {
+      console.error('Error in batch update of category display orders:', error);
+      throw error;
     }
   }
 

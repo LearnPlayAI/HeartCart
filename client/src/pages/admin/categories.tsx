@@ -224,31 +224,30 @@ export default function AdminCategories() {
     },
   });
 
-  // Update display order mutation
-  const updateDisplayOrderMutation = useMutation({
-    mutationFn: async (data: { id: number; displayOrder: number }) => {
-      const response = await fetch(`/api/categories/${data.id}/display-order`, {
+  // Batch update display order mutation
+  const batchUpdateDisplayOrderMutation = useMutation({
+    mutationFn: async (updates: { id: number; displayOrder: number }[]) => {
+      const response = await fetch(`/api/categories/batch-display-order`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ displayOrder: data.displayOrder }),
+        body: JSON.stringify({ updates }),
       });
 
       if (!response.ok) {
-        throw new Error("Failed to update category display order");
+        throw new Error("Failed to update category display orders");
       }
 
       const result = await response.json();
       if (!result.success) {
-        throw new Error(result.error?.message || "Failed to update category display order");
+        throw new Error(result.error?.message || "Failed to update category display orders");
       }
       return result.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
       queryClient.invalidateQueries({ queryKey: ["/api/categories/main/with-children"] });
-      
     },
     onError: (error) => {
       toast({
@@ -501,15 +500,18 @@ export default function AdminCategories() {
       const [removed] = reorderedCategories.splice(source.index, 1);
       reorderedCategories.splice(destination.index, 0, removed);
       
-      // Update display orders for all affected categories
-      reorderedCategories.forEach((item, index) => {
-        if (item.category.displayOrder !== index) {
-          updateDisplayOrderMutation.mutate({
-            id: item.category.id,
-            displayOrder: index
-          });
-        }
-      });
+      // Collect all display order updates
+      const updates = reorderedCategories
+        .map((item, index) => ({
+          id: item.category.id,
+          displayOrder: index
+        }))
+        .filter((update, index) => reorderedCategories[index].category.displayOrder !== update.displayOrder);
+      
+      // Send batch update if there are changes
+      if (updates.length > 0) {
+        batchUpdateDisplayOrderMutation.mutate(updates);
+      }
       
       return;
     }
@@ -530,15 +532,18 @@ export default function AdminCategories() {
       const [removed] = reorderedSubcategories.splice(source.index, 1);
       reorderedSubcategories.splice(destination.index, 0, removed);
       
-      // Update display orders for all affected subcategories
-      reorderedSubcategories.forEach((item, index) => {
-        if (item.displayOrder !== index) {
-          updateDisplayOrderMutation.mutate({
-            id: item.id,
-            displayOrder: index
-          });
-        }
-      });
+      // Collect all subcategory display order updates
+      const subUpdates = reorderedSubcategories
+        .map((item, index) => ({
+          id: item.id,
+          displayOrder: index
+        }))
+        .filter((update, index) => reorderedSubcategories[index].displayOrder !== update.displayOrder);
+      
+      // Send batch update if there are changes
+      if (subUpdates.length > 0) {
+        batchUpdateDisplayOrderMutation.mutate(subUpdates);
+      }
     }
   };
 
