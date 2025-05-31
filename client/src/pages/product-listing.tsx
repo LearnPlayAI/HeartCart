@@ -166,7 +166,8 @@ const ProductListing = () => {
     }
   });
   const products = productsResponse?.success ? productsResponse.data : [];
-  const totalPages = productsResponse?.meta?.totalPages || 1;
+  const totalProducts = productsResponse?.meta?.total || products.length;
+  const totalPages = Math.ceil(totalProducts / limit);
   
   // Fetch categories with children for hierarchical filtering
   const { 
@@ -897,7 +898,7 @@ const ProductListing = () => {
                   <List className="h-4 w-4" />
                 </Button>
                 <span className="text-sm text-gray-500 ml-2">
-                  Showing {filteredProducts.length} of {products?.length || 0} products
+                  Showing {filteredProducts.length} of {totalProducts} products
                 </span>
               </div>
               
