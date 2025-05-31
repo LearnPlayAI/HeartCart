@@ -2,11 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRoute, Link } from 'wouter';
 import { AdminLayout } from '@/components/admin/layout';
-import { Document, Page, pdfjs } from 'react-pdf';
 import { apiRequest } from '@/lib/queryClient';
-
-// Configure PDF.js worker with correct version
-pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 import { useToast } from '@/hooks/use-toast';
 import {
   Card,
@@ -139,35 +135,20 @@ const getPaymentStatusConfig = (paymentStatus: string) => {
 
 // PDF Viewer Component
 function PDFViewer({ orderId }: { orderId: number }) {
-  const [numPages, setNumPages] = useState<number | null>(null);
-  const [pageNumber, setPageNumber] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [retryCount, setRetryCount] = useState(0);
 
   const pdfUrl = `/api/orders/${orderId}/proof?t=${Date.now()}`;
 
-  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
-    setNumPages(numPages);
+  const handleIframeLoad = () => {
     setLoading(false);
     setError(null);
-    setRetryCount(0);
   };
 
-  const onDocumentLoadError = (error: Error) => {
-    console.error('PDF Load Error:', error);
+  const handleIframeError = () => {
     setLoading(false);
-    setError(`Failed to load PDF: ${error.message}`);
+    setError('Failed to load PDF document');
   };
-
-  const retryLoad = () => {
-    setLoading(true);
-    setError(null);
-    setRetryCount(prev => prev + 1);
-  };
-
-  const goToPrevPage = () => setPageNumber(page => Math.max(1, page - 1));
-  const goToNextPage = () => setPageNumber(page => Math.min(numPages || 1, page + 1));
 
   if (loading) {
     return (
@@ -185,15 +166,14 @@ function PDFViewer({ orderId }: { orderId: number }) {
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
           <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Unable to Load PDF</h3>
-          <p className="text-muted-foreground mb-4">{error}</p>
-          <Button onClick={() => {
-            setLoading(true);
-            setError(null);
-            setPageNumber(1);
-          }}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Try Again
+          <p className="text-red-600 mb-4">{error}</p>
+          <Button 
+            onClick={() => window.open(pdfUrl, '_blank')} 
+            variant="outline" 
+            size="sm"
+          >
+            <ExternalLink className="h-4 w-4 mr-2" />
+            Open in New Tab
           </Button>
         </div>
       </div>
@@ -205,27 +185,10 @@ function PDFViewer({ orderId }: { orderId: number }) {
       {/* PDF Controls */}
       <div className="flex items-center justify-between bg-muted p-3 rounded-lg">
         <div className="flex items-center space-x-2">
-          <Button
-            onClick={goToPrevPage}
-            disabled={pageNumber <= 1}
-            size="sm"
-            variant="outline"
-          >
-            <ChevronLeft className="h-4 w-4" />
-            Previous
-          </Button>
+          <FileText className="h-4 w-4 text-muted-foreground" />
           <span className="text-sm font-medium">
-            Page {pageNumber} of {numPages}
+            Proof of Payment Document
           </span>
-          <Button
-            onClick={goToNextPage}
-            disabled={pageNumber >= (numPages || 1)}
-            size="sm"
-            variant="outline"
-          >
-            Next
-            <ChevronRight className="h-4 w-4" />
-          </Button>
         </div>
         <Button
           onClick={() => window.open(pdfUrl, '_blank')}
@@ -237,37 +200,30 @@ function PDFViewer({ orderId }: { orderId: number }) {
         </Button>
       </div>
 
-      {/* PDF Document */}
-      <div className="border rounded-lg overflow-hidden bg-white">
-        <Document
-          file={{
-            url: pdfUrl,
-            withCredentials: false,
+      {/* Loading indicator */}
+      {loading && (
+        <div className="flex items-center justify-center h-96 bg-muted/20 rounded-lg">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading PDF...</p>
+          </div>
+        </div>
+      )}
+
+      {/* PDF Document in iframe */}
+      <div className="border rounded-lg overflow-hidden bg-white" style={{ minHeight: '600px' }}>
+        <iframe
+          src={pdfUrl}
+          width="100%"
+          height="600"
+          title="Proof of Payment PDF"
+          onLoad={handleIframeLoad}
+          onError={handleIframeError}
+          style={{ 
+            border: 'none',
+            display: loading ? 'none' : 'block'
           }}
-          onLoadSuccess={onDocumentLoadSuccess}
-          onLoadError={onDocumentLoadError}
-          options={{
-            cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
-            cMapPacked: true,
-            standardFontDataUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/standard_fonts/`,
-          }}
-          loading={
-            <div className="flex items-center justify-center h-96">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-                <p className="text-muted-foreground">Loading PDF...</p>
-              </div>
-            </div>
-          }
-          key={`pdf-${orderId}-${retryCount}`}
-        >
-          <Page 
-            pageNumber={pageNumber} 
-            width={Math.min(window.innerWidth * 0.8, 800)}
-            renderTextLayer={false}
-            renderAnnotationLayer={false}
-          />
-        </Document>
+        />
       </div>
     </div>
   );
