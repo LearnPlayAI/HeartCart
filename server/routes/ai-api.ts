@@ -60,7 +60,7 @@ router.post('/generate-description', asyncHandler(async (req, res) => {
     
     // Get the Gemini Pro model
     const model = genAI.getGenerativeModel({
-      model: "gemini-pro",
+      model: "gemini-1.5-flash",
       safetySettings,
     });
     
@@ -127,7 +127,7 @@ router.post('/optimize-seo', asyncHandler(async (req, res) => {
     
     // Get the Gemini Pro model
     const model = genAI.getGenerativeModel({
-      model: "gemini-pro",
+      model: "gemini-1.5-flash",
       safetySettings,
     });
     
@@ -139,19 +139,50 @@ router.post('/optimize-seo', asyncHandler(async (req, res) => {
     const response = await result.response;
     const text = response.text();
     
-    // Try to parse JSON from the response
+    // Clean the response and extract JSON
+    let seoData: any = null;
     try {
-      // Extract JSON part from the response if it's not a pure JSON
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      const jsonString = jsonMatch ? jsonMatch[0] : text;
-      const seoData = JSON.parse(jsonString);
+      // First try to parse the response as direct JSON
+      seoData = JSON.parse(text);
+      console.log('Successfully parsed direct JSON:', seoData);
+    } catch (directParseError) {
+      console.log('Direct JSON parse failed, trying regex extraction...');
       
+      try {
+        // Extract JSON part from the response if it's not a pure JSON
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          let jsonString = jsonMatch[0];
+          console.log('Extracted JSON String:', jsonString);
+          
+          // Clean up the JSON string to remove control characters and fix formatting issues
+          jsonString = jsonString
+            .replace(/[\u0000-\u001f]+/g, ' ') // Replace control characters with spaces
+            .replace(/\n/g, ' ') // Replace newlines with spaces
+            .replace(/\r/g, ' ') // Replace carriage returns with spaces
+            .replace(/\t/g, ' ') // Replace tabs with spaces
+            .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+            .trim();
+          
+          console.log('Cleaned JSON String:', jsonString);
+          seoData = JSON.parse(jsonString);
+          console.log('Successfully parsed cleaned JSON:', seoData);
+        } else {
+          console.log('No JSON found in response');
+          throw new Error('No valid JSON found in AI response');
+        }
+      } catch (extractParseError) {
+        console.log('JSON extraction failed:', extractParseError);
+        throw extractParseError;
+      }
+    }
+    
+    if (seoData) {
       res.json({
         success: true,
         data: seoData,
       });
-    } catch (jsonError) {
-      console.error('Error parsing JSON from AI response:', jsonError);
+    } else {
       res.json({
         success: true,
         data: {
