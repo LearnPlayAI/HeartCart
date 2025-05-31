@@ -6912,6 +6912,10 @@ export class DatabaseStorage implements IStorage {
             imageUrls: draftData.imageUrls || existingDraft.imageUrls,
             imageObjectKeys:
               draftData.imageObjectKeys || existingDraft.imageObjectKeys,
+            supplierUrl:
+              draftData.supplierUrl !== undefined
+                ? draftData.supplierUrl
+                : existingDraft.supplierUrl,
           };
           break;
 
