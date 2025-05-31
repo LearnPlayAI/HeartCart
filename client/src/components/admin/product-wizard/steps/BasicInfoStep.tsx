@@ -554,7 +554,10 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
                       <Input 
                         {...field} 
                         placeholder="Enter product name" 
-                        onChange={handleNameChange}
+                        onChange={(e) => {
+                          field.onChange(e); // Update the form state
+                          handleNameChange(e); // Update the heading
+                        }}
                         className="h-9 sm:h-10"
                       />
                     </FormControl>
