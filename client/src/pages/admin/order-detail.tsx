@@ -240,12 +240,7 @@ function PDFViewer({ orderId }: { orderId: number }) {
       {/* PDF Document */}
       <div className="border rounded-lg overflow-hidden bg-white">
         <Document
-          file={{
-            url: pdfUrl,
-            httpHeaders: {
-              'Cache-Control': 'no-cache'
-            }
-          }}
+          file={pdfUrl}
           onLoadSuccess={onDocumentLoadSuccess}
           onLoadError={onDocumentLoadError}
           loading={

@@ -271,7 +271,7 @@ function OrderCard({ order }: { order: Order }) {
         <div className="border-t pt-4">
           <div className="flex justify-between items-center">
             <span className="text-sm text-muted-foreground">
-              {order.orderItems.length} item(s)
+              {order.orderItems?.length || 0} item(s)
             </span>
             <span className="font-semibold">
               {formatCurrency(order.totalAmount)}
