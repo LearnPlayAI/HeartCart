@@ -155,9 +155,13 @@ export const SEOStep: React.FC<SEOStepProps> = ({
   const applySEOSuggestion = () => {
     if (!aiSuggestions) return;
     
-    form.setValue('metaTitle', aiSuggestions.title);
-    form.setValue('metaDescription', aiSuggestions.description);
-    form.setValue('metaKeywords', aiSuggestions.keywords);
+    form.setValue('metaTitle', aiSuggestions.metaTitle || aiSuggestions.title);
+    form.setValue('metaDescription', aiSuggestions.metaDescription || aiSuggestions.description);
+    // Convert keywords array to comma-separated string if it's an array
+    const keywordsString = Array.isArray(aiSuggestions.keywords) 
+      ? aiSuggestions.keywords.join(', ') 
+      : aiSuggestions.keywords;
+    form.setValue('metaKeywords', keywordsString);
     
     setShowAiDialog(false);
   };
@@ -193,17 +197,21 @@ export const SEOStep: React.FC<SEOStepProps> = ({
             <div className="space-y-4 mt-4">
               <div className="space-y-2">
                 <h3 className="text-sm font-medium">Meta Title</h3>
-                <p className="text-sm p-3 bg-secondary rounded-md">{aiSuggestions.title}</p>
+                <p className="text-sm p-3 bg-secondary rounded-md">{aiSuggestions.metaTitle || aiSuggestions.title}</p>
               </div>
               
               <div className="space-y-2">
                 <h3 className="text-sm font-medium">Meta Description</h3>
-                <p className="text-sm p-3 bg-secondary rounded-md">{aiSuggestions.description}</p>
+                <p className="text-sm p-3 bg-secondary rounded-md">{aiSuggestions.metaDescription || aiSuggestions.description}</p>
               </div>
               
               <div className="space-y-2">
                 <h3 className="text-sm font-medium">Meta Keywords</h3>
-                <p className="text-sm p-3 bg-secondary rounded-md">{aiSuggestions.keywords}</p>
+                <p className="text-sm p-3 bg-secondary rounded-md">
+                  {Array.isArray(aiSuggestions.keywords) 
+                    ? aiSuggestions.keywords.join(', ') 
+                    : aiSuggestions.keywords}
+                </p>
               </div>
             </div>
           )}
