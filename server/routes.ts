@@ -123,56 +123,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/orders/:id/proof', async (req, res) => {
     try {
       const orderId = parseInt(req.params.id);
-      console.log(`🔍 PDF ENDPOINT: Request received for order ${orderId}`);
-      console.log(`🔍 PDF ENDPOINT: Request headers:`, JSON.stringify(req.headers, null, 2));
       logger.info(`PDF route: Looking up order ${orderId}`);
       
       const order = await storage.getOrderById(orderId);
-      console.log(`🔍 PDF ENDPOINT: Order lookup result:`, order ? { 
-        id: order.id, 
-        eftPop: order.eftPop,
-        orderNumber: order.orderNumber 
-      } : 'ORDER NOT FOUND');
       logger.info(`PDF route: Order found`, { order: order ? { id: order.id, eftPop: order.eftPop } : null });
       
       if (!order) {
-        console.log(`❌ PDF ENDPOINT: Order ${orderId} not found`);
         return res.status(404).json({ success: false, error: "Order not found" });
       }
       
       if (!order.eftPop) {
-        console.log(`❌ PDF ENDPOINT: No EFT proof found for order ${orderId}`);
         return res.status(404).json({ success: false, error: "No proof of payment found for this order" });
       }
       
       // Get the PDF from object store
-      console.log(`📁 PDF ENDPOINT: Retrieving PDF from object store, key: ${order.eftPop}`);
       logger.info(`PDF route: Retrieving PDF from object store`, { objectKey: order.eftPop });
-      
       const { data: fileData } = await objectStore.getFileAsBuffer(order.eftPop);
-      console.log(`✅ PDF ENDPOINT: PDF retrieved successfully, size: ${fileData.length} bytes`);
-      console.log(`✅ PDF ENDPOINT: First 20 bytes:`, Array.from(fileData.slice(0, 20)).map(b => b.toString(16).padStart(2, '0')).join(' '));
       logger.info(`PDF route: PDF retrieved successfully`, { size: fileData.length });
       
-      // Set appropriate headers for PDF.js viewing
-      console.log(`📋 PDF ENDPOINT: Setting response headers`);
+      // Set appropriate headers for PDF viewing
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `inline; filename="proof-of-payment-${order.orderNumber}.pdf"`);
       res.setHeader('Content-Length', fileData.length.toString());
-      res.setHeader('Accept-Ranges', 'bytes');
-      res.setHeader('Cache-Control', 'public, max-age=86400');
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Access-Control-Allow-Methods', 'GET');
-      res.setHeader('Access-Control-Allow-Headers', 'Range');
-      // Remove X-Frame-Options to allow PDF.js to work properly
-      res.setHeader('X-Content-Type-Options', 'nosniff');
       
-      console.log(`📤 PDF ENDPOINT: Sending PDF data (${fileData.length} bytes)`);
       // Send raw PDF data directly
       res.end(fileData);
-      console.log(`✅ PDF ENDPOINT: Response sent successfully`);
     } catch (error) {
-      console.error(`❌ PDF ENDPOINT ERROR:`, error);
       logger.error('PDF route error:', error);
       res.status(500).json({ success: false, error: "Failed to retrieve proof of payment" });
     }

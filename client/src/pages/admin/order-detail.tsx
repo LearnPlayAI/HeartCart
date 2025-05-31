@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRoute, Link } from 'wouter';
 import { AdminLayout } from '@/components/admin/layout';
+import { Document, Page } from 'react-pdf';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -44,26 +45,7 @@ import {
   Package2,
   Receipt,
   MessageSquare,
-  ZoomIn,
-  ZoomOut,
-  RotateCcw,
-  Download,
 } from 'lucide-react';
-import { Document, Page, pdfjs } from 'react-pdf';
-import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
-import 'react-pdf/dist/esm/Page/TextLayer.css';
-import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
-import 'react-pdf/dist/esm/Page/TextLayer.css';
-
-// Configure PDF.js worker - use CDN with proper fallback
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
-
-// Add options for react-pdf
-const options = {
-  cMapUrl: `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/cmaps/`,
-  cMapPacked: true,
-  standardFontDataUrl: `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/standard_fonts/`,
-};
 
 // Types
 interface OrderItem {
@@ -152,95 +134,44 @@ const getPaymentStatusConfig = (paymentStatus: string) => {
   return configs[paymentStatus as keyof typeof configs] || configs.pending;
 };
 
-// PDF Download Component 
+// PDF Viewer Component
 function PDFViewer({ orderId }: { orderId: number }) {
-  const pdfUrl = `/api/orders/${orderId}/proof`;
+  const [numPages, setNumPages] = useState<number | null>(null);
+  const [pageNumber, setPageNumber] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
-  // Download handler for PDF
-  const handleDownload = async () => {
-    try {
-      const response = await fetch(pdfUrl);
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `proof-of-payment-order-${orderId}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('Download failed:', error);
-      // Fallback to direct link
-      window.open(pdfUrl, '_blank');
-    }
+  const pdfUrl = `/api/orders/${orderId}/proof?t=${Date.now()}`;
+
+  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
+    setNumPages(numPages);
+    setLoading(false);
+    setError(null);
+    setRetryCount(0);
   };
 
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-medium">Proof of Payment</h3>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleDownload}
-            className="flex items-center gap-2"
-          >
-            <Download className="h-4 w-4" />
-            Download PDF
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => window.open(pdfUrl, '_blank')}
-            className="flex items-center gap-2"
-          >
-            <ExternalLink className="h-4 w-4" />
-            Open in New Tab
-          </Button>
-        </div>
-      </div>
-      
-      <div className="border rounded-lg p-8 text-center bg-gray-50">
-        <div className="space-y-6">
-          <div className="flex justify-center">
-            <div className="w-20 h-20 bg-primary/10 rounded-lg flex items-center justify-center">
-              <Download className="h-10 w-10 text-primary" />
-            </div>
-          </div>
-          <div>
-            <h4 className="font-semibold text-gray-900 mb-2">PDF Document Available</h4>
-            <p className="text-sm text-gray-600 mb-6">
-              The proof of payment document is ready for download or viewing in a new tab.
-            </p>
-            <div className="flex justify-center gap-3">
-              <Button
-                onClick={handleDownload}
-                className="flex items-center gap-2"
-              >
-                <Download className="h-4 w-4" />
-                Download Document
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => window.open(pdfUrl, '_blank')}
-                className="flex items-center gap-2"
-              >
-                <ExternalLink className="h-4 w-4" />
-                View in Browser
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading PDF document...</p>
-          </div>
+  const onDocumentLoadError = (error: Error) => {
+    console.error('PDF Load Error:', error);
+    setLoading(false);
+    setError(`Failed to load PDF: ${error.message}`);
+  };
+
+  const retryLoad = () => {
+    setLoading(true);
+    setError(null);
+    setRetryCount(prev => prev + 1);
+  };
+
+  const goToPrevPage = () => setPageNumber(page => Math.max(1, page - 1));
+  const goToNextPage = () => setPageNumber(page => Math.min(numPages || 1, page + 1));
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading PDF...</p>
         </div>
       </div>
     );
@@ -248,47 +179,19 @@ function PDFViewer({ orderId }: { orderId: number }) {
 
   if (error) {
     return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between bg-muted p-3 rounded-lg">
-          <div className="flex items-center space-x-2">
-            <FileText className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium">Proof of Payment Document</span>
-          </div>
-          <Button
-            onClick={() => window.open(pdfUrl, '_blank')}
-            size="sm"
-            variant="outline"
-          >
-            <ExternalLink className="h-4 w-4 mr-2" />
-            Open in New Tab
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold mb-2">Unable to Load PDF</h3>
+          <p className="text-muted-foreground mb-4">{error}</p>
+          <Button onClick={() => {
+            setLoading(true);
+            setError(null);
+            setPageNumber(1);
+          }}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Try Again
           </Button>
-        </div>
-        <div className="flex items-center justify-center h-96 border rounded-lg bg-white">
-          <div className="text-center">
-            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-            <p className="text-red-600 mb-4">{error}</p>
-            <div className="space-x-2">
-              <Button 
-                onClick={() => {
-                  setLoading(true);
-                  setError(null);
-                }}
-                variant="outline" 
-                size="sm"
-              >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Retry
-              </Button>
-              <Button 
-                onClick={() => window.open(pdfUrl, '_blank')} 
-                variant="outline" 
-                size="sm"
-              >
-                <ExternalLink className="h-4 w-4 mr-2" />
-                Open in New Tab
-              </Button>
-            </div>
-          </div>
         </div>
       </div>
     );
@@ -296,161 +199,60 @@ function PDFViewer({ orderId }: { orderId: number }) {
 
   return (
     <div className="space-y-4">
-      {/* PDF Toolbar */}
-      <div className="bg-muted p-3 rounded-lg space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <FileText className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium">Proof of Payment Document</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Button
-              onClick={() => window.open(pdfUrl, '_blank')}
-              size="sm"
-              variant="outline"
-            >
-              <ExternalLink className="h-4 w-4 mr-2" />
-              Open in New Tab
-            </Button>
-            <Button
-              onClick={() => {
-                const link = document.createElement('a');
-                link.href = pdfUrl;
-                link.download = `proof-of-payment-${orderId}.pdf`;
-                link.click();
-              }}
-              size="sm"
-              variant="outline"
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Download
-            </Button>
-          </div>
-        </div>
-
-        {/* Navigation and Zoom Controls - Responsive Layout */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          {/* Page Navigation */}
-          <div className="flex items-center justify-center sm:justify-start space-x-2">
-            <Button
-              onClick={goToPrevPage}
-              disabled={pageNumber <= 1}
-              size="sm"
-              variant="outline"
-            >
-              <ChevronLeft className="h-4 w-4" />
-              <span className="hidden sm:inline ml-1">Prev</span>
-            </Button>
-            <span className="text-sm font-medium px-2 whitespace-nowrap">
-              Page {pageNumber} of {numPages}
-            </span>
-            <Button
-              onClick={goToNextPage}
-              disabled={pageNumber >= numPages}
-              size="sm"
-              variant="outline"
-            >
-              <span className="hidden sm:inline mr-1">Next</span>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-
-          {/* Zoom Controls */}
-          <div className="flex items-center justify-center space-x-2">
-            <Button onClick={zoomOut} size="sm" variant="outline">
-              <ZoomOut className="h-4 w-4" />
-            </Button>
-            <span className="text-sm font-medium px-2 min-w-[60px] text-center">
-              {Math.round(scale * 100)}%
-            </span>
-            <Button onClick={zoomIn} size="sm" variant="outline">
-              <ZoomIn className="h-4 w-4" />
-            </Button>
-            <Button onClick={resetZoom} size="sm" variant="outline" className="hidden sm:flex">
-              <RotateCcw className="h-4 w-4" />
-            </Button>
-            <Button onClick={fitToWidth} size="sm" variant="outline" className="hidden sm:flex">
-              <span className="text-xs">Fit Width</span>
-            </Button>
-          </div>
-        </div>
-
-        {/* Mobile-only zoom controls */}
-        <div className="flex sm:hidden items-center justify-center space-x-2">
-          <Button onClick={resetZoom} size="sm" variant="outline">
-            <RotateCcw className="h-4 w-4 mr-1" />
-            Reset
+      {/* PDF Controls */}
+      <div className="flex items-center justify-between bg-muted p-3 rounded-lg">
+        <div className="flex items-center space-x-2">
+          <Button
+            onClick={goToPrevPage}
+            disabled={pageNumber <= 1}
+            size="sm"
+            variant="outline"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Previous
           </Button>
-          <Button onClick={fitToWidth} size="sm" variant="outline">
-            <span className="text-xs">Fit Width</span>
+          <span className="text-sm font-medium">
+            Page {pageNumber} of {numPages}
+          </span>
+          <Button
+            onClick={goToNextPage}
+            disabled={pageNumber >= (numPages || 1)}
+            size="sm"
+            variant="outline"
+          >
+            Next
+            <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
+        <Button
+          onClick={() => window.open(`/api/orders/${orderId}/proof`, '_blank')}
+          size="sm"
+          variant="outline"
+        >
+          <ExternalLink className="h-4 w-4 mr-2" />
+          Open in New Tab
+        </Button>
       </div>
 
       {/* PDF Document */}
-      <div 
-        id="pdf-container" 
-        className="border rounded-lg overflow-auto bg-white"
-        style={{ maxHeight: '80vh' }}
-      >
-        <div className="flex justify-center p-4">
-          <Document
-            file={pdfUrl}
-            onLoadSuccess={onDocumentLoadSuccess}
-            onLoadError={onDocumentLoadError}
-            onLoadProgress={(progress) => {
-              console.log('📊 PDF Load Progress:', progress);
-            }}
-            onSourceError={(error) => {
-              console.error('🚫 PDF Source Error:', error);
-            }}
-            options={options}
-            loading={
-              <div className="flex items-center justify-center h-96">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-                  <p className="text-muted-foreground">Loading PDF...</p>
-                  <p className="text-xs text-muted-foreground mt-2">URL: {pdfUrl}</p>
-                </div>
-              </div>
-            }
-            error={
-              <div className="flex items-center justify-center h-96">
-                <div className="text-center">
-                  <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-                  <p className="text-red-600 mb-4">Failed to load PDF document</p>
-                  <Button 
-                    onClick={() => window.open(pdfUrl, '_blank')} 
-                    variant="outline" 
-                    size="sm"
-                  >
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    Open in New Tab
-                  </Button>
-                </div>
-              </div>
-            }
-          >
-            <Page
-              pageNumber={pageNumber}
-              scale={scale}
-              renderTextLayer={false}
-              renderAnnotationLayer={false}
-              className="shadow-lg"
-              onLoadSuccess={() => {
-                console.log('✅ Page rendered successfully:', pageNumber);
-                onPageLoadSuccess();
-              }}
-              onLoadError={(error) => {
-                console.error('❌ Page render error:', error);
-                onPageLoadError(error);
-              }}
-              onRenderSuccess={() => {
-                console.log('🎨 Page render completed:', pageNumber);
-              }}
-            />
-          </Document>
-        </div>
+      <div className="border rounded-lg overflow-hidden bg-white">
+        <Document
+          file={`/api/orders/${orderId}/proof`}
+          onLoadSuccess={onDocumentLoadSuccess}
+          onLoadError={onDocumentLoadError}
+          loading={
+            <div className="flex items-center justify-center h-96">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          }
+        >
+          <Page 
+            pageNumber={pageNumber} 
+            width={Math.min(window.innerWidth * 0.8, 800)}
+            renderTextLayer={false}
+            renderAnnotationLayer={false}
+          />
+        </Document>
       </div>
     </div>
   );
