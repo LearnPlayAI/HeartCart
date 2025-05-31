@@ -633,18 +633,18 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
                       variant="outline"
                       size="sm"
                       className="h-8 gap-1 text-xs"
-                      onClick={generateDescriptionSuggestions}
-                      disabled={isGeneratingDescription || !form.getValues('name')}
+                      onClick={enhanceProductWithAI}
+                      disabled={isGeneratingDescription || !form.getValues('name') || !form.getValues('description')}
                     >
                       {isGeneratingDescription ? (
                         <>
                           <Loader2 className="h-3 w-3 animate-spin" />
-                          <span>Generating...</span>
+                          <span>Enhancing...</span>
                         </>
                       ) : (
                         <>
                           <Wand2 className="h-3 w-3" />
-                          <span>AI Generate</span>
+                          <span>AI Enhance</span>
                         </>
                       )}
                     </Button>
