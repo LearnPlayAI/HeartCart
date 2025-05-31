@@ -529,6 +529,105 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
             {data.validationResults?.hasErrors ? 'Fix Errors First' : 'Continue to Adjustments'}
           </Button>
         </div>
+
+        {/* Create Category Dialog - exactly as in admin categories page */}
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Create New Category</DialogTitle>
+              <DialogDescription>
+                Add a new category to organize your products.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="name">Name*</Label>
+                <Input 
+                  id="name" 
+                  value={newName} 
+                  onChange={(e) => setNewName(e.target.value)} 
+                  placeholder="Category Name" 
+                />
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="parent">Parent Category</Label>
+                <Select value={newParentId || "none"} onValueChange={(value) => setNewParentId(value === "none" ? null : value)}>
+                  <SelectTrigger id="parent">
+                    <SelectValue placeholder="No Parent (Main Category)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No Parent (Main Category)</SelectItem>
+                    {categories?.filter(cat => cat.level === 0).map((cat: any) => (
+                      <SelectItem key={cat.id} value={cat.id.toString()}>
+                        {cat.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-muted-foreground">
+                  Current level: {newLevel} {newLevel === 0 ? "(Main Category)" : "(Subcategory)"}
+                </p>
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="slug">Slug</Label>
+                <div className="flex gap-2">
+                  <Input 
+                    id="slug" 
+                    value={newSlug} 
+                    onChange={(e) => setNewSlug(e.target.value)} 
+                    placeholder={slugify(newName) || "category-slug"} 
+                  />
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => setNewSlug(slugify(newName))}
+                  >
+                    Generate
+                  </Button>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  The URL-friendly version of the name.
+                </p>
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="displayOrder">Display Order</Label>
+                <Input 
+                  id="displayOrder" 
+                  type="number" 
+                  value={newDisplayOrder} 
+                  onChange={(e) => setNewDisplayOrder(parseInt(e.target.value))} 
+                />
+                <p className="text-sm text-muted-foreground">
+                  Controls the display order within the same level.
+                </p>
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea 
+                  id="description"
+                  value={newDescription} 
+                  onChange={(e) => setNewDescription(e.target.value)} 
+                  placeholder="Category description" 
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button 
+                onClick={handleCreateCategory} 
+                disabled={createMutation.isPending}
+              >
+                {createMutation.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Create Category
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );
