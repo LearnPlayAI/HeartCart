@@ -690,6 +690,38 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async getCategoriesByParent(
+    parentId: number,
+    options?: { includeInactive?: boolean },
+  ): Promise<Category[]> {
+    try {
+      // Build conditions for children
+      const conditions: SQL<unknown>[] = [
+        eq(categories.parentId, parentId),
+      ];
+
+      // Only filter by isActive if we're not including inactive categories
+      if (!options?.includeInactive) {
+        conditions.push(eq(categories.isActive, true));
+      }
+
+      // Get the children categories
+      const children = await db
+        .select()
+        .from(categories)
+        .where(and(...conditions))
+        .orderBy(asc(categories.displayOrder), asc(categories.name));
+
+      return children;
+    } catch (error) {
+      console.error(
+        `Error fetching categories by parent ${parentId}:`,
+        error,
+      );
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
+  }
+
   async getCategoryWithChildren(
     categoryId: number,
     options?: { includeInactive?: boolean },
