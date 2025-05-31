@@ -441,18 +441,23 @@ router.post("/:id/admin/payment-received", isAuthenticated, asyncHandler(async (
       return sendError(res, "Failed to update order payment status", 500);
     }
 
-    logger.info("Order payment marked as received by admin", {
+    // Automatically update the order status to "processing" when payment is received
+    const finalOrder = await storage.updateOrderStatus(orderId, "processing");
+
+    logger.info("Order payment marked as received by admin and status updated to processing", {
       orderId,
       orderNumber: order.orderNumber,
       adminUserId: userId,
       paymentReceivedDate,
-      previousStatus: order.paymentStatus,
-      newStatus: "payment_received",
+      previousPaymentStatus: order.paymentStatus,
+      newPaymentStatus: "payment_received",
+      previousOrderStatus: order.status,
+      newOrderStatus: "processing",
     });
 
     return sendSuccess(res, {
-      message: "Payment marked as received successfully",
-      order: updatedOrder,
+      message: "Payment marked as received and order moved to processing",
+      order: finalOrder || updatedOrder,
     });
   } catch (error) {
     logger.error("Error marking payment as received", { 
