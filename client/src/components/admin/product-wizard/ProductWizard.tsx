@@ -682,7 +682,7 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ draftId, initialDa
       <StepProgress />
       <div className="bg-white shadow-md rounded-lg p-6">
         <h2 className="text-2xl font-bold mb-6">
-          {editMode ? 'Edit Product' : 'Add New Product'}
+          {editMode && draft?.name ? `Edit: ${draft.name}` : editMode ? 'Edit Product' : 'Add New Product'}
         </h2>
 
         <Tabs value={currentStep} onValueChange={handleStepChange} className="w-full">
