@@ -84,9 +84,23 @@ const ProductListing = () => {
   const [sortBy, setSortBy] = useState(searchParams.get('sort') || 'default');
   const [priceRange, setPriceRange] = useState([0, 5000]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(searchParams.get('category'));
-  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
-    searchParams.get('categoryId') ? parseInt(searchParams.get('categoryId')!) : null
-  );
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(() => {
+    const categoryIdParam = new URLSearchParams(window.location.search).get('categoryId');
+    console.log('Initial categoryId from URL:', categoryIdParam);
+    return categoryIdParam ? parseInt(categoryIdParam) : null;
+  });
+  
+  // Update state when URL changes
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const categoryIdParam = urlParams.get('categoryId');
+    console.log('URL changed, new categoryId:', categoryIdParam);
+    if (categoryIdParam) {
+      setSelectedCategoryId(parseInt(categoryIdParam));
+    } else {
+      setSelectedCategoryId(null);
+    }
+  }, [location]);
   const [availabilityFilter, setAvailabilityFilter] = useState('all');
   const [ratingFilter, setRatingFilter] = useState(searchParams.get('rating') || '');
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
@@ -141,6 +155,8 @@ const ProductListing = () => {
         if (searchParams.get('includeChildren') === 'true') {
           productParams.append('includeChildren', 'true');
         }
+        console.log('Fetching products with params:', productParams.toString());
+        console.log('selectedCategoryId:', selectedCategoryId);
         const response = await fetch(`/api/products?${productParams}`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
