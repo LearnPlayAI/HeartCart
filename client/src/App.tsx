@@ -16,6 +16,8 @@ import OrderDetail from "@/pages/order-detail";
 import OrderConfirmation from "@/pages/order-confirmation";
 import SearchResults from "@/pages/search-results";
 import Profile from "@/pages/profile-fix";
+import ProfileSettings from "@/pages/profile-settings";
+import MyOrders from "@/pages/my-orders";
 import AuthPage from "@/pages/auth-page";
 import FlashDeals from "@/pages/flash-deals";
 import NotFound from "@/pages/not-found";

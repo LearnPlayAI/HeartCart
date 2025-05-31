@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
-import { User, ShoppingCart, LogIn, UserPlus, LogOut, ChevronDown, LayoutDashboard, Terminal } from 'lucide-react';
+import { User, ShoppingCart, LogIn, UserPlus, LogOut, ChevronDown, LayoutDashboard, Terminal, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { 
   DropdownMenu, 
@@ -178,6 +178,20 @@ const Header = () => {
             <Link href="/products" className="px-4 py-1 font-medium text-sm hover:bg-white hover:text-[#FF69B4] rounded-full mx-1 transition-colors duration-200">
               All Products
             </Link>
+            
+            {/* User Profile Navigation - only show if logged in */}
+            {user && (
+              <>
+                <Link href="/profile-settings" className="px-4 py-1 font-medium text-sm hover:bg-white hover:text-[#FF69B4] rounded-full mx-1 transition-colors duration-200 flex items-center">
+                  <User className="h-3 w-3 mr-1" />
+                  My Profile
+                </Link>
+                <Link href="/my-orders" className="px-4 py-1 font-medium text-sm hover:bg-white hover:text-[#FF69B4] rounded-full mx-1 transition-colors duration-200 flex items-center">
+                  <Package className="h-3 w-3 mr-1" />
+                  My Orders
+                </Link>
+              </>
+            )}
             
             {/* Admin Dashboard direct link in main navigation */}
             {user?.role === 'admin' && (
