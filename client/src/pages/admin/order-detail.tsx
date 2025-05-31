@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRoute, Link } from 'wouter';
+import { AdminLayout } from '@/components/admin/layout';
 import { Document, Page } from 'react-pdf';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -340,28 +341,32 @@ export default function AdminOrderDetail() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </AdminLayout>
     );
   }
 
   if (error || !order) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Order Not Found</h1>
-          <p className="text-muted-foreground mb-4">
-            The order you're looking for doesn't exist or you don't have permission to view it.
-          </p>
-          <Link href="/admin/orders">
-            <Button>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Orders
-            </Button>
-          </Link>
+      <AdminLayout>
+        <div className="container mx-auto px-4 py-8">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold mb-4">Order Not Found</h1>
+            <p className="text-muted-foreground mb-4">
+              The order you're looking for doesn't exist or you don't have permission to view it.
+            </p>
+            <Link href="/admin/orders">
+              <Button>
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Orders
+              </Button>
+            </Link>
+          </div>
         </div>
-      </div>
+      </AdminLayout>
     );
   }
 
@@ -369,7 +374,8 @@ export default function AdminOrderDetail() {
   const paymentConfig = getPaymentStatusConfig(order.paymentStatus);
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-6">
+    <AdminLayout>
+      <div className="container mx-auto px-4 py-8 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
@@ -748,6 +754,7 @@ export default function AdminOrderDetail() {
           )}
         </div>
       </div>
-    </div>
+      </div>
+    </AdminLayout>
   );
 }
