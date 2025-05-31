@@ -117,7 +117,7 @@ const ProductListing = () => {
     isLoading: isLoadingProducts,
     error: productsError
   } = useQuery<StandardApiResponse<Product[], { total?: number, totalPages?: number }>>({
-    queryKey: searchQuery ? ['/api/search', searchQuery, page] : ['/api/products', page, selectedCategoryId],
+    queryKey: searchQuery ? ['/api/search', searchQuery, page] : ['/api/products', page, selectedCategoryId, searchParams.get('includeChildren')],
     queryFn: async () => {
       if (searchQuery) {
         const searchParams = new URLSearchParams({
