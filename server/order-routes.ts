@@ -469,56 +469,6 @@ router.post("/:id/admin/payment-received", isAuthenticated, asyncHandler(async (
   }
 }));
 
-// Admin route: Get proof of payment PDF (temporarily without auth for PDF viewer)
-router.get("/:id/proof", asyncHandler(async (req: Request, res: Response) => {
-  try {
-    const orderId = parseInt(req.params.id);
-
-    // Allow access for PDF viewing (TODO: Add proper admin authentication in production)
-
-    if (isNaN(orderId)) {
-      return sendError(res, "Invalid order ID", 400);
-    }
-
-    // Get the order to check if it has a proof of payment
-    const order = await storage.getOrderById(orderId);
-    if (!order) {
-      return sendError(res, "Order not found", 404);
-    }
-
-    if (!order.eftPop) {
-      return sendError(res, "No proof of payment found for this order", 404);
-    }
-
-    try {
-      // Get the PDF from object store
-      const { data: fileData } = await objectStore.getFileAsBuffer(order.eftPop);
-      
-      // Set appropriate headers for PDF viewing
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `inline; filename="proof-of-payment-${order.orderNumber}.pdf"`);
-      res.setHeader('Content-Length', fileData.length.toString());
-      
-      // Write the PDF data directly and end the response
-      // This bypasses all middleware wrappers
-      res.write(fileData);
-      return res.end();
-    } catch (objectStoreError) {
-      logger.error("Error retrieving proof of payment from object store", {
-        error: objectStoreError instanceof Error ? objectStoreError.message : String(objectStoreError),
-        orderId,
-        objectKey: order.eftPop,
-      });
-      return sendError(res, "Failed to retrieve proof of payment", 500);
-    }
-  } catch (error) {
-    logger.error("Error getting proof of payment", { 
-      error: error instanceof Error ? error.message : String(error),
-      orderId: req.params.id,
-      userId: req.user?.id 
-    });
-    return sendError(res, "Internal server error", 500);
-  }
-}));
+// Note: PDF route has been moved to routes.ts to bypass response wrapper middleware
 
 export { router as orderRoutes };

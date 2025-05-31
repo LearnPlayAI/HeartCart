@@ -2,6 +2,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { sendError } from "./api-response";
 import { storage } from "./storage";
+import { objectStore } from "./object-store";
 import { ZodError } from "zod";
 import { logger } from "./logger";
 import { db } from "./db";
@@ -121,7 +122,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/orders/:id/proof', async (req, res) => {
     try {
       const orderId = parseInt(req.params.id);
-      const order = await storage.getOrder(orderId);
+      logger.info(`PDF route: Looking up order ${orderId}`);
+      
+      const order = await storage.getOrderById(orderId);
+      logger.info(`PDF route: Order found`, { order: order ? { id: order.id, eftPop: order.eftPop } : null });
       
       if (!order) {
         return res.status(404).json({ success: false, error: "Order not found" });
@@ -132,7 +136,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Get the PDF from object store
+      logger.info(`PDF route: Retrieving PDF from object store`, { objectKey: order.eftPop });
       const { data: fileData } = await objectStore.getFileAsBuffer(order.eftPop);
+      logger.info(`PDF route: PDF retrieved successfully`, { size: fileData.length });
       
       // Set appropriate headers for PDF viewing
       res.setHeader('Content-Type', 'application/pdf');
@@ -142,6 +148,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Send raw PDF data directly
       res.end(fileData);
     } catch (error) {
+      logger.error('PDF route error:', error);
       res.status(500).json({ success: false, error: "Failed to retrieve proof of payment" });
     }
   });
