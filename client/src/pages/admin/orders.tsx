@@ -375,83 +375,89 @@ function OrderCard({ order }: { order: Order }) {
   );
 }
 
-// Order Details Dialog Component
-function OrderDetailsDialog({ 
-  order, 
-  open, 
-  onOpenChange, 
-  onViewPdf 
-}: { 
-  order: Order | null; 
-  open: boolean; 
-  onOpenChange: (open: boolean) => void;
-  onViewPdf: (order: Order) => void;
-}) {
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [trackingInput, setTrackingInput] = useState("");
-  const [paymentReceivedDate, setPaymentReceivedDate] = useState(new Date().toISOString().split('T')[0]);
+export default function AdminOrdersPage() {
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
 
-  const updateStatusMutation = useMutation({
-    mutationFn: async ({ orderId, status }: { orderId: number; status: string }) => {
-      const response = await apiRequest('PATCH', `/api/admin/orders/${orderId}/status`, { status });
-      return await response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
-    },
-    onError: (error) => {
-      console.error('Status update error:', error);
-      toast({ 
-        variant: "destructive",
-        description: "Failed to update order status" 
-      });
-    }
+  const { data: orders = [], isLoading } = useQuery({
+    queryKey: ['/api/admin/orders'],
+    enabled: true
   });
 
-  const updateTrackingMutation = useMutation({
-    mutationFn: async ({ orderId, trackingNumber }: { orderId: number; trackingNumber: string }) => {
-      return await apiRequest('PATCH', `/api/admin/orders/${orderId}/tracking`, { trackingNumber });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
-      setTrackingInput("");
-    },
-    onError: () => {
-      toast({ 
-        variant: "destructive",
-        description: "Failed to update tracking number" 
-      });
-    }
+  const filteredOrders = orders.filter((order: Order) => {
+    if (statusFilter === "all") return true;
+    return order.status === statusFilter;
   });
 
-  const markPaymentReceivedMutation = useMutation({
-    mutationFn: async ({ orderId, paymentReceivedDate }: { orderId: number; paymentReceivedDate: string }) => {
-      const response = await apiRequest('POST', `/api/orders/${orderId}/admin/payment-received`, { paymentReceivedDate });
-      return await response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
-      toast({ 
-        description: "Payment marked as received and order moved to processing" 
-      });
-    },
-    onError: (error) => {
-      console.error('Payment received update error:', error);
-      toast({ 
-        variant: "destructive",
-        description: "Failed to mark payment as received" 
-      });
-    }
-  });
-
-  if (!order) return null;
-
-  const statusConfig = getStatusConfig(order.status);
-  const paymentConfig = getPaymentStatusConfig(order.paymentStatus);
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <div className="container mx-auto px-4 py-8 space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold">Order Management</h1>
+          <p className="text-muted-foreground">View and manage customer orders</p>
+        </div>
+        
+        <div className="flex items-center space-x-2">
+          <Select value={viewMode} onValueChange={(value: "cards" | "table") => setViewMode(value)}>
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="cards">
+                <div className="flex items-center">
+                  <LayoutGrid className="h-4 w-4 mr-2" />
+                  Cards
+                </div>
+              </SelectItem>
+              <SelectItem value="table">
+                <div className="flex items-center">
+                  <Table className="h-4 w-4 mr-2" />
+                  Table
+                </div>
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <OrderStats orders={filteredOrders} onFilterChange={setStatusFilter} />
+
+      {filteredOrders.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <Package className="h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No Orders Found</h3>
+            <p className="text-muted-foreground text-center">
+              {statusFilter === "all" 
+                ? "No orders have been placed yet." 
+                : `No orders found with status: ${statusFilter}`}
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-6">
+          {viewMode === "cards" ? (
+            <div className="grid gap-6">
+              {filteredOrders.map((order: Order) => (
+                <OrderCard key={order.id} order={order} />
+              ))}
+            </div>
+          ) : (
+            <OrderTable orders={filteredOrders} />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
@@ -988,16 +994,6 @@ export default function AdminOrdersPage() {
     return matchesSearch && matchesStatus && matchesPayment;
   });
 
-  const handleViewDetails = (order: Order) => {
-    setSelectedOrder(order);
-    setShowDetails(true);
-  };
-
-  const handleViewPdf = (order: Order) => {
-    setSelectedOrderForPdf(order);
-    setPdfViewerOpen(true);
-  };
-
   const handleStatisticFilter = (filterValue: string) => {
     setStatusFilter(filterValue);
     // Clear search and payment filters when using statistic filtering for cleaner experience
@@ -1253,26 +1249,7 @@ export default function AdminOrdersPage() {
           </Card>
         )}
 
-        {/* Order Details Dialog */}
-        <OrderDetailsDialog
-          order={selectedOrder}
-          open={showDetails}
-          onOpenChange={setShowDetails}
-          onViewPdf={handleViewPdf}
-        />
 
-        {/* PDF Viewer Dialog */}
-        {selectedOrderForPdf && (
-          <PDFViewer
-            orderNumber={selectedOrderForPdf.orderNumber}
-            orderId={selectedOrderForPdf.id}
-            isOpen={pdfViewerOpen}
-            onClose={() => {
-              setPdfViewerOpen(false);
-              setSelectedOrderForPdf(null);
-            }}
-          />
-        )}
       </div>
     </AdminLayout>
   );
