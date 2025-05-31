@@ -494,12 +494,14 @@ router.get("/:id/proof", asyncHandler(async (req: Request, res: Response) => {
       // Get the PDF from object store
       const { data: fileData } = await objectStore.getFileAsBuffer(order.eftPop);
       
-      // Set appropriate headers for PDF viewing
+      // Set appropriate headers for PDF viewing - must be set before using original send
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `inline; filename="proof-of-payment-${order.orderNumber}.pdf"`);
       
-      // Send the PDF data
-      res.send(fileData);
+      // Bypass the response wrapper by directly calling the original send method
+      // The response wrapper checks for Content-Type to decide if it should wrap the response
+      const originalSend = res.send;
+      return originalSend.call(res, fileData);
     } catch (objectStoreError) {
       logger.error("Error retrieving proof of payment from object store", {
         error: objectStoreError instanceof Error ? objectStoreError.message : String(objectStoreError),
