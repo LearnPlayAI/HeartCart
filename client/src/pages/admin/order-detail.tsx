@@ -140,29 +140,27 @@ function PDFViewer({ orderId }: { orderId: number }) {
   const [pageNumber, setPageNumber] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
-  useEffect(() => {
-    if (loading) {
-      const timeout = setTimeout(() => {
-        if (loading) {
-          setLoading(false);
-          setError('PDF loading timeout - the file may not exist or the server is not responding');
-        }
-      }, 10000);
-
-      return () => clearTimeout(timeout);
-    }
-  }, [loading]);
+  const pdfUrl = `/api/orders/${orderId}/proof?t=${Date.now()}`;
 
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
     setLoading(false);
     setError(null);
+    setRetryCount(0);
   };
 
   const onDocumentLoadError = (error: Error) => {
+    console.error('PDF Load Error:', error);
     setLoading(false);
     setError(`Failed to load PDF: ${error.message}`);
+  };
+
+  const retryLoad = () => {
+    setLoading(true);
+    setError(null);
+    setRetryCount(prev => prev + 1);
   };
 
   const goToPrevPage = () => setPageNumber(page => Math.max(1, page - 1));
@@ -719,7 +717,7 @@ export default function AdminOrderDetail() {
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span>Subtotal:</span>
-                  <span>{formatCurrency(order.subtotal)}</span>
+                  <span>{formatCurrency(order.subtotalAmount)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Shipping:</span>
@@ -727,12 +725,12 @@ export default function AdminOrderDetail() {
                 </div>
                 <div className="flex justify-between">
                   <span>Tax:</span>
-                  <span>{formatCurrency(order.tax)}</span>
+                  <span>{formatCurrency(0)}</span>
                 </div>
                 <Separator />
                 <div className="flex justify-between font-bold text-lg">
                   <span>Total:</span>
-                  <span>{formatCurrency(order.total)}</span>
+                  <span>{formatCurrency(order.totalAmount)}</span>
                 </div>
               </div>
             </CardContent>
