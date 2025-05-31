@@ -52,6 +52,7 @@ import {
 import { db } from "./db";
 import {
   eq,
+  ne,
   like,
   and,
   or,
