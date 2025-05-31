@@ -374,10 +374,16 @@ function OrderCard({ order, onViewDetails }: { order: Order; onViewDetails: (ord
 }
 
 // Order Details Dialog Component
-function OrderDetailsDialog({ order, open, onOpenChange }: { 
+function OrderDetailsDialog({ 
+  order, 
+  open, 
+  onOpenChange, 
+  onViewPdf 
+}: { 
   order: Order | null; 
   open: boolean; 
   onOpenChange: (open: boolean) => void;
+  onViewPdf: (order: Order) => void;
 }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -589,10 +595,7 @@ function OrderDetailsDialog({ order, open, onOpenChange }: {
                               </div>
                             </div>
                             <Button
-                              onClick={() => {
-                                setSelectedOrderForPdf(order);
-                                setPdfViewerOpen(true);
-                              }}
+                              onClick={() => onViewPdf(order)}
                               size="sm"
                               variant="outline"
                               className="border-green-300 text-green-700 hover:bg-green-100"
@@ -1235,6 +1238,7 @@ export default function AdminOrdersPage() {
           order={selectedOrder}
           open={showDetails}
           onOpenChange={setShowDetails}
+          onViewPdf={handleViewPdf}
         />
 
         {/* PDF Viewer Dialog */}
