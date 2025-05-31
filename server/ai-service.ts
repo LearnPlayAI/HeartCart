@@ -365,7 +365,8 @@ export async function generateProductTags(
     }
 
     // Generate content with all the parts
-    const result = await model.generateContent(parts);
+    const aiModel = await getModel();
+    const result = await aiModel.generateContent(parts);
     const text = result.response.text();
     
     try {
@@ -379,7 +380,7 @@ export async function generateProductTags(
     } catch (error) {
       console.error('Error parsing AI response as JSON:', error);
       // Extract text as fallback when JSON parsing fails
-      const fallbackTags = text.split(',').map(tag => tag.trim());
+      const fallbackTags = text.split(',').map((tag: string) => tag.trim());
       return fallbackTags.length > 0 ? fallbackTags : [text];
     }
   } catch (error) {
@@ -496,7 +497,8 @@ export async function generateSEO(
       parts.push({ text: promptText });
     }
 
-    const result = await model.generateContent(parts);
+    const aiModel = await getModel();
+    const result = await aiModel.generateContent(parts);
     const text = result.response.text();
     
     try {
@@ -587,7 +589,8 @@ export async function optimizeSEO(
     Do not include any other text or explanation, only the JSON object with the SEO elements.
     `;
 
-    const result = await model.generateContent(promptText);
+    const aiModel = await getModel();
+    const result = await aiModel.generateContent(promptText);
     const text = result.response.text();
     
     try {
