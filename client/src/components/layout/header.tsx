@@ -79,12 +79,12 @@ const Header = () => {
                       {user.username}
                     </div>
                     <DropdownMenuItem asChild>
-                      <Link href="/profile?tab=profile" className="cursor-pointer">
+                      <Link href="/profile-settings" className="cursor-pointer">
                         My Profile
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/profile?tab=orders" className="cursor-pointer">
+                      <Link href="/my-orders" className="cursor-pointer">
                         My Orders
                       </Link>
                     </DropdownMenuItem>
@@ -179,14 +179,14 @@ const Header = () => {
               All Products
             </Link>
             
-            {/* User Profile Navigation - only show if logged in */}
+            {/* User Profile Navigation - only show on desktop */}
             {user && (
               <>
-                <Link href="/profile-settings" className="px-4 py-1 font-medium text-sm hover:bg-white hover:text-[#FF69B4] rounded-full mx-1 transition-colors duration-200 flex items-center">
+                <Link href="/profile-settings" className="hidden md:flex px-4 py-1 font-medium text-sm hover:bg-white hover:text-[#FF69B4] rounded-full mx-1 transition-colors duration-200 items-center">
                   <User className="h-3 w-3 mr-1" />
                   My Profile
                 </Link>
-                <Link href="/my-orders" className="px-4 py-1 font-medium text-sm hover:bg-white hover:text-[#FF69B4] rounded-full mx-1 transition-colors duration-200 flex items-center">
+                <Link href="/my-orders" className="hidden md:flex px-4 py-1 font-medium text-sm hover:bg-white hover:text-[#FF69B4] rounded-full mx-1 transition-colors duration-200 items-center">
                   <Package className="h-3 w-3 mr-1" />
                   My Orders
                 </Link>
