@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'wouter';
+import { AdminLayout } from '@/components/admin/layout';
 import {
   Card,
   CardContent,
@@ -398,14 +399,17 @@ export default function AdminOrdersPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </AdminLayout>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-6">
+    <AdminLayout>
+      <div className="container mx-auto px-4 py-8 space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold">Order Management</h1>
@@ -462,6 +466,7 @@ export default function AdminOrdersPage() {
           )}
         </div>
       )}
-    </div>
+      </div>
+    </AdminLayout>
   );
 }
