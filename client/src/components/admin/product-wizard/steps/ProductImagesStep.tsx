@@ -233,8 +233,9 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ draft, onS
   // Set an image as the main image
   const setMainImage = (index: number) => {
     form.setValue('mainImageIndex', index);
-    // Trigger form save automatically when main image is changed
-    form.handleSubmit(onSubmit)();
+    // Save the change without auto-advancing to next step
+    const formData = form.getValues();
+    onSave(formData, false);
   };
 
   // Delete an image
