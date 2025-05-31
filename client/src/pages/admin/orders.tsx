@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AdminLayout } from "@/components/admin/layout";
 import { Badge } from "@/components/ui/badge";
@@ -840,16 +840,32 @@ function PDFViewer({ orderNumber, orderId, isOpen, onClose }: {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Add timeout for loading
+  useEffect(() => {
+    if (loading && isOpen) {
+      const timeout = setTimeout(() => {
+        if (loading) {
+          setLoading(false);
+          setError('PDF loading timeout - the file may not exist or the server is not responding');
+        }
+      }, 10000); // 10 second timeout
+
+      return () => clearTimeout(timeout);
+    }
+  }, [loading, isOpen]);
+
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
     setLoading(false);
     setError(null);
+    console.log('PDF loaded successfully with', numPages, 'pages');
   };
 
   const onDocumentLoadError = (error: Error) => {
     setLoading(false);
-    setError('Failed to load PDF. Please try again.');
+    setError(`Failed to load PDF: ${error.message}`);
     console.error('PDF loading error:', error);
+    console.error('PDF URL attempted:', `/api/orders/${orderId}/proof`);
   };
 
   const goToPrevPage = () => setPageNumber(page => Math.max(1, page - 1));
@@ -909,7 +925,7 @@ function PDFViewer({ orderNumber, orderId, isOpen, onClose }: {
               <ScrollArea className="h-[600px] border rounded">
                 <div className="flex justify-center p-4">
                   <Document
-                    file={`/proof/${orderNumber}/${orderId}`}
+                    file={`/api/orders/${orderId}/proof`}
                     onLoadSuccess={onDocumentLoadSuccess}
                     onLoadError={onDocumentLoadError}
                     loading=""
