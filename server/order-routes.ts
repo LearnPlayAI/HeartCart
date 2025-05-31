@@ -399,4 +399,118 @@ router.post("/:id/mark-paid", isAuthenticated, asyncHandler(async (req: Request,
   }
 }));
 
+// Admin route: Mark payment as received
+router.post("/:id/admin/payment-received", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const orderId = parseInt(req.params.id);
+    const { paymentReceivedDate } = req.body;
+
+    // TODO: Add admin role check here
+    const userId = req.user?.id;
+    if (!userId) {
+      return sendError(res, "User not authenticated", 401);
+    }
+
+    if (isNaN(orderId)) {
+      return sendError(res, "Invalid order ID", 400);
+    }
+
+    if (!paymentReceivedDate) {
+      return sendError(res, "Payment received date is required", 400);
+    }
+
+    // Get the order to check current status
+    const order = await storage.getOrderById(orderId);
+    if (!order) {
+      return sendError(res, "Order not found", 404);
+    }
+
+    // Validate that payment status is "paid" before allowing "payment_received"
+    if (order.paymentStatus !== "paid") {
+      return sendError(res, "Order payment status must be 'paid' before marking as received", 400);
+    }
+
+    // Update the order payment status to "payment_received" with the date
+    const updatedOrder = await storage.updateOrderPaymentStatus(orderId, "payment_received", paymentReceivedDate);
+
+    if (!updatedOrder) {
+      return sendError(res, "Failed to update order payment status", 500);
+    }
+
+    logger.info("Order payment marked as received by admin", {
+      orderId,
+      orderNumber: order.orderNumber,
+      adminUserId: userId,
+      paymentReceivedDate,
+      previousStatus: order.paymentStatus,
+      newStatus: "payment_received",
+    });
+
+    return sendSuccess(res, {
+      message: "Payment marked as received successfully",
+      order: updatedOrder,
+    });
+  } catch (error) {
+    logger.error("Error marking payment as received", { 
+      error: error instanceof Error ? error.message : String(error),
+      orderId: req.params.id,
+      userId: req.user?.id 
+    });
+    return sendError(res, "Internal server error", 500);
+  }
+}));
+
+// Admin route: Get proof of payment PDF
+router.get("/:id/admin/proof-of-payment", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const orderId = parseInt(req.params.id);
+
+    // TODO: Add admin role check here
+    const userId = req.user?.id;
+    if (!userId) {
+      return sendError(res, "User not authenticated", 401);
+    }
+
+    if (isNaN(orderId)) {
+      return sendError(res, "Invalid order ID", 400);
+    }
+
+    // Get the order to check if it has a proof of payment
+    const order = await storage.getOrderById(orderId);
+    if (!order) {
+      return sendError(res, "Order not found", 404);
+    }
+
+    if (!order.eftPop) {
+      return sendError(res, "No proof of payment found for this order", 404);
+    }
+
+    try {
+      // Get the PDF from object store
+      const fileData = await objectStore.getFile(order.eftPop);
+      
+      // Set appropriate headers for PDF viewing
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `inline; filename="proof-of-payment-${order.orderNumber}.pdf"`);
+      
+      // Send the PDF data
+      res.send(fileData);
+    } catch (objectStoreError) {
+      logger.error("Error retrieving proof of payment from object store", {
+        error: objectStoreError instanceof Error ? objectStoreError.message : String(objectStoreError),
+        orderId,
+        objectKey: order.eftPop,
+      });
+      return sendError(res, "Failed to retrieve proof of payment", 500);
+    }
+  } catch (error) {
+    logger.error("Error getting proof of payment", { 
+      error: error instanceof Error ? error.message : String(error),
+      orderId: req.params.id,
+      userId: req.user?.id 
+    });
+    return sendError(res, "Internal server error", 500);
+  }
+}));
+
 export { router as orderRoutes };
