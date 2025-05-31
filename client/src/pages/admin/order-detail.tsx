@@ -2,8 +2,11 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRoute, Link } from 'wouter';
 import { AdminLayout } from '@/components/admin/layout';
-import { Document, Page } from 'react-pdf';
+import { Document, Page, pdfjs } from 'react-pdf';
 import { apiRequest } from '@/lib/queryClient';
+
+// Configure PDF.js worker
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 import { useToast } from '@/hooks/use-toast';
 import {
   Card,
@@ -225,7 +228,7 @@ function PDFViewer({ orderId }: { orderId: number }) {
           </Button>
         </div>
         <Button
-          onClick={() => window.open(`/api/orders/${orderId}/proof`, '_blank')}
+          onClick={() => window.open(pdfUrl, '_blank')}
           size="sm"
           variant="outline"
         >
@@ -237,14 +240,23 @@ function PDFViewer({ orderId }: { orderId: number }) {
       {/* PDF Document */}
       <div className="border rounded-lg overflow-hidden bg-white">
         <Document
-          file={`/api/orders/${orderId}/proof`}
+          file={{
+            url: pdfUrl,
+            httpHeaders: {
+              'Cache-Control': 'no-cache'
+            }
+          }}
           onLoadSuccess={onDocumentLoadSuccess}
           onLoadError={onDocumentLoadError}
           loading={
             <div className="flex items-center justify-center h-96">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                <p className="text-muted-foreground">Loading PDF...</p>
+              </div>
             </div>
           }
+          key={`pdf-${orderId}-${retryCount}`}
         >
           <Page 
             pageNumber={pageNumber} 
