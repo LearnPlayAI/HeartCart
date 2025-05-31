@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
-import { ArrowLeft, Package, MapPin, CreditCard, Truck, Check, Clock, User, Mail, Phone } from "lucide-react";
+import { ArrowLeft, Package, MapPin, CreditCard, Truck, Check, Clock, User, Mail, Phone, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -172,6 +172,18 @@ export default function OrderConfirmationPage() {
                   <Badge className={getStatusColor(order.status)}>
                     {order.status ? order.status.charAt(0).toUpperCase() + order.status.slice(1) : 'Unknown'}
                   </Badge>
+                  {order.paymentMethod?.toLowerCase() === 'eft' && (
+                    <div className="mt-3">
+                      <Button 
+                        onClick={() => navigate(`/order/${order.id}`)}
+                        size="sm"
+                        className="bg-pink-500 hover:bg-pink-600 text-white"
+                      >
+                        <Upload className="h-4 w-4 mr-2" />
+                        Upload Proof of Payment
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
               {order.trackingNumber && (
