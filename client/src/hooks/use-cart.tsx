@@ -93,39 +93,42 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }) => {
       console.log('🔍 CLEAN CART MUTATION - Adding item:', cartItem);
       
-      const res = await apiRequest('POST', '/api/cart', cartItem);
-      
-      // Check for 401 authentication error before parsing JSON
-      if (res.status === 401) {
-        console.log('🔍 AUTH DEBUG - 401 detected, redirecting to /auth');
-        setLocation('/auth');
-        // Return early to prevent any further processing
-        return null;
+      try {
+        const res = await apiRequest('POST', '/api/cart', cartItem);
+        const data: StandardApiResponse<any> = await res.json();
+        
+        if (!data.success) {
+          throw new Error(data.error?.message || "Failed to add item to cart");
+        }
+        
+        console.log('🔍 CLEAN CART MUTATION - Success:', data);
+        return data;
+      } catch (error: any) {
+        // Check if this is a 401 authentication error
+        if (error.message && error.message.includes('401')) {
+          console.log('🔍 AUTH DEBUG - 401 detected, redirecting to /auth');
+          setLocation('/auth');
+          // Return successful result to prevent error handling
+          return { success: true, redirected: true };
+        }
+        // Re-throw other errors
+        throw error;
       }
-      
-      const data: StandardApiResponse<any> = await res.json();
-      
-      if (!data.success) {
-        throw new Error(data.error?.message || "Failed to add item to cart");
-      }
-      
-      console.log('🔍 CLEAN CART MUTATION - Success:', data);
-      return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
-      
+    onSuccess: (data) => {
+      // Only invalidate queries if not redirected for auth
+      if (!data?.redirected) {
+        queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
+      }
     },
     onError: (error) => {
-      // Don't show error toast for authentication redirects
-      if (error) {
-        console.log('🔍 AUTH DEBUG - Error in mutation:', error.message);
-        toast({
-          title: "Error",
-          description: error.message || "Failed to add item to cart",
-          variant: "destructive"
-        });
-      }
+      // This should now only handle non-auth errors
+      console.log('🔍 AUTH DEBUG - Error in mutation:', error.message);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add item to cart",
+        variant: "destructive"
+      });
     }
   });
   
