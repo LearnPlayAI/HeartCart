@@ -137,7 +137,8 @@ export const orders = pgTable("orders", {
   
   // Payment information
   paymentMethod: text("paymentMethod").notNull().default("eft"), // eft only for now
-  paymentStatus: text("paymentStatus").notNull().default("pending"), // pending, paid, failed
+  paymentStatus: text("paymentStatus").notNull().default("pending"), // pending, paid, payment_received, failed
+  paymentReceivedDate: text("paymentReceivedDate"), // Date when admin confirmed payment was received
   
   // Order totals
   subtotalAmount: doublePrecision("subtotalAmount").notNull(),

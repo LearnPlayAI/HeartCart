@@ -2926,6 +2926,7 @@ export class DatabaseStorage implements IStorage {
   async updateOrderPaymentStatus(
     id: number,
     paymentStatus: string,
+    paymentReceivedDate?: string,
   ): Promise<Order | undefined> {
     try {
       // First check if the order exists
@@ -2947,13 +2948,21 @@ export class DatabaseStorage implements IStorage {
         const now = new Date().toISOString();
 
         try {
+          // Prepare update data
+          const updateData: any = {
+            paymentStatus,
+            updatedAt: now,
+          };
+
+          // Add payment received date if provided
+          if (paymentReceivedDate) {
+            updateData.paymentReceivedDate = paymentReceivedDate;
+          }
+
           // Update the order with the new payment status and updatedAt timestamp
           const [updatedOrder] = await db
             .update(orders)
-            .set({
-              paymentStatus,
-              updatedAt: now,
-            })
+            .set(updateData)
             .where(eq(orders.id, id))
             .returning();
 
@@ -2961,6 +2970,7 @@ export class DatabaseStorage implements IStorage {
             orderId: id,
             oldPaymentStatus,
             newPaymentStatus: paymentStatus,
+            paymentReceivedDate,
             userId: updatedOrder.userId,
           });
 

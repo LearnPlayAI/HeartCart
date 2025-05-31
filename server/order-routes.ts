@@ -293,7 +293,7 @@ router.post("/:id/upload-proof", isAuthenticated, upload.single('proofOfPayment'
     }
 
     // Get user details for the folder path
-    const user = await storage.getUserById(userId);
+    const user = await storage.getUser(userId);
     if (!user) {
       return sendError(res, "User not found", 401);
     }
