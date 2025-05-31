@@ -61,6 +61,23 @@ export function MassUploadStep2({ data, onUpdate, onNext, onPrevious }: MassUplo
     setIsProcessing(false);
   };
 
+  // Helper function to parse South African Rand prices
+  const parsePrice = (priceStr: string): number => {
+    if (!priceStr) return 0;
+    
+    // Remove R prefix and any whitespace
+    let cleanPrice = priceStr.replace(/^R\s*/, '').trim();
+    
+    // Replace comma with dot for decimal separator (R23,20 becomes 23.20)
+    cleanPrice = cleanPrice.replace(',', '.');
+    
+    // Remove any thousand separators (spaces or other non-numeric chars except decimal point)
+    cleanPrice = cleanPrice.replace(/[^\d.]/g, '');
+    
+    const parsed = parseFloat(cleanPrice);
+    return isNaN(parsed) ? 0 : parsed;
+  };
+
   const parseCSV = (csvContent: string): CSVProduct[] => {
     const lines = csvContent.split('\n').filter(line => line.trim());
     if (lines.length < 2) {
@@ -120,9 +137,9 @@ export function MassUploadStep2({ data, onUpdate, onNext, onPrevious }: MassUplo
           childCategory: values[columnIndices.childCategory] || '',
           attribute: values[columnIndices.attribute] || '',
           attributeOptions: values[columnIndices.attributeOptions] || '',
-          costPrice: parseFloat(values[columnIndices.costPrice]) || 0,
-          salePrice: parseFloat(values[columnIndices.salePrice]) || 0,
-          regularPrice: parseFloat(values[columnIndices.regularPrice]) || 0,
+          costPrice: parsePrice(values[columnIndices.costPrice]),
+          salePrice: parsePrice(values[columnIndices.salePrice]),
+          regularPrice: parsePrice(values[columnIndices.regularPrice]),
           productUrl: values[columnIndices.productUrl] || '',
         };
 
