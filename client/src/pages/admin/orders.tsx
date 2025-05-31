@@ -909,7 +909,7 @@ function PDFViewer({ orderNumber, orderId, isOpen, onClose }: {
               <ScrollArea className="h-[600px] border rounded">
                 <div className="flex justify-center p-4">
                   <Document
-                    file={`/api/orders/${orderId}/proof`}
+                    file={`/proof/${orderNumber}/${orderId}`}
                     onLoadSuccess={onDocumentLoadSuccess}
                     onLoadError={onDocumentLoadError}
                     loading=""
