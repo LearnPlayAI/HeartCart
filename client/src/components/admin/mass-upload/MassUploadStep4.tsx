@@ -170,9 +170,9 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
           warnings.push(`Product with similar name "${product.title}" already exists`);
         }
 
-        // Validate parent category
+        // Validate parent category - find by name and no parentId (main category)
         const parentCategory = categories.find((c: any) => 
-          c.name.toLowerCase() === product.parentCategory.toLowerCase() && c.level === 0
+          c.name.toLowerCase() === product.parentCategory.toLowerCase() && !c.parentId
         );
         if (!parentCategory) {
           errors.push(`Parent category "${product.parentCategory}" not found`);
@@ -180,10 +180,9 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
           product.parentCategoryId = parentCategory.id;
         }
 
-        // Validate child category
+        // Validate child category - find by name and parentId matching the parent
         const childCategory = categories.find((c: any) => 
           c.name.toLowerCase() === product.childCategory.toLowerCase() && 
-          c.level === 1 && 
           c.parentId === parentCategory?.id
         );
         if (!childCategory && parentCategory) {
