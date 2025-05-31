@@ -214,10 +214,21 @@ router.post('/enhance-product', asyncHandler(async (req, res) => {
         // Extract JSON part from the response if it's not a pure JSON
         const jsonMatch = text.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
-          const jsonString = jsonMatch[0];
+          let jsonString = jsonMatch[0];
           console.log('Extracted JSON String:', jsonString);
+          
+          // Clean up the JSON string to remove control characters and fix formatting issues
+          jsonString = jsonString
+            .replace(/[\u0000-\u001f]+/g, ' ') // Replace control characters with spaces
+            .replace(/\n/g, ' ') // Replace newlines with spaces
+            .replace(/\r/g, ' ') // Replace carriage returns with spaces
+            .replace(/\t/g, ' ') // Replace tabs with spaces
+            .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+            .trim();
+          
+          console.log('Cleaned JSON String:', jsonString);
           enhancedData = JSON.parse(jsonString);
-          console.log('Successfully parsed extracted JSON:', enhancedData);
+          console.log('Successfully parsed cleaned JSON:', enhancedData);
         } else {
           console.log('No JSON found in response');
           throw new Error('No valid JSON found in AI response');
