@@ -42,6 +42,7 @@ import pricingRoutes from "./pricing-routes";
 import batchUploadRoutes from "./batch-upload-routes";
 import aiApiRoutes from "./routes/ai-api";
 import { orderRoutes } from "./order-routes";
+import { adminRoutes } from "./admin-routes";
 import { registerAuthTestRoutes } from "./auth-test-routes";
 import { registerDatabaseTestRoutes } from "./database-test-routes";
 import { registerApiTestRoutes } from "./api-test-routes";
@@ -158,6 +159,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register order routes (after middleware for proper error handling)
   app.use("/api/orders", orderRoutes);
+  
+  // Register admin routes for order management
+  app.use("/api/admin", adminRoutes);
   
   // Register authentication testing routes
   registerAuthTestRoutes(app);
