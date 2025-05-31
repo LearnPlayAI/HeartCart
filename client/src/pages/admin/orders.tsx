@@ -978,6 +978,11 @@ export default function AdminOrdersPage() {
     setShowDetails(true);
   };
 
+  const handleViewPdf = (order: Order) => {
+    setSelectedOrderForPdf(order);
+    setPdfViewerOpen(true);
+  };
+
   const handleStatisticFilter = (filterValue: string) => {
     setStatusFilter(filterValue);
     // Clear search and payment filters when using statistic filtering for cleaner experience
