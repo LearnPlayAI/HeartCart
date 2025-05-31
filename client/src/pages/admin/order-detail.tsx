@@ -53,14 +53,14 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 
-// Configure PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+// Configure PDF.js worker - use CDN with proper fallback
+pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 // Add options for react-pdf
 const options = {
-  cMapUrl: 'https://unpkg.com/pdfjs-dist@3.11.174/cmaps/',
+  cMapUrl: `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/cmaps/`,
   cMapPacked: true,
-  standardFontDataUrl: 'https://unpkg.com/pdfjs-dist@3.11.174/standard_fonts/',
+  standardFontDataUrl: `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/standard_fonts/`,
 };
 
 // Types
@@ -227,6 +227,24 @@ function PDFViewer({ orderId }: { orderId: number }) {
     console.error('PDF loading error:', error);
     console.error('PDF URL:', pdfUrl);
     console.error('Error details:', error.name, error.message);
+    console.error('PDF.js version:', pdfjs.version);
+    console.error('Worker source:', pdfjs.GlobalWorkerOptions.workerSrc);
+    
+    // Try to fetch the PDF directly to see if it's accessible
+    fetch(pdfUrl)
+      .then(response => {
+        console.log('PDF fetch response:', response.status, response.statusText);
+        console.log('PDF Content-Type:', response.headers.get('Content-Type'));
+        console.log('PDF Content-Length:', response.headers.get('Content-Length'));
+        return response.blob();
+      })
+      .then(blob => {
+        console.log('PDF blob size:', blob.size, 'type:', blob.type);
+      })
+      .catch(fetchError => {
+        console.error('PDF fetch error:', fetchError);
+      });
+    
     setLoading(false);
     setError(`Failed to load PDF: ${error.message}`);
   };
