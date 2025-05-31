@@ -469,6 +469,43 @@ router.post("/:id/admin/payment-received", isAuthenticated, asyncHandler(async (
   }
 }));
 
+// Admin Routes - Get all orders for admin management
+router.get("/admin/orders", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    // TODO: Add admin role check here
+    const orders = await storage.getAllOrders();
+    
+    logger.info("Admin orders fetched successfully", { orderCount: orders.length });
+    return sendSuccess(res, orders);
+  } catch (error) {
+    logger.error("Error fetching admin orders", { error });
+    return sendError(res, "Failed to fetch orders", 500);
+  }
+}));
+
+// Admin Routes - Get specific order by ID for admin
+router.get("/admin/orders/:id", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    // TODO: Add admin role check here
+    const orderId = parseInt(req.params.id);
+    
+    if (isNaN(orderId)) {
+      return sendError(res, "Invalid order ID", 400);
+    }
+
+    const order = await storage.getOrderById(orderId);
+    
+    if (!order) {
+      return sendError(res, "Order not found", 404);
+    }
+
+    return sendSuccess(res, order);
+  } catch (error) {
+    logger.error("Error fetching admin order", { error, orderId: req.params.id });
+    return sendError(res, "Failed to fetch order", 500);
+  }
+}));
+
 // Note: PDF route has been moved to routes.ts to bypass response wrapper middleware
 
 export { router as orderRoutes };
