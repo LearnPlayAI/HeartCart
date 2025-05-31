@@ -322,6 +322,9 @@ router.post("/:id/upload-proof", isAuthenticated, upload.single('proofOfPayment'
       // Update the order with the object store key
       const updatedOrder = await storage.updateOrderEftProof(orderId, objectKey);
 
+      // Also update payment status to "paid" since proof of payment was uploaded
+      const orderWithPaidStatus = await storage.updateOrderPaymentStatus(orderId, "paid");
+
       logger.info("Proof of payment uploaded", {
         orderId,
         orderNumber: order.orderNumber,
@@ -329,13 +332,14 @@ router.post("/:id/upload-proof", isAuthenticated, upload.single('proofOfPayment'
         filename: req.file.originalname,
         objectKey: objectKey,
         filesize: req.file.size,
+        paymentStatusUpdated: "paid"
       });
 
       return sendSuccess(res, {
         message: "Proof of payment uploaded successfully",
         filename: req.file.originalname,
         objectKey: objectKey,
-        order: updatedOrder,
+        order: orderWithPaidStatus || updatedOrder,
       });
     } catch (uploadError) {
       logger.error("Error uploading proof of payment", { 

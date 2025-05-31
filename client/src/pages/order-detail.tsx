@@ -58,6 +58,7 @@ interface OrderType {
   customerNotes: string | null;
   adminNotes: string | null;
   trackingNumber: string | null;
+  eftPop: string | null;
   createdAt: string;
   updatedAt: string;
   shippedAt: string | null;
@@ -176,7 +177,12 @@ const OrderDetail: React.FC = () => {
     },
     onSuccess: (data) => {
       setProofOfPayment(data.url);
-      
+      // Invalidate and refetch order data to show updated payment status
+      queryClient.invalidateQueries({ queryKey: [`/api/orders/${orderId}`] });
+      toast({
+        title: "Upload Successful",
+        description: "Proof of payment uploaded successfully. Payment status updated to paid.",
+      });
     },
     onError: (error) => {
       toast({
@@ -505,12 +511,27 @@ const OrderDetail: React.FC = () => {
 
                   {/* Upload Proof of Payment */}
                   <div className="border-t pt-4">
-                    <h4 className="font-semibold mb-3 flex items-center">
-                      <Upload className="h-4 w-4 mr-2" />
-                      Upload Proof of Payment
-                    </h4>
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-semibold flex items-center">
+                        <Upload className="h-4 w-4 mr-2" />
+                        Upload Proof of Payment
+                      </h4>
+                      <div className="flex items-center space-x-2">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          order.paymentStatus === 'paid' 
+                            ? 'bg-green-100 text-green-800' 
+                            : order.paymentStatus === 'payment_received'
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {order.paymentStatus === 'paid' ? 'Paid' : 
+                           order.paymentStatus === 'payment_received' ? 'Payment Received' : 
+                           'Pending Payment'}
+                        </span>
+                      </div>
+                    </div>
                     
-                    {!proofOfPayment ? (
+                    {!proofOfPayment && !order.eftPop ? (
                       <div className="space-y-3">
                         <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
                           <input
@@ -554,7 +575,12 @@ const OrderDetail: React.FC = () => {
                                 Proof of payment uploaded successfully
                               </p>
                               <p className="text-sm text-green-600">
-                                Your payment will be verified within 24 hours
+                                {order.paymentStatus === 'payment_received' 
+                                  ? 'Payment has been received and verified by our team'
+                                  : order.paymentStatus === 'paid'
+                                  ? 'Your payment will be verified within 24 hours'
+                                  : 'Your payment will be verified within 24 hours'
+                                }
                               </p>
                             </div>
                           </div>
