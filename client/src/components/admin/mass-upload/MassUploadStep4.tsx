@@ -1,15 +1,34 @@
 import React, { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, CheckCircle, AlertTriangle, XCircle, ArrowLeft, RefreshCw } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogFooter, 
+  DialogHeader, 
+  DialogTitle
+} from '@/components/ui/dialog';
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
+import { Loader2, CheckCircle, AlertTriangle, XCircle, ArrowLeft, RefreshCw, Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { MassUploadData, CSVProduct } from '@/pages/admin/mass-upload';
 import { apiRequest } from '@/lib/queryClient';
+import { slugify } from '@/lib/utils';
 
 interface MassUploadStep4Props {
   data: MassUploadData;
@@ -28,8 +47,18 @@ interface ValidationResult {
 
 export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUploadStep4Props) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [isValidating, setIsValidating] = useState(false);
   const [validationComplete, setValidationComplete] = useState(false);
+  
+  // Category creation state - exactly as in admin categories page
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newSlug, setNewSlug] = useState("");
+  const [newDescription, setNewDescription] = useState("");
+  const [newParentId, setNewParentId] = useState<string | null>(null);
+  const [newLevel, setNewLevel] = useState<number>(0);
+  const [newDisplayOrder, setNewDisplayOrder] = useState<number>(0);
 
   // Fetch categories
   const { data: categoriesData, isLoading: isLoadingCategories } = useQuery({
@@ -51,6 +80,63 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
 
   const categories = categoriesData?.data || [];
   const existingProducts = productsData?.data || [];
+
+  // Create category mutation - exactly as in admin categories page
+  const createMutation = useMutation({
+    mutationFn: async (data: { 
+      name: string; 
+      slug: string; 
+      description: string; 
+      parentId: number | null; 
+      level: number; 
+      displayOrder: number;
+    }) => {
+      const response = await apiRequest('POST', '/api/categories', data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
+      setIsCreateDialogOpen(false);
+      setNewName("");
+      setNewSlug("");
+      setNewDescription("");
+      setNewParentId(null);
+      setNewLevel(0);
+      setNewDisplayOrder(0);
+      toast({
+        title: "Category Created",
+        description: "New category has been created successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to Create Category",
+        description: error.message || "Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Handle create category - exactly as in admin categories page
+  const handleCreateCategory = () => {
+    if (!newName) {
+      toast({
+        title: "Validation Error",
+        description: "Category name is required",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    createMutation.mutate({
+      name: newName,
+      slug: newSlug || slugify(newName),
+      description: newDescription,
+      parentId: newParentId ? parseInt(newParentId) : null,
+      level: newLevel,
+      displayOrder: newDisplayOrder
+    });
+  };
 
   useEffect(() => {
     if (!isLoadingCategories && !isLoadingProducts && !validationComplete) {
@@ -330,10 +416,29 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
           <div className="border rounded-lg">
             <div className="flex items-center justify-between p-4 border-b">
               <h3 className="font-medium">Validation Results</h3>
-              <Button variant="outline" size="sm" onClick={handleRevalidate}>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Revalidate
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  className="space-x-2"
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    setNewName("");
+                    setNewSlug("");
+                    setNewDescription("");
+                    setNewParentId(null);
+                    setNewLevel(0);
+                    setNewDisplayOrder(0);
+                    setIsCreateDialogOpen(true);
+                  }}
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Add Category</span>
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleRevalidate}>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Revalidate
+                </Button>
+              </div>
             </div>
             <ScrollArea className="h-[400px]">
               <Table>
