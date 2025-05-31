@@ -52,6 +52,8 @@ import {
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
+import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
+import 'react-pdf/dist/esm/Page/TextLayer.css';
 
 // Configure PDF.js worker - use CDN with proper fallback
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
@@ -158,7 +160,7 @@ function PDFViewer({ orderId }: { orderId: number }) {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [containerWidth, setContainerWidth] = useState<number>(800);
-  const [useIframe, setUseIframe] = useState<boolean>(false);
+  const [useIframe, setUseIframe] = useState<boolean>(true); // Start with iframe fallback
 
   const pdfUrl = `/api/orders/${orderId}/proof`;
 
@@ -484,13 +486,7 @@ function PDFViewer({ orderId }: { orderId: number }) {
       >
         <div className="flex justify-center p-4">
           <Document
-            file={{
-              url: pdfUrl,
-              httpHeaders: {
-                'Accept': 'application/pdf'
-              },
-              withCredentials: false
-            }}
+            file={pdfUrl}
             onLoadSuccess={onDocumentLoadSuccess}
             onLoadError={onDocumentLoadError}
             onLoadProgress={(progress) => {
@@ -499,12 +495,7 @@ function PDFViewer({ orderId }: { orderId: number }) {
             onSourceError={(error) => {
               console.error('🚫 PDF Source Error:', error);
             }}
-            options={{
-              ...options,
-              verbosity: 1, // Enable verbose logging
-              disableWorker: false,
-              standardFontDataUrl: 'https://unpkg.com/pdfjs-dist@4.8.69/standard_fonts/',
-            }}
+            options={options}
             loading={
               <div className="flex items-center justify-center h-96">
                 <div className="text-center">
