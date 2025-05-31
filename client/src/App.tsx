@@ -248,6 +248,8 @@ function App() {
                       <ProtectedRoute path="/order-confirmation/:id" component={OrderConfirmation} />
                       <Route path="/search"><SearchResults /></Route>
                       <ProtectedRoute path="/profile" component={Profile} />
+                      <ProtectedRoute path="/profile-settings" component={ProfileSettings} />
+                      <ProtectedRoute path="/my-orders" component={MyOrders} />
                       <ProtectedRoute path="/order/:id" component={OrderDetail} />
                       <ProtectedRoute path="/orders/:id" component={OrderDetail} />
                       <Route path="/auth"><AuthPage /></Route>
