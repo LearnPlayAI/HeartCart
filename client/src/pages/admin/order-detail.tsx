@@ -484,7 +484,13 @@ function PDFViewer({ orderId }: { orderId: number }) {
       >
         <div className="flex justify-center p-4">
           <Document
-            file={pdfUrl}
+            file={{
+              url: pdfUrl,
+              httpHeaders: {
+                'Accept': 'application/pdf'
+              },
+              withCredentials: false
+            }}
             onLoadSuccess={onDocumentLoadSuccess}
             onLoadError={onDocumentLoadError}
             onLoadProgress={(progress) => {
@@ -493,8 +499,12 @@ function PDFViewer({ orderId }: { orderId: number }) {
             onSourceError={(error) => {
               console.error('🚫 PDF Source Error:', error);
             }}
-
-            options={options}
+            options={{
+              ...options,
+              verbosity: 1, // Enable verbose logging
+              disableWorker: false,
+              standardFontDataUrl: 'https://unpkg.com/pdfjs-dist@4.8.69/standard_fonts/',
+            }}
             loading={
               <div className="flex items-center justify-center h-96">
                 <div className="text-center">
