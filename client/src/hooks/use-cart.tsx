@@ -97,9 +97,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       
       // Check for 401 authentication error before parsing JSON
       if (res.status === 401) {
+        console.log('🔍 AUTH DEBUG - 401 detected, redirecting to /auth');
         setLocation('/auth');
-        // Throw a special error that we can catch to prevent showing toast
-        throw new Error('AUTHENTICATION_REQUIRED');
+        // Return early to prevent any further processing
+        return null;
       }
       
       const data: StandardApiResponse<any> = await res.json();
@@ -116,8 +117,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       
     },
     onError: (error) => {
-      // Only show error toast for non-authentication errors
-      if (error.message !== 'AUTHENTICATION_REQUIRED') {
+      // Don't show error toast for authentication redirects
+      if (error) {
+        console.log('🔍 AUTH DEBUG - Error in mutation:', error.message);
         toast({
           title: "Error",
           description: error.message || "Failed to add item to cart",
