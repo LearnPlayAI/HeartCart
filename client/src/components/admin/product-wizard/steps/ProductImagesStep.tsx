@@ -279,7 +279,14 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ draft, onS
                   <Button 
                     type="button" 
                     variant="outline" 
-                    onClick={e => e.stopPropagation()}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // Trigger the file input click
+                      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+                      if (fileInput) {
+                        fileInput.click();
+                      }
+                    }}
                     className="h-8 px-3 sm:h-10 sm:px-4 text-xs sm:text-sm"
                   >
                     <ImagePlus className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
