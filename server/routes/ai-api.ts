@@ -198,12 +198,16 @@ router.post('/enhance-product', asyncHandler(async (req, res) => {
     
     // Try to parse JSON from the response
     console.log('AI Response Text:', text);
+    console.log('AI Response length:', text.length);
+    console.log('First 200 chars:', text.substring(0, 200));
     try {
       // Extract JSON part from the response if it's not a pure JSON
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       const jsonString = jsonMatch ? jsonMatch[0] : text;
+      console.log('JSON Match found:', !!jsonMatch);
       console.log('Extracted JSON String:', jsonString);
       const enhancedData = JSON.parse(jsonString);
+      console.log('Successfully parsed JSON:', enhancedData);
       
       res.json({
         success: true,
@@ -227,9 +231,34 @@ router.post('/enhance-product', asyncHandler(async (req, res) => {
   } catch (error) {
     console.error('Error enhancing product:', error);
     
-    res.status(400).json({
+    // Handle API key related errors like the SEO endpoint
+    if (error instanceof Error) {
+      if (error.message.includes('API key')) {
+        return res.status(401).json({
+          success: false,
+          error: {
+            code: 'INVALID_API_KEY',
+            message: 'Invalid or missing Gemini API key',
+          },
+        });
+      }
+      if (error.message.includes('quota') || error.message.includes('limit')) {
+        return res.status(429).json({
+          success: false,
+          error: {
+            code: 'QUOTA_EXCEEDED',
+            message: 'API quota exceeded. Please try again later.',
+          },
+        });
+      }
+    }
+    
+    res.status(500).json({
       success: false,
-      message: error instanceof Error ? error.message : 'Failed to enhance product',
+      error: {
+        code: 'AI_SERVICE_ERROR',
+        message: 'Failed to enhance product with AI',
+      },
     });
   }
 }));
