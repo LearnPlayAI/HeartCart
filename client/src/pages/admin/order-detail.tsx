@@ -54,7 +54,7 @@ import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 
 // Configure PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
 // Types
 interface OrderItem {
@@ -209,6 +209,7 @@ function PDFViewer({ orderId }: { orderId: number }) {
   }, [numPages, pageNumber]);
 
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
+    console.log('PDF loaded successfully with', numPages, 'pages');
     setNumPages(numPages);
     setLoading(false);
     setError(null);
@@ -216,8 +217,17 @@ function PDFViewer({ orderId }: { orderId: number }) {
 
   const onDocumentLoadError = (error: Error) => {
     console.error('PDF loading error:', error);
+    console.error('PDF URL:', pdfUrl);
     setLoading(false);
-    setError('Failed to load PDF document');
+    setError(`Failed to load PDF: ${error.message}`);
+  };
+
+  const onPageLoadSuccess = () => {
+    console.log('Page', pageNumber, 'loaded successfully');
+  };
+
+  const onPageLoadError = (error: Error) => {
+    console.error('Page loading error:', error);
   };
 
   const goToPrevPage = () => {
@@ -446,6 +456,8 @@ function PDFViewer({ orderId }: { orderId: number }) {
               renderTextLayer={false}
               renderAnnotationLayer={false}
               className="shadow-lg"
+              onLoadSuccess={onPageLoadSuccess}
+              onLoadError={onPageLoadError}
             />
           </Document>
         </div>
