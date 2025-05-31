@@ -48,15 +48,17 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ draft, onS
     },
   });
 
-  // Reset form when draft data changes (to handle data loading after form initialization)
+  // Reset form when draft data is fully loaded (similar to BasicInfoStep pattern)
   useEffect(() => {
-    form.reset({
-      imageUrls: draft.imageUrls || [],
-      imageObjectKeys: draft.imageObjectKeys || [],
-      mainImageIndex: draft.mainImageIndex ?? 0,
-      supplierUrl: draft.supplierUrl || '',
-    });
-  }, [draft.imageUrls, draft.imageObjectKeys, draft.mainImageIndex, draft.supplierUrl, form]);
+    if (draft && draft.id) {
+      form.reset({
+        imageUrls: draft.imageUrls || [],
+        imageObjectKeys: draft.imageObjectKeys || [],
+        mainImageIndex: draft.mainImageIndex ?? 0,
+        supplierUrl: draft.supplierUrl || '',
+      });
+    }
+  }, [draft, form]);
 
   // Mutation to upload images
   const uploadImagesMutation = useMutation({
