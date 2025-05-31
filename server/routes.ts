@@ -471,7 +471,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       params: idSchema,
       body: displayOrderSchema
     }),
-    asyncHandler(async (req: Request, res: Response) => {
+    withStandardResponse(async (req: Request, res: Response) => {
       const categoryId = Number(req.params.id);
       const { displayOrder } = req.body;
       
@@ -482,7 +482,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw new NotFoundError(`Category with ID ${categoryId} not found`, 'category');
       }
       
-      res.json(category);
+      return category;
     })
   );
 
