@@ -73,11 +73,12 @@ interface BasicInfoStepProps {
   draft: ProductDraft;
   onSave: (data: any, autoAdvance?: boolean) => void;
   onSaveAndPublish?: (data: any) => void;
+  onProductNameChange?: (name: string) => void;
   isLoading: boolean;
   isPublishing?: boolean;
 }
 
-export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onSaveAndPublish, isLoading, isPublishing }) => {
+export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onSaveAndPublish, onProductNameChange, isLoading, isPublishing }) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isNameTouched, setIsNameTouched] = useState(false);

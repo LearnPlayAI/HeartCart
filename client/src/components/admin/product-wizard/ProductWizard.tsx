@@ -180,6 +180,7 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ draftId, initialDa
   const queryClient = useQueryClient();
   const [currentStep, setCurrentStep] = useState<ProductDraftStep>('basic-info');
   const [internalDraftId, setInternalDraftId] = useState<number | null>(draftId || null);
+  const [currentProductName, setCurrentProductName] = useState<string>('');
 
   const [isAutoAdvancing, setIsAutoAdvancing] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
@@ -270,6 +271,18 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ draftId, initialDa
     },
     enabled: !!draftId,
   });
+
+  // Update currentProductName when draft data loads
+  useEffect(() => {
+    if (draftData?.success && draftData?.data?.name) {
+      setCurrentProductName(draftData.data.name);
+    }
+  }, [draftData]);
+
+  // Callback function to update product name in real-time
+  const onProductNameChange = (name: string) => {
+    setCurrentProductName(name);
+  };
 
   // Update a specific wizard step
   const updateStepMutation = useMutation({
@@ -682,7 +695,7 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ draftId, initialDa
       <StepProgress />
       <div className="bg-white shadow-md rounded-lg p-6">
         <h2 className="text-2xl font-bold mb-6">
-          {editMode && draft?.name ? `Edit: ${draft.name}` : editMode ? 'Edit Product' : 'Add New Product'}
+          {editMode && currentProductName ? `Edit: ${currentProductName}` : editMode ? 'Edit Product' : 'Add New Product'}
         </h2>
 
         <Tabs value={currentStep} onValueChange={handleStepChange} className="w-full">
@@ -693,6 +706,7 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ draftId, initialDa
                 draft={draft as ProductDraft}
                 onSave={handleStepSave}
                 onSaveAndPublish={step.id === 'basic-info' ? handleSaveAndPublish : undefined}
+                onProductNameChange={step.id === 'basic-info' ? onProductNameChange : undefined}
                 isLoading={updateStepMutation.isPending}
                 isPublishing={isPublishing}
               />
