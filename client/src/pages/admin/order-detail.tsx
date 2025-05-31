@@ -56,6 +56,13 @@ import 'react-pdf/dist/esm/Page/TextLayer.css';
 // Configure PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
+// Add options for react-pdf
+const options = {
+  cMapUrl: 'https://unpkg.com/pdfjs-dist@3.11.174/cmaps/',
+  cMapPacked: true,
+  standardFontDataUrl: 'https://unpkg.com/pdfjs-dist@3.11.174/standard_fonts/',
+};
+
 // Types
 interface OrderItem {
   id: number;
@@ -143,7 +150,7 @@ const getPaymentStatusConfig = (paymentStatus: string) => {
   return configs[paymentStatus as keyof typeof configs] || configs.pending;
 };
 
-// PDF Viewer Component with full PDF.js implementation
+// PDF Viewer Component with fallback to iframe
 function PDFViewer({ orderId }: { orderId: number }) {
   const [numPages, setNumPages] = useState<number>(0);
   const [pageNumber, setPageNumber] = useState<number>(1);
@@ -151,6 +158,7 @@ function PDFViewer({ orderId }: { orderId: number }) {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [containerWidth, setContainerWidth] = useState<number>(800);
+  const [useIframe, setUseIframe] = useState<boolean>(false);
 
   const pdfUrl = `/api/orders/${orderId}/proof`;
 
@@ -218,6 +226,7 @@ function PDFViewer({ orderId }: { orderId: number }) {
   const onDocumentLoadError = (error: Error) => {
     console.error('PDF loading error:', error);
     console.error('PDF URL:', pdfUrl);
+    console.error('Error details:', error.name, error.message);
     setLoading(false);
     setError(`Failed to load PDF: ${error.message}`);
   };
@@ -425,6 +434,7 @@ function PDFViewer({ orderId }: { orderId: number }) {
             file={pdfUrl}
             onLoadSuccess={onDocumentLoadSuccess}
             onLoadError={onDocumentLoadError}
+            options={options}
             loading={
               <div className="flex items-center justify-center h-96">
                 <div className="text-center">
