@@ -524,6 +524,7 @@ const MyOrdersPage: React.FC = () => {
                           variant="outline" 
                           size="sm"
                           onClick={() => navigate(`/order/${order.id}`)}
+                          className="bg-[#ff68b4] text-[#ffffff] border-[#ff68b4] hover:bg-[#ff1493] hover:text-[#ffffff]"
                         >
                           <Eye className="h-4 w-4 mr-1" />
                           View Details
