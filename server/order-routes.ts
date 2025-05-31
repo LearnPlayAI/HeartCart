@@ -470,7 +470,7 @@ router.post("/:id/admin/payment-received", isAuthenticated, asyncHandler(async (
 }));
 
 // Admin route: Get proof of payment PDF
-router.get("/:id/admin/proof-of-payment", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
+router.get("/:id/proof", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
   try {
     const orderId = parseInt(req.params.id);
 

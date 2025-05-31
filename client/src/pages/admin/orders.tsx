@@ -38,6 +38,12 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { Document, Page, pdfjs } from 'react-pdf';
+import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
+import 'react-pdf/dist/esm/Page/TextLayer.css';
+
+// Configure PDF.js worker
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
 // Types matching the API response structure
 interface OrderItem {
@@ -816,6 +822,109 @@ function OrderDetailsDialog({ order, open, onOpenChange }: {
   );
 }
 
+// PDF Viewer Component
+function PDFViewer({ orderNumber, orderId, isOpen, onClose }: { 
+  orderNumber: string; 
+  orderId: number; 
+  isOpen: boolean; 
+  onClose: () => void; 
+}) {
+  const [numPages, setNumPages] = useState<number | null>(null);
+  const [pageNumber, setPageNumber] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
+    setNumPages(numPages);
+    setLoading(false);
+    setError(null);
+  };
+
+  const onDocumentLoadError = (error: Error) => {
+    setLoading(false);
+    setError('Failed to load PDF. Please try again.');
+    console.error('PDF loading error:', error);
+  };
+
+  const goToPrevPage = () => setPageNumber(page => Math.max(1, page - 1));
+  const goToNextPage = () => setPageNumber(page => Math.min(numPages || 1, page + 1));
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl max-h-[90vh]">
+        <DialogHeader>
+          <DialogTitle>Proof of Payment - Order {orderNumber}</DialogTitle>
+          <DialogDescription>
+            Review the customer's payment proof document
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="flex-1 overflow-hidden">
+          {loading && (
+            <div className="flex items-center justify-center h-64">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              <span className="ml-2">Loading PDF...</span>
+            </div>
+          )}
+          
+          {error && (
+            <div className="flex items-center justify-center h-64 text-center">
+              <div>
+                <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+                <p className="text-red-600 font-medium">{error}</p>
+              </div>
+            </div>
+          )}
+          
+          {!loading && !error && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between bg-muted p-2 rounded">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={goToPrevPage} 
+                  disabled={pageNumber <= 1}
+                >
+                  Previous
+                </Button>
+                <span className="text-sm">
+                  Page {pageNumber} of {numPages}
+                </span>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={goToNextPage} 
+                  disabled={pageNumber >= (numPages || 1)}
+                >
+                  Next
+                </Button>
+              </div>
+              
+              <ScrollArea className="h-[600px] border rounded">
+                <div className="flex justify-center p-4">
+                  <Document
+                    file={`/api/orders/${orderId}/proof`}
+                    onLoadSuccess={onDocumentLoadSuccess}
+                    onLoadError={onDocumentLoadError}
+                    loading=""
+                  >
+                    <Page 
+                      pageNumber={pageNumber}
+                      width={600}
+                      renderTextLayer={false}
+                      renderAnnotationLayer={false}
+                    />
+                  </Document>
+                </div>
+              </ScrollArea>
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // Main Component
 export default function AdminOrdersPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -824,6 +933,8 @@ export default function AdminOrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
+  const [pdfViewerOpen, setPdfViewerOpen] = useState(false);
+  const [selectedOrderForPdf, setSelectedOrderForPdf] = useState<Order | null>(null);
 
   const { data: ordersResponse, isLoading, error, refetch } = useQuery({
     queryKey: ['/api/admin/orders'],
