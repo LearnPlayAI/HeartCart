@@ -384,11 +384,13 @@ export default function AdminOrdersPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
 
-  const { data: orders = [], isLoading } = useQuery({
+  const { data: response, isLoading } = useQuery({
     queryKey: ['/api/admin/orders'],
     enabled: true
   });
 
+  const orders = response?.data || [];
+  
   const filteredOrders = orders.filter((order: Order) => {
     if (statusFilter === "all") return true;
     return order.status === statusFilter;

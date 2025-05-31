@@ -268,7 +268,7 @@ export default function AdminOrderDetail() {
   const [trackingInput, setTrackingInput] = useState("");
   const [paymentReceivedDate, setPaymentReceivedDate] = useState(new Date().toISOString().split('T')[0]);
 
-  const { data: order, isLoading, error } = useQuery({
+  const { data: response, isLoading, error } = useQuery({
     queryKey: ['/api/admin/orders', orderId],
     queryFn: async () => {
       const response = await fetch(`/api/admin/orders/${orderId}`);
@@ -277,6 +277,8 @@ export default function AdminOrderDetail() {
     },
     enabled: !!orderId
   });
+
+  const order = response?.data;
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ orderId, status }: { orderId: number; status: string }) => {
