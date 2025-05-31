@@ -462,26 +462,7 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
         brand: formValues.brand || undefined,
       });
       
-      console.log('Raw response status:', response.status);
-      console.log('Raw response headers:', response.headers);
-      console.log('Raw response ok:', response.ok);
-      
-      // Get the raw text first to see what we're actually receiving
-      const responseText = await response.text();
-      console.log('Raw response text:', responseText);
-      console.log('Response text length:', responseText.length);
-      console.log('First 500 chars:', responseText.substring(0, 500));
-      
-      // Try to parse as JSON
-      let data;
-      try {
-        data = JSON.parse(responseText);
-        console.log('Parsed JSON successfully:', data);
-      } catch (parseError) {
-        console.error('JSON parse error:', parseError);
-        console.error('Failed to parse:', responseText);
-        throw new Error('Invalid JSON response from server');
-      }
+      const data = await response.json();
       
       if (data.success && data.data) {
         // Apply the enhanced title and description

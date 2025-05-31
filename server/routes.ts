@@ -5915,11 +5915,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerProductDraftRoutes(app);
   
   // Register AI API routes for product generation features
-  app.use('/api/ai', aiRouter);
+  app.use('/api/ai', aiApiRoutes);
   
-  // Mount legacy AI API routes if they exist
-  if (aiApiRoutes) {
-    app.use('/api/ai-legacy', aiApiRoutes);
+  // Mount legacy AI routes if they exist
+  if (aiRouter) {
+    app.use('/api/ai-legacy', aiRouter);
   }
   
   // Register attribute discount rules routes
