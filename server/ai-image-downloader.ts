@@ -104,7 +104,7 @@ export class AIImageDownloader {
 
     for (const imageUrl of imageUrls.slice(0, 12)) { // Limit to 12 images as requested
       try {
-        const downloadedImage = await this.downloadAndUploadImage(imageUrl, productId);
+        const downloadedImage = await this.downloadSingleImage(imageUrl, productId);
         if (downloadedImage) {
           result.images.push(downloadedImage);
         }
