@@ -23,7 +23,9 @@ import {
   insertProductImageSchema,
   insertPricingSchema,
   insertSupplierSchema,
-  insertCatalogSchema
+  insertCatalogSchema,
+  insertPromotionSchema,
+  insertProductPromotionSchema
 } from "@shared/schema";
 import { objectStore, STORAGE_FOLDERS } from "./object-store";
 import { setupAuth } from "./auth";
@@ -3135,6 +3137,207 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     })
   );
+
+  // ===== PROMOTIONS API ROUTES =====
+  
+  // Get all promotions
+  app.get("/api/promotions", withStandardResponse(async (req: Request, res: Response) => {
+    const promotions = await storage.getPromotions();
+    return createPaginatedResponse(promotions, promotions.length, 1, 50);
+  }));
+
+  // Get active promotions only
+  app.get("/api/promotions/active", withStandardResponse(async (req: Request, res: Response) => {
+    const activePromotions = await storage.getActivePromotions();
+    return createPaginatedResponse(activePromotions, activePromotions.length, 1, 50);
+  }));
+
+  // Get promotion by ID
+  app.get("/api/promotions/:id", withStandardResponse(async (req: Request, res: Response) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      throw new BadRequestError("Invalid promotion ID");
+    }
+    
+    const promotion = await storage.getPromotionById(id);
+    if (!promotion) {
+      throw new NotFoundError("Promotion not found");
+    }
+    
+    return promotion;
+  }));
+
+  // Create new promotion (admin only)
+  app.post("/api/promotions", 
+    isAuthenticated, 
+    isAdmin,
+    validateRequest({
+      body: insertPromotionSchema
+    }),
+    withStandardResponse(async (req: Request, res: Response) => {
+      const user = req.user as any;
+      const promotionData = { ...req.body, createdBy: user.id };
+      const promotion = await storage.createPromotion(promotionData);
+      return promotion;
+    })
+  );
+
+  // Update promotion (admin only)
+  app.patch("/api/promotions/:id",
+    isAuthenticated,
+    isAdmin,
+    validateRequest({
+      body: insertPromotionSchema.partial()
+    }),
+    withStandardResponse(async (req: Request, res: Response) => {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        throw new BadRequestError("Invalid promotion ID");
+      }
+      
+      const promotion = await storage.updatePromotion(id, req.body);
+      if (!promotion) {
+        throw new NotFoundError("Promotion not found");
+      }
+      
+      return promotion;
+    })
+  );
+
+  // Delete promotion (admin only)
+  app.delete("/api/promotions/:id",
+    isAuthenticated,
+    isAdmin,
+    withStandardResponse(async (req: Request, res: Response) => {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        throw new BadRequestError("Invalid promotion ID");
+      }
+      
+      const success = await storage.deletePromotion(id);
+      if (!success) {
+        throw new NotFoundError("Promotion not found");
+      }
+      
+      return { message: "Promotion deleted successfully" };
+    })
+  );
+
+  // Get products in a promotion
+  app.get("/api/promotions/:id/products", withStandardResponse(async (req: Request, res: Response) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      throw new BadRequestError("Invalid promotion ID");
+    }
+    
+    const products = await storage.getPromotionProducts(id);
+    return createPaginatedResponse(products, products.length, 1, 50);
+  }));
+
+  // Add product to promotion (admin only)
+  app.post("/api/promotions/:id/products",
+    isAuthenticated,
+    isAdmin,
+    validateRequest({
+      body: z.object({
+        productId: z.number().int().positive(),
+        discountOverride: z.number().optional()
+      })
+    }),
+    withStandardResponse(async (req: Request, res: Response) => {
+      const promotionId = parseInt(req.params.id);
+      if (isNaN(promotionId)) {
+        throw new BadRequestError("Invalid promotion ID");
+      }
+      
+      const { productId, discountOverride } = req.body;
+      const productPromotion = await storage.addProductToPromotion(promotionId, productId, discountOverride);
+      return productPromotion;
+    })
+  );
+
+  // Remove product from promotion (admin only)
+  app.delete("/api/promotions/:id/products/:productId",
+    isAuthenticated,
+    isAdmin,
+    withStandardResponse(async (req: Request, res: Response) => {
+      const promotionId = parseInt(req.params.id);
+      const productId = parseInt(req.params.productId);
+      
+      if (isNaN(promotionId) || isNaN(productId)) {
+        throw new BadRequestError("Invalid promotion ID or product ID");
+      }
+      
+      const success = await storage.removeProductFromPromotion(promotionId, productId);
+      if (!success) {
+        throw new NotFoundError("Product not found in promotion");
+      }
+      
+      return { message: "Product removed from promotion successfully" };
+    })
+  );
+
+  // Bulk add products to promotion (admin only)
+  app.post("/api/promotions/:id/products/bulk",
+    isAuthenticated,
+    isAdmin,
+    validateRequest({
+      body: z.object({
+        productIds: z.array(z.number().int().positive()).min(1)
+      })
+    }),
+    withStandardResponse(async (req: Request, res: Response) => {
+      const promotionId = parseInt(req.params.id);
+      if (isNaN(promotionId)) {
+        throw new BadRequestError("Invalid promotion ID");
+      }
+      
+      const { productIds } = req.body;
+      const productPromotions = await storage.bulkAddProductsToPromotion(promotionId, productIds);
+      return { 
+        message: `${productPromotions.length} products added to promotion successfully`,
+        productPromotions 
+      };
+    })
+  );
+
+  // Bulk remove products from promotion (admin only)
+  app.delete("/api/promotions/:id/products/bulk",
+    isAuthenticated,
+    isAdmin,
+    validateRequest({
+      body: z.object({
+        productIds: z.array(z.number().int().positive()).min(1)
+      })
+    }),
+    withStandardResponse(async (req: Request, res: Response) => {
+      const promotionId = parseInt(req.params.id);
+      if (isNaN(promotionId)) {
+        throw new BadRequestError("Invalid promotion ID");
+      }
+      
+      const { productIds } = req.body;
+      const success = await storage.bulkRemoveProductsFromPromotion(promotionId, productIds);
+      if (!success) {
+        throw new NotFoundError("Failed to remove products from promotion");
+      }
+      
+      return { 
+        message: `${productIds.length} products removed from promotion successfully`
+      };
+    })
+  );
+
+  // Get promotions for a specific product
+  app.get("/api/products/:id/promotions", withStandardResponse(async (req: Request, res: Response) => {
+    const productId = parseInt(req.params.id);
+    if (isNaN(productId)) {
+      throw new BadRequestError("Invalid product ID");
+    }
+    
+    const promotions = await storage.getProductPromotions(productId);
+    return createPaginatedResponse(promotions, promotions.length, 1, 50);
+  }));
 
   // USER PROFILE UPDATE ENDPOINT
   app.patch(
