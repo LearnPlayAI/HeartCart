@@ -211,21 +211,21 @@ const ReviewStep: React.FC<ReviewStepProps> = ({ onPublish }) => {
             </CardContent>
             <CardFooter className="flex flex-col items-start">
               <div className="text-sm text-muted-foreground mb-4">
-                <p>{steps.filter(s => s.valid).length} of {steps.length} steps valid</p>
-                <p className="mt-1">{isValid ? 'Product is ready to publish!' : 'Please fix the validation issues before publishing.'}</p>
+                <p>{steps.filter(s => s.valid).length} of {steps.length} steps completed</p>
+                <p className="mt-1">Your product is ready to publish at any time.</p>
               </div>
               
               {!isValid && (
-                <div className="p-3 bg-amber-50 border border-amber-200 rounded-md flex items-start w-full">
-                  <AlertCircle className="h-5 w-5 text-amber-600 mr-2 mt-0.5" />
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-md flex items-start w-full">
+                  <AlertCircle className="h-5 w-5 text-blue-600 mr-2 mt-0.5" />
                   <div>
-                    <p className="font-medium text-amber-800">Required fields missing</p>
-                    <ul className="text-sm text-amber-700 mt-1 list-disc list-inside">
+                    <p className="font-medium text-blue-800">Optional improvements</p>
+                    <ul className="text-sm text-blue-700 mt-1 list-disc list-inside">
                       {!hasBasicInfo && (
-                        <li>Basic Information: Name, Slug, and Category are required</li>
+                        <li>Consider completing basic information for better product visibility</li>
                       )}
                       {!hasPricing && (
-                        <li>Pricing: Regular price is required</li>
+                        <li>Consider adding pricing information for customer reference</li>
                       )}
                     </ul>
                   </div>
@@ -415,7 +415,7 @@ const ReviewStep: React.FC<ReviewStepProps> = ({ onPublish }) => {
         
         <Button 
           onClick={handlePublish}
-          disabled={!isValid || isSubmitting || isDirty}
+          disabled={isSubmitting}
           className="min-w-[160px]"
         >
           {isSubmitting ? (
@@ -435,11 +435,7 @@ const ReviewStep: React.FC<ReviewStepProps> = ({ onPublish }) => {
         </Button>
       </div>
       
-      {isDirty && (
-        <p className="text-center text-sm text-amber-600">
-          Please save all changes before publishing.
-        </p>
-      )}
+
     </div>
   );
 };
