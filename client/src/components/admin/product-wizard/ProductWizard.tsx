@@ -666,7 +666,7 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ draftId, initialDa
 
         <div className="flex justify-between mt-6 pt-4 border-t">
           <div className="flex gap-2">
-            {currentStep !== 'review' ? (
+            {currentStep !== 'review' && (
               <Button
                 onClick={handleNextStep}
                 variant="outline"
@@ -674,16 +674,6 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ draftId, initialDa
               >
                 Next Step
                 <ChevronRight className="ml-1 h-4 w-4" />
-              </Button>
-            ) : (
-              <Button
-                onClick={handlePublish}
-                disabled={publishDraftMutation.isPending}
-                variant="default"
-              >
-                {publishDraftMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                <Save className="mr-2 h-4 w-4" />
-                {editMode ? 'Update Product' : 'Create Product'}
               </Button>
             )}
           </div>
