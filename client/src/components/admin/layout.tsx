@@ -1,7 +1,7 @@
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, ShoppingBag, Package, CreditCard, Users, Settings, BarChart3, LogOut, DollarSign, BrainCircuit, Factory, BookOpen, Tags, FileText, Upload, PlusCircle, Menu } from "lucide-react";
+import { LayoutDashboard, ShoppingBag, Package, CreditCard, Users, Settings, BarChart3, LogOut, DollarSign, BrainCircuit, Factory, BookOpen, Tags, FileText, Upload, PlusCircle, Menu, Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
