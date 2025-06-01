@@ -218,7 +218,10 @@ const ProductCard: React.FC<ProductCardProps> = ({
                   return timeLeft && (
                     <div className="absolute bottom-2 right-2 bg-orange-500 text-white px-2 py-1 text-xs rounded shadow-lg z-10 flex items-center">
                       <Clock className="w-3 h-3 mr-1" />
-                      {timeLeft.hours}h {timeLeft.minutes}m
+                      {timeLeft.days > 0 
+                        ? `${timeLeft.days}d ${timeLeft.hours}h`
+                        : `${timeLeft.hours}h ${timeLeft.minutes}m`
+                      }
                     </div>
                   );
                 })()}
