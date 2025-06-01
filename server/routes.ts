@@ -3293,6 +3293,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     })
   );
 
+  // Update promotional price for a specific product in promotion (admin only)
+  app.patch("/api/promotions/:id/products/:productId/price",
+    isAuthenticated,
+    isAdmin,
+    validateRequest({
+      body: z.object({
+        promotionalPrice: z.number().positive()
+      })
+    }),
+    withStandardResponse(async (req: Request, res: Response) => {
+      const promotionId = parseInt(req.params.id);
+      const productId = parseInt(req.params.productId);
+      
+      if (isNaN(promotionId) || isNaN(productId)) {
+        throw new BadRequestError("Invalid promotion ID or product ID");
+      }
+      
+      const { promotionalPrice } = req.body;
+      const updated = await storage.updatePromotionalPrice(promotionId, productId, promotionalPrice);
+      
+      if (!updated) {
+        throw new NotFoundError("Product not found in promotion");
+      }
+      
+      return { message: "Promotional price updated successfully" };
+    })
+  );
+
+  // Mass publish all products in a promotion (admin only)
+  app.post("/api/promotions/:id/products/mass-publish",
+    isAuthenticated,
+    isAdmin,
+    withStandardResponse(async (req: Request, res: Response) => {
+      const promotionId = parseInt(req.params.id);
+      
+      if (isNaN(promotionId)) {
+        throw new BadRequestError("Invalid promotion ID");
+      }
+      
+      const result = await storage.massPublishPromotionProducts(promotionId);
+      
+      return { 
+        message: `${result.publishedCount} products published successfully`,
+        publishedCount: result.publishedCount,
+        skippedCount: result.skippedCount,
+        errors: result.errors
+      };
+    })
+  );
+
   // Bulk add products to promotion (admin only)
   app.post("/api/promotions/:id/products/bulk",
     isAuthenticated,

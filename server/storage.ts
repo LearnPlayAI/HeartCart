@@ -8865,6 +8865,74 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async updatePromotionalPrice(promotionId: number, productId: number, promotionalPrice: number): Promise<boolean> {
+    try {
+      const result = await db
+        .update(productPromotions)
+        .set({ promotionalPrice })
+        .where(
+          and(
+            eq(productPromotions.promotionId, promotionId),
+            eq(productPromotions.productId, productId)
+          )
+        );
+      return true;
+    } catch (error) {
+      console.error(`Error updating promotional price for product ${productId} in promotion ${promotionId}:`, error);
+      throw error;
+    }
+  }
+
+  async massPublishPromotionProducts(promotionId: number): Promise<{ publishedCount: number; skippedCount: number; errors: string[] }> {
+    try {
+      // Get all products in the promotion
+      const promotionProducts = await db
+        .select({
+          productId: productPromotions.productId
+        })
+        .from(productPromotions)
+        .where(eq(productPromotions.promotionId, promotionId));
+
+      let publishedCount = 0;
+      let skippedCount = 0;
+      const errors: string[] = [];
+
+      for (const item of promotionProducts) {
+        try {
+          // Check if product is already published
+          const [product] = await db
+            .select({ isPublished: products.isPublished })
+            .from(products)
+            .where(eq(products.id, item.productId));
+
+          if (product?.isPublished) {
+            skippedCount++;
+            continue;
+          }
+
+          // Publish the product
+          await db
+            .update(products)
+            .set({ 
+              isPublished: true,
+              updatedAt: new Date().toISOString()
+            })
+            .where(eq(products.id, item.productId));
+
+          publishedCount++;
+        } catch (error) {
+          console.error(`Error publishing product ${item.productId}:`, error);
+          errors.push(`Failed to publish product ${item.productId}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+      }
+
+      return { publishedCount, skippedCount, errors };
+    } catch (error) {
+      console.error(`Error in mass publish for promotion ${promotionId}:`, error);
+      throw error;
+    }
+  }
+
   async getPromotionProducts(promotionId: number): Promise<(Product & { discountOverride?: number })[]> {
     try {
       const promotionProducts = await db
