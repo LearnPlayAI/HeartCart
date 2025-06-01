@@ -8955,12 +8955,20 @@ export class DatabaseStorage implements IStorage {
           parentCategory = parent || null;
         }
 
+        // Calculate promotional price if not already set
+        let calculatedPromotionalPrice = item.productPromotions.promotionalPrice;
+        if (!calculatedPromotionalPrice && promotion.discountValue && item.products.salePrice) {
+          const discountPercentage = parseFloat(promotion.discountValue);
+          const salePrice = parseFloat(item.products.salePrice);
+          calculatedPromotionalPrice = Math.round(salePrice * (1 - discountPercentage / 100));
+        }
+
         result.push({
           id: item.productPromotions.id,
           productId: item.productPromotions.productId,
           promotionId: item.productPromotions.promotionId,
           discountOverride: item.productPromotions.discountOverride,
-          promotionalPrice: item.productPromotions.promotionalPrice,
+          promotionalPrice: calculatedPromotionalPrice,
           product: {
             ...item.products,
             category: item.categories ? {
@@ -9011,12 +9019,12 @@ export class DatabaseStorage implements IStorage {
         if (product) {
           let promotionalPrice = null;
           
-          // Calculate promotional price by applying additional discount to existing sale price
+          // Calculate promotional price by applying discount to existing sale price
           if (promotion.discountValue && product.salePrice) {
             const discountPercentage = parseFloat(promotion.discountValue);
             const currentSalePrice = parseFloat(product.salePrice);
-            // Apply discount to current sale price (this makes it cheaper, not more expensive)
-            promotionalPrice = (currentSalePrice * (1 - discountPercentage / 100)).toFixed(2);
+            // Apply discount to current sale price to make it cheaper
+            promotionalPrice = Math.round(currentSalePrice * (1 - discountPercentage / 100));
           }
 
           values.push({
