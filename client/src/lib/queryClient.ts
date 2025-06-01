@@ -39,9 +39,12 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
+// Overloaded function to support both calling patterns
+export async function apiRequest(url: string, options: { method: string; body?: string; headers?: Record<string, string> }): Promise<Response>;
+export async function apiRequest(method: string, url: string, data?: unknown, options?: { isFormData?: boolean; debug?: boolean; credentials?: RequestCredentials; headers?: Record<string, string> }): Promise<Response>;
 export async function apiRequest(
-  method: string,
-  url: string,
+  urlOrMethod: string,
+  urlOrOptions?: string | { method: string; body?: string; headers?: Record<string, string> },
   data?: unknown | undefined,
   options?: { 
     isFormData?: boolean; 
@@ -50,24 +53,44 @@ export async function apiRequest(
     headers?: Record<string, string>;
   }
 ): Promise<Response> {
-  const isFormData = options?.isFormData || false;
-  const debug = options?.debug || false;
+  let method: string;
+  let url: string;
+  let requestData: unknown;
+  let requestOptions: any = {};
+
+  // Handle both calling patterns
+  if (typeof urlOrOptions === 'string') {
+    // Old pattern: apiRequest(method, url, data, options)
+    method = urlOrMethod;
+    url = urlOrOptions;
+    requestData = data;
+    requestOptions = options || {};
+  } else {
+    // New pattern: apiRequest(url, { method, body, headers })
+    url = urlOrMethod;
+    method = urlOrOptions?.method || 'GET';
+    requestData = urlOrOptions?.body ? JSON.parse(urlOrOptions.body) : undefined;
+    requestOptions = { headers: urlOrOptions?.headers || {} };
+  }
+
+  const isFormData = requestOptions?.isFormData || false;
+  const debug = requestOptions?.debug || false;
   
   // Log for debugging if requested
   if (debug || url.includes('/api/product-drafts')) {
-    console.log(`API Request: ${method} ${url}`, data, options);
+    console.log(`API Request: ${method} ${url}`, requestData, requestOptions);
   }
   
   const fetchOptions: RequestInit = {
     method,
-    credentials: options?.credentials || "include",
-    body: data ? (isFormData ? data as FormData : JSON.stringify(data)) : undefined,
+    credentials: requestOptions?.credentials || "include",
+    body: requestData ? (isFormData ? requestData as FormData : JSON.stringify(requestData)) : undefined,
   };
   
   // Set headers
   fetchOptions.headers = {
-    ...(data && !isFormData ? { "Content-Type": "application/json" } : {}),
-    ...(options?.headers || {})
+    ...(requestData && !isFormData ? { "Content-Type": "application/json" } : {}),
+    ...(requestOptions?.headers || {})
   };
   
   console.log('Full fetch options:', fetchOptions);
