@@ -527,6 +527,7 @@ export const productPromotions = pgTable("productPromotions", {
   productId: integer("productId").references(() => products.id).notNull(),
   promotionId: integer("promotionId").references(() => promotions.id).notNull(),
   discountOverride: decimal("discountOverride", { precision: 10, scale: 2 }),
+  promotionalPrice: decimal("promotionalPrice", { precision: 10, scale: 2 }),
   createdAt: text("createdAt").default(String(new Date().toISOString())).notNull(),
 }, (table) => {
   return {

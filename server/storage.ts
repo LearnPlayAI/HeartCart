@@ -8933,21 +8933,44 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getPromotionProducts(promotionId: number): Promise<(Product & { discountOverride?: number })[]> {
+  async getPromotionProducts(promotionId: number): Promise<any[]> {
     try {
-      const promotionProducts = await db
-        .select({
-          product: products,
-          discountOverride: productPromotions.discountOverride
-        })
-        .from(products)
-        .innerJoin(productPromotions, eq(products.id, productPromotions.productId))
+      // First get the promotion products with basic product info
+      const promotionProductsList = await db
+        .select()
+        .from(productPromotions)
+        .innerJoin(products, eq(productPromotions.productId, products.id))
+        .leftJoin(categories, eq(products.categoryId, categories.id))
         .where(eq(productPromotions.promotionId, promotionId));
 
-      return promotionProducts.map(item => ({
-        ...item.product,
-        discountOverride: item.discountOverride || undefined
-      }));
+      // Then get parent categories for each category if they exist
+      const result = [];
+      for (const item of promotionProductsList) {
+        let parentCategory = null;
+        if (item.categories?.parentId) {
+          const [parent] = await db
+            .select()
+            .from(categories)
+            .where(eq(categories.id, item.categories.parentId));
+          parentCategory = parent || null;
+        }
+
+        result.push({
+          id: item.productPromotions.id,
+          productId: item.productPromotions.productId,
+          promotionId: item.productPromotions.promotionId,
+          discountOverride: item.productPromotions.discountOverride,
+          product: {
+            ...item.products,
+            category: item.categories ? {
+              ...item.categories,
+              parentCategory: parentCategory
+            } : null
+          }
+        });
+      }
+
+      return result;
     } catch (error) {
       console.error(`Error fetching products for promotion ${promotionId}:`, error);
       throw error;
