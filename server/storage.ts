@@ -387,6 +387,32 @@ export interface IStorage {
   ): Promise<ProductDraft | undefined>;
   publishProductDraft(id: number): Promise<Product | undefined>;
   deleteProductDraft(id: number): Promise<boolean>;
+
+  // Promotion operations
+  getPromotions(): Promise<Promotion[]>;
+  getPromotionById(id: number): Promise<Promotion | undefined>;
+  getActivePromotions(): Promise<Promotion[]>;
+  createPromotion(promotionData: InsertPromotion): Promise<Promotion>;
+  updatePromotion(id: number, updateData: Partial<InsertPromotion>): Promise<Promotion | undefined>;
+  deletePromotion(id: number): Promise<boolean>;
+  
+  // Product-Promotion relationship operations
+  getPromotionProducts(promotionId: number): Promise<(Product & { discountOverride?: number })[]>;
+  getProductPromotions(productId: number): Promise<Promotion[]>;
+  addProductToPromotion(promotionId: number, productId: number, discountOverride?: number): Promise<ProductPromotion>;
+  removeProductFromPromotion(promotionId: number, productId: number): Promise<boolean>;
+  bulkAddProductsToPromotion(promotionId: number, productIds: number[]): Promise<ProductPromotion[]>;
+  bulkRemoveProductsFromPromotion(promotionId: number, productIds: number[]): Promise<boolean>;
+  
+  // Bulk operations for promotion management
+  getProductIdsByCategory(categoryId: number, includeSubcategories?: boolean): Promise<number[]>;
+  getProductIdsBySupplier(supplierId: number): Promise<number[]>;
+  getProductIdsByCatalog(catalogId: number): Promise<number[]>;
+  
+  // Promotion analytics operations
+  getPromotionAnalytics(promotionId?: number, dateRange?: { from: Date; to: Date }, compareWith?: { from: Date; to: Date }): Promise<any>;
+  getPromotionPerformanceMetrics(promotionId: number): Promise<any>;
+  getPromotionTopProducts(promotionId: number, limit?: number): Promise<any[]>;
 }
 
 export class DatabaseStorage implements IStorage {
