@@ -58,15 +58,19 @@ Transform the current individual flash deals system into a comprehensive promoti
 - [ ] Integrate existing home page search component
 - [ ] Create `/admin/promotions/[id]/products` page
 - [ ] Individual product search and selection
-- [ ] Checkbox selection for multiple products
+- [ ] Product list view with checkbox selection for multiple products
 - [ ] Selected products display and management
 - [ ] Remove products from promotion functionality
 
-### Category-Based Selection
+### Multiple Product Selection Methods
+- [ ] Search-based product selection (individual or multiple)
+- [ ] List view with checkboxes for bulk selection
 - [ ] "Add all products from category" functionality
 - [ ] Category tree selection interface
 - [ ] Bulk category assignment with preview
 - [ ] Subcategory inclusion options
+- [ ] Supplier-based bulk selection
+- [ ] Catalog-based bulk selection
 
 ### Draft System Integration
 - [ ] Extend existing drafts system for promotion assignments
@@ -115,10 +119,13 @@ Transform the current individual flash deals system into a comprehensive promoti
 - [ ] Preview before import functionality
 
 ### Import Features
-- [ ] SKU-based product matching
-- [ ] Category-based bulk import
-- [ ] Supplier-based bulk import
+- [ ] SKU-based product matching for promotion assignment
+- [ ] Category-based bulk import for promotion assignment
+- [ ] Supplier-based bulk import for promotion assignment
+- [ ] Catalog-based bulk import for promotion assignment
 - [ ] Import with custom discount values per product
+- [ ] Bulk promotion assignment via CSV using existing mass upload system
+- [ ] Integration with existing supplier and catalog selection in mass upload
 
 ---
 
@@ -126,7 +133,7 @@ Transform the current individual flash deals system into a comprehensive promoti
 
 ### API Migration
 - [ ] Update `/api/flash-deals` to use promotions system
-- [ ] Maintain backward compatibility during transition
+- [ ] Replace individual flash deal logic with promotion-based queries
 - [ ] Query active promotions for special deals
 - [ ] Product filtering by active promotions
 
@@ -250,11 +257,11 @@ Transform the current individual flash deals system into a comprehensive promoti
 - [ ] Input validation and sanitization
 - [ ] Rate limiting for bulk operations
 
-### Backward Compatibility
-- [ ] Existing flash deals continue working during migration
-- [ ] API compatibility for frontend components
-- [ ] Database migration strategy
-- [ ] Gradual transition plan
+### Direct Migration Strategy
+- [ ] Replace existing flash deal system with promotions
+- [ ] Update all flash deal references to use promotions
+- [ ] Remove individual product flash deal columns after migration
+- [ ] Test all functionality with promotion-based system
 
 ---
 
