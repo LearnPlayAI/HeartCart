@@ -9,6 +9,7 @@ import FormData from 'form-data';
 import { Readable } from 'stream';
 import { logger } from './logger';
 import { Client } from '@replit/object-storage';
+import sharp from 'sharp';
 
 interface DownloadedImage {
   url: string;
