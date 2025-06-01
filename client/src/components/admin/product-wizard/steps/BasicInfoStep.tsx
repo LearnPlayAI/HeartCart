@@ -94,6 +94,10 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
     description: string;
   } | null>(null);
   
+  // Editable versions of AI enhancement results
+  const [editableAiTitle, setEditableAiTitle] = useState('');
+  const [editableAiDescription, setEditableAiDescription] = useState('');
+  
   // Category creation modal state
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
@@ -470,10 +474,13 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
       
       if (data.success && data.data) {
         // Store the AI enhancement result and show preview modal
-        setAiEnhancementResult({
+        const enhancementData = {
           title: data.data.title || formValues.name,
           description: data.data.description || currentDescription,
-        });
+        };
+        setAiEnhancementResult(enhancementData);
+        setEditableAiTitle(enhancementData.title);
+        setEditableAiDescription(enhancementData.description);
         setShowEnhancementPreview(true);
       } else {
         throw new Error(data.message || 'Failed to enhance product');
@@ -505,14 +512,14 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
 
   // Functions for AI enhancement preview modal
   const applyAiEnhancement = () => {
-    if (aiEnhancementResult) {
-      // Apply the enhanced title and description
-      form.setValue('name', aiEnhancementResult.title);
-      form.setValue('description', aiEnhancementResult.description);
+    if (editableAiTitle && editableAiDescription) {
+      // Apply the edited title and description
+      form.setValue('name', editableAiTitle);
+      form.setValue('description', editableAiDescription);
       
       // Update the product name in real-time for the heading
       if (onProductNameChange) {
-        onProductNameChange(aiEnhancementResult.title);
+        onProductNameChange(editableAiTitle);
       }
       
       toast({
@@ -522,6 +529,8 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
     }
     setShowEnhancementPreview(false);
     setAiEnhancementResult(null);
+    setEditableAiTitle('');
+    setEditableAiDescription('');
   };
 
   const regenerateAiEnhancement = async () => {
@@ -534,6 +543,8 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
   const discardAiEnhancement = () => {
     setShowEnhancementPreview(false);
     setAiEnhancementResult(null);
+    setEditableAiTitle('');
+    setEditableAiDescription('');
   };
   
   // Handle sale price changes
@@ -1273,9 +1284,12 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
                 </div>
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-green-600">AI Enhanced Title</Label>
-                  <div className="p-3 bg-green-50 rounded-lg border border-green-200">
-                    <p className="text-sm font-medium">{aiEnhancementResult.title}</p>
-                  </div>
+                  <Input
+                    value={editableAiTitle}
+                    onChange={(e) => setEditableAiTitle(e.target.value)}
+                    className="bg-green-50 border-green-200 focus:border-green-400"
+                    placeholder="Enter enhanced title..."
+                  />
                 </div>
               </div>
             </div>
@@ -1292,9 +1306,12 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
                 </div>
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-green-600">AI Enhanced Description</Label>
-                  <div className="p-3 bg-green-50 rounded-lg border border-green-200 max-h-40 overflow-y-auto">
-                    <p className="text-sm whitespace-pre-wrap">{aiEnhancementResult.description}</p>
-                  </div>
+                  <Textarea
+                    value={editableAiDescription}
+                    onChange={(e) => setEditableAiDescription(e.target.value)}
+                    className="bg-green-50 border-green-200 focus:border-green-400 min-h-[120px]"
+                    placeholder="Enter enhanced description..."
+                  />
                 </div>
               </div>
             </div>
