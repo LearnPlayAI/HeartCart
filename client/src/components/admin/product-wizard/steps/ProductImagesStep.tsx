@@ -281,6 +281,8 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ draft, onS
         productId: draft.id
       });
 
+      console.log('AI download response:', response);
+      
       if (response.success && response.images && response.images.length > 0) {
         // Update the form with the new images
         const currentImageUrls = form.getValues('imageUrls');
@@ -305,10 +307,16 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ draft, onS
         // Auto-save the changes
         const formData = form.getValues();
         onSave(formData, false);
+        
+        // Invalidate queries to refresh the data
+        queryClient.invalidateQueries({ queryKey: [`/api/product-drafts/${draft.id}`] });
       } else {
+        // Log the full response for debugging
+        console.log('Download failed or no images:', response);
+        
         toast({
-          title: "No Images Found",
-          description: "No suitable product images were found on the supplier page.",
+          title: response.message || "No Images Found",
+          description: response.errors?.[0] || "No suitable product images were found on the supplier page.",
           variant: "destructive"
         });
       }
