@@ -101,6 +101,8 @@ function GlobalAttributesPage() {
   const [optionMetadata, setOptionMetadata] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState("");
   const [attributeFilter, setAttributeFilter] = useState<string | null>(null);
+  const [nextAttributeSortOrder, setNextAttributeSortOrder] = useState<number>(0);
+  const [nextOptionSortOrder, setNextOptionSortOrder] = useState<number>(0);
 
   // Fetch global attributes from the centralized attribute system
   const {
@@ -122,6 +124,25 @@ function GlobalAttributesPage() {
   useEffect(() => {
     refetchAttributes();
   }, [refetchAttributes]);
+
+  // Effect to calculate next available sort orders
+  useEffect(() => {
+    if (attributes && attributes.length > 0) {
+      const maxSortOrder = Math.max(...attributes.map(attr => attr.sortOrder || 0));
+      setNextAttributeSortOrder(maxSortOrder + 1);
+    } else {
+      setNextAttributeSortOrder(0);
+    }
+  }, [attributes]);
+
+  useEffect(() => {
+    if (selectedAttribute && options && options.length > 0) {
+      const maxSortOrder = Math.max(...options.map(opt => opt.sortOrder || 0));
+      setNextOptionSortOrder(maxSortOrder + 1);
+    } else {
+      setNextOptionSortOrder(0);
+    }
+  }, [selectedAttribute, options]);
 
   // Fetch attribute options when an attribute is selected
   const {
