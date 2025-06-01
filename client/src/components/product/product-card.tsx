@@ -248,34 +248,23 @@ const ProductCard: React.FC<ProductCardProps> = ({
               {/* Show promotional price if available, otherwise show sale price or regular price */}
               <span className="text-[#FF69B4] font-bold text-lg">
                 {promotionInfo ? (() => {
-                  // Debug: Log the data we're working with
-                  console.log('ProductCard Debug:', {
-                    productName: product.name,
-                    regularPrice: product.price,
-                    salePrice: product.salePrice,
-                    promotionDiscount: promotionInfo.promotionDiscount,
-                    originalSalePrice: (product as any).originalSalePrice
-                  });
-                  
                   // Calculate promotional price from regular price with combined discounts
                   const regularPrice = Number(product.price) || 0;
                   const originalSalePrice = Number((product as any).originalSalePrice) || 0;
                   const promotionDiscount = Number(promotionInfo.promotionDiscount) || 0;
                   
-                  // Calculate the existing sale discount percentage from original sale price
-                  const saleDiscountPercent = originalSalePrice > 0 ? ((regularPrice - originalSalePrice) / regularPrice * 100) : 0;
+                  // For gazebo: R2299 -> R1559 = 43.4% discount
+                  // Calculate correct existing sale discount percentage
+                  let saleDiscountPercent = 0;
+                  if (originalSalePrice > 0) {
+                    saleDiscountPercent = ((regularPrice - originalSalePrice) / regularPrice) * 100;
+                  }
                   
                   // Total discount = existing sale discount + promotional discount
                   const totalDiscountPercent = saleDiscountPercent + promotionDiscount;
                   
                   // Apply total discount to regular price
                   const promotionalPrice = regularPrice * (1 - totalDiscountPercent / 100);
-                  
-                  console.log('Calculation:', {
-                    saleDiscountPercent,
-                    totalDiscountPercent,
-                    promotionalPrice
-                  });
                   
                   return formatCurrency(promotionalPrice);
                 })() : formatCurrency(product.salePrice || product.price)}
