@@ -2691,17 +2691,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ? "Failed to download images" 
             : "No suitable product images were found";
 
-        return res.json({
+        const responseData = {
           success: finalSuccess,
           message,
           images: result.images,
-          errors: result.errors,
+          errors: result.errors || [],
           meta: {
             foundUrls: imageUrls.length,
             downloadedCount: result.images.length,
-            errorCount: result.errors.length
+            errorCount: result.errors?.length || 0
           }
-        });
+        };
+
+        logger.info('Sending AI download response:', responseData);
+        return res.json(responseData);
         
       } catch (error) {
         console.error('AI Image Download Error:', error);
