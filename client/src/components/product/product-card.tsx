@@ -248,15 +248,19 @@ const ProductCard: React.FC<ProductCardProps> = ({
               {/* Show promotional price if available, otherwise show sale price or regular price */}
               <span className="text-[#FF69B4] font-bold text-lg">
                 {promotionInfo ? (() => {
-                  // Calculate promotional price from regular price, not sale price
+                  // Calculate promotional price from regular price with combined discounts
                   const regularPrice = Number(product.price) || 0;
                   const salePrice = Number(product.salePrice) || 0;
                   const promotionDiscount = Number(promotionInfo.promotionDiscount) || 0;
                   
-                  // If there's a sale price, start from sale price and apply promotion discount
-                  // If no sale price, start from regular price and apply promotion discount
-                  const basePrice = salePrice > 0 ? salePrice : regularPrice;
-                  const promotionalPrice = basePrice * (1 - promotionDiscount / 100);
+                  // Calculate the existing sale discount percentage
+                  const saleDiscountPercent = salePrice > 0 ? ((regularPrice - salePrice) / regularPrice * 100) : 0;
+                  
+                  // Total discount = existing sale discount + promotional discount
+                  const totalDiscountPercent = saleDiscountPercent + promotionDiscount;
+                  
+                  // Apply total discount to regular price
+                  const promotionalPrice = regularPrice * (1 - totalDiscountPercent / 100);
                   
                   return formatCurrency(promotionalPrice);
                 })() : formatCurrency(product.salePrice || product.price)}
