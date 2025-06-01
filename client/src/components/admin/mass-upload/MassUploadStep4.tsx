@@ -164,8 +164,11 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
       setNewDescription("");
       setNewParentId(null);
       setNewLevel(0);
-      setNewDisplayOrder(0);
-      
+      // Don't reset display order to 0, let the useEffect recalculate it
+      toast({
+        title: "Success",
+        description: "Category created successfully",
+      });
     },
     onError: (error: any) => {
       toast({

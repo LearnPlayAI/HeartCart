@@ -1019,6 +1019,59 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async reorderAllCategories(): Promise<{ updatedCount: number; message: string }> {
+    try {
+      // Get all categories, grouped by parent
+      const allCategories = await db
+        .select()
+        .from(categories)
+        .orderBy(
+          asc(categories.parentId), 
+          asc(categories.displayOrder), 
+          asc(categories.name)
+        );
+
+      // Group by parent ID
+      const categoryGroups = new Map<number | null, Category[]>();
+      
+      for (const category of allCategories) {
+        const parentId = category.parentId;
+        if (!categoryGroups.has(parentId)) {
+          categoryGroups.set(parentId, []);
+        }
+        categoryGroups.get(parentId)!.push(category);
+      }
+
+      let updatedCount = 0;
+
+      // Reorder each group
+      for (const [parentId, groupCategories] of categoryGroups) {
+        for (let i = 0; i < groupCategories.length; i++) {
+          const category = groupCategories[i];
+          const newDisplayOrder = i;
+          
+          // Only update if the display order has changed
+          if (category.displayOrder !== newDisplayOrder) {
+            await db
+              .update(categories)
+              .set({ displayOrder: newDisplayOrder })
+              .where(eq(categories.id, category.id));
+            
+            updatedCount++;
+          }
+        }
+      }
+
+      return {
+        updatedCount,
+        message: `Successfully reordered ${updatedCount} categories`
+      };
+    } catch (error) {
+      console.error('Error reordering categories:', error);
+      throw error;
+    }
+  }
+
   async deleteCategory(id: number): Promise<boolean> {
     try {
       const result = await db
