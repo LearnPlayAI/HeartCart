@@ -7383,6 +7383,13 @@ export class DatabaseStorage implements IStorage {
         lastModified: new Date(),
       };
 
+      logger.debug("Updating product draft images", {
+        id,
+        imageCount: imageUrls.length,
+        objectKeyCount: imageObjectKeys.length,
+        mainImageIndex
+      });
+
       return await this.updateProductDraft(id, updateData);
     } catch (error) {
       logger.error("Error updating product draft images", { error, id });
