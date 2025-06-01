@@ -5847,9 +5847,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createAttribute(attribute: InsertAttribute): Promise<Attribute> {
+    // Get the next sort order
+    const maxSortOrderResult = await db
+      .select({ maxSortOrder: sql<number>`COALESCE(MAX(sort_order), -1)` })
+      .from(attributes);
+    
+    const nextSortOrder = (maxSortOrderResult[0]?.maxSortOrder || -1) + 1;
+    
     const [newAttribute] = await db
       .insert(attributes)
-      .values(attribute)
+      .values({
+        ...attribute,
+        sortOrder: nextSortOrder
+      })
       .returning();
     return newAttribute;
   }
@@ -5898,9 +5908,20 @@ export class DatabaseStorage implements IStorage {
   async createAttributeOption(
     option: InsertAttributeOption,
   ): Promise<AttributeOption> {
+    // Get the next sort order for this specific attribute
+    const maxSortOrderResult = await db
+      .select({ maxSortOrder: sql<number>`COALESCE(MAX(sort_order), -1)` })
+      .from(attributeOptions)
+      .where(eq(attributeOptions.attributeId, option.attributeId));
+    
+    const nextSortOrder = (maxSortOrderResult[0]?.maxSortOrder || -1) + 1;
+    
     const [newOption] = await db
       .insert(attributeOptions)
-      .values(option)
+      .values({
+        ...option,
+        sortOrder: nextSortOrder
+      })
       .returning();
     return newOption;
   }
