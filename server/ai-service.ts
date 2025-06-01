@@ -470,7 +470,7 @@ export async function generateSEO(
         Example:
         {
           "title": "Product Name - Key Feature | Brand Name",
-          "description": "Shop our [Product Name] with [key benefit]. Perfect for [use case] with [special feature]. Free delivery in South Africa. Shop now & save!",
+          "description": "Shop our [Product Name] with [key benefit]. Perfect for [use case] with [special feature]. Quality guaranteed in South Africa. Shop now & save!",
           "keywords": "product name, key feature, south africa, online shop, best price, category, specific feature, specific benefit"
         }
         
@@ -488,7 +488,7 @@ export async function generateSEO(
       Example:
       {
         "title": "Product Name - Key Feature | Brand Name",
-        "description": "Shop our [Product Name] with [key benefit]. Perfect for [use case] with [special feature]. Free delivery in South Africa. Shop now & save!",
+        "description": "Shop our [Product Name] with [key benefit]. Perfect for [use case] with [special feature]. Quality guaranteed in South Africa. Shop now & save!",
         "keywords": "product name, key feature, south africa, online shop, best price, category, specific feature, specific benefit"
       }
       
@@ -582,7 +582,7 @@ export async function optimizeSEO(
     For example:
     {
       "title": "Product Name - Key Feature | Brand Name",
-      "description": "Shop our [Product Name] with [key benefit]. Perfect for [use case] with [special feature]. Free delivery in South Africa. Shop now & save!",
+      "description": "Shop our [Product Name] with [key benefit]. Perfect for [use case] with [special feature]. Quality guaranteed in South Africa. Shop now & save!",
       "keywords": "product name, key feature, south africa, online shop, best price, category, specific feature, specific benefit"
     }
     
@@ -608,14 +608,14 @@ export async function optimizeSEO(
       // Fallback when JSON extraction fails
       return {
         title: existingTitle || productName,
-        description: existingDescription || `Shop ${productName} online. Fast shipping across South Africa.`.slice(0, 160),
+        description: existingDescription || `Shop ${productName} online. Quality products across South Africa.`.slice(0, 160),
         keywords: existingKeywords || productName.toLowerCase()
       };
     } catch (error) {
       console.error('Error parsing AI response as JSON:', error);
       return {
         title: existingTitle || productName,
-        description: existingDescription || `Shop ${productName} online. Fast shipping across South Africa.`.slice(0, 160),
+        description: existingDescription || `Shop ${productName} online. Quality products across South Africa.`.slice(0, 160),
         keywords: existingKeywords || productName.toLowerCase()
       };
     }
