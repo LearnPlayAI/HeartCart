@@ -59,7 +59,6 @@ export default function PromotionsPage() {
   // Fetch promotions
   const { data: promotionsData, isLoading } = useQuery({
     queryKey: ['/api/promotions'],
-    queryFn: () => apiRequest('/api/promotions'),
   });
 
   const promotions = promotionsData?.data || [];
@@ -71,8 +70,16 @@ export default function PromotionsPage() {
       body: JSON.stringify(data),
     }),
     onSuccess: () => {
+      // Invalidate all promotion-related queries
       queryClient.invalidateQueries({ queryKey: ['/api/promotions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/promotions/active'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/promotions/active-with-products'] });
+      
+      // Refetch the main promotions query immediately
+      queryClient.refetchQueries({ queryKey: ['/api/promotions'] });
+      
       setIsCreateDialogOpen(false);
+      createForm.reset(); // Reset form after successful creation
       toast({
         title: "Success",
         description: "Promotion created successfully",
@@ -95,9 +102,17 @@ export default function PromotionsPage() {
         body: JSON.stringify(data),
       }),
     onSuccess: () => {
+      // Invalidate all promotion-related queries
       queryClient.invalidateQueries({ queryKey: ['/api/promotions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/promotions/active'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/promotions/active-with-products'] });
+      
+      // Refetch the main promotions query immediately
+      queryClient.refetchQueries({ queryKey: ['/api/promotions'] });
+      
       setIsEditDialogOpen(false);
       setSelectedPromotion(null);
+      editForm.reset(); // Reset edit form
       toast({
         title: "Success",
         description: "Promotion updated successfully",
@@ -118,7 +133,13 @@ export default function PromotionsPage() {
       method: 'DELETE',
     }),
     onSuccess: () => {
+      // Invalidate all promotion-related queries
       queryClient.invalidateQueries({ queryKey: ['/api/promotions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/promotions/active'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/promotions/active-with-products'] });
+      
+      // Refetch the main promotions query immediately
+      queryClient.refetchQueries({ queryKey: ['/api/promotions'] });
       toast({
         title: "Success",
         description: "Promotion deleted successfully",
