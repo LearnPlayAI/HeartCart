@@ -2462,7 +2462,152 @@ export async function registerRoutes(app: Express): Promise<Server> {
     })
   );
   
-  // AI Image Downloader - Download images from supplier URL
+  // AI Image Downloader - Extract images from supplier URL for preview
+  app.post(
+    "/api/ai/extract-images",
+    validateRequest({
+      body: z.object({
+        supplierUrl: z.string().url("Valid supplier URL is required")
+      })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const { supplierUrl } = req.body;
+      
+      try {
+        // Import the AI image downloader
+        const { AIImageDownloader } = await import('./ai-image-downloader');
+        
+        // Extract image URLs from the supplier page
+        const imageUrls = await AIImageDownloader.extractImagesFromUrl(supplierUrl);
+        
+        if (imageUrls.length === 0) {
+          return res.json({
+            success: false,
+            message: "No product images found on the supplier page",
+            images: [],
+            errors: ["No suitable product images were detected on the provided URL"]
+          });
+        }
+        
+        // Return the extracted URLs for preview
+        return res.json({
+          success: true,
+          message: `Found ${imageUrls.length} images for preview`,
+          images: imageUrls.map((url, index) => ({
+            url,
+            index,
+            selected: false
+          })),
+          meta: {
+            foundUrls: imageUrls.length
+          }
+        });
+        
+      } catch (error) {
+        console.error('AI Image Extract Error:', error);
+        return res.status(500).json({
+          success: false,
+          message: "Failed to extract images from supplier URL",
+          images: [],
+          errors: [error instanceof Error ? error.message : "Unknown error occurred"]
+        });
+      }
+    })
+  );
+
+  // AI Image Downloader - Download selected images from supplier URL
+  app.post(
+    "/api/ai/download-selected-images",
+    validateRequest({
+      body: z.object({
+        imageUrls: z.array(z.string().url()),
+        productId: z.number().optional()
+      })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const { imageUrls, productId } = req.body;
+      
+      try {
+        // Import the AI image downloader
+        const { AIImageDownloader } = await import('./ai-image-downloader');
+        
+        // Download and process the selected images
+        let result;
+        try {
+          result = await AIImageDownloader.downloadImages(imageUrls, productId);
+        } catch (error) {
+          logger.error('Error in AI image download process:', error);
+          return res.status(500).json({
+            success: false,
+            message: 'Failed to process image downloads',
+            errors: [error instanceof Error ? error.message : 'Unknown error']
+          });
+        }
+        
+        // Check if we have any successful downloads
+        const finalSuccess = result.images.length > 0;
+        const message = finalSuccess 
+          ? `Successfully downloaded ${result.images.length} images from supplier page`
+          : "No images could be downloaded from the supplier page";
+        
+        // If we have a productId, update the product draft with the new images
+        if (productId && result.images.length > 0) {
+          try {
+            // Get current product draft
+            const currentDraft = await storage.getProductDraft(productId);
+            if (!currentDraft) {
+              throw new Error(`Product draft ${productId} not found`);
+            }
+            
+            // Add new images to existing ones
+            const currentImageUrls = currentDraft.imageUrls || [];
+            const currentObjectKeys = currentDraft.imageObjectKeys || [];
+            
+            const newImageUrls = [...currentImageUrls, ...result.images.map(img => img.url)];
+            const newObjectKeys = [...currentObjectKeys, ...result.images.map(img => img.objectKey)];
+            
+            // Set main image index if no main image exists
+            const newMainImageIndex = currentImageUrls.length === 0 ? 0 : currentDraft.mainImageIndex;
+            
+            // Update the product draft
+            await storage.updateProductDraft(productId, {
+              imageUrls: newImageUrls,
+              imageObjectKeys: newObjectKeys,
+              mainImageIndex: newMainImageIndex
+            });
+            
+            logger.info(`Successfully updated product draft ${productId} with ${result.images.length} new images`);
+          } catch (error) {
+            logger.error(`Error updating product draft ${productId} with AI images:`, error);
+            // Don't fail the entire request if draft update fails
+          }
+        }
+        
+        return res.json({
+          success: finalSuccess,
+          message,
+          images: result.images,
+          errors: result.errors,
+          meta: {
+            selectedCount: imageUrls.length,
+            downloadedCount: result.images.length,
+            errorCount: result.errors.length
+          }
+        });
+        
+      } catch (error) {
+        console.error('AI Image Download Error:', error);
+        return res.status(500).json({
+          success: false,
+          message: "Failed to download images from supplier URL",
+          images: [],
+          errors: [error instanceof Error ? error.message : "Unknown error occurred"]
+        });
+      }
+    })
+  );
+
+  // AI Image Downloader - Download images from supplier URL (legacy endpoint)
   app.post(
     "/api/ai/download-images",
     validateRequest({
