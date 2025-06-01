@@ -78,9 +78,35 @@ export default function AdminProducts() {
 
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
   
-  // Navigate to product edit page
-  const handleEditProduct = (id: number) => {
-    navigate(`/admin/products/${id}/edit`);
+  // Handle edit product - EXACT same function as pricing page
+  const handleEditProduct = async (productId: number) => {
+    try {
+      // Set flag to indicate we came from pricing page
+      sessionStorage.setItem('cameFromPricing', 'true');
+      
+      // Call API to create or reuse existing draft
+      const response = await fetch(`/api/product-drafts/create-from-published/${productId}`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        console.error("Failed to create product draft");
+        return;
+      }
+      
+      // Get the draft data
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        // Navigate to product wizard with the draft ID
+        navigate(`/admin/product-wizard/${result.data.draftId}`);
+      } else {
+        console.error("Invalid response from server");
+      }
+    } catch (error) {
+      console.error("Error creating product draft:", error);
+    }
   };
   
   // Delete product
