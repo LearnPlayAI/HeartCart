@@ -263,7 +263,7 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
           return text
             .toLowerCase()
             .normalize('NFD') // Decompose accented characters
-            .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
+            .replace(/[\u0300-\u036f]/g, '') // Remove diacritics (é becomes e, à becomes a, etc.)
             .replace(/�/g, '') // Remove replacement characters from encoding issues
             .replace(/[^\w\s-]/g, '') // Remove special characters except spaces and hyphens
             .replace(/\s+/g, ' ') // Normalize whitespace
