@@ -153,16 +153,6 @@ export class AIImageDownloader {
         throw new Error(`File too large: ${(buffer.length / 1024 / 1024).toFixed(2)}MB`);
       }
 
-      // Process the image for optimization using sharp
-      const processedBuffer = await sharp(buffer)
-        .resize(1200, 1200, {
-          fit: 'inside',
-          withoutEnlargement: true
-        })
-        .webp({ quality: 85 })
-        .rotate() // Auto-rotate based on EXIF
-        .toBuffer();
-
       // Generate filename
       const urlParts = new URL(imageUrl);
       const originalFilename = urlParts.pathname.split('/').pop() || 'downloaded-image.jpg';
@@ -173,31 +163,19 @@ export class AIImageDownloader {
 
       // Use the same storage path as manual uploads for product drafts
       const folder = `dmc-wholesale/main/${productId}`;
-
-      // Upload the processed image
       const objectKey = `${folder}/${filename}`;
-      await AIImageDownloader.objectStore.uploadFromBuffer(
-        objectKey,
-        processedBuffer,
-        {
-          contentType,
-          metadata: {
-            originalUrl: imageUrl,
-            downloadedAt: new Date().toISOString(),
-            source: 'ai-downloader',
-            processed: 'true'
-          }
-        }
-      );
+
+      // Upload the image directly without processing
+      await AIImageDownloader.objectStore.upload(objectKey, buffer);
 
       // Get the public URL
-      const publicUrl = AIImageDownloader.objectStore.getPublicUrl(objectKey);
+      const publicUrl = `https://storage.googleapis.com/replit-object-storage/${objectKey}`;
 
       const result = {
         url: publicUrl,
         objectKey,
         filename,
-        size: processedBuffer.length,
+        size: buffer.length,
         contentType
       };
 
