@@ -184,19 +184,8 @@ function App() {
                 }}
               </Route>
               
-              {/* Redirect original wizard routes to new implementation */}
-              <Route path="/admin/products/wizard/:id?">
-                {(params) => {
-                  const [_, navigate] = useLocation();
-                  React.useEffect(() => {
-                    const targetPath = params.id 
-                      ? `/admin/products/manage/${params.id}` 
-                      : `/admin/products/manage`;
-                    navigate(targetPath, { replace: true });
-                  }, [params.id, navigate]);
-                  return <div className="p-8 text-center">Redirecting to new product management system...</div>;
-                }}
-              </Route>
+              {/* Product wizard routes */}
+              <AdminProtectedRoute path="/admin/products/wizard/:id?" component={ProductWizardPage} />
               <Route path="/admin/catalogs/:catalogId/products/wizard">
                 {(params) => {
                   const [_, navigate] = useLocation();

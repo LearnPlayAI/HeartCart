@@ -74,26 +74,41 @@ export const AIImageDownloader: React.FC<AIImageDownloaderProps> = ({
     setDownloadResult(null);
 
     try {
-      const response = await apiRequest('/api/ai/download-images', {
-        method: 'POST',
-        body: JSON.stringify({
-          supplierUrl: supplierUrl.trim(),
-          productId
-        })
+      const response = await apiRequest('POST', '/api/ai/download-images', {
+        supplierUrl: supplierUrl.trim(),
+        productId
       });
 
-      setDownloadResult(response);
+      const data = await response.json();
+      console.log('AI download response:', data);
+      setDownloadResult(data);
 
-      if (response.success && response.images.length > 0) {
-        onImagesDownloaded(response.images);
+      // Handle case where response might be empty object
+      if (data && data.success && data.images && data.images.length > 0) {
+        onImagesDownloaded(data.images);
         toast({
           title: "Images Downloaded",
-          description: `Successfully downloaded ${response.images.length} images from the supplier page.`
+          description: `Successfully downloaded ${data.images.length} images from the supplier page.`
+        });
+      } else if (data && data.success === false) {
+        // Server returned explicit failure
+        toast({
+          title: "Download Failed",
+          description: data.message || "Failed to download images from the supplier page.",
+          variant: "destructive"
+        });
+      } else if (!data || Object.keys(data).length === 0) {
+        // Empty response - this might indicate success but response parsing failed
+        console.log('Download failed or no images:', data);
+        toast({
+          title: "Processing Complete",
+          description: "Images may have been downloaded. Please refresh the page to see if images appear.",
+          variant: "destructive"
         });
       } else {
         toast({
           title: "No Images Found",
-          description: response.message || "No suitable product images were found on the supplier page.",
+          description: data.message || "No suitable product images were found on the supplier page.",
           variant: "destructive"
         });
       }

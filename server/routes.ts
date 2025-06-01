@@ -2516,12 +2516,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const newImageUrls = [...currentImageUrls, ...result.images.map(img => img.url)];
               const newObjectKeys = [...currentObjectKeys, ...result.images.map(img => img.objectKey)];
               
+              // Set main image index to 0 if no images existed before, otherwise keep current
+              const mainImageIndex = currentImageUrls.length === 0 ? 0 : (draft.mainImageIndex || 0);
+              
               // Update the draft with new images
               await storage.updateProductDraftImages(
                 productId,
                 newImageUrls,
                 newObjectKeys,
-                draft.mainImageIndex || 0
+                mainImageIndex
               );
               
               logger.info(`Successfully updated product draft ${productId} with ${result.images.length} new images`);
