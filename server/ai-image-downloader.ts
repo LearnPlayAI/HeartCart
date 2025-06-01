@@ -81,8 +81,8 @@ export class AIImageDownloader {
         }
       });
 
-      // Remove duplicates and return
-      return [...new Set(imageUrls)];
+      // Remove duplicates based on filename and return
+      return this.deduplicateByFilename(imageUrls);
     } catch (error) {
       logger.error('Error extracting images from URL:', error);
       return [];
@@ -291,6 +291,37 @@ export class AIImageDownloader {
     if (url.includes('copy') || url.includes('duplicate')) score -= 3;
     
     return score;
+  }
+
+  /**
+   * Remove duplicate images based on unique filenames
+   */
+  private static deduplicateByFilename(imageUrls: string[]): string[] {
+    const seenFilenames = new Set<string>();
+    const uniqueUrls: string[] = [];
+    
+    for (const url of imageUrls) {
+      try {
+        // Extract filename from URL (handle query parameters and fragments)
+        const urlObj = new URL(url);
+        const pathname = urlObj.pathname;
+        const filename = pathname.split('/').pop() || '';
+        
+        // Remove query parameters from filename for better matching
+        const cleanFilename = filename.split('?')[0].toLowerCase();
+        
+        // Only add if we haven't seen this filename before
+        if (cleanFilename && !seenFilenames.has(cleanFilename)) {
+          seenFilenames.add(cleanFilename);
+          uniqueUrls.push(url);
+        }
+      } catch (error) {
+        // If URL parsing fails, still include the image (better to have duplicates than miss images)
+        uniqueUrls.push(url);
+      }
+    }
+    
+    return uniqueUrls;
   }
 
   /**
