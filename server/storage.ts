@@ -48,6 +48,13 @@ import {
   productAttributes,
   type ProductAttribute,
   type InsertProductAttribute,
+  // Promotions system imports
+  promotions,
+  type Promotion,
+  type InsertPromotion,
+  productPromotions,
+  type ProductPromotion,
+  type InsertProductPromotion,
 } from "@shared/schema";
 import { db } from "./db";
 import {
@@ -8705,6 +8712,199 @@ export class DatabaseStorage implements IStorage {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
       logger.error(`Error deleting product draft ${id}: ${errorMessage}`);
+      throw error;
+    }
+  }
+
+  // ===== PROMOTIONS MANAGEMENT =====
+
+  async createPromotion(promotionData: InsertPromotion): Promise<Promotion> {
+    try {
+      const [promotion] = await db
+        .insert(promotions)
+        .values(promotionData)
+        .returning();
+      return promotion;
+    } catch (error) {
+      console.error("Error creating promotion:", error);
+      throw error;
+    }
+  }
+
+  async getPromotions(): Promise<Promotion[]> {
+    try {
+      return await db.select().from(promotions).orderBy(desc(promotions.createdAt));
+    } catch (error) {
+      console.error("Error fetching promotions:", error);
+      throw error;
+    }
+  }
+
+  async getActivePromotions(): Promise<Promotion[]> {
+    try {
+      const now = new Date().toISOString();
+      return await db
+        .select()
+        .from(promotions)
+        .where(
+          and(
+            eq(promotions.isActive, true),
+            lte(promotions.startDate, now),
+            gte(promotions.endDate, now)
+          )
+        )
+        .orderBy(desc(promotions.createdAt));
+    } catch (error) {
+      console.error("Error fetching active promotions:", error);
+      throw error;
+    }
+  }
+
+  async getPromotionById(id: number): Promise<Promotion | undefined> {
+    try {
+      const [promotion] = await db
+        .select()
+        .from(promotions)
+        .where(eq(promotions.id, id));
+      return promotion;
+    } catch (error) {
+      console.error(`Error fetching promotion ${id}:`, error);
+      throw error;
+    }
+  }
+
+  async updatePromotion(id: number, updateData: Partial<InsertPromotion>): Promise<Promotion | undefined> {
+    try {
+      const [updatedPromotion] = await db
+        .update(promotions)
+        .set(updateData)
+        .where(eq(promotions.id, id))
+        .returning();
+      return updatedPromotion;
+    } catch (error) {
+      console.error(`Error updating promotion ${id}:`, error);
+      throw error;
+    }
+  }
+
+  async deletePromotion(id: number): Promise<boolean> {
+    try {
+      // First remove all product associations
+      await db.delete(productPromotions).where(eq(productPromotions.promotionId, id));
+      
+      // Then delete the promotion
+      await db.delete(promotions).where(eq(promotions.id, id));
+      return true;
+    } catch (error) {
+      console.error(`Error deleting promotion ${id}:`, error);
+      throw error;
+    }
+  }
+
+  // ===== PRODUCT PROMOTIONS MANAGEMENT =====
+
+  async addProductToPromotion(promotionId: number, productId: number, discountOverride?: number): Promise<ProductPromotion> {
+    try {
+      const [productPromotion] = await db
+        .insert(productPromotions)
+        .values({
+          promotionId,
+          productId,
+          discountOverride
+        })
+        .returning();
+      return productPromotion;
+    } catch (error) {
+      console.error(`Error adding product ${productId} to promotion ${promotionId}:`, error);
+      throw error;
+    }
+  }
+
+  async removeProductFromPromotion(promotionId: number, productId: number): Promise<boolean> {
+    try {
+      await db
+        .delete(productPromotions)
+        .where(
+          and(
+            eq(productPromotions.promotionId, promotionId),
+            eq(productPromotions.productId, productId)
+          )
+        );
+      return true;
+    } catch (error) {
+      console.error(`Error removing product ${productId} from promotion ${promotionId}:`, error);
+      throw error;
+    }
+  }
+
+  async getPromotionProducts(promotionId: number): Promise<(Product & { discountOverride?: number })[]> {
+    try {
+      const promotionProducts = await db
+        .select({
+          product: products,
+          discountOverride: productPromotions.discountOverride
+        })
+        .from(products)
+        .innerJoin(productPromotions, eq(products.id, productPromotions.productId))
+        .where(eq(productPromotions.promotionId, promotionId));
+
+      return promotionProducts.map(item => ({
+        ...item.product,
+        discountOverride: item.discountOverride || undefined
+      }));
+    } catch (error) {
+      console.error(`Error fetching products for promotion ${promotionId}:`, error);
+      throw error;
+    }
+  }
+
+  async getProductPromotions(productId: number): Promise<Promotion[]> {
+    try {
+      const productPromotionsList = await db
+        .select({
+          promotion: promotions
+        })
+        .from(promotions)
+        .innerJoin(productPromotions, eq(promotions.id, productPromotions.promotionId))
+        .where(eq(productPromotions.productId, productId));
+
+      return productPromotionsList.map(item => item.promotion);
+    } catch (error) {
+      console.error(`Error fetching promotions for product ${productId}:`, error);
+      throw error;
+    }
+  }
+
+  async bulkAddProductsToPromotion(promotionId: number, productIds: number[]): Promise<ProductPromotion[]> {
+    try {
+      const values = productIds.map(productId => ({
+        promotionId,
+        productId
+      }));
+
+      return await db
+        .insert(productPromotions)
+        .values(values)
+        .returning();
+    } catch (error) {
+      console.error(`Error bulk adding products to promotion ${promotionId}:`, error);
+      throw error;
+    }
+  }
+
+  async bulkRemoveProductsFromPromotion(promotionId: number, productIds: number[]): Promise<boolean> {
+    try {
+      await db
+        .delete(productPromotions)
+        .where(
+          and(
+            eq(productPromotions.promotionId, promotionId),
+            inArray(productPromotions.productId, productIds)
+          )
+        );
+      return true;
+    } catch (error) {
+      console.error(`Error bulk removing products from promotion ${promotionId}:`, error);
       throw error;
     }
   }
