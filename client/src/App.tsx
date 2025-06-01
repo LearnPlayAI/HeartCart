@@ -36,7 +36,7 @@ import AdminAISettings from "@/pages/admin/ai-settings";
 import AdminSuppliers from "@/pages/admin/suppliers";
 import AdminCatalogs from "@/pages/admin/catalogs";
 import ProductEditPage from "@/pages/admin/product-edit";
-import ProductWizardPage from "@/pages/admin/product-wizard-new";
+import ProductWizardPage from "@/pages/admin/product-wizard";
 import AddSupplier from "@/pages/admin/add-supplier";
 import EditSupplier from "@/pages/admin/edit-supplier";
 import AddCatalog from "@/pages/admin/add-catalog";
