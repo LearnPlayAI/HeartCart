@@ -249,10 +249,10 @@ export const SalesPromotionsStep: React.FC<SalesPromotionsStepProps> = ({
         discountLabel: values.onSale ? values.discountLabel : null,
         specialSaleText: values.specialSaleText || null,
         // Convert date objects to text strings in SAST format
-        specialSaleStart: formatDateToSASTString(values.specialSaleStart),
-        specialSaleEnd: formatDateToSASTString(values.specialSaleEnd),
+        specialSaleStart: values.specialSaleStart ? formatDateToSASTString(values.specialSaleStart) : null,
+        specialSaleEnd: values.specialSaleEnd ? formatDateToSASTString(values.specialSaleEnd) : null,
         isFlashDeal: values.isFlashDeal || false,
-        flashDealEnd: formatDateToSASTString(values.flashDealEnd),
+        flashDealEnd: values.flashDealEnd ? formatDateToSASTString(values.flashDealEnd) : null,
         // Include rating and review count for marketplace appearance
         rating: values.rating || null,
         review_count: values.review_count || null
@@ -772,10 +772,10 @@ export const SalesPromotionsStep: React.FC<SalesPromotionsStepProps> = ({
                       discountLabel: values.onSale ? values.discountLabel : null,
                       specialSaleText: values.specialSaleText || null,
                       // Convert date objects to text strings in SAST format
-                      specialSaleStart: formatDateToSASTString(values.specialSaleStart),
-                      specialSaleEnd: formatDateToSASTString(values.specialSaleEnd),
+                      specialSaleStart: values.specialSaleStart ? formatDateToSASTString(values.specialSaleStart) : null,
+                      specialSaleEnd: values.specialSaleEnd ? formatDateToSASTString(values.specialSaleEnd) : null,
                       isFlashDeal: values.isFlashDeal || false,
-                      flashDealEnd: formatDateToSASTString(values.flashDealEnd),
+                      flashDealEnd: values.flashDealEnd ? formatDateToSASTString(values.flashDealEnd) : null,
                       // Include rating and review count for marketplace appearance
                       rating: values.rating || null,
                       review_count: values.review_count || null
