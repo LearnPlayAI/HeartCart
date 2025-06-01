@@ -29,7 +29,7 @@ Transform the current individual flash deals system into a comprehensive promoti
   - [ ] minimumOrderValue (DECIMAL)
 
 - [ ] Extend `product_drafts` table
-  - [ ] Add promotionId column (snake_case to match existing structure)
+  - [ ] Add promotionId column (camelCase naming convention)
   - [ ] Update schema.ts with new field
 
 ### API Endpoints - Core CRUD
@@ -223,7 +223,7 @@ Transform the current individual flash deals system into a comprehensive promoti
 
 ### Database Considerations
 - [x] Use camelCase for new promotions table
-- [x] Use snake_case for product_drafts extensions (match existing)
+- [x] Use camelCase for product_drafts extensions (promotionId)
 - [x] Maintain existing flash deal columns during transition
 - [x] Proper indexing for performance
 
