@@ -155,28 +155,26 @@ export const ProductImagesStepRefactored: React.FC<ProductImagesStepProps> = ({ 
   // Handle images downloaded from AI Image Downloader
   const handleImagesDownloaded = (downloadedImages: any[]) => {
     try {
-      // Convert downloaded images to the format expected by fileUpload
-      downloadedImages.forEach((image) => {
+      // Convert downloaded images to the format expected by the wizard context
+      downloadedImages.forEach((image, index) => {
+        const uploadedImage = {
+          id: undefined,
+          url: image.url,
+          objectKey: image.objectKey,
+          isMain: productData.uploadedImages.length === 0 && index === 0, // First image becomes main
+          order: productData.uploadedImages.length + index,
+          metadata: {
+            originalname: image.filename,
+            filename: image.filename,
+            size: image.size,
+            processedAt: new Date().toISOString()
+          }
+        };
+
         // Add each downloaded image to the wizard context
         dispatch({
           type: WizardActionType.ADD_UPLOADED_IMAGE,
-          payload: {
-            id: null,
-            url: image.url,
-            objectKey: image.objectKey,
-            filename: image.filename,
-            isMain: fileUpload.images.length === 0, // First image becomes main
-            sortOrder: fileUpload.images.length,
-            hasBgRemoved: false,
-            bgRemovedUrl: null,
-            bgRemovedObjectKey: null,
-            metadata: {
-              originalFilename: image.filename,
-              size: image.size,
-              contentType: image.contentType,
-              source: 'ai-downloader'
-            }
-          }
+          payload: uploadedImage
         });
       });
 
