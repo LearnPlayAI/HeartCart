@@ -8,7 +8,7 @@ import axios from 'axios';
 import FormData from 'form-data';
 import { Readable } from 'stream';
 import { logger } from './logger';
-import { objectStore } from '@replit/object-storage';
+import { Client } from '@replit/object-storage';
 
 interface DownloadedImage {
   url: string;
@@ -28,6 +28,7 @@ export class AIImageDownloader {
   private static readonly MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
   private static readonly ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
   private static readonly TIMEOUT = 30000; // 30 seconds
+  private static objectStore = new Client();
 
   /**
    * Extract image URLs from a supplier webpage
@@ -174,7 +175,7 @@ export class AIImageDownloader {
 
       // Upload the processed image
       const objectKey = `${folder}/${filename}`;
-      await objectStore.uploadFromBuffer(
+      await AIImageDownloader.objectStore.uploadFromBuffer(
         objectKey,
         processedBuffer,
         {
@@ -189,7 +190,7 @@ export class AIImageDownloader {
       );
 
       // Get the public URL
-      const publicUrl = objectStore.getPublicUrl(objectKey);
+      const publicUrl = AIImageDownloader.objectStore.getPublicUrl(objectKey);
 
       const result = {
         url: publicUrl,
