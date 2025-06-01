@@ -49,6 +49,8 @@ const FlashDealsSection = () => {
   const allPromotionProducts = activePromotions.flatMap(promo => 
     promo.products?.map(pp => ({
       ...pp.product,
+      salePrice: pp.promotionalPrice || pp.product?.salePrice || 0,
+      originalSalePrice: pp.product?.salePrice || 0,
       promotionName: promo.promotionName,
       promotionDiscount: pp.discountOverride || promo.discountValue,
       promotionDiscountType: promo.discountType,
@@ -151,9 +153,13 @@ const FlashDealsSection = () => {
               
               // Create a modified product object with promotional pricing
               const promotionalProduct = {
-                ...product,
-                salePrice: product.promotionalPrice || product.salePrice, // Use promotional price as the display price
-                originalSalePrice: product.salePrice // Keep original for calculations
+                ...product.product, // Use the nested product data
+                salePrice: product.promotionalPrice, // Use promotional price from top level
+                originalSalePrice: product.product.salePrice, // Keep original for calculations
+                promotionName: product.promotionName,
+                promotionDiscount: product.promotionDiscount,
+                promotionDiscountType: product.promotionDiscountType,
+                promotionEndDate: product.promotionEndDate
               };
               
               return (
@@ -166,18 +172,18 @@ const FlashDealsSection = () => {
                   />
                   {/* Promotion discount badge */}
                   <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 text-xs font-bold rounded-full shadow-lg z-10">
-                    {product.promotionDiscountType === 'percentage' 
-                      ? `${product.promotionDiscount}% OFF`
-                      : `${product.promotionDiscount}% OFF`
+                    {promotionalProduct.promotionDiscountType === 'percentage' 
+                      ? `${promotionalProduct.promotionDiscount}% OFF`
+                      : `${promotionalProduct.promotionDiscount}% OFF`
                     }
                   </div>
                   {/* Promotion name tag */}
                   <div className="absolute top-2 right-2 bg-black/70 text-white px-2 py-1 text-xs rounded shadow-lg z-10">
-                    {product.promotionName}
+                    {promotionalProduct.promotionName}
                   </div>
                   {/* Time remaining indicator - moved to bottom right corner */}
                   {(() => {
-                    const timeLeft = getTimeRemaining(product.promotionEndDate);
+                    const timeLeft = getTimeRemaining(promotionalProduct.promotionEndDate);
                     return timeLeft && (
                       <div className="absolute bottom-2 right-2 bg-orange-500 text-white px-2 py-1 text-xs rounded shadow-lg z-10 flex items-center">
                         <Clock className="w-3 h-3 mr-1" />
