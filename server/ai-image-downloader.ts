@@ -8,6 +8,7 @@ import axios from 'axios';
 import FormData from 'form-data';
 import { Readable } from 'stream';
 import { logger } from './logger';
+import { objectStore } from '@replit/object-storage';
 
 interface DownloadedImage {
   url: string;
@@ -150,15 +151,15 @@ export class AIImageDownloader {
         throw new Error(`File too large: ${(buffer.length / 1024 / 1024).toFixed(2)}MB`);
       }
 
-      // Process the image for optimization
-      const processedBuffer = await objectStoreAdapter.processImage(buffer, {
-        width: 1200,
-        height: 1200,
-        fit: 'inside',
-        withoutEnlargement: true,
-        quality: 85,
-        autoRotate: true
-      });
+      // Process the image for optimization using sharp
+      const processedBuffer = await sharp(buffer)
+        .resize(1200, 1200, {
+          fit: 'inside',
+          withoutEnlargement: true
+        })
+        .webp({ quality: 85 })
+        .rotate() // Auto-rotate based on EXIF
+        .toBuffer();
 
       // Generate filename
       const urlParts = new URL(imageUrl);
@@ -173,7 +174,7 @@ export class AIImageDownloader {
 
       // Upload the processed image
       const objectKey = `${folder}/${filename}`;
-      await objectStoreAdapter.uploadFromBuffer(
+      await objectStore.uploadFromBuffer(
         objectKey,
         processedBuffer,
         {
@@ -188,7 +189,7 @@ export class AIImageDownloader {
       );
 
       // Get the public URL
-      const publicUrl = objectStoreAdapter.getPublicUrl(objectKey);
+      const publicUrl = objectStore.getPublicUrl(objectKey);
 
       const result = {
         url: publicUrl,
