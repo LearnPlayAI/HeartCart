@@ -135,15 +135,6 @@ function GlobalAttributesPage() {
     }
   }, [attributes]);
 
-  useEffect(() => {
-    if (selectedAttribute && options && options.length > 0) {
-      const maxSortOrder = Math.max(...options.map(opt => opt.sortOrder || 0));
-      setNextOptionSortOrder(maxSortOrder + 1);
-    } else {
-      setNextOptionSortOrder(0);
-    }
-  }, [selectedAttribute, options]);
-
   // Fetch attribute options when an attribute is selected
   const {
     data: optionsResponse,
@@ -186,6 +177,16 @@ function GlobalAttributesPage() {
     if (selectedAttribute) {
       console.log(`Selected attribute: ${selectedAttribute.name} (ID: ${selectedAttribute.id})`);
       console.log('Options loaded:', options);
+    }
+  }, [selectedAttribute, options]);
+
+  // Calculate next option sort order when options change
+  useEffect(() => {
+    if (selectedAttribute && options && options.length > 0) {
+      const maxSortOrder = Math.max(...options.map(opt => opt.sortOrder || 0));
+      setNextOptionSortOrder(maxSortOrder + 1);
+    } else {
+      setNextOptionSortOrder(0);
     }
   }, [selectedAttribute, options]);
 
@@ -1092,7 +1093,7 @@ function GlobalAttributesPage() {
                   type="number"
                   placeholder="0"
                   className="col-span-3"
-                  defaultValue={selectedAttribute?.sortOrder || 0}
+                  defaultValue={attributeFormMode === "create" ? nextAttributeSortOrder : (selectedAttribute?.sortOrder || 0)}
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
@@ -1213,7 +1214,7 @@ function GlobalAttributesPage() {
                   type="number"
                   placeholder="0"
                   className="col-span-3"
-                  defaultValue={selectedOption?.sortOrder || 0}
+                  defaultValue={optionFormMode === "create" ? nextOptionSortOrder : (selectedOption?.sortOrder || 0)}
                 />
               </div>
               {/* For color attributes, show color picker */}
