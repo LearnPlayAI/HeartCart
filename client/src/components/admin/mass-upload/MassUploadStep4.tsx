@@ -258,10 +258,47 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
           warnings.push(`Product with similar name "${product.title}" already exists`);
         }
 
+        // Helper function to normalize text for comparison (handles special characters and encoding issues)
+        const normalizeText = (text: string): string => {
+          return text
+            .toLowerCase()
+            .normalize('NFD') // Decompose accented characters
+            .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
+            .replace(/[^\w\s-]/g, '') // Remove special characters except spaces and hyphens
+            .trim();
+        };
+
+        // Helper function to find category with fuzzy matching
+        const findCategoryByName = (searchName: string, parentId?: number | null): any => {
+          const normalizedSearch = normalizeText(searchName);
+          
+          // First try exact match
+          let category = categories.find((c: any) => 
+            normalizeText(c.name) === normalizedSearch && 
+            (parentId !== undefined ? c.parentId === parentId : !c.parentId)
+          );
+          
+          // If no exact match, try partial match
+          if (!category) {
+            category = categories.find((c: any) => 
+              normalizeText(c.name).includes(normalizedSearch) && 
+              (parentId !== undefined ? c.parentId === parentId : !c.parentId)
+            );
+          }
+          
+          // If still no match, try reverse partial match
+          if (!category) {
+            category = categories.find((c: any) => 
+              normalizedSearch.includes(normalizeText(c.name)) && 
+              (parentId !== undefined ? c.parentId === parentId : !c.parentId)
+            );
+          }
+          
+          return category;
+        };
+
         // Validate parent category - find by name and no parentId (main category)
-        const parentCategory = categories.find((c: any) => 
-          c.name.toLowerCase() === product.parentCategory.toLowerCase() && !c.parentId
-        );
+        const parentCategory = findCategoryByName(product.parentCategory);
         if (!parentCategory) {
           errors.push(`Parent category "${product.parentCategory}" not found`);
         } else {
@@ -269,10 +306,7 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
         }
 
         // Validate child category - find by name and parentId matching the parent
-        const childCategory = categories.find((c: any) => 
-          c.name.toLowerCase() === product.childCategory.toLowerCase() && 
-          c.parentId === parentCategory?.id
-        );
+        const childCategory = parentCategory ? findCategoryByName(product.childCategory, parentCategory.id) : null;
         if (!childCategory && parentCategory) {
           errors.push(`Child category "${product.childCategory}" not found under "${product.parentCategory}"`);
         } else if (childCategory) {
