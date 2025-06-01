@@ -2494,6 +2494,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Download and process the images
         const result = await AIImageDownloader.downloadImages(imageUrls, productId);
         
+        if (result.success && result.images.length > 0) {
+          // Update the product draft with the new images
+          const draft = await storage.getProductDraft(productId);
+          if (draft) {
+            const currentImageUrls = draft.imageUrls || [];
+            const currentObjectKeys = draft.imageObjectKeys || [];
+            
+            const newImageUrls = [...currentImageUrls, ...result.images.map(img => img.url)];
+            const newObjectKeys = [...currentObjectKeys, ...result.images.map(img => img.objectKey)];
+            
+            // Update the draft with new images
+            await storage.updateProductDraftImages(
+              productId,
+              newImageUrls,
+              newObjectKeys,
+              draft.mainImageIndex || 0
+            );
+          }
+        }
+        
         return res.json({
           success: result.success,
           message: result.success 
