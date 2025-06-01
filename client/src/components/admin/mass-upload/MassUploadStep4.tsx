@@ -264,7 +264,9 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
             .toLowerCase()
             .normalize('NFD') // Decompose accented characters
             .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
+            .replace(/�/g, '') // Remove replacement characters from encoding issues
             .replace(/[^\w\s-]/g, '') // Remove special characters except spaces and hyphens
+            .replace(/\s+/g, ' ') // Normalize whitespace
             .trim();
         };
 
@@ -272,28 +274,54 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
         const findCategoryByName = (searchName: string, parentId?: number | null): any => {
           const normalizedSearch = normalizeText(searchName);
           
+          console.log(`Searching for category: "${searchName}" -> normalized: "${normalizedSearch}"`);
+          console.log(`Parent ID filter: ${parentId}`);
+          
+          // Log all available categories for debugging
+          const availableCategories = categories.filter((c: any) => 
+            parentId !== undefined ? c.parentId === parentId : !c.parentId
+          );
+          console.log('Available categories:', availableCategories.map((c: any) => ({
+            id: c.id,
+            name: c.name,
+            normalized: normalizeText(c.name),
+            parentId: c.parentId
+          })));
+          
           // First try exact match
           let category = categories.find((c: any) => 
             normalizeText(c.name) === normalizedSearch && 
             (parentId !== undefined ? c.parentId === parentId : !c.parentId)
           );
           
+          if (category) {
+            console.log(`Found exact match: ${category.name} (ID: ${category.id})`);
+            return category;
+          }
+          
           // If no exact match, try partial match
-          if (!category) {
-            category = categories.find((c: any) => 
-              normalizeText(c.name).includes(normalizedSearch) && 
-              (parentId !== undefined ? c.parentId === parentId : !c.parentId)
-            );
+          category = categories.find((c: any) => 
+            normalizeText(c.name).includes(normalizedSearch) && 
+            (parentId !== undefined ? c.parentId === parentId : !c.parentId)
+          );
+          
+          if (category) {
+            console.log(`Found partial match: ${category.name} (ID: ${category.id})`);
+            return category;
           }
           
           // If still no match, try reverse partial match
-          if (!category) {
-            category = categories.find((c: any) => 
-              normalizedSearch.includes(normalizeText(c.name)) && 
-              (parentId !== undefined ? c.parentId === parentId : !c.parentId)
-            );
+          category = categories.find((c: any) => 
+            normalizedSearch.includes(normalizeText(c.name)) && 
+            (parentId !== undefined ? c.parentId === parentId : !c.parentId)
+          );
+          
+          if (category) {
+            console.log(`Found reverse partial match: ${category.name} (ID: ${category.id})`);
+            return category;
           }
           
+          console.log(`No match found for: "${searchName}"`);
           return category;
         };
 
