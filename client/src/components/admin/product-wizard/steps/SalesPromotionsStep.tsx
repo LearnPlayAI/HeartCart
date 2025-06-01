@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Card,
   CardContent,
@@ -97,6 +97,43 @@ export const SalesPromotionsStep: React.FC<SalesPromotionsStepProps> = ({
   isLoading = false
 }) => {
   const [saving, setSaving] = useState(false);
+
+  // Rating generation functions
+  const generateRandomRating = (): number => {
+    const rand = Math.random();
+    
+    if (rand < 0.2) {
+      // 20%: between 3.2 and 4.0
+      return parseFloat((Math.random() * (4.0 - 3.2) + 3.2).toFixed(1));
+    } else if (rand < 0.9) {
+      // 70%: between 4.1 and 4.5
+      return parseFloat((Math.random() * (4.5 - 4.1) + 4.1).toFixed(1));
+    } else {
+      // 10%: between 4.6 and 4.9
+      return parseFloat((Math.random() * (4.9 - 4.6) + 4.6).toFixed(1));
+    }
+  };
+
+  const generateRandomReviewCount = (): number => {
+    return Math.floor(Math.random() * (148 - 22 + 1)) + 22;
+  };
+
+  const generateFloatForStarRating = (starRating: number): number => {
+    switch (starRating) {
+      case 1:
+        return parseFloat((Math.random() * (1.9 - 1.1) + 1.1).toFixed(1));
+      case 2:
+        return parseFloat((Math.random() * (2.9 - 2.1) + 2.1).toFixed(1));
+      case 3:
+        return parseFloat((Math.random() * (3.9 - 3.5) + 3.5).toFixed(1));
+      case 4:
+        return parseFloat((Math.random() * (4.7 - 4.1) + 4.1).toFixed(1));
+      case 5:
+        return parseFloat((Math.random() * (4.9 - 4.8) + 4.8).toFixed(1));
+      default:
+        return starRating;
+    }
+  };
   
   // Initialize form with draft data
   // Convert string dates to Date objects for the date pickers
@@ -142,9 +179,23 @@ export const SalesPromotionsStep: React.FC<SalesPromotionsStepProps> = ({
       flashDealEnd: draft.flashDealEnd ? parseStringToDate(draft.flashDealEnd) : null,
       // Rating and review count for marketplace appearance
       rating: draft.rating || null,
-      review_count: draft.reviewCount || null
+      review_count: draft.review_count || null
     }
   });
+
+  // Auto-generate rating and review count when component loads if both are empty
+  useEffect(() => {
+    const currentRating = form.getValues('rating');
+    const currentReviewCount = form.getValues('review_count');
+    
+    if ((!currentRating || currentRating === 0) && (!currentReviewCount || currentReviewCount === 0)) {
+      const newRating = generateRandomRating();
+      const newReviewCount = generateRandomReviewCount();
+      
+      form.setValue('rating', newRating);
+      form.setValue('review_count', newReviewCount);
+    }
+  }, [form]);
 
   // Calculate the discount percentage
   const calculateDiscountPercentage = () => {
@@ -583,8 +634,14 @@ export const SalesPromotionsStep: React.FC<SalesPromotionsStepProps> = ({
                                     key={star}
                                     type="button"
                                     onClick={() => {
-                                      const newRating = star === field.value ? 0 : star;
-                                      field.onChange(newRating || null);
+                                      if (star === Math.floor(field.value || 0)) {
+                                        // If clicking the same star, reset to 0
+                                        field.onChange(0);
+                                      } else {
+                                        // Generate float value for the clicked star
+                                        const floatRating = generateFloatForStarRating(star);
+                                        field.onChange(floatRating);
+                                      }
                                     }}
                                     className={`p-1 transition-colors rounded ${
                                       star <= (field.value || 0) 
@@ -599,7 +656,7 @@ export const SalesPromotionsStep: React.FC<SalesPromotionsStepProps> = ({
                                   </button>
                                 ))}
                                 <span className="ml-2 text-sm text-muted-foreground">
-                                  {field.value > 0 ? `${field.value} star${field.value !== 1 ? 's' : ''}` : 'No rating'}
+                                  {(field.value || 0) > 0 ? `${field.value} stars` : 'No rating'}
                                 </span>
                               </div>
                             </div>
@@ -641,7 +698,7 @@ export const SalesPromotionsStep: React.FC<SalesPromotionsStepProps> = ({
                   </div>
 
                   {/* Rating Preview */}
-                  {(form.watch('rating') > 0 || form.watch('review_count') > 0) && (
+                  {((form.watch('rating') || 0) > 0 || (form.watch('review_count') || 0) > 0) && (
                     <div className="p-4 bg-muted/30 rounded-md">
                       <h4 className="text-sm font-medium mb-2">Preview:</h4>
                       <div className="flex items-center gap-2">
@@ -660,7 +717,7 @@ export const SalesPromotionsStep: React.FC<SalesPromotionsStepProps> = ({
                         <span className="text-sm text-muted-foreground">
                           {form.watch('rating') || 0}/5
                         </span>
-                        {form.watch('review_count') > 0 && (
+                        {(form.watch('review_count') || 0) > 0 && (
                           <span className="text-sm text-muted-foreground">
                             ({form.watch('review_count')} reviews)
                           </span>
