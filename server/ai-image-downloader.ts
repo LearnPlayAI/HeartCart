@@ -166,10 +166,21 @@ export class AIImageDownloader {
       const objectKey = `${folder}/${filename}`;
 
       // Upload the image directly without processing
-      await AIImageDownloader.objectStore.upload(objectKey, buffer);
+      const uploadResult = await AIImageDownloader.objectStore.uploadFromBytes(objectKey, buffer, {
+        contentType,
+        metadata: {
+          originalUrl: imageUrl,
+          downloadedAt: new Date().toISOString(),
+          source: 'ai-downloader'
+        }
+      });
+
+      if ('err' in uploadResult && uploadResult.err) {
+        throw new Error(`Upload failed: ${uploadResult.err}`);
+      }
 
       // Get the public URL
-      const publicUrl = `https://storage.googleapis.com/replit-object-storage/${objectKey}`;
+      const publicUrl = `/api/files/${objectKey}`;
 
       const result = {
         url: publicUrl,
