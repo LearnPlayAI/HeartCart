@@ -105,10 +105,9 @@ export class AIImageDownloader {
       return result;
     }
 
-    // Further filter and deduplicate URLs before processing
-    const filteredUrls = this.filterAndDeduplicateUrls(imageUrls);
-    
-    for (const imageUrl of filteredUrls.slice(0, 8)) { // Limit to 8 high-quality images
+    // Process all provided URLs without filtering or deduplication
+    // since these are user-selected images from the preview modal
+    for (const imageUrl of imageUrls) {
       try {
         const downloadedImage = await this.downloadSingleImage(imageUrl, productId);
         if (downloadedImage) {
