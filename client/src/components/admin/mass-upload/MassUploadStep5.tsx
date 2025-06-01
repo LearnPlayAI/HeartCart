@@ -68,6 +68,7 @@ export function MassUploadStep5({ data, onUpdate, onNext, onPrevious }: MassUplo
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/categories/main/with-children'] });
       setIsCreateDialogOpen(false);
       resetCategoryForm();
       

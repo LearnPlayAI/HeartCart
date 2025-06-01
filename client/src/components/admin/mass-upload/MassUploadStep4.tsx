@@ -157,6 +157,7 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/categories/main/with-children'] });
       setIsCreateDialogOpen(false);
       setNewName("");
       setNewSlug("");
