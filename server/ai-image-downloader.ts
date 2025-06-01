@@ -5,7 +5,8 @@
  */
 
 import axios from 'axios';
-import { objectStoreAdapter, STORAGE_FOLDERS } from './object-store-adapter';
+import FormData from 'form-data';
+import { Readable } from 'stream';
 import { logger } from './logger';
 
 interface DownloadedImage {
@@ -86,7 +87,7 @@ export class AIImageDownloader {
   }
 
   /**
-   * Download images from URLs and upload to storage
+   * Download images from URLs and upload using the same mechanism as manual uploads
    */
   static async downloadImages(imageUrls: string[], productId?: number): Promise<ImageDownloadResult> {
     const result: ImageDownloadResult = {
@@ -95,9 +96,15 @@ export class AIImageDownloader {
       errors: []
     };
 
-    for (const imageUrl of imageUrls.slice(0, 10)) { // Limit to 10 images
+    if (!productId) {
+      result.success = false;
+      result.errors.push('Product ID is required for image uploads');
+      return result;
+    }
+
+    for (const imageUrl of imageUrls.slice(0, 12)) { // Limit to 12 images as requested
       try {
-        const downloadedImage = await this.downloadSingleImage(imageUrl, productId);
+        const downloadedImage = await this.downloadAndUploadImage(imageUrl, productId);
         if (downloadedImage) {
           result.images.push(downloadedImage);
         }
@@ -161,10 +168,8 @@ export class AIImageDownloader {
       const sanitizedName = originalFilename.replace(/[^a-zA-Z0-9.-]/g, '_');
       const filename = `ai_downloaded_${timestamp}_${randomString}_${sanitizedName}`;
 
-      // Determine storage folder
-      const folder = productId 
-        ? `${STORAGE_FOLDERS.PRODUCTS}/${productId}/images`
-        : `${STORAGE_FOLDERS.TEMP}/ai-downloads`;
+      // Use the same storage path as manual uploads for product drafts
+      const folder = `dmc-wholesale/main/${productId}`;
 
       // Upload the processed image
       const objectKey = `${folder}/${filename}`;
@@ -185,13 +190,23 @@ export class AIImageDownloader {
       // Get the public URL
       const publicUrl = objectStoreAdapter.getPublicUrl(objectKey);
 
-      return {
+      const result = {
         url: publicUrl,
         objectKey,
         filename,
         size: processedBuffer.length,
         contentType
       };
+
+      logger.info('Successfully downloaded and uploaded AI image', {
+        originalUrl: imageUrl,
+        objectKey,
+        publicUrl,
+        productId,
+        fileSize: processedBuffer.length
+      });
+
+      return result;
 
     } catch (error) {
       logger.error(`Error downloading image from ${imageUrl}:`, error);
