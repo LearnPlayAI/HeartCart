@@ -27,6 +27,7 @@ function Navigation({ className }: { className?: string }) {
     { path: "/admin/product-management", label: "Product Management", icon: PlusCircle },
     { path: "/admin/products", label: "Products", icon: ShoppingBag },
     { path: "/admin/mass-upload", label: "Mass Upload", icon: Upload },
+    { path: "/admin/promotions", label: "Promotions", icon: Gift },
     { path: "/admin/orders", label: "Orders", icon: Package },
     { path: "/admin/categories", label: "Categories", icon: BarChart3 },
     { path: "/admin/global-attributes", label: "Global Attributes", icon: Tags },
