@@ -224,12 +224,31 @@ export class AIImageDownloader {
     });
     
     for (const url of sortedUrls) {
-      // Remove query parameters for deduplication (same image with different sizes)
+      // Extract base filename without size parameters for better deduplication
       const baseUrl = url.split('?')[0];
       const fileName = baseUrl.split('/').pop() || '';
       
-      if (!seen.has(fileName) && !seen.has(baseUrl)) {
-        seen.add(fileName);
+      // Create a normalized key for deduplication
+      // Remove size parameters, version numbers, and common variations
+      let normalizedKey = fileName
+        .toLowerCase()
+        .replace(/[_-](\d+x\d+|\d+w|\d+h)/g, '') // Remove size indicators like _800x600, _1200w
+        .replace(/[_-]v\d+/g, '') // Remove version numbers like _v1
+        .replace(/[_-](thumb|small|large|medium)/g, '') // Remove size descriptors
+        .replace(/[_-]copy(\d+)?/g, '') // Remove copy indicators
+        .replace(/[_-]\d+$/g, ''); // Remove trailing numbers
+      
+      // Also check for similar base URLs (same image in different directories)
+      const pathParts = baseUrl.split('/');
+      const baseImageName = pathParts[pathParts.length - 1];
+      const normalizedImageName = baseImageName
+        .toLowerCase()
+        .replace(/[_-](\d+x\d+|\d+w|\d+h)/g, '')
+        .replace(/[_-]v\d+/g, '');
+      
+      if (!seen.has(normalizedKey) && !seen.has(normalizedImageName) && !seen.has(baseUrl)) {
+        seen.add(normalizedKey);
+        seen.add(normalizedImageName);
         seen.add(baseUrl);
         filtered.push(url);
       }
@@ -245,6 +264,14 @@ export class AIImageDownloader {
     const url = imageUrl.toLowerCase();
     let score = 0;
     
+    // Strong penalty for promotional content and logos
+    if (url.includes('logo') || url.includes('brand') || url.includes('deal') || 
+        url.includes('week') || url.includes('promo') || url.includes('banner') ||
+        url.includes('3d_website') || url.includes('professional') || 
+        url.includes('marketing') || url.includes('app') || url.includes('icon')) {
+      score -= 50; // Heavy penalty
+    }
+    
     // Prefer larger image sizes
     if (url.includes('1500') || url.includes('1200')) score += 10;
     else if (url.includes('1000') || url.includes('800')) score += 8;
@@ -255,6 +282,9 @@ export class AIImageDownloader {
     if (url.includes('main') || url.includes('primary')) score += 8;
     if (url.includes('product') || url.includes('item')) score += 6;
     if (url.includes('gallery') || url.includes('detail')) score += 4;
+    
+    // Bonus for actual product file names
+    if (url.includes('full-body-shot') || url.includes('product-shot')) score += 5;
     
     // Penalize potential duplicates or low-quality indicators
     if (url.includes('thumb') || url.includes('small')) score -= 5;
