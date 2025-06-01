@@ -14,6 +14,7 @@ import { Loader2, X, Upload, ImagePlus, Star, StarOff, MoveVertical, AlertCircle
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { ensureValidImageUrl } from '@/utils/file-manager';
 import { ProductDraft } from '../ProductWizard';
+import { AIImageDownloader } from '../components/AIImageDownloader';
 
 // Validation schema for the image step
 const imageSchema = z.object({
@@ -36,7 +37,6 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ draft, onS
   const queryClient = useQueryClient();
   const [uploadingImages, setUploadingImages] = useState(false);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
-  const [isDownloadingImages, setIsDownloadingImages] = useState(false);
   
   // Initialize form with draft values
   const form = useForm<ImageFormValues>({
@@ -262,74 +262,29 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ draft, onS
     reorderImagesMutation.mutate(imageIndexes);
   };
 
-  // Handle AI image download
-  const handleAIImageDownload = async () => {
-    if (!draft.supplierUrl) {
-      toast({
-        title: "No URL Available",
-        description: "Please add a supplier URL first to download images.",
-        variant: "destructive"
-      });
-      return;
+  // Handle AI images downloaded from the new component
+  const handleImagesDownloaded = (downloadedImages: any[]) => {
+    // Update the form with the new images
+    const currentImageUrls = form.getValues('imageUrls');
+    const currentObjectKeys = form.getValues('imageObjectKeys');
+    
+    const newImageUrls = [...currentImageUrls, ...downloadedImages.map((img: any) => img.url)];
+    const newObjectKeys = [...currentObjectKeys, ...downloadedImages.map((img: any) => img.objectKey || '')];
+    
+    form.setValue('imageUrls', newImageUrls);
+    form.setValue('imageObjectKeys', newObjectKeys);
+    
+    // Set first image as main if no main image exists
+    if (currentImageUrls.length === 0) {
+      form.setValue('mainImageIndex', 0);
     }
 
-    setIsDownloadingImages(true);
-
-    try {
-      const response = await apiRequest('POST', '/api/ai/download-images', {
-        supplierUrl: draft.supplierUrl,
-        productId: draft.id
-      });
-
-      console.log('AI download response:', response);
-      
-      if (response.success && response.images && response.images.length > 0) {
-        // Update the form with the new images
-        const currentImageUrls = form.getValues('imageUrls');
-        const currentObjectKeys = form.getValues('imageObjectKeys');
-        
-        const newImageUrls = [...currentImageUrls, ...response.images.map((img: any) => img.url)];
-        const newObjectKeys = [...currentObjectKeys, ...response.images.map((img: any) => img.objectKey || '')];
-        
-        form.setValue('imageUrls', newImageUrls);
-        form.setValue('imageObjectKeys', newObjectKeys);
-        
-        // Set first image as main if no main image exists
-        if (currentImageUrls.length === 0) {
-          form.setValue('mainImageIndex', 0);
-        }
-
-        toast({
-          title: "Images Downloaded",
-          description: `Successfully downloaded ${response.images.length} images from the supplier page.`
-        });
-
-        // Auto-save the changes
-        const formData = form.getValues();
-        onSave(formData, false);
-        
-        // Invalidate queries to refresh the data
-        queryClient.invalidateQueries({ queryKey: [`/api/product-drafts/${draft.id}`] });
-      } else {
-        // Log the full response for debugging
-        console.log('Download failed or no images:', response);
-        
-        toast({
-          title: response.message || "No Images Found",
-          description: response.errors?.[0] || "No suitable product images were found on the supplier page.",
-          variant: "destructive"
-        });
-      }
-    } catch (error) {
-      console.error('AI image download failed:', error);
-      toast({
-        title: "Download Failed",
-        description: "Failed to download images. Please check the URL and try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsDownloadingImages(false);
-    }
+    // Auto-save the changes
+    const formData = form.getValues();
+    onSave(formData, false);
+    
+    // Invalidate queries to refresh the data
+    queryClient.invalidateQueries({ queryKey: [`/api/product-drafts/${draft.id}`] });
   };
 
   const imageUrls = form.watch('imageUrls');
@@ -341,34 +296,12 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ draft, onS
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div className="space-y-4">
-              {/* Supplier URL Link - Only show if available */}
-              {draft.supplierUrl && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="text-sm font-medium text-blue-900">AI Image Download</h4>
-                      <p className="text-xs text-blue-700 mt-1">
-                        Automatically extract and download product images from the supplier page
-                      </p>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleAIImageDownload()}
-                      disabled={!draft.supplierUrl || isDownloadingImages}
-                      className="flex items-center gap-2 text-blue-700 border-blue-300 hover:bg-blue-100 disabled:opacity-50"
-                    >
-                      {isDownloadingImages ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Download className="h-4 w-4" />
-                      )}
-                      {isDownloadingImages ? 'Downloading...' : 'Download Images'}
-                    </Button>
-                  </div>
-                </div>
-              )}
+              {/* AI Image Downloader Component with Preview Modal */}
+              <AIImageDownloader
+                onImagesDownloaded={handleImagesDownloaded}
+                productId={draft.id}
+                className="mt-4"
+              />
 
               {/* Manual Supplier URL Input */}
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
