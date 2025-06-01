@@ -8990,6 +8990,319 @@ export class DatabaseStorage implements IStorage {
       throw error;
     }
   }
+
+  // ==================================================================================
+  // PROMOTION ANALYTICS METHODS
+  // ==================================================================================
+
+  async getPromotionAnalytics(
+    promotionId?: number,
+    dateRange?: { from: Date; to: Date },
+    compareWith?: { from: Date; to: Date }
+  ): Promise<any> {
+    try {
+      // Build base query conditions
+      const conditions = [];
+      
+      if (promotionId) {
+        conditions.push(eq(productPromotions.promotionId, promotionId));
+      }
+      
+      if (dateRange) {
+        conditions.push(
+          and(
+            gte(orders.createdAt, dateRange.from.toISOString()),
+            lte(orders.createdAt, dateRange.to.toISOString())
+          )
+        );
+      }
+
+      // Get promotion analytics data
+      const analyticsQuery = db
+        .select({
+          promotionId: promotions.id,
+          promotionName: promotions.name,
+          status: promotions.status,
+          startDate: promotions.startDate,
+          endDate: promotions.endDate,
+          orderId: orders.id,
+          orderTotal: orders.totalAmount,
+          orderSubtotal: orders.subtotalAmount,
+          orderDate: orders.createdAt,
+          customerId: orders.userId,
+          customerProvince: users.province,
+          productId: orderItems.productId,
+          productName: orderItems.productName,
+          quantity: orderItems.quantity,
+          unitPrice: orderItems.unitPrice,
+          totalPrice: orderItems.totalPrice
+        })
+        .from(promotions)
+        .leftJoin(productPromotions, eq(productPromotions.promotionId, promotions.id))
+        .leftJoin(orderItems, eq(orderItems.productId, productPromotions.productId))
+        .leftJoin(orders, eq(orders.id, orderItems.orderId))
+        .leftJoin(users, eq(users.id, orders.userId));
+
+      if (conditions.length > 0) {
+        analyticsQuery.where(and(...conditions));
+      }
+
+      const rawData = await analyticsQuery;
+
+      // Process and aggregate the data
+      const analytics = this.processPromotionAnalyticsData(rawData);
+      
+      // Add comparison data if requested
+      if (compareWith) {
+        const comparisonData = await this.getPromotionAnalyticsComparison(
+          promotionId,
+          compareWith,
+          dateRange
+        );
+        analytics.comparison = comparisonData;
+      }
+
+      return analytics;
+    } catch (error) {
+      console.error('Error getting promotion analytics:', error);
+      throw error;
+    }
+  }
+
+  private processPromotionAnalyticsData(rawData: any[]): any {
+    const promotionMap = new Map();
+    const dailyMetrics = new Map();
+    const geographicData = new Map();
+    const topProducts = new Map();
+    const customerTracking = new Set();
+
+    rawData.forEach(row => {
+      if (!row.promotionId) return;
+
+      // Initialize promotion data
+      if (!promotionMap.has(row.promotionId)) {
+        promotionMap.set(row.promotionId, {
+          id: row.promotionId,
+          promotionName: row.promotionName,
+          status: row.status,
+          startDate: row.startDate,
+          endDate: row.endDate,
+          totalOrders: 0,
+          totalRevenue: 0,
+          totalProducts: 0,
+          newCustomers: 0,
+          returningCustomers: 0,
+          orderIds: new Set(),
+          productIds: new Set(),
+          customerIds: new Set()
+        });
+      }
+
+      const promotion = promotionMap.get(row.promotionId);
+
+      // Track orders and revenue
+      if (row.orderId && !promotion.orderIds.has(row.orderId)) {
+        promotion.orderIds.add(row.orderId);
+        promotion.totalOrders++;
+        promotion.totalRevenue += parseFloat(row.orderTotal) || 0;
+      }
+
+      // Track products
+      if (row.productId) {
+        promotion.productIds.add(row.productId);
+      }
+
+      // Track customers
+      if (row.customerId) {
+        promotion.customerIds.add(row.customerId);
+        customerTracking.add(row.customerId);
+      }
+
+      // Daily metrics
+      if (row.orderDate) {
+        const dateKey = row.orderDate.split('T')[0];
+        if (!dailyMetrics.has(dateKey)) {
+          dailyMetrics.set(dateKey, {
+            date: dateKey,
+            orders: 0,
+            revenue: 0,
+            visitors: 0,
+            orderIds: new Set()
+          });
+        }
+        
+        const daily = dailyMetrics.get(dateKey);
+        if (!daily.orderIds.has(row.orderId)) {
+          daily.orderIds.add(row.orderId);
+          daily.orders++;
+          daily.revenue += parseFloat(row.orderTotal) || 0;
+        }
+      }
+
+      // Geographic data
+      if (row.customerProvince && row.orderId) {
+        const province = row.customerProvince;
+        if (!geographicData.has(province)) {
+          geographicData.set(province, {
+            province,
+            orders: 0,
+            revenue: 0,
+            orderIds: new Set()
+          });
+        }
+        
+        const geo = geographicData.get(province);
+        if (!geo.orderIds.has(row.orderId)) {
+          geo.orderIds.add(row.orderId);
+          geo.orders++;
+          geo.revenue += parseFloat(row.orderTotal) || 0;
+        }
+      }
+
+      // Top products
+      if (row.productId && row.productName) {
+        if (!topProducts.has(row.productId)) {
+          topProducts.set(row.productId, {
+            id: row.productId,
+            name: row.productName,
+            sales: 0,
+            revenue: 0
+          });
+        }
+        
+        const product = topProducts.get(row.productId);
+        product.sales += parseInt(row.quantity) || 0;
+        product.revenue += parseFloat(row.totalPrice) || 0;
+      }
+    });
+
+    // Convert maps to arrays and calculate additional metrics
+    const processedAnalytics = Array.from(promotionMap.values()).map(promotion => {
+      promotion.totalProducts = promotion.productIds.size;
+      promotion.conversionRate = promotion.totalOrders > 0 ? 
+        (promotion.totalOrders / Math.max(promotion.customerIds.size, 1)) * 100 : 0;
+      promotion.avgOrderValue = promotion.totalOrders > 0 ? 
+        promotion.totalRevenue / promotion.totalOrders : 0;
+      
+      // Clean up tracking sets
+      delete promotion.orderIds;
+      delete promotion.productIds;
+      delete promotion.customerIds;
+
+      return promotion;
+    });
+
+    return {
+      promotions: processedAnalytics,
+      dailyMetrics: Array.from(dailyMetrics.values()).map(day => {
+        delete day.orderIds;
+        return day;
+      }),
+      geographicData: Array.from(geographicData.values()).map(geo => {
+        delete geo.orderIds;
+        return geo;
+      }),
+      topProducts: Array.from(topProducts.values())
+        .sort((a, b) => b.revenue - a.revenue)
+        .slice(0, 10)
+    };
+  }
+
+  private async getPromotionAnalyticsComparison(
+    promotionId?: number,
+    compareWith?: { from: Date; to: Date },
+    originalRange?: { from: Date; to: Date }
+  ): Promise<any> {
+    if (!compareWith) return null;
+
+    try {
+      const comparisonData = await this.getPromotionAnalytics(promotionId, compareWith);
+      
+      return {
+        period: compareWith,
+        metrics: comparisonData
+      };
+    } catch (error) {
+      console.error('Error getting comparison analytics:', error);
+      return null;
+    }
+  }
+
+  async getPromotionPerformanceMetrics(promotionId: number): Promise<any> {
+    try {
+      const [promotion] = await db
+        .select()
+        .from(promotions)
+        .where(eq(promotions.id, promotionId));
+
+      if (!promotion) {
+        throw new Error(`Promotion ${promotionId} not found`);
+      }
+
+      // Get performance metrics
+      const metricsQuery = await db
+        .select({
+          totalOrders: sql<number>`COUNT(DISTINCT ${orders.id})`,
+          totalRevenue: sql<number>`COALESCE(SUM(${orders.totalAmount}), 0)`,
+          totalProducts: sql<number>`COUNT(DISTINCT ${productPromotions.productId})`,
+          avgOrderValue: sql<number>`COALESCE(AVG(${orders.totalAmount}), 0)`,
+          totalCustomers: sql<number>`COUNT(DISTINCT ${orders.userId})`
+        })
+        .from(productPromotions)
+        .leftJoin(orderItems, eq(orderItems.productId, productPromotions.productId))
+        .leftJoin(orders, eq(orders.id, orderItems.orderId))
+        .where(eq(productPromotions.promotionId, promotionId));
+
+      const metrics = metricsQuery[0];
+
+      return {
+        promotion,
+        metrics: {
+          totalOrders: parseInt(metrics.totalOrders) || 0,
+          totalRevenue: parseFloat(metrics.totalRevenue) || 0,
+          totalProducts: parseInt(metrics.totalProducts) || 0,
+          avgOrderValue: parseFloat(metrics.avgOrderValue) || 0,
+          totalCustomers: parseInt(metrics.totalCustomers) || 0,
+          conversionRate: metrics.totalCustomers > 0 ? 
+            (parseInt(metrics.totalOrders) / parseInt(metrics.totalCustomers)) * 100 : 0
+        }
+      };
+    } catch (error) {
+      console.error(`Error getting performance metrics for promotion ${promotionId}:`, error);
+      throw error;
+    }
+  }
+
+  async getPromotionTopProducts(promotionId: number, limit = 10): Promise<any[]> {
+    try {
+      const topProducts = await db
+        .select({
+          productId: productPromotions.productId,
+          productName: orderItems.productName,
+          totalSales: sql<number>`COALESCE(SUM(${orderItems.quantity}), 0)`,
+          totalRevenue: sql<number>`COALESCE(SUM(${orderItems.totalPrice}), 0)`,
+          orderCount: sql<number>`COUNT(DISTINCT ${orders.id})`
+        })
+        .from(productPromotions)
+        .leftJoin(orderItems, eq(orderItems.productId, productPromotions.productId))
+        .leftJoin(orders, eq(orders.id, orderItems.orderId))
+        .where(eq(productPromotions.promotionId, promotionId))
+        .groupBy(productPromotions.productId, orderItems.productName)
+        .orderBy(desc(sql`COALESCE(SUM(${orderItems.totalPrice}), 0)`))
+        .limit(limit);
+
+      return topProducts.map(product => ({
+        id: product.productId,
+        name: product.productName,
+        sales: parseInt(product.totalSales) || 0,
+        revenue: parseFloat(product.totalRevenue) || 0,
+        orders: parseInt(product.orderCount) || 0
+      }));
+    } catch (error) {
+      console.error(`Error getting top products for promotion ${promotionId}:`, error);
+      throw error;
+    }
+  }
 }
 
 export const storage = new DatabaseStorage();

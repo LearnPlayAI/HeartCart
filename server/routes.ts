@@ -3462,6 +3462,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     })
   );
 
+  // Get promotion analytics data (admin only)
+  app.get("/api/promotions/analytics",
+    isAuthenticated,
+    isAdmin,
+    withStandardResponse(async (req: Request, res: Response) => {
+      const { from, to, promotionId, compareFrom, compareTo } = req.query as {
+        from: string;
+        to: string;
+        promotionId?: string;
+        compareFrom?: string;
+        compareTo?: string;
+      };
+
+      if (!from || !to) {
+        throw new BadRequestError("Date range parameters 'from' and 'to' are required");
+      }
+
+      const analytics = await storage.getPromotionAnalytics(
+        promotionId ? parseInt(promotionId) : undefined,
+        {
+          from: new Date(from),
+          to: new Date(to)
+        },
+        compareFrom && compareTo ? {
+          from: new Date(compareFrom),
+          to: new Date(compareTo)
+        } : undefined
+      );
+
+      return analytics;
+    })
+  );
+
+  // Get promotion performance metrics (admin only)
+  app.get("/api/promotions/:id/performance",
+    isAuthenticated,
+    isAdmin,
+    withStandardResponse(async (req: Request, res: Response) => {
+      const promotionId = parseInt(req.params.id);
+      if (isNaN(promotionId)) {
+        throw new BadRequestError("Invalid promotion ID");
+      }
+
+      const performance = await storage.getPromotionPerformanceMetrics(promotionId);
+      return performance;
+    })
+  );
+
+  // Get promotion top products (admin only)
+  app.get("/api/promotions/:id/top-products",
+    isAuthenticated,
+    isAdmin,
+    withStandardResponse(async (req: Request, res: Response) => {
+      const promotionId = parseInt(req.params.id);
+      if (isNaN(promotionId)) {
+        throw new BadRequestError("Invalid promotion ID");
+      }
+
+      const { limit = '10' } = req.query as { limit?: string };
+      const topProducts = await storage.getPromotionTopProducts(promotionId, parseInt(limit));
+      return topProducts;
+    })
+  );
+
   // USER PROFILE UPDATE ENDPOINT
   app.patch(
     "/api/user/profile",
