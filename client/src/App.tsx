@@ -50,6 +50,7 @@ import AttributeOptionEditor from "@/pages/admin/attribute-option-editor";
 import ProductImages from "@/pages/admin/product-images";
 import BatchUpload from "@/pages/admin/batch-upload";
 import AuthTestDashboard from "@/pages/admin/auth-test-dashboard";
+import PromotionsPage from "@/pages/admin/promotions";
 
 // Developer Pages
 import DeveloperDashboard from "@/pages/developer";
@@ -203,6 +204,7 @@ function App() {
               <AdminProtectedRoute path="/admin/attributes/:id/edit" component={AttributeEditor} />
               <AdminProtectedRoute path="/admin/attributes/:id/options" component={AttributeOptionEditor} />
               <AdminProtectedRoute path="/admin/pricing" component={AdminPricing} />
+              <AdminProtectedRoute path="/admin/promotions" component={PromotionsPage} />
               <AdminProtectedRoute path="/admin/orders" component={AdminOrders} />
               <AdminProtectedRoute path="/admin/orders/:id" component={AdminOrderDetail} />
               <AdminProtectedRoute path="/admin/ai-settings" component={AdminAISettings} />
