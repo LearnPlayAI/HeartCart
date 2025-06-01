@@ -646,8 +646,8 @@ export const insertPromotionSchema = createInsertSchema(promotions).omit({
 }).extend({
   startDate: z.string(),
   endDate: z.string(),
-  discountValue: z.string().nullable().optional(),
-  minimumOrderValue: z.string().nullable().optional(),
+  discountValue: z.union([z.string(), z.number()]).transform(val => String(val)).nullable().optional(),
+  minimumOrderValue: z.union([z.string(), z.number()]).transform(val => String(val)).nullable().optional(),
 });
 
 export type Promotion = typeof promotions.$inferSelect;
