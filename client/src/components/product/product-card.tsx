@@ -248,24 +248,35 @@ const ProductCard: React.FC<ProductCardProps> = ({
               {/* Show promotional price if available, otherwise show sale price or regular price */}
               <span className="text-[#FF69B4] font-bold text-lg">
                 {promotionInfo ? (() => {
-                  const basePrice = product.salePrice || product.price;
-                  const discountAmount = promotionInfo.promotionDiscountType === 'percentage' 
-                    ? basePrice * (promotionInfo.promotionDiscount / 100)
-                    : promotionInfo.promotionDiscount;
-                  return formatCurrency(basePrice - discountAmount);
+                  // Calculate promotional price from regular price, not sale price
+                  const regularPrice = product.price;
+                  const saleDiscountPercent = product.salePrice ? ((regularPrice - product.salePrice) / regularPrice * 100) : 0;
+                  const totalDiscountPercent = saleDiscountPercent + promotionInfo.promotionDiscount;
+                  const promotionalPrice = regularPrice * (1 - totalDiscountPercent / 100);
+                  return formatCurrency(promotionalPrice);
                 })() : formatCurrency(product.salePrice || product.price)}
               </span>
               
               {/* Show original price crossed out when there's a promotion or sale */}
               {(promotionInfo || product.salePrice) && (
                 <span className="text-gray-500 text-xs line-through">
-                  {promotionInfo ? formatCurrency(product.salePrice || product.price) : formatCurrency(product.price)}
+                  {formatCurrency(product.price)}
                 </span>
               )}
             </div>
             
-            {/* Discount Percentage Badge - hide when promotion is active since it's shown on image */}
-            {!promotionInfo && product.salePrice && product.price && (
+            {/* Combined Discount Percentage Badge - always show when promotion is active */}
+            {promotionInfo ? (
+              <div className="ml-2">
+                <Badge className="bg-[#FF69B4] hover:bg-[#FF1493] text-white text-xs px-2 py-1 rounded-md font-medium">
+                  {(() => {
+                    const saleDiscountPercent = product.salePrice ? Math.round(((product.price - product.salePrice) / product.price) * 100) : 0;
+                    const totalDiscountPercent = saleDiscountPercent + promotionInfo.promotionDiscount;
+                    return `${totalDiscountPercent}% OFF`;
+                  })()}
+                </Badge>
+              </div>
+            ) : product.salePrice && product.price && (
               <div className="ml-2">
                 <Badge className="bg-[#FF69B4] hover:bg-[#FF1493] text-white text-xs px-2 py-1 rounded-md font-medium">
                   {Math.round(((product.price - product.salePrice) / product.price) * 100)}% OFF
