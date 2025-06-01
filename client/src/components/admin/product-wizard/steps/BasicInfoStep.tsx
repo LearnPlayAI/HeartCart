@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Loader2, Wand2, Plus } from 'lucide-react';
+import { Loader2, Wand2, Plus, Sparkles, RefreshCw, Check } from 'lucide-react';
 import { 
   Form, 
   FormControl, 
