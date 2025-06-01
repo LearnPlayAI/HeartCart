@@ -261,31 +261,7 @@ export const ReviewAndSaveStep: React.FC<ReviewAndSaveStepProps> = ({
   // Handle publishing
   const handlePublish = async () => {
     setIsPublishing(true);
-    
-    try {
-      // Final validation check
-      const validationResponse = await apiRequest('POST', `/api/product-drafts/${draft.id}/validate`);
-      const validationResult = await validationResponse.json();
-      
-      if (validationResult.success && validationResult.data.isValid) {
-        publishMutation.mutate();
-      } else {
-        setValidationErrors(validationResult.data.errors || {});
-        setIsPublishing(false);
-        toast({
-          title: 'Validation Failed',
-          description: 'Please fix the validation errors before publishing.',
-          variant: 'destructive',
-        });
-      }
-    } catch (error) {
-      setIsPublishing(false);
-      toast({
-        title: 'Validation Failed',
-        description: 'An error occurred while validating the product.',
-        variant: 'destructive',
-      });
-    }
+    publishMutation.mutate();
   };
   
   // Format price display - handles both number and string values
@@ -344,7 +320,7 @@ export const ReviewAndSaveStep: React.FC<ReviewAndSaveStepProps> = ({
             </Button>
             <Button 
               onClick={handlePublish} 
-              disabled={!isValid || isPublishing || Object.keys(validationErrors).length > 0}
+              disabled={isPublishing}
               className="gap-2"
             >
               {isPublishing && <Loader2 className="h-4 w-4 animate-spin" />}
@@ -813,18 +789,16 @@ export const ReviewAndSaveStep: React.FC<ReviewAndSaveStepProps> = ({
                       Change Status
                     </Button>
                     
-                    {draft.draftStatus === 'ready_to_publish' && (
-                      <Button 
-                        onClick={() => setShowPublishDialog(true)} 
-                        size="sm"
-                        disabled={!isValid || isPublishing}
-                        className="gap-2"
-                      >
-                        {isPublishing && <Loader2 className="h-4 w-4 animate-spin" />}
-                        <Check className="h-4 w-4" />
-                        Publish Product
-                      </Button>
-                    )}
+                    <Button 
+                      onClick={() => setShowPublishDialog(true)} 
+                      size="sm"
+                      disabled={isPublishing}
+                      className="gap-2"
+                    >
+                      {isPublishing && <Loader2 className="h-4 w-4 animate-spin" />}
+                      <Check className="h-4 w-4" />
+                      Publish Product
+                    </Button>
                   </div>
                 </div>
               </div>
