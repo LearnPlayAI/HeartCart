@@ -428,6 +428,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     })
   );
+
+  // Reorder categories endpoint - resequences all category display orders
+  app.post(
+    "/api/categories/reorder", 
+    isAuthenticated, 
+    isAdmin,
+    asyncHandler(async (req: Request, res: Response) => {
+      // Reorder all categories to have sequential display order numbers
+      const result = await storage.reorderAllCategories();
+      
+      res.json({
+        success: true,
+        data: result
+      });
+    })
+  );
   
   // Parameterized routes come after specific named routes
   app.get("/api/categories/:slug", withStandardResponse(async (req: Request, res: Response) => {

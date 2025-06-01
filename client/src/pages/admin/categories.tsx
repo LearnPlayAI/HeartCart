@@ -333,6 +333,44 @@ export default function AdminCategories() {
     },
   });
 
+  // Reorder categories mutation
+  const reorderCategoriesMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch("/api/categories/reorder", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to reorder categories");
+      }
+
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error?.message || "Failed to reorder categories");
+      }
+      return result.data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/categories/main/with-children"] });
+      
+      toast({
+        title: "Success",
+        description: `Reordered ${data.updatedCount} categories successfully`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: String(error),
+        variant: "destructive",
+      });
+    },
+  });
+
   // Effect to set initial display order for new categories
   useEffect(() => {
     if (categories && categories.length > 0) {
@@ -611,6 +649,20 @@ export default function AdminCategories() {
                 </SelectContent>
               </Select>
             )}
+            
+            <Button
+              variant="outline"
+              className="space-x-2"
+              onClick={() => reorderCategoriesMutation.mutate()}
+              disabled={reorderCategoriesMutation.isPending}
+            >
+              {reorderCategoriesMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <ArrowUpDown className="h-4 w-4" />
+              )}
+              <span>Reorder</span>
+            </Button>
             
             <Button 
               className="space-x-2"
