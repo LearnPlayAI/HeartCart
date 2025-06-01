@@ -8935,7 +8935,17 @@ export class DatabaseStorage implements IStorage {
 
   async getPromotionProducts(promotionId: number): Promise<any[]> {
     try {
-      // First get the promotion products with basic product info
+      // First get the promotion details
+      const [promotion] = await db
+        .select()
+        .from(promotions)
+        .where(eq(promotions.id, promotionId));
+
+      if (!promotion) {
+        return [];
+      }
+
+      // Get the promotion products with basic product info
       const promotionProductsList = await db
         .select()
         .from(productPromotions)
@@ -8957,7 +8967,7 @@ export class DatabaseStorage implements IStorage {
 
         // Calculate promotional price if not already set
         let calculatedPromotionalPrice = item.productPromotions.promotionalPrice;
-        if (!calculatedPromotionalPrice && promotion.discountValue && item.products.salePrice) {
+        if (!calculatedPromotionalPrice && promotion && promotion.discountValue && item.products.salePrice) {
           const discountPercentage = parseFloat(promotion.discountValue);
           const salePrice = parseFloat(item.products.salePrice);
           calculatedPromotionalPrice = Math.round(salePrice * (1 - discountPercentage / 100));
