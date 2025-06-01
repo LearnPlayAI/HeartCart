@@ -89,7 +89,14 @@ export const AIImageDownloader: React.FC<AIImageDownloaderProps> = ({
         supplierUrl: supplierUrl.trim()
       });
 
-      const data = await response.json();
+      let data;
+      try {
+        const responseText = await response.text();
+        data = responseText ? JSON.parse(responseText) : {};
+      } catch (parseError) {
+        console.error('Response parsing error:', parseError);
+        data = {};
+      }
       console.log('AI extract response:', data);
 
       if (data.success && data.images && data.images.length > 0) {
@@ -140,7 +147,14 @@ export const AIImageDownloader: React.FC<AIImageDownloaderProps> = ({
         productId
       });
 
-      const data = await response.json();
+      let data;
+      try {
+        const responseText = await response.text();
+        data = responseText ? JSON.parse(responseText) : {};
+      } catch (parseError) {
+        console.error('Response parsing error:', parseError);
+        data = {};
+      }
       console.log('AI download response:', data);
       setDownloadResult(data);
 
