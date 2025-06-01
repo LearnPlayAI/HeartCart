@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, Plus, Edit, Trash2, Users, TrendingUp, Gift } from "lucide-react";
+import { Calendar, Plus, Edit, Trash2, Users, TrendingUp, Gift, Package, Search, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -53,6 +53,10 @@ export default function PromotionsPage() {
   const [selectedPromotion, setSelectedPromotion] = useState<Promotion | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isProductManagementOpen, setIsProductManagementOpen] = useState(false);
+  const [productSearchQuery, setProductSearchQuery] = useState("");
+  const [selectedProducts, setSelectedProducts] = useState<any[]>([]);
+  const [promotionProducts, setPromotionProducts] = useState<any[]>([]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -200,6 +204,99 @@ export default function PromotionsPage() {
   const handleDelete = (promotion: Promotion) => {
     if (confirm(`Are you sure you want to delete "${promotion.promotionName}"?`)) {
       deletePromotionMutation.mutate(promotion.id);
+    }
+  };
+
+  const handleManageProducts = (promotion: Promotion) => {
+    setSelectedPromotion(promotion);
+    setIsProductManagementOpen(true);
+    // Fetch promotion products when opening
+    fetchPromotionProducts(promotion.id);
+  };
+
+  // Fetch products search results
+  const { data: productsData } = useQuery({
+    queryKey: ['/api/products', { search: productSearchQuery }],
+    enabled: productSearchQuery.length > 2,
+  });
+
+  // Fetch promotion products
+  const fetchPromotionProducts = async (promotionId: number) => {
+    try {
+      const response = await apiRequest(`/api/promotions/${promotionId}/products`);
+      setPromotionProducts(response.data || []);
+    } catch (error) {
+      console.error('Error fetching promotion products:', error);
+    }
+  };
+
+  // Add product to promotion mutation
+  const addProductToPromotionMutation = useMutation({
+    mutationFn: ({ promotionId, productId, discountOverride }: { promotionId: number; productId: number; discountOverride?: number }) =>
+      apiRequest(`/api/promotions/${promotionId}/products`, {
+        method: 'POST',
+        body: JSON.stringify({ productId, discountOverride }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/promotions'] });
+      if (selectedPromotion) {
+        fetchPromotionProducts(selectedPromotion.id);
+      }
+      toast({
+        title: "Success",
+        description: "Product added to promotion successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to add product to promotion",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Remove product from promotion mutation
+  const removeProductFromPromotionMutation = useMutation({
+    mutationFn: ({ promotionId, productId }: { promotionId: number; productId: number }) =>
+      apiRequest(`/api/promotions/${promotionId}/products/${productId}`, {
+        method: 'DELETE',
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/promotions'] });
+      if (selectedPromotion) {
+        fetchPromotionProducts(selectedPromotion.id);
+      }
+      toast({
+        title: "Success",
+        description: "Product removed from promotion successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to remove product from promotion",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleAddProductToPromotion = (product: any, discountOverride?: number) => {
+    if (selectedPromotion) {
+      addProductToPromotionMutation.mutate({
+        promotionId: selectedPromotion.id,
+        productId: product.id,
+        discountOverride,
+      });
+    }
+  };
+
+  const handleRemoveProductFromPromotion = (productId: number) => {
+    if (selectedPromotion) {
+      removeProductFromPromotionMutation.mutate({
+        promotionId: selectedPromotion.id,
+        productId,
+      });
     }
   };
 
