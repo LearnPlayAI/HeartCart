@@ -452,7 +452,7 @@ export const ReviewAndSaveStep: React.FC<ReviewAndSaveStepProps> = ({
               </div>
               <Button 
                 onClick={() => setShowPublishDialog(true)} 
-                disabled={!isValid || isPublishing || draft.draftStatus !== 'ready_to_publish'}
+                disabled={isPublishing}
                 className="gap-2"
               >
                 {isPublishing && <Loader2 className="h-4 w-4 animate-spin" />}
