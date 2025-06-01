@@ -5847,17 +5847,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createAttribute(attribute: InsertAttribute): Promise<Attribute> {
-    // Get the next sort order
+    // Always auto-generate sort order for new attributes
     const maxSortOrderResult = await db
       .select({ maxSortOrder: sql<number>`COALESCE(MAX(sort_order), -1)` })
       .from(attributes);
     
     const nextSortOrder = (maxSortOrderResult[0]?.maxSortOrder || -1) + 1;
     
+    // Remove sortOrder from input and use auto-generated value
+    const { sortOrder: _, ...attributeWithoutSort } = attribute;
+    
     const [newAttribute] = await db
       .insert(attributes)
       .values({
-        ...attribute,
+        ...attributeWithoutSort,
         sortOrder: nextSortOrder
       })
       .returning();
@@ -5908,7 +5911,7 @@ export class DatabaseStorage implements IStorage {
   async createAttributeOption(
     option: InsertAttributeOption,
   ): Promise<AttributeOption> {
-    // Get the next sort order for this specific attribute
+    // Always auto-generate sort order for new attribute options
     const maxSortOrderResult = await db
       .select({ maxSortOrder: sql<number>`COALESCE(MAX(sort_order), -1)` })
       .from(attributeOptions)
@@ -5916,10 +5919,13 @@ export class DatabaseStorage implements IStorage {
     
     const nextSortOrder = (maxSortOrderResult[0]?.maxSortOrder || -1) + 1;
     
+    // Remove sortOrder from input and use auto-generated value
+    const { sortOrder: _, ...optionWithoutSort } = option;
+    
     const [newOption] = await db
       .insert(attributeOptions)
       .values({
-        ...option,
+        ...optionWithoutSort,
         sortOrder: nextSortOrder
       })
       .returning();
