@@ -151,46 +151,20 @@ const FlashDealsSection = () => {
             (allPromotionProducts.slice(0, 8).map((product: any) => {
               const soldPercentage = Math.floor((product.id * 17) % 100);
               
-              // Create a modified product object with promotional pricing
-              const promotionalProduct = {
-                ...product.product, // Use the nested product data
-                salePrice: product.promotionalPrice, // Use promotional price from top level
-                originalSalePrice: product.product.salePrice, // Keep original for calculations
-                promotionName: product.promotionName,
-                promotionDiscount: product.promotionDiscount,
-                promotionDiscountType: product.promotionDiscountType,
-                promotionEndDate: product.promotionEndDate
-              };
-              
               return (
                 <div key={`${product.id}-${product.promotionName}`} className="relative">
                   <ProductCard
-                    product={promotionalProduct}
+                    product={product}
                     isFlashDeal={true}
                     soldPercentage={soldPercentage}
                     showAddToCart={true}
+                    promotionInfo={{
+                      promotionName: product.promotionName,
+                      promotionDiscount: product.promotionDiscount,
+                      promotionDiscountType: product.promotionDiscountType,
+                      promotionEndDate: product.promotionEndDate
+                    }}
                   />
-                  {/* Promotion discount badge */}
-                  <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 text-xs font-bold rounded-full shadow-lg z-10">
-                    {promotionalProduct.promotionDiscountType === 'percentage' 
-                      ? `${promotionalProduct.promotionDiscount}% OFF`
-                      : `${promotionalProduct.promotionDiscount}% OFF`
-                    }
-                  </div>
-                  {/* Promotion name tag */}
-                  <div className="absolute top-2 right-2 bg-black/70 text-white px-2 py-1 text-xs rounded shadow-lg z-10">
-                    {promotionalProduct.promotionName}
-                  </div>
-                  {/* Time remaining indicator - moved to bottom right corner */}
-                  {(() => {
-                    const timeLeft = getTimeRemaining(promotionalProduct.promotionEndDate);
-                    return timeLeft && (
-                      <div className="absolute bottom-2 right-2 bg-orange-500 text-white px-2 py-1 text-xs rounded shadow-lg z-10 flex items-center">
-                        <Clock className="w-3 h-3 mr-1" />
-                        {timeLeft.hours}h {timeLeft.minutes}m
-                      </div>
-                    );
-                  })()}
                 </div>
               );
             }))

@@ -75,6 +75,12 @@ type ProductCardProps = {
   isFlashDeal?: boolean;
   soldPercentage?: number;
   showAddToCart?: boolean;
+  promotionInfo?: {
+    promotionName: string;
+    promotionDiscount: number;
+    promotionDiscountType: string;
+    promotionEndDate: string;
+  };
 };
 
 const ProductCard: React.FC<ProductCardProps> = ({
@@ -82,6 +88,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   isFlashDeal = false,
   soldPercentage,
   showAddToCart = false,
+  promotionInfo,
 }) => {
   const { addItem } = useCart();
   const { toast } = useToast();
@@ -91,6 +98,20 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const discount = product.salePrice
     ? calculateDiscount(product.price, product.salePrice)
     : 0;
+
+  // Calculate time remaining for promotion countdown
+  const getTimeRemaining = (endDate: string) => {
+    const now = new Date().getTime();
+    const end = new Date(endDate).getTime();
+    const timeLeft = end - now;
+    
+    if (timeLeft <= 0) return null;
+    
+    const hours = Math.floor(timeLeft / (1000 * 60 * 60));
+    const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+    
+    return { hours, minutes };
+  };
   
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -175,8 +196,37 @@ const ProductCard: React.FC<ProductCardProps> = ({
               onError={() => setImageError(true)}
             />
             
-            {/* Discount Badge - positioned in lower right */}
-            {product.discountLabel && (
+            {/* Promotional overlays */}
+            {promotionInfo && (
+              <>
+                {/* Promotion discount badge - top left */}
+                <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 text-xs font-bold rounded-full shadow-lg z-10">
+                  {promotionInfo.promotionDiscountType === 'percentage' 
+                    ? `${promotionInfo.promotionDiscount}% OFF`
+                    : `${promotionInfo.promotionDiscount}% OFF`
+                  }
+                </div>
+                
+                {/* Promotion name tag - top right */}
+                <div className="absolute top-2 right-2 bg-black/70 text-white px-2 py-1 text-xs rounded shadow-lg z-10">
+                  {promotionInfo.promotionName}
+                </div>
+                
+                {/* Time remaining indicator - bottom right of image */}
+                {(() => {
+                  const timeLeft = getTimeRemaining(promotionInfo.promotionEndDate);
+                  return timeLeft && (
+                    <div className="absolute bottom-2 right-2 bg-orange-500 text-white px-2 py-1 text-xs rounded shadow-lg z-10 flex items-center">
+                      <Clock className="w-3 h-3 mr-1" />
+                      {timeLeft.hours}h {timeLeft.minutes}m
+                    </div>
+                  );
+                })()}
+              </>
+            )}
+
+            {/* Regular discount badge - positioned in lower right when no promotion */}
+            {!promotionInfo && product.discountLabel && (
               <div className="absolute bottom-2 right-2">
                 <Badge 
                   className="inline-flex items-center border font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent hover:bg-blue-600 text-white text-xs px-2 py-1 rounded-md shadow-sm bg-[#1ac20c]"
