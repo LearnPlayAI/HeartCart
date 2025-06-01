@@ -195,7 +195,7 @@ export class AIImageDownloader {
         objectKey,
         publicUrl,
         productId,
-        fileSize: processedBuffer.length
+        fileSize: buffer.length
       });
 
       return result;

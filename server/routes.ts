@@ -2492,33 +2492,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // Download and process the images
-        const result = await AIImageDownloader.downloadImages(imageUrls, productId);
+        let result;
+        try {
+          result = await AIImageDownloader.downloadImages(imageUrls, productId);
+        } catch (error) {
+          logger.error('Error in AI image download process:', error);
+          return res.status(500).json({
+            success: false,
+            message: 'Failed to process image downloads',
+            errors: [error instanceof Error ? error.message : 'Unknown error']
+          });
+        }
         
-        if (result.success && result.images.length > 0) {
-          // Update the product draft with the new images
-          const draft = await storage.getProductDraft(productId);
-          if (draft) {
-            const currentImageUrls = draft.imageUrls || [];
-            const currentObjectKeys = draft.imageObjectKeys || [];
-            
-            const newImageUrls = [...currentImageUrls, ...result.images.map(img => img.url)];
-            const newObjectKeys = [...currentObjectKeys, ...result.images.map(img => img.objectKey)];
-            
-            // Update the draft with new images
-            await storage.updateProductDraftImages(
-              productId,
-              newImageUrls,
-              newObjectKeys,
-              draft.mainImageIndex || 0
-            );
+        // Always try to update database if we have any successful images, even if there were some errors
+        if (result.images.length > 0) {
+          try {
+            // Update the product draft with the new images
+            const draft = await storage.getProductDraft(productId);
+            if (draft) {
+              const currentImageUrls = draft.imageUrls || [];
+              const currentObjectKeys = draft.imageObjectKeys || [];
+              
+              const newImageUrls = [...currentImageUrls, ...result.images.map(img => img.url)];
+              const newObjectKeys = [...currentObjectKeys, ...result.images.map(img => img.objectKey)];
+              
+              // Update the draft with new images
+              await storage.updateProductDraftImages(
+                productId,
+                newImageUrls,
+                newObjectKeys,
+                draft.mainImageIndex || 0
+              );
+              
+              logger.info(`Successfully updated product draft ${productId} with ${result.images.length} new images`);
+            }
+          } catch (dbError) {
+            logger.error('Error updating database with downloaded images:', dbError);
+            return res.status(500).json({
+              success: false,
+              message: 'Images downloaded but failed to save to database',
+              errors: [dbError instanceof Error ? dbError.message : 'Database update failed']
+            });
           }
         }
         
+        const finalSuccess = result.images.length > 0;
+        const message = finalSuccess 
+          ? `Successfully downloaded ${result.images.length} images`
+          : result.errors.length > 0 
+            ? "Failed to download images" 
+            : "No suitable product images were found";
+
         return res.json({
-          success: result.success,
-          message: result.success 
-            ? `Successfully downloaded ${result.images.length} images`
-            : "Failed to download images",
+          success: finalSuccess,
+          message,
           images: result.images,
           errors: result.errors,
           meta: {
