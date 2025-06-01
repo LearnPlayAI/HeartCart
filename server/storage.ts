@@ -8960,6 +8960,7 @@ export class DatabaseStorage implements IStorage {
           productId: item.productPromotions.productId,
           promotionId: item.productPromotions.promotionId,
           discountOverride: item.productPromotions.discountOverride,
+          promotionalPrice: item.productPromotions.promotionalPrice,
           product: {
             ...item.products,
             category: item.categories ? {
@@ -8996,10 +8997,35 @@ export class DatabaseStorage implements IStorage {
 
   async bulkAddProductsToPromotion(promotionId: number, productIds: number[]): Promise<ProductPromotion[]> {
     try {
-      const values = productIds.map(productId => ({
-        promotionId,
-        productId
-      }));
+      // Get the promotion details to calculate promotional prices
+      const promotion = await this.getPromotion(promotionId);
+      if (!promotion) {
+        throw new Error(`Promotion ${promotionId} not found`);
+      }
+
+      const values = [];
+      
+      // Get product details and calculate promotional prices
+      for (const productId of productIds) {
+        const product = await this.getProduct(productId);
+        if (product) {
+          let promotionalPrice = null;
+          
+          // Calculate promotional price by applying additional discount to existing sale price
+          if (promotion.discountValue && product.salePrice) {
+            const discountPercentage = parseFloat(promotion.discountValue);
+            const currentSalePrice = parseFloat(product.salePrice);
+            // Apply discount to current sale price (this makes it cheaper, not more expensive)
+            promotionalPrice = (currentSalePrice * (1 - discountPercentage / 100)).toFixed(2);
+          }
+
+          values.push({
+            promotionId,
+            productId,
+            promotionalPrice
+          });
+        }
+      }
 
       return await db
         .insert(productPromotions)
@@ -9388,6 +9414,27 @@ export class DatabaseStorage implements IStorage {
       };
     } catch (error) {
       console.error(`Error getting performance metrics for promotion ${promotionId}:`, error);
+      throw error;
+    }
+  }
+
+  async updatePromotionalPrice(promotionId: number, productId: number, promotionalPrice: string): Promise<boolean> {
+    try {
+      const result = await db
+        .update(productPromotions)
+        .set({ 
+          promotionalPrice: promotionalPrice
+        })
+        .where(
+          and(
+            eq(productPromotions.promotionId, promotionId),
+            eq(productPromotions.productId, productId)
+          )
+        );
+
+      return true;
+    } catch (error) {
+      console.error(`Error updating promotional price for product ${productId} in promotion ${promotionId}:`, error);
       throw error;
     }
   }
