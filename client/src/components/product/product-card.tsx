@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'wouter';
-import { Star, StarHalf, Eye, ShoppingCart, ImageOff, Zap } from 'lucide-react';
+import { Star, StarHalf, Eye, ShoppingCart, ImageOff, Zap, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/hooks/use-cart';
 import { formatCurrency, calculateDiscount } from '@/lib/utils';
@@ -245,18 +245,27 @@ const ProductCard: React.FC<ProductCardProps> = ({
           
           <div className="flex items-start justify-between mt-1">
             <div className="flex flex-col">
+              {/* Show promotional price if available, otherwise show sale price or regular price */}
               <span className="text-[#FF69B4] font-bold text-lg">
-                {formatCurrency(product.salePrice || product.price)}
+                {promotionInfo ? (() => {
+                  const basePrice = product.salePrice || product.price;
+                  const discountAmount = promotionInfo.promotionDiscountType === 'percentage' 
+                    ? basePrice * (promotionInfo.promotionDiscount / 100)
+                    : promotionInfo.promotionDiscount;
+                  return formatCurrency(basePrice - discountAmount);
+                })() : formatCurrency(product.salePrice || product.price)}
               </span>
-              {product.salePrice && (
+              
+              {/* Show original price crossed out when there's a promotion or sale */}
+              {(promotionInfo || product.salePrice) && (
                 <span className="text-gray-500 text-xs line-through">
-                  {formatCurrency(product.price)}
+                  {promotionInfo ? formatCurrency(product.salePrice || product.price) : formatCurrency(product.price)}
                 </span>
               )}
             </div>
             
-            {/* Discount Percentage Badge */}
-            {product.salePrice && product.price && (
+            {/* Discount Percentage Badge - hide when promotion is active since it's shown on image */}
+            {!promotionInfo && product.salePrice && product.price && (
               <div className="ml-2">
                 <Badge className="bg-[#FF69B4] hover:bg-[#FF1493] text-white text-xs px-2 py-1 rounded-md font-medium">
                   {Math.round(((product.price - product.salePrice) / product.price) * 100)}% OFF
