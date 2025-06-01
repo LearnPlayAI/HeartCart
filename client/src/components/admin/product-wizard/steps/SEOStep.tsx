@@ -155,7 +155,8 @@ export const SEOStep: React.FC<SEOStepProps> = ({
   const applySEOSuggestion = () => {
     if (!aiSuggestions) return;
     
-    form.setValue('metaTitle', aiSuggestions.metaTitle || aiSuggestions.title);
+    // Keep the meta title the same as the product title
+    form.setValue('metaTitle', draft.name || '');
     form.setValue('metaDescription', aiSuggestions.metaDescription || aiSuggestions.description);
     // Convert keywords array to comma-separated string if it's an array
     const keywordsString = Array.isArray(aiSuggestions.keywords) 
@@ -197,7 +198,9 @@ export const SEOStep: React.FC<SEOStepProps> = ({
             <div className="space-y-4 mt-4">
               <div className="space-y-2">
                 <h3 className="text-sm font-medium">Meta Title</h3>
-                <p className="text-sm p-3 bg-secondary rounded-md">{aiSuggestions.metaTitle || aiSuggestions.title}</p>
+                <p className="text-sm p-3 bg-blue-50 rounded-md border border-blue-200">
+                  <span className="text-blue-600 font-medium">Will use product title:</span> {draft.name}
+                </p>
               </div>
               
               <div className="space-y-2">
