@@ -3283,7 +3283,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     isAdmin,
     validateRequest({
       body: z.object({
-        productIds: z.array(z.number().int().positive()).min(1)
+        type: z.enum(["category", "supplier", "catalog"]),
+        id: z.string(),
+        includeSubcategories: z.boolean().optional()
       })
     }),
     withStandardResponse(async (req: Request, res: Response) => {
@@ -3292,9 +3294,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw new BadRequestError("Invalid promotion ID");
       }
       
-      const { productIds } = req.body;
+      const { type, id: targetId, includeSubcategories } = req.body;
+      let productIds: number[] = [];
+      
+      switch (type) {
+        case "category":
+          productIds = await storage.getProductIdsByCategory(parseInt(targetId), includeSubcategories);
+          break;
+        case "supplier":
+          productIds = await storage.getProductIdsBySupplier(parseInt(targetId));
+          break;
+        case "catalog":
+          productIds = await storage.getProductIdsByCatalog(parseInt(targetId));
+          break;
+        default:
+          throw new BadRequestError("Invalid bulk operation type");
+      }
+      
+      if (productIds.length === 0) {
+        return { count: 0, message: "No products found for the specified criteria" };
+      }
+      
       const productPromotions = await storage.bulkAddProductsToPromotion(promotionId, productIds);
       return { 
+        count: productPromotions.length,
         message: `${productPromotions.length} products added to promotion successfully`,
         productPromotions 
       };

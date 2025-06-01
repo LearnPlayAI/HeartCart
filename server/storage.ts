@@ -8892,6 +8892,88 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  // Get product IDs by category (with optional subcategories)
+  async getProductIdsByCategory(categoryId: number, includeSubcategories: boolean = false): Promise<number[]> {
+    try {
+      if (includeSubcategories) {
+        // Get all subcategory IDs recursively
+        const subcategoryIds = await this.getAllSubcategoryIds(categoryId);
+        const allCategoryIds = [categoryId, ...subcategoryIds];
+        
+        const results = await db
+          .select({ id: products.id })
+          .from(products)
+          .where(inArray(products.categoryId, allCategoryIds));
+        
+        return results.map(r => r.id);
+      } else {
+        const results = await db
+          .select({ id: products.id })
+          .from(products)
+          .where(eq(products.categoryId, categoryId));
+        
+        return results.map(r => r.id);
+      }
+    } catch (error) {
+      console.error(`Error getting product IDs by category ${categoryId}:`, error);
+      throw error;
+    }
+  }
+
+  // Get product IDs by supplier
+  async getProductIdsBySupplier(supplierId: number): Promise<number[]> {
+    try {
+      const results = await db
+        .select({ id: products.id })
+        .from(products)
+        .where(eq(products.supplierId, supplierId));
+      
+      return results.map(r => r.id);
+    } catch (error) {
+      console.error(`Error getting product IDs by supplier ${supplierId}:`, error);
+      throw error;
+    }
+  }
+
+  // Get product IDs by catalog
+  async getProductIdsByCatalog(catalogId: number): Promise<number[]> {
+    try {
+      const results = await db
+        .select({ id: products.id })
+        .from(products)
+        .where(eq(products.catalogId, catalogId));
+      
+      return results.map(r => r.id);
+    } catch (error) {
+      console.error(`Error getting product IDs by catalog ${catalogId}:`, error);
+      throw error;
+    }
+  }
+
+  // Helper method to get all subcategory IDs recursively
+  private async getAllSubcategoryIds(parentId: number): Promise<number[]> {
+    try {
+      const directChildren = await db
+        .select({ id: categories.id })
+        .from(categories)
+        .where(eq(categories.parentId, parentId));
+      
+      const childIds = directChildren.map(c => c.id);
+      const allSubcategoryIds = [...childIds];
+      
+      // Recursively get subcategories
+      for (const childId of childIds) {
+        const grandChildren = await this.getAllSubcategoryIds(childId);
+        allSubcategoryIds.push(...grandChildren);
+      }
+      
+      return allSubcategoryIds;
+    } catch (error) {
+      console.error(`Error getting subcategory IDs for parent ${parentId}:`, error);
+      throw error;
+    }
+  }
+
   async bulkRemoveProductsFromPromotion(promotionId: number, productIds: number[]): Promise<boolean> {
     try {
       await db
