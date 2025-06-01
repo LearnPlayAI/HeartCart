@@ -253,6 +253,13 @@ const ProductCard: React.FC<ProductCardProps> = ({
                   const originalSalePrice = Number((product as any).originalSalePrice) || 0;
                   const promotionDiscount = Number(promotionInfo.promotionDiscount) || 0;
                   
+                  console.log('DEBUG Calculation for', product.name, {
+                    regularPrice,
+                    originalSalePrice,
+                    promotionDiscount,
+                    currentSalePrice: product.salePrice
+                  });
+                  
                   // For gazebo: R2299 -> R1559 = 43.4% discount
                   // Calculate correct existing sale discount percentage
                   let saleDiscountPercent = 0;
@@ -265,6 +272,12 @@ const ProductCard: React.FC<ProductCardProps> = ({
                   
                   // Apply total discount to regular price
                   const promotionalPrice = regularPrice * (1 - totalDiscountPercent / 100);
+                  
+                  console.log('DEBUG Results:', {
+                    saleDiscountPercent: saleDiscountPercent.toFixed(2),
+                    totalDiscountPercent: totalDiscountPercent.toFixed(2),
+                    promotionalPrice: promotionalPrice.toFixed(2)
+                  });
                   
                   return formatCurrency(promotionalPrice);
                 })() : formatCurrency(product.salePrice || product.price)}
