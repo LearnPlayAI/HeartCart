@@ -161,7 +161,7 @@ const FlashDealsSection = () => {
                   <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 text-xs font-bold rounded-full shadow-lg z-10">
                     {product.promotionDiscountType === 'percentage' 
                       ? `${product.promotionDiscount}% OFF`
-                      : `R${product.promotionDiscount} OFF`
+                      : `R${Math.round((product.salePrice - product.promotionalPrice) || 0)} OFF`
                     }
                   </div>
                   {/* Promotion name tag */}
