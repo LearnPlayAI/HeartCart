@@ -30,6 +30,7 @@ import {
 // Import the new file handling utilities
 import { useFileUpload } from '@/hooks/use-file-upload';
 import { UPLOAD_ENDPOINTS, ensureValidImageUrl } from '@/utils/file-manager';
+import { AIImageDownloader } from '../components/AIImageDownloader';
 
 interface ProductImagesStepProps {
   className?: string;
@@ -136,20 +137,57 @@ export const ProductImagesStepRefactored: React.FC<ProductImagesStepProps> = ({ 
   // Handle setting an image as the main image
   const handleSetMainImage = (index: number) => {
     fileUpload.setMainImage(index);
-    
-    
   };
   
   // Upload all pending images
   const handleUploadImages = async () => {
     try {
       await fileUpload.uploadAllFiles();
-      
-      
     } catch (error) {
       toast({
         title: "Upload failed",
         description: error instanceof Error ? error.message : "Failed to upload images",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Handle images downloaded from AI Image Downloader
+  const handleImagesDownloaded = (downloadedImages: any[]) => {
+    try {
+      // Convert downloaded images to the format expected by fileUpload
+      downloadedImages.forEach((image) => {
+        // Add each downloaded image to the wizard context
+        dispatch({
+          type: WizardActionType.ADD_UPLOADED_IMAGE,
+          payload: {
+            id: null,
+            url: image.url,
+            objectKey: image.objectKey,
+            filename: image.filename,
+            isMain: fileUpload.images.length === 0, // First image becomes main
+            sortOrder: fileUpload.images.length,
+            hasBgRemoved: false,
+            bgRemovedUrl: null,
+            bgRemovedObjectKey: null,
+            metadata: {
+              originalFilename: image.filename,
+              size: image.size,
+              contentType: image.contentType,
+              source: 'ai-downloader'
+            }
+          }
+        });
+      });
+
+      toast({
+        title: "Images added successfully",
+        description: `${downloadedImages.length} images have been downloaded and added to your product.`
+      });
+    } catch (error) {
+      toast({
+        title: "Error adding images",
+        description: "There was an error adding the downloaded images to your product.",
         variant: "destructive"
       });
     }
@@ -184,6 +222,13 @@ export const ProductImagesStepRefactored: React.FC<ProductImagesStepProps> = ({ 
             </p>
           </div>
           
+          {/* AI Image Downloader */}
+          <AIImageDownloader
+            onImagesDownloaded={handleImagesDownloaded}
+            productId={productData.id}
+            className="mt-4"
+          />
+
           {/* Error display */}
           {Object.entries(fileUpload.errors).length > 0 && (
             <div className="mt-4 p-3 bg-destructive/10 rounded-md">

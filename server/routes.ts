@@ -2462,6 +2462,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     })
   );
   
+  // AI Image Downloader - Download images from supplier URL
+  app.post(
+    "/api/ai/download-images",
+    isAuthenticated,
+    validateRequest({
+      body: z.object({
+        supplierUrl: z.string().url("Valid supplier URL is required"),
+        productId: z.number().optional()
+      })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const user = req.user as any;
+      
+      if (user.role !== 'admin') {
+        throw new ForbiddenError("Only administrators can use AI features");
+      }
+      
+      const { supplierUrl, productId } = req.body;
+      
+      try {
+        // Import the AI image downloader
+        const { AIImageDownloader } = await import('./ai-image-downloader');
+        
+        // Extract image URLs from the supplier page
+        const imageUrls = await AIImageDownloader.extractImagesFromUrl(supplierUrl);
+        
+        if (imageUrls.length === 0) {
+          return res.json({
+            success: false,
+            message: "No product images found on the supplier page",
+            images: [],
+            errors: ["No suitable product images were detected on the provided URL"]
+          });
+        }
+        
+        // Download and process the images
+        const result = await AIImageDownloader.downloadImages(imageUrls, productId);
+        
+        return res.json({
+          success: result.success,
+          message: result.success 
+            ? `Successfully downloaded ${result.images.length} images`
+            : "Failed to download images",
+          images: result.images,
+          errors: result.errors,
+          meta: {
+            foundUrls: imageUrls.length,
+            downloadedCount: result.images.length,
+            errorCount: result.errors.length
+          }
+        });
+        
+      } catch (error) {
+        console.error('AI Image Download Error:', error);
+        return res.status(500).json({
+          success: false,
+          message: "Failed to download images from supplier URL",
+          images: [],
+          errors: [error instanceof Error ? error.message : "Unknown error occurred"]
+        });
+      }
+    })
+  );
+
   // Generate product tags using AI
   app.post(
     "/api/ai/generate-tags", 
