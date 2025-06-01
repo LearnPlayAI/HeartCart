@@ -283,11 +283,11 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 <Badge className="bg-[#FF69B4] hover:bg-[#FF1493] text-white text-xs px-2 py-1 rounded-md font-medium">
                   {(() => {
                     const regularPrice = Number(product.price) || 0;
-                    const salePrice = Number(product.salePrice) || 0;
+                    const originalSalePrice = Number((product as any).originalSalePrice) || 0;
                     const promotionDiscount = Number(promotionInfo.promotionDiscount) || 0;
                     
-                    // Calculate sale discount percentage if there's a sale price
-                    const saleDiscountPercent = salePrice > 0 ? Math.round(((regularPrice - salePrice) / regularPrice) * 100) : 0;
+                    // Calculate sale discount percentage using original sale price (before promotional discount)
+                    const saleDiscountPercent = originalSalePrice > 0 ? Math.round(((regularPrice - originalSalePrice) / regularPrice) * 100) : 0;
                     
                     // Total discount is sale discount + promotion discount
                     const totalDiscountPercent = saleDiscountPercent + promotionDiscount;
