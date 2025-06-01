@@ -118,6 +118,30 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
     }
   }, [newParentId, categories]);
 
+  // Auto-generate slug based on parent-child relationship
+  useEffect(() => {
+    if (newName) {
+      let generatedSlug = '';
+      
+      if (newParentId) {
+        // If there's a parent, combine parent slug with child name
+        const parentCategory = categories?.find(c => c.id === parseInt(newParentId));
+        if (parentCategory && parentCategory.slug) {
+          generatedSlug = `${parentCategory.slug}-${slugify(newName)}`;
+        } else {
+          generatedSlug = slugify(newName);
+        }
+      } else {
+        // If no parent, just use the name
+        generatedSlug = slugify(newName);
+      }
+      
+      setNewSlug(generatedSlug);
+    } else {
+      setNewSlug('');
+    }
+  }, [newName, newParentId, categories]);
+
   // Create category mutation - exactly as in admin categories page
   const createMutation = useMutation({
     mutationFn: async (data: { 
@@ -709,23 +733,14 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
               
               <div className="grid gap-2">
                 <Label htmlFor="slug">Slug</Label>
-                <div className="flex gap-2">
-                  <Input 
-                    id="slug" 
-                    value={newSlug} 
-                    onChange={(e) => setNewSlug(e.target.value)} 
-                    placeholder={slugify(newName) || "category-slug"} 
-                  />
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={() => setNewSlug(slugify(newName))}
-                  >
-                    Generate
-                  </Button>
-                </div>
+                <Input 
+                  id="slug" 
+                  value={newSlug} 
+                  readOnly
+                  className="bg-gray-50"
+                />
                 <p className="text-sm text-muted-foreground">
-                  The URL-friendly version of the name.
+                  Auto-generated based on parent category and name (e.g., parent-slug-child-name).
                 </p>
               </div>
               
