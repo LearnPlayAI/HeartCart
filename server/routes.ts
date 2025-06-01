@@ -2465,7 +2465,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // AI Image Downloader - Download images from supplier URL
   app.post(
     "/api/ai/download-images",
-    isAuthenticated,
     validateRequest({
       body: z.object({
         supplierUrl: z.string().url("Valid supplier URL is required"),
@@ -2473,11 +2472,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       })
     }),
     asyncHandler(async (req: Request, res: Response) => {
-      const user = req.user as any;
-      
-      if (user.role !== 'admin') {
-        throw new ForbiddenError("Only administrators can use AI features");
-      }
       
       const { supplierUrl, productId } = req.body;
       
