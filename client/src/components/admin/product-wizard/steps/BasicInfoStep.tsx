@@ -87,6 +87,13 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
   const [showAiDialog, setShowAiDialog] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   
+  // State for AI enhancement preview modal
+  const [showEnhancementPreview, setShowEnhancementPreview] = useState(false);
+  const [aiEnhancementResult, setAiEnhancementResult] = useState<{
+    title: string;
+    description: string;
+  } | null>(null);
+  
   // Category creation modal state
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
@@ -462,20 +469,12 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
       const data = await response.json();
       
       if (data.success && data.data) {
-        // Apply the enhanced title and description
-        if (data.data.title) {
-          form.setValue('name', data.data.title);
-          // Update the product name in real-time for the heading
-          if (onProductNameChange) {
-            onProductNameChange(data.data.title);
-          }
-        }
-        
-        if (data.data.description) {
-          form.setValue('description', data.data.description);
-        }
-        
-        
+        // Store the AI enhancement result and show preview modal
+        setAiEnhancementResult({
+          title: data.data.title || formValues.name,
+          description: data.data.description || currentDescription,
+        });
+        setShowEnhancementPreview(true);
       } else {
         throw new Error(data.message || 'Failed to enhance product');
       }
@@ -502,6 +501,39 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
     setShowAiDialog(false);
     
     
+  };
+
+  // Functions for AI enhancement preview modal
+  const applyAiEnhancement = () => {
+    if (aiEnhancementResult) {
+      // Apply the enhanced title and description
+      form.setValue('name', aiEnhancementResult.title);
+      form.setValue('description', aiEnhancementResult.description);
+      
+      // Update the product name in real-time for the heading
+      if (onProductNameChange) {
+        onProductNameChange(aiEnhancementResult.title);
+      }
+      
+      toast({
+        title: 'AI Enhancement Applied',
+        description: 'Product title and description have been updated.',
+      });
+    }
+    setShowEnhancementPreview(false);
+    setAiEnhancementResult(null);
+  };
+
+  const regenerateAiEnhancement = async () => {
+    setShowEnhancementPreview(false);
+    setAiEnhancementResult(null);
+    // Trigger AI enhancement again
+    await enhanceProductWithAI();
+  };
+
+  const discardAiEnhancement = () => {
+    setShowEnhancementPreview(false);
+    setAiEnhancementResult(null);
   };
   
   // Handle sale price changes
@@ -1209,6 +1241,98 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             )}
             Create Category
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    {/* AI Enhancement Preview Modal */}
+    <Dialog open={showEnhancementPreview} onOpenChange={setShowEnhancementPreview}>
+      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-purple-600" />
+            AI Enhancement Preview
+          </DialogTitle>
+          <DialogDescription>
+            Review the AI-generated improvements for your product title and description.
+          </DialogDescription>
+        </DialogHeader>
+
+        {aiEnhancementResult && (
+          <div className="space-y-6">
+            {/* Title Comparison */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-lg">Product Title</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-muted-foreground">Current Title</Label>
+                  <div className="p-3 bg-muted rounded-lg border">
+                    <p className="text-sm">{form.getValues('name')}</p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-green-600">AI Enhanced Title</Label>
+                  <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                    <p className="text-sm font-medium">{aiEnhancementResult.title}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Description Comparison */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-lg">Product Description</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-muted-foreground">Current Description</Label>
+                  <div className="p-3 bg-muted rounded-lg border max-h-40 overflow-y-auto">
+                    <p className="text-sm whitespace-pre-wrap">{form.getValues('description')}</p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-green-600">AI Enhanced Description</Label>
+                  <div className="p-3 bg-green-50 rounded-lg border border-green-200 max-h-40 overflow-y-auto">
+                    <p className="text-sm whitespace-pre-wrap">{aiEnhancementResult.description}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <DialogFooter className="flex flex-col sm:flex-row gap-2">
+          <Button
+            variant="outline"
+            onClick={discardAiEnhancement}
+            className="w-full sm:w-auto"
+          >
+            Discard
+          </Button>
+          <Button
+            variant="outline"
+            onClick={regenerateAiEnhancement}
+            disabled={isGeneratingDescription}
+            className="w-full sm:w-auto"
+          >
+            {isGeneratingDescription ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Regenerating...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Regenerate
+              </>
+            )}
+          </Button>
+          <Button
+            onClick={applyAiEnhancement}
+            className="w-full sm:w-auto bg-green-600 hover:bg-green-700"
+          >
+            <Check className="mr-2 h-4 w-4" />
+            Apply Changes
           </Button>
         </DialogFooter>
       </DialogContent>
