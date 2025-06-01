@@ -300,6 +300,7 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ draft, onS
               <AIImageDownloader
                 onImagesDownloaded={handleImagesDownloaded}
                 productId={draft.id}
+                initialSupplierUrl={draft.supplierUrl}
                 className="mt-4"
               />
 

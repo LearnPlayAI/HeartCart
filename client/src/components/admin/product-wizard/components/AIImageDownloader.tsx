@@ -4,7 +4,7 @@
  * Downloads product images from supplier URLs using AI to extract and process images
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Loader2, Download, Globe, ImageIcon, AlertTriangle, CheckCircle, Eye, X, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,16 +34,25 @@ interface PreviewImage {
 interface AIImageDownloaderProps {
   onImagesDownloaded: (images: DownloadedImage[]) => void;
   productId?: number;
+  initialSupplierUrl?: string;
   className?: string;
 }
 
 export const AIImageDownloader: React.FC<AIImageDownloaderProps> = ({
   onImagesDownloaded,
   productId,
+  initialSupplierUrl,
   className
 }) => {
-  const [supplierUrl, setSupplierUrl] = useState('');
+  const [supplierUrl, setSupplierUrl] = useState(initialSupplierUrl || '');
   const [isExtracting, setIsExtracting] = useState(false);
+
+  // Update supplier URL when initialSupplierUrl prop changes
+  useEffect(() => {
+    if (initialSupplierUrl && initialSupplierUrl !== supplierUrl) {
+      setSupplierUrl(initialSupplierUrl);
+    }
+  }, [initialSupplierUrl]);
   const [isDownloading, setIsDownloading] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [previewImages, setPreviewImages] = useState<PreviewImage[]>([]);
