@@ -149,10 +149,17 @@ const FlashDealsSection = () => {
             (allPromotionProducts.slice(0, 8).map((product: any) => {
               const soldPercentage = Math.floor((product.id * 17) % 100);
               
+              // Create a modified product object with promotional pricing
+              const promotionalProduct = {
+                ...product,
+                salePrice: product.promotionalPrice || product.salePrice, // Use promotional price as the display price
+                originalSalePrice: product.salePrice // Keep original for calculations
+              };
+              
               return (
                 <div key={`${product.id}-${product.promotionName}`} className="relative">
                   <ProductCard
-                    product={product}
+                    product={promotionalProduct}
                     isFlashDeal={true}
                     soldPercentage={soldPercentage}
                     showAddToCart={true}
