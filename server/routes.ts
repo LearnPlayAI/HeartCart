@@ -3152,6 +3152,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return createPaginatedResponse(activePromotions, activePromotions.length, 1, 50);
   }));
 
+  // Get active promotions with their products (for flash deals display)
+  app.get("/api/promotions/active-with-products", withStandardResponse(async (req: Request, res: Response) => {
+    const activePromotions = await storage.getActivePromotions();
+    const promotionsWithProducts = [];
+    
+    for (const promotion of activePromotions) {
+      const products = await storage.getPromotionProducts(promotion.id);
+      promotionsWithProducts.push({
+        ...promotion,
+        products
+      });
+    }
+    
+    return promotionsWithProducts;
+  }));
+
   // Get promotion by ID
   app.get("/api/promotions/:id", withStandardResponse(async (req: Request, res: Response) => {
     const id = parseInt(req.params.id);
@@ -3361,6 +3377,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const promotions = await storage.getProductPromotions(productId);
     return createPaginatedResponse(promotions, promotions.length, 1, 50);
   }));
+
+  // CSV Import endpoint for promotion products (admin only)
+  app.post("/api/promotions/:id/import-csv",
+    isAuthenticated,
+    isAdmin,
+    validateRequest({
+      body: z.object({
+        csvContent: z.string().min(1),
+        type: z.enum(["sku", "category", "supplier", "catalog"]).default("sku"),
+        hasHeaders: z.boolean().default(true),
+        delimiter: z.string().default(","),
+        includeSubcategories: z.boolean().optional()
+      })
+    }),
+    withStandardResponse(async (req: Request, res: Response) => {
+      const promotionId = parseInt(req.params.id);
+      if (isNaN(promotionId)) {
+        throw new BadRequestError("Invalid promotion ID");
+      }
+      
+      const { csvContent, type, hasHeaders, delimiter, includeSubcategories } = req.body;
+      
+      // Import CSV using the promotion CSV importer
+      const { PromotionCsvImporter } = await import('./promotion-csv-importer');
+      
+      let result;
+      switch (type) {
+        case "sku":
+          result = await PromotionCsvImporter.importFromCsv(promotionId, csvContent, { hasHeaders, delimiter });
+          break;
+        case "category":
+          result = await PromotionCsvImporter.importByCategoryFromCsv(promotionId, csvContent, { hasHeaders, delimiter, includeSubcategories });
+          break;
+        case "supplier":
+          result = await PromotionCsvImporter.importBySupplierFromCsv(promotionId, csvContent, { hasHeaders, delimiter });
+          break;
+        default:
+          throw new BadRequestError("Invalid import type");
+      }
+      
+      return result;
+    })
+  );
+
+  // Get CSV template for promotion imports (admin only)
+  app.get("/api/promotions/csv-template/:type",
+    isAuthenticated,
+    isAdmin,
+    withStandardResponse(async (req: Request, res: Response) => {
+      const type = req.params.type as 'sku' | 'category' | 'supplier' | 'catalog';
+      
+      if (!['sku', 'category', 'supplier', 'catalog'].includes(type)) {
+        throw new BadRequestError("Invalid template type");
+      }
+      
+      const { PromotionCsvImporter } = await import('./promotion-csv-importer');
+      const template = PromotionCsvImporter.generateCsvTemplate(type);
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="promotion-${type}-template.csv"`);
+      return template;
+    })
+  );
+
+  // Get promotion scheduler status (admin only)
+  app.get("/api/promotions/scheduler/status",
+    isAuthenticated,
+    isAdmin,
+    withStandardResponse(async (req: Request, res: Response) => {
+      const { promotionScheduler } = await import('./promotion-scheduler');
+      return promotionScheduler.getStatus();
+    })
+  );
+
+  // Refresh promotion scheduler tasks (admin only)
+  app.post("/api/promotions/scheduler/refresh",
+    isAuthenticated,
+    isAdmin,
+    withStandardResponse(async (req: Request, res: Response) => {
+      const { promotionScheduler } = await import('./promotion-scheduler');
+      await promotionScheduler.refreshTasks();
+      return { message: "Scheduler tasks refreshed successfully" };
+    })
+  );
 
   // USER PROFILE UPDATE ENDPOINT
   app.patch(
