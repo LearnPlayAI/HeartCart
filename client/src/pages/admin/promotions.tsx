@@ -589,6 +589,9 @@ export default function PromotionsPage() {
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
+                      <Button variant="outline" size="sm" onClick={() => handleManageProducts(promotion)}>
+                        <Package className="h-4 w-4" />
+                      </Button>
                       <Button variant="outline" size="sm" onClick={() => handleEdit(promotion)}>
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -772,6 +775,132 @@ export default function PromotionsPage() {
               </div>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Product Management Dialog */}
+      <Dialog open={isProductManagementOpen} onOpenChange={setIsProductManagementOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              Manage Products - {selectedPromotion?.promotionName}
+            </DialogTitle>
+            <DialogDescription>
+              Add or remove products from this promotion campaign
+            </DialogDescription>
+          </DialogHeader>
+
+          <Tabs defaultValue="search" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="search">Search Products</TabsTrigger>
+              <TabsTrigger value="current">Current Products ({promotionProducts.length})</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="search" className="space-y-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search products to add to promotion..."
+                  value={productSearchQuery}
+                  onChange={(e) => setProductSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+
+              {productSearchQuery.length > 2 && (
+                <div className="border rounded-lg max-h-96 overflow-y-auto">
+                  {productsData?.data?.map((product: any) => (
+                    <div key={product.id} className="p-4 border-b last:border-b-0 flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        {product.imageUrl && (
+                          <img
+                            src={product.imageUrl}
+                            alt={product.name}
+                            className="w-12 h-12 object-cover rounded"
+                          />
+                        )}
+                        <div>
+                          <h4 className="font-medium">{product.name}</h4>
+                          <p className="text-sm text-muted-foreground">
+                            SKU: {product.sku} | Price: R{product.price}
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() => handleAddProductToPromotion(product)}
+                        disabled={addProductToPromotionMutation.isPending || 
+                          promotionProducts.some(p => p.productId === product.id)}
+                      >
+                        {promotionProducts.some(p => p.productId === product.id) ? "Added" : "Add"}
+                      </Button>
+                    </div>
+                  ))}
+                  
+                  {productsData?.data?.length === 0 && (
+                    <div className="p-8 text-center text-muted-foreground">
+                      No products found matching "{productSearchQuery}"
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {productSearchQuery.length <= 2 && (
+                <div className="p-8 text-center text-muted-foreground">
+                  Type at least 3 characters to search for products
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="current" className="space-y-4">
+              {promotionProducts.length > 0 ? (
+                <div className="border rounded-lg">
+                  {promotionProducts.map((item: any) => (
+                    <div key={item.id} className="p-4 border-b last:border-b-0 flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        {item.product?.imageUrl && (
+                          <img
+                            src={item.product.imageUrl}
+                            alt={item.product?.name}
+                            className="w-12 h-12 object-cover rounded"
+                          />
+                        )}
+                        <div>
+                          <h4 className="font-medium">{item.product?.name || `Product ID: ${item.productId}`}</h4>
+                          <p className="text-sm text-muted-foreground">
+                            {item.product?.sku && `SKU: ${item.product.sku} | `}
+                            Base Price: R{item.product?.price}
+                            {item.discountOverride && ` | Override: ${item.discountOverride}%`}
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleRemoveProductFromPromotion(item.productId)}
+                        disabled={removeProductFromPromotionMutation.isPending}
+                      >
+                        <X className="h-4 w-4" />
+                        Remove
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-8 text-center text-muted-foreground">
+                  <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No products added to this promotion yet</p>
+                  <p className="text-sm">Switch to the Search tab to add products</p>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+
+          <div className="flex justify-end">
+            <Button onClick={() => setIsProductManagementOpen(false)}>
+              Done
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
       </div>
