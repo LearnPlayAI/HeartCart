@@ -183,17 +183,26 @@ export const SalesPromotionsStep: React.FC<SalesPromotionsStepProps> = ({
     }
   });
 
-  // Auto-generate rating and review count when component loads if both are empty
+  // Auto-generate rating and review count when component loads based on existing values
   useEffect(() => {
     const currentRating = form.getValues('rating');
     const currentReviewCount = form.getValues('review_count');
     
-    if ((!currentRating || currentRating === 0) && (!currentReviewCount || currentReviewCount === 0)) {
-      const newRating = generateRandomRating();
+    // Handle review count logic
+    if (!currentReviewCount || currentReviewCount === 0) {
+      // If review count is null or zero, generate random number between 22-148
       const newReviewCount = generateRandomReviewCount();
-      
-      form.setValue('rating', newRating);
       form.setValue('review_count', newReviewCount);
+      
+      // Also generate rating if it's empty
+      if (!currentRating || currentRating === 0) {
+        const newRating = generateRandomRating();
+        form.setValue('rating', newRating);
+      }
+    } else {
+      // If review count exists and is not zero, increment by 1 but leave rating unchanged
+      const incrementedReviewCount = currentReviewCount + 1;
+      form.setValue('review_count', incrementedReviewCount);
     }
   }, [form]);
 
