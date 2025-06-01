@@ -12,142 +12,142 @@ Transform the current individual flash deals system into a comprehensive promoti
 
 ---
 
-## Phase 1: Foundation Infrastructure ✅
+## Phase 1: Foundation Infrastructure ⏳
 
 ### Database Schema
-- [x] Create `promotions` table with camelCase naming convention
-  - [x] promotionName (TEXT NOT NULL)
-  - [x] startDate (TEXT NOT NULL)
-  - [x] endDate (TEXT NOT NULL)
-  - [x] isActive (BOOLEAN DEFAULT true)
-  - [x] createdBy (INTEGER REFERENCES users.id)
-  - [x] createdAt (TEXT DEFAULT NOW())
-  - [x] updatedAt (TEXT DEFAULT NOW())
-  - [x] description (TEXT)
-  - [x] promotionType (TEXT DEFAULT 'percentage')
-  - [x] discountValue (DECIMAL)
-  - [x] minimumOrderValue (DECIMAL)
+- [ ] Create `promotions` table with camelCase naming convention
+  - [ ] promotionName (TEXT NOT NULL)
+  - [ ] startDate (TEXT NOT NULL)
+  - [ ] endDate (TEXT NOT NULL)
+  - [ ] isActive (BOOLEAN DEFAULT true)
+  - [ ] createdBy (INTEGER REFERENCES users.id)
+  - [ ] createdAt (TEXT DEFAULT NOW())
+  - [ ] updatedAt (TEXT DEFAULT NOW())
+  - [ ] description (TEXT)
+  - [ ] promotionType (TEXT DEFAULT 'percentage')
+  - [ ] discountValue (DECIMAL)
+  - [ ] minimumOrderValue (DECIMAL)
 
-- [x] Extend `product_drafts` table
-  - [x] Add promotionId column (camelCase naming convention)
-  - [x] Update schema.ts with new field
+- [ ] Extend `product_drafts` table
+  - [ ] Add promotionId column (camelCase naming convention)
+  - [ ] Update schema.ts with new field
 
 ### API Endpoints - Core CRUD
-- [x] `GET /api/promotions` - List all promotions with pagination
-- [x] `POST /api/promotions` - Create new promotion
-- [x] `GET /api/promotions/:id` - Get specific promotion details
-- [x] `PATCH /api/promotions/:id` - Update promotion
-- [x] `DELETE /api/promotions/:id` - Delete promotion
-- [x] `POST /api/promotions/:id/activate` - Manual activation
-- [x] `POST /api/promotions/:id/deactivate` - Manual deactivation
+- [ ] `GET /api/promotions` - List all promotions with pagination
+- [ ] `POST /api/promotions` - Create new promotion
+- [ ] `GET /api/promotions/:id` - Get specific promotion details
+- [ ] `PATCH /api/promotions/:id` - Update promotion
+- [ ] `DELETE /api/promotions/:id` - Delete promotion
+- [ ] `POST /api/promotions/:id/activate` - Manual activation
+- [ ] `POST /api/promotions/:id/deactivate` - Manual deactivation
 
 ### Admin Interface Foundation
-- [x] Add "Promotions" to admin sidebar navigation
-- [x] Create `/admin/promotions` main page with layout
-- [x] Implement card view for promotions list
-- [x] Implement table view for promotions list
-- [x] Create `/admin/promotions/create` page
-- [x] Create `/admin/promotions/[id]/edit` page
-- [x] Basic promotion form with validation
+- [ ] Add "Promotions" to admin sidebar navigation
+- [ ] Create `/admin/promotions` main page with layout
+- [ ] Implement card view for promotions list
+- [ ] Implement table view for promotions list
+- [ ] Create `/admin/promotions/create` page
+- [ ] Create `/admin/promotions/[id]/edit` page
+- [ ] Basic promotion form with validation
 
 ---
 
-## Phase 2: Product Management Integration ✅
+## Phase 2: Product Management Integration ⏳
 
 ### Product Selection System
-- [x] Integrate existing home page search component
-- [x] Create `/admin/promotions/[id]/products` page
-- [x] Individual product search and selection
-- [x] Product list view with checkbox selection for multiple products
-- [x] Selected products display and management
-- [x] Remove products from promotion functionality
+- [ ] Integrate existing home page search component
+- [ ] Create `/admin/promotions/[id]/products` page
+- [ ] Individual product search and selection
+- [ ] Product list view with checkbox selection for multiple products
+- [ ] Selected products display and management
+- [ ] Remove products from promotion functionality
 
 ### Multiple Product Selection Methods
-- [x] Search-based product selection (individual or multiple)
-- [x] List view with checkboxes for bulk selection
-- [x] "Add all products from category" functionality
-- [x] Category tree selection interface
-- [x] Bulk category assignment with preview
-- [x] Subcategory inclusion options
-- [x] Supplier-based bulk selection
-- [x] Catalog-based bulk selection
+- [ ] Search-based product selection (individual or multiple)
+- [ ] List view with checkboxes for bulk selection
+- [ ] "Add all products from category" functionality
+- [ ] Category tree selection interface
+- [ ] Bulk category assignment with preview
+- [ ] Subcategory inclusion options
+- [ ] Supplier-based bulk selection
+- [ ] Catalog-based bulk selection
 
 ### Draft System Integration
-- [x] Extend existing drafts system for promotion assignments
-- [x] Create drafts for all products added to promotion
-- [x] Bulk draft publishing workflow
-- [x] Progress tracking for bulk operations
-- [x] Error handling for failed draft creations
+- [ ] Extend existing drafts system for promotion assignments
+- [ ] Create drafts for all products added to promotion
+- [ ] Bulk draft publishing workflow
+- [ ] Progress tracking for bulk operations
+- [ ] Error handling for failed draft creations
 
 ---
 
-## Phase 3: Automation & Scheduling ✅
+## Phase 3: Automation & Scheduling ⏳
 
 ### Time Zone Awareness
-- [x] South African timezone configuration
-- [x] Proper date/time handling in UI
-- [x] Server-side timezone conversion
-- [x] Schedule display in local time
+- [ ] South African timezone configuration
+- [ ] Proper date/time handling in UI
+- [ ] Server-side timezone conversion
+- [ ] Schedule display in local time
 
 ### Automatic Activation System
-- [x] Background job system for promotion activation
-- [x] Scheduled promotion start automation
-- [x] Scheduled promotion end automation
-- [x] Grace period handling for overlapping schedules
+- [ ] Background job system for promotion activation
+- [ ] Scheduled promotion start automation
+- [ ] Scheduled promotion end automation
+- [ ] Grace period handling for overlapping schedules
 
 ### Draft Scheduling
-- [x] Schedule when promotion drafts get published
-- [x] Pre-publication validation
-- [x] Automated publishing workflow
-- [x] Notification system for scheduled events
+- [ ] Schedule when promotion drafts get published
+- [ ] Pre-publication validation
+- [ ] Automated publishing workflow
+- [ ] Notification system for scheduled events
 
 ### Duplicate Protection
-- [x] Check for overlapping promotions on same products
-- [x] Warning system for potential conflicts
-- [x] Resolution workflow for conflicts
-- [x] Override options for admin users
+- [ ] Check for overlapping promotions on same products
+- [ ] Warning system for potential conflicts
+- [ ] Resolution workflow for conflicts
+- [ ] Override options for admin users
 
 ---
 
-## Phase 4: CSV Bulk Import Integration ✅
+## Phase 4: CSV Bulk Import Integration ⏳
 
 ### Mass Upload System Integration
-- [x] Extend existing mass upload for promotion products
-- [x] CSV template for promotion product import
-- [x] Validation rules for promotion CSV uploads
-- [x] Error handling and reporting
-- [x] Preview before import functionality
+- [ ] Extend existing mass upload for promotion products
+- [ ] CSV template for promotion product import
+- [ ] Validation rules for promotion CSV uploads
+- [ ] Error handling and reporting
+- [ ] Preview before import functionality
 
 ### Import Features
-- [x] SKU-based product matching for promotion assignment
-- [x] Category-based bulk import for promotion assignment
-- [x] Supplier-based bulk import for promotion assignment
-- [x] Catalog-based bulk import for promotion assignment
-- [x] Import with custom discount values per product
-- [x] Bulk promotion assignment via CSV using existing mass upload system
-- [x] Integration with existing supplier and catalog selection in mass upload
+- [ ] SKU-based product matching for promotion assignment
+- [ ] Category-based bulk import for promotion assignment
+- [ ] Supplier-based bulk import for promotion assignment
+- [ ] Catalog-based bulk import for promotion assignment
+- [ ] Import with custom discount values per product
+- [ ] Bulk promotion assignment via CSV using existing mass upload system
+- [ ] Integration with existing supplier and catalog selection in mass upload
 
 ---
 
-## Phase 5: Frontend Flash Deals Migration ✅
+## Phase 5: Frontend Flash Deals Migration ⏳
 
 ### API Migration
-- [x] Update `/api/flash-deals` to use promotions system
-- [x] Replace individual flash deal logic with promotion-based queries
-- [x] Query active promotions for special deals
-- [x] Product filtering by active promotions
+- [ ] Update `/api/flash-deals` to use promotions system
+- [ ] Replace individual flash deal logic with promotion-based queries
+- [ ] Query active promotions for special deals
+- [ ] Product filtering by active promotions
 
 ### Flash Deals Page Updates
-- [x] Add promotion filtering to `/flash-deals` page
-- [x] Promotion-based product grouping
-- [x] Filter by specific promotion campaigns
-- [x] Promotion name display on deals page
+- [ ] Add promotion filtering to `/flash-deals` page
+- [ ] Promotion-based product grouping
+- [ ] Filter by specific promotion campaigns
+- [ ] Promotion name display on deals page
 
 ### Product Card Updates
-- [x] Add promotion badges to product cards
-- [x] Display promotion information
-- [x] Promotion-specific styling
-- [x] Mobile-optimized badge design
+- [ ] Add promotion badges to product cards
+- [ ] Display promotion information
+- [ ] Promotion-specific styling
+- [ ] Mobile-optimized badge design
 
 ---
 
