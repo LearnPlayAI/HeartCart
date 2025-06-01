@@ -66,10 +66,11 @@ const FlashDealsSection = () => {
     
     if (timeLeft <= 0) return null;
     
-    const hours = Math.floor(timeLeft / (1000 * 60 * 60));
+    const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
     
-    return { hours, minutes };
+    return { days, hours, minutes };
   };
 
   // Handle error state gracefully
@@ -113,7 +114,10 @@ const FlashDealsSection = () => {
                   {timeLeft && (
                     <div className="flex items-center text-xs bg-white/20 px-2 py-1 rounded">
                       <Clock className="w-3 h-3 mr-1" />
-                      {timeLeft.hours}h {timeLeft.minutes}m left
+                      {timeLeft.days > 0 
+                        ? `${timeLeft.days}d ${timeLeft.hours}h left`
+                        : `${timeLeft.hours}h ${timeLeft.minutes}m left`
+                      }
                     </div>
                   )}
                 </div>
