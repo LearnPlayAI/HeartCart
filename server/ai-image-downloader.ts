@@ -105,7 +105,10 @@ export class AIImageDownloader {
       return result;
     }
 
-    for (const imageUrl of imageUrls.slice(0, 12)) { // Limit to 12 images as requested
+    // Further filter and deduplicate URLs before processing
+    const filteredUrls = this.filterAndDeduplicateUrls(imageUrls);
+    
+    for (const imageUrl of filteredUrls.slice(0, 8)) { // Limit to 8 high-quality images
       try {
         const downloadedImage = await this.downloadSingleImage(imageUrl, productId);
         if (downloadedImage) {
@@ -204,6 +207,60 @@ export class AIImageDownloader {
       logger.error(`Error downloading image from ${imageUrl}:`, error);
       throw error;
     }
+  }
+
+  /**
+   * Filter and deduplicate image URLs to prioritize best quality product images
+   */
+  private static filterAndDeduplicateUrls(imageUrls: string[]): string[] {
+    const seen = new Set<string>();
+    const filtered: string[] = [];
+    
+    // Sort URLs by quality indicators - prioritize larger sizes and main product images
+    const sortedUrls = imageUrls.sort((a, b) => {
+      const aScore = this.getImageQualityScore(a);
+      const bScore = this.getImageQualityScore(b);
+      return bScore - aScore; // Higher score first
+    });
+    
+    for (const url of sortedUrls) {
+      // Remove query parameters for deduplication (same image with different sizes)
+      const baseUrl = url.split('?')[0];
+      const fileName = baseUrl.split('/').pop() || '';
+      
+      if (!seen.has(fileName) && !seen.has(baseUrl)) {
+        seen.add(fileName);
+        seen.add(baseUrl);
+        filtered.push(url);
+      }
+    }
+    
+    return filtered;
+  }
+
+  /**
+   * Score image URLs by quality indicators
+   */
+  private static getImageQualityScore(imageUrl: string): number {
+    const url = imageUrl.toLowerCase();
+    let score = 0;
+    
+    // Prefer larger image sizes
+    if (url.includes('1500') || url.includes('1200')) score += 10;
+    else if (url.includes('1000') || url.includes('800')) score += 8;
+    else if (url.includes('600') || url.includes('700')) score += 6;
+    else if (url.includes('400') || url.includes('500')) score += 4;
+    
+    // Prefer main product image indicators
+    if (url.includes('main') || url.includes('primary')) score += 8;
+    if (url.includes('product') || url.includes('item')) score += 6;
+    if (url.includes('gallery') || url.includes('detail')) score += 4;
+    
+    // Penalize potential duplicates or low-quality indicators
+    if (url.includes('thumb') || url.includes('small')) score -= 5;
+    if (url.includes('copy') || url.includes('duplicate')) score -= 3;
+    
+    return score;
   }
 
   /**
