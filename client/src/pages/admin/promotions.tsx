@@ -57,6 +57,7 @@ export default function PromotionsPage() {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, navigate] = useLocation();
 
   // Fetch promotions
   const { data: promotionsData, isLoading } = useQuery({
@@ -206,7 +207,7 @@ export default function PromotionsPage() {
   };
 
   const handleManageProducts = (promotion: Promotion) => {
-    setLocation(`/admin/promotions/${promotion.id}/products`);
+    navigate(`/admin/promotions/${promotion.id}/products`);
   };
 
 
