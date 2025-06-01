@@ -136,10 +136,7 @@ export default function AdminSuppliers() {
       });
       setShowDeleteDialog(false);
       setSelectedSupplier(null);
-      toast({
-        title: "Success",
-        description: result.message || "Supplier deleted successfully",
-      });
+      
     },
     onError: (error: any) => {
       toast({
@@ -180,10 +177,7 @@ export default function AdminSuppliers() {
       });
       setShowDeactivateDialog(false);
       setSelectedSupplier(null);
-      toast({
-        title: "Success",
-        description: result.message || "Supplier deactivated successfully",
-      });
+      
     },
     onError: (error: any) => {
       toast({

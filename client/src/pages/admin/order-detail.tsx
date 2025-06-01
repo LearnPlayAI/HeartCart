@@ -304,7 +304,7 @@ export default function AdminOrderDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/orders', orderId] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
-      toast({ description: "Order status updated successfully" });
+      
     },
     onError: (error) => {
       console.error('Status update error:', error);
@@ -323,7 +323,7 @@ export default function AdminOrderDetail() {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/orders', orderId] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
       setTrackingInput("");
-      toast({ description: "Tracking number updated successfully" });
+      
     },
     onError: () => {
       toast({ 
@@ -341,9 +341,7 @@ export default function AdminOrderDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/orders', orderId] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
-      toast({ 
-        description: "Payment marked as received and order moved to processing" 
-      });
+      
     },
     onError: (error) => {
       console.error('Payment received update error:', error);

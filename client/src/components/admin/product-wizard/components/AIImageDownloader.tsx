@@ -111,10 +111,7 @@ export const AIImageDownloader: React.FC<AIImageDownloaderProps> = ({
       if (data.success && data.images && data.images.length > 0) {
         setPreviewImages(data.images);
         setShowPreviewModal(true);
-        toast({
-          title: "Images Found",
-          description: `Found ${data.images.length} images. Select which ones to download.`
-        });
+        
       } else {
         toast({
           title: data.message || "No Images Found",
@@ -168,11 +165,6 @@ export const AIImageDownloader: React.FC<AIImageDownloaderProps> = ({
       setDownloadResult(data);
 
       if (data.success && data.images && data.images.length > 0) {
-        toast({
-          title: "Images Downloaded",
-          description: `Successfully downloaded ${data.images.length} images from the supplier page.`
-        });
-
         onImagesDownloaded(data.images);
         setShowPreviewModal(false);
         setPreviewImages([]);

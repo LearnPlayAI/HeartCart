@@ -353,10 +353,7 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
       // Auto-select the newly created category
       form.setValue('categoryId', newCategory.id);
 
-      toast({
-        title: "Success",
-        description: "Category created successfully",
-      });
+      
     },
     onError: (error) => {
       toast({
@@ -478,10 +475,7 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
           form.setValue('description', data.data.description);
         }
         
-        toast({
-          title: 'AI Enhancement Complete',
-          description: 'Your product title and description have been enhanced with better marketing language.',
-        });
+        
       } else {
         throw new Error(data.message || 'Failed to enhance product');
       }

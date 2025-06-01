@@ -143,10 +143,7 @@ const ProfileSettingsPage: React.FC = () => {
       return response.json();
     },
     onSuccess: () => {
-      toast({
-        title: "Profile updated",
-        description: "Your profile has been successfully updated.",
-      });
+      
       queryClient.invalidateQueries({ queryKey: ['/api/user'] });
     },
     onError: (error: Error) => {

@@ -73,10 +73,7 @@ export default function EditSupplier() {
         }
       });
       queryClient.invalidateQueries({ queryKey: [`/api/suppliers/${supplierId}`] });
-      toast({
-        title: "Success",
-        description: result.message || "Supplier updated successfully",
-      });
+      
       setLocation("/admin/suppliers");
     },
     onError: (error: any) => {

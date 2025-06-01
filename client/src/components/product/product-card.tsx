@@ -108,12 +108,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
         if (hasRequiredAttributes) {
           // Open quick view modal instead of adding directly to cart
           setQuickViewOpen(true);
-          toast({
-            title: "Please select options",
-            description: "This product has options that need to be selected. Please choose your preferences in the quick view.",
-            variant: "default",
-            duration: 4000,
-          });
+          
           return;
         }
       }

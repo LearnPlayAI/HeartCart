@@ -81,6 +81,43 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
   const categories = categoriesData?.data || [];
   const existingProducts = productsData?.data || [];
 
+  // Auto-increment display order logic - same as admin categories page
+  useEffect(() => {
+    if (categories && categories.length > 0) {
+      // If parent is selected, find the max display order among its children
+      if (newParentId) {
+        const parentIdNum = parseInt(newParentId);
+        const siblingCategories = categories.filter(c => c.parentId === parentIdNum);
+        if (siblingCategories.length > 0) {
+          const maxOrder = Math.max(...siblingCategories.map(c => c.displayOrder || 0));
+          setNewDisplayOrder(maxOrder + 1);
+          return;
+        }
+      }
+      
+      // Otherwise, for level 0 categories
+      const levelZeroCategories = categories.filter(c => c.level === 0);
+      if (levelZeroCategories.length > 0) {
+        const maxOrder = Math.max(...levelZeroCategories.map(c => c.displayOrder || 0));
+        setNewDisplayOrder(maxOrder + 1);
+      } else {
+        setNewDisplayOrder(0);
+      }
+    }
+  }, [categories, newParentId]);
+
+  // Auto-update level based on parent selection
+  useEffect(() => {
+    if (newParentId) {
+      const parentCategory = categories?.find(c => c.id === parseInt(newParentId));
+      if (parentCategory) {
+        setNewLevel((parentCategory.level || 0) + 1);
+      }
+    } else {
+      setNewLevel(0);
+    }
+  }, [newParentId, categories]);
+
   // Create category mutation - exactly as in admin categories page
   const createMutation = useMutation({
     mutationFn: async (data: { 
@@ -103,10 +140,7 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
       setNewParentId(null);
       setNewLevel(0);
       setNewDisplayOrder(0);
-      toast({
-        title: "Category Created",
-        description: "New category has been created successfully.",
-      });
+      
     },
     onError: (error: any) => {
       toast({
@@ -261,15 +295,9 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
           variant: 'destructive',
         });
       } else if (validationResult.hasWarnings) {
-        toast({
-          title: 'Validation Warnings',
-          description: `All products passed validation, but there are ${validatedProducts.filter(p => p.validationWarnings!.length > 0).length} warnings to review.`,
-        });
+        
       } else {
-        toast({
-          title: 'Validation Passed',
-          description: 'All products passed validation successfully!',
-        });
+        
       }
     } catch (error) {
       console.error('Validation error:', error);
@@ -707,10 +735,11 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
                   id="displayOrder" 
                   type="number" 
                   value={newDisplayOrder} 
-                  onChange={(e) => setNewDisplayOrder(parseInt(e.target.value))} 
+                  readOnly
+                  className="bg-gray-50"
                 />
                 <p className="text-sm text-muted-foreground">
-                  Controls the display order within the same level.
+                  Auto-calculated based on existing categories at the same level.
                 </p>
               </div>
               

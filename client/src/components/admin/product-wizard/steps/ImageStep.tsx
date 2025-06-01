@@ -357,10 +357,7 @@ export function ImageStep() {
       // Mark step as complete if we have images
       markStepComplete('images');
 
-      toast({
-        title: "Images added successfully",
-        description: `${downloadedImages.length} images have been downloaded and added to your product.`
-      });
+      
     } catch (error) {
       toast({
         title: "Error adding images",

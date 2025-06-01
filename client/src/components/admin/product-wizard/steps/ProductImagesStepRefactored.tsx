@@ -178,10 +178,7 @@ export const ProductImagesStepRefactored: React.FC<ProductImagesStepProps> = ({ 
         });
       });
 
-      toast({
-        title: "Images added successfully",
-        description: `${downloadedImages.length} images have been downloaded and added to your product.`
-      });
+      
     } catch (error) {
       toast({
         title: "Error adding images",

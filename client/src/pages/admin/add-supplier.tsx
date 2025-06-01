@@ -37,10 +37,7 @@ export default function AddSupplier() {
           return Array.isArray(key) && key[0] === "/api/suppliers";
         }
       });
-      toast({
-        title: "Success",
-        description: result.message || "Supplier created successfully",
-      });
+      
       setLocation("/admin/suppliers");
     },
     onError: (error: any) => {

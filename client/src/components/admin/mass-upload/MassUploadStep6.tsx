@@ -160,10 +160,7 @@ export function MassUploadStep6({ data, onUpdate, onComplete, onPrevious }: Mass
       setIsCreatingDrafts(false);
       
       if (errors.length === 0) {
-        toast({
-          title: 'Drafts Created Successfully',
-          description: `${results.length} product drafts have been created. You can now upload images.`,
-        });
+        
       } else {
         toast({
           title: 'Some Drafts Failed',
@@ -215,17 +212,11 @@ export function MassUploadStep6({ data, onUpdate, onComplete, onPrevious }: Mass
 
   const handleImageUploadComplete = () => {
     setSelectedProductForImages(null);
-    toast({
-      title: 'Images Uploaded',
-      description: 'Product images have been uploaded successfully.',
-    });
+    
   };
 
   const handleComplete = () => {
-    toast({
-      title: 'Mass Upload Complete',
-      description: `${data.products.length} products have been uploaded as drafts. You can now edit and publish them from the Product Management page.`,
-    });
+    
     onComplete();
   };
 

@@ -70,10 +70,7 @@ export function MassUploadStep5({ data, onUpdate, onNext, onPrevious }: MassUplo
       queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
       setIsCreateDialogOpen(false);
       resetCategoryForm();
-      toast({
-        title: 'Category Created',
-        description: 'New category has been created successfully.',
-      });
+      
     },
     onError: (error: any) => {
       toast({
@@ -129,20 +126,14 @@ export function MassUploadStep5({ data, onUpdate, onNext, onPrevious }: MassUplo
     setEditingProductIndex(null);
     setEditedProduct(null);
 
-    toast({
-      title: 'Product Updated',
-      description: 'Product changes have been saved.',
-    });
+    
   };
 
   const handleRemoveProduct = (index: number) => {
     const updatedProducts = data.products.filter((_, i) => i !== index);
     onUpdate({ products: updatedProducts });
 
-    toast({
-      title: 'Product Removed',
-      description: 'Product has been removed from the upload list.',
-    });
+    
   };
 
   const handleRevalidate = () => {
@@ -194,13 +185,7 @@ export function MassUploadStep5({ data, onUpdate, onNext, onPrevious }: MassUplo
       validationResults: validationResult,
     });
 
-    toast({
-      title: 'Validation Updated',
-      description: validationResult.hasErrors ? 
-        `${validationResult.invalidProducts} products still have errors.` :
-        'All products passed validation!',
-      variant: validationResult.hasErrors ? 'destructive' : 'default',
-    });
+    
   };
 
   const handleStartUpload = async () => {

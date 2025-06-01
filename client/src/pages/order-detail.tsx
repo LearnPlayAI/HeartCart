@@ -179,10 +179,7 @@ const OrderDetail: React.FC = () => {
       setProofOfPayment(data.url);
       // Invalidate and refetch order data to show updated payment status
       queryClient.invalidateQueries({ queryKey: [`/api/orders/${orderId}`] });
-      toast({
-        title: "Upload Successful",
-        description: "Proof of payment uploaded successfully. Payment status updated to paid.",
-      });
+      
     },
     onError: (error) => {
       toast({

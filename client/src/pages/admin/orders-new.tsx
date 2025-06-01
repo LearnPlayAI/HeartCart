@@ -120,7 +120,7 @@ function OrderDetails({ order }: { order: Order }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
-      toast({ description: "Order status updated successfully" });
+      
     },
     onError: () => {
       toast({ 
@@ -136,7 +136,7 @@ function OrderDetails({ order }: { order: Order }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
-      toast({ description: "Tracking number updated successfully" });
+      
     },
     onError: () => {
       toast({ 

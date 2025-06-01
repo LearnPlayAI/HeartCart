@@ -48,10 +48,7 @@ export function MassUploadStep2({ data, onUpdate, onNext, onPrevious }: MassUplo
         products: products 
       });
 
-      toast({
-        title: 'CSV Uploaded Successfully',
-        description: `Found ${products.length} products in the file.`,
-      });
+      
 
     } catch (error) {
       console.error('Error processing CSV:', error);
