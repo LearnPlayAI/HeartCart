@@ -157,22 +157,22 @@ const FlashDealsSection = () => {
                     soldPercentage={soldPercentage}
                     showAddToCart={true}
                   />
-                  {/* Promotion badge */}
+                  {/* Promotion discount badge */}
                   <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 text-xs font-bold rounded-full shadow-lg z-10">
                     {product.promotionDiscountType === 'percentage' 
                       ? `${product.promotionDiscount}% OFF`
-                      : `R${Math.round((product.salePrice - product.promotionalPrice) || 0)} OFF`
+                      : `${product.promotionDiscount}% OFF`
                     }
                   </div>
                   {/* Promotion name tag */}
                   <div className="absolute top-2 right-2 bg-black/70 text-white px-2 py-1 text-xs rounded shadow-lg z-10">
                     {product.promotionName}
                   </div>
-                  {/* Time remaining indicator */}
+                  {/* Time remaining indicator - moved to bottom right corner */}
                   {(() => {
                     const timeLeft = getTimeRemaining(product.promotionEndDate);
                     return timeLeft && (
-                      <div className="absolute bottom-2 left-2 bg-orange-500 text-white px-2 py-1 text-xs rounded shadow-lg z-10 flex items-center">
+                      <div className="absolute bottom-2 right-2 bg-orange-500 text-white px-2 py-1 text-xs rounded shadow-lg z-10 flex items-center">
                         <Clock className="w-3 h-3 mr-1" />
                         {timeLeft.hours}h {timeLeft.minutes}m
                       </div>

@@ -217,12 +217,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
           
           {isFlashDeal && (
             <div className="mt-2 mb-1">
-              <div className="flex items-center justify-between mb-2">
-                <Badge variant="outline" className="bg-[#FF69B4]/10 text-[#FF69B4] border-[#FF69B4]/30 flex items-center gap-1 px-2 py-0.5">
-                  <Zap className="h-3 w-3" />
-                  <span className="text-xs">Special Deal</span>
-                </Badge>
-              </div>
               {product.specialSaleEnd && (
                 <TimeLeftProgressBar product={product} />
               )}
