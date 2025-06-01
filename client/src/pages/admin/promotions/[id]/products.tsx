@@ -16,7 +16,18 @@ interface Product {
   name: string;
   sku: string;
   price: number;
+  costPrice?: number;
+  salePrice?: number;
   imageUrl?: string;
+  isPublished?: boolean;
+  category?: {
+    id: number;
+    name: string;
+    parentCategory?: {
+      id: number;
+      name: string;
+    };
+  };
 }
 
 interface ProductPromotion {
@@ -24,6 +35,7 @@ interface ProductPromotion {
   productId: number;
   promotionId: number;
   discountOverride?: number;
+  promotionalPrice?: number;
   product?: Product;
 }
 
@@ -43,6 +55,7 @@ export default function PromotionProductsPage() {
   const { id } = useParams();
   const [, setLocation] = useLocation();
   const [productSearchQuery, setProductSearchQuery] = useState("");
+  const [promotionalPrices, setPromotionalPrices] = useState<Record<number, string>>({});
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -115,12 +128,76 @@ export default function PromotionProductsPage() {
     },
   });
 
+  // Update promotional price mutation
+  const updatePromotionalPriceMutation = useMutation({
+    mutationFn: ({ productId, price }: { productId: number; price: number }) => 
+      apiRequest(`/api/promotions/${promotionId}/products/${productId}/price`, {
+        method: 'PATCH',
+        body: JSON.stringify({ promotionalPrice: price }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/promotions/${promotionId}/products`] });
+      toast({
+        title: "Success",
+        description: "Promotional price updated successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to update promotional price",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mass publish mutation
+  const massPublishMutation = useMutation({
+    mutationFn: () => 
+      apiRequest(`/api/promotions/${promotionId}/products/mass-publish`, {
+        method: 'POST',
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/promotions/${promotionId}/products`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/promotions/active-with-products'] });
+      toast({
+        title: "Success",
+        description: "All promotion products published successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to publish promotion products",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleAddProduct = (product: Product) => {
     addProductToPromotionMutation.mutate({ productId: product.id });
   };
 
   const handleRemoveProduct = (productId: number) => {
     removeProductFromPromotionMutation.mutate(productId);
+  };
+
+  const handlePromotionalPriceChange = (productId: number, value: string) => {
+    setPromotionalPrices(prev => ({
+      ...prev,
+      [productId]: value
+    }));
+  };
+
+  const handleUpdatePromotionalPrice = (productId: number, price: string | undefined) => {
+    const numericPrice = parseFloat(price || '0');
+    if (numericPrice > 0) {
+      updatePromotionalPriceMutation.mutate({ productId, price: numericPrice });
+    }
+  };
+
+  const handleMassPublish = () => {
+    massPublishMutation.mutate();
   };
 
   const isProductInPromotion = (productId: number) => {
@@ -276,11 +353,20 @@ export default function PromotionProductsPage() {
 
           <TabsContent value="current" className="space-y-6">
             <Card>
-              <CardHeader>
-                <CardTitle>Products in Promotion</CardTitle>
-                <CardDescription>
-                  Manage products currently included in this promotion
-                </CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Products in Promotion ({promotionProducts.length})</CardTitle>
+                  <CardDescription>
+                    Manage products currently included in this promotion
+                  </CardDescription>
+                </div>
+                <Button 
+                  onClick={handleMassPublish}
+                  disabled={massPublishMutation.isPending || promotionProducts.length === 0}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {massPublishMutation.isPending ? "Publishing..." : "Mass Publish Products"}
+                </Button>
               </CardHeader>
               <CardContent>
                 {isLoadingProducts ? (
@@ -288,40 +374,104 @@ export default function PromotionProductsPage() {
                     Loading promotion products...
                   </div>
                 ) : promotionProducts.length > 0 ? (
-                  <div className="grid gap-4">
-                    {promotionProducts.map((item: ProductPromotion) => (
-                      <Card key={item.id} className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-3">
-                            {item.product?.imageUrl && (
-                              <img
-                                src={item.product.imageUrl}
-                                alt={item.product.name}
-                                className="w-16 h-16 object-cover rounded-lg"
-                              />
-                            )}
-                            <div>
-                              <h4 className="font-semibold">
-                                {item.product?.name || `Product ID: ${item.productId}`}
-                              </h4>
-                              <p className="text-sm text-muted-foreground">
-                                {item.product?.sku && `SKU: ${item.product.sku} | `}
-                                Base Price: R{item.product?.price}
-                                {item.discountOverride && ` | Override: ${item.discountOverride}%`}
-                              </p>
-                            </div>
-                          </div>
-                          <Button
-                            variant="outline"
-                            onClick={() => handleRemoveProduct(item.productId)}
-                            disabled={removeProductFromPromotionMutation.isPending}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Remove
-                          </Button>
-                        </div>
-                      </Card>
-                    ))}
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left p-3 font-medium">Product</th>
+                          <th className="text-left p-3 font-medium">Categories</th>
+                          <th className="text-left p-3 font-medium">Cost Price</th>
+                          <th className="text-left p-3 font-medium">Base Price</th>
+                          <th className="text-left p-3 font-medium">Sale Price</th>
+                          <th className="text-left p-3 font-medium">Promotional Price</th>
+                          <th className="text-left p-3 font-medium">Status</th>
+                          <th className="text-center p-3 font-medium">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {promotionProducts.map((item: ProductPromotion) => (
+                          <tr key={item.id} className="border-b hover:bg-gray-50">
+                            <td className="p-3">
+                              <div className="flex items-center space-x-3">
+                                {item.product?.imageUrl ? (
+                                  <img
+                                    src={item.product.imageUrl}
+                                    alt={item.product.name}
+                                    className="w-12 h-12 object-cover rounded-lg"
+                                  />
+                                ) : (
+                                  <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">
+                                    <Package className="h-6 w-6 text-gray-400" />
+                                  </div>
+                                )}
+                                <div>
+                                  <h4 className="font-medium text-sm">{item.product?.name || `Product ID: ${item.productId}`}</h4>
+                                  <p className="text-xs text-muted-foreground">
+                                    SKU: {item.product?.sku || 'N/A'}
+                                  </p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="p-3">
+                              <div className="text-sm">
+                                <div className="font-medium">{item.product?.category?.name || 'N/A'}</div>
+                                <div className="text-xs text-muted-foreground">
+                                  {item.product?.category?.parentCategory?.name || 'No parent'}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="p-3">
+                              <span className="text-sm">R{item.product?.costPrice || '0.00'}</span>
+                            </td>
+                            <td className="p-3">
+                              <span className="text-sm">R{item.product?.price || '0.00'}</span>
+                            </td>
+                            <td className="p-3">
+                              <span className="text-sm">
+                                {item.product?.salePrice ? `R${item.product.salePrice}` : 'N/A'}
+                              </span>
+                            </td>
+                            <td className="p-3">
+                              <div className="flex items-center space-x-2">
+                                <Input
+                                  type="number"
+                                  value={promotionalPrices[item.productId] || item.promotionalPrice || ''}
+                                  onChange={(e) => handlePromotionalPriceChange(item.productId, e.target.value)}
+                                  placeholder="Set price"
+                                  className="w-24 h-8 text-sm"
+                                  step="0.01"
+                                />
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleUpdatePromotionalPrice(item.productId, promotionalPrices[item.productId] || item.promotionalPrice?.toString())}
+                                  disabled={updatePromotionalPriceMutation.isPending}
+                                  className="h-8 px-2"
+                                >
+                                  Save
+                                </Button>
+                              </div>
+                            </td>
+                            <td className="p-3">
+                              <Badge variant={item.product?.isPublished ? "default" : "secondary"}>
+                                {item.product?.isPublished ? "Published" : "Draft"}
+                              </Badge>
+                            </td>
+                            <td className="p-3 text-center">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleRemoveProduct(item.productId)}
+                                disabled={removeProductFromPromotionMutation.isPending}
+                                className="h-8"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 ) : (
                   <div className="p-8 text-center text-muted-foreground">
