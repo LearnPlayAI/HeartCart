@@ -498,6 +498,43 @@ export const insertBatchUploadSchema = createInsertSchema(batchUploads).omit({
   updatedAt: true,
 });
 
+// Promotions table for campaign-based promotion management
+export const promotions = pgTable("promotions", {
+  id: serial("id").primaryKey(),
+  promotionName: text("promotionName").notNull(),
+  description: text("description"),
+  startDate: text("startDate").notNull(),
+  endDate: text("endDate").notNull(),
+  isActive: boolean("isActive").default(true).notNull(),
+  promotionType: text("promotionType").default("percentage").notNull(),
+  discountValue: decimal("discountValue", { precision: 10, scale: 2 }),
+  minimumOrderValue: decimal("minimumOrderValue", { precision: 10, scale: 2 }),
+  createdBy: integer("createdBy").references(() => users.id),
+  createdAt: text("createdAt").default(String(new Date().toISOString())).notNull(),
+  updatedAt: text("updatedAt").default(String(new Date().toISOString())).notNull(),
+}, (table) => {
+  return {
+    promotionNameIdx: index("promotions_name_idx").on(table.promotionName),
+    startDateIdx: index("promotions_start_date_idx").on(table.startDate),
+    endDateIdx: index("promotions_end_date_idx").on(table.endDate),
+    isActiveIdx: index("promotions_is_active_idx").on(table.isActive),
+  };
+});
+
+// Product-Promotion relationship table for many-to-many mapping
+export const productPromotions = pgTable("productPromotions", {
+  id: serial("id").primaryKey(),
+  productId: integer("productId").references(() => products.id).notNull(),
+  promotionId: integer("promotionId").references(() => promotions.id).notNull(),
+  discountOverride: decimal("discountOverride", { precision: 10, scale: 2 }),
+  createdAt: text("createdAt").default(String(new Date().toISOString())).notNull(),
+}, (table) => {
+  return {
+    productPromotionIdx: index("product_promotion_idx").on(table.productId, table.promotionId),
+    uniqueProductPromotion: unique("unique_product_promotion").on(table.productId, table.promotionId),
+  };
+});
+
 export const insertBatchUploadErrorSchema = createInsertSchema(batchUploadErrors).omit({
   id: true,
   createdAt: true,
@@ -601,6 +638,32 @@ export type InsertProductAttribute = z.infer<typeof insertProductAttributeSchema
 export type InsertBatchUpload = z.infer<typeof insertBatchUploadSchema>;
 export type InsertBatchUploadError = z.infer<typeof insertBatchUploadErrorSchema>;
 
+// Promotion insert schema and types
+export const insertPromotionSchema = createInsertSchema(promotions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  startDate: z.string(),
+  endDate: z.string(),
+  discountValue: z.string().nullable().optional(),
+  minimumOrderValue: z.string().nullable().optional(),
+});
+
+export type Promotion = typeof promotions.$inferSelect;
+export type InsertPromotion = z.infer<typeof insertPromotionSchema>;
+
+// Product-Promotion relationship insert schema and types
+export const insertProductPromotionSchema = createInsertSchema(productPromotions).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  discountOverride: z.string().nullable().optional(),
+});
+
+export type ProductPromotion = typeof productPromotions.$inferSelect;
+export type InsertProductPromotion = z.infer<typeof insertProductPromotionSchema>;
+
 // Define all table relations after all tables and types are defined
 export const categoriesRelations = relations(categories, ({ one, many }) => ({
   parent: one(categories, {
@@ -623,7 +686,8 @@ export const productsRelations = relations(products, ({ one, many }) => ({
     fields: [products.catalogId],
     references: [catalogs.id]
   }),
-  images: many(productImages)
+  images: many(productImages),
+  productPromotions: many(productPromotions)
 }));
 
 export const productImagesRelations = relations(productImages, ({ one }) => ({
@@ -708,6 +772,9 @@ export const productDrafts = pgTable("product_drafts", {
   attributes: jsonb("attributes").default('[]'),
   // Enhanced product attributes with structured format
   attributesData: jsonb("attributes_data").default('[]'),
+  
+  // Promotion field (camelCase as per requirements)
+  promotionId: integer("promotionId").references(() => promotions.id),
   
   // Supplier information
   supplierId: integer("supplier_id").references(() => suppliers.id),
@@ -822,6 +889,10 @@ export const productDraftsRelations = relations(productDrafts, ({ one }) => ({
   user: one(users, {
     fields: [productDrafts.createdBy],
     references: [users.id]
+  }),
+  promotion: one(promotions, {
+    fields: [productDrafts.promotionId],
+    references: [promotions.id]
   })
 }));
 
@@ -877,6 +948,32 @@ export const productAttributesRelations = relations(productAttributes, ({ one })
  * - InsertAttributeDiscountRule type
  * - insertAttributeDiscountRuleSchema
  */
+
+// =============================================================================
+// PROMOTIONS SYSTEM RELATIONS
+// =============================================================================
+
+// Promotions relations
+export const promotionsRelations = relations(promotions, ({ one, many }) => ({
+  createdBy: one(users, {
+    fields: [promotions.createdBy],
+    references: [users.id]
+  }),
+  productPromotions: many(productPromotions),
+  productDrafts: many(productDrafts)
+}));
+
+// Product-Promotion relationship relations
+export const productPromotionsRelations = relations(productPromotions, ({ one }) => ({
+  product: one(products, {
+    fields: [productPromotions.productId],
+    references: [products.id]
+  }),
+  promotion: one(promotions, {
+    fields: [productPromotions.promotionId],
+    references: [promotions.id]
+  })
+}));
 
 // Export ProductDraft type
 export type ProductDraft = typeof productDrafts.$inferSelect;
