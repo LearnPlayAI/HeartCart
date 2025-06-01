@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import ProductImage from '../ProductImage';
 import ProductImageGallery from '../ProductImageGallery';
+import { AIImageDownloader } from '../components/AIImageDownloader';
 
 // Maximum file size (5MB)
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
@@ -345,6 +346,30 @@ export function ImageStep() {
     removeImage(index);
   };
   
+  // Handle images downloaded from AI Image Downloader
+  const handleAIImagesDownloaded = (downloadedImages: any[]) => {
+    try {
+      downloadedImages.forEach((image, index) => {
+        // Add each downloaded image using the existing addImage function
+        addImage(image.url, image.objectKey || '');
+      });
+
+      // Mark step as complete if we have images
+      markStepComplete('images');
+
+      toast({
+        title: "Images added successfully",
+        description: `${downloadedImages.length} images have been downloaded and added to your product.`
+      });
+    } catch (error) {
+      toast({
+        title: "Error adding images",
+        description: "There was an error adding the downloaded images to your product.",
+        variant: "destructive"
+      });
+    }
+  };
+  
   return (
     <div className="space-y-6">
       <Card>
@@ -396,6 +421,9 @@ export function ImageStep() {
               </div>
             </div>
           )}
+          
+          {/* AI Image Downloader */}
+          <AIImageDownloader onImagesDownloaded={handleAIImagesDownloaded} />
           
           {/* Uploaded images */}
           {state.imageUrls.length > 0 ? (
