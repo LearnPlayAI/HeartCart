@@ -212,30 +212,44 @@ export class AIImageDownloader {
   private static isLikelyProductImage(imageUrl: string): boolean {
     const url = imageUrl.toLowerCase();
     
-    // Skip obvious non-product images
+    // Skip obvious non-product images with more comprehensive patterns
     const skipPatterns = [
       'logo', 'icon', 'favicon', 'banner', 'header', 'footer',
       'button', 'arrow', 'sprite', 'thumb', 'avatar', 'profile',
-      'social', 'payment', 'badge', 'award', 'cert'
+      'social', 'payment', 'badge', 'award', 'cert', 'nav',
+      'menu', 'search', 'cart', 'checkout', 'ui', 'interface',
+      'promo', 'deal', 'week', 'sale', 'discount', 'offer',
+      'brand', 'company', 'about', 'contact', 'support',
+      'mastercard', 'visa', 'paypal', 'absa', 'nedbank',
+      'secure', 'ssl', 'verified', 'guarantee', 'warranty',
+      'shipping', 'delivery', 'return', 'policy', 'terms',
+      'background', 'bg', 'pattern', 'texture', 'gradient',
+      'decorative', 'ornament', 'border', 'frame', 'divider'
     ];
 
     if (skipPatterns.some(pattern => url.includes(pattern))) {
       return false;
     }
 
-    // Look for product-related keywords
-    const productPatterns = [
-      'product', 'item', 'gallery', 'detail', 'zoom', 'main',
-      'primary', 'large', 'full', 'view', 'image'
+    // Skip very small images (likely icons or thumbnails)
+    const sizeExclusions = [
+      '16x16', '32x32', '64x64', '100x100', '150x150',
+      'small', 'mini', 'tiny', 'xs', 'sm'
     ];
 
-    // Check file size indicators (larger images are more likely to be products)
-    const sizePatterns = [
-      'large', 'big', 'full', 'detail', 'zoom', '1000', '1200', '800'
+    if (sizeExclusions.some(pattern => url.includes(pattern))) {
+      return false;
+    }
+
+    // Only allow images that have strong product indicators
+    const strongProductPatterns = [
+      'product', 'item', 'gallery', 'detail', 'zoom',
+      'large', 'big', 'full', 'main', 'primary',
+      // Size indicators for larger product images
+      '400', '500', '600', '700', '800', '1000', '1200', '1500'
     ];
 
-    return productPatterns.some(pattern => url.includes(pattern)) ||
-           sizePatterns.some(pattern => url.includes(pattern)) ||
-           url.includes('jpg') || url.includes('jpeg') || url.includes('png');
+    // Must contain at least one strong product indicator
+    return strongProductPatterns.some(pattern => url.includes(pattern));
   }
 }
