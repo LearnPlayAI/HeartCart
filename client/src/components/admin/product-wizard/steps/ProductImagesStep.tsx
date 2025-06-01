@@ -276,12 +276,9 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ draft, onS
     setIsDownloadingImages(true);
 
     try {
-      const response = await apiRequest('/api/ai/download-images', {
-        method: 'POST',
-        body: JSON.stringify({
-          supplierUrl: draft.supplierUrl,
-          productId: draft.id
-        })
+      const response = await apiRequest('POST', '/api/ai/download-images', {
+        supplierUrl: draft.supplierUrl,
+        productId: draft.id
       });
 
       if (response.success && response.images && response.images.length > 0) {
