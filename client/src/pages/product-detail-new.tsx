@@ -242,7 +242,7 @@ const ProductDetailView = ({
   
   // Effect to set initial image on component mount or when product changes
   useEffect(() => {
-    if (product && !currentImage) {
+    if (product) {
       // First check for imageUrl, then fall back to objectKey
       if (product.imageUrl) {
         setCurrentImage(ensureValidImageUrl(product.imageUrl));
@@ -251,7 +251,7 @@ const ProductDetailView = ({
         setCurrentImage(ensureValidImageUrl(product.originalImageObjectKey));
       }
     }
-  }, [product, currentImage]);
+  }, [product?.id]); // Only depend on product ID to avoid infinite loops
 
   // Effect to update price when attributes are selected or quantity changes
   useEffect(() => {

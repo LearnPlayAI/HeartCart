@@ -111,12 +111,6 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
     if (open && product) {
       // Reset to first image when modal opens
       setCurrentImage(product.imageUrl ? ensureValidImageUrl(product.imageUrl) : null);
-      console.log('Product data:', product);
-      console.log('Available images:', {
-        mainImage: product.imageUrl,
-        additionalImages: product.additionalImages,
-        totalImages: (product.imageUrl ? 1 : 0) + (product.additionalImages?.length || 0)
-      });
       
       // Preload all product images for faster navigation
       const preloadImages = () => {
@@ -128,16 +122,11 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
           allImages.push(...product.additionalImages);
         }
         
-        // Preload each image
+        // Preload each image for instant navigation
         allImages.forEach(imageUrl => {
           const img = new Image();
           img.src = ensureValidImageUrl(imageUrl);
-          // Optional: add onload/onerror handlers for debugging
-          img.onload = () => console.log('Preloaded:', imageUrl);
-          img.onerror = () => console.warn('Failed to preload:', imageUrl);
         });
-        
-        console.log('Preloading', allImages.length, 'images for faster navigation');
       };
       
       // Start preloading after a small delay to not block the modal opening
