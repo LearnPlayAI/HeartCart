@@ -488,8 +488,19 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
       costPrice: currentFormData.costPrice ? Number(currentFormData.costPrice) : null,
     };
     
+    // Update form immediately with new category
+    form.setValue('categoryId', selectedCategoryId);
+    
     // Save without auto-advancing to allow further editing
     onSave(dataToSave, false); // Don't auto-advance, just save and refresh form
+    
+    // Force immediate form refresh after save
+    setTimeout(() => {
+      // Refresh the form with the new category value
+      form.setValue('categoryId', selectedCategoryId, { shouldValidate: true });
+      // Trigger re-render to update computed values
+      form.trigger('categoryId');
+    }, 500);
     
     // Close the dialog
     setShowAiCategorySuggestions(false);
