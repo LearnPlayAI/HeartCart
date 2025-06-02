@@ -180,13 +180,19 @@ export function AICategorySuggestionDialog({
       let parentId = null;
       
       // Look for existing parent category by name
+      console.log('Looking for parent category:', newCategoryData.parentName);
+      console.log('Available categories:', categoriesArray.map(cat => ({name: cat.name, level: cat.level})));
+      
       const existingParent = categoriesArray.find(
         cat => cat.name.toLowerCase() === newCategoryData.parentName.toLowerCase() && cat.level === 0
       );
 
+      console.log('Found existing parent:', existingParent);
+
       if (existingParent) {
         // Use existing parent category
         parentId = existingParent.id;
+        console.log('Using existing parent ID:', parentId);
       } else {
         // Create new parent category - get max display order for parent categories (level 0)
         const parentCategories = categoriesArray.filter(cat => cat.level === 0);
