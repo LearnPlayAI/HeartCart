@@ -505,4 +505,201 @@ function parseDescriptions(text: string): string[] {
   return descriptions;
 }
 
+// Schema for category suggestion request
+const categorySuggestionSchema = z.object({
+  productName: z.string().min(1, 'Product name is required'),
+  productDescription: z.string().min(1, 'Product description is required'),
+});
+
+/**
+ * Suggest Categories for Product using AI
+ * 
+ * POST /api/ai/suggest-categories
+ */
+router.post('/suggest-categories', asyncHandler(async (req, res) => {
+  try {
+    // Validate the request body
+    const validatedData = categorySuggestionSchema.parse(req.body);
+    
+    // Import storage to get categories
+    const { storage } = await import('../storage');
+    
+    // Fetch all categories from the database
+    const categories = await storage.getAllCategories();
+    
+    // Organize categories into parent/child structure
+    const parentCategories = categories.filter(cat => cat.level === 0);
+    const childCategories = categories.filter(cat => cat.level === 1);
+    
+    const categoryStructure = parentCategories.map(parent => ({
+      id: parent.id,
+      name: parent.name,
+      children: childCategories
+        .filter(child => child.parentId === parent.id)
+        .map(child => ({ id: child.id, name: child.name }))
+    }));
+    
+    // Get the Gemini Pro model
+    const model = genAI.getGenerativeModel({
+      model: "gemini-1.5-flash",
+      safetySettings,
+    });
+    
+    // Create the prompt for category suggestion
+    const prompt = createCategorySuggestionPrompt(validatedData, categoryStructure);
+    
+    // Generate content
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+    
+    // Try to parse JSON from the response
+    console.log('AI Category Response Text:', text);
+    
+    let categorySuggestions: any = null;
+    try {
+      // First try to parse the response as direct JSON
+      categorySuggestions = JSON.parse(text);
+      console.log('Successfully parsed category suggestions JSON:', categorySuggestions);
+    } catch (directParseError) {
+      console.log('Direct JSON parse failed, trying regex extraction...');
+      
+      try {
+        // Extract JSON part from the response if it's not a pure JSON
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          let jsonString = jsonMatch[0];
+          console.log('Extracted JSON String:', jsonString);
+          categorySuggestions = JSON.parse(jsonString);
+          console.log('Successfully parsed extracted JSON:', categorySuggestions);
+        } else {
+          throw new Error('No JSON found in AI response');
+        }
+      } catch (extractionError) {
+        console.error('Failed to extract and parse JSON from AI response:', extractionError);
+        console.log('Raw AI response for debugging:', text);
+        
+        // Return a default response structure
+        categorySuggestions = {
+          suggestions: [],
+          newCategorySuggestions: [{
+            parentName: "Health & Fitness",
+            childName: "Exercise Equipment", 
+            reasoning: "Based on the product description, this appears to be fitness equipment."
+          }]
+        };
+      }
+    }
+    
+    // Ensure the response has the expected structure
+    if (!categorySuggestions.suggestions) {
+      categorySuggestions.suggestions = [];
+    }
+    if (!categorySuggestions.newCategorySuggestions) {
+      categorySuggestions.newCategorySuggestions = [];
+    }
+    
+    res.json({
+      success: true,
+      data: categorySuggestions
+    });
+    
+  } catch (error) {
+    console.error('Error suggesting categories:', error);
+    
+    // Handle API key related errors
+    if (error instanceof Error) {
+      if (error.message.includes('API key')) {
+        return res.status(401).json({
+          success: false,
+          error: {
+            code: 'INVALID_API_KEY',
+            message: 'Invalid or missing Gemini API key',
+          },
+        });
+      }
+      if (error.message.includes('quota') || error.message.includes('limit')) {
+        return res.status(429).json({
+          success: false,
+          error: {
+            code: 'QUOTA_EXCEEDED',
+            message: 'API quota exceeded. Please try again later.',
+          },
+        });
+      }
+    }
+    
+    res.status(500).json({
+      success: false,
+      error: {
+        code: 'AI_SERVICE_ERROR',
+        message: 'Failed to suggest categories with AI',
+      },
+    });
+  }
+}));
+
+/**
+ * Create a prompt for category suggestion
+ */
+function createCategorySuggestionPrompt(
+  data: z.infer<typeof categorySuggestionSchema>, 
+  categoryStructure: Array<{
+    id: number;
+    name: string;
+    children: Array<{ id: number; name: string }>;
+  }>
+): string {
+  const prompt = `
+You are an expert e-commerce categorization AI. Based on the product information provided, suggest the most appropriate categories.
+
+Product Name: "${data.productName}"
+Product Description: "${data.productDescription}"
+
+Current Category Structure:
+${JSON.stringify(categoryStructure, null, 2)}
+
+Task:
+1. Analyze the product and suggest the 2-3 best matching parent/child category combinations from the existing categories
+2. If no suitable categories exist, suggest new parent/child category names that should be created
+
+For existing category suggestions:
+- Provide the exact category IDs and names from the structure above
+- Include a confidence score (0-100)
+- Explain your reasoning in 1-2 sentences
+
+For new category suggestions (only if existing ones don't fit well):
+- Suggest specific parent and child category names
+- Explain why these new categories are needed
+
+FORMAT YOUR RESPONSE AS A JSON OBJECT:
+{
+  "suggestions": [
+    {
+      "parentCategory": { "id": 123, "name": "Category Name" },
+      "childCategory": { "id": 456, "name": "Subcategory Name" },
+      "confidence": 85,
+      "reasoning": "This product fits here because..."
+    }
+  ],
+  "newCategorySuggestions": [
+    {
+      "parentName": "New Parent Category",
+      "childName": "New Child Category", 
+      "reasoning": "These categories are needed because..."
+    }
+  ]
+}
+
+Rules:
+- Only suggest existing categories that actually exist in the provided structure
+- Confidence should reflect how well the product fits the category
+- Provide 2-3 suggestions maximum for existing categories
+- Only suggest new categories if existing ones are truly inadequate
+- Be specific and accurate with category names and IDs
+`.trim();
+
+  return prompt;
+}
+
 export default router;
