@@ -15,10 +15,9 @@ import { StandardApiResponse } from '@/types/api';
 import { Product } from '@shared/schema';
 import { ensureValidImageUrl } from '@/utils/file-manager';
 import { 
-  CategoryAttribute, 
-  CategoryAttributeOption, 
-  ProductAttributeValue,
-  ProductAttributeOption
+  Attribute, 
+  AttributeOption, 
+  ProductAttribute
 } from '@/types/attribute-types';
 
 interface ProductAttributeCombination {
@@ -88,7 +87,7 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
     data: productAttributesResponse,
     isLoading: isLoadingProductAttributes,
     error: productAttributesError
-  } = useQuery<StandardApiResponse<CategoryAttribute[]>>({
+  } = useQuery<StandardApiResponse<Attribute[]>>({
     queryKey: [`/api/product-attributes/product/${product?.id}/attributes`],
     enabled: !!product?.id && open,
   });
@@ -98,7 +97,7 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
   const { 
     data: attributeValuesResponse,
     error: attributeValuesError
-  } = useQuery<StandardApiResponse<ProductAttributeValue[]>>({
+  } = useQuery<StandardApiResponse<ProductAttribute[]>>({
     queryKey: [`/api/product-attributes/product/${product?.id}/attribute-values`],
     enabled: !!product?.id && open,
   });
@@ -252,13 +251,13 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
     if (productAttributes && productAttributes.length > 0) {
       // Check if all required attributes are selected
       const missingRequiredAttributes = productAttributes
-        .filter((attr: CategoryAttribute) => attr.isRequired)
-        .filter((attr: CategoryAttribute) => !selectedAttributes[attr.id]);
+        .filter((attr: Attribute) => attr.isRequired)
+        .filter((attr: Attribute) => !selectedAttributes[attr.id]);
       
       if (missingRequiredAttributes.length > 0) {
         toast({
           title: "Please select options",
-          description: `Please select ${missingRequiredAttributes.map((a: CategoryAttribute) => a.displayName || a.name).join(', ')}`,
+          description: `Please select ${missingRequiredAttributes.map((a: Attribute) => a.displayName || a.name).join(', ')}`,
           variant: "destructive",
         });
         return;
@@ -283,7 +282,7 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
     addItem({
       productId: product.id,
       quantity: quantity,
-      itemPrice: basePrice,
+      price: basePrice,
       attributeSelections
     });
     
@@ -298,10 +297,10 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[800px]">
+      <DialogContent className="sm:max-w-[800px]" aria-describedby="quick-view-description">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold">{product.name}</DialogTitle>
-          <DialogDescription className="sr-only">
+          <DialogDescription id="quick-view-description" className="sr-only">
             Quick view of {product.name} with pricing and options
           </DialogDescription>
         </DialogHeader>
@@ -410,9 +409,9 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
                   const attrValue = attributeValues.find(val => val.attributeId === attributeId);
                   let availableOptionValues: string[] = [];
                   
-                  if (attrValue && attrValue.valueText) {
+                  if (attrValue && attrValue.textValue) {
                     // Split the comma-separated values
-                    availableOptionValues = attrValue.valueText.split(',');
+                    availableOptionValues = attrValue.textValue.split(',');
                   }
                   
                   // We'll use the options directly from the productAttributes
