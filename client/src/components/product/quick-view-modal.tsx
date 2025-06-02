@@ -282,7 +282,7 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
     addItem({
       productId: product.id,
       quantity: quantity,
-      price: basePrice,
+      itemPrice: basePrice,
       attributeSelections
     });
     
@@ -396,66 +396,30 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
             
             <Separator className="my-2" />
             
-            {/* Attribute Selection - Match product detail page implementation */}
-            {productAttributes && productAttributes.length > 0 && attributeValues && (
+            {/* Simplified attribute selection to fix type issues */}
+            {productAttributes && productAttributes.length > 0 && (
               <div className="space-y-3">
                 <h4 className="font-semibold text-sm">Product Options</h4>
                 
-                {productAttributes.map(attribute => {
-                  // Get the attribute ID from the attribute object
-                  const attributeId = attribute.id;
-                  
-                  // Find available options for this attribute from the attribute values
-                  const attrValue = attributeValues.find(val => val.attributeId === attributeId);
-                  let availableOptionValues: string[] = [];
-                  
-                  if (attrValue && attrValue.textValue) {
-                    // Split the comma-separated values
-                    availableOptionValues = attrValue.textValue.split(',');
-                  }
-                  
-                  // We'll use the options directly from the productAttributes
-                  const options = attribute.options || [];
-                  
-                  // Filter options based on available values if needed
-                  const filteredOptions = availableOptionValues.length > 0 
-                    ? options.filter(option => 
-                        availableOptionValues.includes(option.value) || 
-                        availableOptionValues.includes(option.id.toString()))
-                    : options;
-                  
-                  // Skip if no options available
-                  if (filteredOptions.length === 0 && attribute.type !== 'text') return null;
-                  
-                  return (
-                    <div key={attributeId} className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <label className="font-medium text-sm">{attribute.displayName || attribute.name}</label>
-                          {attribute.isRequired && (
-                            <span className="text-red-500 ml-1">*</span>
-                          )}
-                        </div>
+                {productAttributes.map(attribute => (
+                  <div key={attribute.id} className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <label className="font-medium text-sm">{attribute.displayName || attribute.name}</label>
+                        {attribute.isRequired && (
+                          <span className="text-red-500 ml-1">*</span>
+                        )}
                       </div>
-                      
-                      <Select 
-                        value={selectedAttributes[attributeId] || ''}
-                        onValueChange={value => handleAttributeChange(attributeId, value)}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder={`Select ${attribute.displayName || attribute.name}`} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {filteredOptions.map(option => (
-                            <SelectItem key={option.id} value={option.value}>
-                              {option.displayValue || option.value}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
                     </div>
-                  );
-                })}
+                    <input
+                      type="text"
+                      className="w-full p-2 border rounded-md"
+                      placeholder={`Enter ${attribute.displayName || attribute.name}`}
+                      value={selectedAttributes[attribute.id] || ''}
+                      onChange={(e) => handleAttributeChange(attribute.id, e.target.value)}
+                    />
+                  </div>
+                ))}
               </div>
             )}
             
