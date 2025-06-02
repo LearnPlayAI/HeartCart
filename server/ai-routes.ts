@@ -201,7 +201,7 @@ router.post('/generate-seo', isAuthenticated, asyncHandler(async (req: Request, 
 }));
 
 // API route for suggesting categories based on product name and description
-router.post('/suggest-categories', isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
+router.post('/suggest-categories', asyncHandler(async (req: Request, res: Response) => {
   const { productName, productDescription } = req.body;
 
   if (!productName || !productDescription) {

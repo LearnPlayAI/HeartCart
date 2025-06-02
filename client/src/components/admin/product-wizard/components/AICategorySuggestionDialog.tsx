@@ -191,8 +191,8 @@ export function AICategorySuggestionDialog({
     }
   };
 
-  const suggestions = categorySuggestionMutation.data?.data?.suggestions || [];
-  const newCategorySuggestions = categorySuggestionMutation.data?.data?.newCategorySuggestions || [];
+  const suggestions = categorySuggestionMutation.data?.suggestions || [];
+  const newCategorySuggestions = categorySuggestionMutation.data?.newCategorySuggestions || [];
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
