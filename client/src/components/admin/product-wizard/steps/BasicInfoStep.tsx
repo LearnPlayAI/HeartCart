@@ -497,9 +497,15 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
     queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
     queryClient.invalidateQueries({ queryKey: ['/api/categories/main/with-children'] });
     
-    // Force form to re-render with updated category
+    // Force form to re-render with updated category and trigger watchers
     setTimeout(() => {
-      form.reset(form.getValues());
+      const currentValues = form.getValues();
+      form.reset({
+        ...currentValues,
+        categoryId: selectedCategoryId
+      });
+      // Trigger the categoryId field to update watchers
+      form.setValue('categoryId', selectedCategoryId, { shouldValidate: true, shouldDirty: true });
     }, 100);
     
     // Close the dialog
