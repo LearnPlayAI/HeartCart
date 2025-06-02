@@ -14,6 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -52,6 +53,10 @@ export const DraftDashboard: React.FC = () => {
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newDraftName, setNewDraftName] = useState('');
+  
+  // Category filters
+  const [selectedParentCategory, setSelectedParentCategory] = useState<string>('');
+  const [selectedChildCategory, setSelectedChildCategory] = useState<string>('');
 
   const [newDraftLoading, setNewDraftLoading] = useState(false);
 
@@ -64,6 +69,15 @@ export const DraftDashboard: React.FC = () => {
     return () => clearTimeout(timer);
   }, [searchQuery]);
   
+  // Fetch categories for filtering
+  const { data: categoriesData } = useQuery({
+    queryKey: ['/api/categories'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/categories');
+      return response.json();
+    }
+  });
+
   // Fetch product drafts with search functionality
   const { data: draftsData, isLoading: isDraftsLoading, error: draftsError } = useQuery({
     queryKey: ['/api/product-drafts', debouncedSearchQuery],
@@ -135,12 +149,55 @@ export const DraftDashboard: React.FC = () => {
   };
   
 
-  
-  // Filter drafts to exclude published products (search is handled server-side)
-  const filteredDrafts = draftsData?.data?.filter((draft: ProductDraft) => {
-    // Exclude published products from the drafts view
-    return draft.draftStatus !== 'published';
-  }) || [];
+  const drafts = draftsData?.success ? draftsData.data : [];
+  const categories = categoriesData?.success ? categoriesData.data : [];
+
+  // Process categories into parent and child relationships
+  const parentCategories = useMemo(() => {
+    return categories.filter((cat: any) => cat.parentId === null || cat.parentId === undefined);
+  }, [categories]);
+
+  const childCategories = useMemo(() => {
+    if (!selectedParentCategory) return [];
+    const parentId = parseInt(selectedParentCategory);
+    return categories.filter((cat: any) => cat.parentId === parentId);
+  }, [categories, selectedParentCategory]);
+
+  // Handle parent category change
+  const handleParentCategoryChange = (value: string) => {
+    setSelectedParentCategory(value);
+    setSelectedChildCategory(''); // Reset child category when parent changes
+  };
+
+  // Filter drafts with category filtering and exclude published products
+  const filteredDrafts = useMemo(() => {
+    let filtered = drafts.filter((draft: ProductDraft) => {
+      // Exclude published products from the drafts view
+      return draft.draftStatus !== 'published';
+    });
+
+    // Apply category filtering
+    if (selectedParentCategory) {
+      const parentId = parseInt(selectedParentCategory);
+      
+      if (selectedChildCategory) {
+        // Filter by specific child category
+        const childId = parseInt(selectedChildCategory);
+        filtered = filtered.filter((draft: ProductDraft) => draft.categoryId === childId);
+      } else {
+        // Filter by parent category - include all products under this parent and its children
+        const parentAndChildIds = [parentId];
+        const childCats = categories.filter((cat: any) => cat.parentId === parentId);
+        parentAndChildIds.push(...childCats.map((cat: any) => cat.id));
+        
+        filtered = filtered.filter((draft: ProductDraft) => 
+          draft.categoryId && parentAndChildIds.includes(draft.categoryId)
+        );
+      }
+    }
+
+    return filtered;
+  }, [drafts, selectedParentCategory, selectedChildCategory, categories]);
   
   // Get wizard step display name
   const getStepDisplayName = (stepKey: string) => {
@@ -205,6 +262,39 @@ export const DraftDashboard: React.FC = () => {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
+        
+        {/* Category Filters */}
+        <Select value={selectedParentCategory} onValueChange={handleParentCategoryChange}>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="All Parent Categories" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">All Parent Categories</SelectItem>
+            {parentCategories.map((category: any) => (
+              <SelectItem key={category.id} value={category.id.toString()}>
+                {category.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        
+        <Select 
+          value={selectedChildCategory} 
+          onValueChange={setSelectedChildCategory}
+          disabled={!selectedParentCategory || childCategories.length === 0}
+        >
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="All Child Categories" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">All Child Categories</SelectItem>
+            {childCategories.map((category: any) => (
+              <SelectItem key={category.id} value={category.id.toString()}>
+                {category.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       
       <Card>
