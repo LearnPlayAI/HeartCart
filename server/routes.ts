@@ -1075,28 +1075,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         const deletionResult = result.rows[0]?.result;
         
-        if (deletionResult?.success) {
-          // Clean up images from object store if any were found
-          const deletedImages = deletionResult.deleted_images || [];
-          for (const imageUrl of deletedImages) {
-            try {
-              // Extract object key from URL and delete from object store
-              const urlParts = imageUrl.split('/');
-              const objectKey = urlParts.slice(-2).join('/'); // Get folder/filename
-              await objectStore.deleteFile(objectKey);
-            } catch (imageError) {
-              logger.warn('Failed to delete image from object store:', { imageUrl, error: imageError });
-            }
-          }
-          
+        if (deletionResult === true) {
           res.json({ 
             success: true, 
-            message: `Product "${existingProduct.name}" was successfully deleted along with all associated data.`,
-            data: {
-              deletedDrafts: deletionResult.deleted_drafts,
-              deletedAttributes: deletionResult.deleted_attributes,
-              deletedImages: deletedImages.length
-            }
+            message: `Product "${existingProduct.name}" was successfully deleted along with all associated data.`
           });
         } else {
           throw new AppError(
