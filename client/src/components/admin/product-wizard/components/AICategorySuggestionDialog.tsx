@@ -227,44 +227,40 @@ export function AICategorySuggestionDialog({
             </Card>
           )}
 
-          {suggestions.length > 0 && (
+          {newCategorySuggestions.length > 0 && (
             <div className="space-y-4">
               <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-yellow-500" />
-                <h3 className="font-medium">Existing Category Matches</h3>
+                <Plus className="h-4 w-4 text-green-500" />
+                <h3 className="font-medium">Suggested New Categories</h3>
+                <Badge variant="outline">Create New</Badge>
               </div>
 
               <div className="grid gap-4">
-                {suggestions.map((suggestion, index) => (
+                {newCategorySuggestions.map((newSuggestion, index) => (
                   <Card
                     key={index}
                     className={`cursor-pointer transition-colors ${
-                      selectedSuggestion === suggestion
-                        ? 'border-primary bg-primary/5'
+                      newCategoryData === newSuggestion
+                        ? 'border-green-500 bg-green-50'
                         : 'hover:border-muted-foreground/20'
                     }`}
-                    onClick={() => handleSelectSuggestion(suggestion)}
+                    onClick={() => setNewCategoryData(newSuggestion)}
                   >
                     <CardHeader className="pb-2">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <CardTitle className="text-base">
-                            {suggestion.parentCategory?.name}
-                            {suggestion.childCategory && (
-                              <span className="text-muted-foreground"> → {suggestion.childCategory.name}</span>
-                            )}
-                          </CardTitle>
-                          {selectedSuggestion === suggestion && (
-                            <CheckCircle className="h-4 w-4 text-primary" />
+                        <CardTitle className="text-base text-green-700">
+                          {newSuggestion.parentName}
+                          {newSuggestion.childName && (
+                            <span className="text-muted-foreground"> → {newSuggestion.childName}</span>
                           )}
-                        </div>
-                        <Badge variant={suggestion.confidence > 80 ? 'default' : 'secondary'}>
-                          {suggestion.confidence}% match
-                        </Badge>
+                        </CardTitle>
+                        {newCategoryData === newSuggestion && (
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                        )}
                       </div>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-sm text-muted-foreground">{suggestion.reasoning}</p>
+                      <p className="text-sm text-muted-foreground">{newSuggestion.reasoning}</p>
                     </CardContent>
                   </Card>
                 ))}
@@ -272,42 +268,46 @@ export function AICategorySuggestionDialog({
             </div>
           )}
 
-          {newCategorySuggestions.length > 0 && (
+          {suggestions.length > 0 && (
             <>
               <Separator />
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
-                  <Plus className="h-4 w-4 text-green-500" />
-                  <h3 className="font-medium">Suggested New Categories</h3>
-                  <Badge variant="outline">Create New</Badge>
+                  <Sparkles className="h-4 w-4 text-yellow-500" />
+                  <h3 className="font-medium">Existing Category Matches</h3>
                 </div>
 
                 <div className="grid gap-4">
-                  {newCategorySuggestions.map((newSuggestion, index) => (
+                  {suggestions.map((suggestion, index) => (
                     <Card
                       key={index}
                       className={`cursor-pointer transition-colors ${
-                        newCategoryData === newSuggestion
-                          ? 'border-green-500 bg-green-50'
+                        selectedSuggestion === suggestion
+                          ? 'border-primary bg-primary/5'
                           : 'hover:border-muted-foreground/20'
                       }`}
-                      onClick={() => setNewCategoryData(newSuggestion)}
+                      onClick={() => handleSelectSuggestion(suggestion)}
                     >
                       <CardHeader className="pb-2">
                         <div className="flex items-center justify-between">
-                          <CardTitle className="text-base text-green-700">
-                            {newSuggestion.parentName}
-                            {newSuggestion.childName && (
-                              <span className="text-muted-foreground"> → {newSuggestion.childName}</span>
+                          <div className="flex items-center gap-2">
+                            <CardTitle className="text-base">
+                              {suggestion.parentCategory?.name}
+                              {suggestion.childCategory && (
+                                <span className="text-muted-foreground"> → {suggestion.childCategory.name}</span>
+                              )}
+                            </CardTitle>
+                            {selectedSuggestion === suggestion && (
+                              <CheckCircle className="h-4 w-4 text-primary" />
                             )}
-                          </CardTitle>
-                          {newCategoryData === newSuggestion && (
-                            <CheckCircle className="h-4 w-4 text-green-500" />
-                          )}
+                          </div>
+                          <Badge variant={suggestion.confidence > 80 ? 'default' : 'secondary'}>
+                            {suggestion.confidence}% match
+                          </Badge>
                         </div>
                       </CardHeader>
                       <CardContent>
-                        <p className="text-sm text-muted-foreground">{newSuggestion.reasoning}</p>
+                        <p className="text-sm text-muted-foreground">{suggestion.reasoning}</p>
                       </CardContent>
                     </Card>
                   ))}
