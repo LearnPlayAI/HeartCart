@@ -557,7 +557,7 @@ export const PublishedProducts: React.FC = () => {
                             SKU: {product.sku || 'No SKU'} | Product ID: {product.id}
                           </p>
                           <p className="text-xs text-gray-500">
-                            Price: R{product.regularPrice.toFixed(2)}
+                            Price: R{product.regularPrice ? product.regularPrice.toFixed(2) : '0.00'}
                             {product.onSale && product.salePrice && (
                               <span className="text-green-600 ml-2">
                                 Sale: R{product.salePrice.toFixed(2)}
