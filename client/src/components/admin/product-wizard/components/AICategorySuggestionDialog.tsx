@@ -63,14 +63,18 @@ export function AICategorySuggestionDialog({
     reasoning: string;
   } | null>(null);
 
-  // Fetch categories for checking existing ones
-  const { data: categoriesData } = useQuery({
+  // Fetch categories for checking existing ones - FIXED with proper loading state
+  const { data: categoriesData, isLoading: isCategoriesLoading, error: categoriesError } = useQuery({
     queryKey: ['/api/categories'],
     queryFn: async () => {
       const response = await apiRequest('GET', '/api/categories');
       const data = await response.json();
       return data.success ? data.data : [];
     },
+    // Enable the query immediately when dialog opens
+    enabled: isOpen,
+    // Ensure fresh data for category creation
+    staleTime: 0,
   });
 
   const categories = categoriesData || [];
@@ -156,10 +160,31 @@ export function AICategorySuggestionDialog({
   };
 
   const handleCreateNewCategories = async () => {
-    if (!newCategoryData || !Array.isArray(categories)) {
+    // Check if categories are still loading
+    if (isCategoriesLoading) {
+      toast({
+        title: 'Please Wait',
+        description: 'Loading categories data...',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Check for category loading errors
+    if (categoriesError) {
       toast({
         title: 'Error',
-        description: 'Categories not loaded yet. Please try again.',
+        description: 'Failed to load categories. Please refresh and try again.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Validate that we have the necessary data
+    if (!newCategoryData || !Array.isArray(categories) || categories.length === 0) {
+      toast({
+        title: 'Error',
+        description: 'Category data is not available. Please try again.',
         variant: 'destructive',
       });
       return;
@@ -218,10 +243,21 @@ export function AICategorySuggestionDialog({
         
         console.log('Creating child category with data:', childCategoryData);
         const childResponse = await createCategoryMutation.mutateAsync(childCategoryData);
-        childId = childResponse.id;
+        console.log('Child category creation response:', childResponse);
+        
+        // Extract child ID from response - handle both direct ID and nested data structure
+        if (childResponse && typeof childResponse === 'object') {
+          childId = childResponse.data?.id || childResponse.id;
+        } else {
+          childId = childResponse;
+        }
+        
+        console.log('Extracted child category ID:', childId);
       }
 
-      // Apply the categories
+      // Apply the categories - prioritize child category if available
+      console.log('Applying categories - Parent ID:', parentId, 'Child ID:', childId);
+      console.log('Will assign product to category ID:', childId || parentId);
       onCategorySelected(parentId, childId);
       onOpenChange(false);
       setIsCreatingCategory(false);
