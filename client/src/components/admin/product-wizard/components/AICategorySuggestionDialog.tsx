@@ -174,10 +174,10 @@ export function AICategorySuggestionDialog({
       return;
     }
 
-    if (!Array.isArray(categories)) {
+    if (categoriesQuery.isLoading || !categoriesQuery.data) {
       toast({
-        title: 'Error',
-        description: 'Categories not loaded yet. Please try again.',
+        title: 'Please wait',
+        description: 'Categories are still loading. Please try again in a moment.',
         variant: 'destructive',
       });
       return;
