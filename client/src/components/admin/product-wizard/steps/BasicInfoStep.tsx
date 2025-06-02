@@ -488,8 +488,8 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
       costPrice: currentFormData.costPrice ? Number(currentFormData.costPrice) : null,
     };
     
-    // Save first, then update form
-    onSave(dataToSave, true); // Pass autoAdvance = true to trigger form refresh
+    // Save without auto-advancing to allow further editing
+    onSave(dataToSave, false); // Don't auto-advance, just save and refresh form
     
     // Close the dialog
     setShowAiCategorySuggestions(false);
