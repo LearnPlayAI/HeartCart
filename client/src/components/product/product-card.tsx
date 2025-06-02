@@ -296,7 +296,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                   })()}
                 </Badge>
               </div>
-            ) : product.salePrice && product.price && (
+            ) : product.salePrice && product.price && Number(product.salePrice) < Number(product.price) && (
               <div className="ml-2">
                 <Badge className="bg-[#FF69B4] hover:bg-[#FF1493] text-white text-xs px-2 py-1 rounded-md font-medium">
                   {Math.round(((Number(product.price) - Number(product.salePrice)) / Number(product.price)) * 100)}% OFF
