@@ -106,6 +106,23 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
 
   // Note: We no longer use combinations since product prices don't change based on attributes
   
+  // Reset current image when modal opens/closes or product changes
+  useEffect(() => {
+    if (open && product) {
+      // Reset to first image when modal opens
+      setCurrentImage(product.imageUrl ? ensureValidImageUrl(product.imageUrl) : null);
+      console.log('Product data:', product);
+      console.log('Available images:', {
+        mainImage: product.imageUrl,
+        additionalImages: product.additionalImages,
+        totalImages: (product.imageUrl ? 1 : 0) + (product.additionalImages?.length || 0)
+      });
+    } else if (!open) {
+      // Clear image when modal closes
+      setCurrentImage(null);
+    }
+  }, [open, product]);
+
   // Log any attribute-related errors (but don't show toast - attributes are optional)
   useEffect(() => {
     if (productAttributesError) {
@@ -137,15 +154,44 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
     if (product.imageUrl) {
       allImages.push(product.imageUrl);
     }
-    if (product.additionalImages) {
+    if (product.additionalImages && product.additionalImages.length > 0) {
       allImages.push(...product.additionalImages);
     }
     
-    if (allImages.length <= 1) return; // No navigation needed for single image
+    console.log('Navigation:', {
+      direction,
+      allImages,
+      currentImage,
+      productImageUrl: product.imageUrl
+    });
+    
+    if (allImages.length <= 1) {
+      console.log('Only one image available, no navigation needed');
+      return; // No navigation needed for single image
+    }
     
     // Find current image index
     const currentImageUrl = currentImage || product.imageUrl;
-    const currentIndex = allImages.findIndex(img => ensureValidImageUrl(img) === currentImageUrl);
+    let currentIndex = -1;
+    
+    // Try to find exact match first
+    currentIndex = allImages.findIndex(img => img === currentImageUrl);
+    
+    // If not found, try with ensureValidImageUrl
+    if (currentIndex === -1) {
+      currentIndex = allImages.findIndex(img => ensureValidImageUrl(img) === currentImageUrl);
+    }
+    
+    // If still not found, try comparing with ensureValidImageUrl on current
+    if (currentIndex === -1) {
+      const normalizedCurrent = ensureValidImageUrl(currentImageUrl || '');
+      currentIndex = allImages.findIndex(img => ensureValidImageUrl(img) === normalizedCurrent);
+    }
+    
+    // Default to 0 if still not found
+    if (currentIndex === -1) {
+      currentIndex = 0;
+    }
     
     let newIndex;
     if (direction === 'prev') {
@@ -153,6 +199,12 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
     } else {
       newIndex = currentIndex >= allImages.length - 1 ? 0 : currentIndex + 1;
     }
+    
+    console.log('Index calculation:', {
+      currentIndex,
+      newIndex,
+      newImage: allImages[newIndex]
+    });
     
     setCurrentImage(ensureValidImageUrl(allImages[newIndex]));
   };
