@@ -117,6 +117,31 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
         additionalImages: product.additionalImages,
         totalImages: (product.imageUrl ? 1 : 0) + (product.additionalImages?.length || 0)
       });
+      
+      // Preload all product images for faster navigation
+      const preloadImages = () => {
+        const allImages = [];
+        if (product.imageUrl) {
+          allImages.push(product.imageUrl);
+        }
+        if (product.additionalImages && product.additionalImages.length > 0) {
+          allImages.push(...product.additionalImages);
+        }
+        
+        // Preload each image
+        allImages.forEach(imageUrl => {
+          const img = new Image();
+          img.src = ensureValidImageUrl(imageUrl);
+          // Optional: add onload/onerror handlers for debugging
+          img.onload = () => console.log('Preloaded:', imageUrl);
+          img.onerror = () => console.warn('Failed to preload:', imageUrl);
+        });
+        
+        console.log('Preloading', allImages.length, 'images for faster navigation');
+      };
+      
+      // Start preloading after a small delay to not block the modal opening
+      setTimeout(preloadImages, 100);
     } else if (!open) {
       // Clear image when modal closes
       setCurrentImage(null);
