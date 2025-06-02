@@ -59,7 +59,18 @@ import {
   X,
   GitMerge,
   AlertCircle,
+  TrendingUp,
+  TrendingDown,
 } from 'lucide-react';
+
+// Utility function for currency formatting
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('en-ZA', {
+    style: 'currency',
+    currency: 'ZAR',
+    minimumFractionDigits: 2,
+  }).format(amount);
+};
 
 // Types
 interface PublishedProduct {
@@ -68,13 +79,18 @@ interface PublishedProduct {
   slug: string;
   price: number;
   costPrice: number;
+  salePrice?: number;
   stock: number;
   isActive: boolean;
   isFeatured: boolean;
   categoryName?: string;
   createdAt: string;
+  publishedAt?: string;
   imageUrl?: string;
   brand?: string;
+  sku?: string;
+  parentCategoryName?: string;
+  childCategoryName?: string;
 }
 
 export const PublishedProducts: React.FC = () => {
@@ -406,7 +422,8 @@ export const PublishedProducts: React.FC = () => {
                     <TableHead>Product</TableHead>
                     <TableHead>Parent Cat</TableHead>
                     <TableHead>Child Cat</TableHead>
-                    <TableHead>Price</TableHead>
+                    <TableHead className="text-right">Prices</TableHead>
+                    <TableHead className="text-right">Percentage</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Published</TableHead>
                     <TableHead className="w-[100px] text-right">Actions</TableHead>
@@ -454,12 +471,55 @@ export const PublishedProducts: React.FC = () => {
                           {product.childCategoryName}
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          <div className="font-medium">{formatCurrency(product.price)}</div>
-                          <div className="text-muted-foreground">
-                            Cost: {formatCurrency(product.costPrice)}
+                      <TableCell className="text-right">
+                        <div className="space-y-1 text-sm">
+                          <div className="font-mono text-xs text-muted-foreground">
+                            Cost: {formatCurrency(product.costPrice || 0)}
                           </div>
+                          <div className="font-mono text-sm font-medium">
+                            Regular: {formatCurrency(product.price || 0)}
+                          </div>
+                          {product.salePrice && (
+                            <div className="font-mono text-sm text-red-600 font-semibold">
+                              Sale: {formatCurrency(product.salePrice)}
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="space-y-1 text-sm">
+                          {(() => {
+                            const costPrice = product.costPrice || 0;
+                            const regularPrice = product.price || 0;
+                            const salePrice = product.salePrice || regularPrice;
+                            
+                            const tmyMarkup = costPrice > 0 ? ((regularPrice - costPrice) / costPrice * 100) : 0;
+                            const customerDiscount = regularPrice > 0 && salePrice < regularPrice ? ((regularPrice - salePrice) / regularPrice * 100) : 0;
+                            
+                            return (
+                              <>
+                                <div className="flex items-center justify-end gap-1">
+                                  {tmyMarkup > 0 ? (
+                                    <TrendingUp className="h-3 w-3 text-green-600" />
+                                  ) : (
+                                    <TrendingDown className="h-3 w-3 text-red-600" />
+                                  )}
+                                  <span className={`font-semibold text-xs ${
+                                    tmyMarkup > 0 ? 'text-green-600' : 'text-red-600'
+                                  }`}>
+                                    TMY: {tmyMarkup.toFixed(1)}%
+                                  </span>
+                                </div>
+                                {customerDiscount > 0 && (
+                                  <div className="flex justify-end">
+                                    <Badge className="font-mono text-xs bg-pink-500 hover:bg-pink-600 text-white">
+                                      Disc: {customerDiscount.toFixed(1)}%
+                                    </Badge>
+                                  </div>
+                                )}
+                              </>
+                            );
+                          })()}
                         </div>
                       </TableCell>
                       <TableCell>
