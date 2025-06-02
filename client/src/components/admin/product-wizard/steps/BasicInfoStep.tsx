@@ -477,9 +477,6 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
   const handleAiCategorySelection = async (parentId: number, childId: number | null) => {
     const selectedCategoryId = childId || parentId;
     
-    // Update the form with the selected category
-    form.setValue('categoryId', selectedCategoryId);
-    
     // Save the draft with the updated category - convert string prices to numbers
     const currentFormData = form.getValues();
     const dataToSave = {
@@ -491,27 +488,8 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
       costPrice: currentFormData.costPrice ? Number(currentFormData.costPrice) : null,
     };
     
-    onSave(dataToSave);
-    
-    // Invalidate categories cache to refresh the dropdowns
-    queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
-    queryClient.invalidateQueries({ queryKey: ['/api/categories/main/with-children'] });
-    
-    // Refetch the updated draft data and reinitialize the form
-    setTimeout(async () => {
-      try {
-        // Invalidate and refetch the draft data
-        queryClient.invalidateQueries({ queryKey: [`/api/product-drafts/${draft.id}`] });
-        
-        // Wait a moment for the invalidation to trigger refetch
-        await new Promise(resolve => setTimeout(resolve, 200));
-        
-        // The draft query will automatically refetch, which will trigger
-        // the form reset in the parent component
-      } catch (error) {
-        console.error('Error refreshing draft after AI category selection:', error);
-      }
-    }, 100);
+    // Save first, then update form
+    onSave(dataToSave, true); // Pass autoAdvance = true to trigger form refresh
     
     // Close the dialog
     setShowAiCategorySuggestions(false);
