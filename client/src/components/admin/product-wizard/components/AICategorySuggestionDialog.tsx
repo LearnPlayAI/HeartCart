@@ -431,7 +431,7 @@ export function AICategorySuggestionDialog({
           {newCategoryData && (
             <Button
               onClick={handleCreateNewCategories}
-              disabled={isCreatingCategory || createCategoryMutation.isPending || categoriesQuery.isLoading || !Array.isArray(categories)}
+              disabled={isCreatingCategory || createCategoryMutation.isPending || categoriesQuery.isLoading}
               className="bg-green-600 hover:bg-green-700"
             >
               {isCreatingCategory || createCategoryMutation.isPending ? (
