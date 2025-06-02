@@ -225,10 +225,27 @@ export function AICategorySuggestionDialog({
       });
     } catch (error) {
       console.error('Error creating categories:', error);
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+        response: error.response,
+      });
       setIsCreatingCategory(false);
+      
+      // Try to get more specific error message
+      let errorMessage = 'Failed to create categories. Please try again.';
+      if (error.response) {
+        try {
+          const errorData = await error.response.json();
+          errorMessage = errorData.error?.message || errorMessage;
+        } catch (parseError) {
+          console.error('Failed to parse error response:', parseError);
+        }
+      }
+      
       toast({
         title: 'Error',
-        description: 'Failed to create categories. Please try again.',
+        description: errorMessage,
         variant: 'destructive',
       });
     }
