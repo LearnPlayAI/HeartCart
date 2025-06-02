@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import { formatDistanceToNow } from 'date-fns';
 import { apiRequest } from '@/lib/queryClient';
@@ -61,7 +61,9 @@ import {
   AlertCircle,
   TrendingUp,
   TrendingDown,
+  Trash2,
 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 // Utility function for currency formatting
 const formatCurrency = (amount: number) => {
@@ -106,9 +108,17 @@ export const PublishedProducts: React.FC = () => {
   const [showDuplicates, setShowDuplicates] = useState(false);
   const [duplicateGroups, setDuplicateGroups] = useState<any[]>([]);
   
+  // Delete functionality state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [productToDelete, setProductToDelete] = useState<PublishedProduct | null>(null);
+  
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
+  
+  // Hooks
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   // Fetch published products (get all products for client-side pagination)
   const { data: productsData, isLoading: isProductsLoading, error: productsError } = useQuery({
@@ -130,6 +140,47 @@ export const PublishedProducts: React.FC = () => {
 
   const products = productsData?.success ? productsData.data : [];
   const categories = categoriesData?.success ? categoriesData.data : [];
+
+  // Delete product mutation
+  const deleteProductMutation = useMutation({
+    mutationFn: async (productId: number) => {
+      const response = await apiRequest('DELETE', `/api/products/${productId}`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to delete product');
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Product Deleted",
+        description: data.message || "Product has been successfully deleted",
+      });
+      // Invalidate and refetch the products list
+      queryClient.invalidateQueries({ queryKey: ['/api/products'] });
+      setDeleteDialogOpen(false);
+      setProductToDelete(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Delete Failed",
+        description: error.message || "Failed to delete product. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Handle delete product
+  const handleDeleteProduct = (product: PublishedProduct) => {
+    setProductToDelete(product);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteProduct = () => {
+    if (productToDelete) {
+      deleteProductMutation.mutate(productToDelete.id);
+    }
+  };
 
   // Organize categories into parent/child relationships
   const categoriesWithParents = useMemo(() => {

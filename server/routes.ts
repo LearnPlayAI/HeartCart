@@ -6,7 +6,7 @@ import { objectStore } from "./object-store";
 import { ZodError } from "zod";
 import { logger } from "./logger";
 import { db } from "./db";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import crypto from "crypto";
 import { cleanupOrphanedDraftImages, cleanupAllOrphanedDraftImages } from "./clean-orphaned-images";
 // Import AI routes separately
