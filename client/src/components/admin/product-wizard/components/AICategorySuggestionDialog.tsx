@@ -236,21 +236,16 @@ export function AICategorySuggestionDialog({
     } catch (error) {
       console.error('Error creating categories:', error);
       console.error('Error details:', {
-        message: error.message,
-        stack: error.stack,
-        response: error.response,
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : 'No stack trace',
+        response: error && typeof error === 'object' && 'response' in error ? error.response : 'No response',
       });
       setIsCreatingCategory(false);
       
       // Try to get more specific error message
       let errorMessage = 'Failed to create categories. Please try again.';
-      if (error.response) {
-        try {
-          const errorData = await error.response.json();
-          errorMessage = errorData.error?.message || errorMessage;
-        } catch (parseError) {
-          console.error('Failed to parse error response:', parseError);
-        }
+      if (error instanceof Error) {
+        errorMessage = error.message;
       }
       
       toast({

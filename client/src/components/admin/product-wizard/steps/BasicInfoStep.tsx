@@ -473,19 +473,47 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
     }
   }, [newCategoryParentId]);
   
-  // Handle AI category selection
-  const handleAiCategorySelection = (parentId: number, childId: number | null) => {
-    // Update the form with the selected category
-    if (childId) {
-      // If there's a child category, use that as the main category
-      form.setValue('categoryId', childId);
-    } else {
-      // Otherwise use the parent category
-      form.setValue('categoryId', parentId);
+  // Handle AI category selection - FIXED to immediately save to database
+  const handleAiCategorySelection = async (parentId: number, childId: number | null) => {
+    try {
+      // Determine the final category ID to use
+      const finalCategoryId = childId || parentId;
+      
+      // Update the form with the selected category
+      form.setValue('categoryId', finalCategoryId);
+      
+      // CRITICAL FIX: Immediately save the category assignment to the database
+      // Using snake_case column name to match actual database structure
+      const updateData = {
+        category_id: finalCategoryId  // Using snake_case as per database schema
+      };
+      
+      console.log('Saving AI category selection to database:', updateData);
+      
+      // Save the category assignment directly to the product draft
+      const response = await apiRequest('PATCH', `/api/product-drafts/${draft.id}`, updateData);
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.error?.message || 'Failed to save category assignment');
+      }
+      
+      toast({
+        title: 'Category Applied',
+        description: 'Product category has been saved successfully.',
+      });
+      
+    } catch (error) {
+      console.error('Error saving AI category selection:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to save category assignment. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      // Close the dialog
+      setShowAiCategorySuggestions(false);
     }
-    
-    // Close the dialog
-    setShowAiCategorySuggestions(false);
   };
   
   // Function to enhance existing product title and description using AI
