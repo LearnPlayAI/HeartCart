@@ -5,9 +5,11 @@ import {
   generateProductTags, 
   optimizeSEO, 
   generateSEO,
-  analyzeProductImage
+  analyzeProductImage,
+  suggestProductCategories
 } from './ai-service';
 import { isAuthenticated } from './auth-middleware';
+import { storage } from './storage';
 
 const router = express.Router();
 
@@ -193,6 +195,53 @@ router.post('/generate-seo', isAuthenticated, asyncHandler(async (req: Request, 
       success: false,
       error: {
         message: error instanceof Error ? error.message : 'Failed to generate SEO content'
+      }
+    });
+  }
+}));
+
+// API route for suggesting categories based on product name and description
+router.post('/suggest-categories', isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
+  const { productName, productDescription } = req.body;
+
+  if (!productName || !productDescription) {
+    return res.status(400).json({
+      success: false,
+      error: {
+        message: 'Product name and description are required'
+      }
+    });
+  }
+
+  try {
+    // Fetch all categories from the database
+    const categories = await storage.getAllCategories();
+    
+    // Transform categories for AI processing
+    const formattedCategories = categories.map(cat => ({
+      id: cat.id,
+      name: cat.name,
+      slug: cat.slug,
+      parentId: cat.parentId,
+      level: cat.level
+    }));
+
+    const suggestions = await suggestProductCategories(
+      productName,
+      productDescription,
+      formattedCategories
+    );
+    
+    res.json({
+      success: true,
+      data: suggestions
+    });
+  } catch (error) {
+    console.error('Error suggesting categories:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: error instanceof Error ? error.message : 'Failed to suggest categories'
       }
     });
   }

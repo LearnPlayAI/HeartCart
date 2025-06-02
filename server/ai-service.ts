@@ -392,6 +392,125 @@ export async function generateProductTags(
 /**
  * Generates SEO content for a product with optional image analysis
  */
+/**
+ * Suggests parent and child categories for a product based on its title and description
+ */
+export async function suggestProductCategories(
+  productName: string,
+  productDescription: string,
+  existingCategories: Array<{
+    id: number;
+    name: string;
+    slug: string;
+    parentId: number | null;
+    level: number;
+  }>
+): Promise<{
+  suggestions: Array<{
+    parentCategory: { id: number; name: string } | null;
+    childCategory: { id: number; name: string } | null;
+    confidence: number;
+    reasoning: string;
+  }>;
+  newCategorySuggestions: Array<{
+    parentName: string;
+    childName: string;
+    reasoning: string;
+  }>;
+}> {
+  try {
+    // Organize categories into parent/child structure for the AI
+    const parentCategories = existingCategories.filter(cat => cat.level === 0);
+    const childCategories = existingCategories.filter(cat => cat.level === 1);
+    
+    const categoryStructure = parentCategories.map(parent => ({
+      id: parent.id,
+      name: parent.name,
+      children: childCategories
+        .filter(child => child.parentId === parent.id)
+        .map(child => ({ id: child.id, name: child.name }))
+    }));
+
+    const promptText = `
+    You are an expert e-commerce categorization AI. Based on the product information provided, suggest the most appropriate categories.
+
+    Product Name: "${productName}"
+    Product Description: "${productDescription}"
+
+    Current Category Structure:
+    ${JSON.stringify(categoryStructure, null, 2)}
+
+    Task:
+    1. Analyze the product and suggest the 2-3 best matching parent/child category combinations from the existing categories
+    2. If no suitable categories exist, suggest new parent/child category names that should be created
+
+    For existing category suggestions:
+    - Provide the exact category IDs and names from the structure above
+    - Include a confidence score (0-100)
+    - Explain your reasoning in 1-2 sentences
+
+    For new category suggestions (only if existing ones don't fit well):
+    - Suggest specific parent and child category names
+    - Explain why these new categories are needed
+
+    Format your response as a JSON object:
+    {
+      "suggestions": [
+        {
+          "parentCategory": { "id": 123, "name": "Category Name" } or null,
+          "childCategory": { "id": 456, "name": "Subcategory Name" } or null,
+          "confidence": 85,
+          "reasoning": "This product fits here because..."
+        }
+      ],
+      "newCategorySuggestions": [
+        {
+          "parentName": "New Parent Category",
+          "childName": "New Child Category", 
+          "reasoning": "These categories are needed because..."
+        }
+      ]
+    }
+
+    Rules:
+    - Only suggest existing categories that actually exist in the provided structure
+    - Confidence should reflect how well the product fits the category
+    - Provide 2-3 suggestions maximum for existing categories
+    - Only suggest new categories if existing ones are truly inadequate
+    - Be specific and accurate with category names and IDs
+    `;
+
+    const aiModel = await getModel();
+    const result = await aiModel.generateContent(promptText);
+    const text = result.response.text();
+    
+    try {
+      // Extract the JSON object from the response
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const response = JSON.parse(jsonMatch[0]);
+        
+        return {
+          suggestions: Array.isArray(response.suggestions) ? response.suggestions : [],
+          newCategorySuggestions: Array.isArray(response.newCategorySuggestions) ? response.newCategorySuggestions : []
+        };
+      }
+      
+      // Fallback when JSON extraction fails
+      return {
+        suggestions: [],
+        newCategorySuggestions: []
+      };
+    } catch (error) {
+      console.error('Error parsing AI category suggestion response as JSON:', error);
+      throw new Error('Failed to parse category suggestions');
+    }
+  } catch (error) {
+    console.error('Error generating category suggestions:', error);
+    throw new Error('Failed to generate category suggestions');
+  }
+}
+
 export async function generateSEO(
   productName: string,
   productDescription: string,

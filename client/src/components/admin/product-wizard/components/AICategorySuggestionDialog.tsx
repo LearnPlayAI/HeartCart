@@ -1,0 +1,355 @@
+import React, { useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
+import { Loader2, Sparkles, CheckCircle, Plus, Brain } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { apiRequest } from '@/lib/queryClient';
+import slugify from 'slugify';
+
+interface CategorySuggestion {
+  parentCategory: { id: number; name: string } | null;
+  childCategory: { id: number; name: string } | null;
+  confidence: number;
+  reasoning: string;
+}
+
+interface NewCategorySuggestion {
+  parentName: string;
+  childName: string;
+  reasoning: string;
+}
+
+interface AICategorySuggestionDialogProps {
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+  productName: string;
+  productDescription: string;
+  onCategorySelected: (parentId: number, childId: number | null) => void;
+}
+
+export function AICategorySuggestionDialog({
+  isOpen,
+  onOpenChange,
+  productName,
+  productDescription,
+  onCategorySelected,
+}: AICategorySuggestionDialogProps) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [selectedSuggestion, setSelectedSuggestion] = useState<CategorySuggestion | null>(null);
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
+  const [newCategoryData, setNewCategoryData] = useState<{
+    parentName: string;
+    childName: string;
+    reasoning: string;
+  } | null>(null);
+
+  // Fetch AI category suggestions
+  const categorySuggestionMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('POST', '/api/ai/suggest-categories', {
+        productName,
+        productDescription,
+      });
+      return response.json();
+    },
+    onError: (error) => {
+      console.error('Error fetching category suggestions:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to get AI category suggestions. Please try again.',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Create new category mutation
+  const createCategoryMutation = useMutation({
+    mutationFn: async (categoryData: {
+      name: string;
+      slug: string;
+      description: string;
+      parentId?: number;
+      level: number;
+      displayOrder: number;
+    }) => {
+      const response = await apiRequest('POST', '/api/categories', categoryData);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
+      toast({
+        title: 'Success',
+        description: 'Categories created successfully!',
+      });
+    },
+    onError: (error) => {
+      console.error('Error creating category:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to create categories. Please try again.',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Generate AI suggestions when dialog opens
+  React.useEffect(() => {
+    if (isOpen && productName && productDescription) {
+      categorySuggestionMutation.mutate();
+    }
+  }, [isOpen, productName, productDescription]);
+
+  const handleSelectSuggestion = (suggestion: CategorySuggestion) => {
+    setSelectedSuggestion(suggestion);
+  };
+
+  const handleApproveSelection = () => {
+    if (selectedSuggestion?.parentCategory) {
+      const parentId = selectedSuggestion.parentCategory.id;
+      const childId = selectedSuggestion.childCategory?.id || null;
+      onCategorySelected(parentId, childId);
+      onOpenChange(false);
+      toast({
+        title: 'Categories Applied',
+        description: 'Product categories have been updated successfully.',
+      });
+    }
+  };
+
+  const handleCreateNewCategories = async () => {
+    if (!newCategoryData) return;
+
+    try {
+      setIsCreatingCategory(true);
+
+      // Create parent category first
+      const parentSlug = slugify(newCategoryData.parentName, { lower: true, strict: true });
+      const parentResponse = await createCategoryMutation.mutateAsync({
+        name: newCategoryData.parentName,
+        slug: parentSlug,
+        description: `AI-suggested parent category for ${productName}`,
+        level: 0,
+        displayOrder: 999,
+      });
+
+      let childResponse = null;
+      if (newCategoryData.childName) {
+        // Create child category
+        const childSlug = `${parentSlug}-${slugify(newCategoryData.childName, { lower: true, strict: true })}`;
+        childResponse = await createCategoryMutation.mutateAsync({
+          name: newCategoryData.childName,
+          slug: childSlug,
+          description: `AI-suggested child category for ${productName}`,
+          parentId: parentResponse.id,
+          level: 1,
+          displayOrder: 999,
+        });
+      }
+
+      // Apply the newly created categories
+      const parentId = parentResponse.id;
+      const childId = childResponse?.id || null;
+      onCategorySelected(parentId, childId);
+      onOpenChange(false);
+      setIsCreatingCategory(false);
+      setNewCategoryData(null);
+
+      toast({
+        title: 'Categories Created',
+        description: 'New categories have been created and applied to the product.',
+      });
+    } catch (error) {
+      console.error('Error creating categories:', error);
+      setIsCreatingCategory(false);
+    }
+  };
+
+  const suggestions = categorySuggestionMutation.data?.data?.suggestions || [];
+  const newCategorySuggestions = categorySuggestionMutation.data?.data?.newCategorySuggestions || [];
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Brain className="h-5 w-5 text-purple-600" />
+            AI Category Suggestions
+          </DialogTitle>
+          <DialogDescription>
+            Based on "{productName}" and its description, here are the recommended categories:
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-6">
+          {categorySuggestionMutation.isPending && (
+            <div className="flex items-center justify-center py-8">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Analyzing product and suggesting categories...</span>
+              </div>
+            </div>
+          )}
+
+          {categorySuggestionMutation.isError && (
+            <Card className="border-destructive">
+              <CardContent className="p-4">
+                <p className="text-destructive text-sm">
+                  Failed to get category suggestions. Please check your AI service configuration and try again.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {suggestions.length > 0 && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-yellow-500" />
+                <h3 className="font-medium">Existing Category Matches</h3>
+              </div>
+
+              <div className="grid gap-4">
+                {suggestions.map((suggestion, index) => (
+                  <Card
+                    key={index}
+                    className={`cursor-pointer transition-colors ${
+                      selectedSuggestion === suggestion
+                        ? 'border-primary bg-primary/5'
+                        : 'hover:border-muted-foreground/20'
+                    }`}
+                    onClick={() => handleSelectSuggestion(suggestion)}
+                  >
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <CardTitle className="text-base">
+                            {suggestion.parentCategory?.name}
+                            {suggestion.childCategory && (
+                              <span className="text-muted-foreground"> → {suggestion.childCategory.name}</span>
+                            )}
+                          </CardTitle>
+                          {selectedSuggestion === suggestion && (
+                            <CheckCircle className="h-4 w-4 text-primary" />
+                          )}
+                        </div>
+                        <Badge variant={suggestion.confidence > 80 ? 'default' : 'secondary'}>
+                          {suggestion.confidence}% match
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground">{suggestion.reasoning}</p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {newCategorySuggestions.length > 0 && (
+            <>
+              <Separator />
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Plus className="h-4 w-4 text-green-500" />
+                  <h3 className="font-medium">Suggested New Categories</h3>
+                  <Badge variant="outline">Create New</Badge>
+                </div>
+
+                <div className="grid gap-4">
+                  {newCategorySuggestions.map((newSuggestion, index) => (
+                    <Card
+                      key={index}
+                      className={`cursor-pointer transition-colors ${
+                        newCategoryData === newSuggestion
+                          ? 'border-green-500 bg-green-50'
+                          : 'hover:border-muted-foreground/20'
+                      }`}
+                      onClick={() => setNewCategoryData(newSuggestion)}
+                    >
+                      <CardHeader className="pb-2">
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-base text-green-700">
+                            {newSuggestion.parentName}
+                            {newSuggestion.childName && (
+                              <span className="text-muted-foreground"> → {newSuggestion.childName}</span>
+                            )}
+                          </CardTitle>
+                          {newCategoryData === newSuggestion && (
+                            <CheckCircle className="h-4 w-4 text-green-500" />
+                          )}
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm text-muted-foreground">{newSuggestion.reasoning}</p>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          {suggestions.length === 0 && newCategorySuggestions.length === 0 && !categorySuggestionMutation.isPending && !categorySuggestionMutation.isError && (
+            <Card>
+              <CardContent className="p-6 text-center">
+                <p className="text-muted-foreground">No category suggestions available for this product.</p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          
+          {selectedSuggestion && (
+            <Button onClick={handleApproveSelection}>
+              Apply Selected Category
+            </Button>
+          )}
+          
+          {newCategoryData && (
+            <Button
+              onClick={handleCreateNewCategories}
+              disabled={isCreatingCategory || createCategoryMutation.isPending}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {isCreatingCategory || createCategoryMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create & Apply Categories
+                </>
+              )}
+            </Button>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

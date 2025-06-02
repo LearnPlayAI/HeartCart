@@ -48,6 +48,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ProductDraft } from '../ProductWizard';
+import { AICategorySuggestionDialog } from '../components/AICategorySuggestionDialog';
 
 // Validation schema for the basic information step
 const basicInfoSchema = z.object({
