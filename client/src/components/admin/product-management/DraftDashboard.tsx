@@ -22,7 +22,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { 
   Plus, Search, MoreVertical, Edit, Trash2, Copy, ExternalLink, 
   Check, X, Clock, Loader2, Filter, SortAsc, SortDesc, 
-  FileQuestion, ShoppingCart, FileCheck, Eye, AlertCircle, Package
+  FileQuestion, ShoppingCart, FileCheck, Eye, AlertCircle, Package, GitMerge
 } from 'lucide-react';
 
 // Types
@@ -57,6 +57,10 @@ export const DraftDashboard: React.FC = () => {
   // Category filters
   const [selectedParentCategory, setSelectedParentCategory] = useState<string>('');
   const [selectedChildCategory, setSelectedChildCategory] = useState<string>('');
+
+  // Duplicate detection
+  const [showDuplicates, setShowDuplicates] = useState(false);
+  const [duplicateGroups, setDuplicateGroups] = useState<any[]>([]);
 
   const [newDraftLoading, setNewDraftLoading] = useState(false);
 
@@ -198,6 +202,60 @@ export const DraftDashboard: React.FC = () => {
 
     return filtered;
   }, [drafts, selectedParentCategory, selectedChildCategory, categories]);
+
+  // Helper function to calculate name similarity
+  const calculateSimilarity = (name1: string, name2: string): number => {
+    const str1 = name1.toLowerCase().trim();
+    const str2 = name2.toLowerCase().trim();
+    
+    if (str1 === str2) return 1; // Exact match
+    
+    // Simple similarity based on word overlap
+    const words1 = str1.split(/\s+/);
+    const words2 = str2.split(/\s+/);
+    
+    const commonWords = words1.filter(word => words2.includes(word));
+    const totalWords = Math.max(words1.length, words2.length);
+    
+    return commonWords.length / totalWords;
+  };
+
+  // Detect duplicates and similar products
+  const detectDuplicates = () => {
+    const groups: any[] = [];
+    const processed = new Set<number>();
+
+    filteredDrafts.forEach((draft: ProductDraft) => {
+      if (processed.has(draft.id)) return;
+
+      const similarProducts = filteredDrafts.filter((other: ProductDraft) => {
+        if (other.id === draft.id || processed.has(other.id)) return false;
+        
+        const similarity = calculateSimilarity(draft.name, other.name);
+        // Different SKU but similar/same name
+        return similarity >= 0.6; // 60% similarity threshold
+      });
+
+      if (similarProducts.length > 0) {
+        const group = [draft, ...similarProducts];
+        const hasExactMatch = group.some((p1: ProductDraft) => 
+          group.some((p2: ProductDraft) => 
+            p1.id !== p2.id && p1.name.toLowerCase().trim() === p2.name.toLowerCase().trim()
+          )
+        );
+
+        groups.push({
+          type: hasExactMatch ? 'exact' : 'similar',
+          products: group
+        });
+
+        group.forEach((p: ProductDraft) => processed.add(p.id));
+      }
+    });
+
+    setDuplicateGroups(groups);
+    setShowDuplicates(true);
+  };
   
   // Get wizard step display name
   const getStepDisplayName = (stepKey: string) => {
@@ -299,10 +357,23 @@ export const DraftDashboard: React.FC = () => {
       
       <Card>
         <CardHeader className="p-4">
-          <CardTitle>All Product Drafts</CardTitle>
-          <CardDescription>
-            {filteredDrafts.length} {filteredDrafts.length === 1 ? 'draft' : 'drafts'} found
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>All Product Drafts</CardTitle>
+              <CardDescription>
+                {filteredDrafts.length} {filteredDrafts.length === 1 ? 'draft' : 'drafts'} found
+              </CardDescription>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={detectDuplicates}
+              className="flex items-center gap-2"
+            >
+              <GitMerge className="h-4 w-4" />
+              Find Duplicates
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           {isDraftsLoading ? (
@@ -507,7 +578,93 @@ export const DraftDashboard: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
+
+      {/* Duplicate Detection Dialog */}
+      <Dialog open={showDuplicates} onOpenChange={setShowDuplicates}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Duplicate & Similar Products Detected</DialogTitle>
+            <DialogDescription>
+              Found {duplicateGroups.length} group(s) of products with similar or identical names but different SKUs.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {duplicateGroups.map((group: any, groupIndex: number) => (
+              <div 
+                key={groupIndex} 
+                className={`border rounded-lg p-4 ${
+                  group.type === 'exact' ? 'border-red-300 bg-red-50' : 'border-yellow-300 bg-yellow-50'
+                }`}
+              >
+                <div className="flex items-center gap-2 mb-3">
+                  <Badge variant={group.type === 'exact' ? 'destructive' : 'secondary'}>
+                    {group.type === 'exact' ? 'Exact Match' : 'Similar Names'}
+                  </Badge>
+                  <span className="text-sm text-gray-600">
+                    {group.products.length} products in this group
+                  </span>
+                </div>
+                
+                <div className="grid gap-3">
+                  {group.products.map((product: ProductDraft) => (
+                    <div 
+                      key={product.id} 
+                      className="flex items-center justify-between p-3 bg-white rounded border"
+                    >
+                      <div className="flex items-center gap-3">
+                        {product.images && product.images.length > 0 ? (
+                          <img 
+                            src={product.images[0]} 
+                            alt={product.name}
+                            className="w-12 h-12 object-cover rounded"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center">
+                            <Package className="h-6 w-6 text-gray-400" />
+                          </div>
+                        )}
+                        <div>
+                          <h4 className="font-medium">{product.name}</h4>
+                          <p className="text-sm text-gray-600">
+                            SKU: {product.slug || 'No SKU'} | Draft ID: {product.id}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Status: {product.draftStatus} | Step: {getStepDisplayName(product.wizardStep)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setLocation(`/admin/product-wizard/${product.id}`)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+            
+            {duplicateGroups.length === 0 && (
+              <div className="text-center py-8 text-gray-500">
+                <AlertCircle className="h-12 w-12 mx-auto mb-3 text-gray-400" />
+                <p>No duplicate or similar products found.</p>
+                <p className="text-sm">All product names appear to be unique.</p>
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDuplicates(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
     </div>
   );
