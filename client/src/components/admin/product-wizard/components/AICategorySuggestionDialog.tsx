@@ -73,7 +73,7 @@ export function AICategorySuggestionDialog({
     },
   });
 
-  const categories = Array.isArray(categoriesQuery.data) ? categoriesQuery.data : [];
+  const categories = categoriesQuery.data || [];
 
   // Fetch AI category suggestions
   const categorySuggestionMutation = useMutation({
@@ -174,11 +174,10 @@ export function AICategorySuggestionDialog({
       return;
     }
 
-    // Basic loading check - don't require categories to be loaded since we can create them
-    if (categoriesQuery.isLoading) {
+    if (!Array.isArray(categories) || categories.length === 0) {
       toast({
-        title: 'Please wait',
-        description: 'Categories are still loading. Please try again in a moment.',
+        title: 'Error',
+        description: 'Categories not loaded yet. Please try again.',
         variant: 'destructive',
       });
       return;
@@ -187,22 +186,14 @@ export function AICategorySuggestionDialog({
     try {
       setIsCreatingCategory(true);
 
-      // CRITICAL: Refetch categories to ensure we have the latest data
-      const refetchResult = await categoriesQuery.refetch();
-      const freshCategories = Array.isArray(refetchResult.data) ? refetchResult.data : [];
-      
-      console.log('Searching for existing parent category:', newCategoryData.parentName);
-      console.log('Available categories:', freshCategories.length, freshCategories.map(c => ({ name: c.name, level: c.level, id: c.id })));
-      
-      // Look for existing parent category by name (case-insensitive search)
-      const existingParent = freshCategories.find(
-        cat => cat.name.toLowerCase().trim() === newCategoryData.parentName.toLowerCase().trim() && cat.level === 0
-      );
-      
-      console.log('Found existing parent:', existingParent);
-
+      // First, check if parent category already exists
       const parentSlug = slugify(newCategoryData.parentName, { lower: true, strict: true });
       let parentId = null;
+      
+      // Look for existing parent category by name
+      const existingParent = categories.find(
+        cat => cat.name.toLowerCase() === newCategoryData.parentName.toLowerCase() && cat.level === 0
+      );
 
       if (existingParent) {
         // Use existing parent category
@@ -231,7 +222,7 @@ export function AICategorySuggestionDialog({
       let childId = null;
       if (newCategoryData.childName) {
         // Get the highest display order for children under this specific parent
-        const siblingChildren = freshCategories.filter(cat => cat.parentId === parentId && cat.level === 1);
+        const siblingChildren = categories.filter(cat => cat.parentId === parentId && cat.level === 1);
         const maxChildDisplayOrder = siblingChildren.length > 0 
           ? Math.max(...siblingChildren.map(cat => cat.displayOrder || 0))
           : 0;
@@ -250,13 +241,10 @@ export function AICategorySuggestionDialog({
         console.log('Creating child category with data:', childCategoryData);
         const childResponse = await createCategoryMutation.mutateAsync(childCategoryData);
         childId = childResponse.id;
-        console.log('Created child category with ID:', childId);
       }
 
-      // Apply the child category (not the parent) to the product
-      const categoryToApply = childId || parentId;
-      console.log('Applying category to product:', categoryToApply);
-      onCategorySelected(categoryToApply, null);
+      // Apply the categories
+      onCategorySelected(parentId, childId);
       onOpenChange(false);
       setIsCreatingCategory(false);
       setNewCategoryData(null);
@@ -443,7 +431,7 @@ export function AICategorySuggestionDialog({
           {newCategoryData && (
             <Button
               onClick={handleCreateNewCategories}
-              disabled={isCreatingCategory || createCategoryMutation.isPending || categoriesQuery.isLoading}
+              disabled={isCreatingCategory || createCategoryMutation.isPending || categoriesQuery.isLoading || !Array.isArray(categories)}
               className="bg-green-600 hover:bg-green-700"
             >
               {isCreatingCategory || createCategoryMutation.isPending ? (
