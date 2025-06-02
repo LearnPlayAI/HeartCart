@@ -231,7 +231,7 @@ export function AICategorySuggestionDialog({
       let childId = null;
       if (newCategoryData.childName) {
         // Get the highest display order for children under this specific parent
-        const siblingChildren = categories.filter(cat => cat.parentId === parentId && cat.level === 1);
+        const siblingChildren = freshCategories.filter(cat => cat.parentId === parentId && cat.level === 1);
         const maxChildDisplayOrder = siblingChildren.length > 0 
           ? Math.max(...siblingChildren.map(cat => cat.displayOrder || 0))
           : 0;
@@ -250,10 +250,13 @@ export function AICategorySuggestionDialog({
         console.log('Creating child category with data:', childCategoryData);
         const childResponse = await createCategoryMutation.mutateAsync(childCategoryData);
         childId = childResponse.id;
+        console.log('Created child category with ID:', childId);
       }
 
-      // Apply the categories
-      onCategorySelected(parentId, childId);
+      // Apply the child category (not the parent) to the product
+      const categoryToApply = childId || parentId;
+      console.log('Applying category to product:', categoryToApply);
+      onCategorySelected(categoryToApply, null);
       onOpenChange(false);
       setIsCreatingCategory(false);
       setNewCategoryData(null);
