@@ -190,10 +190,15 @@ export function AICategorySuggestionDialog({
       const parentSlug = slugify(newCategoryData.parentName, { lower: true, strict: true });
       let parentId = null;
       
-      // Look for existing parent category by name
+      console.log('Searching for existing parent category:', newCategoryData.parentName);
+      console.log('Available categories:', categories.length, categories.map(c => ({ name: c.name, level: c.level, id: c.id })));
+      
+      // Look for existing parent category by name (case-insensitive search)
       const existingParent = categories.find(
-        cat => cat.name.toLowerCase() === newCategoryData.parentName.toLowerCase() && cat.level === 0
+        cat => cat.name.toLowerCase().trim() === newCategoryData.parentName.toLowerCase().trim() && cat.level === 0
       );
+      
+      console.log('Found existing parent:', existingParent);
 
       if (existingParent) {
         // Use existing parent category
