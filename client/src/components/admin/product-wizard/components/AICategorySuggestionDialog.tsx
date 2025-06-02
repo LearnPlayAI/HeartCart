@@ -176,10 +176,10 @@ export function AICategorySuggestionDialog({
       const refetchResult = await categoriesQuery.refetch();
       console.log('Refetch result:', refetchResult);
       
-      // Get the actual data from the refetch result
+      // The refetch result contains the processed data from the queryFn
       const freshData = refetchResult.data || [];
-      console.log('Fresh categories data:', freshData);
-      console.log('Fresh categories length:', freshData.length);
+      console.log('Fresh categories data length:', freshData.length);
+      console.log('Sample categories:', freshData.slice(0, 3).map(cat => ({name: cat.name, level: cat.level})));
       
       // Ensure we have categories data
       const categoriesArray = Array.isArray(freshData) ? freshData : [];
