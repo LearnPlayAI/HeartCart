@@ -37,6 +37,14 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogFooter, 
+  DialogHeader, 
+  DialogTitle 
+} from '@/components/ui/dialog';
 import {
   Search,
   MoreHorizontal,
@@ -47,6 +55,8 @@ import {
   ShoppingCart,
   Filter,
   X,
+  GitMerge,
+  AlertCircle,
 } from 'lucide-react';
 
 // Types
@@ -72,6 +82,10 @@ export const PublishedProducts: React.FC = () => {
   // Category filters
   const [selectedParentCategory, setSelectedParentCategory] = useState<string>('');
   const [selectedChildCategory, setSelectedChildCategory] = useState<string>('');
+  
+  // Duplicate detection state
+  const [showDuplicates, setShowDuplicates] = useState(false);
+  const [duplicateGroups, setDuplicateGroups] = useState<any[]>([]);
   
   // Fetch published products
   const { data: productsData, isLoading: isProductsLoading, error: productsError } = useQuery({
@@ -149,6 +163,60 @@ export const PublishedProducts: React.FC = () => {
 
     return filtered;
   }, [products, searchQuery, selectedParentCategory, selectedChildCategory, categories]);
+
+  // Helper function to calculate name similarity
+  const calculateSimilarity = (name1: string, name2: string): number => {
+    const str1 = name1.toLowerCase().trim();
+    const str2 = name2.toLowerCase().trim();
+    
+    if (str1 === str2) return 1; // Exact match
+    
+    // Simple similarity based on word overlap
+    const words1 = str1.split(/\s+/);
+    const words2 = str2.split(/\s+/);
+    
+    const commonWords = words1.filter(word => words2.includes(word));
+    const totalWords = Math.max(words1.length, words2.length);
+    
+    return commonWords.length / totalWords;
+  };
+
+  // Detect duplicates and similar products
+  const detectDuplicates = () => {
+    const groups: any[] = [];
+    const processed = new Set<number>();
+
+    filteredProducts.forEach((product: PublishedProduct) => {
+      if (processed.has(product.id)) return;
+
+      const similarProducts = filteredProducts.filter((other: PublishedProduct) => {
+        if (other.id === product.id || processed.has(other.id)) return false;
+        
+        const similarity = calculateSimilarity(product.name, other.name);
+        // Different SKU but similar/same name
+        return similarity >= 0.6; // 60% similarity threshold
+      });
+
+      if (similarProducts.length > 0) {
+        const group = [product, ...similarProducts];
+        const hasExactMatch = group.some((p1: PublishedProduct) => 
+          group.some((p2: PublishedProduct) => 
+            p1.id !== p2.id && p1.name.toLowerCase().trim() === p2.name.toLowerCase().trim()
+          )
+        );
+
+        groups.push({
+          type: hasExactMatch ? 'exact' : 'similar',
+          products: group
+        });
+
+        group.forEach((p: PublishedProduct) => processed.add(p.id));
+      }
+    });
+
+    setDuplicateGroups(groups);
+    setShowDuplicates(true);
+  };
   
   // Format date relative to now
   const formatDate = (dateString: string) => {
@@ -231,10 +299,23 @@ export const PublishedProducts: React.FC = () => {
       
       <Card>
         <CardHeader className="p-4">
-          <CardTitle>All Published Products</CardTitle>
-          <CardDescription>
-            {filteredProducts.length} {filteredProducts.length === 1 ? 'product' : 'products'} found
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>All Published Products</CardTitle>
+              <CardDescription>
+                {filteredProducts.length} {filteredProducts.length === 1 ? 'product' : 'products'} found
+              </CardDescription>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={detectDuplicates}
+              className="flex items-center gap-2"
+            >
+              <GitMerge className="h-4 w-4" />
+              Find Duplicates
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           {isProductsLoading ? (
@@ -424,6 +505,99 @@ export const PublishedProducts: React.FC = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Duplicate Detection Dialog */}
+      <Dialog open={showDuplicates} onOpenChange={setShowDuplicates}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Duplicate & Similar Products Detected</DialogTitle>
+            <DialogDescription>
+              Found {duplicateGroups.length} group(s) of published products with similar or identical names but different SKUs.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {duplicateGroups.map((group: any, groupIndex: number) => (
+              <div 
+                key={groupIndex} 
+                className={`border rounded-lg p-4 ${
+                  group.type === 'exact' ? 'border-red-300 bg-red-50' : 'border-yellow-300 bg-yellow-50'
+                }`}
+              >
+                <div className="flex items-center gap-2 mb-3">
+                  <Badge variant={group.type === 'exact' ? 'destructive' : 'secondary'}>
+                    {group.type === 'exact' ? 'Exact Match' : 'Similar Names'}
+                  </Badge>
+                  <span className="text-sm text-gray-600">
+                    {group.products.length} products in this group
+                  </span>
+                </div>
+                
+                <div className="grid gap-3">
+                  {group.products.map((product: PublishedProduct) => (
+                    <div 
+                      key={product.id} 
+                      className="flex items-center justify-between p-3 bg-white rounded border"
+                    >
+                      <div className="flex items-center gap-3">
+                        {product.imageUrl ? (
+                          <img 
+                            src={product.imageUrl} 
+                            alt={product.name}
+                            className="w-12 h-12 object-cover rounded"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center">
+                            <Package className="h-6 w-6 text-gray-400" />
+                          </div>
+                        )}
+                        <div>
+                          <h4 className="font-medium">{product.name}</h4>
+                          <p className="text-sm text-gray-600">
+                            SKU: {product.sku || 'No SKU'} | Product ID: {product.id}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Price: R{product.regularPrice.toFixed(2)}
+                            {product.onSale && product.salePrice && (
+                              <span className="text-green-600 ml-2">
+                                Sale: R{product.salePrice.toFixed(2)}
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => window.open(`/product/id/${product.id}`, '_blank')}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+            
+            {duplicateGroups.length === 0 && (
+              <div className="text-center py-8 text-gray-500">
+                <AlertCircle className="h-12 w-12 mx-auto mb-3 text-gray-400" />
+                <p>No duplicate or similar products found.</p>
+                <p className="text-sm">All published product names appear to be unique.</p>
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDuplicates(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 };
