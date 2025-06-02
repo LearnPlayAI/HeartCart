@@ -1068,15 +1068,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       try {
-        // Delete the product and all associated data
-        const success = await storage.deleteProduct(productId);
+        // Use the comprehensive database function to delete everything
+        const result = await db.execute(
+          sql`SELECT delete_product_completely(${productId}) as result`
+        );
         
-        res.json({ 
-          success, 
-          message: `Product "${existingProduct.name}" was successfully deleted along with all associated images and data.` 
-        });
+        const deletionResult = result.rows[0]?.result;
+        
+        if (deletionResult?.success) {
+          // Clean up images from object store if any were found
+          const deletedImages = deletionResult.deleted_images || [];
+          for (const imageUrl of deletedImages) {
+            try {
+              // Extract object key from URL and delete from object store
+              const urlParts = imageUrl.split('/');
+              const objectKey = urlParts.slice(-2).join('/'); // Get folder/filename
+              await objectStore.deleteFile(objectKey);
+            } catch (imageError) {
+              logger.warn('Failed to delete image from object store:', { imageUrl, error: imageError });
+            }
+          }
+          
+          res.json({ 
+            success: true, 
+            message: `Product "${existingProduct.name}" was successfully deleted along with all associated data.`,
+            data: {
+              deletedDrafts: deletionResult.deleted_drafts,
+              deletedAttributes: deletionResult.deleted_attributes,
+              deletedImages: deletedImages.length
+            }
+          });
+        } else {
+          throw new AppError(
+            "Failed to delete product completely",
+            ErrorCode.INTERNAL_SERVER_ERROR,
+            500
+          );
+        }
       } catch (error) {
-        // Since we're using asyncHandler, this will be caught and handled properly
         logger.error('Error deleting product:', { error, productId });
         throw new AppError(
           "An error occurred while deleting the product. Please try again.",
