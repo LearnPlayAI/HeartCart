@@ -484,6 +484,13 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
       form.setValue('categoryId', parentId);
     }
     
+    // Trigger form change to save the draft
+    form.trigger('categoryId');
+    
+    // Invalidate categories cache to refresh the dropdowns
+    queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/categories/main/with-children'] });
+    
     // Close the dialog
     setShowAiCategorySuggestions(false);
   };
