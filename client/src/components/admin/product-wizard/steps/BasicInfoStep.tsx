@@ -498,17 +498,18 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
         throw new Error(result.error?.message || 'Failed to save category assignment');
       }
       
-      // Refresh categories to show the newly created categories
+      // Refresh categories to show the newly created categories and wait for completion
       await queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
+      await queryClient.refetchQueries({ queryKey: ['/api/categories'] });
       
       // Refresh the current product draft to get updated data
       await queryClient.invalidateQueries({ queryKey: ['/api/product-drafts', draft.id] });
       
-      // Force form to refresh with the new category value
+      // Wait a bit longer for category data to be fully refreshed, then update form
       setTimeout(() => {
         form.setValue('categoryId', finalCategoryId, { shouldValidate: true, shouldDirty: true });
         console.log('Form category forcefully updated to:', finalCategoryId, 'Form values now:', form.getValues());
-      }, 100);
+      }, 300);
       
       toast({
         title: 'Category Applied',
