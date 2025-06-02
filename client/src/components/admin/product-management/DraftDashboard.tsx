@@ -169,6 +169,15 @@ export const DraftDashboard: React.FC = () => {
   const drafts = draftsData?.success ? draftsData.data : [];
   const categories = categoriesData?.success ? categoriesData.data : [];
 
+  // Organize categories into parent/child relationships
+  const categoriesWithParents = useMemo(() => {
+    const categoryMap = new Map(categories.map((cat: any) => [cat.id, cat]));
+    return categories.map((category: any) => ({
+      ...category,
+      parent: category.parentId ? categoryMap.get(category.parentId) : null
+    }));
+  }, [categories]);
+
   // Process categories into parent and child relationships
   const parentCategories = useMemo(() => {
     return categories.filter((cat: any) => cat.parentId === null || cat.parentId === undefined);
@@ -180,6 +189,19 @@ export const DraftDashboard: React.FC = () => {
     return categories.filter((cat: any) => cat.parentId === parentId);
   }, [categories, selectedParentCategory]);
 
+  // Transform drafts to include category names with parent/child structure
+  const enrichedDrafts = useMemo(() => {
+    return drafts.map((draft: any) => {
+      const category = categoriesWithParents.find((cat: any) => cat.id === draft.categoryId);
+      return {
+        ...draft,
+        categoryName: category?.name || 'Uncategorized',
+        parentCategoryName: category?.parent?.name || 'No Parent',
+        childCategoryName: category?.name || 'Uncategorized'
+      };
+    });
+  }, [drafts, categoriesWithParents]);
+
   // Handle parent category change
   const handleParentCategoryChange = (value: string) => {
     setSelectedParentCategory(value);
@@ -188,7 +210,7 @@ export const DraftDashboard: React.FC = () => {
 
   // Filter drafts with category filtering and exclude published products
   const filteredDrafts = useMemo(() => {
-    let filtered = drafts.filter((draft: ProductDraft) => {
+    let filtered = enrichedDrafts.filter((draft: ProductDraft) => {
       // Exclude published products from the drafts view
       return draft.draftStatus !== 'published';
     });
@@ -214,7 +236,7 @@ export const DraftDashboard: React.FC = () => {
     }
 
     return filtered;
-  }, [drafts, selectedParentCategory, selectedChildCategory, categories]);
+  }, [enrichedDrafts, selectedParentCategory, selectedChildCategory, categories]);
 
   // Calculate pagination for filtered drafts
   const totalFilteredDrafts = filteredDrafts.length;
@@ -452,8 +474,10 @@ export const DraftDashboard: React.FC = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>SKU</TableHead>
                     <TableHead>Product</TableHead>
+                    <TableHead>SKU</TableHead>
+                    <TableHead>Parent Cat</TableHead>
+                    <TableHead>Child Cat</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Last Updated</TableHead>
                     <TableHead className="w-[100px] text-right">Actions</TableHead>

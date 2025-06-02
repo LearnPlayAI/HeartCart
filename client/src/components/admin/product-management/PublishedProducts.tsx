@@ -479,7 +479,7 @@ export const PublishedProducts: React.FC = () => {
                       </TableCell>
                       <TableCell>
                         <div className="text-sm text-muted-foreground">
-                          {formatDate(product.createdAt)}
+                          {formatDate(product.publishedAt || product.createdAt)}
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
