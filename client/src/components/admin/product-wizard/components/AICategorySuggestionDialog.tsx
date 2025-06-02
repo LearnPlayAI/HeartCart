@@ -256,6 +256,9 @@ export function AICategorySuggestionDialog({
         console.log('Child category ID assigned:', childId);
       }
 
+      // Invalidate categories cache to refresh dropdowns
+      await categoriesQuery.refetch();
+      
       // Apply the categories
       onCategorySelected(parentId, childId);
       onOpenChange(false);
@@ -266,7 +269,7 @@ export function AICategorySuggestionDialog({
         title: 'Categories Created',
         description: childId 
           ? 'New child category has been created and applied to the product.'
-          : 'New categories have been created and applied to the product.',
+          : 'Categories have been applied to the product.',
       });
     } catch (error) {
       console.error('Error creating categories:', error);
