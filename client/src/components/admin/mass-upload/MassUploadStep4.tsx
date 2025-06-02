@@ -69,17 +69,17 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
     },
   });
 
-  // Fetch existing products for duplicate checking and price comparison
-  const { data: productsData, isLoading: isLoadingProducts } = useQuery({
-    queryKey: ['/api/products', 'all-skus-with-pricing'],
+  // Fetch existing draft records for duplicate checking
+  const { data: draftsData, isLoading: isLoadingDrafts } = useQuery({
+    queryKey: ['/api/product-drafts'],
     queryFn: async () => {
-      const response = await apiRequest('GET', '/api/products?fields=sku,name,price,salePrice,costPrice&limit=10000');
+      const response = await apiRequest('GET', '/api/product-drafts');
       return response.json();
     },
   });
 
   const categories = categoriesData?.data || [];
-  const existingProducts = productsData?.data || [];
+  const existingDrafts = draftsData?.data || [];
 
   // Auto-increment display order logic - same as admin categories page
   useEffect(() => {
@@ -201,13 +201,13 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
   };
 
   useEffect(() => {
-    if (!isLoadingCategories && !isLoadingProducts && !validationComplete) {
+    if (!isLoadingCategories && !isLoadingDrafts && !validationComplete) {
       runValidation();
     }
-  }, [isLoadingCategories, isLoadingProducts]);
+  }, [isLoadingCategories, isLoadingDrafts]);
 
   const runValidation = async () => {
-    if (isLoadingCategories || isLoadingProducts) return;
+    if (isLoadingCategories || isLoadingDrafts) return;
     
     setIsValidating(true);
     
@@ -216,46 +216,35 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
         const errors: string[] = [];
         const warnings: string[] = [];
 
-        // Check for duplicate SKU and store existing product data for price comparison
-        const duplicateSku = existingProducts.find((p: any) => 
-          p.sku && product.sku && p.sku.toLowerCase() === product.sku.toLowerCase()
+        // Check for duplicate SKU in existing drafts
+        const duplicateDraft = existingDrafts.find((draft: any) => 
+          draft.sku && product.sku && draft.sku.toLowerCase() === product.sku.toLowerCase()
         );
-        if (duplicateSku) {
-          // Store existing product data for price comparison
-          product.existingProduct = {
-            id: duplicateSku.id,
-            name: duplicateSku.name,
-            price: duplicateSku.price,
-            salePrice: duplicateSku.salePrice,
-            costPrice: duplicateSku.costPrice
+        if (duplicateDraft) {
+          // Store existing draft data for comparison
+          product.existingDraft = {
+            id: duplicateDraft.id,
+            name: duplicateDraft.name,
+            price: duplicateDraft.price,
+            salePrice: duplicateDraft.salePrice,
+            costPrice: duplicateDraft.costPrice,
+            draftStatus: duplicateDraft.draftStatus
           };
 
-          // Check for price differences
-          const hasRegularPriceChange = Math.abs(duplicateSku.price - product.regularPrice) > 0.01;
-          const hasSalePriceChange = Math.abs((duplicateSku.salePrice || 0) - (product.salePrice || 0)) > 0.01;
-          const hasCostPriceChange = Math.abs(duplicateSku.costPrice - product.costPrice) > 0.01;
-          
-          product.hasPriceChanges = hasRegularPriceChange || hasSalePriceChange || hasCostPriceChange;
-
-          if (product.hasPriceChanges) {
-            warnings.push(`Product with SKU "${product.sku}" exists with different pricing. You can choose to update the prices.`);
-            // Initialize price update options to false by default
-            product.priceUpdateOptions = {
-              updateRegularPrice: false,
-              updateSalePrice: false,
-              updateCostPrice: false
-            };
-          } else {
-            errors.push(`Product with SKU "${product.sku}" already exists with identical pricing`);
-          }
+          // Mark as duplicate and allow user to deselect
+          product.isDuplicate = true;
+          product.isSelected = false; // Default to deselected for duplicates
+          warnings.push(`Product with SKU "${product.sku}" already has a draft record (Status: ${duplicateDraft.draftStatus}). You can choose to upload anyway or skip this duplicate.`);
+        } else {
+          product.isSelected = true; // Default to selected for non-duplicates
         }
 
-        // Check for duplicate name
-        const duplicateName = existingProducts.find((p: any) => 
-          p.name && product.title && p.name.toLowerCase() === product.title.toLowerCase()
+        // Check for duplicate name in existing drafts
+        const duplicateName = existingDrafts.find((draft: any) => 
+          draft.name && product.title && draft.name.toLowerCase() === product.title.toLowerCase()
         );
-        if (duplicateName) {
-          warnings.push(`Product with similar name "${product.title}" already exists`);
+        if (duplicateName && !duplicateDraft) {
+          warnings.push(`Product with similar name "${product.title}" already has a draft record`);
         }
 
         // Helper function to normalize text for comparison (handles special characters and encoding issues)
@@ -448,7 +437,7 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
     return <Badge variant="default">Valid</Badge>;
   };
 
-  if (isLoadingCategories || isLoadingProducts) {
+  if (isLoadingCategories || isLoadingDrafts) {
     return (
       <Card>
         <CardHeader>
