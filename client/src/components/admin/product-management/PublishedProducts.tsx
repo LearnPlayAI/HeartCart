@@ -48,6 +48,8 @@ import {
 import {
   Search,
   MoreHorizontal,
+  ChevronLeft,
+  ChevronRight,
   Package,
   Eye,
   Edit,
@@ -387,7 +389,7 @@ export const PublishedProducts: React.FC = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredProducts.map((product: PublishedProduct) => (
+                  {paginatedProducts.map((product: PublishedProduct) => (
                     <TableRow key={product.id}>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-3">
@@ -520,6 +522,38 @@ export const PublishedProducts: React.FC = () => {
             </div>
           )}
         </CardContent>
+        
+        {/* Pagination Controls */}
+        {totalProducts > itemsPerPage && (
+          <div className="flex items-center justify-between px-6 py-4 border-t">
+            <div className="text-sm text-muted-foreground">
+              Showing {startIndex + 1} to {Math.min(endIndex, totalProducts)} of {totalProducts} products
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Previous
+              </Button>
+              <span className="text-sm">
+                Page {currentPage} of {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage >= totalPages}
+              >
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </Card>
 
       {/* Duplicate Detection Dialog */}
