@@ -108,6 +108,9 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
   const [newCategoryLevel, setNewCategoryLevel] = useState<number>(0);
   const [newCategoryDisplayOrder, setNewCategoryDisplayOrder] = useState<number>(0);
   
+  // AI category suggestion state
+  const [showAiCategorySuggestions, setShowAiCategorySuggestions] = useState(false);
+  
   // Fetch categories for the dropdown
   const { data: categoriesData, isLoading: isCategoriesLoading } = useQuery({
     queryKey: ['/api/categories'],
@@ -469,6 +472,21 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
       setNewCategoryLevel(0);
     }
   }, [newCategoryParentId]);
+  
+  // Handle AI category selection
+  const handleAiCategorySelection = (parentId: number, childId: number | null) => {
+    // Update the form with the selected category
+    if (childId) {
+      // If there's a child category, use that as the main category
+      form.setValue('categoryId', childId);
+    } else {
+      // Otherwise use the parent category
+      form.setValue('categoryId', parentId);
+    }
+    
+    // Close the dialog
+    setShowAiCategorySuggestions(false);
+  };
   
   // Function to enhance existing product title and description using AI
   const enhanceProductWithAI = async () => {
@@ -840,6 +858,42 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* AI Category Suggestion Button */}
+            <div className="col-span-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  const productName = form.getValues('name');
+                  const productDescription = form.getValues('description');
+                  
+                  if (!productName?.trim()) {
+                    toast({
+                      title: 'Product Name Required',
+                      description: 'Please enter a product name before getting AI category suggestions.',
+                      variant: 'destructive'
+                    });
+                    return;
+                  }
+                  
+                  if (!productDescription?.trim()) {
+                    toast({
+                      title: 'Description Required',
+                      description: 'Please enter a product description before getting AI category suggestions.',
+                      variant: 'destructive'
+                    });
+                    return;
+                  }
+                  
+                  setShowAiCategorySuggestions(true);
+                }}
+                className="w-full h-10 border-purple-200 hover:border-purple-300 hover:bg-purple-50"
+              >
+                <Sparkles className="h-4 w-4 mr-2 text-purple-600" />
+                Get AI Category Suggestions
+              </Button>
             </div>
 
             {/* Hidden field to maintain form validation */}
@@ -1453,6 +1507,15 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    {/* AI Category Suggestion Dialog */}
+    <AICategorySuggestionDialog
+      isOpen={showAiCategorySuggestions}
+      onOpenChange={setShowAiCategorySuggestions}
+      productName={form.getValues('name') || ''}
+      productDescription={form.getValues('description') || ''}
+      onCategorySelected={handleAiCategorySelection}
+    />
     </>
   );
 };
