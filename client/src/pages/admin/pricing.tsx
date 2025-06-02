@@ -61,10 +61,10 @@ export default function PricingPage() {
   
   // Search and filter states
   const [searchQuery, setSearchQuery] = useState('');
-  const [parentCategoryFilter, setParentCategoryFilter] = useState<string>('');
-  const [childCategoryFilter, setChildCategoryFilter] = useState<string>('');
-  const [supplierFilter, setSupplierFilter] = useState<string>('');
-  const [catalogFilter, setCatalogFilter] = useState<string>('');
+  const [parentCategoryFilter, setParentCategoryFilter] = useState<string>('all');
+  const [childCategoryFilter, setChildCategoryFilter] = useState<string>('all');
+  const [supplierFilter, setSupplierFilter] = useState<string>('all');
+  const [catalogFilter, setCatalogFilter] = useState<string>('all');
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   
@@ -163,7 +163,7 @@ export default function PricingPage() {
 
   // Get child categories for the selected parent - only active ones
   const availableChildCategories = useMemo(() => {
-    if (!parentCategoryFilter) return [];
+    if (!parentCategoryFilter || parentCategoryFilter === 'all') return [];
     const parentId = parseInt(parentCategoryFilter);
     return categoriesWithParents.filter((cat: any) => cat.parentId === parentId && cat.isActive);
   }, [categoriesWithParents, parentCategoryFilter]);
@@ -395,15 +395,21 @@ export default function PricingPage() {
   // Clear filters
   const clearFilters = () => {
     setSearchQuery('');
-    setParentCategoryFilter('');
-    setChildCategoryFilter('');
+    setParentCategoryFilter('all');
+    setChildCategoryFilter('all');
     setSupplierFilter('all');
     setCatalogFilter('all');
     setCurrentPage(1);
   };
 
   // Active filters count
-  const activeFiltersCount = [searchQuery, parentCategoryFilter, childCategoryFilter, supplierFilter, catalogFilter].filter(Boolean).length;
+  const activeFiltersCount = [
+    searchQuery, 
+    parentCategoryFilter !== 'all' ? parentCategoryFilter : '', 
+    childCategoryFilter !== 'all' ? childCategoryFilter : '', 
+    supplierFilter !== 'all' ? supplierFilter : '', 
+    catalogFilter !== 'all' ? catalogFilter : ''
+  ].filter(Boolean).length;
 
   if (productsError) {
     return (
@@ -482,7 +488,7 @@ export default function PricingPage() {
               {/* Parent Category Filter */}
               <Select value={parentCategoryFilter} onValueChange={(value) => {
                 setParentCategoryFilter(value);
-                setChildCategoryFilter(''); // Clear child when parent changes
+                setChildCategoryFilter('all'); // Reset child when parent changes
               }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Filter by parent category" />
@@ -501,7 +507,7 @@ export default function PricingPage() {
               <Select 
                 value={childCategoryFilter} 
                 onValueChange={setChildCategoryFilter}
-                disabled={!parentCategoryFilter || availableChildCategories.length === 0}
+                disabled={!parentCategoryFilter || parentCategoryFilter === 'all' || availableChildCategories.length === 0}
               >
                 <SelectTrigger>
                   <SelectValue placeholder={
