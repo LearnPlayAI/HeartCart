@@ -1,7 +1,7 @@
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, ShoppingBag, Package, CreditCard, Users, Settings, BarChart3, LogOut, DollarSign, BrainCircuit, Factory, BookOpen, Tags, FileText, Upload, PlusCircle, Menu, Gift } from "lucide-react";
+import { LayoutDashboard, ShoppingBag, Package, CreditCard, Users, Settings, BarChart3, LogOut, DollarSign, BrainCircuit, Factory, BookOpen, Tags, FileText, Upload, PlusCircle, Menu, Gift, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -15,7 +15,7 @@ interface AdminLayoutProps {
 /**
  * Navigation menu for admin dashboard
  */
-function Navigation({ className }: { className?: string }) {
+function Navigation({ className, isCollapsed }: { className?: string; isCollapsed?: boolean }) {
   const [location] = useLocation();
   const { logoutMutation } = useAuth();
 
@@ -53,8 +53,8 @@ function Navigation({ className }: { className?: string }) {
                 : "text-gray-600 hover:bg-pink-50 hover:text-pink-700"
             )}
           >
-            <item.icon className={cn("mr-3 h-5 w-5")} />
-            {item.label}
+            <item.icon className={cn("h-5 w-5", isCollapsed ? "mx-auto" : "mr-3")} />
+            {!isCollapsed && item.label}
           </Link>
         );
       })}
@@ -64,8 +64,8 @@ function Navigation({ className }: { className?: string }) {
         className="w-full flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:bg-pink-50 hover:text-pink-700"
         disabled={logoutMutation.isPending}
       >
-        <LogOut className="mr-3 h-5 w-5" />
-        {logoutMutation.isPending ? "Signing out..." : "Logout"}
+        <LogOut className={cn("h-5 w-5", isCollapsed ? "mx-auto" : "mr-3")} />
+        {!isCollapsed && (logoutMutation.isPending ? "Signing out..." : "Logout")}
       </button>
     </nav>
   );
@@ -77,33 +77,58 @@ function Navigation({ className }: { className?: string }) {
 export function AdminLayout({ children }: AdminLayoutProps) {
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const { user } = useAuth();
   
   // Responsive sidebar that shows as a drawer on mobile
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Desktop sidebar */}
-      <div className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0">
+      <div className={cn(
+        "hidden md:flex md:flex-col md:fixed md:inset-y-0 transition-all duration-300 ease-in-out",
+        isCollapsed ? "md:w-16" : "md:w-64"
+      )}>
         <div className="flex-1 flex flex-col min-h-0 bg-white border-r border-gray-200">
-          <div className="flex items-center h-16 flex-shrink-0 px-4 bg-pink-600">
-            <Link href="/" className="text-xl font-bold text-white">
-              TEE ME YOU
-            </Link>
+          <div className="flex items-center h-16 flex-shrink-0 px-4 bg-pink-600 justify-between">
+            {!isCollapsed && (
+              <Link href="/" className="text-xl font-bold text-white">
+                TEE ME YOU
+              </Link>
+            )}
+            {isCollapsed && (
+              <Link href="/" className="text-lg font-bold text-white mx-auto">
+                T
+              </Link>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsCollapsed(!isCollapsed)}
+              className="text-white hover:bg-pink-700 ml-auto"
+            >
+              {isCollapsed ? (
+                <ChevronRight className="h-4 w-4" />
+              ) : (
+                <ChevronLeft className="h-4 w-4" />
+              )}
+            </Button>
           </div>
           <div className="flex-1 flex flex-col overflow-y-auto pt-5 pb-4">
-            <ScrollArea className="px-3">
-              <Navigation />
+            <ScrollArea className={cn("px-3", isCollapsed && "px-1")}>
+              <Navigation isCollapsed={isCollapsed} />
             </ScrollArea>
           </div>
           <div className="flex-shrink-0 flex border-t border-gray-200 p-4">
-            <div className="flex items-center">
+            <div className={cn("flex items-center", isCollapsed && "justify-center")}>
               <div className="h-8 w-8 rounded-full bg-pink-500 flex items-center justify-center text-white font-bold">
                 {user?.username.charAt(0).toUpperCase()}
               </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-gray-700">{user?.username}</p>
-                <p className="text-xs font-medium text-gray-500">Admin</p>
-              </div>
+              {!isCollapsed && (
+                <div className="ml-3">
+                  <p className="text-sm font-medium text-gray-700">{user?.username}</p>
+                  <p className="text-xs font-medium text-gray-500">Admin</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -154,7 +179,10 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       </div>
 
       {/* Main content */}
-      <div className={cn("md:pl-64 flex flex-col flex-1")}>
+      <div className={cn(
+        "flex flex-col flex-1 transition-all duration-300 ease-in-out",
+        isCollapsed ? "md:pl-16" : "md:pl-64"
+      )}>
         <main className="flex-1 pb-8">
           <div className="mx-auto px-4 sm:px-6 md:px-8 py-4">
             {children}
