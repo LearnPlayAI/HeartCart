@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import { useCart } from '@/hooks/use-cart';
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogHeader } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -299,10 +299,12 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[800px]">
-        <DialogTitle className="text-xl font-bold">{product.name}</DialogTitle>
-        <DialogDescription className="sr-only">
-          Quick view of {product.name} with pricing and options
-        </DialogDescription>
+        <DialogHeader>
+          <DialogTitle className="text-xl font-bold">{product.name}</DialogTitle>
+          <DialogDescription className="sr-only">
+            Quick view of {product.name} with pricing and options
+          </DialogDescription>
+        </DialogHeader>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Product Image */}
           <div className="relative group">
