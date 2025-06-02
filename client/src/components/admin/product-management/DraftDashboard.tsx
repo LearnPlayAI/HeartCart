@@ -266,16 +266,21 @@ export const DraftDashboard: React.FC = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>SKU</TableHead>
                     <TableHead>Product</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Last Updated</TableHead>
-                    <TableHead>Progress</TableHead>
                     <TableHead className="w-[100px] text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredDrafts.map((draft: ProductDraft) => (
                     <TableRow key={draft.id}>
+                      <TableCell className="font-medium">
+                        <div className="text-sm font-mono">
+                          {draft.sku || 'No SKU'}
+                        </div>
+                      </TableCell>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-3">
                           {draft.imageUrls && draft.imageUrls.length > 0 ? (
@@ -328,13 +333,6 @@ export const DraftDashboard: React.FC = () => {
                       <TableCell>
                         <div className="text-sm">
                           {formatDate(draft.lastModified)}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          {draft.completedSteps ? 
-                            `${draft.completedSteps.length} of 7 steps completed` : 
-                            getStepDisplayName(draft.wizardStep)}
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
