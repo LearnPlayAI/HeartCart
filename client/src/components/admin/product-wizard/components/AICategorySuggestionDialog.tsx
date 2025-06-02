@@ -294,9 +294,15 @@ export function AICategorySuggestionDialog({
             <Brain className="h-5 w-5 text-purple-600" />
             AI Category Suggestions
           </DialogTitle>
-          <DialogDescription>
-            Based on "{productName}" and its description, here are the recommended categories:
-          </DialogDescription>
+          <div className="space-y-3">
+            <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+              <p className="text-xs font-medium text-blue-700 mb-1">Product Name:</p>
+              <p className="text-sm text-blue-900 font-semibold">{productName}</p>
+            </div>
+            <DialogDescription>
+              Based on your product details above, here are the AI-recommended categories:
+            </DialogDescription>
+          </div>
         </DialogHeader>
 
         <div className="space-y-6">
