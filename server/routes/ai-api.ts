@@ -661,16 +661,19 @@ ${JSON.stringify(categoryStructure, null, 2)}
 
 Task:
 1. Analyze the product and suggest the 2-3 best matching parent/child category combinations from the existing categories
-2. If no suitable categories exist, suggest new parent/child category names that should be created
+2. If a parent category is appropriate but lacks a suitable child category, suggest creating a new child category under that parent
+3. If no suitable parent categories exist, suggest completely new parent/child category combinations
 
 For existing category suggestions:
 - Provide the exact category IDs and names from the structure above
 - Include a confidence score (0-100)
 - Explain your reasoning in 1-2 sentences
+- If suggesting only a parent category without a child, consider if a new child category should be created
 
-For new category suggestions (only if existing ones don't fit well):
-- Suggest specific parent and child category names
-- Explain why these new categories are needed
+For new category suggestions:
+- Suggest new child categories under existing parents when the parent fits but no appropriate child exists
+- Suggest completely new parent/child combinations only when existing parents don't fit
+- Always explain why these new categories are needed
 
 FORMAT YOUR RESPONSE AS A JSON OBJECT:
 {
@@ -695,8 +698,10 @@ Rules:
 - Only suggest existing categories that actually exist in the provided structure
 - Confidence should reflect how well the product fits the category
 - Provide 2-3 suggestions maximum for existing categories
-- Only suggest new categories if existing ones are truly inadequate
+- When a parent category fits but lacks an appropriate child category, suggest creating a new child category
+- For new child categories, use the existing parent's name and suggest an appropriate child name
 - Be specific and accurate with category names and IDs
+- Always consider if a more specific child category would be beneficial
 `.trim();
 
   return prompt;
