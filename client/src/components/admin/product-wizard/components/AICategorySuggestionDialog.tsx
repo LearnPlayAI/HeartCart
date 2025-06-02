@@ -251,7 +251,9 @@ export function AICategorySuggestionDialog({
         
         console.log('Creating child category with data:', childCategoryData);
         const childResponse = await createCategoryMutation.mutateAsync(childCategoryData);
+        console.log('Child category created successfully:', childResponse);
         childId = childResponse.id;
+        console.log('Child category ID assigned:', childId);
       }
 
       // Apply the categories
