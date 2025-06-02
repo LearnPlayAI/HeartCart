@@ -110,7 +110,6 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
   
   // AI category suggestion state
   const [showAiCategorySuggestions, setShowAiCategorySuggestions] = useState(false);
-  const [categoryUpdateKey, setCategoryUpdateKey] = useState(0);
   
   // Fetch categories for the dropdown
   const { data: categoriesData, isLoading: isCategoriesLoading } = useQuery({
@@ -199,26 +198,26 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
   const currentCategory = React.useMemo(() => {
     if (!formCategoryId || !categoriesWithParents.length) return null;
     return categoriesWithParents.find((cat: any) => cat.id === formCategoryId);
-  }, [formCategoryId, categoriesWithParents, categoryUpdateKey]);
+  }, [formCategoryId, categoriesWithParents]);
 
   const parentCategoryId = React.useMemo(() => {
     if (!currentCategory) return null;
     // If current category has a parent, return the parent ID
     // If current category IS a parent (no parentId), return its own ID
     return currentCategory.parentId || currentCategory.id;
-  }, [currentCategory, categoryUpdateKey]);
+  }, [currentCategory]);
 
   const childCategoryId = React.useMemo(() => {
     if (!currentCategory) return null;
     // Only return child ID if current category actually has a parent
     return currentCategory.parentId ? currentCategory.id : null;
-  }, [currentCategory, categoryUpdateKey]);
+  }, [currentCategory]);
 
   // Get child categories for the selected parent - only active ones
   const childCategories = React.useMemo(() => {
     if (!parentCategoryId) return [];
     return categoriesWithParents.filter((cat: any) => cat.parentId === parentCategoryId && cat.isActive);
-  }, [categoriesWithParents, parentCategoryId, categoryUpdateKey]);
+  }, [categoriesWithParents, parentCategoryId]);
 
 
 
@@ -489,16 +488,8 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
       costPrice: currentFormData.costPrice ? Number(currentFormData.costPrice) : null,
     };
     
-    // Update form with new category
-    form.setValue('categoryId', selectedCategoryId);
-    
-    // Save without auto-advancing
-    onSave(dataToSave, false);
-    
-    // Force category dropdown re-render by incrementing the update key
-    setTimeout(() => {
-      setCategoryUpdateKey(prev => prev + 1);
-    }, 100);
+    // Save first, then update form
+    onSave(dataToSave, true); // Pass autoAdvance = true to trigger form refresh
     
     // Close the dialog
     setShowAiCategorySuggestions(false);

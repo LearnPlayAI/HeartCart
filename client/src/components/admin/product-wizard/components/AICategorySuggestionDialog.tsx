@@ -139,14 +139,10 @@ export function AICategorySuggestionDialog({
   }, [isOpen, productName, productDescription]);
 
   const handleSelectSuggestion = (suggestion: CategorySuggestion) => {
-    console.log('Selected suggestion:', suggestion);
     setSelectedSuggestion(suggestion);
-    // Clear any new category selection when selecting existing category
-    setNewCategoryData(null);
   };
 
   const handleApproveSelection = () => {
-    console.log('Applying selection:', selectedSuggestion);
     if (selectedSuggestion?.parentCategory) {
       const parentId = selectedSuggestion.parentCategory.id;
       const childId = selectedSuggestion.childCategory?.id || null;
@@ -169,42 +165,42 @@ export function AICategorySuggestionDialog({
       return;
     }
 
+    if (categoriesQuery.isLoading) {
+      toast({
+        title: 'Please wait',
+        description: 'Categories are still loading. Please try again in a moment.',
+        variant: 'default',
+      });
+      return;
+    }
+
+    if (!Array.isArray(categories) || categories.length === 0) {
+      toast({
+        title: 'Error',
+        description: 'Categories not loaded yet. Please try again.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     try {
       setIsCreatingCategory(true);
-
-      // Force fresh categories data by refetching
-      const refetchResult = await categoriesQuery.refetch();
-      console.log('Refetch result:', refetchResult);
-      
-      // The refetch result contains the processed data from the queryFn
-      const freshData = refetchResult.data || [];
-      console.log('Fresh categories data length:', freshData.length);
-      console.log('Sample categories:', freshData.slice(0, 3).map(cat => ({name: cat.name, level: cat.level})));
-      
-      // Ensure we have categories data
-      const categoriesArray = Array.isArray(freshData) ? freshData : [];
 
       // First, check if parent category already exists
       const parentSlug = slugify(newCategoryData.parentName, { lower: true, strict: true });
       let parentId = null;
       
       // Look for existing parent category by name
-      console.log('Looking for parent category:', newCategoryData.parentName);
-      console.log('Available categories:', categoriesArray.map(cat => ({name: cat.name, level: cat.level})));
-      
-      const existingParent = categoriesArray.find(
+      const existingParent = categories.find(
         cat => cat.name.toLowerCase() === newCategoryData.parentName.toLowerCase() && cat.level === 0
       );
-
-      console.log('Found existing parent:', existingParent);
 
       if (existingParent) {
         // Use existing parent category
         parentId = existingParent.id;
-        console.log('Using existing parent ID:', parentId);
       } else {
         // Create new parent category - get max display order for parent categories (level 0)
-        const parentCategories = categoriesArray.filter(cat => cat.level === 0);
+        const parentCategories = categories.filter(cat => cat.level === 0);
         const maxParentDisplayOrder = parentCategories.length > 0 
           ? Math.max(...parentCategories.map(cat => cat.displayOrder || 0))
           : 0;
@@ -224,16 +220,9 @@ export function AICategorySuggestionDialog({
       }
 
       let childId = null;
-      console.log('Checking child category creation:', {
-        hasChildName: !!newCategoryData.childName,
-        childName: newCategoryData.childName,
-        parentId: parentId
-      });
-      
       if (newCategoryData.childName) {
-        console.log('Starting child category creation process...');
         // Get the highest display order for children under this specific parent
-        const siblingChildren = categoriesArray.filter(cat => cat.parentId === parentId && cat.level === 1);
+        const siblingChildren = categories.filter(cat => cat.parentId === parentId && cat.level === 1);
         const maxChildDisplayOrder = siblingChildren.length > 0 
           ? Math.max(...siblingChildren.map(cat => cat.displayOrder || 0))
           : 0;
@@ -251,14 +240,9 @@ export function AICategorySuggestionDialog({
         
         console.log('Creating child category with data:', childCategoryData);
         const childResponse = await createCategoryMutation.mutateAsync(childCategoryData);
-        console.log('Child category created successfully:', childResponse);
         childId = childResponse.id;
-        console.log('Child category ID assigned:', childId);
       }
 
-      // Invalidate categories cache to refresh dropdowns
-      await categoriesQuery.refetch();
-      
       // Apply the categories
       onCategorySelected(parentId, childId);
       onOpenChange(false);
@@ -269,7 +253,7 @@ export function AICategorySuggestionDialog({
         title: 'Categories Created',
         description: childId 
           ? 'New child category has been created and applied to the product.'
-          : 'Categories have been applied to the product.',
+          : 'New categories have been created and applied to the product.',
       });
     } catch (error) {
       console.error('Error creating categories:', error);
@@ -310,15 +294,9 @@ export function AICategorySuggestionDialog({
             <Brain className="h-5 w-5 text-purple-600" />
             AI Category Suggestions
           </DialogTitle>
-          <div className="space-y-3">
-            <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-              <p className="text-xs font-medium text-blue-700 mb-1">Product Name:</p>
-              <p className="text-sm text-blue-900 font-semibold">{productName}</p>
-            </div>
-            <DialogDescription>
-              Based on your product details above, here are the AI-recommended categories:
-            </DialogDescription>
-          </div>
+          <DialogDescription>
+            Based on "{productName}" and its description, here are the recommended categories:
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
@@ -358,12 +336,7 @@ export function AICategorySuggestionDialog({
                         ? 'border-green-500 bg-green-50'
                         : 'hover:border-muted-foreground/20'
                     }`}
-                    onClick={() => {
-                      console.log('Selected new category:', newSuggestion);
-                      setNewCategoryData(newSuggestion);
-                      // Clear any existing category selection when selecting new category
-                      setSelectedSuggestion(null);
-                    }}
+                    onClick={() => setNewCategoryData(newSuggestion)}
                   >
                     <CardHeader className="pb-2">
                       <div className="flex items-center justify-between">
@@ -449,40 +422,31 @@ export function AICategorySuggestionDialog({
             Cancel
           </Button>
           
-          <Button 
-            onClick={(e) => {
-              console.log('Apply button clicked!', selectedSuggestion);
-              e.preventDefault();
-              e.stopPropagation();
-              handleApproveSelection();
-            }}
-            disabled={!selectedSuggestion}
-          >
-            Apply Selected Category
-          </Button>
+          {selectedSuggestion && (
+            <Button onClick={handleApproveSelection}>
+              Apply Selected Category
+            </Button>
+          )}
           
-          <Button
-            onClick={(e) => {
-              console.log('Create button clicked!', newCategoryData);
-              e.preventDefault();
-              e.stopPropagation();
-              handleCreateNewCategories();
-            }}
-            disabled={!newCategoryData || isCreatingCategory || createCategoryMutation.isPending}
-            className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400"
-          >
-            {isCreatingCategory || createCategoryMutation.isPending ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Creating...
-              </>
-            ) : (
-              <>
-                <Plus className="h-4 w-4 mr-2" />
-                Create & Apply Categories
-              </>
-            )}
-          </Button>
+          {newCategoryData && (
+            <Button
+              onClick={handleCreateNewCategories}
+              disabled={isCreatingCategory || createCategoryMutation.isPending || categoriesQuery.isLoading || !Array.isArray(categories)}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {isCreatingCategory || createCategoryMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create & Apply Categories
+                </>
+              )}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
