@@ -156,7 +156,25 @@ export function AICategorySuggestionDialog({
   };
 
   const handleCreateNewCategories = async () => {
-    if (!newCategoryData || !Array.isArray(categories)) {
+    if (!newCategoryData) {
+      toast({
+        title: 'Error',
+        description: 'No category data selected.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (categoriesQuery.isLoading) {
+      toast({
+        title: 'Please wait',
+        description: 'Categories are still loading. Please try again in a moment.',
+        variant: 'default',
+      });
+      return;
+    }
+
+    if (!Array.isArray(categories) || categories.length === 0) {
       toast({
         title: 'Error',
         description: 'Categories not loaded yet. Please try again.',
@@ -413,7 +431,7 @@ export function AICategorySuggestionDialog({
           {newCategoryData && (
             <Button
               onClick={handleCreateNewCategories}
-              disabled={isCreatingCategory || createCategoryMutation.isPending}
+              disabled={isCreatingCategory || createCategoryMutation.isPending || categoriesQuery.isLoading || !Array.isArray(categories)}
               className="bg-green-600 hover:bg-green-700"
             >
               {isCreatingCategory || createCategoryMutation.isPending ? (
