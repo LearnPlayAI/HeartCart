@@ -49,18 +49,28 @@ export const DraftDashboard: React.FC = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newDraftName, setNewDraftName] = useState('');
 
   const [newDraftLoading, setNewDraftLoading] = useState(false);
+
+  // Debounce search query to avoid excessive API calls
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
   
   // Fetch product drafts with search functionality
   const { data: draftsData, isLoading: isDraftsLoading, error: draftsError } = useQuery({
-    queryKey: ['/api/product-drafts', searchQuery],
+    queryKey: ['/api/product-drafts', debouncedSearchQuery],
     queryFn: async () => {
       const searchParams = new URLSearchParams();
-      if (searchQuery) {
-        searchParams.append('search', searchQuery);
+      if (debouncedSearchQuery) {
+        searchParams.append('search', debouncedSearchQuery);
       }
       const url = `/api/product-drafts${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
       const response = await apiRequest('GET', url);
@@ -126,19 +136,10 @@ export const DraftDashboard: React.FC = () => {
   
 
   
-  // Filter drafts based on search query and exclude published products
+  // Filter drafts to exclude published products (search is handled server-side)
   const filteredDrafts = draftsData?.data?.filter((draft: ProductDraft) => {
     // Exclude published products from the drafts view
-    if (draft.draftStatus === 'published') {
-      return false;
-    }
-    
-    // Apply search filter if query exists
-    if (searchQuery) {
-      return draft.name.toLowerCase().includes(searchQuery.toLowerCase());
-    }
-    
-    return true;
+    return draft.draftStatus !== 'published';
   }) || [];
   
   // Get wizard step display name
