@@ -438,14 +438,24 @@ export function AICategorySuggestionDialog({
           </Button>
           
           <Button 
-            onClick={handleApproveSelection}
+            onClick={(e) => {
+              console.log('Apply button clicked!', selectedSuggestion);
+              e.preventDefault();
+              e.stopPropagation();
+              handleApproveSelection();
+            }}
             disabled={!selectedSuggestion}
           >
             Apply Selected Category
           </Button>
           
           <Button
-            onClick={handleCreateNewCategories}
+            onClick={(e) => {
+              console.log('Create button clicked!', newCategoryData);
+              e.preventDefault();
+              e.stopPropagation();
+              handleCreateNewCategories();
+            }}
             disabled={!newCategoryData || isCreatingCategory || createCategoryMutation.isPending || categoriesQuery.isLoading || !Array.isArray(categories)}
             className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400"
           >
