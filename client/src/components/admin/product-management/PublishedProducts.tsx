@@ -114,6 +114,15 @@ export const PublishedProducts: React.FC = () => {
   const products = productsData?.success ? productsData.data : [];
   const categories = categoriesData?.success ? categoriesData.data : [];
 
+  // Organize categories into parent/child relationships
+  const categoriesWithParents = useMemo(() => {
+    const categoryMap = new Map(categories.map((cat: any) => [cat.id, cat]));
+    return categories.map((category: any) => ({
+      ...category,
+      parent: category.parentId ? categoryMap.get(category.parentId) : null
+    }));
+  }, [categories]);
+
   // Process categories into parent and child relationships
   const parentCategories = useMemo(() => {
     return categories.filter((cat: any) => cat.parentId === null || cat.parentId === undefined);
@@ -125,6 +134,19 @@ export const PublishedProducts: React.FC = () => {
     return categories.filter((cat: any) => cat.parentId === parentId);
   }, [categories, selectedParentCategory]);
 
+  // Transform products to include category names with parent/child structure
+  const enrichedProducts = useMemo(() => {
+    return products.map((product: any) => {
+      const category = categoriesWithParents.find((cat: any) => cat.id === product.categoryId);
+      return {
+        ...product,
+        categoryName: category?.name || 'Uncategorized',
+        parentCategoryName: category?.parent?.name || 'No Parent',
+        childCategoryName: category?.name || 'Uncategorized'
+      };
+    });
+  }, [products, categoriesWithParents]);
+
   // Handle parent category change
   const handleParentCategoryChange = (value: string) => {
     setSelectedParentCategory(value);
@@ -133,7 +155,7 @@ export const PublishedProducts: React.FC = () => {
 
   // Filter products with search and category filtering
   const filteredProducts = useMemo(() => {
-    let filtered = products;
+    let filtered = enrichedProducts;
 
     // Apply search filtering
     if (searchQuery) {
@@ -381,8 +403,10 @@ export const PublishedProducts: React.FC = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Product</TableHead>
+                    <TableHead>SKU</TableHead>
+                    <TableHead>Parent Cat</TableHead>
+                    <TableHead>Child Cat</TableHead>
                     <TableHead>Price</TableHead>
-                    <TableHead>Stock</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Published</TableHead>
                     <TableHead className="w-[100px] text-right">Actions</TableHead>
@@ -418,20 +442,25 @@ export const PublishedProducts: React.FC = () => {
                         </div>
                       </TableCell>
                       <TableCell>
+                        <span className="font-mono text-sm">{product.sku || '-'}</span>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">
+                          {product.parentCategoryName}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">
+                          {product.childCategoryName}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
                         <div className="text-sm">
                           <div className="font-medium">{formatCurrency(product.price)}</div>
                           <div className="text-muted-foreground">
                             Cost: {formatCurrency(product.costPrice)}
                           </div>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge 
-                          variant={product.stock > 0 ? "default" : "destructive"}
-                          className="text-xs"
-                        >
-                          {product.stock > 0 ? `${product.stock} in stock` : 'Out of stock'}
-                        </Badge>
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col gap-1">
