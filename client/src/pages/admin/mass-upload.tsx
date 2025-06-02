@@ -32,20 +32,17 @@ export interface CSVProduct {
   childCategoryId?: number;
   // Draft ID after creation
   draftId?: number;
-  // Price comparison data for existing products
-  existingProduct?: {
+  // Duplicate checking for draft records
+  existingDraft?: {
     id: number;
     name: string;
     price: number;
     salePrice?: number;
     costPrice: number;
+    draftStatus: string;
   };
-  hasPriceChanges?: boolean;
-  priceUpdateOptions?: {
-    updateRegularPrice?: boolean;
-    updateSalePrice?: boolean;
-    updateCostPrice?: boolean;
-  };
+  isDuplicate?: boolean;
+  isSelected?: boolean;
 }
 
 export interface MassUploadData {
