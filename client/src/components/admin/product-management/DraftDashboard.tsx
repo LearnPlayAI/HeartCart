@@ -216,6 +216,18 @@ export const DraftDashboard: React.FC = () => {
     return filtered;
   }, [drafts, selectedParentCategory, selectedChildCategory, categories]);
 
+  // Calculate pagination for filtered drafts
+  const totalFilteredDrafts = filteredDrafts.length;
+  const totalPages = Math.ceil(totalFilteredDrafts / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedDrafts = filteredDrafts.slice(startIndex, endIndex);
+
+  // Reset to first page when filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedParentCategory, selectedChildCategory]);
+
   // Helper function to calculate name similarity
   const calculateSimilarity = (name1: string, name2: string): number => {
     const str1 = name1.toLowerCase().trim();
@@ -448,7 +460,7 @@ export const DraftDashboard: React.FC = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredDrafts.map((draft: ProductDraft) => (
+                  {paginatedDrafts.map((draft: ProductDraft) => (
                     <TableRow key={draft.id}>
                       <TableCell className="font-medium">
                         <div className="text-sm font-mono">
@@ -545,10 +557,10 @@ export const DraftDashboard: React.FC = () => {
         </CardContent>
         
         {/* Pagination Controls */}
-        {draftsData?.meta && draftsData.meta.total > itemsPerPage && (
+        {totalFilteredDrafts > itemsPerPage && (
           <div className="flex items-center justify-between px-6 py-4 border-t">
             <div className="text-sm text-muted-foreground">
-              Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, draftsData.meta.total)} of {draftsData.meta.total} drafts
+              Showing {startIndex + 1} to {Math.min(endIndex, totalFilteredDrafts)} of {totalFilteredDrafts} drafts
             </div>
             <div className="flex items-center space-x-2">
               <Button
@@ -561,13 +573,13 @@ export const DraftDashboard: React.FC = () => {
                 Previous
               </Button>
               <span className="text-sm">
-                Page {currentPage} of {Math.ceil(draftsData.meta.total / itemsPerPage)}
+                Page {currentPage} of {totalPages}
               </span>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setCurrentPage(prev => Math.min(Math.ceil(draftsData.meta.total / itemsPerPage), prev + 1))}
-                disabled={currentPage >= Math.ceil(draftsData.meta.total / itemsPerPage)}
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage >= totalPages}
               >
                 Next
                 <ChevronRight className="h-4 w-4" />
