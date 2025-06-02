@@ -287,6 +287,20 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
 
   // Handle form submission
   const onSubmit = (data: BasicInfoFormValues) => {
+    // Validate 20% minimum TMY markup if both cost price and sale price are set
+    if (data.costPrice && data.salePrice) {
+      const markup = calculateTMYMarkup(data.costPrice, data.salePrice);
+      if (markup !== null && markup < 20) {
+        const minimumPrice = data.costPrice * 1.2;
+        toast({
+          title: 'Invalid Pricing',
+          description: `Sale price must be at least R${minimumPrice.toFixed(2)} to maintain 20% TMY markup. Current markup: ${markup.toFixed(1)}%`,
+          variant: 'destructive'
+        });
+        return; // Stop form submission
+      }
+    }
+
     // If sale price is set, ensure onSale is true
     if (data.salePrice && data.salePrice < data.regularPrice) {
       data.onSale = true;
@@ -315,11 +329,41 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
   const handleSalePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const salePrice = parseFloat(e.target.value);
     const regularPrice = form.getValues('regularPrice');
+    const costPrice = form.getValues('costPrice');
     
     if (!isNaN(salePrice) && salePrice > 0 && salePrice < regularPrice) {
       form.setValue('onSale', true);
     }
+    
+    // Check minimum 20% TMY markup
+    if (costPrice && !isNaN(salePrice) && salePrice > 0) {
+      const minimumPrice = costPrice * 1.2; // 20% markup
+      if (salePrice < minimumPrice) {
+        toast({
+          title: 'Price Warning',
+          description: `Sale price must be at least R${minimumPrice.toFixed(2)} to maintain 20% TMY markup.`,
+          variant: 'destructive'
+        });
+      }
+    }
   };
+
+  // Calculate TMY Markup percentage
+  const calculateTMYMarkup = (costPrice: number | null, salePrice: number | null) => {
+    if (!costPrice || !salePrice || costPrice <= 0) return null;
+    return ((salePrice - costPrice) / costPrice) * 100;
+  };
+
+  // Calculate customer discount percentage
+  const calculateCustomerDiscount = (regularPrice: number, salePrice: number | null) => {
+    if (!salePrice || salePrice >= regularPrice || regularPrice <= 0) return null;
+    return ((regularPrice - salePrice) / regularPrice) * 100;
+  };
+
+  // Watch pricing fields for real-time calculations
+  const watchCostPrice = form.watch('costPrice');
+  const watchRegularPrice = form.watch('regularPrice');
+  const watchSalePrice = form.watch('salePrice');
 
   // Category creation mutation
   const createCategoryMutation = useMutation({
@@ -971,6 +1015,23 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
                         />
                       </FormControl>
                       <FormMessage />
+                      {/* Customer Discount Display */}
+                      {watchRegularPrice && watchSalePrice && watchSalePrice < watchRegularPrice && (
+                        <div className="mt-1">
+                          {(() => {
+                            const discount = calculateCustomerDiscount(watchRegularPrice, watchSalePrice);
+                            if (discount !== null) {
+                              return (
+                                <div className="text-xs flex items-center gap-1 text-blue-600">
+                                  <span className="font-medium">Customer Discount:</span>
+                                  <span>{discount.toFixed(1)}%</span>
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
+                        </div>
+                      )}
                     </FormItem>
                   )}
                 />
@@ -997,6 +1058,29 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
                         />
                       </FormControl>
                       <FormMessage />
+                      {/* TMY Markup Display */}
+                      {watchCostPrice && watchSalePrice && (
+                        <div className="mt-1">
+                          {(() => {
+                            const markup = calculateTMYMarkup(watchCostPrice, watchSalePrice);
+                            if (markup !== null) {
+                              const isValidMarkup = markup >= 20;
+                              return (
+                                <div className={`text-xs flex items-center gap-1 ${
+                                  isValidMarkup ? 'text-green-600' : 'text-red-600'
+                                }`}>
+                                  <span className="font-medium">TMY Markup:</span>
+                                  <span>{markup.toFixed(1)}%</span>
+                                  {!isValidMarkup && (
+                                    <span className="text-red-500 font-medium">(Min: 20%)</span>
+                                  )}
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
+                        </div>
+                      )}
                     </FormItem>
                   )}
                 />
@@ -1111,6 +1195,20 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
                   disabled={isLoading || isPublishing}
                   className="h-9 px-3 sm:h-10 sm:px-4 bg-green-600 hover:bg-green-700"
                   onClick={form.handleSubmit((data) => {
+                    // Validate 20% minimum TMY markup if both cost price and sale price are set
+                    if (data.costPrice && data.salePrice) {
+                      const markup = calculateTMYMarkup(data.costPrice, data.salePrice);
+                      if (markup !== null && markup < 20) {
+                        const minimumPrice = data.costPrice * 1.2;
+                        toast({
+                          title: 'Invalid Pricing',
+                          description: `Sale price must be at least R${minimumPrice.toFixed(2)} to maintain 20% TMY markup. Current markup: ${markup.toFixed(1)}%`,
+                          variant: 'destructive'
+                        });
+                        return; // Stop form submission
+                      }
+                    }
+                    
                     // Process the data same as onSubmit
                     if (data.salePrice && data.salePrice < data.regularPrice) {
                       data.onSale = true;
