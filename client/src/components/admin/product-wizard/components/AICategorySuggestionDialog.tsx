@@ -437,31 +437,30 @@ export function AICategorySuggestionDialog({
             Cancel
           </Button>
           
-          {selectedSuggestion && (
-            <Button onClick={handleApproveSelection}>
-              Apply Selected Category
-            </Button>
-          )}
+          <Button 
+            onClick={handleApproveSelection}
+            disabled={!selectedSuggestion}
+          >
+            Apply Selected Category
+          </Button>
           
-          {newCategoryData && (
-            <Button
-              onClick={handleCreateNewCategories}
-              disabled={isCreatingCategory || createCategoryMutation.isPending || categoriesQuery.isLoading || !Array.isArray(categories)}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              {isCreatingCategory || createCategoryMutation.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Creating...
-                </>
-              ) : (
-                <>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create & Apply Categories
-                </>
-              )}
-            </Button>
-          )}
+          <Button
+            onClick={handleCreateNewCategories}
+            disabled={!newCategoryData || isCreatingCategory || createCategoryMutation.isPending || categoriesQuery.isLoading || !Array.isArray(categories)}
+            className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400"
+          >
+            {isCreatingCategory || createCategoryMutation.isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Creating...
+              </>
+            ) : (
+              <>
+                <Plus className="h-4 w-4 mr-2" />
+                Create & Apply Categories
+              </>
+            )}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
