@@ -169,24 +169,6 @@ export function AICategorySuggestionDialog({
       return;
     }
 
-    if (categoriesQuery.isLoading) {
-      toast({
-        title: 'Please wait',
-        description: 'Categories are still loading. Please try again in a moment.',
-        variant: 'default',
-      });
-      return;
-    }
-
-    if (!Array.isArray(categories) || categories.length === 0) {
-      toast({
-        title: 'Error',
-        description: 'Categories not loaded yet. Please try again.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
     try {
       setIsCreatingCategory(true);
 
@@ -456,7 +438,7 @@ export function AICategorySuggestionDialog({
               e.stopPropagation();
               handleCreateNewCategories();
             }}
-            disabled={!newCategoryData || isCreatingCategory || createCategoryMutation.isPending || categoriesQuery.isLoading || !Array.isArray(categories)}
+            disabled={!newCategoryData || isCreatingCategory || createCategoryMutation.isPending}
             className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400"
           >
             {isCreatingCategory || createCategoryMutation.isPending ? (
