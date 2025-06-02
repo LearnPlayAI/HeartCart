@@ -474,7 +474,7 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
   }, [newCategoryParentId]);
   
   // Handle AI category selection
-  const handleAiCategorySelection = (parentId: number, childId: number | null) => {
+  const handleAiCategorySelection = async (parentId: number, childId: number | null) => {
     const selectedCategoryId = childId || parentId;
     
     // Update the form with the selected category
@@ -496,6 +496,11 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
     // Invalidate categories cache to refresh the dropdowns
     queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
     queryClient.invalidateQueries({ queryKey: ['/api/categories/main/with-children'] });
+    
+    // Force form to re-render with updated category
+    setTimeout(() => {
+      form.reset(form.getValues());
+    }, 100);
     
     // Close the dialog
     setShowAiCategorySuggestions(false);
