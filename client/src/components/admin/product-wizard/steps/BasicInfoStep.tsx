@@ -490,8 +490,13 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
       
       console.log('Saving AI category selection to database:', updateData);
       
-      // Save the category assignment directly to the product draft
-      const response = await apiRequest('PATCH', `/api/product-drafts/${draft.id}`, updateData);
+      // Save the category assignment using the wizard step endpoint to match form submission
+      const response = await apiRequest('PATCH', `/api/product-drafts/${draft.id}/wizard-step`, {
+        step: 0, // Basic info step
+        data: {
+          categoryId: finalCategoryId
+        }
+      });
       const result = await response.json();
       
       if (!result.success) {
@@ -506,11 +511,11 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
       // Refresh the current product draft to get updated data
       await queryClient.invalidateQueries({ queryKey: ['/api/product-drafts', draft.id] });
       
-      // Wait for category data to be fully refreshed, then force form reset with new data
-      setTimeout(async () => {
-        // Force a complete page refresh to reload all category data
-        window.location.reload();
-      }, 500);
+      // Wait for category data to be fully refreshed, then update form
+      setTimeout(() => {
+        form.setValue('categoryId', finalCategoryId, { shouldValidate: true, shouldDirty: true });
+        console.log('Form category updated to:', finalCategoryId);
+      }, 300);
       
       toast({
         title: 'Category Applied',
