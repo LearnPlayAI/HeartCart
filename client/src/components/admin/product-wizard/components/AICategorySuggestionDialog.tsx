@@ -174,7 +174,8 @@ export function AICategorySuggestionDialog({
       return;
     }
 
-    if (categoriesQuery.isLoading || !categoriesQuery.data) {
+    // Wait for categories to be fully loaded
+    if (categoriesQuery.isLoading || !categoriesQuery.data || !Array.isArray(categoriesQuery.data) || categoriesQuery.data.length === 0) {
       toast({
         title: 'Please wait',
         description: 'Categories are still loading. Please try again in a moment.',
@@ -436,7 +437,14 @@ export function AICategorySuggestionDialog({
           {newCategoryData && (
             <Button
               onClick={handleCreateNewCategories}
-              disabled={isCreatingCategory || createCategoryMutation.isPending || categoriesQuery.isLoading}
+              disabled={
+                isCreatingCategory || 
+                createCategoryMutation.isPending || 
+                categoriesQuery.isLoading || 
+                !categoriesQuery.data || 
+                !Array.isArray(categoriesQuery.data) || 
+                categoriesQuery.data.length === 0
+              }
               className="bg-green-600 hover:bg-green-700"
             >
               {isCreatingCategory || createCategoryMutation.isPending ? (
