@@ -172,12 +172,15 @@ export function AICategorySuggestionDialog({
     try {
       setIsCreatingCategory(true);
 
+      // Ensure we have categories data
+      const categoriesArray = Array.isArray(categories) ? categories : [];
+
       // First, check if parent category already exists
       const parentSlug = slugify(newCategoryData.parentName, { lower: true, strict: true });
       let parentId = null;
       
       // Look for existing parent category by name
-      const existingParent = categories.find(
+      const existingParent = categoriesArray.find(
         cat => cat.name.toLowerCase() === newCategoryData.parentName.toLowerCase() && cat.level === 0
       );
 
@@ -186,7 +189,7 @@ export function AICategorySuggestionDialog({
         parentId = existingParent.id;
       } else {
         // Create new parent category - get max display order for parent categories (level 0)
-        const parentCategories = categories.filter(cat => cat.level === 0);
+        const parentCategories = categoriesArray.filter(cat => cat.level === 0);
         const maxParentDisplayOrder = parentCategories.length > 0 
           ? Math.max(...parentCategories.map(cat => cat.displayOrder || 0))
           : 0;
@@ -208,7 +211,7 @@ export function AICategorySuggestionDialog({
       let childId = null;
       if (newCategoryData.childName) {
         // Get the highest display order for children under this specific parent
-        const siblingChildren = categories.filter(cat => cat.parentId === parentId && cat.level === 1);
+        const siblingChildren = categoriesArray.filter(cat => cat.parentId === parentId && cat.level === 1);
         const maxChildDisplayOrder = siblingChildren.length > 0 
           ? Math.max(...siblingChildren.map(cat => cat.displayOrder || 0))
           : 0;
