@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useLocation } from 'wouter';
 import { apiRequest } from '@/lib/queryClient';
@@ -54,11 +54,16 @@ export const DraftDashboard: React.FC = () => {
 
   const [newDraftLoading, setNewDraftLoading] = useState(false);
   
-  // Fetch product drafts
+  // Fetch product drafts with search functionality
   const { data: draftsData, isLoading: isDraftsLoading, error: draftsError } = useQuery({
-    queryKey: ['/api/product-drafts'],
+    queryKey: ['/api/product-drafts', searchQuery],
     queryFn: async () => {
-      const response = await apiRequest('GET', '/api/product-drafts');
+      const searchParams = new URLSearchParams();
+      if (searchQuery) {
+        searchParams.append('search', searchQuery);
+      }
+      const url = `/api/product-drafts${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
+      const response = await apiRequest('GET', url);
       return response.json();
     }
   });

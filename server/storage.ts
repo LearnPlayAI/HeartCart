@@ -61,6 +61,7 @@ import {
   eq,
   ne,
   like,
+  ilike,
   and,
   or,
   desc,
@@ -7009,16 +7010,38 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getUserProductDrafts(userId: number): Promise<ProductDraft[]> {
+  async getUserProductDrafts(userId: number, searchQuery?: string): Promise<ProductDraft[]> {
     try {
-      const drafts = await db
+      let query = db
         .select()
         .from(productDrafts)
         .where(eq(productDrafts.createdBy, userId));
 
+      // Add search functionality across multiple columns if search query is provided
+      if (searchQuery && searchQuery.trim()) {
+        const searchTerm = `%${searchQuery.toLowerCase()}%`;
+        query = query.where(
+          or(
+            ilike(productDrafts.name, searchTerm),
+            ilike(productDrafts.slug, searchTerm),
+            ilike(productDrafts.sku, searchTerm),
+            ilike(productDrafts.description, searchTerm),
+            ilike(productDrafts.brand, searchTerm),
+            ilike(productDrafts.metaTitle, searchTerm),
+            ilike(productDrafts.metaDescription, searchTerm),
+            ilike(productDrafts.metaKeywords, searchTerm),
+            ilike(productDrafts.supplierUrl, searchTerm),
+            ilike(productDrafts.discountLabel, searchTerm),
+            ilike(productDrafts.specialSaleText, searchTerm),
+            ilike(productDrafts.rejectionReason, searchTerm)
+          )
+        );
+      }
+
+      const drafts = await query;
       return drafts;
     } catch (error) {
-      logger.error("Error getting user product drafts", { error, userId });
+      logger.error("Error getting user product drafts", { error, userId, searchQuery });
       throw error;
     }
   }

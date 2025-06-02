@@ -6568,9 +6568,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/product-drafts", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
     const user = req.user as any;
     const catalogId = req.query.catalogId ? parseInt(req.query.catalogId as string) : undefined;
+    const searchQuery = req.query.search as string;
     
     try {
-      const drafts = await storage.getUserProductDrafts(user.id, catalogId);
+      const drafts = await storage.getUserProductDrafts(user.id, searchQuery);
       
       res.json({
         success: true,
