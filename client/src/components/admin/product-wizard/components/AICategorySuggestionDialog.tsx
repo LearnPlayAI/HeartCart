@@ -73,7 +73,7 @@ export function AICategorySuggestionDialog({
     },
   });
 
-  const categories = categoriesQuery.data || [];
+  const categories = Array.isArray(categoriesQuery.data) ? categoriesQuery.data : [];
 
   // Fetch AI category suggestions
   const categorySuggestionMutation = useMutation({
