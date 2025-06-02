@@ -493,7 +493,7 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
       // Save the category assignment using the wizard step endpoint to match form submission
       const response = await apiRequest('PATCH', `/api/product-drafts/${draft.id}/wizard-step`, {
         step: 0, // Basic info step
-        data: {
+        draftData: {
           categoryId: finalCategoryId
         }
       });
