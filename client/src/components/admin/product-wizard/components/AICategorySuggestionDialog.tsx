@@ -174,26 +174,31 @@ export function AICategorySuggestionDialog({
         // Use existing parent category
         parentId = existingParent.id;
       } else {
-        // Create new parent category
+        // Create new parent category - get max display order for parent categories (level 0)
+        const parentCategories = categories.filter(cat => cat.level === 0);
+        const maxParentDisplayOrder = parentCategories.length > 0 
+          ? Math.max(...parentCategories.map(cat => cat.displayOrder || 0))
+          : 0;
+
         const parentResponse = await createCategoryMutation.mutateAsync({
           name: newCategoryData.parentName,
           slug: parentSlug,
           description: `AI-suggested parent category for ${productName}`,
           level: 0,
-          displayOrder: 999,
+          displayOrder: maxParentDisplayOrder + 1,
         });
         parentId = parentResponse.id;
       }
 
       let childId = null;
       if (newCategoryData.childName) {
-        // Get the highest display order for children under this parent
+        // Get the highest display order for children under this specific parent
         const siblingChildren = categories.filter(cat => cat.parentId === parentId && cat.level === 1);
-        const maxDisplayOrder = siblingChildren.length > 0 
+        const maxChildDisplayOrder = siblingChildren.length > 0 
           ? Math.max(...siblingChildren.map(cat => cat.displayOrder || 0))
           : 0;
 
-        // Create child category
+        // Create child category with parent-prefixed slug
         const childSlug = `${parentSlug}-${slugify(newCategoryData.childName, { lower: true, strict: true })}`;
         const childResponse = await createCategoryMutation.mutateAsync({
           name: newCategoryData.childName,
@@ -201,7 +206,7 @@ export function AICategorySuggestionDialog({
           description: `AI-suggested child category for ${productName}`,
           parentId: parentId,
           level: 1,
-          displayOrder: maxDisplayOrder + 1,
+          displayOrder: maxChildDisplayOrder + 1,
         });
         childId = childResponse.id;
       }
