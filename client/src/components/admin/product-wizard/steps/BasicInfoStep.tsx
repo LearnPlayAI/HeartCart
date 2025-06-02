@@ -110,6 +110,7 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
   
   // AI category suggestion state
   const [showAiCategorySuggestions, setShowAiCategorySuggestions] = useState(false);
+  const [isApplyingAiCategory, setIsApplyingAiCategory] = useState(false);
   
   // Fetch categories for the dropdown
   const { data: categoriesData, isLoading: isCategoriesLoading } = useQuery({
@@ -291,6 +292,12 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
 
   // Handle form submission
   const onSubmit = (data: BasicInfoFormValues) => {
+    // CRITICAL: Prevent form submission from overriding AI category selections
+    if (isApplyingAiCategory) {
+      console.log('Form submission blocked - AI category selection in progress');
+      return;
+    }
+    
     // Validate 20% minimum TMY markup if both cost price and sale price are set
     if (data.costPrice && data.salePrice) {
       const markup = calculateTMYMarkup(data.costPrice, data.salePrice);
@@ -476,6 +483,9 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
   // Handle AI category selection - FIXED to immediately save to database
   const handleAiCategorySelection = async (parentId: number, childId: number | null) => {
     try {
+      // Set flag to prevent form auto-submission from overriding this change
+      setIsApplyingAiCategory(true);
+      
       // Determine the final category ID to use
       const finalCategoryId = childId || parentId;
       
@@ -528,7 +538,8 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
         variant: 'destructive',
       });
     } finally {
-      // Close the dialog
+      // Reset the flag and close the dialog
+      setIsApplyingAiCategory(false);
       setShowAiCategorySuggestions(false);
     }
   };
