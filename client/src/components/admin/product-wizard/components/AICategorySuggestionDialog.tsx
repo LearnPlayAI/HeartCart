@@ -64,7 +64,7 @@ export function AICategorySuggestionDialog({
   } | null>(null);
 
   // Fetch categories for checking existing ones
-  const { data: categoriesData } = useQuery({
+  const categoriesQuery = useQuery({
     queryKey: ['/api/categories'],
     queryFn: async () => {
       const response = await apiRequest('GET', '/api/categories');
@@ -73,7 +73,7 @@ export function AICategorySuggestionDialog({
     },
   });
 
-  const categories = categoriesData || [];
+  const categories = categoriesQuery.data || [];
 
   // Fetch AI category suggestions
   const categorySuggestionMutation = useMutation({
