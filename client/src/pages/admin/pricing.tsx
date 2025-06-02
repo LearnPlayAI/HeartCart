@@ -511,7 +511,7 @@ export default function PricingPage() {
               >
                 <SelectTrigger>
                   <SelectValue placeholder={
-                    !parentCategoryFilter 
+                    !parentCategoryFilter || parentCategoryFilter === 'all'
                       ? "Select parent first" 
                       : availableChildCategories.length === 0 
                         ? "No child categories"
