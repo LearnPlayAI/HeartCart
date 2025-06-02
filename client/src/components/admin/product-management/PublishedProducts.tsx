@@ -93,11 +93,11 @@ export const PublishedProducts: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
   
-  // Fetch published products
+  // Fetch published products (get all products for client-side pagination)
   const { data: productsData, isLoading: isProductsLoading, error: productsError } = useQuery({
-    queryKey: ['/api/products'],
+    queryKey: ['/api/products', 'all'],
     queryFn: async () => {
-      const response = await apiRequest('GET', '/api/products');
+      const response = await apiRequest('GET', '/api/products?limit=1000'); // Get all products
       return response.json();
     }
   });
