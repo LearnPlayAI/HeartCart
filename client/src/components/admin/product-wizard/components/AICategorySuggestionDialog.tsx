@@ -224,7 +224,14 @@ export function AICategorySuggestionDialog({
       }
 
       let childId = null;
+      console.log('Checking child category creation:', {
+        hasChildName: !!newCategoryData.childName,
+        childName: newCategoryData.childName,
+        parentId: parentId
+      });
+      
       if (newCategoryData.childName) {
+        console.log('Starting child category creation process...');
         // Get the highest display order for children under this specific parent
         const siblingChildren = categoriesArray.filter(cat => cat.parentId === parentId && cat.level === 1);
         const maxChildDisplayOrder = siblingChildren.length > 0 
