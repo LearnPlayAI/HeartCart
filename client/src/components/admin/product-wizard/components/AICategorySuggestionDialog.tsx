@@ -156,7 +156,14 @@ export function AICategorySuggestionDialog({
   };
 
   const handleCreateNewCategories = async () => {
-    if (!newCategoryData) return;
+    if (!newCategoryData || !Array.isArray(categories)) {
+      toast({
+        title: 'Error',
+        description: 'Categories not loaded yet. Please try again.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     try {
       setIsCreatingCategory(true);
@@ -200,14 +207,17 @@ export function AICategorySuggestionDialog({
 
         // Create child category with parent-prefixed slug
         const childSlug = `${parentSlug}-${slugify(newCategoryData.childName, { lower: true, strict: true })}`;
-        const childResponse = await createCategoryMutation.mutateAsync({
+        const childCategoryData = {
           name: newCategoryData.childName,
           slug: childSlug,
           description: `AI-suggested child category for ${productName}`,
           parentId: parentId,
           level: 1,
           displayOrder: maxChildDisplayOrder + 1,
-        });
+        };
+        
+        console.log('Creating child category with data:', childCategoryData);
+        const childResponse = await createCategoryMutation.mutateAsync(childCategoryData);
         childId = childResponse.id;
       }
 
