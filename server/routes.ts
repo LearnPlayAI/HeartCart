@@ -485,6 +485,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post(
     "/api/categories", 
+    isAuthenticated, 
+    isAdmin, // Use the isAdmin middleware directly
     validateRequest({ body: createCategorySchema }), 
     asyncHandler(async (req: Request, res: Response) => {
       // With validation middleware, the request body is already validated and typed
