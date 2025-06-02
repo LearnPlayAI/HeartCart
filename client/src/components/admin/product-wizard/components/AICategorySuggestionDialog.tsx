@@ -174,8 +174,8 @@ export function AICategorySuggestionDialog({
       return;
     }
 
-    // Wait for categories to be fully loaded
-    if (categoriesQuery.isLoading || !categoriesQuery.data || !Array.isArray(categoriesQuery.data) || categoriesQuery.data.length === 0) {
+    // Basic loading check - don't require categories to be loaded since we can create them
+    if (categoriesQuery.isLoading) {
       toast({
         title: 'Please wait',
         description: 'Categories are still loading. Please try again in a moment.',
@@ -195,9 +195,10 @@ export function AICategorySuggestionDialog({
       console.log('Available categories:', categories.length, categories.map(c => ({ name: c.name, level: c.level, id: c.id })));
       
       // Look for existing parent category by name (case-insensitive search)
-      const existingParent = categories.find(
-        cat => cat.name.toLowerCase().trim() === newCategoryData.parentName.toLowerCase().trim() && cat.level === 0
-      );
+      // Use a more robust search that handles empty categories array
+      const existingParent = categories && categories.length > 0 
+        ? categories.find(cat => cat.name.toLowerCase().trim() === newCategoryData.parentName.toLowerCase().trim() && cat.level === 0)
+        : null;
       
       console.log('Found existing parent:', existingParent);
 
@@ -437,14 +438,7 @@ export function AICategorySuggestionDialog({
           {newCategoryData && (
             <Button
               onClick={handleCreateNewCategories}
-              disabled={
-                isCreatingCategory || 
-                createCategoryMutation.isPending || 
-                categoriesQuery.isLoading || 
-                !categoriesQuery.data || 
-                !Array.isArray(categoriesQuery.data) || 
-                categoriesQuery.data.length === 0
-              }
+              disabled={isCreatingCategory || createCategoryMutation.isPending || categoriesQuery.isLoading}
               className="bg-green-600 hover:bg-green-700"
             >
               {isCreatingCategory || createCategoryMutation.isPending ? (
