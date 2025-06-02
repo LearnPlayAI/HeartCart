@@ -480,12 +480,18 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
     // Update the form with the selected category
     form.setValue('categoryId', selectedCategoryId);
     
-    // Save the draft with the updated category
+    // Save the draft with the updated category - convert string prices to numbers
     const currentFormData = form.getValues();
-    onSave({
+    const dataToSave = {
       ...currentFormData,
-      categoryId: selectedCategoryId
-    });
+      categoryId: selectedCategoryId,
+      // Convert price strings to numbers for validation
+      regularPrice: currentFormData.regularPrice ? Number(currentFormData.regularPrice) : null,
+      salePrice: currentFormData.salePrice ? Number(currentFormData.salePrice) : null,
+      costPrice: currentFormData.costPrice ? Number(currentFormData.costPrice) : null,
+    };
+    
+    onSave(dataToSave);
     
     // Invalidate categories cache to refresh the dropdowns
     queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
