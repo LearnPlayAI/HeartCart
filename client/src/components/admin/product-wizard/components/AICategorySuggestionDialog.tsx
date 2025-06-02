@@ -173,10 +173,13 @@ export function AICategorySuggestionDialog({
       setIsCreatingCategory(true);
 
       // Force fresh categories data by refetching
-      await categoriesQuery.refetch();
+      const refetchResult = await categoriesQuery.refetch();
+      console.log('Refetch result:', refetchResult);
       
       // Ensure we have categories data
       const categoriesArray = Array.isArray(categoriesQuery.data) ? categoriesQuery.data : [];
+      console.log('Raw categories data:', categoriesQuery.data);
+      console.log('Categories array length:', categoriesArray.length);
 
       // First, check if parent category already exists
       const parentSlug = slugify(newCategoryData.parentName, { lower: true, strict: true });
