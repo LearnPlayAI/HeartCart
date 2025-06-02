@@ -475,17 +475,17 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
   
   // Handle AI category selection
   const handleAiCategorySelection = (parentId: number, childId: number | null) => {
-    // Update the form with the selected category
-    if (childId) {
-      // If there's a child category, use that as the main category
-      form.setValue('categoryId', childId);
-    } else {
-      // Otherwise use the parent category
-      form.setValue('categoryId', parentId);
-    }
+    const selectedCategoryId = childId || parentId;
     
-    // Trigger form change to save the draft
-    form.trigger('categoryId');
+    // Update the form with the selected category
+    form.setValue('categoryId', selectedCategoryId);
+    
+    // Save the draft with the updated category
+    const currentFormData = form.getValues();
+    onSave({
+      ...currentFormData,
+      categoryId: selectedCategoryId
+    });
     
     // Invalidate categories cache to refresh the dropdowns
     queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
