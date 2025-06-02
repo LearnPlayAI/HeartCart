@@ -477,8 +477,8 @@ export const DraftDashboard: React.FC = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Product</TableHead>
                     <TableHead>SKU</TableHead>
+                    <TableHead>Product</TableHead>
                     <TableHead>Parent Cat</TableHead>
                     <TableHead>Child Cat</TableHead>
                     <TableHead>Status</TableHead>
@@ -489,6 +489,9 @@ export const DraftDashboard: React.FC = () => {
                 <TableBody>
                   {paginatedDrafts.map((draft: ProductDraft) => (
                     <TableRow key={draft.id}>
+                      <TableCell>
+                        <span className="font-mono text-sm">{draft.sku || '-'}</span>
+                      </TableCell>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-3">
                           {draft.imageUrls && draft.imageUrls.length > 0 ? (
@@ -509,9 +512,6 @@ export const DraftDashboard: React.FC = () => {
                             </div>
                           </div>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="font-mono text-sm">{draft.sku || '-'}</span>
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">

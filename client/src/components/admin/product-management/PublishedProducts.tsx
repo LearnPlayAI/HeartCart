@@ -402,8 +402,8 @@ export const PublishedProducts: React.FC = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Product</TableHead>
                     <TableHead>SKU</TableHead>
+                    <TableHead>Product</TableHead>
                     <TableHead>Parent Cat</TableHead>
                     <TableHead>Child Cat</TableHead>
                     <TableHead>Price</TableHead>
@@ -415,6 +415,9 @@ export const PublishedProducts: React.FC = () => {
                 <TableBody>
                   {paginatedProducts.map((product: PublishedProduct) => (
                     <TableRow key={product.id}>
+                      <TableCell>
+                        <span className="font-mono text-sm">{product.sku || '-'}</span>
+                      </TableCell>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-3">
                           {product.imageUrl ? (
@@ -440,9 +443,6 @@ export const PublishedProducts: React.FC = () => {
                             )}
                           </div>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="font-mono text-sm">{product.sku || '-'}</span>
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">
