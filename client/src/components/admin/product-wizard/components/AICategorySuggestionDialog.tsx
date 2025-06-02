@@ -187,20 +187,22 @@ export function AICategorySuggestionDialog({
     try {
       setIsCreatingCategory(true);
 
-      // First, check if parent category already exists
-      const parentSlug = slugify(newCategoryData.parentName, { lower: true, strict: true });
-      let parentId = null;
+      // CRITICAL: Refetch categories to ensure we have the latest data
+      await categoriesQuery.refetch();
+      const freshCategories = categoriesQuery.data || [];
       
       console.log('Searching for existing parent category:', newCategoryData.parentName);
-      console.log('Available categories:', categories.length, categories.map(c => ({ name: c.name, level: c.level, id: c.id })));
+      console.log('Available categories:', freshCategories.length, freshCategories.map(c => ({ name: c.name, level: c.level, id: c.id })));
       
       // Look for existing parent category by name (case-insensitive search)
-      // Use a more robust search that handles empty categories array
-      const existingParent = categories && categories.length > 0 
-        ? categories.find(cat => cat.name.toLowerCase().trim() === newCategoryData.parentName.toLowerCase().trim() && cat.level === 0)
-        : null;
+      const existingParent = freshCategories.find(
+        cat => cat.name.toLowerCase().trim() === newCategoryData.parentName.toLowerCase().trim() && cat.level === 0
+      );
       
       console.log('Found existing parent:', existingParent);
+
+      const parentSlug = slugify(newCategoryData.parentName, { lower: true, strict: true });
+      let parentId = null;
 
       if (existingParent) {
         // Use existing parent category
