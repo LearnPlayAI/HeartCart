@@ -42,6 +42,9 @@ interface ProductDraft {
   isPublished: boolean;
   publishedProductId: number | null;
   categoryName?: string; // From join
+  parentCategoryName?: string; // From enrichment
+  childCategoryName?: string; // From enrichment
+  sku?: string;
   completedSteps: string[];
   draftStatus: 'draft' | 'in_review' | 'ready_to_publish' | 'published' | 'rejected';
 }
@@ -487,11 +490,6 @@ export const DraftDashboard: React.FC = () => {
                   {paginatedDrafts.map((draft: ProductDraft) => (
                     <TableRow key={draft.id}>
                       <TableCell className="font-medium">
-                        <div className="text-sm font-mono">
-                          {draft.sku || 'No SKU'}
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-medium">
                         <div className="flex items-center gap-3">
                           {draft.imageUrls && draft.imageUrls.length > 0 ? (
                             <img 
@@ -511,6 +509,19 @@ export const DraftDashboard: React.FC = () => {
                             </div>
                           </div>
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className="font-mono text-sm">{draft.sku || '-'}</span>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">
+                          {draft.parentCategoryName}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">
+                          {draft.childCategoryName}
+                        </Badge>
                       </TableCell>
                       <TableCell>
                         {draft.draftStatus === 'published' ? (
