@@ -152,10 +152,6 @@ export const PublishedProducts: React.FC = () => {
       return response.json();
     },
     onSuccess: (data) => {
-      toast({
-        title: "Product Deleted",
-        description: data.message || "Product has been successfully deleted",
-      });
       // Invalidate and refetch the products list
       queryClient.invalidateQueries({ queryKey: ['/api/products'] });
       setDeleteDialogOpen(false);
