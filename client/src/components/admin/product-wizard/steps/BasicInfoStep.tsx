@@ -506,11 +506,11 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
       // Refresh the current product draft to get updated data
       await queryClient.invalidateQueries({ queryKey: ['/api/product-drafts', draft.id] });
       
-      // Wait a bit longer for category data to be fully refreshed, then update form
-      setTimeout(() => {
-        form.setValue('categoryId', finalCategoryId, { shouldValidate: true, shouldDirty: true });
-        console.log('Form category forcefully updated to:', finalCategoryId, 'Form values now:', form.getValues());
-      }, 300);
+      // Wait for category data to be fully refreshed, then force form reset with new data
+      setTimeout(async () => {
+        // Force a complete page refresh to reload all category data
+        window.location.reload();
+      }, 500);
       
       toast({
         title: 'Category Applied',
