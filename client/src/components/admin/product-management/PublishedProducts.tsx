@@ -692,6 +692,14 @@ export const PublishedProducts: React.FC = () => {
                               <ExternalLink className="h-4 w-4" />
                               View in Store
                             </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              className="gap-2 text-red-600 focus:text-red-600"
+                              onClick={() => handleDeleteProduct(product)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              Delete Product
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -823,6 +831,36 @@ export const PublishedProducts: React.FC = () => {
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowDuplicates(false)}>
               Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Product</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to permanently delete "{productToDelete?.name}"? 
+              This action will remove the product and all associated data including images, drafts, and attributes.
+              Order history will be preserved.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setDeleteDialogOpen(false)}
+              disabled={deleteProductMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={confirmDeleteProduct}
+              disabled={deleteProductMutation.isPending}
+            >
+              {deleteProductMutation.isPending ? 'Deleting...' : 'Delete Product'}
             </Button>
           </DialogFooter>
         </DialogContent>
