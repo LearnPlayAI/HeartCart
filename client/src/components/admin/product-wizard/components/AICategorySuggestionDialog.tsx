@@ -188,8 +188,8 @@ export function AICategorySuggestionDialog({
       setIsCreatingCategory(true);
 
       // CRITICAL: Refetch categories to ensure we have the latest data
-      await categoriesQuery.refetch();
-      const freshCategories = categoriesQuery.data || [];
+      const refetchResult = await categoriesQuery.refetch();
+      const freshCategories = Array.isArray(refetchResult.data) ? refetchResult.data : [];
       
       console.log('Searching for existing parent category:', newCategoryData.parentName);
       console.log('Available categories:', freshCategories.length, freshCategories.map(c => ({ name: c.name, level: c.level, id: c.id })));
