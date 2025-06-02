@@ -584,7 +584,8 @@ export const DraftDashboard: React.FC = () => {
                                     <TrendingDown className="h-3 w-3 text-red-600" />
                                   )}
                                   <span className={`font-semibold text-xs ${
-                                    tmyMarkup > 0 ? 'text-green-600' : 'text-red-600'
+                                    tmyMarkup <= 20 ? 'text-red-600' : 
+                                    tmyMarkup <= 30 ? 'text-yellow-600' : 'text-green-600'
                                   }`}>
                                     TMY: {tmyMarkup.toFixed(1)}%
                                   </span>
@@ -592,7 +593,7 @@ export const DraftDashboard: React.FC = () => {
                                 {customerDiscount > 0 && (
                                   <div className="flex justify-end">
                                     <Badge className="font-mono text-xs bg-pink-500 hover:bg-pink-600 text-white">
-                                      Disc: {customerDiscount.toFixed(1)}%
+                                      {customerDiscount.toFixed(1)}%
                                     </Badge>
                                   </div>
                                 )}
