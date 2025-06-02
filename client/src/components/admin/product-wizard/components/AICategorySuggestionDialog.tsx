@@ -174,7 +174,7 @@ export function AICategorySuggestionDialog({
       return;
     }
 
-    if (!Array.isArray(categories) || categories.length === 0) {
+    if (!Array.isArray(categories)) {
       toast({
         title: 'Error',
         description: 'Categories not loaded yet. Please try again.',
