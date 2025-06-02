@@ -108,7 +108,7 @@ export const PublishedProducts: React.FC = () => {
   // Handle parent category change
   const handleParentCategoryChange = (value: string) => {
     setSelectedParentCategory(value);
-    setSelectedChildCategory(''); // Reset child category when parent changes
+    setSelectedChildCategory('all'); // Reset child category when parent changes
   };
 
   // Filter products with search and category filtering
@@ -125,10 +125,10 @@ export const PublishedProducts: React.FC = () => {
     }
 
     // Apply category filtering
-    if (selectedParentCategory) {
+    if (selectedParentCategory && selectedParentCategory !== 'all') {
       const parentId = parseInt(selectedParentCategory);
       
-      if (selectedChildCategory) {
+      if (selectedChildCategory && selectedChildCategory !== 'all') {
         // Filter by specific child category
         const childId = parseInt(selectedChildCategory);
         filtered = filtered.filter((product: PublishedProduct) => {
@@ -201,7 +201,7 @@ export const PublishedProducts: React.FC = () => {
             <SelectValue placeholder="All Parent Categories" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Parent Categories</SelectItem>
+            <SelectItem value="all">All Parent Categories</SelectItem>
             {parentCategories.map((category: any) => (
               <SelectItem key={category.id} value={category.id.toString()}>
                 {category.name}
@@ -219,7 +219,7 @@ export const PublishedProducts: React.FC = () => {
             <SelectValue placeholder="All Child Categories" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Child Categories</SelectItem>
+            <SelectItem value="all">All Child Categories</SelectItem>
             {childCategories.map((category: any) => (
               <SelectItem key={category.id} value={category.id.toString()}>
                 {category.name}
