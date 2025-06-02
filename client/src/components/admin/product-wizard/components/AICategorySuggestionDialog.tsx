@@ -139,10 +139,14 @@ export function AICategorySuggestionDialog({
   }, [isOpen, productName, productDescription]);
 
   const handleSelectSuggestion = (suggestion: CategorySuggestion) => {
+    console.log('Selected suggestion:', suggestion);
     setSelectedSuggestion(suggestion);
+    // Clear any new category selection when selecting existing category
+    setNewCategoryData(null);
   };
 
   const handleApproveSelection = () => {
+    console.log('Applying selection:', selectedSuggestion);
     if (selectedSuggestion?.parentCategory) {
       const parentId = selectedSuggestion.parentCategory.id;
       const childId = selectedSuggestion.childCategory?.id || null;
@@ -342,7 +346,12 @@ export function AICategorySuggestionDialog({
                         ? 'border-green-500 bg-green-50'
                         : 'hover:border-muted-foreground/20'
                     }`}
-                    onClick={() => setNewCategoryData(newSuggestion)}
+                    onClick={() => {
+                      console.log('Selected new category:', newSuggestion);
+                      setNewCategoryData(newSuggestion);
+                      // Clear any existing category selection when selecting new category
+                      setSelectedSuggestion(null);
+                    }}
                   >
                     <CardHeader className="pb-2">
                       <div className="flex items-center justify-between">
