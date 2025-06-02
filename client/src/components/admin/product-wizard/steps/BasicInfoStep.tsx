@@ -479,7 +479,13 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
       // Determine the final category ID to use
       const finalCategoryId = childId || parentId;
       
-      // Update the form with the selected category
+      console.log('AI Category Selection - Parent ID:', parentId, 'Child ID:', childId, 'Final ID:', finalCategoryId);
+      
+      // IMPORTANT: Set a flag to prevent form auto-submission from overriding this change
+      const currentFormData = form.getValues();
+      console.log('Current form categoryId before AI selection:', currentFormData.categoryId);
+      
+      // Update the form with the selected category BEFORE saving
       form.setValue('categoryId', finalCategoryId);
       
       // CRITICAL FIX: Immediately save the category assignment to the database
@@ -503,6 +509,11 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
       
       // Refresh the current product draft to get updated data
       await queryClient.invalidateQueries({ queryKey: ['/api/product-drafts', draft.id] });
+      
+      // Force form state update and trigger re-render
+      form.setValue('categoryId', finalCategoryId, { shouldDirty: false, shouldTouch: false });
+      
+      console.log('Form category forcefully updated to:', finalCategoryId, 'Form values now:', form.getValues());
       
       toast({
         title: 'Category Applied',
