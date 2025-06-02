@@ -154,7 +154,7 @@ function App() {
               <AdminProtectedRoute path="/admin/product-management" component={React.lazy(() => import("@/pages/admin/product-management"))} />
               <AdminProtectedRoute path="/admin/products/manage" component={React.lazy(() => import("@/pages/admin/product-management"))} />
               <AdminProtectedRoute path="/admin/catalogs/:catalogId/products/manage" component={React.lazy(() => import("@/pages/admin/product-management"))} />
-              <AdminProtectedRoute path="/admin/product-wizard/:id" component={React.lazy(() => import("@/pages/admin/product-wizard"))} />
+              <AdminProtectedRoute path="/admin/product-wizard/:id?" component={React.lazy(() => import("@/pages/admin/product-wizard"))} />
               <AdminProtectedRoute path="/admin/mass-upload" component={React.lazy(() => import("@/pages/admin/mass-upload"))} />
               
               {/* Redirect current routes to new product management */}
@@ -187,7 +187,7 @@ function App() {
               </Route>
               
               {/* Product wizard routes */}
-              <AdminProtectedRoute path="/admin/products/wizard/:id" component={ProductWizardPage} />
+              <AdminProtectedRoute path="/admin/products/wizard/:id?" component={ProductWizardPage} />
               <Route path="/admin/catalogs/:catalogId/products/wizard">
                 {(params) => {
                   const [_, navigate] = useLocation();

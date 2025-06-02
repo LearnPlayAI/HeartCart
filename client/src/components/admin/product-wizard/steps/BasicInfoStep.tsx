@@ -110,7 +110,6 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
   
   // AI category suggestion state
   const [showAiCategorySuggestions, setShowAiCategorySuggestions] = useState(false);
-  const [isApplyingAiCategory, setIsApplyingAiCategory] = useState(false);
   
   // Fetch categories for the dropdown
   const { data: categoriesData, isLoading: isCategoriesLoading } = useQuery({
@@ -292,12 +291,6 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
 
   // Handle form submission
   const onSubmit = (data: BasicInfoFormValues) => {
-    // CRITICAL: Prevent form submission from overriding AI category selections
-    if (isApplyingAiCategory) {
-      console.log('Form submission blocked - AI category selection in progress');
-      return;
-    }
-    
     // Validate 20% minimum TMY markup if both cost price and sale price are set
     if (data.costPrice && data.salePrice) {
       const markup = calculateTMYMarkup(data.costPrice, data.salePrice);
@@ -483,19 +476,10 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
   // Handle AI category selection - FIXED to immediately save to database
   const handleAiCategorySelection = async (parentId: number, childId: number | null) => {
     try {
-      // Set flag to prevent form auto-submission from overriding this change
-      setIsApplyingAiCategory(true);
-      
       // Determine the final category ID to use
       const finalCategoryId = childId || parentId;
       
-      console.log('AI Category Selection - Parent ID:', parentId, 'Child ID:', childId, 'Final ID:', finalCategoryId);
-      
-      // IMPORTANT: Set a flag to prevent form auto-submission from overriding this change
-      const currentFormData = form.getValues();
-      console.log('Current form categoryId before AI selection:', currentFormData.categoryId);
-      
-      // Update the form with the selected category BEFORE saving
+      // Update the form with the selected category
       form.setValue('categoryId', finalCategoryId);
       
       // CRITICAL FIX: Immediately save the category assignment to the database
@@ -520,11 +504,6 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
       // Refresh the current product draft to get updated data
       await queryClient.invalidateQueries({ queryKey: ['/api/product-drafts', draft.id] });
       
-      // Force form state update and trigger re-render
-      form.setValue('categoryId', finalCategoryId, { shouldDirty: false, shouldTouch: false });
-      
-      console.log('Form category forcefully updated to:', finalCategoryId, 'Form values now:', form.getValues());
-      
       toast({
         title: 'Category Applied',
         description: 'Product category has been saved successfully.',
@@ -538,8 +517,7 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
         variant: 'destructive',
       });
     } finally {
-      // Reset the flag and close the dialog
-      setIsApplyingAiCategory(false);
+      // Close the dialog
       setShowAiCategorySuggestions(false);
     }
   };
