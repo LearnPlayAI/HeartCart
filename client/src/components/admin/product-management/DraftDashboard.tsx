@@ -23,8 +23,17 @@ import {
   Plus, Search, MoreVertical, Edit, Trash2, Copy, ExternalLink, 
   Check, X, Clock, Loader2, Filter, SortAsc, SortDesc, 
   FileQuestion, ShoppingCart, FileCheck, Eye, AlertCircle, Package, GitMerge,
-  ChevronLeft, ChevronRight
+  ChevronLeft, ChevronRight, TrendingUp, TrendingDown
 } from 'lucide-react';
+
+// Utility function for currency formatting
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('en-ZA', {
+    style: 'currency',
+    currency: 'ZAR',
+    minimumFractionDigits: 2,
+  }).format(amount);
+};
 
 // Types
 interface ProductDraft {
@@ -47,6 +56,9 @@ interface ProductDraft {
   sku?: string;
   completedSteps: string[];
   draftStatus: 'draft' | 'in_review' | 'ready_to_publish' | 'published' | 'rejected';
+  costPrice?: number;
+  regularPrice?: number;
+  salePrice?: number;
 }
 
 export const DraftDashboard: React.FC = () => {
@@ -481,6 +493,8 @@ export const DraftDashboard: React.FC = () => {
                     <TableHead>Product</TableHead>
                     <TableHead>Parent Cat</TableHead>
                     <TableHead>Child Cat</TableHead>
+                    <TableHead className="text-right">Prices</TableHead>
+                    <TableHead className="text-right">Percentages</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Last Updated</TableHead>
                     <TableHead className="w-[100px] text-right">Actions</TableHead>
@@ -522,6 +536,57 @@ export const DraftDashboard: React.FC = () => {
                         <Badge variant="outline">
                           {draft.childCategoryName}
                         </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="space-y-1 text-sm">
+                          <div className="font-mono text-xs text-muted-foreground">
+                            Cost: {formatCurrency(draft.costPrice || 0)}
+                          </div>
+                          <div className="font-mono text-sm font-medium">
+                            Regular: {formatCurrency(draft.regularPrice || 0)}
+                          </div>
+                          {draft.salePrice && (
+                            <div className="font-mono text-sm text-red-600 font-semibold">
+                              Sale: {formatCurrency(draft.salePrice)}
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="space-y-1 text-sm">
+                          {(() => {
+                            const costPrice = draft.costPrice || 0;
+                            const regularPrice = draft.regularPrice || 0;
+                            const salePrice = draft.salePrice || regularPrice;
+                            
+                            const tmyMarkup = costPrice > 0 ? ((regularPrice - costPrice) / costPrice * 100) : 0;
+                            const customerDiscount = regularPrice > 0 && salePrice < regularPrice ? ((regularPrice - salePrice) / regularPrice * 100) : 0;
+                            
+                            return (
+                              <>
+                                <div className="flex items-center justify-end gap-1">
+                                  {tmyMarkup > 0 ? (
+                                    <TrendingUp className="h-3 w-3 text-green-600" />
+                                  ) : (
+                                    <TrendingDown className="h-3 w-3 text-red-600" />
+                                  )}
+                                  <span className={`font-semibold text-xs ${
+                                    tmyMarkup > 0 ? 'text-green-600' : 'text-red-600'
+                                  }`}>
+                                    TMY: {tmyMarkup.toFixed(1)}%
+                                  </span>
+                                </div>
+                                {customerDiscount > 0 && (
+                                  <div className="flex justify-end">
+                                    <Badge className="font-mono text-xs bg-pink-500 hover:bg-pink-600 text-white">
+                                      Disc: {customerDiscount.toFixed(1)}%
+                                    </Badge>
+                                  </div>
+                                )}
+                              </>
+                            );
+                          })()}
+                        </div>
                       </TableCell>
                       <TableCell>
                         {draft.draftStatus === 'published' ? (
