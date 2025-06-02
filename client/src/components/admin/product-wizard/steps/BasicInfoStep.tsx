@@ -497,15 +497,20 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
     queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
     queryClient.invalidateQueries({ queryKey: ['/api/categories/main/with-children'] });
     
-    // Force form to re-render with updated category and trigger watchers
-    setTimeout(() => {
-      const currentValues = form.getValues();
-      form.reset({
-        ...currentValues,
-        categoryId: selectedCategoryId
-      });
-      // Trigger the categoryId field to update watchers
-      form.setValue('categoryId', selectedCategoryId, { shouldValidate: true, shouldDirty: true });
+    // Refetch the updated draft data and reinitialize the form
+    setTimeout(async () => {
+      try {
+        // Invalidate and refetch the draft data
+        queryClient.invalidateQueries({ queryKey: [`/api/product-drafts/${draft.id}`] });
+        
+        // Wait a moment for the invalidation to trigger refetch
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        // The draft query will automatically refetch, which will trigger
+        // the form reset in the parent component
+      } catch (error) {
+        console.error('Error refreshing draft after AI category selection:', error);
+      }
     }, 100);
     
     // Close the dialog
