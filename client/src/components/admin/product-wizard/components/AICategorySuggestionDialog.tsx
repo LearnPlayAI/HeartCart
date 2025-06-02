@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import {
   Dialog,
   DialogContent,
@@ -62,6 +62,18 @@ export function AICategorySuggestionDialog({
     childName: string;
     reasoning: string;
   } | null>(null);
+
+  // Fetch categories for checking existing ones
+  const { data: categoriesData } = useQuery({
+    queryKey: ['/api/categories'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/categories');
+      const data = await response.json();
+      return data.success ? data.data : [];
+    },
+  });
+
+  const categories = categoriesData || [];
 
   // Fetch AI category suggestions
   const categorySuggestionMutation = useMutation({
@@ -149,33 +161,52 @@ export function AICategorySuggestionDialog({
     try {
       setIsCreatingCategory(true);
 
-      // Create parent category first
+      // First, check if parent category already exists
       const parentSlug = slugify(newCategoryData.parentName, { lower: true, strict: true });
-      const parentResponse = await createCategoryMutation.mutateAsync({
-        name: newCategoryData.parentName,
-        slug: parentSlug,
-        description: `AI-suggested parent category for ${productName}`,
-        level: 0,
-        displayOrder: 999,
-      });
+      let parentId = null;
+      
+      // Look for existing parent category by name
+      const existingParent = categories.find(
+        cat => cat.name.toLowerCase() === newCategoryData.parentName.toLowerCase() && cat.level === 0
+      );
 
-      let childResponse = null;
+      if (existingParent) {
+        // Use existing parent category
+        parentId = existingParent.id;
+      } else {
+        // Create new parent category
+        const parentResponse = await createCategoryMutation.mutateAsync({
+          name: newCategoryData.parentName,
+          slug: parentSlug,
+          description: `AI-suggested parent category for ${productName}`,
+          level: 0,
+          displayOrder: 999,
+        });
+        parentId = parentResponse.id;
+      }
+
+      let childId = null;
       if (newCategoryData.childName) {
+        // Get the highest display order for children under this parent
+        const siblingChildren = categories.filter(cat => cat.parentId === parentId && cat.level === 1);
+        const maxDisplayOrder = siblingChildren.length > 0 
+          ? Math.max(...siblingChildren.map(cat => cat.displayOrder || 0))
+          : 0;
+
         // Create child category
         const childSlug = `${parentSlug}-${slugify(newCategoryData.childName, { lower: true, strict: true })}`;
-        childResponse = await createCategoryMutation.mutateAsync({
+        const childResponse = await createCategoryMutation.mutateAsync({
           name: newCategoryData.childName,
           slug: childSlug,
           description: `AI-suggested child category for ${productName}`,
-          parentId: parentResponse.id,
+          parentId: parentId,
           level: 1,
-          displayOrder: 999,
+          displayOrder: maxDisplayOrder + 1,
         });
+        childId = childResponse.id;
       }
 
-      // Apply the newly created categories
-      const parentId = parentResponse.id;
-      const childId = childResponse?.id || null;
+      // Apply the categories
       onCategorySelected(parentId, childId);
       onOpenChange(false);
       setIsCreatingCategory(false);
@@ -183,11 +214,18 @@ export function AICategorySuggestionDialog({
 
       toast({
         title: 'Categories Created',
-        description: 'New categories have been created and applied to the product.',
+        description: childId 
+          ? 'New child category has been created and applied to the product.'
+          : 'New categories have been created and applied to the product.',
       });
     } catch (error) {
       console.error('Error creating categories:', error);
       setIsCreatingCategory(false);
+      toast({
+        title: 'Error',
+        description: 'Failed to create categories. Please try again.',
+        variant: 'destructive',
+      });
     }
   };
 
