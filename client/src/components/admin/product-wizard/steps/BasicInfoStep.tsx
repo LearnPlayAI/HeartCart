@@ -498,6 +498,12 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
         throw new Error(result.error?.message || 'Failed to save category assignment');
       }
       
+      // Refresh categories to show the newly created categories
+      await queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
+      
+      // Refresh the current product draft to get updated data
+      await queryClient.invalidateQueries({ queryKey: ['/api/product-drafts', draft.id] });
+      
       toast({
         title: 'Category Applied',
         description: 'Product category has been saved successfully.',
