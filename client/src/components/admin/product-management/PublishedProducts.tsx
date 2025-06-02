@@ -479,11 +479,24 @@ export const PublishedProducts: React.FC = () => {
                           <div className="font-mono text-sm font-medium">
                             Regular: {formatCurrency(product.price || 0)}
                           </div>
-                          {product.salePrice && (
-                            <div className="font-mono text-sm text-red-600 font-semibold">
-                              Sale: {formatCurrency(product.salePrice)}
-                            </div>
-                          )}
+                          {product.salePrice && (() => {
+                            const costPrice = product.costPrice || 0;
+                            const regularPrice = product.price || 0;
+                            const tmyMarkup = costPrice > 0 ? ((regularPrice - costPrice) / costPrice * 100) : 0;
+                            
+                            let saleColorClass = 'text-red-600'; // Default red for ≤20%
+                            if (tmyMarkup > 30) {
+                              saleColorClass = 'text-green-600';
+                            } else if (tmyMarkup > 20) {
+                              saleColorClass = 'text-yellow-600';
+                            }
+                            
+                            return (
+                              <div className={`font-mono text-sm font-semibold ${saleColorClass}`}>
+                                Sale: {formatCurrency(product.salePrice)}
+                              </div>
+                            );
+                          })()}
                         </div>
                       </TableCell>
                       <TableCell className="text-right">

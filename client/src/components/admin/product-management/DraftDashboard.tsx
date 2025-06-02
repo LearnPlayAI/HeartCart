@@ -545,11 +545,24 @@ export const DraftDashboard: React.FC = () => {
                           <div className="font-mono text-sm font-medium">
                             Regular: {formatCurrency(draft.regularPrice || 0)}
                           </div>
-                          {draft.salePrice && (
-                            <div className="font-mono text-sm text-red-600 font-semibold">
-                              Sale: {formatCurrency(draft.salePrice)}
-                            </div>
-                          )}
+                          {draft.salePrice && (() => {
+                            const costPrice = draft.costPrice || 0;
+                            const regularPrice = draft.regularPrice || 0;
+                            const tmyMarkup = costPrice > 0 ? ((regularPrice - costPrice) / costPrice * 100) : 0;
+                            
+                            let saleColorClass = 'text-red-600'; // Default red for ≤20%
+                            if (tmyMarkup > 30) {
+                              saleColorClass = 'text-green-600';
+                            } else if (tmyMarkup > 20) {
+                              saleColorClass = 'text-yellow-600';
+                            }
+                            
+                            return (
+                              <div className={`font-mono text-sm font-semibold ${saleColorClass}`}>
+                                Sale: {formatCurrency(draft.salePrice)}
+                              </div>
+                            );
+                          })()}
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
