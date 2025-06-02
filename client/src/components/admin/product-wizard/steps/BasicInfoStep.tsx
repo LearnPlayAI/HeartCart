@@ -474,8 +474,11 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
   }, [newCategoryParentId]);
   
   // Handle AI category selection
-  const handleAiCategorySelection = async (parentId: number, childId: number | null) => {
+  const handleAiCategorySelection = (parentId: number, childId: number | null) => {
     const selectedCategoryId = childId || parentId;
+    
+    // Update the form with the selected category
+    form.setValue('categoryId', selectedCategoryId);
     
     // Save the draft with the updated category - convert string prices to numbers
     const currentFormData = form.getValues();
@@ -488,8 +491,11 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
       costPrice: currentFormData.costPrice ? Number(currentFormData.costPrice) : null,
     };
     
-    // Save first, then update form
-    onSave(dataToSave, true); // Pass autoAdvance = true to trigger form refresh
+    onSave(dataToSave);
+    
+    // Invalidate categories cache to refresh the dropdowns
+    queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/categories/main/with-children'] });
     
     // Close the dialog
     setShowAiCategorySuggestions(false);

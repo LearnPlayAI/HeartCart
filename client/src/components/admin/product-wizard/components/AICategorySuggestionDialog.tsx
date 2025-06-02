@@ -433,7 +433,6 @@ export function AICategorySuggestionDialog({
               onClick={handleCreateNewCategories}
               disabled={isCreatingCategory || createCategoryMutation.isPending || categoriesQuery.isLoading || !Array.isArray(categories)}
               className="bg-green-600 hover:bg-green-700"
-              title={`Debug: isCreating=${isCreatingCategory}, mutationPending=${createCategoryMutation.isPending}, categoriesLoading=${categoriesQuery.isLoading}, categoriesArray=${Array.isArray(categories)}`}
             >
               {isCreatingCategory || createCategoryMutation.isPending ? (
                 <>
