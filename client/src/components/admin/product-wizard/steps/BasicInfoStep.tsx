@@ -498,7 +498,8 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
         throw new Error(result.error?.message || 'Failed to save category assignment');
       }
       
-      // Refresh categories to show the newly created categories and wait for completion
+      // Force complete refresh of categories data to show newly created categories
+      await queryClient.removeQueries({ queryKey: ['/api/categories'] });
       await queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
       await queryClient.refetchQueries({ queryKey: ['/api/categories'] });
       
