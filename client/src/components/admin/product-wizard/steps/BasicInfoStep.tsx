@@ -479,9 +479,15 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
     if (childId) {
       // If there's a child category, use that as the main category
       form.setValue('categoryId', childId);
+      // Update the parent and child dropdown states
+      setSelectedParentCategory(parentId.toString());
+      setSelectedChildCategory(childId.toString());
     } else {
       // Otherwise use the parent category
       form.setValue('categoryId', parentId);
+      // Update only the parent dropdown state
+      setSelectedParentCategory(parentId.toString());
+      setSelectedChildCategory('');
     }
     
     // Close the dialog
