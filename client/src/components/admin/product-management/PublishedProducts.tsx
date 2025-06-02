@@ -68,10 +68,10 @@ interface PublishedProduct {
 export const PublishedProducts: React.FC = () => {
   const [, navigate] = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('');
-  const [supplierFilter, setSupplierFilter] = useState('');
-  const [catalogFilter, setCatalogFilter] = useState('');
-  const [skuFilter, setSkuFilter] = useState('');
+  
+  // Category filters
+  const [selectedParentCategory, setSelectedParentCategory] = useState<string>('');
+  const [selectedChildCategory, setSelectedChildCategory] = useState<string>('');
   
   // Fetch published products
   const { data: productsData, isLoading: isProductsLoading, error: productsError } = useQuery({
@@ -91,24 +91,64 @@ export const PublishedProducts: React.FC = () => {
     }
   });
 
-  // Fetch catalogs for filter
-  const { data: catalogsData } = useQuery({
-    queryKey: ['/api/catalogs'],
-    queryFn: async () => {
-      const response = await apiRequest('GET', '/api/catalogs');
-      return response.json();
-    }
-  });
-  
-  // Filter products based on search query
-  const filteredProducts = productsData?.data?.filter((product: PublishedProduct) => {
+  const products = productsData?.success ? productsData.data : [];
+  const categories = categoriesData?.success ? categoriesData.data : [];
+
+  // Process categories into parent and child relationships
+  const parentCategories = useMemo(() => {
+    return categories.filter((cat: any) => cat.parentId === null || cat.parentId === undefined);
+  }, [categories]);
+
+  const childCategories = useMemo(() => {
+    if (!selectedParentCategory) return [];
+    const parentId = parseInt(selectedParentCategory);
+    return categories.filter((cat: any) => cat.parentId === parentId);
+  }, [categories, selectedParentCategory]);
+
+  // Handle parent category change
+  const handleParentCategoryChange = (value: string) => {
+    setSelectedParentCategory(value);
+    setSelectedChildCategory(''); // Reset child category when parent changes
+  };
+
+  // Filter products with search and category filtering
+  const filteredProducts = useMemo(() => {
+    let filtered = products;
+
+    // Apply search filtering
     if (searchQuery) {
-      return product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-             product.slug.toLowerCase().includes(searchQuery.toLowerCase()) ||
-             product.brand?.toLowerCase().includes(searchQuery.toLowerCase());
+      filtered = filtered.filter((product: PublishedProduct) => {
+        return product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+               product.slug.toLowerCase().includes(searchQuery.toLowerCase()) ||
+               product.brand?.toLowerCase().includes(searchQuery.toLowerCase());
+      });
     }
-    return true;
-  }) || [];
+
+    // Apply category filtering
+    if (selectedParentCategory) {
+      const parentId = parseInt(selectedParentCategory);
+      
+      if (selectedChildCategory) {
+        // Filter by specific child category
+        const childId = parseInt(selectedChildCategory);
+        filtered = filtered.filter((product: PublishedProduct) => {
+          // Assuming products have categoryId field - we may need to check the actual schema
+          return (product as any).categoryId === childId;
+        });
+      } else {
+        // Filter by parent category - include all products under this parent and its children
+        const parentAndChildIds = [parentId];
+        const childCats = categories.filter((cat: any) => cat.parentId === parentId);
+        parentAndChildIds.push(...childCats.map((cat: any) => cat.id));
+        
+        filtered = filtered.filter((product: PublishedProduct) => 
+          (product as any).categoryId && parentAndChildIds.includes((product as any).categoryId)
+        );
+      }
+    }
+
+    return filtered;
+  }, [products, searchQuery, selectedParentCategory, selectedChildCategory, categories]);
   
   // Format date relative to now
   const formatDate = (dateString: string) => {
@@ -154,6 +194,39 @@ export const PublishedProducts: React.FC = () => {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
+        
+        {/* Category Filters */}
+        <Select value={selectedParentCategory} onValueChange={handleParentCategoryChange}>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="All Parent Categories" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">All Parent Categories</SelectItem>
+            {parentCategories.map((category: any) => (
+              <SelectItem key={category.id} value={category.id.toString()}>
+                {category.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        
+        <Select 
+          value={selectedChildCategory} 
+          onValueChange={setSelectedChildCategory}
+          disabled={!selectedParentCategory || childCategories.length === 0}
+        >
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="All Child Categories" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">All Child Categories</SelectItem>
+            {childCategories.map((category: any) => (
+              <SelectItem key={category.id} value={category.id.toString()}>
+                {category.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       
       <Card>
