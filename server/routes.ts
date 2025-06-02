@@ -1189,7 +1189,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const searchQuerySchema = z.object({
     q: z.string().min(1, { message: "Search query is required" }),
     limit: z.coerce.number().int().nonnegative().default(20),
-    offset: z.coerce.number().int().nonnegative().default(0)
+    offset: z.coerce.number().int().nonnegative().default(0),
+    categoryId: z.coerce.number().int().positive().optional(),
+    parentCategoryId: z.coerce.number().int().positive().optional()
   }).passthrough(); // Allow additional parameters
 
   app.get(
@@ -1198,14 +1200,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       query: searchQuerySchema
     }),
     asyncHandler(async (req: Request, res: Response) => {
-      const { q: query, limit, offset } = req.query;
+      const { q: query, limit, offset, categoryId, parentCategoryId } = req.query;
       
       const user = req.user as any;
       const isAdmin = user && user.role === 'admin';
       
       const options = { 
         includeInactive: isAdmin, 
-        includeCategoryInactive: isAdmin 
+        includeCategoryInactive: isAdmin,
+        categoryId: categoryId ? Number(categoryId) : undefined,
+        parentCategoryId: parentCategoryId ? Number(parentCategoryId) : undefined
       };
       
       try {

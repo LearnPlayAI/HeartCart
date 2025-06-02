@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Search, Package, Plus, X, Trash2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ArrowLeft, Search, Package, Plus, X, Trash2, Filter } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -51,10 +52,19 @@ interface Promotion {
   minimumOrderValue?: number;
 }
 
+interface Category {
+  id: number;
+  name: string;
+  parentId?: number;
+  children?: Category[];
+}
+
 export default function PromotionProductsPage() {
   const { id } = useParams();
   const [, setLocation] = useLocation();
   const [productSearchQuery, setProductSearchQuery] = useState("");
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
+  const [selectedParentCategoryId, setSelectedParentCategoryId] = useState<number | null>(null);
   const [promotionalPrices, setPromotionalPrices] = useState<Record<number, string>>({});
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -75,10 +85,39 @@ export default function PromotionProductsPage() {
 
   const promotionProducts = promotionProductsData?.data || [];
 
-  // Fetch products search results
+  // Fetch categories for filtering
+  const { data: categoriesData } = useQuery({
+    queryKey: ['/api/categories/main/with-children'],
+  });
+
+  const categories = categoriesData?.data || [];
+
+  // Fetch products search results with enhanced parameters
   const { data: productsData, isLoading: isSearching } = useQuery({
-    queryKey: ['/api/products', { search: productSearchQuery }],
+    queryKey: ['/api/search', { 
+      q: productSearchQuery,
+      categoryId: selectedCategoryId,
+      parentCategoryId: selectedParentCategoryId 
+    }],
     enabled: productSearchQuery.length > 2,
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        q: productSearchQuery,
+        limit: '20',
+        offset: '0'
+      });
+      
+      if (selectedCategoryId) {
+        params.set('categoryId', selectedCategoryId.toString());
+      }
+      if (selectedParentCategoryId) {
+        params.set('parentCategoryId', selectedParentCategoryId.toString());
+      }
+      
+      const response = await fetch(`/api/search?${params}`);
+      if (!response.ok) throw new Error('Search failed');
+      return response.json();
+    }
   });
 
   // Add product to promotion mutation

@@ -1632,106 +1632,103 @@ export class DatabaseStorage implements IStorage {
     query: string,
     limit = 20,
     offset = 0,
-    options?: { includeInactive?: boolean; includeCategoryInactive?: boolean },
+    options?: { 
+      includeInactive?: boolean; 
+      includeCategoryInactive?: boolean;
+      categoryId?: number;
+      parentCategoryId?: number;
+    },
   ): Promise<Product[]> {
     try {
       // Split query into individual terms and create search patterns
       const searchTerms = query.trim().split(/\s+/).filter(term => term.length > 0);
       console.log(`Searching products with terms: ${searchTerms.join(', ')}`);
-      let productList: Product[] = [];
-
-      // Use a more direct approach with raw SQL for comprehensive search
-      if (!options?.includeCategoryInactive) {
-        try {
-          // First get all active products using the same method as getAllProducts
-          const allProducts = await this.getAllProducts();
+      
+      // Get all products first, then apply sophisticated ranking
+      const allProducts = await this.getAllProducts(
+        1000, // Get more products for ranking
+        0,
+        options?.categoryId,
+        undefined,
+        options
+      );
+      
+      // Filter and rank products based on search terms
+      const rankedProducts = allProducts
+        .filter(product => {
+          if (!options?.includeInactive && !product.isActive) return false;
           
-          // Filter the results based on search terms
-          productList = allProducts.filter(product => {
-            if (!options?.includeInactive && !product.isActive) return false;
+          // Apply category filtering if specified
+          if (options?.categoryId && product.categoryId !== options.categoryId) return false;
+          if (options?.parentCategoryId && product.category?.parentCategoryId !== options.parentCategoryId) return false;
+          
+          // Check if any search term matches
+          return searchTerms.some(term => {
+            const searchTerm = term.toLowerCase();
+            return (
+              product.name?.toLowerCase().includes(searchTerm) ||
+              product.description?.toLowerCase().includes(searchTerm) ||
+              product.brand?.toLowerCase().includes(searchTerm) ||
+              product.supplier?.toLowerCase().includes(searchTerm) ||
+              product.sku?.toLowerCase().includes(searchTerm) ||
+              product.metaTitle?.toLowerCase().includes(searchTerm) ||
+              product.metaDescription?.toLowerCase().includes(searchTerm) ||
+              product.metaKeywords?.toLowerCase().includes(searchTerm) ||
+              product.dimensions?.toLowerCase().includes(searchTerm) ||
+              product.specialSaleText?.toLowerCase().includes(searchTerm) ||
+              product.discountLabel?.toLowerCase().includes(searchTerm) ||
+              product.tags?.some(tag => tag.toLowerCase().includes(searchTerm))
+            );
+          });
+        })
+        .map(product => {
+          // Calculate relevance score for ranking
+          let score = 0;
+          const productName = product.name?.toLowerCase() || '';
+          const productDescription = product.description?.toLowerCase() || '';
+          const productBrand = product.brand?.toLowerCase() || '';
+          const productSku = product.sku?.toLowerCase() || '';
+          
+          searchTerms.forEach(term => {
+            const searchTerm = term.toLowerCase();
             
-            return searchTerms.some(term => {
-              const searchTerm = term.toLowerCase();
-              return (
-                product.name?.toLowerCase().includes(searchTerm) ||
-                product.description?.toLowerCase().includes(searchTerm) ||
-                product.brand?.toLowerCase().includes(searchTerm) ||
-                product.supplier?.toLowerCase().includes(searchTerm) ||
-                product.sku?.toLowerCase().includes(searchTerm) ||
-                product.metaTitle?.toLowerCase().includes(searchTerm) ||
-                product.metaDescription?.toLowerCase().includes(searchTerm) ||
-                product.metaKeywords?.toLowerCase().includes(searchTerm) ||
-                product.dimensions?.toLowerCase().includes(searchTerm) ||
-                product.specialSaleText?.toLowerCase().includes(searchTerm) ||
-                product.discountLabel?.toLowerCase().includes(searchTerm) ||
-                product.tags?.some(tag => tag.toLowerCase().includes(searchTerm))
-              );
-            });
+            // Exact name match gets highest score
+            if (productName === searchTerm) score += 100;
+            // Name starts with term gets high score
+            else if (productName.startsWith(searchTerm)) score += 80;
+            // Name contains term gets medium score
+            else if (productName.includes(searchTerm)) score += 60;
+            
+            // SKU exact match gets high score
+            if (productSku === searchTerm) score += 90;
+            else if (productSku.includes(searchTerm)) score += 50;
+            
+            // Brand exact match gets high score
+            if (productBrand === searchTerm) score += 70;
+            else if (productBrand.includes(searchTerm)) score += 40;
+            
+            // Description contains term gets lower score
+            if (productDescription.includes(searchTerm)) score += 20;
+            
+            // Tags match gets medium score
+            if (product.tags?.some(tag => tag.toLowerCase().includes(searchTerm))) score += 30;
+            
+            // Bonus for multiple word matches in name
+            const nameWords = productName.split(' ');
+            const matchingWords = nameWords.filter(word => word.includes(searchTerm));
+            score += matchingWords.length * 10;
           });
           
-          // Apply pagination
-          productList = productList.slice(offset, offset + limit);
-          console.log(`Found ${productList.length} products with category join`);
-        } catch (joinError) {
-          console.error(
-            `Error searching products with active categories for query "${query}":`,
-            joinError,
-          );
-          throw joinError;
-        }
-      } else {
-        try {
-          // Search without category constraint  
-          // Build dynamic search conditions for each term (all terms must match)
-          const searchConditions = searchTerms.map(term => {
-            const searchTerm = `%${term}%`;
-            return sql`(
-              name ILIKE ${searchTerm} OR 
-              description ILIKE ${searchTerm} OR 
-              brand ILIKE ${searchTerm} OR 
-              supplier ILIKE ${searchTerm} OR 
-              sku ILIKE ${searchTerm} OR 
-              meta_title ILIKE ${searchTerm} OR 
-              meta_description ILIKE ${searchTerm} OR 
-              meta_keywords ILIKE ${searchTerm} OR 
-              dimensions ILIKE ${searchTerm} OR 
-              special_sale_text ILIKE ${searchTerm} OR 
-              discount_label ILIKE ${searchTerm} OR 
-              EXISTS (
-                SELECT 1 FROM unnest(tags) AS tag 
-                WHERE tag ILIKE ${searchTerm}
-              )
-            )`;
-          });
+          return { product, score };
+        })
+        .sort((a, b) => b.score - a.score) // Sort by relevance score descending
+        .slice(offset, offset + limit)
+        .map(item => item.product);
 
-          // Combine all search conditions with AND
-          const combinedSearchCondition = searchConditions.reduce((acc, condition, index) => {
-            if (index === 0) return condition;
-            return sql`${acc} AND ${condition}`;
-          });
-          
-          const result = await db.execute(sql`
-            SELECT * 
-            FROM products 
-            WHERE ${options?.includeInactive ? sql`TRUE` : sql`is_active = TRUE`}
-            AND ${combinedSearchCondition}
-            LIMIT ${limit}
-            OFFSET ${offset}
-          `);
-          
-          productList = result.rows as Product[];
-          console.log(`Found ${productList.length} products without category constraint`);
-        } catch (queryError) {
-          console.error(
-            `Error searching products for query "${query}":`,
-            queryError,
-          );
-          throw queryError;
-        }
-      }
-
+      console.log(`Found ${rankedProducts.length} ranked products`);
+      
       // Enrich products with main image URLs
-      return await this.enrichProductsWithMainImage(productList);
+      return await this.enrichProductsWithMainImage(rankedProducts);
     } catch (error) {
       console.error(`Error in searchProducts for query "${query}":`, error);
       throw error;
