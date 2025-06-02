@@ -64,7 +64,7 @@ export function AICategorySuggestionDialog({
   } | null>(null);
 
   // Fetch categories for checking existing ones
-  const categoriesQuery = useQuery({
+  const { data: categoriesData } = useQuery({
     queryKey: ['/api/categories'],
     queryFn: async () => {
       const response = await apiRequest('GET', '/api/categories');
@@ -73,7 +73,7 @@ export function AICategorySuggestionDialog({
     },
   });
 
-  const categories = categoriesQuery.data || [];
+  const categories = categoriesData || [];
 
   // Fetch AI category suggestions
   const categorySuggestionMutation = useMutation({
@@ -156,25 +156,7 @@ export function AICategorySuggestionDialog({
   };
 
   const handleCreateNewCategories = async () => {
-    if (!newCategoryData) {
-      toast({
-        title: 'Error',
-        description: 'No category data selected.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    if (categoriesQuery.isLoading) {
-      toast({
-        title: 'Please wait',
-        description: 'Categories are still loading. Please try again in a moment.',
-        variant: 'default',
-      });
-      return;
-    }
-
-    if (!Array.isArray(categories) || categories.length === 0) {
+    if (!newCategoryData || !Array.isArray(categories)) {
       toast({
         title: 'Error',
         description: 'Categories not loaded yet. Please try again.',
@@ -431,7 +413,7 @@ export function AICategorySuggestionDialog({
           {newCategoryData && (
             <Button
               onClick={handleCreateNewCategories}
-              disabled={isCreatingCategory || createCategoryMutation.isPending || categoriesQuery.isLoading || !Array.isArray(categories)}
+              disabled={isCreatingCategory || createCategoryMutation.isPending}
               className="bg-green-600 hover:bg-green-700"
             >
               {isCreatingCategory || createCategoryMutation.isPending ? (
