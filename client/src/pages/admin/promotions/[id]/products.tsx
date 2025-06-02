@@ -319,15 +319,96 @@ export default function PromotionProductsPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search products by name, SKU, or description..."
-                    value={productSearchQuery}
-                    onChange={(e) => setProductSearchQuery(e.target.value)}
-                    className="pl-10"
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search products by name, SKU, or description..."
+                      value={productSearchQuery}
+                      onChange={(e) => setProductSearchQuery(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Parent Category</label>
+                    <Select 
+                      value={selectedParentCategoryId?.toString() || "all"} 
+                      onValueChange={(value) => {
+                        const parentId = value === "all" ? null : parseInt(value);
+                        setSelectedParentCategoryId(parentId);
+                        setSelectedCategoryId(null); // Reset child category when parent changes
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="All categories" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All categories</SelectItem>
+                        {categories.map((category: any) => (
+                          category.id && (
+                            <SelectItem key={category.id} value={category.id.toString()}>
+                              {category.name || 'Unnamed Category'}
+                            </SelectItem>
+                          )
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Child Category</label>
+                    <Select 
+                      value={selectedCategoryId?.toString() || "all"} 
+                      onValueChange={(value) => setSelectedCategoryId(value === "all" ? null : parseInt(value))}
+                      disabled={!selectedParentCategoryId}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={selectedParentCategoryId ? "Select subcategory" : "Select parent first"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All subcategories</SelectItem>
+                        {selectedParentCategoryId && categories
+                          .find((cat: any) => cat.id === selectedParentCategoryId)
+                          ?.children?.map((child: any) => (
+                            <SelectItem key={child.id} value={child.id.toString()}>
+                              {child.name}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
+
+                {(selectedParentCategoryId || selectedCategoryId) && (
+                  <div className="flex items-center gap-2 pt-2">
+                    <Filter className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Filters active:</span>
+                    {selectedParentCategoryId && (
+                      <Badge variant="secondary" className="text-xs">
+                        {categories.find((cat: any) => cat.id === selectedParentCategoryId)?.name || 'Unknown'}
+                        <X 
+                          className="h-3 w-3 ml-1 cursor-pointer" 
+                          onClick={() => {
+                            setSelectedParentCategoryId(null);
+                            setSelectedCategoryId(null);
+                          }}
+                        />
+                      </Badge>
+                    )}
+                    {selectedCategoryId && (
+                      <Badge variant="secondary" className="text-xs">
+                        {categories
+                          .find((cat: any) => cat.id === selectedParentCategoryId)
+                          ?.children?.find((child: any) => child.id === selectedCategoryId)?.name || 'Unknown'}
+                        <X 
+                          className="h-3 w-3 ml-1 cursor-pointer" 
+                          onClick={() => setSelectedCategoryId(null)}
+                        />
+                      </Badge>
+                    )}
+                  </div>
+                )}
 
                 {productSearchQuery.length > 2 && (
                   <div className="space-y-4">
