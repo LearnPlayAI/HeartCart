@@ -479,8 +479,8 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
       // Determine the final category ID to use
       const finalCategoryId = childId || parentId;
       
-      // Update the form with the selected category
-      form.setValue('categoryId', finalCategoryId);
+      // Update the form with the selected category and trigger validation
+      form.setValue('categoryId', finalCategoryId, { shouldValidate: true, shouldDirty: true });
       
       // CRITICAL FIX: Immediately save the category assignment to the database
       // Using snake_case column name to match actual database structure
@@ -503,6 +503,12 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
       
       // Refresh the current product draft to get updated data
       await queryClient.invalidateQueries({ queryKey: ['/api/product-drafts', draft.id] });
+      
+      // Force form to refresh with the new category value
+      setTimeout(() => {
+        form.setValue('categoryId', finalCategoryId, { shouldValidate: true, shouldDirty: true });
+        console.log('Form category forcefully updated to:', finalCategoryId, 'Form values now:', form.getValues());
+      }, 100);
       
       toast({
         title: 'Category Applied',
