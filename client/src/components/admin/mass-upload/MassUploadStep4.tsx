@@ -315,20 +315,44 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
           return category;
         };
 
-        // Validate parent category - find by name and no parentId (main category)
-        const parentCategory = findCategoryByName(product.parentCategory);
-        if (!parentCategory) {
-          errors.push(`Parent category "${product.parentCategory}" not found`);
-        } else {
-          product.parentCategoryId = parentCategory.id;
-        }
+        // Handle missing or empty categories
+        const hasParentCategory = product.parentCategory && product.parentCategory.trim() !== '';
+        const hasChildCategory = product.childCategory && product.childCategory.trim() !== '';
 
-        // Validate child category - find by name and parentId matching the parent
-        const childCategory = parentCategory ? findCategoryByName(product.childCategory, parentCategory.id) : null;
-        if (!childCategory && parentCategory) {
-          errors.push(`Child category "${product.childCategory}" not found under "${product.parentCategory}"`);
-        } else if (childCategory) {
-          product.childCategoryId = childCategory.id;
+        if (!hasParentCategory || !hasChildCategory) {
+          // Mark product as needing category assignment
+          product.needsCategoryAssignment = true;
+          warnings.push(`Product "${product.title}" is missing category information. Please assign categories below.`);
+          
+          // Initialize with empty selections if missing
+          if (!hasParentCategory) {
+            product.assignedParentCategoryId = null;
+          }
+          if (!hasChildCategory) {
+            product.assignedChildCategoryId = null;
+          }
+        } else {
+          // Validate existing category names
+          const parentCategory = findCategoryByName(product.parentCategory);
+          if (!parentCategory) {
+            product.needsCategoryAssignment = true;
+            warnings.push(`Parent category "${product.parentCategory}" not found. Please select a valid category.`);
+            product.assignedParentCategoryId = null;
+          } else {
+            product.parentCategoryId = parentCategory.id;
+            product.assignedParentCategoryId = parentCategory.id;
+          }
+
+          // Validate child category
+          const childCategory = parentCategory ? findCategoryByName(product.childCategory, parentCategory.id) : null;
+          if (!childCategory && parentCategory) {
+            product.needsCategoryAssignment = true;
+            warnings.push(`Child category "${product.childCategory}" not found under "${product.parentCategory}". Please select a valid category.`);
+            product.assignedChildCategoryId = null;
+          } else if (childCategory) {
+            product.childCategoryId = childCategory.id;
+            product.assignedChildCategoryId = childCategory.id;
+          }
         }
 
         // Validate pricing
@@ -619,20 +643,96 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
                       </TableCell>
                       
                       <TableCell>
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <Badge variant={product.parentCategoryId ? "default" : "destructive"} className="text-xs">
-                              {product.parentCategory}
-                            </Badge>
-                            {!product.parentCategoryId && <XCircle className="h-3 w-3 text-red-500" />}
+                        {product.needsCategoryAssignment ? (
+                          <div className="space-y-2">
+                            <div className="text-xs font-medium text-orange-700">Select Categories:</div>
+                            
+                            {/* Parent Category Selector */}
+                            <div>
+                              <Label className="text-xs">Parent Category</Label>
+                              <Select 
+                                value={product.assignedParentCategoryId?.toString() || ""} 
+                                onValueChange={(value) => {
+                                  const parentId = value ? parseInt(value) : null;
+                                  const updatedProducts = data.products.map(p => 
+                                    p.sku === product.sku 
+                                      ? { 
+                                          ...p, 
+                                          assignedParentCategoryId: parentId,
+                                          assignedChildCategoryId: null, // Reset child when parent changes
+                                          parentCategoryId: parentId,
+                                          childCategoryId: null
+                                        }
+                                      : p
+                                  );
+                                  onUpdate({ products: updatedProducts });
+                                }}
+                              >
+                                <SelectTrigger className="h-8 text-xs">
+                                  <SelectValue placeholder="Select parent..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {categories.filter((cat: any) => cat.level === 0).map((cat: any) => (
+                                    <SelectItem key={cat.id} value={cat.id.toString()}>
+                                      {cat.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            {/* Child Category Selector */}
+                            {product.assignedParentCategoryId && (
+                              <div>
+                                <Label className="text-xs">Child Category</Label>
+                                <Select 
+                                  value={product.assignedChildCategoryId?.toString() || ""} 
+                                  onValueChange={(value) => {
+                                    const childId = value ? parseInt(value) : null;
+                                    const updatedProducts = data.products.map(p => 
+                                      p.sku === product.sku 
+                                        ? { 
+                                            ...p, 
+                                            assignedChildCategoryId: childId,
+                                            childCategoryId: childId
+                                          }
+                                        : p
+                                    );
+                                    onUpdate({ products: updatedProducts });
+                                  }}
+                                >
+                                  <SelectTrigger className="h-8 text-xs">
+                                    <SelectValue placeholder="Select child..." />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {categories
+                                      .filter((cat: any) => cat.parentId === product.assignedParentCategoryId)
+                                      .map((cat: any) => (
+                                        <SelectItem key={cat.id} value={cat.id.toString()}>
+                                          {cat.name}
+                                        </SelectItem>
+                                      ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            )}
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Badge variant={product.childCategoryId ? "secondary" : "destructive"} className="text-xs">
-                              {product.childCategory}
-                            </Badge>
-                            {!product.childCategoryId && <XCircle className="h-3 w-3 text-red-500" />}
+                        ) : (
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <Badge variant={product.parentCategoryId ? "default" : "destructive"} className="text-xs">
+                                {product.parentCategory || 'Not assigned'}
+                              </Badge>
+                              {!product.parentCategoryId && <XCircle className="h-3 w-3 text-red-500" />}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge variant={product.childCategoryId ? "secondary" : "destructive"} className="text-xs">
+                                {product.childCategory || 'Not assigned'}
+                              </Badge>
+                              {!product.childCategoryId && <XCircle className="h-3 w-3 text-red-500" />}
+                            </div>
                           </div>
-                        </div>
+                        )}
                       </TableCell>
                       
                       <TableCell>

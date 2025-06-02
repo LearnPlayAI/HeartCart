@@ -43,6 +43,10 @@ export interface CSVProduct {
   };
   isDuplicate?: boolean;
   isSelected?: boolean;
+  // Category assignment for products with missing categories
+  needsCategoryAssignment?: boolean;
+  assignedParentCategoryId?: number | null;
+  assignedChildCategoryId?: number | null;
 }
 
 export interface MassUploadData {
