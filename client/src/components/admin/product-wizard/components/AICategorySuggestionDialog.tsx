@@ -187,13 +187,17 @@ export function AICategorySuggestionDialog({
           ? Math.max(...parentCategories.map(cat => cat.displayOrder || 0))
           : 0;
 
-        const parentResponse = await createCategoryMutation.mutateAsync({
+        const parentCategoryData = {
           name: newCategoryData.parentName,
           slug: parentSlug,
           description: `AI-suggested parent category for ${productName}`,
+          parentId: null,
           level: 0,
           displayOrder: maxParentDisplayOrder + 1,
-        });
+        };
+        
+        console.log('Creating parent category with data:', parentCategoryData);
+        const parentResponse = await createCategoryMutation.mutateAsync(parentCategoryData);
         parentId = parentResponse.id;
       }
 
