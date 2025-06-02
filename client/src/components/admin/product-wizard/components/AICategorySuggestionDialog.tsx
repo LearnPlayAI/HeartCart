@@ -70,13 +70,20 @@ export function AICategorySuggestionDialog({
         productName,
         productDescription,
       });
-      return response.json();
+      const data = await response.json();
+      console.log('AI Category Suggestions Response:', data);
+      
+      if (!data.success) {
+        throw new Error(data.error?.message || 'Failed to get category suggestions');
+      }
+      
+      return data.data;
     },
     onError: (error) => {
       console.error('Error fetching category suggestions:', error);
       toast({
         title: 'Error',
-        description: 'Failed to get AI category suggestions. Please try again.',
+        description: error instanceof Error ? error.message : 'Failed to get AI category suggestions. Please check your AI service configuration and try again.',
         variant: 'destructive',
       });
     },
