@@ -87,6 +87,10 @@ export const PublishedProducts: React.FC = () => {
   const [showDuplicates, setShowDuplicates] = useState(false);
   const [duplicateGroups, setDuplicateGroups] = useState<any[]>([]);
   
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
+  
   // Fetch published products
   const { data: productsData, isLoading: isProductsLoading, error: productsError } = useQuery({
     queryKey: ['/api/products'],
@@ -163,6 +167,18 @@ export const PublishedProducts: React.FC = () => {
 
     return filtered;
   }, [products, searchQuery, selectedParentCategory, selectedChildCategory, categories]);
+
+  // Calculate pagination
+  const totalProducts = filteredProducts.length;
+  const totalPages = Math.ceil(totalProducts / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedProducts = filteredProducts.slice(startIndex, endIndex);
+
+  // Reset to first page when filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedParentCategory, selectedChildCategory]);
 
   // Helper function to calculate name similarity
   const calculateSimilarity = (name1: string, name2: string): number => {

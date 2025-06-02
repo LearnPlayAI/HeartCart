@@ -541,60 +541,40 @@ export const DraftDashboard: React.FC = () => {
                 </TableBody>
               </Table>
             </div>
-            
-            {/* Pagination Controls */}
-            {filteredDrafts.length > 0 && (
-              <div className="flex items-center justify-between px-6 py-4 border-t">
-                <div className="text-sm text-muted-foreground">
-                  Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, (draftsData?.meta?.total || 0))} of {draftsData?.meta?.total || 0} drafts
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                    disabled={currentPage === 1}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                    Previous
-                  </Button>
-                  <div className="flex items-center space-x-1">
-                    {Array.from({ length: Math.ceil((draftsData?.meta?.total || 0) / itemsPerPage) }, (_, i) => i + 1)
-                      .filter(page => {
-                        // Show first page, last page, current page, and pages around current
-                        const totalPages = Math.ceil((draftsData?.meta?.total || 0) / itemsPerPage);
-                        return page === 1 || page === totalPages || (page >= currentPage - 1 && page <= currentPage + 1);
-                      })
-                      .map((page, index, array) => (
-                        <React.Fragment key={page}>
-                          {index > 0 && array[index - 1] !== page - 1 && (
-                            <span className="px-2 text-muted-foreground">...</span>
-                          )}
-                          <Button
-                            variant={currentPage === page ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setCurrentPage(page)}
-                            className="w-8 h-8 p-0"
-                          >
-                            {page}
-                          </Button>
-                        </React.Fragment>
-                      ))}
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage(prev => Math.min(Math.ceil((draftsData?.meta?.total || 0) / itemsPerPage), prev + 1))}
-                    disabled={currentPage >= Math.ceil((draftsData?.meta?.total || 0) / itemsPerPage)}
-                  >
-                    Next
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            )}
           )}
         </CardContent>
+        
+        {/* Pagination Controls */}
+        {draftsData?.meta && draftsData.meta.total > itemsPerPage && (
+          <div className="flex items-center justify-between px-6 py-4 border-t">
+            <div className="text-sm text-muted-foreground">
+              Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, draftsData.meta.total)} of {draftsData.meta.total} drafts
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Previous
+              </Button>
+              <span className="text-sm">
+                Page {currentPage} of {Math.ceil(draftsData.meta.total / itemsPerPage)}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.min(Math.ceil(draftsData.meta.total / itemsPerPage), prev + 1))}
+                disabled={currentPage >= Math.ceil(draftsData.meta.total / itemsPerPage)}
+              >
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </Card>
       
       {/* Create New Draft Dialog */}
