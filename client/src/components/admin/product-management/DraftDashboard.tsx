@@ -73,6 +73,7 @@ export const DraftDashboard: React.FC = () => {
   // Category filters
   const [selectedParentCategory, setSelectedParentCategory] = useState<string>('');
   const [selectedChildCategory, setSelectedChildCategory] = useState<string>('');
+  const [maxTmyFilter, setMaxTmyFilter] = useState<string>('');
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -250,8 +251,19 @@ export const DraftDashboard: React.FC = () => {
       }
     }
 
+    // Apply TMY filter if specified
+    if (maxTmyFilter && !isNaN(parseFloat(maxTmyFilter))) {
+      const maxTmyValue = parseFloat(maxTmyFilter);
+      filtered = filtered.filter((draft: ProductDraft) => {
+        const costPrice = draft.costPrice || 0;
+        const regularPrice = draft.regularPrice || 0;
+        const tmyMarkup = costPrice > 0 ? ((regularPrice - costPrice) / costPrice * 100) : 0;
+        return tmyMarkup <= maxTmyValue;
+      });
+    }
+
     return filtered;
-  }, [enrichedDrafts, selectedParentCategory, selectedChildCategory, categories]);
+  }, [enrichedDrafts, selectedParentCategory, selectedChildCategory, categories, maxTmyFilter]);
 
   // Calculate pagination for filtered drafts
   const totalFilteredDrafts = filteredDrafts.length;
@@ -263,7 +275,7 @@ export const DraftDashboard: React.FC = () => {
   // Reset to first page when filters change
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [selectedParentCategory, selectedChildCategory]);
+  }, [selectedParentCategory, selectedChildCategory, maxTmyFilter]);
 
   // Helper function to calculate name similarity
   const calculateSimilarity = (name1: string, name2: string): number => {
@@ -415,6 +427,20 @@ export const DraftDashboard: React.FC = () => {
             ))}
           </SelectContent>
         </Select>
+
+        {/* Min. TMY % Filter */}
+        <div className="relative">
+          <Input
+            placeholder="Min. TMY %"
+            className="w-[120px]"
+            value={maxTmyFilter}
+            onChange={(e) => setMaxTmyFilter(e.target.value)}
+            type="number"
+            min="0"
+            max="100"
+            step="0.1"
+          />
+        </div>
       </div>
       
       <Card>

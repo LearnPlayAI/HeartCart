@@ -100,6 +100,7 @@ export const PublishedProducts: React.FC = () => {
   // Category filters
   const [selectedParentCategory, setSelectedParentCategory] = useState<string>('');
   const [selectedChildCategory, setSelectedChildCategory] = useState<string>('');
+  const [maxTmyFilter, setMaxTmyFilter] = useState<string>('');
   
   // Duplicate detection state
   const [showDuplicates, setShowDuplicates] = useState(false);
