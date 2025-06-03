@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuth } from "../hooks/use-auth";
 import { useToast } from "../hooks/use-toast";
+import { queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -100,6 +101,9 @@ export default function AuthPage() {
     // Send all data including confirmPassword and acceptTerms as expected by backend
     registerMutation.mutate(data, {
       onSuccess: () => {
+        // Invalidate and refetch user data to update the UI components
+        queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
         
         // Navigate using router instead of forcing page reload
         navigate('/');
