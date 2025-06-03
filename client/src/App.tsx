@@ -52,6 +52,7 @@ import BatchUpload from "@/pages/admin/batch-upload";
 import AuthTestDashboard from "@/pages/admin/auth-test-dashboard";
 import PromotionsPage from "@/pages/admin/promotions";
 import PromotionProductsPage from "@/pages/admin/promotions/[id]/products";
+import CustomerPromotionsPage from "@/pages/promotions";
 
 // Developer Pages
 import DeveloperDashboard from "@/pages/developer";
@@ -238,6 +239,7 @@ function App() {
                       <Route path="/product/:slug"><ProductDetail /></Route>
                       <Route path="/category/:slug"><Category /></Route>
                       <Route path="/flash-deals"><FlashDeals /></Route>
+                      <Route path="/promotions"><CustomerPromotionsPage /></Route>
                       <Route path="/products"><ProductListing /></Route>
                       <Route path="/products-example"><ProductsExample /></Route>
                       <ProtectedRoute path="/checkout" component={Checkout} />
