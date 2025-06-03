@@ -10005,6 +10005,69 @@ export class DatabaseStorage implements IStorage {
       throw error;
     }
   }
+
+  // System Settings operations
+  async getSystemSetting(key: string): Promise<SystemSetting | undefined> {
+    try {
+      const [setting] = await db
+        .select()
+        .from(systemSettings)
+        .where(eq(systemSettings.key, key));
+      
+      return setting;
+    } catch (error) {
+      logger.error('Error getting system setting', { error, key });
+      throw error;
+    }
+  }
+
+  async getAllSystemSettings(): Promise<SystemSetting[]> {
+    try {
+      const settings = await db
+        .select()
+        .from(systemSettings)
+        .orderBy(asc(systemSettings.key));
+      
+      return settings;
+    } catch (error) {
+      logger.error('Error getting all system settings', { error });
+      throw error;
+    }
+  }
+
+  async updateSystemSetting(key: string, value: string): Promise<SystemSetting | undefined> {
+    try {
+      const [updatedSetting] = await db
+        .update(systemSettings)
+        .set({ 
+          value,
+          updatedAt: new Date().toISOString()
+        })
+        .where(eq(systemSettings.key, key))
+        .returning();
+
+      logger.info('System setting updated', { key, value });
+      return updatedSetting;
+    } catch (error) {
+      logger.error('Error updating system setting', { error, key, value });
+      throw error;
+    }
+  }
+
+  async createSystemSetting(setting: InsertSystemSetting): Promise<SystemSetting> {
+    try {
+      const [createdSetting] = await db
+        .insert(systemSettings)
+        .values(setting)
+        .returning();
+
+      logger.info('System setting created', { key: setting.key, value: setting.value });
+      return createdSetting;
+    } catch (error) {
+      logger.error('Error creating system setting', { error, setting });
+      throw error;
+    }
+  }
 }
 
 export const storage = new DatabaseStorage();

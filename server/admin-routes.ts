@@ -427,4 +427,67 @@ router.delete("/users/:id", isAuthenticated, asyncHandler(async (req: Request, r
   }
 }));
 
+// System Settings routes for admin configuration
+router.get("/settings", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    // TODO: Add admin role check here
+    const settings = await storage.getAllSystemSettings();
+    
+    logger.info("System settings fetched successfully", { settingsCount: settings.length });
+    return sendSuccess(res, settings);
+  } catch (error) {
+    logger.error("Error fetching system settings", { error });
+    return sendError(res, "Failed to fetch system settings", 500);
+  }
+}));
+
+// Get specific system setting by key
+router.get("/settings/:key", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    // TODO: Add admin role check here
+    const { key } = req.params;
+    
+    const setting = await storage.getSystemSetting(key);
+    
+    if (!setting) {
+      return sendError(res, "Setting not found", 404);
+    }
+
+    return sendSuccess(res, setting);
+  } catch (error) {
+    logger.error("Error fetching system setting", { error, key: req.params.key });
+    return sendError(res, "Failed to fetch system setting", 500);
+  }
+}));
+
+// Update system setting
+router.patch("/settings/:key", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    // TODO: Add admin role check here
+    const { key } = req.params;
+    const { value } = req.body;
+    
+    if (!value && value !== "false" && value !== "") {
+      return sendError(res, "Value is required", 400);
+    }
+
+    const updatedSetting = await storage.updateSystemSetting(key, String(value));
+    
+    if (!updatedSetting) {
+      return sendError(res, "Setting not found", 404);
+    }
+
+    logger.info("System setting updated successfully", { 
+      key,
+      value,
+      adminUserId: req.user?.id
+    });
+
+    return sendSuccess(res, updatedSetting);
+  } catch (error) {
+    logger.error("Error updating system setting", { error, key: req.params.key });
+    return sendError(res, "Failed to update system setting", 500);
+  }
+}));
+
 export { router as adminRoutes };
