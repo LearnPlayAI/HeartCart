@@ -297,14 +297,14 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[800px]" aria-describedby="quick-view-description">
+      <DialogContent className="max-w-[95vw] sm:max-w-[600px] lg:max-w-[800px] max-h-[90vh] overflow-y-auto" aria-describedby="quick-view-description">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold">{product.name}</DialogTitle>
           <DialogDescription id="quick-view-description" className="sr-only">
             Quick view of {product.name} with pricing and options
           </DialogDescription>
         </DialogHeader>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
           {/* Product Image */}
           <div className="relative group">
             <img 
