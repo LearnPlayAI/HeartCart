@@ -33,6 +33,7 @@ function Navigation({ className, isCollapsed, onNavigate }: { className?: string
     { path: "/admin/global-attributes", label: "Global Attributes", icon: Tags },
     { path: "/admin/pricing", label: "Pricing", icon: DollarSign },
     { path: "/admin/ai-settings", label: "AI Settings", icon: BrainCircuit },
+    { path: "/admin/users", label: "User Admin", icon: Users },
     { path: "/admin/customers", label: "Customers", icon: Users },
     { path: "/admin/payments", label: "Payments", icon: CreditCard },
     { path: "/admin/settings", label: "Settings", icon: Settings },

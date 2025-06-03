@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getQueryFn, apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
-import AdminLayout from '@/components/admin/admin-layout';
+import { AdminLayout } from '@/components/admin/layout';
 import { 
   Card, 
   CardContent, 
@@ -877,8 +877,13 @@ export default function UserAdminPage() {
   );
 
   return (
-    <AdminLayout title="User Administration" subtitle="Manage user accounts, roles, and permissions">
-      <div className="space-y-6">
+    <AdminLayout>
+      <div className="p-6 space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">User Administration</h1>
+          <p className="text-muted-foreground">Manage user accounts, roles, and permissions</p>
+        </div>
+        
         <StatsCards />
         
         {viewMode === 'table' ? <UserTableView /> : <UserCardsView />}
