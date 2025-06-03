@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getQueryFn, apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { AdminLayout } from '@/components/admin/layout';
+import { formatDate } from '@/utils/format';
 import { 
   Card, 
   CardContent, 
@@ -122,11 +123,22 @@ export default function UserAdminPage() {
   // State for pagination and filtering
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortBy, setSortBy] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setCurrentPage(1); // Reset to first page when search changes
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [search]);
   
   // State for dialogs
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -173,7 +185,7 @@ export default function UserAdminPage() {
     queryKey: ['/api/admin/users', { 
       page: currentPage, 
       limit, 
-      search, 
+      search: debouncedSearch, 
       role: roleFilter, 
       status: statusFilter, 
       sortBy, 

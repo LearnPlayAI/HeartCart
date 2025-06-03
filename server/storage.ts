@@ -9667,8 +9667,11 @@ export class DatabaseStorage implements IStorage {
             ilike(users.email, searchTerm),
             ilike(users.fullName, searchTerm),
             ilike(users.phoneNumber, searchTerm),
+            ilike(users.address, searchTerm),
             ilike(users.city, searchTerm),
-            ilike(users.province, searchTerm)
+            ilike(users.province, searchTerm),
+            ilike(users.country, searchTerm),
+            ilike(users.role, searchTerm)
           )
         );
       }
