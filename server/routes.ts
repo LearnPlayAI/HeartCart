@@ -6594,7 +6594,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
     
     try {
-      const result = await storage.getUserProductDrafts(user.id, searchQuery, limit, offset);
+      const result = await storage.getUserProductDrafts(user.id, searchQuery, limit, offset, user.role);
       
       res.json({
         success: true,

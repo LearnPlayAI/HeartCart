@@ -6785,11 +6785,15 @@ export class DatabaseStorage implements IStorage {
     userId: number, 
     searchQuery?: string, 
     limit?: number, 
-    offset?: number
+    offset?: number,
+    userRole?: string
   ): Promise<{ drafts: ProductDraft[], total: number }> {
     try {
-      // Build base conditions
-      let conditions = [eq(productDrafts.createdBy, userId)];
+      // Build base conditions - admin users can see all drafts
+      let conditions = [];
+      if (userRole !== 'admin') {
+        conditions.push(eq(productDrafts.createdBy, userId));
+      }
 
       // Add search functionality across multiple columns if search query is provided
       if (searchQuery && searchQuery.trim()) {
@@ -6812,22 +6816,29 @@ export class DatabaseStorage implements IStorage {
         );
       }
 
-      const whereClause = and(...conditions);
+      const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
       // Get total count for pagination
-      const [countResult] = await db
+      const countQuery = db
         .select({ count: sql<number>`count(*)` })
-        .from(productDrafts)
-        .where(whereClause);
+        .from(productDrafts);
+      
+      if (whereClause) {
+        countQuery.where(whereClause);
+      }
 
+      const [countResult] = await countQuery;
       const total = countResult?.count || 0;
 
       // Get paginated results with ordering by last_modified DESC
       let query = db
         .select()
         .from(productDrafts)
-        .where(whereClause)
         .orderBy(desc(productDrafts.lastModified));
+
+      if (whereClause) {
+        query = query.where(whereClause);
+      }
 
       if (limit !== undefined) {
         query = query.limit(limit);
@@ -6841,7 +6852,7 @@ export class DatabaseStorage implements IStorage {
 
       return { drafts, total };
     } catch (error) {
-      logger.error("Error getting user product drafts", { error, userId, searchQuery, limit, offset });
+      logger.error("Error getting user product drafts", { error, userId, searchQuery, limit, offset, userRole });
       throw error;
     }
   }
