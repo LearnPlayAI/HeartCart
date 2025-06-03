@@ -594,13 +594,14 @@ export const DraftDashboard: React.FC = () => {
                       <TableCell className="text-right">
                         <div className="space-y-1 text-sm">
                           {(() => {
-                            const costPrice = draft.costPrice || 0;
-                            const regularPrice = draft.regularPrice || 0;
-                            const salePrice = draft.salePrice || regularPrice;
+                            const costPrice = typeof draft.costPrice === 'string' ? parseFloat(draft.costPrice) : (draft.costPrice || 0);
+                            const regularPrice = typeof draft.regularPrice === 'string' ? parseFloat(draft.regularPrice) : (draft.regularPrice || 0);
+                            const salePrice = draft.salePrice ? (typeof draft.salePrice === 'string' ? parseFloat(draft.salePrice) : draft.salePrice) : null;
                             
                             // TMY profit margin should be based on sale price vs cost price (actual profit TeeMeYou makes)
-                            const tmyMarkup = costPrice > 0 && salePrice > 0 ? ((salePrice - costPrice) / costPrice * 100) : 0;
-                            const customerDiscount = regularPrice > 0 && salePrice < regularPrice ? ((regularPrice - salePrice) / regularPrice * 100) : 0;
+                            const effectivePrice = salePrice || regularPrice;
+                            const tmyMarkup = costPrice > 0 && effectivePrice > 0 ? ((effectivePrice - costPrice) / costPrice * 100) : 0;
+                            const customerDiscount = salePrice && regularPrice > 0 && salePrice < regularPrice ? ((regularPrice - salePrice) / regularPrice * 100) : 0;
                             
                             return (
                               <>

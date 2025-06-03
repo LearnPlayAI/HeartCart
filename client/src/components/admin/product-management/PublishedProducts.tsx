@@ -554,13 +554,14 @@ export const PublishedProducts: React.FC = () => {
                       <TableCell className="text-right">
                         <div className="space-y-1 text-sm">
                           {(() => {
-                            const costPrice = product.costPrice || 0;
-                            const regularPrice = product.price || 0;
-                            const salePrice = product.salePrice || regularPrice;
+                            const costPrice = typeof product.costPrice === 'string' ? parseFloat(product.costPrice) : (product.costPrice || 0);
+                            const regularPrice = typeof product.price === 'string' ? parseFloat(product.price) : (product.price || 0);
+                            const salePrice = product.salePrice ? (typeof product.salePrice === 'string' ? parseFloat(product.salePrice) : product.salePrice) : null;
                             
                             // TMY profit margin should be based on sale price vs cost price (actual profit TeeMeYou makes)
-                            const tmyMarkup = costPrice > 0 && salePrice > 0 ? ((salePrice - costPrice) / costPrice * 100) : 0;
-                            const customerDiscount = regularPrice > 0 && salePrice < regularPrice ? ((regularPrice - salePrice) / regularPrice * 100) : 0;
+                            const effectivePrice = salePrice || regularPrice;
+                            const tmyMarkup = costPrice > 0 && effectivePrice > 0 ? ((effectivePrice - costPrice) / costPrice * 100) : 0;
+                            const customerDiscount = salePrice && regularPrice > 0 && salePrice < regularPrice ? ((regularPrice - salePrice) / regularPrice * 100) : 0;
                             
                             return (
                               <>
