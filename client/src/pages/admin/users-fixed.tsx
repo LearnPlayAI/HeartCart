@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 import { apiRequest } from '@/lib/queryClient';
@@ -95,21 +95,10 @@ export default function UserAdminPageFixed() {
   
   // State for pagination and filtering - using exact approach as product management
   const [currentPage, setCurrentPage] = useState(1);
-  const [searchInput, setSearchInput] = useState(''); // For input display
-  const [searchQuery, setSearchQuery] = useState(''); // For actual queries
+  const [searchQuery, setSearchQuery] = useState(''); // Single state like product management
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
-
-  // Debounce search input to prevent constant re-renders
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      setSearchQuery(searchInput);
-      setCurrentPage(1);
-    }, 300);
-
-    return () => clearTimeout(timeoutId);
-  }, [searchInput]);
 
   const itemsPerPage = 20;
   const offset = (currentPage - 1) * itemsPerPage;
@@ -344,14 +333,14 @@ export default function UserAdminPageFixed() {
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search users..."
-                value={searchInput}
-                onChange={handleSearchChange}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-8"
               />
             </div>
           </div>
           
-          <Select value={roleFilter} onValueChange={(value) => handleFilterChange('role', value)}>
+          <Select value={roleFilter || 'all'} onValueChange={(value) => handleFilterChange('role', value)}>
             <SelectTrigger className="w-full md:w-[140px]">
               <SelectValue placeholder="Role" />
             </SelectTrigger>
@@ -362,7 +351,7 @@ export default function UserAdminPageFixed() {
             </SelectContent>
           </Select>
           
-          <Select value={statusFilter} onValueChange={(value) => handleFilterChange('status', value)}>
+          <Select value={statusFilter || 'all'} onValueChange={(value) => handleFilterChange('status', value)}>
             <SelectTrigger className="w-full md:w-[140px]">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
