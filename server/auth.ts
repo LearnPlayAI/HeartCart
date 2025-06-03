@@ -287,6 +287,8 @@ export function setupAuth(app: Express): void {
         username, 
         email,
         role: userRole,
+        isActive: allowUserCreation,
+        userCreationEnabled: allowUserCreation,
         ip: req.ip 
       });
 
