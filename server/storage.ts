@@ -1022,15 +1022,11 @@ export class DatabaseStorage implements IStorage {
 
   async reorderAllCategories(): Promise<{ updatedCount: number; message: string }> {
     try {
-      // Get all categories, grouped by parent
+      // Get all categories
       const allCategories = await db
         .select()
         .from(categories)
-        .orderBy(
-          asc(categories.parentId), 
-          asc(categories.displayOrder), 
-          asc(categories.name)
-        );
+        .orderBy(asc(categories.parentId));
 
       // Group by parent ID
       const categoryGroups = new Map<number | null, Category[]>();
@@ -1045,10 +1041,15 @@ export class DatabaseStorage implements IStorage {
 
       let updatedCount = 0;
 
-      // Reorder each group
+      // Reorder each group alphabetically by name
       for (const [parentId, groupCategories] of categoryGroups) {
-        for (let i = 0; i < groupCategories.length; i++) {
-          const category = groupCategories[i];
+        // Sort categories alphabetically by name (case-insensitive)
+        const sortedCategories = groupCategories.sort((a, b) => 
+          a.name.toLowerCase().localeCompare(b.name.toLowerCase())
+        );
+        
+        for (let i = 0; i < sortedCategories.length; i++) {
+          const category = sortedCategories[i];
           const newDisplayOrder = i;
           
           // Only update if the display order has changed
@@ -1065,7 +1066,7 @@ export class DatabaseStorage implements IStorage {
 
       return {
         updatedCount,
-        message: `Successfully reordered ${updatedCount} categories`
+        message: `Successfully reordered ${updatedCount} categories alphabetically`
       };
     } catch (error) {
       console.error('Error reordering categories:', error);
