@@ -15,7 +15,7 @@ interface AdminLayoutProps {
 /**
  * Navigation menu for admin dashboard
  */
-function Navigation({ className, isCollapsed }: { className?: string; isCollapsed?: boolean }) {
+function Navigation({ className, isCollapsed, onNavigate }: { className?: string; isCollapsed?: boolean; onNavigate?: () => void }) {
   const [location] = useLocation();
   const { logoutMutation } = useAuth();
 
@@ -46,6 +46,7 @@ function Navigation({ className, isCollapsed }: { className?: string; isCollapse
           <Link 
             key={item.path} 
             href={item.path}
+            onClick={onNavigate}
             className={cn(
               "flex items-center px-3 py-2 text-sm font-medium rounded-md",
               isActive
@@ -77,8 +78,15 @@ function Navigation({ className, isCollapsed }: { className?: string; isCollapse
 export function AdminLayout({ children }: AdminLayoutProps) {
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true); // Start minimized
   const { user } = useAuth();
+  
+  // Function to handle navigation click and auto-collapse
+  const handleNavigationClick = () => {
+    if (!isCollapsed) {
+      setIsCollapsed(true);
+    }
+  };
   
   // Responsive sidebar that shows as a drawer on mobile
   return (
@@ -115,7 +123,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           </div>
           <div className="flex-1 flex flex-col overflow-y-auto pt-5 pb-4">
             <ScrollArea className={cn("px-3", isCollapsed && "px-1")}>
-              <Navigation isCollapsed={isCollapsed} />
+              <Navigation isCollapsed={isCollapsed} onNavigate={handleNavigationClick} />
             </ScrollArea>
           </div>
           <div className="flex-shrink-0 flex border-t border-gray-200 p-4">
@@ -160,7 +168,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             </div>
             <div className="flex-1 flex flex-col overflow-y-auto pt-5 pb-4">
               <ScrollArea className="px-3">
-                <Navigation />
+                <Navigation onNavigate={() => setOpen(false)} />
               </ScrollArea>
             </div>
             <div className="flex-shrink-0 flex border-t border-gray-200 p-4">
