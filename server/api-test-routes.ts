@@ -117,7 +117,7 @@ export function registerApiTestRoutes(app: Express): void {
         });
       } else if (layer.name === 'bound dispatch' && layer.handle && layer.handle.stack) {
         // Handle mounted apps/middlewares
-        const mountPath = (layer.regexp !== /^\\/i)
+        const mountPath = (layer.regexp.toString() !== '/^\\/i')
           ? basePath + (layer.regexp.toString().replace('/^', '').replace('\\/?(?=\\/|$)/i', '').replace(/\\\//g, '/'))
           : basePath;
         
