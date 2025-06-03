@@ -205,10 +205,7 @@ export default function UserAdminPageFixed() {
     },
   });
 
-  // Handle search input change - uses debounced approach to prevent re-render issues
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchInput(e.target.value);
-  };
+
 
   const handleFilterChange = (type: string, value: string) => {
     if (type === 'role') {
