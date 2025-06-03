@@ -698,7 +698,7 @@ export const DraftDashboard: React.FC = () => {
         {totalFilteredDrafts > itemsPerPage && (
           <div className="flex items-center justify-between px-6 py-4 border-t">
             <div className="text-sm text-muted-foreground">
-              Showing {startIndex + 1} to {Math.min(endIndex, totalFilteredDrafts)} of {totalFilteredDrafts} drafts
+              Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, totalFilteredDrafts)} of {totalFilteredDrafts} drafts
             </div>
             <div className="flex items-center space-x-2">
               <Button
