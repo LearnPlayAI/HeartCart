@@ -1118,22 +1118,25 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
                       </FormControl>
                       <FormMessage />
                       {/* Customer Discount Display */}
-                      {watchRegularPrice && watchSalePrice && watchSalePrice < watchRegularPrice && (
-                        <div className="mt-1">
-                          {(() => {
-                            const discount = calculateCustomerDiscount(watchRegularPrice, watchSalePrice);
-                            if (discount !== null) {
-                              return (
-                                <div className="text-xs flex items-center gap-1 text-blue-600">
-                                  <span className="font-medium">Customer Discount:</span>
+                      {(() => {
+                        const regularPrice = typeof watchRegularPrice === 'string' ? parseFloat(watchRegularPrice) : watchRegularPrice;
+                        const salePrice = watchSalePrice ? (typeof watchSalePrice === 'string' ? parseFloat(watchSalePrice) : watchSalePrice) : null;
+                        
+                        if (regularPrice && salePrice && salePrice < regularPrice) {
+                          const discount = calculateCustomerDiscount(regularPrice, salePrice);
+                          if (discount !== null) {
+                            return (
+                              <div className="mt-1">
+                                <div className="text-xs flex items-center gap-1 text-pink-600">
+                                  <span className="font-medium">Customer Savings:</span>
                                   <span>{discount.toFixed(1)}%</span>
                                 </div>
-                              );
-                            }
-                            return null;
-                          })()}
-                        </div>
-                      )}
+                              </div>
+                            );
+                          }
+                        }
+                        return null;
+                      })()}
                     </FormItem>
                   )}
                 />
