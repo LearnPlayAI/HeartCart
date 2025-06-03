@@ -163,6 +163,7 @@ export const PublishedProducts: React.FC = () => {
 
   const products = productsData?.success ? productsData.data : [];
   const categories = categoriesData?.success ? categoriesData.data : [];
+  const pagination = productsData?.success ? productsData.meta : null;
 
   // Delete product mutation
   const deleteProductMutation = useMutation({
@@ -238,69 +239,24 @@ export const PublishedProducts: React.FC = () => {
   const handleParentCategoryChange = (value: string) => {
     setSelectedParentCategory(value);
     setSelectedChildCategory('all'); // Reset child category when parent changes
+    setCurrentPage(1); // Reset to first page when filter changes
   };
 
-  // Filter products with search and category filtering
-  const filteredProducts = useMemo(() => {
-    let filtered = enrichedProducts;
+  // Handle child category change
+  const handleChildCategoryChange = (value: string) => {
+    setSelectedChildCategory(value);
+    setCurrentPage(1); // Reset to first page when filter changes
+  };
 
-    // Apply search filtering
-    if (searchQuery) {
-      filtered = filtered.filter((product: PublishedProduct) => {
-        return product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-               product.slug.toLowerCase().includes(searchQuery.toLowerCase()) ||
-               product.brand?.toLowerCase().includes(searchQuery.toLowerCase());
-      });
-    }
+  // Handle search change
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    setCurrentPage(1); // Reset to first page when search changes
+  };
 
-    // Apply category filtering
-    if (selectedParentCategory && selectedParentCategory !== 'all') {
-      const parentId = parseInt(selectedParentCategory);
-      
-      if (selectedChildCategory && selectedChildCategory !== 'all') {
-        // Filter by specific child category
-        const childId = parseInt(selectedChildCategory);
-        filtered = filtered.filter((product: PublishedProduct) => {
-          // Assuming products have categoryId field - we may need to check the actual schema
-          return (product as any).categoryId === childId;
-        });
-      } else {
-        // Filter by parent category - include all products under this parent and its children
-        const parentAndChildIds = [parentId];
-        const childCats = categories.filter((cat: any) => cat.parentId === parentId);
-        parentAndChildIds.push(...childCats.map((cat: any) => cat.id));
-        
-        filtered = filtered.filter((product: PublishedProduct) => 
-          (product as any).categoryId && parentAndChildIds.includes((product as any).categoryId)
-        );
-      }
-    }
-
-    // Apply TMY filter if specified
-    if (maxTmyFilter && !isNaN(parseFloat(maxTmyFilter))) {
-      const maxTmyValue = parseFloat(maxTmyFilter);
-      filtered = filtered.filter((product: PublishedProduct) => {
-        const costPrice = product.costPrice || 0;
-        const regularPrice = product.price || 0;
-        const tmyMarkup = costPrice > 0 ? ((regularPrice - costPrice) / costPrice * 100) : 0;
-        return tmyMarkup <= maxTmyValue;
-      });
-    }
-
-    return filtered;
-  }, [products, searchQuery, selectedParentCategory, selectedChildCategory, categories, maxTmyFilter]);
-
-  // Calculate pagination
-  const totalProducts = filteredProducts.length;
-  const totalPages = Math.ceil(totalProducts / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedProducts = filteredProducts.slice(startIndex, endIndex);
-
-  // Reset to first page when filters change
-  React.useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, selectedParentCategory, selectedChildCategory, maxTmyFilter]);
+  // Calculate pagination metadata from server response
+  const totalProducts = pagination?.total || 0;
+  const totalPages = pagination?.totalPages || 0;
 
   // Helper function to calculate name similarity
   const calculateSimilarity = (name1: string, name2: string): number => {
@@ -324,10 +280,10 @@ export const PublishedProducts: React.FC = () => {
     const groups: any[] = [];
     const processed = new Set<number>();
 
-    filteredProducts.forEach((product: PublishedProduct) => {
+    enrichedProducts.forEach((product: PublishedProduct) => {
       if (processed.has(product.id)) return;
 
-      const similarProducts = filteredProducts.filter((other: PublishedProduct) => {
+      const similarProducts = enrichedProducts.filter((other: PublishedProduct) => {
         if (other.id === product.id || processed.has(other.id)) return false;
         
         const similarity = calculateSimilarity(product.name, other.name);
@@ -455,7 +411,7 @@ export const PublishedProducts: React.FC = () => {
             <div>
               <CardTitle>All Published Products</CardTitle>
               <CardDescription>
-                {filteredProducts.length} {filteredProducts.length === 1 ? 'product' : 'products'} found
+                {totalProducts} {totalProducts === 1 ? 'product' : 'products'} found
               </CardDescription>
             </div>
             <Button
@@ -490,7 +446,7 @@ export const PublishedProducts: React.FC = () => {
                 There was an error loading your published products. Please try again.
               </p>
             </div>
-          ) : filteredProducts.length === 0 ? (
+          ) : enrichedProducts.length === 0 ? (
             <div className="p-6 text-center">
               <ShoppingCart className="h-12 w-12 mx-auto text-muted-foreground" />
               <h3 className="mt-4 text-lg font-medium">No products found</h3>
@@ -526,7 +482,7 @@ export const PublishedProducts: React.FC = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {paginatedProducts.map((product: PublishedProduct) => (
+                  {enrichedProducts.map((product: PublishedProduct) => (
                     <TableRow key={product.id}>
                       <TableCell>
                         <span className="font-mono text-sm">{product.sku || '-'}</span>
