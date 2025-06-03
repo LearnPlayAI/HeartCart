@@ -137,7 +137,7 @@ export default function UserAdminPageFixed() {
   // Update user creation enabled state when data is fetched
   useEffect(() => {
     if (userCreationSettingData?.success) {
-      setUserCreationEnabled(userCreationSettingData.data.value === 'true');
+      setUserCreationEnabled(userCreationSettingData.data.settingValue === 'true');
     }
   }, [userCreationSettingData]);
 
