@@ -1028,6 +1028,8 @@ export class DatabaseStorage implements IStorage {
         .from(categories)
         .orderBy(asc(categories.parentId));
 
+      console.log('Total categories found:', allCategories.length);
+
       // Group by parent ID
       const categoryGroups = new Map<number | null, Category[]>();
       
@@ -1039,25 +1041,39 @@ export class DatabaseStorage implements IStorage {
         categoryGroups.get(parentId)!.push(category);
       }
 
+      console.log('Category groups:', Array.from(categoryGroups.keys()));
+
       let updatedCount = 0;
 
       // Reorder each group alphabetically by name
       for (const [parentId, groupCategories] of categoryGroups) {
+        console.log(`Processing group ${parentId || 'null'} with ${groupCategories.length} categories`);
+        
+        // Sort original array by current display order to get the current order
+        const currentOrder = [...groupCategories].sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+        
         // Sort categories alphabetically by name (case-insensitive)
-        const sortedCategories = groupCategories.sort((a, b) => 
+        const sortedCategories = [...groupCategories].sort((a, b) => 
           a.name.toLowerCase().localeCompare(b.name.toLowerCase())
         );
         
-        // Check if the order has actually changed by comparing original vs sorted order
-        const originalOrder = groupCategories.map(cat => cat.id);
-        const sortedOrder = sortedCategories.map(cat => cat.id);
-        const orderChanged = !originalOrder.every((id, index) => id === sortedOrder[index]);
+        console.log(`Current order for group ${parentId || 'null'}:`, currentOrder.map(c => c.name));
+        console.log(`Alphabetical order for group ${parentId || 'null'}:`, sortedCategories.map(c => c.name));
+        
+        // Check if the order has actually changed by comparing current vs sorted order
+        const currentIdOrder = currentOrder.map(cat => cat.id);
+        const sortedIdOrder = sortedCategories.map(cat => cat.id);
+        const orderChanged = !currentIdOrder.every((id, index) => id === sortedIdOrder[index]);
+        
+        console.log(`Order changed for group ${parentId || 'null'}:`, orderChanged);
         
         // Only update if the alphabetical order is different from current order
         if (orderChanged) {
           for (let i = 0; i < sortedCategories.length; i++) {
             const category = sortedCategories[i];
             const newDisplayOrder = i;
+            
+            console.log(`Updating category ${category.name} from display order ${category.displayOrder} to ${newDisplayOrder}`);
             
             await db
               .update(categories)
@@ -1068,6 +1084,8 @@ export class DatabaseStorage implements IStorage {
           }
         }
       }
+
+      console.log('Total categories updated:', updatedCount);
 
       return {
         updatedCount,
