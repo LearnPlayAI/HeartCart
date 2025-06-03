@@ -1183,7 +1183,7 @@ export class DatabaseStorage implements IStorage {
     categoryId?: number,
     search?: string,
     options?: { includeInactive?: boolean; includeCategoryInactive?: boolean },
-  ): Promise<Product[]> {
+  ): Promise<{ products: Product[]; total: number }> {
     try {
       console.log('getAllProducts called with:', { limit, offset, categoryId, search, options });
 
@@ -1204,9 +1204,9 @@ export class DatabaseStorage implements IStorage {
             { includeInactive: options?.includeCategoryInactive }
           );
 
-          // If category doesn't exist or is inactive, return empty array
+          // If category doesn't exist or is inactive, return empty result
           if (!categoryWithChildren) {
-            return [];
+            return { products: [], total: 0 };
           }
 
           // Collect all category IDs to filter by (parent + children)
@@ -1226,87 +1226,90 @@ export class DatabaseStorage implements IStorage {
           );
           throw categoryError; // Rethrow so the route handler can catch it and send a proper error response
         }
-      } else if (!options?.includeCategoryInactive) {
-        try {
-          // If we're not filtering by category but we need to exclude products
-          // from inactive categories, we need to join with the categories table
-          const query = db
-            .select({
-              product: products,
-            })
-            .from(products)
-            .innerJoin(categories, eq(products.categoryId, categories.id))
-            .where(and(...conditions, eq(categories.isActive, true)));
-
-          // Apply search filter if provided
-          if (search) {
-            const searchTerm = `%${search}%`;
-            query.where(
-              or(
-                like(products.name, searchTerm),
-                like(products.description || "", searchTerm),
-              ),
-            );
-          }
-
-          const result = await query.limit(limit).offset(offset);
-          const productList = result.map((row) => row.product);
-
-          // Enrich products with main image URLs
-          return await this.enrichProductsWithMainImage(productList);
-        } catch (joinError) {
-          console.error(
-            "Error querying products with active categories:",
-            joinError,
-          );
-          throw joinError; // Rethrow so the route handler can catch it and send a proper error response
-        }
       }
 
-      // If we got here, we're either including products with inactive categories
-      // or we filtered by a specific category that is active
+      // Build final conditions for both count and data queries
+      const allConditions = [...conditions];
+      
+      // Add search condition if provided
+      if (search) {
+        const searchTerm = `%${search}%`;
+        const searchConditions = or(
+          like(products.name, searchTerm),
+          like(products.description || "", searchTerm),
+        );
+        allConditions.push(searchConditions);
+      }
+
+      // Handle category filtering with joins if needed
+      const needsJoin = !categoryId && !options?.includeCategoryInactive;
+
+      let countQuery: any;
+      let dataQuery: any;
+
+      if (needsJoin) {
+        // Need to join with categories table to exclude products from inactive categories
+        const joinConditions = [...allConditions, eq(categories.isActive, true)];
+        
+        countQuery = db
+          .select({ count: count() })
+          .from(products)
+          .innerJoin(categories, eq(products.categoryId, categories.id))
+          .where(and(...joinConditions));
+
+        dataQuery = db
+          .select({ product: products })
+          .from(products)
+          .innerJoin(categories, eq(products.categoryId, categories.id))
+          .where(and(...joinConditions))
+          .orderBy(products.displayOrder, products.id)
+          .limit(limit)
+          .offset(offset);
+      } else {
+        // Simple query without joins
+        const whereCondition = allConditions.length > 0 ? and(...allConditions) : undefined;
+        
+        countQuery = db
+          .select({ count: count() })
+          .from(products);
+        
+        if (whereCondition) {
+          countQuery = countQuery.where(whereCondition);
+        }
+
+        dataQuery = db
+          .select()
+          .from(products);
+        
+        if (whereCondition) {
+          dataQuery = dataQuery.where(whereCondition);
+        }
+        
+        dataQuery = dataQuery
+          .orderBy(products.displayOrder, products.id)
+          .limit(limit)
+          .offset(offset);
+      }
 
       try {
-        // Apply base conditions and search
-        let query = db.select().from(products);
-        
-        // Combine all conditions
-        const allConditions = [...conditions];
-        
-        // Add search condition if provided
-        if (search) {
-          const searchTerm = `%${search}%`;
-          const searchConditions = or(
-            like(products.name, searchTerm),
-            like(products.description || "", searchTerm),
-          );
-          allConditions.push(searchConditions);
-        }
+        // Execute both queries in parallel
+        const [countResult, dataResult] = await Promise.all([
+          countQuery,
+          dataQuery
+        ]);
 
-        if (allConditions.length > 0) {
-          query = query.where(and(...allConditions));
-        }
-
-        // Add proper sorting
-        query = query.orderBy(products.displayOrder, products.id);
+        const total = countResult[0]?.count || 0;
+        const productList = needsJoin ? dataResult.map((row: any) => row.product) : dataResult;
         
-        const productList = await query.limit(limit).offset(offset);
+        console.log('Products found:', productList.length, 'Total:', total);
         
-        console.log('Products found:', productList.length);
-        console.log('First few products with category IDs:', productList.slice(0, 5).map(p => ({ id: p.id, name: p.name, categoryId: p.categoryId })));
-        
-        // Check if any products have category ID 37 (Accessories under Computers)
-        const categoryId37Products = productList.filter(p => p.categoryId === 37);
-        console.log('Products with category ID 37:', categoryId37Products.length);
-        if (categoryId37Products.length > 0) {
-          console.log('Category 37 products:', categoryId37Products.map(p => ({ id: p.id, name: p.name, categoryId: p.categoryId })));
-        }
-
         // Enrich products with main image URLs
-        return await this.enrichProductsWithMainImage(productList);
+        const enrichedProducts = await this.enrichProductsWithMainImage(productList);
+        
+        return { products: enrichedProducts, total };
       } catch (queryError) {
         console.error("Error querying products:", queryError);
-        throw queryError; // Rethrow so the route handler can catch it and send a proper error response
+        throw queryError;
       }
     } catch (error) {
       console.error(`Error getting all products with filters:`, error);

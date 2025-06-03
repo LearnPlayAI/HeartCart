@@ -745,29 +745,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         includeCategoryInactive: isAdmin 
       };
       
-      // Get both products and total count
-      const [products, totalCount] = await Promise.all([
-        storage.getAllProducts(
-          Number(limit), 
-          Number(offset), 
-          categoryId ? Number(categoryId) : undefined, 
-          search as string | undefined, 
-          options
-        ),
-        storage.getProductCount(
-          categoryId ? Number(categoryId) : undefined, 
-          search as string | undefined, 
-          options
-        )
-      ]);
+      // Get products with pagination data
+      const result = await storage.getAllProducts(
+        Number(limit), 
+        Number(offset), 
+        categoryId ? Number(categoryId) : undefined, 
+        search as string | undefined, 
+        options
+      );
       
       // Calculate pagination metadata
-      const totalPages = Math.ceil(totalCount / Number(limit));
+      const totalPages = Math.ceil(result.total / Number(limit));
       
       return {
-        data: products,
+        data: result.products,
         meta: {
-          total: totalCount,
+          total: result.total,
           totalPages,
           limit: Number(limit),
           offset: Number(offset)

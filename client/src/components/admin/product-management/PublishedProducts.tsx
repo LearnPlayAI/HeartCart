@@ -120,11 +120,34 @@ export const PublishedProducts: React.FC = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  // Fetch published products (get all products for client-side pagination)
+  // Calculate offset for pagination
+  const offset = (currentPage - 1) * itemsPerPage;
+  
+  // Fetch published products with server-side pagination
   const { data: productsData, isLoading: isProductsLoading, error: productsError } = useQuery({
-    queryKey: ['/api/products', 'all'],
+    queryKey: ['/api/products', { 
+      limit: itemsPerPage, 
+      offset, 
+      search: searchQuery,
+      categoryId: selectedChildCategory || selectedParentCategory || undefined
+    }],
     queryFn: async () => {
-      const response = await apiRequest('GET', '/api/products?limit=1000'); // Get all products
+      const params = new URLSearchParams({
+        limit: itemsPerPage.toString(),
+        offset: offset.toString(),
+      });
+      
+      if (searchQuery) {
+        params.append('search', searchQuery);
+      }
+      
+      if (selectedChildCategory) {
+        params.append('categoryId', selectedChildCategory);
+      } else if (selectedParentCategory) {
+        params.append('categoryId', selectedParentCategory);
+      }
+      
+      const response = await apiRequest('GET', `/api/products?${params.toString()}`);
       return response.json();
     }
   });
