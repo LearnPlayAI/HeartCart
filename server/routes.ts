@@ -3171,10 +3171,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ===== PROMOTIONS API ROUTES =====
   
-  // Get all promotions
+  // Get all promotions with their associated products
   app.get("/api/promotions", withStandardResponse(async (req: Request, res: Response) => {
     const promotions = await storage.getPromotions();
-    return createPaginatedResponse(promotions, promotions.length, 1, 50);
+    const promotionsWithProducts = [];
+    
+    for (const promotion of promotions) {
+      const products = await storage.getPromotionProducts(promotion.id);
+      promotionsWithProducts.push({
+        ...promotion,
+        promotionProducts: products
+      });
+    }
+    
+    return createPaginatedResponse(promotionsWithProducts, promotionsWithProducts.length, 1, 50);
   }));
 
   // Get active promotions only

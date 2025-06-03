@@ -115,13 +115,13 @@ function PromotionCard({ promotion }: { promotion: Promotion }) {
 }
 
 function PromotionsPage() {
-  const { data: response, isLoading, error } = useQuery({
+  const { data: response, isLoading, error } = useQuery<any>({
     queryKey: ['/api/promotions'],
   });
 
   const promotions = response?.data || [];
-  const activePromotions = promotions.filter((promo: Promotion) => promo.isActive);
-  const upcomingPromotions = promotions.filter((promo: Promotion) => 
+  const activePromotions = promotions.filter((promo) => promo.isActive);
+  const upcomingPromotions = promotions.filter((promo) => 
     !promo.isActive && new Date(promo.startDate) > new Date()
   );
 
