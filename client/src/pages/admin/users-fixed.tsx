@@ -205,7 +205,9 @@ export default function UserAdminPageFixed() {
     },
   });
 
-  const handleSearch = (value: string) => {
+  // Handle search input change - direct implementation like product management
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
     setSearchQuery(value);
     setCurrentPage(1);
   };
@@ -334,7 +336,7 @@ export default function UserAdminPageFixed() {
               <Input
                 placeholder="Search users..."
                 value={searchQuery}
-                onChange={(e) => handleSearch(e.target.value)}
+                onChange={handleSearchChange}
                 className="pl-8"
               />
             </div>
