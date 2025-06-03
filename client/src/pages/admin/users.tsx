@@ -130,13 +130,12 @@ export default function UserAdminPage() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
 
-  // Debounce search input
+  // Debounce search with proper implementation
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search);
-      setCurrentPage(1); // Reset to first page when search changes
-    }, 300);
-
+      setCurrentPage(1);
+    }, 500);
     return () => clearTimeout(timer);
   }, [search]);
   
