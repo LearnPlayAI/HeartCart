@@ -9638,6 +9638,354 @@ export class DatabaseStorage implements IStorage {
       throw error;
     }
   }
+
+  // ===============================================================
+  // USER MANAGEMENT METHODS
+  // ===============================================================
+
+  /**
+   * Get users with pagination, search, and filtering
+   */
+  async getUsersWithPagination(
+    limit: number,
+    offset: number,
+    search?: string,
+    roleFilter?: string,
+    statusFilter?: string,
+    sortBy?: string,
+    sortOrder?: 'asc' | 'desc'
+  ): Promise<{ users: any[], total: number }> {
+    try {
+      let conditions = [];
+
+      // Search across multiple fields
+      if (search && search.trim()) {
+        const searchTerm = `%${search.toLowerCase()}%`;
+        conditions.push(
+          or(
+            ilike(users.username, searchTerm),
+            ilike(users.email, searchTerm),
+            ilike(users.fullName, searchTerm),
+            ilike(users.phoneNumber, searchTerm),
+            ilike(users.city, searchTerm),
+            ilike(users.province, searchTerm)
+          )
+        );
+      }
+
+      // Role filter
+      if (roleFilter && roleFilter !== 'all') {
+        conditions.push(eq(users.role, roleFilter));
+      }
+
+      // Status filter
+      if (statusFilter && statusFilter !== 'all') {
+        const isActive = statusFilter === 'active';
+        conditions.push(eq(users.isActive, isActive));
+      }
+
+      const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+      // Get total count
+      const countQuery = db
+        .select({ count: sql<number>`count(*)` })
+        .from(users);
+      
+      if (whereClause) {
+        countQuery.where(whereClause);
+      }
+
+      const [countResult] = await countQuery;
+      const total = countResult?.count || 0;
+
+      // Build order by clause
+      let orderByClause;
+      const order = sortOrder === 'asc' ? asc : desc;
+      
+      switch (sortBy) {
+        case 'username':
+          orderByClause = order(users.username);
+          break;
+        case 'email':
+          orderByClause = order(users.email);
+          break;
+        case 'role':
+          orderByClause = order(users.role);
+          break;
+        case 'isActive':
+          orderByClause = order(users.isActive);
+          break;
+        case 'createdAt':
+        default:
+          orderByClause = order(users.createdAt);
+          break;
+      }
+
+      // Get paginated results
+      let query = db
+        .select({
+          id: users.id,
+          username: users.username,
+          email: users.email,
+          fullName: users.fullName,
+          phoneNumber: users.phoneNumber,
+          address: users.address,
+          city: users.city,
+          province: users.province,
+          postalCode: users.postalCode,
+          country: users.country,
+          isActive: users.isActive,
+          role: users.role,
+          createdAt: users.createdAt,
+          updatedAt: users.updatedAt,
+          lastLogin: users.lastLogin
+        })
+        .from(users)
+        .orderBy(orderByClause)
+        .limit(limit)
+        .offset(offset);
+
+      if (whereClause) {
+        query = query.where(whereClause);
+      }
+
+      const userResults = await query;
+
+      return { users: userResults, total };
+    } catch (error) {
+      logger.error("Error getting users with pagination", { error, limit, offset, search, roleFilter, statusFilter });
+      throw error;
+    }
+  }
+
+  /**
+   * Get user statistics for admin dashboard
+   */
+  async getUserStats(): Promise<{
+    totalUsers: number;
+    activeUsers: number;
+    inactiveUsers: number;
+    adminUsers: number;
+    regularUsers: number;
+    recentRegistrations: number;
+  }> {
+    try {
+      // Get total users
+      const [totalResult] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(users);
+      const totalUsers = totalResult?.count || 0;
+
+      // Get active users
+      const [activeResult] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(users)
+        .where(eq(users.isActive, true));
+      const activeUsers = activeResult?.count || 0;
+
+      // Get inactive users
+      const inactiveUsers = totalUsers - activeUsers;
+
+      // Get admin users
+      const [adminResult] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(users)
+        .where(eq(users.role, 'admin'));
+      const adminUsers = adminResult?.count || 0;
+
+      // Get regular users
+      const regularUsers = totalUsers - adminUsers;
+
+      // Get recent registrations (last 30 days)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      const [recentResult] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(users)
+        .where(sql`${users.createdAt} >= ${thirtyDaysAgo.toISOString()}`);
+      const recentRegistrations = recentResult?.count || 0;
+
+      return {
+        totalUsers,
+        activeUsers,
+        inactiveUsers,
+        adminUsers,
+        regularUsers,
+        recentRegistrations
+      };
+    } catch (error) {
+      logger.error("Error getting user statistics", { error });
+      throw error;
+    }
+  }
+
+  /**
+   * Update user information
+   */
+  async updateUser(userId: number, updateData: {
+    username?: string;
+    email?: string;
+    fullName?: string;
+    phoneNumber?: string;
+    address?: string;
+    city?: string;
+    province?: string;
+    postalCode?: string;
+    country?: string;
+    role?: string;
+    isActive?: boolean;
+  }): Promise<any | undefined> {
+    try {
+      const [updatedUser] = await db
+        .update(users)
+        .set({
+          ...updateData,
+          updatedAt: new Date().toISOString()
+        })
+        .where(eq(users.id, userId))
+        .returning({
+          id: users.id,
+          username: users.username,
+          email: users.email,
+          fullName: users.fullName,
+          phoneNumber: users.phoneNumber,
+          address: users.address,
+          city: users.city,
+          province: users.province,
+          postalCode: users.postalCode,
+          country: users.country,
+          isActive: users.isActive,
+          role: users.role,
+          createdAt: users.createdAt,
+          updatedAt: users.updatedAt,
+          lastLogin: users.lastLogin
+        });
+
+      return updatedUser;
+    } catch (error) {
+      logger.error("Error updating user", { error, userId });
+      throw error;
+    }
+  }
+
+  /**
+   * Update user role
+   */
+  async updateUserRole(userId: number, role: string): Promise<any | undefined> {
+    try {
+      const [updatedUser] = await db
+        .update(users)
+        .set({
+          role,
+          updatedAt: new Date().toISOString()
+        })
+        .where(eq(users.id, userId))
+        .returning({
+          id: users.id,
+          username: users.username,
+          email: users.email,
+          fullName: users.fullName,
+          phoneNumber: users.phoneNumber,
+          address: users.address,
+          city: users.city,
+          province: users.province,
+          postalCode: users.postalCode,
+          country: users.country,
+          isActive: users.isActive,
+          role: users.role,
+          createdAt: users.createdAt,
+          updatedAt: users.updatedAt,
+          lastLogin: users.lastLogin
+        });
+
+      return updatedUser;
+    } catch (error) {
+      logger.error("Error updating user role", { error, userId, role });
+      throw error;
+    }
+  }
+
+  /**
+   * Update user status (active/inactive)
+   */
+  async updateUserStatus(userId: number, isActive: boolean): Promise<any | undefined> {
+    try {
+      const [updatedUser] = await db
+        .update(users)
+        .set({
+          isActive,
+          updatedAt: new Date().toISOString()
+        })
+        .where(eq(users.id, userId))
+        .returning({
+          id: users.id,
+          username: users.username,
+          email: users.email,
+          fullName: users.fullName,
+          phoneNumber: users.phoneNumber,
+          address: users.address,
+          city: users.city,
+          province: users.province,
+          postalCode: users.postalCode,
+          country: users.country,
+          isActive: users.isActive,
+          role: users.role,
+          createdAt: users.createdAt,
+          updatedAt: users.updatedAt,
+          lastLogin: users.lastLogin
+        });
+
+      return updatedUser;
+    } catch (error) {
+      logger.error("Error updating user status", { error, userId, isActive });
+      throw error;
+    }
+  }
+
+  /**
+   * Reset user password
+   */
+  async resetUserPassword(userId: number, newPassword: string): Promise<boolean> {
+    try {
+      const bcrypt = require('bcryptjs');
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+      await db
+        .update(users)
+        .set({
+          password: hashedPassword,
+          updatedAt: new Date().toISOString()
+        })
+        .where(eq(users.id, userId));
+
+      return true;
+    } catch (error) {
+      logger.error("Error resetting user password", { error, userId });
+      throw error;
+    }
+  }
+
+  /**
+   * Delete user (soft delete by setting isActive to false)
+   */
+  async deleteUser(userId: number): Promise<boolean> {
+    try {
+      const [result] = await db
+        .update(users)
+        .set({
+          isActive: false,
+          updatedAt: new Date().toISOString()
+        })
+        .where(eq(users.id, userId))
+        .returning({ id: users.id });
+
+      return !!result;
+    } catch (error) {
+      logger.error("Error deleting user", { error, userId });
+      throw error;
+    }
+  }
 }
 
 export const storage = new DatabaseStorage();
