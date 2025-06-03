@@ -111,6 +111,9 @@ export default function UserAdminPageFixed() {
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
+  // State for user creation toggle
+  const [userCreationEnabled, setUserCreationEnabled] = useState(true);
+
   // Fetch user stats
   const { data: statsData } = useQuery<{ success: boolean; data: UserStats }>({
     queryKey: ['/api/admin/users/stats'],
@@ -121,6 +124,48 @@ export default function UserAdminPageFixed() {
   });
 
   const stats = statsData?.success ? statsData.data : null;
+
+  // Fetch user creation setting
+  const { data: userCreationSettingData } = useQuery({
+    queryKey: ['/api/admin/settings/userCreationEnabled'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/admin/settings/userCreationEnabled');
+      return response.json();
+    }
+  });
+
+  // Update user creation enabled state when data is fetched
+  useEffect(() => {
+    if (userCreationSettingData?.success) {
+      setUserCreationEnabled(userCreationSettingData.data.value === 'true');
+    }
+  }, [userCreationSettingData]);
+
+  // Mutation for updating user creation setting
+  const updateUserCreationSettingMutation = useMutation({
+    mutationFn: async (enabled: boolean) => {
+      const response = await apiRequest('PATCH', '/api/admin/settings/userCreationEnabled', {
+        value: enabled.toString()
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: `User creation ${userCreationEnabled ? 'enabled' : 'disabled'} successfully`
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/settings/userCreationEnabled'] });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update user creation setting",
+        variant: "destructive"
+      });
+      // Revert the toggle state on error
+      setUserCreationEnabled(!userCreationEnabled);
+    }
+  });
 
   // Fetch users with server-side pagination - using exact approach as product management
   const { data: usersData, isLoading, refetch } = useQuery({
@@ -499,11 +544,27 @@ export default function UserAdminPageFixed() {
   return (
     <AdminLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">User Management</h1>
-          <p className="text-muted-foreground">
-            Manage user accounts, roles, and permissions
-          </p>
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">User Management</h1>
+            <p className="text-muted-foreground">
+              Manage user accounts, roles, and permissions
+            </p>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Label htmlFor="user-creation-toggle" className="text-sm font-medium">
+              Allow User Creation
+            </Label>
+            <Switch
+              id="user-creation-toggle"
+              checked={userCreationEnabled}
+              onCheckedChange={(checked) => {
+                setUserCreationEnabled(checked);
+                updateUserCreationSettingMutation.mutate(checked);
+              }}
+              disabled={updateUserCreationSettingMutation.isPending}
+            />
+          </div>
         </div>
 
         <UserStatsCards />
