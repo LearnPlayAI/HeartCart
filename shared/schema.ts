@@ -979,8 +979,8 @@ export const productPromotionsRelations = relations(productPromotions, ({ one })
 // System Settings table - for app-wide configuration
 export const systemSettings = pgTable("systemSettings", {
   id: serial("id").primaryKey(),
-  key: text("key").notNull().unique(),
-  value: text("value").notNull(),
+  settingKey: text("settingKey").notNull().unique(),
+  settingValue: text("settingValue").notNull(),
   description: text("description"),
   isActive: boolean("isActive").default(true).notNull(),
   createdAt: text("createdAt").default(String(new Date().toISOString())).notNull(),

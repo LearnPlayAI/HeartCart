@@ -10012,7 +10012,7 @@ export class DatabaseStorage implements IStorage {
       const [setting] = await db
         .select()
         .from(systemSettings)
-        .where(eq(systemSettings.key, key));
+        .where(eq(systemSettings.settingKey, key));
       
       return setting;
     } catch (error) {
@@ -10040,10 +10040,10 @@ export class DatabaseStorage implements IStorage {
       const [updatedSetting] = await db
         .update(systemSettings)
         .set({ 
-          value,
+          settingValue: value,
           updatedAt: new Date().toISOString()
         })
-        .where(eq(systemSettings.key, key))
+        .where(eq(systemSettings.settingKey, key))
         .returning();
 
       logger.info('System setting updated', { key, value });

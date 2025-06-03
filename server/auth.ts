@@ -268,12 +268,17 @@ export function setupAuth(app: Express): void {
       // Set default role for new users (regular user)
       const userRole = 'user';
       
+      // Check system setting for user creation control
+      const userCreationSetting = await storage.getSystemSetting('allow_user_creation');
+      const allowUserCreation = userCreationSetting?.settingValue === 'true';
+      
       // Create new user with standardized fields
+      // If user creation is disabled, set new users as inactive
       const user = await storage.createUser({
         ...req.body,
         password: hashedPassword,
         role: userRole,
-        isActive: true
+        isActive: allowUserCreation
       });
 
       // Log successful registration
