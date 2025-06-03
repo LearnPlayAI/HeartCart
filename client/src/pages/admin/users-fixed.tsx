@@ -149,21 +149,21 @@ export default function UserAdminPageFixed() {
       });
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       toast({
         title: "Success",
-        description: `User creation ${userCreationEnabled ? 'enabled' : 'disabled'} successfully`
+        description: `User creation ${variables ? 'enabled' : 'disabled'} successfully`
       });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/settings/userCreationEnabled'] });
     },
-    onError: () => {
+    onError: (error, variables) => {
       toast({
         title: "Error",
         description: "Failed to update user creation setting",
         variant: "destructive"
       });
       // Revert the toggle state on error
-      setUserCreationEnabled(!userCreationEnabled);
+      setUserCreationEnabled(!variables);
     }
   });
 
