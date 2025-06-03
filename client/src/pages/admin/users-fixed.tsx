@@ -212,9 +212,9 @@ export default function UserAdminPageFixed() {
 
   const handleFilterChange = (type: string, value: string) => {
     if (type === 'role') {
-      setRoleFilter(value);
+      setRoleFilter(value === 'all' ? '' : value);
     } else if (type === 'status') {
-      setStatusFilter(value);
+      setStatusFilter(value === 'all' ? '' : value);
     }
     setCurrentPage(1);
   };
@@ -345,7 +345,7 @@ export default function UserAdminPageFixed() {
               <SelectValue placeholder="Role" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Roles</SelectItem>
+              <SelectItem value="all">All Roles</SelectItem>
               <SelectItem value="admin">Admin</SelectItem>
               <SelectItem value="user">User</SelectItem>
             </SelectContent>
@@ -356,7 +356,7 @@ export default function UserAdminPageFixed() {
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Status</SelectItem>
+              <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="active">Active</SelectItem>
               <SelectItem value="inactive">Inactive</SelectItem>
             </SelectContent>
