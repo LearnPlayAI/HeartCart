@@ -299,7 +299,6 @@ export default function UserAdminPage() {
 
   const handleSearch = (value: string) => {
     setSearch(value);
-    setCurrentPage(1);
   };
 
   const handleFilterChange = (type: string, value: string) => {

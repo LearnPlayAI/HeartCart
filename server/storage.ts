@@ -6327,13 +6327,20 @@ export class DatabaseStorage implements IStorage {
     try {
       let whereConditions: any[] = [];
 
-      // Search filter
-      if (search) {
+      // Search filter across all user fields
+      if (search && search.trim()) {
+        const searchTerm = `%${search.toLowerCase()}%`;
         whereConditions.push(
           or(
-            ilike(users.username, `%${search}%`),
-            ilike(users.email, `%${search}%`),
-            ilike(users.fullName, `%${search}%`)
+            ilike(users.username, searchTerm),
+            ilike(users.email, searchTerm),
+            ilike(users.fullName, searchTerm),
+            ilike(users.phoneNumber, searchTerm),
+            ilike(users.address, searchTerm),
+            ilike(users.city, searchTerm),
+            ilike(users.province, searchTerm),
+            ilike(users.country, searchTerm),
+            ilike(users.role, searchTerm)
           )
         );
       }
