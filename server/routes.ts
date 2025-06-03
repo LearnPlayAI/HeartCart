@@ -6590,15 +6590,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const user = req.user as any;
     const catalogId = req.query.catalogId ? parseInt(req.query.catalogId as string) : undefined;
     const searchQuery = req.query.search as string;
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
+    const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
     
     try {
-      const drafts = await storage.getUserProductDrafts(user.id, searchQuery);
+      const result = await storage.getUserProductDrafts(user.id, searchQuery, limit, offset);
       
       res.json({
         success: true,
-        data: drafts,
+        data: result.drafts,
         meta: {
-          count: drafts.length
+          count: result.drafts.length,
+          total: result.total,
+          limit,
+          offset,
+          totalPages: Math.ceil(result.total / limit),
+          currentPage: Math.floor(offset / limit) + 1
         }
       });
     } catch (error) {

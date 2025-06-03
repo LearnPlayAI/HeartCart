@@ -265,12 +265,10 @@ export const DraftDashboard: React.FC = () => {
     return filtered;
   }, [enrichedDrafts, selectedParentCategory, selectedChildCategory, categories, maxTmyFilter]);
 
-  // Calculate pagination for filtered drafts
-  const totalFilteredDrafts = filteredDrafts.length;
-  const totalPages = Math.ceil(totalFilteredDrafts / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedDrafts = filteredDrafts.slice(startIndex, endIndex);
+  // Use server-side pagination data
+  const totalFilteredDrafts = draftsData?.meta?.total || 0;
+  const totalPages = draftsData?.meta?.totalPages || 1;
+  const paginatedDrafts = filteredDrafts;
 
   // Reset to first page when filters change
   React.useEffect(() => {

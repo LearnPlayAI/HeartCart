@@ -6781,17 +6781,20 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getUserProductDrafts(userId: number, searchQuery?: string): Promise<ProductDraft[]> {
+  async getUserProductDrafts(
+    userId: number, 
+    searchQuery?: string, 
+    limit?: number, 
+    offset?: number
+  ): Promise<{ drafts: ProductDraft[], total: number }> {
     try {
-      let query = db
-        .select()
-        .from(productDrafts)
-        .where(eq(productDrafts.createdBy, userId));
+      // Build base conditions
+      let conditions = [eq(productDrafts.createdBy, userId)];
 
       // Add search functionality across multiple columns if search query is provided
       if (searchQuery && searchQuery.trim()) {
         const searchTerm = `%${searchQuery.toLowerCase()}%`;
-        query = query.where(
+        conditions.push(
           or(
             ilike(productDrafts.name, searchTerm),
             ilike(productDrafts.slug, searchTerm),
@@ -6809,10 +6812,36 @@ export class DatabaseStorage implements IStorage {
         );
       }
 
+      const whereClause = and(...conditions);
+
+      // Get total count for pagination
+      const [countResult] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(productDrafts)
+        .where(whereClause);
+
+      const total = countResult?.count || 0;
+
+      // Get paginated results with ordering by updatedAt DESC
+      let query = db
+        .select()
+        .from(productDrafts)
+        .where(whereClause)
+        .orderBy(desc(productDrafts.updatedAt));
+
+      if (limit !== undefined) {
+        query = query.limit(limit);
+      }
+
+      if (offset !== undefined) {
+        query = query.offset(offset);
+      }
+
       const drafts = await query;
-      return drafts;
+
+      return { drafts, total };
     } catch (error) {
-      logger.error("Error getting user product drafts", { error, userId, searchQuery });
+      logger.error("Error getting user product drafts", { error, userId, searchQuery, limit, offset });
       throw error;
     }
   }
