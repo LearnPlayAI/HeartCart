@@ -92,6 +92,29 @@ export interface IStorage {
   getUserCount(): Promise<number>;
   hashPassword(password: string): Promise<string>;
   getAllUsers(): Promise<User[]>;
+  
+  // Enhanced user management methods for admin
+  getUsersWithPagination(
+    limit?: number,
+    offset?: number,
+    search?: string,
+    roleFilter?: string,
+    statusFilter?: string,
+    sortBy?: string,
+    sortOrder?: 'asc' | 'desc'
+  ): Promise<{ users: User[], total: number }>;
+  updateUserRole(id: number, role: string): Promise<User | undefined>;
+  updateUserStatus(id: number, isActive: boolean): Promise<User | undefined>;
+  deleteUser(id: number): Promise<boolean>;
+  resetUserPassword(id: number, newPassword: string): Promise<boolean>;
+  getUserStats(): Promise<{
+    totalUsers: number;
+    activeUsers: number;
+    inactiveUsers: number;
+    adminUsers: number;
+    regularUsers: number;
+    recentRegistrations: number;
+  }>;
 
   // Product Wizard Draft operations
   saveProductDraft(
@@ -6284,6 +6307,230 @@ export class DatabaseStorage implements IStorage {
   }
 
 
+
+  // ===============================================================
+  // USER ADMIN MANAGEMENT METHODS
+  // ===============================================================
+
+  /**
+   * Get users with pagination, search, and filtering capabilities
+   */
+  async getUsersWithPagination(
+    limit: number = 20,
+    offset: number = 0,
+    search?: string,
+    roleFilter?: string,
+    statusFilter?: string,
+    sortBy: string = 'createdAt',
+    sortOrder: 'asc' | 'desc' = 'desc'
+  ): Promise<{ users: User[], total: number }> {
+    try {
+      let whereConditions: any[] = [];
+
+      // Search filter
+      if (search) {
+        whereConditions.push(
+          or(
+            ilike(users.username, `%${search}%`),
+            ilike(users.email, `%${search}%`),
+            ilike(users.fullName, `%${search}%`)
+          )
+        );
+      }
+
+      // Role filter
+      if (roleFilter && roleFilter !== 'all') {
+        whereConditions.push(eq(users.role, roleFilter));
+      }
+
+      // Status filter
+      if (statusFilter && statusFilter !== 'all') {
+        whereConditions.push(eq(users.isActive, statusFilter === 'active'));
+      }
+
+      const whereClause = whereConditions.length > 0 ? and(...whereConditions) : undefined;
+
+      // Determine sort column
+      const sortColumn = sortBy === 'username' ? users.username : 
+                        sortBy === 'email' ? users.email :
+                        sortBy === 'role' ? users.role :
+                        sortBy === 'isActive' ? users.isActive :
+                        sortBy === 'lastLogin' ? users.lastLogin :
+                        users.createdAt;
+
+      // Get total count
+      const countResult = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(users)
+        .where(whereClause);
+      
+      const total = Number(countResult[0]?.count) || 0;
+
+      // Get users with pagination
+      const userResults = await db
+        .select()
+        .from(users)
+        .where(whereClause)
+        .orderBy(sortOrder === 'asc' ? asc(sortColumn) : desc(sortColumn))
+        .limit(limit)
+        .offset(offset);
+
+      return { users: userResults, total };
+    } catch (error) {
+      logger.error('Error getting users with pagination', { error });
+      throw error;
+    }
+  }
+
+  /**
+   * Update user role
+   */
+  async updateUserRole(id: number, role: string): Promise<User | undefined> {
+    try {
+      const [updatedUser] = await db
+        .update(users)
+        .set({ 
+          role,
+          updatedAt: new Date().toISOString()
+        })
+        .where(eq(users.id, id))
+        .returning();
+
+      logger.info('User role updated', { userId: id, newRole: role });
+      return updatedUser;
+    } catch (error) {
+      logger.error('Error updating user role', { error, userId: id, role });
+      throw error;
+    }
+  }
+
+  /**
+   * Update user status (active/inactive)
+   */
+  async updateUserStatus(id: number, isActive: boolean): Promise<User | undefined> {
+    try {
+      const [updatedUser] = await db
+        .update(users)
+        .set({ 
+          isActive,
+          updatedAt: new Date().toISOString()
+        })
+        .where(eq(users.id, id))
+        .returning();
+
+      logger.info('User status updated', { userId: id, isActive });
+      return updatedUser;
+    } catch (error) {
+      logger.error('Error updating user status', { error, userId: id, isActive });
+      throw error;
+    }
+  }
+
+  /**
+   * Delete user (soft delete by setting inactive)
+   */
+  async deleteUser(id: number): Promise<boolean> {
+    try {
+      const [updatedUser] = await db
+        .update(users)
+        .set({ 
+          isActive: false,
+          updatedAt: new Date().toISOString()
+        })
+        .where(eq(users.id, id))
+        .returning();
+
+      logger.info('User soft deleted', { userId: id });
+      return !!updatedUser;
+    } catch (error) {
+      logger.error('Error deleting user', { error, userId: id });
+      throw error;
+    }
+  }
+
+  /**
+   * Reset user password
+   */
+  async resetUserPassword(id: number, newPassword: string): Promise<boolean> {
+    try {
+      const hashedPassword = await this.hashPassword(newPassword);
+      
+      const [updatedUser] = await db
+        .update(users)
+        .set({ 
+          password: hashedPassword,
+          updatedAt: new Date().toISOString()
+        })
+        .where(eq(users.id, id))
+        .returning();
+
+      logger.info('User password reset', { userId: id });
+      return !!updatedUser;
+    } catch (error) {
+      logger.error('Error resetting user password', { error, userId: id });
+      throw error;
+    }
+  }
+
+  /**
+   * Get user statistics for admin dashboard
+   */
+  async getUserStats(): Promise<{
+    totalUsers: number;
+    activeUsers: number;
+    inactiveUsers: number;
+    adminUsers: number;
+    regularUsers: number;
+    recentRegistrations: number;
+  }> {
+    try {
+      // Get basic counts
+      const [totalResult] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(users);
+      
+      const [activeResult] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(users)
+        .where(eq(users.isActive, true));
+      
+      const [inactiveResult] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(users)
+        .where(eq(users.isActive, false));
+      
+      const [adminResult] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(users)
+        .where(eq(users.role, 'admin'));
+      
+      const [regularResult] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(users)
+        .where(eq(users.role, 'user'));
+
+      // Get recent registrations (last 30 days)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      const [recentResult] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(users)
+        .where(gte(users.createdAt, thirtyDaysAgo.toISOString()));
+
+      return {
+        totalUsers: Number(totalResult?.count) || 0,
+        activeUsers: Number(activeResult?.count) || 0,
+        inactiveUsers: Number(inactiveResult?.count) || 0,
+        adminUsers: Number(adminResult?.count) || 0,
+        regularUsers: Number(regularResult?.count) || 0,
+        recentRegistrations: Number(recentResult?.count) || 0
+      };
+    } catch (error) {
+      logger.error('Error getting user statistics', { error });
+      throw error;
+    }
+  }
 
   /**
    * Session store for authentication - this is initialized in the constructor
