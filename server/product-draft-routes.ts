@@ -225,15 +225,13 @@ export default function registerProductDraftRoutes(router: Router) {
     validateRequest({ params: productDraftIdParamSchema }),
     asyncHandler(async (req, res) => {
       const draftId = parseInt(req.params.id);
-      const draft = await storage.getProductDraft(draftId);
+      const userRole = req.user?.role;
+      const userId = req.user?.id;
+      
+      const draft = await storage.getProductDraft(draftId, userRole, userId);
       
       if (!draft) {
         throw new NotFoundError("Product draft not found");
-      }
-      
-      // Check if user has permission to access this draft
-      if (draft.createdBy !== req.user?.id && req.user?.role !== 'admin') {
-        throw new BadRequestError("You don't have permission to access this draft");
       }
       
       sendSuccess(res, draft);

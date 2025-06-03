@@ -6353,8 +6353,15 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getProductDraft(id: number): Promise<ProductDraft | undefined> {
+  async getProductDraft(id: number, userRole?: string, userId?: number): Promise<ProductDraft | undefined> {
     try {
+      // Admin users can access any draft, non-admin users only their own drafts
+      let whereCondition = eq(productDrafts.id, id);
+      
+      if (userRole !== 'admin' && userId) {
+        whereCondition = and(eq(productDrafts.id, id), eq(productDrafts.createdBy, userId));
+      }
+
       // Force fresh query by explicitly selecting specific fields including rating and reviewCount
       const [draft] = await db
         .select({
@@ -6423,21 +6430,11 @@ export class DatabaseStorage implements IStorage {
           reviewCount: productDrafts.reviewCount,
         })
         .from(productDrafts)
-        .where(eq(productDrafts.id, id));
-
-      // Debug: Log what we got from the database
-      logger.debug("Raw draft from database", {
-        id,
-        hasRating: draft?.rating !== undefined,
-        hasReviewCount: draft?.reviewCount !== undefined,
-        rating: draft?.rating,
-        reviewCount: draft?.reviewCount,
-        allKeys: draft ? Object.keys(draft) : 'no draft'
-      });
+        .where(whereCondition);
 
       return draft;
     } catch (error) {
-      logger.error("Error getting product draft", { error, id });
+      logger.error("Error getting product draft", { error, id, userRole, userId });
       throw error;
     }
   }
@@ -6875,8 +6872,19 @@ export class DatabaseStorage implements IStorage {
   async updateProductDraft(
     id: number,
     data: Partial<InsertProductDraft>,
+    userRole?: string,
+    userId?: number
   ): Promise<ProductDraft | undefined> {
     try {
+      // Admin users can update any draft, non-admin users need ownership check
+      if (userRole !== 'admin' && userId) {
+        // Verify ownership for non-admin users
+        const existingDraft = await this.getProductDraft(id, userRole, userId);
+        if (!existingDraft) {
+          throw new Error("Draft not found or access denied");
+        }
+      }
+
       // Always update the lastModified timestamp
       const updateData = {
         ...data,
@@ -6891,7 +6899,7 @@ export class DatabaseStorage implements IStorage {
 
       return updatedDraft;
     } catch (error) {
-      logger.error("Error updating product draft", { error, id });
+      logger.error("Error updating product draft", { error, id, userRole, userId });
       throw error;
     }
   }
@@ -8465,19 +8473,19 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async deleteProductDraft(id: number): Promise<boolean> {
+  async deleteProductDraft(id: number, userRole?: string, userId?: number): Promise<boolean> {
     try {
       // Import dynamically to avoid circular dependencies
       const { cleanupOrphanedDraftImages } = await import(
         "./clean-orphaned-images"
       );
 
-      // Get the draft first to access the image object keys
-      const draft = await this.getProductDraft(id);
+      // Get the draft first to access the image object keys and verify access
+      const draft = await this.getProductDraft(id, userRole, userId);
 
       if (!draft) {
-        logger.error(`Draft not found when trying to delete: ${id}`);
-        throw new Error(`Draft with ID ${id} not found`);
+        logger.error(`Draft not found or access denied when trying to delete: ${id}`);
+        throw new Error(`Draft with ID ${id} not found or access denied`);
       }
 
       // First, clean up any orphaned images for this draft that may not be tracked in the database
