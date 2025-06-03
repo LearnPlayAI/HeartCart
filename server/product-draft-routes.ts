@@ -299,16 +299,13 @@ export default function registerProductDraftRoutes(router: Router) {
     asyncHandler(async (req, res) => {
       const draftId = parseInt(req.params.id);
       const { step, draftData } = req.body;
+      const userRole = req.user?.role;
+      const userId = req.user?.id;
       
-      const draft = await storage.getProductDraft(draftId);
+      const draft = await storage.getProductDraft(draftId, userRole, userId);
       
       if (!draft) {
         throw new NotFoundError("Product draft not found");
-      }
-      
-      // Check if user has permission to update this draft
-      if (draft.createdBy !== req.user?.id && req.user?.role !== 'admin') {
-        throw new BadRequestError("You don't have permission to update this draft");
       }
       
       const updatedDraft = await storage.updateProductDraftWizardStep(draftId, step, draftData);
@@ -328,20 +325,17 @@ export default function registerProductDraftRoutes(router: Router) {
     asyncHandler(async (req, res) => {
       const draftId = parseInt(req.params.id);
       const files = req.files as Express.Multer.File[];
+      const userRole = req.user?.role;
+      const userId = req.user?.id;
       
       if (!files || files.length === 0) {
         throw new BadRequestError("No images uploaded");
       }
       
-      const draft = await storage.getProductDraft(draftId);
+      const draft = await storage.getProductDraft(draftId, userRole, userId);
       
       if (!draft) {
         throw new NotFoundError("Product draft not found");
-      }
-      
-      // Check if user has permission to update this draft
-      if (draft.createdBy !== req.user?.id && req.user?.role !== 'admin') {
-        throw new BadRequestError("You don't have permission to update this draft");
       }
       
       // Get current images
@@ -475,20 +469,17 @@ export default function registerProductDraftRoutes(router: Router) {
     asyncHandler(async (req, res) => {
       const draftId = parseInt(req.params.id);
       const { imageIndexes } = req.body;
+      const userRole = req.user?.role;
+      const userId = req.user?.id;
       
       if (!Array.isArray(imageIndexes)) {
         throw new BadRequestError("Invalid image indexes: expected array");
       }
       
-      const draft = await storage.getProductDraft(draftId);
+      const draft = await storage.getProductDraft(draftId, userRole, userId);
       
       if (!draft) {
         throw new NotFoundError("Product draft not found");
-      }
-      
-      // Check if user has permission to update this draft
-      if (draft.createdBy !== req.user?.id && req.user?.role !== 'admin') {
-        throw new BadRequestError("You don't have permission to update this draft");
       }
       
       const updatedDraft = await storage.reorderProductDraftImages(draftId, imageIndexes);
@@ -506,16 +497,13 @@ export default function registerProductDraftRoutes(router: Router) {
     validateRequest({ params: productDraftIdParamSchema }),
     asyncHandler(async (req, res) => {
       const draftId = parseInt(req.params.id);
+      const userRole = req.user?.role;
+      const userId = req.user?.id;
       
-      const draft = await storage.getProductDraft(draftId);
+      const draft = await storage.getProductDraft(draftId, userRole, userId);
       
       if (!draft) {
         throw new NotFoundError("Product draft not found");
-      }
-      
-      // Check if user has permission to publish this draft
-      if (draft.createdBy !== req.user?.id && req.user?.role !== 'admin') {
-        throw new BadRequestError("You don't have permission to publish this draft");
       }
       
       // Basic validation before publishing
@@ -586,15 +574,13 @@ export default function registerProductDraftRoutes(router: Router) {
     asyncHandler(async (req, res) => {
       const draftId = parseInt(req.params.id);
       
-      const draft = await storage.getProductDraft(draftId);
+      const userRole = req.user?.role;
+      const userId = req.user?.id;
+      
+      const draft = await storage.getProductDraft(draftId, userRole, userId);
       
       if (!draft) {
         throw new NotFoundError("Product draft not found");
-      }
-      
-      // Check if user has permission to delete this draft
-      if (draft.createdBy !== req.user?.id && req.user?.role !== 'admin') {
-        throw new BadRequestError("You don't have permission to delete this draft");
       }
       
       console.log(`Attempting to delete draft with ID ${draftId}`);
@@ -621,16 +607,13 @@ export default function registerProductDraftRoutes(router: Router) {
     asyncHandler(async (req, res) => {
       const draftId = parseInt(req.params.id);
       const { step } = req.body;
+      const userRole = req.user?.role;
+      const userId = req.user?.id;
       
-      const draft = await storage.getProductDraft(draftId);
+      const draft = await storage.getProductDraft(draftId, userRole, userId);
       
       if (!draft) {
         throw new NotFoundError("Product draft not found");
-      }
-      
-      // Check if user has permission to validate this draft
-      if (draft.createdBy !== req.user?.id && req.user?.role !== 'admin') {
-        throw new BadRequestError("You don't have permission to validate this draft");
       }
       
       // Validate based on step
