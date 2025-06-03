@@ -6822,12 +6822,12 @@ export class DatabaseStorage implements IStorage {
 
       const total = countResult?.count || 0;
 
-      // Get paginated results with ordering by updatedAt DESC
+      // Get paginated results with ordering by last_modified DESC
       let query = db
         .select()
         .from(productDrafts)
         .where(whereClause)
-        .orderBy(desc(productDrafts.updatedAt));
+        .orderBy(desc(productDrafts.lastModified));
 
       if (limit !== undefined) {
         query = query.limit(limit);
