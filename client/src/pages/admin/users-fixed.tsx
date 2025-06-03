@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 import { apiRequest } from '@/lib/queryClient';
@@ -95,10 +95,21 @@ export default function UserAdminPageFixed() {
   
   // State for pagination and filtering - using exact approach as product management
   const [currentPage, setCurrentPage] = useState(1);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchInput, setSearchInput] = useState(''); // For input display
+  const [searchQuery, setSearchQuery] = useState(''); // For actual queries
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
+
+  // Debounce search input to prevent constant re-renders
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setSearchQuery(searchInput);
+      setCurrentPage(1);
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchInput]);
 
   const itemsPerPage = 20;
   const offset = (currentPage - 1) * itemsPerPage;
@@ -205,11 +216,9 @@ export default function UserAdminPageFixed() {
     },
   });
 
-  // Handle search input change - direct implementation like product management
+  // Handle search input change - uses debounced approach to prevent re-render issues
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setSearchQuery(value);
-    setCurrentPage(1);
+    setSearchInput(e.target.value);
   };
 
   const handleFilterChange = (type: string, value: string) => {
@@ -335,7 +344,7 @@ export default function UserAdminPageFixed() {
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search users..."
-                value={searchQuery}
+                value={searchInput}
                 onChange={handleSearchChange}
                 className="pl-8"
               />
