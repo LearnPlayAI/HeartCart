@@ -976,6 +976,23 @@ export const productPromotionsRelations = relations(productPromotions, ({ one })
   })
 }));
 
+// System Settings table - for app-wide configuration
+export const systemSettings = pgTable("systemSettings", {
+  id: serial("id").primaryKey(),
+  settingKey: text("settingKey").notNull().unique(),
+  settingValue: text("settingValue").notNull(),
+  description: text("description"),
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: text("createdAt").default(String(new Date().toISOString())).notNull(),
+  updatedAt: text("updatedAt").default(String(new Date().toISOString())).notNull(),
+});
+
+// System Settings types and schemas
+export type SystemSetting = typeof systemSettings.$inferSelect;
+export type InsertSystemSetting = typeof systemSettings.$inferInsert;
+
+export const insertSystemSettingSchema = createInsertSchema(systemSettings);
+
 // Export ProductDraft type
 export type ProductDraft = typeof productDrafts.$inferSelect;
 export type InsertProductDraft = z.infer<typeof insertProductDraftSchema>;

@@ -48,6 +48,9 @@ import {
   productAttributes,
   type ProductAttribute,
   type InsertProductAttribute,
+  systemSettings,
+  type SystemSetting,
+  type InsertSystemSetting,
   // Promotions system imports
   promotions,
   type Promotion,
@@ -437,6 +440,12 @@ export interface IStorage {
   getPromotionAnalytics(promotionId?: number, dateRange?: { from: Date; to: Date }, compareWith?: { from: Date; to: Date }): Promise<any>;
   getPromotionPerformanceMetrics(promotionId: number): Promise<any>;
   getPromotionTopProducts(promotionId: number, limit?: number): Promise<any[]>;
+  
+  // System Settings operations
+  getSystemSetting(key: string): Promise<SystemSetting | undefined>;
+  getAllSystemSettings(): Promise<SystemSetting[]>;
+  updateSystemSetting(key: string, value: string): Promise<SystemSetting | undefined>;
+  createSystemSetting(setting: InsertSystemSetting): Promise<SystemSetting>;
 }
 
 export class DatabaseStorage implements IStorage {
