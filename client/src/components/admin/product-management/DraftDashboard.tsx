@@ -257,7 +257,9 @@ export const DraftDashboard: React.FC = () => {
       filtered = filtered.filter((draft: ProductDraft) => {
         const costPrice = draft.costPrice || 0;
         const regularPrice = draft.regularPrice || 0;
-        const tmyMarkup = costPrice > 0 ? ((regularPrice - costPrice) / costPrice * 100) : 0;
+        const salePrice = draft.salePrice || regularPrice;
+        // Use sale price for TMY markup calculation (actual profit margin)
+        const tmyMarkup = costPrice > 0 && salePrice > 0 ? ((salePrice - costPrice) / costPrice * 100) : 0;
         return tmyMarkup <= maxTmyValue;
       });
     }
@@ -596,7 +598,8 @@ export const DraftDashboard: React.FC = () => {
                             const regularPrice = draft.regularPrice || 0;
                             const salePrice = draft.salePrice || regularPrice;
                             
-                            const tmyMarkup = costPrice > 0 ? ((regularPrice - costPrice) / costPrice * 100) : 0;
+                            // TMY profit margin should be based on sale price vs cost price (actual profit TeeMeYou makes)
+                            const tmyMarkup = costPrice > 0 && salePrice > 0 ? ((salePrice - costPrice) / costPrice * 100) : 0;
                             const customerDiscount = regularPrice > 0 && salePrice < regularPrice ? ((regularPrice - salePrice) / regularPrice * 100) : 0;
                             
                             return (
