@@ -53,7 +53,7 @@ import AuthTestDashboard from "@/pages/admin/auth-test-dashboard";
 import PromotionsPage from "@/pages/admin/promotions";
 import PromotionProductsPage from "@/pages/admin/promotions/[id]/products";
 import CustomerPromotionsPage from "@/pages/promotions";
-import UserAdminPage from "@/pages/admin/users";
+import UserAdminPageFixed from "@/pages/admin/users-fixed";
 
 // Developer Pages
 import DeveloperDashboard from "@/pages/developer";
@@ -211,7 +211,7 @@ function App() {
               <AdminProtectedRoute path="/admin/promotions/:id/products" component={PromotionProductsPage} />
               <AdminProtectedRoute path="/admin/orders" component={AdminOrders} />
               <AdminProtectedRoute path="/admin/orders/:id" component={AdminOrderDetail} />
-              <AdminProtectedRoute path="/admin/users" component={UserAdminPage} />
+              <AdminProtectedRoute path="/admin/users" component={UserAdminPageFixed} />
               <AdminProtectedRoute path="/admin/ai-settings" component={AdminAISettings} />
               <AdminProtectedRoute path="/admin/batch-upload" component={BatchUpload} />
               <AdminProtectedRoute path="/admin/auth-test" component={AuthTestDashboard} />
