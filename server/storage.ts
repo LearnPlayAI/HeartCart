@@ -1048,12 +1048,17 @@ export class DatabaseStorage implements IStorage {
           a.name.toLowerCase().localeCompare(b.name.toLowerCase())
         );
         
-        for (let i = 0; i < sortedCategories.length; i++) {
-          const category = sortedCategories[i];
-          const newDisplayOrder = i;
-          
-          // Only update if the display order has changed
-          if (category.displayOrder !== newDisplayOrder) {
+        // Check if the order has actually changed by comparing original vs sorted order
+        const originalOrder = groupCategories.map(cat => cat.id);
+        const sortedOrder = sortedCategories.map(cat => cat.id);
+        const orderChanged = !originalOrder.every((id, index) => id === sortedOrder[index]);
+        
+        // Only update if the alphabetical order is different from current order
+        if (orderChanged) {
+          for (let i = 0; i < sortedCategories.length; i++) {
+            const category = sortedCategories[i];
+            const newDisplayOrder = i;
+            
             await db
               .update(categories)
               .set({ displayOrder: newDisplayOrder })
