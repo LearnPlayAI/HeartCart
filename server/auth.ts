@@ -269,7 +269,7 @@ export function setupAuth(app: Express): void {
       const userRole = 'user';
       
       // Check system setting for user creation control
-      const userCreationSetting = await storage.getSystemSetting('allow_user_creation');
+      const userCreationSetting = await storage.getSystemSetting('userCreationEnabled');
       const allowUserCreation = userCreationSetting?.settingValue === 'true';
       
       // Create new user with standardized fields
