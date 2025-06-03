@@ -120,24 +120,17 @@ export default function UserAdminPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  // State for pagination and filtering
+  // State for pagination and filtering - using same approach as product management
   const [currentPage, setCurrentPage] = useState(1);
-  const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [roleFilter, setRoleFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [sortBy, setSortBy] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
 
-  // Debounce search with proper implementation
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(search);
-      setCurrentPage(1);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [search]);
+  const itemsPerPage = 20;
+  const offset = (currentPage - 1) * itemsPerPage;
   
   // State for dialogs
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -168,29 +161,36 @@ export default function UserAdminPage() {
 
   const stats = statsData?.success ? statsData.data : null;
 
-  // Fetch users with pagination
-  const { data: usersData, isLoading, refetch } = useQuery<{
-    success: boolean;
-    data: {
-      users: User[];
-      pagination: {
-        page: number;
-        limit: number;
-        total: number;
-        totalPages: number;
-      };
-    };
-  }>({
+  // Fetch users with server-side pagination - using exact approach as product management
+  const { data: usersData, isLoading, refetch } = useQuery({
     queryKey: ['/api/admin/users', { 
-      page: currentPage, 
-      limit, 
-      search: debouncedSearch, 
-      role: roleFilter, 
-      status: statusFilter, 
-      sortBy, 
-      sortOrder 
+      limit: itemsPerPage, 
+      offset, 
+      search: searchQuery,
+      role: roleFilter || undefined,
+      status: statusFilter || undefined
     }],
-    queryFn: getQueryFn({ on401: "returnNull" }),
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        limit: itemsPerPage.toString(),
+        offset: offset.toString(),
+      });
+      
+      if (searchQuery) {
+        params.append('search', searchQuery);
+      }
+      
+      if (roleFilter) {
+        params.append('role', roleFilter);
+      }
+      
+      if (statusFilter) {
+        params.append('status', statusFilter);
+      }
+      
+      const response = await apiRequest('GET', `/api/admin/users?${params.toString()}`);
+      return response.json();
+    }
   });
 
   const users = usersData?.success ? usersData.data.users : [];
@@ -297,7 +297,8 @@ export default function UserAdminPage() {
   });
 
   const handleSearch = (value: string) => {
-    setSearch(value);
+    setSearchQuery(value);
+    setCurrentPage(1);
   };
 
   const handleFilterChange = (type: string, value: string) => {
