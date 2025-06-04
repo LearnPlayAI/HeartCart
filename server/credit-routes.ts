@@ -18,8 +18,8 @@ router.get("/balance", isAuthenticated, asyncHandler(async (req, res) => {
       success: true,
       data: {
         userId,
-        totalCredits: creditBalance.totalCredits || 0,
-        availableCredits: creditBalance.availableCredits || 0
+        totalCredits: creditBalance.totalCreditAmount || 0,
+        availableCredits: creditBalance.availableCreditAmount || 0
       }
     });
   } catch (error) {

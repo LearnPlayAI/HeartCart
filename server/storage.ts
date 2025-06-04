@@ -10730,7 +10730,7 @@ export class DatabaseStorage implements IStorage {
           throw new Error('No credit balance found for user');
         }
 
-        const availableCredits = parseFloat(customerCredit.availableCredits);
+        const availableCredits = parseFloat(customerCredit.availableCreditAmount);
         if (availableCredits < amount) {
           throw new Error('Insufficient credit balance');
         }
@@ -10740,7 +10740,7 @@ export class DatabaseStorage implements IStorage {
         await tx
           .update(customerCredits)
           .set({
-            availableCredits: newAvailableCredits.toString(),
+            availableCreditAmount: newAvailableCredits.toString(),
             updatedAt: new Date().toISOString(),
           })
           .where(eq(customerCredits.userId, userId));
@@ -10783,8 +10783,8 @@ export class DatabaseStorage implements IStorage {
         .insert(customerCredits)
         .values({
           userId,
-          totalCredits: '0',
-          availableCredits: '0',
+          totalCreditAmount: '0',
+          availableCreditAmount: '0',
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         })
