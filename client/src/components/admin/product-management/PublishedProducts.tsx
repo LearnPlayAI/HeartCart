@@ -270,6 +270,18 @@ export const PublishedProducts: React.FC = () => {
     setCurrentPage(1); // Reset to first page when search changes
   };
 
+  // Handle TMY filter change
+  const handleTmyFilterChange = (value: string) => {
+    setMaxTmyFilter(value);
+    setCurrentPage(1); // Reset to first page when filter changes
+  };
+
+  // Handle status filter change
+  const handleStatusFilterChange = (value: string) => {
+    setStatusFilter(value);
+    setCurrentPage(1); // Reset to first page when filter changes
+  };
+
   // Calculate pagination metadata from server response
   const totalProducts = pagination?.total || 0;
   const totalPages = pagination?.totalPages || 0;
@@ -412,13 +424,25 @@ export const PublishedProducts: React.FC = () => {
             placeholder="Min. TMY %"
             className="w-[120px]"
             value={maxTmyFilter}
-            onChange={(e) => setMaxTmyFilter(e.target.value)}
+            onChange={(e) => handleTmyFilterChange(e.target.value)}
             type="number"
             min="0"
             max="100"
             step="0.1"
           />
         </div>
+
+        {/* Status Filter */}
+        <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
+          <SelectTrigger className="w-[140px]">
+            <SelectValue placeholder="All Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="active">Active</SelectItem>
+            <SelectItem value="inactive">Inactive</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
       
       <Card>
