@@ -84,24 +84,19 @@ const CartDrawer = () => {
                     <h4 className="font-medium text-sm text-gray-800 mb-1">{item.product.name}</h4>
                     <div className="text-[#FF69B4] font-bold text-sm flex items-center gap-2">
                       {(() => {
-                        // Use the same pricing hierarchy as product cards and checkout
-                        let currentPrice = 0;
-                        if (item.product.promotionalPrice && item.product.promotionalPrice > 0) {
-                          currentPrice = item.product.promotionalPrice;
-                        } else if (item.product.salePrice && item.product.salePrice > 0) {
-                          currentPrice = item.product.salePrice;
-                        } else {
-                          currentPrice = item.product.price || 0;
-                        }
+                        // Use the stored item price which includes promotional calculations
+                        const itemPrice = Number(item.itemPrice) || 0;
+                        const originalPrice = Number(item.product.price) || 0;
+                        const hasDiscount = itemPrice < originalPrice;
                         
                         return (
                           <>
-                            {formatCurrency(currentPrice + (item.priceAdjustment || 0))}
+                            {formatCurrency(itemPrice)}
                             
-                            {/* Show original price if on sale */}
-                            {(item.product.promotionalPrice || item.product.salePrice) && item.product.price > currentPrice && (
+                            {/* Show original price if item price is discounted */}
+                            {hasDiscount && (
                               <span className="text-gray-500 line-through text-xs">
-                                {formatCurrency(item.product.price)}
+                                {formatCurrency(originalPrice)}
                               </span>
                             )}
                           </>
