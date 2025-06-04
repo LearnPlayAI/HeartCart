@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
-import { User, ShoppingCart, LogIn, UserPlus, LogOut, ChevronDown, LayoutDashboard, Terminal, Package, Heart } from 'lucide-react';
+import { User, ShoppingCart, LogIn, UserPlus, LogOut, ChevronDown, LayoutDashboard, Terminal, Package, Heart, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { 
   DropdownMenu, 
@@ -95,6 +95,12 @@ const Header = () => {
                       <Link href="/my-favourites" className="cursor-pointer flex items-center">
                         <Heart className="h-4 w-4 mr-2" />
                         My Favourites
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/credit-history" className="cursor-pointer flex items-center">
+                        <CreditCard className="h-4 w-4 mr-2" />
+                        Credit History
                       </Link>
                     </DropdownMenuItem>
                     

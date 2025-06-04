@@ -20,6 +20,7 @@ import Profile from "@/pages/profile-fix";
 import ProfileSettings from "@/pages/profile-settings";
 import MyOrders from "@/pages/my-orders";
 import MyFavourites from "@/pages/MyFavourites";
+import CreditHistory from "@/pages/credit-history";
 import AuthPage from "@/pages/auth-page";
 import FlashDeals from "@/pages/flash-deals";
 import NotFound from "@/pages/not-found";
@@ -254,6 +255,7 @@ function App() {
                       <ProtectedRoute path="/profile-settings" component={ProfileSettings} />
                       <ProtectedRoute path="/my-orders" component={MyOrders} />
                       <ProtectedRoute path="/my-favourites" component={MyFavourites} />
+                      <ProtectedRoute path="/credit-history" component={CreditHistory} />
                       <ProtectedRoute path="/order/:id" component={OrderDetail} />
                       <ProtectedRoute path="/orders/:id" component={OrderDetail} />
                       <Route path="/auth"><AuthPage /></Route>
