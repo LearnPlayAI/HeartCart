@@ -3722,7 +3722,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post(
     "/api/cart", 
-    isAuthenticated, 
+    isAuthenticated,
+    trackCartActivity,
     validateRequest({
       body: z.object({
         productId: z.coerce.number().positive("Product ID is required"),
