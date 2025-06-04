@@ -873,11 +873,22 @@ export default function CheckoutPage() {
                   <span>Shipping:</span>
                   <span>{shippingCost === 0 ? "Free" : `R${shippingCost.toFixed(2)}`}</span>
                 </div>
+                {applyCreditAmount > 0 && (
+                  <div className="flex justify-between text-sm text-green-600">
+                    <span>Credit Applied:</span>
+                    <span>-R{applyCreditAmount.toFixed(2)}</span>
+                  </div>
+                )}
                 <Separator />
                 <div className="flex justify-between font-bold">
                   <span>Total:</span>
-                  <span>R{total.toFixed(2)}</span>
+                  <span>R{finalTotal.toFixed(2)}</span>
                 </div>
+                {applyCreditAmount > 0 && (
+                  <div className="text-xs text-gray-600">
+                    Original total: R{(subtotal + shippingCost).toFixed(2)}
+                  </div>
+                )}
               </div>
 
               {/* Selected Options Summary */}
