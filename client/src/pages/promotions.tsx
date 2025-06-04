@@ -85,19 +85,25 @@ function PromotionCard({ promotion }: { promotion: Promotion }) {
       <CardContent className="p-4">
         {products.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {products.slice(0, 8).map((promotionProduct) => (
-              <ProductCard 
-                key={promotionProduct.id} 
-                product={promotionProduct.product}
-                promotionInfo={{
+            {products.slice(0, 8).map((promotionProduct) => {
+              // Create product with embedded promotion data for unified pricing system
+              const productWithPromotion = {
+                ...promotionProduct.product,
+                promotionInfo: {
                   promotionName: promotion.promotionName,
-                  promotionDiscount: promotion.discountValue,
-                  promotionDiscountType: promotion.discountType,
+                  promotionDiscount: promotion.discountValue.toString(),
                   promotionEndDate: promotion.endDate,
-                  promotionalPrice: promotionProduct.promotionalPrice ? Number(promotionProduct.promotionalPrice) : null
-                }}
-              />
-            ))}
+                  promotionalPrice: promotionProduct.discountOverride || null
+                }
+              };
+              
+              return (
+                <ProductCard 
+                  key={promotionProduct.id} 
+                  product={productWithPromotion}
+                />
+              );
+            })}
           </div>
         ) : (
           <div className="text-center py-8 text-gray-500">
