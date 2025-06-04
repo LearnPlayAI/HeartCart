@@ -124,6 +124,12 @@ const ProductCard: React.FC<ProductCardProps> = ({
     promotionInfo
   );
   
+  console.log(`Cart price for product ${product.id}:`, {
+    cartPrice,
+    promotionInfo,
+    displayPrice: pricing.displayPrice
+  });
+  
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();

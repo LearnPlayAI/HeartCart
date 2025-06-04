@@ -93,7 +93,8 @@ function PromotionCard({ promotion }: { promotion: Promotion }) {
                   promotionName: promotion.promotionName,
                   promotionDiscount: promotion.discountValue,
                   promotionDiscountType: promotion.discountType,
-                  promotionEndDate: promotion.endDate
+                  promotionEndDate: promotion.endDate,
+                  promotionalPrice: promotionProduct.promotionalPrice ? Number(promotionProduct.promotionalPrice) : null
                 }}
               />
             ))}
