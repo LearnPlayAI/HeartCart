@@ -690,7 +690,7 @@ export default function AdminOrderDetail() {
                         
                         {/* Supplier Status Badge */}
                         {(() => {
-                          const supplierStatus = supplierOrdersData?.find(so => so.productId === item.productId)?.status;
+                          const supplierStatus = supplierOrders?.find(so => so.productId === item.productId)?.status;
                           if (!supplierStatus) return null;
                           
                           const statusConfig = {
