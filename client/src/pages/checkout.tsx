@@ -257,10 +257,9 @@ export default function CheckoutPage() {
     },
     onSuccess: (data) => {
       console.log("Order mutation success:", data);
-      // Clear cart and show success
+      // Clear cart and invalidate orders to refresh My Orders page
       queryClient.invalidateQueries({ queryKey: ["/api/cart"] });
-      
-      
+      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
       
       // Navigate to order confirmation
       navigate(`/order-confirmation/${data.data?.id || data.id}`);

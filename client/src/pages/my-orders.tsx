@@ -157,14 +157,20 @@ const MyOrdersPage: React.FC = () => {
 
   const user = userResponse?.success ? userResponse.data : null;
 
-  // Fetch orders data
+  // Fetch orders data with fresh data on page access
   const { 
     data: ordersResponse, 
     isLoading: isLoadingOrders,
-    isError: isErrorOrders 
+    isError: isErrorOrders,
+    refetch: refetchOrders
   } = useQuery<{success: boolean; data: OrderType[]}>({
     queryKey: ['/api/orders'],
     enabled: !!user,
+    staleTime: 0, // Always consider data stale
+    gcTime: 0, // Don't cache data for long
+    refetchOnMount: 'always', // Always refetch when component mounts
+    refetchOnWindowFocus: true, // Refetch when window regains focus
+    refetchOnReconnect: true, // Refetch when reconnecting to network
   });
 
   const orders = ordersResponse?.success ? ordersResponse.data : [];
@@ -175,6 +181,13 @@ const MyOrdersPage: React.FC = () => {
       navigate('/auth');
     }
   }, [user, userResponse, navigate]);
+
+  // Refetch orders when user is available to ensure fresh data
+  useEffect(() => {
+    if (user && refetchOrders) {
+      refetchOrders();
+    }
+  }, [user, refetchOrders]);
 
   // Filter and sort orders
   const filteredOrders = React.useMemo(() => {
