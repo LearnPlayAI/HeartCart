@@ -63,11 +63,22 @@ export default function MyFavourites() {
   // Create promotional pricing lookup
   const productPromotions = useMemo(() => {
     const map = new Map();
+    console.log('Promotions response in MyFavourites:', promotionsResponse);
+    
     if (promotionsResponse?.success && promotionsResponse?.data) {
       const activePromotions = promotionsResponse.data;
+      console.log('Active promotions data:', activePromotions);
+      
       activePromotions.forEach((promo: any) => {
+        console.log('Processing promotion:', promo);
         if (promo.products) {
           promo.products.forEach((pp: any) => {
+            console.log('Adding product to promotion map:', pp.productId, {
+              promotionName: promo.promotionName,
+              promotionDiscount: pp.discountOverride || promo.discountValue,
+              promotionDiscountType: promo.discountType,
+              promotionEndDate: promo.endDate
+            });
             map.set(pp.productId, {
               promotionName: promo.promotionName,
               promotionDiscount: pp.discountOverride || promo.discountValue,
@@ -78,6 +89,8 @@ export default function MyFavourites() {
         }
       });
     }
+    
+    console.log('Final promotion map in MyFavourites:', map);
     return map;
   }, [promotionsResponse]);
 

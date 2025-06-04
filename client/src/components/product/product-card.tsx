@@ -100,12 +100,22 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const [quickViewOpen, setQuickViewOpen] = useState(false);
   const [imageError, setImageError] = useState(false);
   
+  // Debug promotional info
+  console.log(`ProductCard for product ${product.id}:`, {
+    productName: product.name,
+    basePrice: product.price,
+    salePrice: product.salePrice,
+    promotionInfo: promotionInfo
+  });
+
   // Calculate unified pricing using centralized logic
   const pricing = calculateProductPricing(
     Number(product.price) || 0,
     product.salePrice ? Number(product.salePrice) : null,
     promotionInfo
   );
+  
+  console.log(`Calculated pricing for product ${product.id}:`, pricing);
 
   // Get the correct cart price
   const cartPrice = getCartPrice(
