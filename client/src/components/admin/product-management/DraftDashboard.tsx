@@ -195,7 +195,7 @@ export const DraftDashboard: React.FC = () => {
   };
   
 
-  const drafts = draftsData?.success ? draftsData.data : [];
+  const drafts = draftsData?.success ? (draftsData.data?.drafts || draftsData.data || []) : [];
   const categories = categoriesData?.success ? categoriesData.data : [];
 
   // Organize categories into parent/child relationships
@@ -281,8 +281,8 @@ export const DraftDashboard: React.FC = () => {
   }, [enrichedDrafts, selectedParentCategory, selectedChildCategory, categories, maxTmyFilter]);
 
   // Use server-side pagination data
-  const totalFilteredDrafts = draftsData?.meta?.total || 0;
-  const totalPages = draftsData?.meta?.totalPages || 1;
+  const totalFilteredDrafts = draftsData?.data?.total || 0;
+  const totalPages = Math.ceil(totalFilteredDrafts / DRAFTS_PER_PAGE);
   const paginatedDrafts = filteredDrafts;
 
   // Reset to first page when filters change
