@@ -398,6 +398,7 @@ const SupplierOrders = () => {
                   <SelectItem value="pending">Pending</SelectItem>
                   <SelectItem value="ordered">Ordered</SelectItem>
                   <SelectItem value="received">Received</SelectItem>
+                  <SelectItem value="shipped">Shipped</SelectItem>
                   <SelectItem value="unavailable">Unavailable</SelectItem>
                 </SelectContent>
               </Select>
