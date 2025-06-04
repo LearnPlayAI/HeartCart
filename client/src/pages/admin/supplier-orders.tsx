@@ -49,6 +49,7 @@ interface SupplierOrder {
   createdAt: string;
   updatedAt?: string;
   customerUnitPrice: number;
+  hasCreditGenerated?: boolean; // Track if credit has been generated
   customerOrder: {
     id: number;
     orderNumber: string;
@@ -194,7 +195,14 @@ const SupplierOrders = () => {
     mutationFn: (orderId: number) =>
       apiRequest(`/api/admin/supplier-orders/${orderId}/generate-credit`, { method: 'POST' }),
     onSuccess: () => {
+      // Invalidate supplier orders to update hasCreditGenerated status
       queryClient.invalidateQueries({ queryKey: ['/api/admin/supplier-orders'] });
+      queryClient.refetchQueries({ queryKey: ['/api/admin/supplier-orders'] });
+      
+      // Invalidate credit balance queries to update header display
+      queryClient.invalidateQueries({ queryKey: ['/api/credits/balance'] });
+      queryClient.refetchQueries({ queryKey: ['/api/credits/balance'] });
+      
       toast({
         title: 'Credit generated',
         description: 'Customer credit has been generated for unavailable item',
@@ -629,11 +637,11 @@ const SupplierOrders = () => {
                             variant="outline"
                             size="sm"
                             onClick={() => generateCreditMutation.mutate(order.id)}
-                            disabled={generateCreditMutation.isPending}
+                            disabled={generateCreditMutation.isPending || order.hasCreditGenerated}
                             className="w-full flex items-center gap-1"
                           >
                             <CreditCard className="h-3 w-3" />
-                            Generate Customer Credit
+                            {order.hasCreditGenerated ? 'Credit Already Generated' : 'Generate Customer Credit'}
                           </Button>
                         )}
                       </div>

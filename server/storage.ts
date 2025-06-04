@@ -10903,12 +10903,14 @@ export class DatabaseStorage implements IStorage {
           product: products,
           supplierStatus: orderItemSupplierStatus,
           productDraft: productDrafts,
+          creditTransaction: creditTransactions,
         })
         .from(orderItems)
         .innerJoin(orders, eq(orderItems.orderId, orders.id))
         .innerJoin(products, eq(orderItems.productId, products.id))
         .leftJoin(orderItemSupplierStatus, eq(orderItems.id, orderItemSupplierStatus.orderItemId))
         .leftJoin(productDrafts, eq(productDrafts.sku, products.sku))
+        .leftJoin(creditTransactions, eq(creditTransactions.supplierOrderId, orderItems.id))
         .where(
           and(
             or(
@@ -10943,6 +10945,7 @@ export class DatabaseStorage implements IStorage {
         urlLastChecked: '',
         createdAt: row.order.createdAt,
         updatedAt: row.supplierStatus?.createdAt || row.order.createdAt,
+        hasCreditGenerated: !!row.creditTransaction, // Check if credit transaction exists
         customerOrder: {
           id: row.order.id,
           orderNumber: row.order.orderNumber,
