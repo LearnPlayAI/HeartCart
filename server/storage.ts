@@ -1724,13 +1724,16 @@ export class DatabaseStorage implements IStorage {
       console.log(`Searching products with terms: ${searchTerms.join(', ')}`);
       
       // Get all products first, then apply sophisticated ranking
-      const allProducts = await this.getAllProducts(
+      const allProductsResult = await this.getAllProducts(
         1000, // Get more products for ranking
         0,
         options?.categoryId,
         undefined,
         options
       );
+      
+      // Extract products array from the result object
+      const allProducts = allProductsResult.products;
       
       // Filter and rank products based on search terms
       const rankedProducts = allProducts
