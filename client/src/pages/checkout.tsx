@@ -95,7 +95,7 @@ export default function CheckoutPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isProcessing, setIsProcessing] = useState(false);
-  const { creditBalance, formattedBalance, balanceLoading } = useCredits();
+  const { creditBalance, formattedBalance, balanceLoading, transactions } = useCredits();
 
   // Fetch current user details
   const { data: user } = useQuery({
@@ -213,11 +213,18 @@ export default function CheckoutPage() {
   const selectedShippingMethod = form.watch("shippingMethod");
   const selectedPaymentMethod = form.watch("paymentMethod");
   
-  const shippingCost = shippingOptions.find(option => 
-    option.id === selectedShippingMethod)?.price || 0;
-  
   // Calculate automatic credit application
   const availableCredit = creditBalance ? parseFloat(creditBalance.availableCredits || '0') : 0;
+  
+  // Calculate shipping cost with exemption logic
+  const baseShippingCost = shippingOptions.find(option => 
+    option.id === selectedShippingMethod)?.price || 0;
+  
+  const { cost: shippingCost, isWaived: isShippingWaived, reason: reasonForWaiver } = calculateShippingCost(
+    baseShippingCost,
+    availableCredit,
+    transactions || []
+  );
   const orderTotal = subtotal + shippingCost;
   const autoCreditAmount = Math.min(availableCredit, orderTotal);
   const finalTotal = Math.max(0, orderTotal - autoCreditAmount);
@@ -890,7 +897,17 @@ export default function CheckoutPage() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Shipping:</span>
-                  <span>{shippingCost === 0 ? "Free" : `R${shippingCost.toFixed(2)}`}</span>
+                  <div className="text-right">
+                    {isShippingWaived ? (
+                      <div>
+                        <span className="line-through text-gray-400 text-xs">R85.00</span>
+                        <span className="ml-2 font-medium text-green-600">FREE</span>
+                        <div className="text-xs text-green-600">{reasonForWaiver}</div>
+                      </div>
+                    ) : (
+                      <span>{shippingCost === 0 ? "Free" : `R${shippingCost.toFixed(2)}`}</span>
+                    )}
+                  </div>
                 </div>
                 {autoCreditAmount > 0 && (
                   <div className="flex justify-between text-sm text-green-600">
