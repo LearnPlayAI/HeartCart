@@ -32,7 +32,9 @@ import {
   XCircle,
   ArrowLeft,
   Eye,
-  Package2
+  Package2,
+  AlertTriangle,
+  ExternalLink
 } from 'lucide-react';
 
 // Interfaces matching our database schema
@@ -174,6 +176,35 @@ const MyOrdersPage: React.FC = () => {
   });
 
   const orders = ordersResponse?.success ? ordersResponse.data : [];
+
+  // Fetch credit transactions to check for unavailable item credits
+  const { data: creditTransactionsResponse } = useQuery({
+    queryKey: ['/api/credits/transactions'],
+    enabled: !!user,
+  });
+
+  const creditTransactions = creditTransactionsResponse?.success ? creditTransactionsResponse.data : [];
+
+  // Helper function to check if order has credits for unavailable items
+  const getOrderCreditInfo = (orderId: number) => {
+    const orderCredits = creditTransactions.filter((transaction: any) => 
+      transaction.type === 'credit' && 
+      transaction.description && 
+      transaction.description.toLowerCase().includes('unavailable') &&
+      transaction.orderId === orderId
+    );
+    
+    if (orderCredits.length > 0) {
+      const totalCreditAmount = orderCredits.reduce((sum: number, credit: any) => sum + credit.amount, 0);
+      return {
+        hasCredits: true,
+        creditAmount: totalCreditAmount,
+        itemCount: orderCredits.length
+      };
+    }
+    
+    return { hasCredits: false, creditAmount: 0, itemCount: 0 };
+  };
 
   // Redirect if not logged in
   useEffect(() => {
@@ -558,73 +589,103 @@ const MyOrdersPage: React.FC = () => {
           </Card>
         ) : (
           <div className="space-y-6">
-            {filteredOrders.map((order) => (
-              <Card key={order.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
-                    {/* Order Info */}
-                    <div className="flex-1 mb-4 lg:mb-0">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-lg font-semibold">Order #{order.orderNumber}</h3>
-                        <Badge 
-                          variant="outline" 
-                          className={`${getStatusColor(order.status)} flex items-center gap-1`}
-                        >
-                          {getStatusIcon(order.status)}
-                          {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                        </Badge>
-                      </div>
-                      
-                      <div className="text-sm text-gray-600 space-y-1">
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-4 w-4" />
-                          <span>Ordered: {formatDate(order.createdAt)}</span>
+            {filteredOrders.map((order) => {
+              const creditInfo = getOrderCreditInfo(order.id);
+              
+              return (
+                <Card key={order.id} className="hover:shadow-md transition-shadow">
+                  <CardContent className="p-6">
+                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+                      {/* Order Info */}
+                      <div className="flex-1 mb-4 lg:mb-0">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h3 className="text-lg font-semibold">Order #{order.orderNumber}</h3>
+                          <Badge 
+                            variant="outline" 
+                            className={`${getStatusColor(order.status)} flex items-center gap-1`}
+                          >
+                            {getStatusIcon(order.status)}
+                            {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                          </Badge>
                         </div>
-                        <div className="flex items-center gap-1">
-                          <CreditCard className="h-4 w-4" />
-                          <span>Payment: {order.paymentMethod}</span>
-                        </div>
-                        {order.trackingNumber && (
+                        
+                        <div className="text-sm text-gray-600 space-y-1">
                           <div className="flex items-center gap-1">
-                            <Truck className="h-4 w-4" />
-                            <span>Tracking: {order.trackingNumber}</span>
+                            <Calendar className="h-4 w-4" />
+                            <span>Ordered: {formatDate(order.createdAt)}</span>
                           </div>
-                        )}
+                          <div className="flex items-center gap-1">
+                            <CreditCard className="h-4 w-4" />
+                            <span>Payment: {order.paymentMethod}</span>
+                          </div>
+                          {order.trackingNumber && (
+                            <div className="flex items-center gap-1">
+                              <Truck className="h-4 w-4" />
+                              <span>Tracking: {order.trackingNumber}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Order Details */}
+                      <div className="flex flex-col lg:items-end lg:text-right">
+                        <div className="text-2xl font-bold text-gray-900 mb-2">
+                          {formatCurrency(order.totalAmount)}
+                        </div>
+                        <div className="text-sm text-gray-600 mb-3">
+                          <div>Subtotal: {formatCurrency(order.subtotalAmount)}</div>
+                          <div>Shipping: {formatCurrency(order.shippingCost)}</div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => navigate(`/order/${order.id}`)}
+                            className="bg-[#ff68b4] text-[#ffffff] border-[#ff68b4] hover:bg-[#ff1493] hover:text-[#ffffff]"
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            View Details
+                          </Button>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Order Details */}
-                    <div className="flex flex-col lg:items-end lg:text-right">
-                      <div className="text-2xl font-bold text-gray-900 mb-2">
-                        {formatCurrency(order.totalAmount)}
+                    {/* Credit Notice for Unavailable Items */}
+                    {creditInfo.hasCredits && (
+                      <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                        <div className="flex items-start gap-3">
+                          <AlertTriangle className="h-5 w-5 text-orange-600 mt-0.5" />
+                          <div className="flex-1">
+                            <div className="font-medium text-orange-800">
+                              {creditInfo.itemCount === 1 ? '1 item was' : `${creditInfo.itemCount} items were`} unavailable
+                            </div>
+                            <div className="text-sm text-orange-700 mt-1">
+                              You have been credited {formatCurrency(creditInfo.creditAmount)} for unavailable items.
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => navigate('/credit-history')}
+                              className="text-orange-700 hover:text-orange-800 hover:bg-orange-100 p-0 h-auto mt-2"
+                            >
+                              View credit history
+                              <ExternalLink className="h-3 w-3 ml-1" />
+                            </Button>
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-sm text-gray-600 mb-3">
-                        <div>Subtotal: {formatCurrency(order.subtotalAmount)}</div>
-                        <div>Shipping: {formatCurrency(order.shippingCost)}</div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => navigate(`/order/${order.id}`)}
-                          className="bg-[#ff68b4] text-[#ffffff] border-[#ff68b4] hover:bg-[#ff1493] hover:text-[#ffffff]"
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          View Details
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
+                    )}
 
-                  {/* Shipping Address */}
-                  <div className="mt-4 pt-4 border-t">
-                    <div className="text-sm text-gray-600">
-                      <strong>Shipping to:</strong> {order.shippingAddress}, {order.shippingCity}, {order.shippingPostalCode}
+                    {/* Shipping Address */}
+                    <div className="mt-4 pt-4 border-t">
+                      <div className="text-sm text-gray-600">
+                        <strong>Shipping to:</strong> {order.shippingAddress}, {order.shippingCity}, {order.shippingPostalCode}
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         )}
 
