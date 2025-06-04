@@ -245,13 +245,42 @@ export default function registerProductDraftRoutes(router: Router) {
   router.get(
     "/api/product-drafts",
     isAuthenticated,
+    validateRequest({
+      query: z.object({
+        limit: z.string().optional().transform(val => val ? parseInt(val, 10) : undefined),
+        offset: z.string().optional().transform(val => val ? parseInt(val, 10) : undefined),
+        search: z.string().optional(),
+        parentCategoryId: z.string().optional().transform(val => val ? parseInt(val, 10) : undefined),
+        childCategoryId: z.string().optional().transform(val => val ? parseInt(val, 10) : undefined),
+        minTmyPercent: z.string().optional().transform(val => val ? parseFloat(val) : undefined),
+        statusFilter: z.enum(['all', 'active', 'inactive']).optional()
+      })
+    }),
     asyncHandler(async (req, res) => {
       const userId = req.user?.id;
       if (!userId) {
         throw new BadRequestError("User ID is required");
       }
       
-      const drafts = await storage.getUserProductDrafts(userId);
+      const {
+        limit = 20,
+        offset = 0,
+        search,
+        parentCategoryId,
+        childCategoryId,
+        minTmyPercent,
+        statusFilter
+      } = req.query;
+
+      const drafts = await storage.getUserProductDrafts(userId, {
+        limit,
+        offset,
+        search,
+        parentCategoryId,
+        childCategoryId,
+        minTmyPercent,
+        statusFilter
+      });
       sendSuccess(res, drafts);
     })
   );

@@ -1376,12 +1376,12 @@ export class DatabaseStorage implements IStorage {
 
       // Add TMY percentage filter if provided
       if (options?.minTmyPercent !== undefined && options.minTmyPercent > 0) {
-        // Create SQL condition for TMY calculation: ((effective_price - cost_price) / cost_price * 100) >= minTmyPercent
+        // Create SQL condition for TMY calculation: ((effective_price - cost_price) / cost_price * 100) <= minTmyPercent
         // Use COALESCE to handle nulls and ensure we don't divide by zero
         const tmyCondition = sql`
           CASE 
             WHEN COALESCE(${products.costPrice}, 0) > 0 THEN
-              ((COALESCE(${products.salePrice}, ${products.price}, 0) - COALESCE(${products.costPrice}, 0)) / COALESCE(${products.costPrice}, 1) * 100) >= ${options.minTmyPercent}
+              ((COALESCE(${products.salePrice}, ${products.price}, 0) - COALESCE(${products.costPrice}, 0)) / COALESCE(${products.costPrice}, 1) * 100) <= ${options.minTmyPercent}
             ELSE FALSE
           END
         `;
@@ -7195,9 +7195,15 @@ export class DatabaseStorage implements IStorage {
 
   async getUserProductDrafts(
     userId: number, 
-    searchQuery?: string, 
-    limit?: number, 
-    offset?: number,
+    options?: {
+      search?: string;
+      limit?: number;
+      offset?: number;
+      parentCategoryId?: number;
+      childCategoryId?: number;
+      minTmyPercent?: number;
+      statusFilter?: string;
+    },
     userRole?: string
   ): Promise<{ drafts: ProductDraft[], total: number }> {
     try {
@@ -7208,8 +7214,8 @@ export class DatabaseStorage implements IStorage {
       }
 
       // Add search functionality across multiple columns if search query is provided
-      if (searchQuery && searchQuery.trim()) {
-        const searchTerm = `%${searchQuery.toLowerCase()}%`;
+      if (options?.search && options.search.trim()) {
+        const searchTerm = `%${options.search.toLowerCase()}%`;
         conditions.push(
           or(
             ilike(productDrafts.name, searchTerm),
@@ -7226,6 +7232,49 @@ export class DatabaseStorage implements IStorage {
             ilike(productDrafts.rejectionReason, searchTerm)
           )
         );
+      }
+
+      // Add category filters
+      if (options?.parentCategoryId) {
+        // Get the category with its children to support parent category filtering
+        const categoryWithChildren = await this.getCategoryWithChildren(
+          options.parentCategoryId,
+          { includeInactive: true }
+        );
+        
+        if (categoryWithChildren) {
+          // Collect all category IDs to filter by (parent + children)
+          const categoryIds = [options.parentCategoryId];
+          if (categoryWithChildren.children.length > 0) {
+            categoryIds.push(...categoryWithChildren.children.map(child => child.id));
+          }
+          
+          // Filter products by any of these category IDs
+          conditions.push(inArray(productDrafts.categoryId, categoryIds));
+        }
+      } else if (options?.childCategoryId) {
+        conditions.push(eq(productDrafts.categoryId, options.childCategoryId));
+      }
+
+      // Add TMY percentage filter if provided (show products with margin ≤ threshold)
+      if (options?.minTmyPercent !== undefined && options.minTmyPercent > 0) {
+        const tmyCondition = sql`
+          CASE 
+            WHEN COALESCE(${productDrafts.costPrice}, 0) > 0 THEN
+              ((COALESCE(${productDrafts.salePrice}, ${productDrafts.regularPrice}, 0) - COALESCE(${productDrafts.costPrice}, 0)) / COALESCE(${productDrafts.costPrice}, 1) * 100) <= ${options.minTmyPercent}
+            ELSE FALSE
+          END
+        `;
+        conditions.push(tmyCondition);
+      }
+
+      // Add status filter if provided (Active/Inactive products)
+      if (options?.statusFilter && options.statusFilter !== 'all') {
+        if (options.statusFilter === 'active') {
+          conditions.push(eq(productDrafts.isActive, true));
+        } else if (options.statusFilter === 'inactive') {
+          conditions.push(eq(productDrafts.isActive, false));
+        }
       }
 
       const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
@@ -7252,19 +7301,19 @@ export class DatabaseStorage implements IStorage {
         query = query.where(whereClause);
       }
 
-      if (limit !== undefined) {
-        query = query.limit(limit);
+      if (options?.limit !== undefined) {
+        query = query.limit(options.limit);
       }
 
-      if (offset !== undefined) {
-        query = query.offset(offset);
+      if (options?.offset !== undefined) {
+        query = query.offset(options.offset);
       }
 
       const drafts = await query;
 
       return { drafts, total };
     } catch (error) {
-      logger.error("Error getting user product drafts", { error, userId, searchQuery, limit, offset, userRole });
+      logger.error("Error getting user product drafts", { error, userId, options, userRole });
       throw error;
     }
   }
