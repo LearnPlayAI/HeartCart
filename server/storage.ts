@@ -10926,17 +10926,29 @@ export class DatabaseStorage implements IStorage {
         orderId: row.order.id,
         orderNumber: row.order.orderNumber,
         productId: row.product.id,
-        productName: row.orderItem.productName,
+        productName: row.orderItem.productName || row.product.name,
         productSku: row.product.sku,
+        supplierUrl: row.product.supplier || '', // Map supplier field to supplierUrl
         quantity: row.orderItem.quantity,
-        unitPrice: row.orderItem.unitPrice,
-        totalPrice: row.orderItem.totalPrice,
+        unitCost: row.orderItem.unitPrice,
+        totalCost: row.orderItem.totalPrice,
+        status: row.supplierStatus?.supplierStatus || 'pending',
+        supplierOrderNumber: row.supplierStatus?.supplierOrderDate || '',
+        orderDate: row.supplierStatus?.supplierOrderDate || '',
+        expectedDelivery: '',
+        notes: row.supplierStatus?.adminNotes || '',
+        urlValidationStatus: 'pending',
+        urlLastChecked: '',
+        createdAt: row.order.createdAt,
+        updatedAt: row.supplierStatus?.createdAt || row.order.createdAt,
         customerName: row.order.customerName,
-        orderDate: row.order.createdAt,
-        supplierStatus: row.supplierStatus?.supplierStatus || 'pending',
-        supplierOrderPlaced: row.supplierStatus?.supplierOrderPlaced || false,
-        adminNotes: row.supplierStatus?.adminNotes,
-        supplierOrderDate: row.supplierStatus?.supplierOrderDate,
+        orderDateOriginal: row.order.createdAt,
+        product: {
+          id: row.product.id,
+          name: row.product.name,
+          imageUrl: row.product.imageUrl,
+          supplierAvailable: true,
+        }
       }));
     } catch (error) {
       logger.error('Error getting order items for supplier management', { error, filters });
