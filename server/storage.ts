@@ -3415,12 +3415,12 @@ export class DatabaseStorage implements IStorage {
                 .from(orderItems)
                 .where(eq(orderItems.orderId, id));
 
-              // Update supplier status for items that are currently "ordered" to "received"
+              // Update supplier status for items that are currently "ordered" to "shipped"
               for (const item of orderItems) {
                 await db
                   .update(orderItemSupplierStatus)
                   .set({
-                    supplierStatus: 'received',
+                    supplierStatus: 'shipped',
                     updatedAt: now.toISOString()
                   })
                   .where(
@@ -3431,7 +3431,7 @@ export class DatabaseStorage implements IStorage {
                   );
               }
 
-              logger.info(`Updated supplier order statuses to received for order ${id}`, {
+              logger.info(`Updated supplier order statuses to shipped for order ${id}`, {
                 orderId: id,
                 orderItemCount: orderItems.length
               });

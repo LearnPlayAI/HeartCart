@@ -1147,7 +1147,7 @@ export const orderItemSupplierStatus = pgTable("orderItemSupplierStatus", {
   productId: integer("productId").notNull().references(() => products.id),
   supplierOrderPlaced: boolean("supplierOrderPlaced").notNull().default(false),
   supplierOrderDate: text("supplierOrderDate"),
-  supplierStatus: text("supplierStatus").notNull().default('pending'), // 'pending', 'ordered', 'backordered', 'unavailable', 'received'
+  supplierStatus: text("supplierStatus").notNull().default('pending'), // 'pending', 'ordered', 'backordered', 'unavailable', 'shipped'
   adminNotes: text("adminNotes"),
   customerNotified: boolean("customerNotified").notNull().default(false),
   createdAt: text("createdAt").default(String(new Date().toISOString())).notNull(),
