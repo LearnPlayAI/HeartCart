@@ -644,8 +644,8 @@ export class DatabaseStorage implements IStorage {
       const result = await db
         .update(users)
         .set({
-          lastLogin: now,
-          updatedAt: now, // Also update the general updatedAt field
+          lastLogin: now.toISOString(),
+          updatedAt: now.toISOString(), // Also update the general updatedAt field
         })
         .where(eq(users.id, id));
 
