@@ -334,10 +334,11 @@ export default function AdminOrderDetail() {
   };
 
   // Supplier status badge component
-  const SupplierStatusBadge = ({ status }: { status: 'pending' | 'ordered' | 'unavailable' | 'received' }) => {
+  const SupplierStatusBadge = ({ status }: { status: 'pending' | 'ordered' | 'shipped' | 'unavailable' | 'received' }) => {
     const statusConfig = {
       pending: { color: 'bg-yellow-100 text-yellow-800', icon: Clock, label: 'Pending' },
       ordered: { color: 'bg-blue-100 text-blue-800', icon: ShoppingCart, label: 'Ordered' },
+      shipped: { color: 'bg-green-100 text-green-800', icon: CheckCircle, label: 'Shipped' },
       received: { color: 'bg-green-100 text-green-800', icon: CheckCircle, label: 'Received' },
       unavailable: { color: 'bg-red-100 text-red-800', icon: XCircle, label: 'Unavailable' }
     };
@@ -703,6 +704,11 @@ export default function AdminOrderDetail() {
                               icon: ShoppingCart, 
                               color: 'text-blue-600 bg-blue-100', 
                               label: 'Ordered' 
+                            },
+                            shipped: { 
+                              icon: CheckCircle, 
+                              color: 'text-green-600 bg-green-100', 
+                              label: 'Shipped' 
                             },
                             received: { 
                               icon: CheckCircle, 

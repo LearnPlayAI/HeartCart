@@ -467,6 +467,7 @@ const OrderDetail: React.FC = () => {
                             const statusConfig = {
                               pending: { label: 'Pending', color: 'bg-yellow-100 text-yellow-800', icon: Clock },
                               ordered: { label: 'Ordered', color: 'bg-blue-100 text-blue-800', icon: Truck },
+                              shipped: { label: 'Shipped', color: 'bg-green-100 text-green-800', icon: CheckCircle },
                               received: { label: 'Received', color: 'bg-green-100 text-green-800', icon: CheckCircle },
                               unavailable: { label: 'Unavailable', color: 'bg-red-100 text-red-800', icon: XCircle }
                             };
