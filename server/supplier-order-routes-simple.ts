@@ -60,7 +60,7 @@ router.post('/:id/update-status', isAuthenticated, isAdmin, asyncHandler(async (
         // Create credit transaction
         await storage.createCreditTransaction({
           userId: orderItem.order.userId,
-          transactionType: 'credit',
+          transactionType: 'earned',
           amount: creditAmount,
           description: `Credit for unavailable item: ${orderItem.productName}`,
           orderId: orderItem.orderId,
@@ -135,7 +135,7 @@ router.patch('/:id/status', isAuthenticated, isAdmin, asyncHandler(async (req, r
         // Create credit transaction
         await storage.createCreditTransaction({
           userId: orderItem.order.userId,
-          transactionType: 'credit',
+          transactionType: 'earned',
           amount: creditAmount,
           description: `Credit for unavailable item: ${orderItem.productName}`,
           orderId: orderItem.orderId,
