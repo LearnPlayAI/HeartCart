@@ -89,6 +89,12 @@ function PromotionCard({ promotion }: { promotion: Promotion }) {
               <ProductCard 
                 key={promotionProduct.id} 
                 product={promotionProduct.product}
+                promotionInfo={{
+                  promotionName: promotion.promotionName,
+                  promotionDiscount: promotion.discountValue,
+                  promotionDiscountType: promotion.discountType,
+                  promotionEndDate: promotion.endDate
+                }}
               />
             ))}
           </div>
