@@ -200,8 +200,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
               onError={() => setImageError(true)}
             />
             
-            {/* Favourite Heart - positioned at top right */}
-            <div className="absolute top-2 right-2">
+            {/* Favourite Heart - positioned at bottom left */}
+            <div className="absolute bottom-2 left-2">
               <FavouriteHeart
                 productId={product.id}
                 userId={user?.id}
