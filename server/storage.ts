@@ -1339,7 +1339,7 @@ export class DatabaseStorage implements IStorage {
             categoryIds.push(...categoryWithChildren.children.map(child => child.id));
           }
 
-
+          console.log(`Category filtering: categoryId=${categoryId}, categoryIds=[${categoryIds.join(', ')}]`);
           
           // Filter products by any of these category IDs
           conditions.push(inArray(products.categoryId, categoryIds));
