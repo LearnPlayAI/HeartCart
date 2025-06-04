@@ -503,6 +503,7 @@ export interface IStorage {
   updateOrderItemSupplierStatus(orderItemId: number, statusData: Partial<InsertOrderItemSupplierStatus>): Promise<OrderItemSupplierStatus>;
   getSupplierOrderStatuses(status?: string, limit?: number, offset?: number): Promise<OrderItemSupplierStatus[]>;
   getOrderItemSupplierStatus(orderItemId: number): Promise<OrderItemSupplierStatus | undefined>;
+  getOrderItemsForSupplierManagement(filters?: { status?: string; orderId?: number; }): Promise<any[]>;
 }
 
 export class DatabaseStorage implements IStorage {
