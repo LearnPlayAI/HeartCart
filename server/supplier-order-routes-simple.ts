@@ -10,14 +10,21 @@ const router = Router();
 // Helper function to auto-update main order status based on supplier order completion
 async function updateMainOrderStatusBasedOnSupplierOrders(orderItemId: number) {
   try {
+    console.log(`[AUTOMATION] Starting status update check for order item ${orderItemId}`);
+    
     // Get the order item to find the main order ID
     const orderItem = await storage.getOrderItemById(orderItemId);
-    if (!orderItem) return;
+    if (!orderItem) {
+      console.log(`[AUTOMATION] Order item ${orderItemId} not found`);
+      return;
+    }
 
     const mainOrderId = orderItem.orderId;
+    console.log(`[AUTOMATION] Found main order ID: ${mainOrderId}`);
     
     // Get all supplier orders for this main order
     const supplierOrders = await storage.getSupplierOrdersByOrderId(mainOrderId);
+    console.log(`[AUTOMATION] Found ${supplierOrders.length} supplier orders for order ${mainOrderId}`);
     
     if (supplierOrders.length === 0) return;
 
@@ -27,6 +34,8 @@ async function updateMainOrderStatusBasedOnSupplierOrders(orderItemId: number) {
       return acc;
     }, {} as Record<string, number>);
 
+    console.log(`[AUTOMATION] Status distribution:`, statusCounts);
+
     const totalItems = supplierOrders.length;
     const receivedCount = statusCounts['received'] || 0;
     const orderedCount = statusCounts['ordered'] || 0;
@@ -35,7 +44,12 @@ async function updateMainOrderStatusBasedOnSupplierOrders(orderItemId: number) {
     let newMainOrderStatus = null;
 
     // Determine new main order status based on supplier order completion
-    if (receivedCount === totalItems) {
+    const shippedCount = statusCounts['shipped'] || 0;
+    
+    if (shippedCount + unavailableCount === totalItems) {
+      // All items either shipped or unavailable - order is shipped
+      newMainOrderStatus = 'shipped';
+    } else if (receivedCount === totalItems) {
       // All items received - ready to ship
       newMainOrderStatus = 'processing';
     } else if (receivedCount + unavailableCount === totalItems) {
