@@ -1404,14 +1404,37 @@ export class DatabaseStorage implements IStorage {
         }
       }
 
-      // Handle category filtering with joins if needed
-      const needsJoin = !categoryId && !options?.includeCategoryInactive;
+      // Handle category filtering and product_drafts joins
+      const needsCategoryJoin = !categoryId && !options?.includeCategoryInactive;
+      const sortField = options?.sortField || 'displayOrder';
+      const needsDraftsJoin = sortField === 'publishedAt';
 
       let countQuery: any;
       let dataQuery: any;
 
-      if (needsJoin) {
-        // Need to join with categories table to exclude products from inactive categories
+      if (needsCategoryJoin && needsDraftsJoin) {
+        // Join with both categories and product_drafts tables
+        const joinConditions = [...allConditions, eq(categories.isActive, true)];
+        
+        countQuery = db
+          .select({ count: count() })
+          .from(products)
+          .innerJoin(categories, eq(products.categoryId, categories.id))
+          .leftJoin(productDrafts, eq(products.id, productDrafts.originalProductId))
+          .where(and(...joinConditions));
+
+        dataQuery = db
+          .select({ 
+            product: products,
+            publishedAt: productDrafts.publishedAt,
+            createdAt: productDrafts.createdAt
+          })
+          .from(products)
+          .innerJoin(categories, eq(products.categoryId, categories.id))
+          .leftJoin(productDrafts, eq(products.id, productDrafts.originalProductId))
+          .where(and(...joinConditions));
+      } else if (needsCategoryJoin) {
+        // Only join with categories table
         const joinConditions = [...allConditions, eq(categories.isActive, true)];
         
         countQuery = db
@@ -1424,10 +1447,32 @@ export class DatabaseStorage implements IStorage {
           .select({ product: products })
           .from(products)
           .innerJoin(categories, eq(products.categoryId, categories.id))
-          .where(and(...joinConditions))
-          .orderBy(products.displayOrder, products.id)
-          .limit(limit)
-          .offset(offset);
+          .where(and(...joinConditions));
+      } else if (needsDraftsJoin) {
+        // Only join with product_drafts table
+        const whereCondition = allConditions.length > 0 ? and(...allConditions) : undefined;
+        
+        countQuery = db
+          .select({ count: count() })
+          .from(products)
+          .leftJoin(productDrafts, eq(products.id, productDrafts.originalProductId));
+        
+        if (whereCondition) {
+          countQuery = countQuery.where(whereCondition);
+        }
+
+        dataQuery = db
+          .select({ 
+            product: products,
+            publishedAt: productDrafts.publishedAt,
+            createdAt: productDrafts.createdAt
+          })
+          .from(products)
+          .leftJoin(productDrafts, eq(products.id, productDrafts.originalProductId));
+        
+        if (whereCondition) {
+          dataQuery = dataQuery.where(whereCondition);
+        }
       } else {
         // Simple query without joins
         const whereCondition = allConditions.length > 0 ? and(...allConditions) : undefined;
@@ -1447,39 +1492,38 @@ export class DatabaseStorage implements IStorage {
         if (whereCondition) {
           dataQuery = dataQuery.where(whereCondition);
         }
-        
-        // Apply sorting based on sortField and sortOrder
-        const sortField = options?.sortField || 'displayOrder';
-        const sortOrder = options?.sortOrder || 'asc';
-        
-        // Map frontend field names to database columns
-        const sortFieldMap: Record<string, any> = {
-          'name': products.name,
-          'sku': products.sku,
-          'price': products.price,
-          'salePrice': products.salePrice,
-          'costPrice': products.costPrice,
-          'stock': products.stock,
-          'createdAt': products.createdAt,
-          'publishedAt': products.createdAt, // Use createdAt as publishedAt since there's no separate publishedAt field
-          'displayOrder': products.displayOrder,
-          'brand': products.brand,
-          'isActive': products.isActive,
-          'tmyPercentage': sql`CASE WHEN COALESCE(${products.costPrice}, 0) > 0 THEN ((COALESCE(${products.salePrice}, ${products.price}, 0) - COALESCE(${products.costPrice}, 0)) / COALESCE(${products.costPrice}, 1) * 100) ELSE 0 END`
-        };
-
-        const sortColumn = sortFieldMap[sortField] || products.displayOrder;
-        
-        if (sortOrder === 'asc') {
-          dataQuery = dataQuery.orderBy(asc(sortColumn), products.id);
-        } else {
-          dataQuery = dataQuery.orderBy(desc(sortColumn), products.id);
-        }
-        
-        dataQuery = dataQuery
-          .limit(limit)
-          .offset(offset);
       }
+
+      // Apply sorting
+      const sortOrder = options?.sortOrder || 'asc';
+      
+      // Map frontend field names to database columns
+      const sortFieldMap: Record<string, any> = {
+        'name': products.name,
+        'sku': products.sku,
+        'price': products.price,
+        'salePrice': products.salePrice,
+        'costPrice': products.costPrice,
+        'stock': products.stock,
+        'createdAt': products.createdAt,
+        'publishedAt': needsDraftsJoin ? productDrafts.publishedAt : products.createdAt,
+        'displayOrder': products.displayOrder,
+        'brand': products.brand,
+        'isActive': products.isActive,
+        'tmyPercentage': sql`CASE WHEN COALESCE(${products.costPrice}, 0) > 0 THEN ((COALESCE(${products.salePrice}, ${products.price}, 0) - COALESCE(${products.costPrice}, 0)) / COALESCE(${products.costPrice}, 1) * 100) ELSE 0 END`
+      };
+
+      const sortColumn = sortFieldMap[sortField] || products.displayOrder;
+      
+      if (sortOrder === 'asc') {
+        dataQuery = dataQuery.orderBy(asc(sortColumn), products.id);
+      } else {
+        dataQuery = dataQuery.orderBy(desc(sortColumn), products.id);
+      }
+      
+      dataQuery = dataQuery
+        .limit(limit)
+        .offset(offset);
 
       try {
         // Execute both queries in parallel
@@ -1489,7 +1533,24 @@ export class DatabaseStorage implements IStorage {
         ]);
 
         const total = countResult[0]?.count || 0;
-        const productList = needsJoin ? dataResult.map((row: any) => row.product) : dataResult;
+        
+        // Handle different query result structures based on joins
+        let productList: any[];
+        if (needsDraftsJoin || (needsCategoryJoin && needsDraftsJoin)) {
+          // When joining with product_drafts, merge the draft timestamps with product data
+          productList = dataResult.map((row: any) => ({
+            ...row.product,
+            publishedAt: row.publishedAt || row.product.createdAt,
+            // Override createdAt from product_drafts if available for more accurate timestamps
+            createdAt: row.createdAt || row.product.createdAt
+          }));
+        } else if (needsCategoryJoin) {
+          // Simple category join
+          productList = dataResult.map((row: any) => row.product);
+        } else {
+          // No joins
+          productList = dataResult;
+        }
         
         console.log('Products found:', productList.length, 'Total:', total);
         
