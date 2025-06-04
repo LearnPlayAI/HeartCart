@@ -23,17 +23,16 @@ const CartDrawer = () => {
   } = useCart();
   
   const { creditBalance, formattedBalance } = useCredits();
-  const [applyCreditAmount, setApplyCreditAmount] = useState(0);
   
   // Use the cart summary data which already includes all calculations
   const { subtotal, finalTotal, totalDiscount } = cartSummary;
   const shipping = subtotal > 0 ? 85 : 0; // R85 PUDO courier shipping fee
   const cartTotal = finalTotal + shipping;
   
-  // Calculate credit application
+  // Automatically apply maximum available credits
   const availableCredit = creditBalance ? parseFloat(creditBalance.availableCredits) : 0;
-  const maxCreditAmount = Math.min(availableCredit, cartTotal);
-  const finalTotalAfterCredit = Math.max(0, cartTotal - applyCreditAmount);
+  const autoCreditAmount = Math.min(availableCredit, cartTotal);
+  const finalTotalAfterCredit = Math.max(0, cartTotal - autoCreditAmount);
   
   // Close cart on ESC key
   useEffect(() => {
@@ -221,54 +220,27 @@ const CartDrawer = () => {
                 <span>{formatCurrency(cartTotal)}</span>
               </div>
               
-              {/* Credit Application Section */}
-              {availableCredit > 0 && (
+              {/* Auto Credit Application Display */}
+              {autoCreditAmount > 0 && (
                 <div className="my-3 p-3 bg-green-50 border border-green-200 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
                     <CreditCard className="h-4 w-4 text-green-600" />
                     <span className="text-sm font-medium text-green-700">
-                      Available Credit: {formatCurrency(availableCredit)}
+                      Credit Auto-Applied: {formatCurrency(autoCreditAmount)}
                     </span>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="creditAmount" className="text-xs text-gray-600">
-                      Apply Credit Amount
-                    </Label>
-                    <div className="flex gap-2">
-                      <Input
-                        id="creditAmount"
-                        type="number"
-                        min="0"
-                        max={maxCreditAmount}
-                        step="0.01"
-                        value={applyCreditAmount}
-                        onChange={(e) => setApplyCreditAmount(Math.min(parseFloat(e.target.value) || 0, maxCreditAmount))}
-                        placeholder="0.00"
-                        className="text-sm"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setApplyCreditAmount(maxCreditAmount)}
-                        className="text-xs whitespace-nowrap"
-                      >
-                        Use Max
-                      </Button>
-                    </div>
-                    <p className="text-xs text-gray-500">
-                      Maximum: {formatCurrency(maxCreditAmount)}
-                    </p>
-                  </div>
+                  <p className="text-xs text-gray-600">
+                    Available: {formatCurrency(availableCredit)} • Maximum applied automatically
+                  </p>
                 </div>
               )}
               
               {/* Applied Credit Display */}
-              {applyCreditAmount > 0 && (
+              {autoCreditAmount > 0 && (
                 <>
                   <div className="flex justify-between mb-2 text-sm text-green-600">
                     <span>Store Credit Applied</span>
-                    <span>-{formatCurrency(applyCreditAmount)}</span>
+                    <span>-{formatCurrency(autoCreditAmount)}</span>
                   </div>
                   <Separator className="my-2" />
                 </>
@@ -276,12 +248,12 @@ const CartDrawer = () => {
               
               <div className="flex justify-between mb-4 text-lg font-bold">
                 <span>Final Total</span>
-                <span className={applyCreditAmount > 0 ? "text-green-600" : ""}>
+                <span className={autoCreditAmount > 0 ? "text-green-600" : ""}>
                   {formatCurrency(finalTotalAfterCredit)}
                 </span>
               </div>
               
-              <Link href={`/checkout${applyCreditAmount > 0 ? `?credit=${applyCreditAmount}` : ''}`}>
+              <Link href={`/checkout${autoCreditAmount > 0 ? `?credit=${autoCreditAmount}` : ''}`}>
                 <Button 
                   className="w-full bg-[#FF69B4] hover:bg-[#FF1493] text-white"
                   onClick={closeCart}

@@ -95,7 +95,6 @@ export default function CheckoutPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isProcessing, setIsProcessing] = useState(false);
-  const [applyCreditAmount, setApplyCreditAmount] = useState(0);
   const { creditBalance, formattedBalance, balanceLoading } = useCredits();
 
   // Fetch current user details
@@ -178,19 +177,9 @@ export default function CheckoutPage() {
     }
   });
 
-  // Force cart refetch on component mount and handle credit from URL
+  // Force cart refetch on component mount
   useEffect(() => {
     refetchCart();
-    
-    // Parse credit amount from URL parameters
-    const urlParams = new URLSearchParams(window.location.search);
-    const creditParam = urlParams.get('credit');
-    if (creditParam) {
-      const creditAmount = parseFloat(creditParam);
-      if (!isNaN(creditAmount) && creditAmount > 0) {
-        setApplyCreditAmount(creditAmount);
-      }
-    }
   }, [refetchCart]);
 
   // Pre-populate form with user data if available

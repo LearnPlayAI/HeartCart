@@ -149,3 +149,14 @@ export function getPromotionalBadgeText(promotionInfo: PromotionInfo): string {
   
   return "SPECIAL OFFER";
 }
+
+/**
+ * Calculate automatic credit application for cart/checkout
+ */
+export function calculateAutoCreditApplication(
+  orderTotal: number,
+  availableCredits: number
+): number {
+  // Automatically apply the maximum credits up to the order total
+  return Math.min(availableCredits, orderTotal);
+}
