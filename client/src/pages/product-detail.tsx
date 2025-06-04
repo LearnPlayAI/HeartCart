@@ -173,6 +173,25 @@ const ProductDetailContent = ({
   queryClient: any;
 }) => {
   
+  // Fetch active promotions for this product
+  const { data: promotionsResponse } = useQuery<any>({
+    queryKey: ['/api/promotions/active-with-products'],
+    enabled: !!product?.id,
+  });
+
+  // Find if this product is in any active promotion
+  const activePromotions = promotionsResponse?.success ? promotionsResponse.data : [];
+  const productPromotion = activePromotions
+    .flatMap((promo: any) => promo.products?.map((pp: any) => ({ ...pp, promotion: promo })) || [])
+    .find((pp: any) => pp.productId === product?.id);
+
+  const promotionInfo = productPromotion ? {
+    promotionName: productPromotion.promotion.promotionName,
+    promotionDiscount: productPromotion.discountOverride || productPromotion.promotion.discountValue,
+    promotionDiscountType: productPromotion.promotion.discountType,
+    promotionEndDate: productPromotion.promotion.endDate
+  } : null;
+
   // Get related products based on the same category
   const { data: relatedProducts } = useQuery<Product[]>({
     queryKey: ['/api/products/category', product?.categoryId, { limit: 5 }],

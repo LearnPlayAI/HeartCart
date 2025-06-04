@@ -69,6 +69,25 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
   const product = productFromId || productFromSlug;
   const isLoadingProduct = isLoadingProductFromId || isLoadingProductFromSlug;
   const productError = productIdError || productSlugError;
+
+  // Fetch active promotions for this product
+  const { data: promotionsResponse } = useQuery<StandardApiResponse<any[]>>({
+    queryKey: ['/api/promotions/active-with-products'],
+    enabled: !!product?.id && open,
+  });
+
+  // Find if this product is in any active promotion
+  const activePromotions = promotionsResponse?.success ? promotionsResponse.data : [];
+  const productPromotion = activePromotions
+    .flatMap(promo => promo.products?.map((pp: any) => ({ ...pp, promotion: promo })) || [])
+    .find((pp: any) => pp.productId === product?.id);
+
+  const promotionInfo = productPromotion ? {
+    promotionName: productPromotion.promotion.promotionName,
+    promotionDiscount: productPromotion.discountOverride || productPromotion.promotion.discountValue,
+    promotionDiscountType: productPromotion.promotion.discountType,
+    promotionEndDate: productPromotion.promotion.endDate
+  } : null;
   
   // Log error to console for debugging
   useEffect(() => {
@@ -292,8 +311,20 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
     onOpenChange(false);
   };
   
-  // No price adjustment based on attributes as per requirements
-  const adjustedPrice = (product.salePrice || product.price);
+  // Calculate promotional price if available
+  const calculatePromotionalPrice = (basePrice: number, promotion: any) => {
+    if (!promotion) return basePrice;
+    
+    if (promotion.promotionDiscountType === 'percentage') {
+      return basePrice * (1 - promotion.promotionDiscount / 100);
+    } else {
+      return Math.max(0, basePrice - promotion.promotionDiscount);
+    }
+  };
+
+  // Use promotional pricing if available, otherwise use sale price or regular price
+  const basePrice = product.salePrice || product.price;
+  const adjustedPrice = promotionInfo ? calculatePromotionalPrice(basePrice, promotionInfo) : basePrice;
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -361,14 +392,32 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
             
             {/* Price and ratings */}
             <div className="flex items-center justify-between">
-              <div>
-                <span className="text-xl font-bold text-[#FF69B4]">
-                  {formatCurrency(adjustedPrice)}
-                </span>
-                {product.salePrice && product.price > product.salePrice && (
-                  <span className="ml-2 text-sm line-through text-gray-500">
-                    {formatCurrency(product.price)}
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl font-bold text-[#FF69B4]">
+                    {formatCurrency(adjustedPrice)}
                   </span>
+                  {promotionInfo && (
+                    <span className="ml-2 text-sm line-through text-gray-500">
+                      {formatCurrency(basePrice)}
+                    </span>
+                  )}
+                  {!promotionInfo && product.salePrice && product.price > product.salePrice && (
+                    <span className="ml-2 text-sm line-through text-gray-500">
+                      {formatCurrency(product.price)}
+                    </span>
+                  )}
+                </div>
+                {promotionInfo && (
+                  <div className="flex items-center gap-2">
+                    <Badge variant="destructive" className="bg-red-500 text-white text-xs">
+                      {promotionInfo.promotionDiscountType === 'percentage' 
+                        ? `${promotionInfo.promotionDiscount}% OFF` 
+                        : `R${promotionInfo.promotionDiscount} OFF`
+                      }
+                    </Badge>
+                    <span className="text-xs text-gray-600">{promotionInfo.promotionName}</span>
+                  </div>
                 )}
               </div>
               

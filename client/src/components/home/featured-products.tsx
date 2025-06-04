@@ -15,8 +15,28 @@ const FeaturedProductsSection = () => {
     queryKey: ['/api/featured-products', { limit, offset: (page - 1) * limit }],
   });
   
+  // Fetch active promotions to check if featured products are promotional
+  const { data: promotionsResponse } = useQuery<StandardApiResponse<any[]>>({
+    queryKey: ['/api/promotions/active-with-products'],
+  });
+  
   // Extract the featured products from the standardized response
   const featuredProducts = response?.success ? response.data : [];
+  
+  // Create a map of product promotions for quick lookup
+  const activePromotions = promotionsResponse?.success ? promotionsResponse.data : [];
+  const productPromotions = new Map();
+  
+  activePromotions.forEach(promo => {
+    promo.products?.forEach((pp: any) => {
+      productPromotions.set(pp.productId, {
+        promotionName: promo.promotionName,
+        promotionDiscount: pp.discountOverride || promo.discountValue,
+        promotionDiscountType: promo.discountType,
+        promotionEndDate: promo.endDate
+      });
+    });
+  });
   
   // Handle error state gracefully
   useEffect(() => {
@@ -81,6 +101,7 @@ const FeaturedProductsSection = () => {
                 product={product}
                 isFlashDeal={false}
                 showAddToCart={true}
+                promotionInfo={productPromotions.get(product.id)}
               />
             ))
           )}
