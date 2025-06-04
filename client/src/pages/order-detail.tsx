@@ -640,6 +640,19 @@ const OrderDetail: React.FC = () => {
                   <span>Total</span>
                   <span className="text-[#FF69B4]">{formatCurrency(order.totalAmount)}</span>
                 </div>
+                <div className="flex justify-between">
+                  <span>Method</span>
+                  <span className="capitalize">{order.paymentMethod}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Status</span>
+                  <Badge 
+                    variant={order.paymentStatus === 'paid' || order.status === 'payment received' ? 'default' : 'secondary'}
+                    className={`capitalize ${(order.paymentStatus === 'paid' || order.status === 'payment received') ? 'bg-green-600 hover:bg-green-700' : ''}`}
+                  >
+                    {order.status === 'payment received' ? 'Paid' : order.paymentStatus}
+                  </Badge>
+                </div>
               </CardContent>
             </Card>
 
@@ -705,30 +718,7 @@ const OrderDetail: React.FC = () => {
               </CardContent>
             </Card>
 
-            {/* Payment Information */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <CreditCard className="h-5 w-5 mr-2" />
-                  Payment Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between">
-                  <span>Method</span>
-                  <span className="capitalize">{order.paymentMethod}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Status</span>
-                  <Badge 
-                    variant={order.paymentStatus === 'paid' || order.status === 'payment received' ? 'default' : 'secondary'}
-                    className={`capitalize ${(order.paymentStatus === 'paid' || order.status === 'payment received') ? 'bg-green-600 hover:bg-green-700' : ''}`}
-                  >
-                    {order.status === 'payment received' ? 'Payment Received' : order.paymentStatus}
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
+
 
             {/* Order Actions */}
             <Card>

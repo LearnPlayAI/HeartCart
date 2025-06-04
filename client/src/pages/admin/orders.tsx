@@ -385,9 +385,14 @@ export default function AdminOrdersPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
 
-  const { data: response, isLoading } = useQuery({
+  const { data: response, isLoading, refetch } = useQuery({
     queryKey: ['/api/admin/orders'],
-    enabled: true
+    enabled: true,
+    staleTime: 0, // Always consider data stale
+    gcTime: 0, // Don't cache data for long
+    refetchOnMount: 'always', // Always refetch when component mounts
+    refetchOnWindowFocus: true, // Refetch when window regains focus
+    refetchOnReconnect: true, // Refetch when reconnecting to network
   });
 
   const orders = response?.data || [];
