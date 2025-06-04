@@ -32,8 +32,12 @@ export function FavouriteHeart({ productId, userId, className, size = 20 }: Favo
       method: 'POST',
       body: { productId }
     }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/favourites/check', productId] });
+    onSuccess: (data) => {
+      // Immediately update the cache with the new state
+      queryClient.setQueryData(['/api/favourites/check', productId], {
+        success: true,
+        data: { isFavourited: true }
+      });
       queryClient.invalidateQueries({ queryKey: ['/api/favourites'] });
       toast({
         title: "Added to favourites",
@@ -41,7 +45,7 @@ export function FavouriteHeart({ productId, userId, className, size = 20 }: Favo
       });
     },
     onError: (error: any) => {
-      const message = error?.response?.data?.error || "Failed to add to favourites";
+      const message = error?.message || error?.response?.data?.error || "Failed to add to favourites";
       toast({
         title: "Error",
         description: message,
@@ -56,7 +60,11 @@ export function FavouriteHeart({ productId, userId, className, size = 20 }: Favo
       method: 'DELETE'
     }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/favourites/check', productId] });
+      // Immediately update the cache with the new state
+      queryClient.setQueryData(['/api/favourites/check', productId], {
+        success: true,
+        data: { isFavourited: false }
+      });
       queryClient.invalidateQueries({ queryKey: ['/api/favourites'] });
       toast({
         title: "Removed from favourites",
@@ -64,7 +72,7 @@ export function FavouriteHeart({ productId, userId, className, size = 20 }: Favo
       });
     },
     onError: (error: any) => {
-      const message = error?.response?.data?.error || "Failed to remove from favourites";
+      const message = error?.message || error?.response?.data?.error || "Failed to remove from favourites";
       toast({
         title: "Error",
         description: message,

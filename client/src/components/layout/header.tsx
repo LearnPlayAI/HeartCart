@@ -197,6 +197,10 @@ const Header = () => {
                   <Package className="h-3 w-3 mr-1" />
                   My Orders
                 </Link>
+                <Link href="/my-favourites" className="hidden md:flex px-4 py-1 font-medium text-sm hover:bg-white hover:text-[#FF69B4] rounded-full mx-1 transition-colors duration-200 items-center">
+                  <Heart className="h-3 w-3 mr-1" />
+                  My Favourites
+                </Link>
               </>
             )}
             
