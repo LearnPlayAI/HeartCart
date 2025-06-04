@@ -754,10 +754,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       // Get products with pagination data
+      // Handle categoryId: if it's "all" or undefined, don't filter by category
+      const categoryFilter = (categoryId && categoryId !== "all") ? Number(categoryId) : undefined;
+      
       const result = await storage.getAllProducts(
         Number(limit), 
         Number(offset), 
-        categoryId ? Number(categoryId) : undefined, 
+        categoryFilter, 
         search as string | undefined, 
         options
       );
