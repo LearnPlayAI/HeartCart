@@ -158,17 +158,21 @@ export async function publishProductDraftComplete(draftId: number): Promise<Publ
         existingProduct = existing;
       }
 
-      // Debug cost preservation logic
-      const draftCostPrice = safeNumber((draft as any).cost_price);
+      // Debug cost preservation logic - test both possible field access patterns
+      const draftCostPriceField = draft.costPrice;
+      const draftCostPriceSnake = (draft as any).cost_price;
+      const draftCostPrice = safeNumber(draftCostPriceField || draftCostPriceSnake);
       const existingCostPrice = existingProduct?.costPrice || 0;
       
       logger.info('🔍 COST PRESERVATION DEBUG (Complete Service)', {
         draftId,
+        draftCostPriceField,
+        draftCostPriceSnake,
         draftCostPrice,
-        draftCostPriceRaw: (draft as any).cost_price,
         existingCostPrice,
         willPreserveCost: draftCostPrice === 0 && existingCostPrice > 0,
-        isUpdate: !!draft.originalProductId
+        isUpdate: !!draft.originalProductId,
+        allDraftFields: Object.keys(draft).filter(key => key.includes('cost') || key.includes('price')).map(key => ({ [key]: (draft as any)[key] }))
       });
 
       // 3. Map ALL fields with complete validation and type conversion
