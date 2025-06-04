@@ -131,7 +131,8 @@ export const PublishedProducts: React.FC = () => {
       searchQuery,
       selectedChildCategory && selectedChildCategory !== 'all' ? selectedChildCategory :
       selectedParentCategory && selectedParentCategory !== 'all' ? selectedParentCategory :
-      'all'
+      'all',
+      maxTmyFilter
     ],
     queryFn: async () => {
       const params = new URLSearchParams({
@@ -224,9 +225,9 @@ export const PublishedProducts: React.FC = () => {
     return categories.filter((cat: any) => cat.parentId === parentId);
   }, [categories, selectedParentCategory]);
 
-  // Transform products to include category names with parent/child structure
+  // Transform products to include category names with parent/child structure and apply TMY filter
   const enrichedProducts = useMemo(() => {
-    return products.map((product: any) => {
+    let filtered = products.map((product: any) => {
       const category = categoriesWithParents.find((cat: any) => cat.id === product.categoryId);
       return {
         ...product,
@@ -235,7 +236,27 @@ export const PublishedProducts: React.FC = () => {
         childCategoryName: category?.name || 'Uncategorized'
       };
     });
-  }, [products, categoriesWithParents]);
+
+    // Apply TMY percentage filter if specified
+    if (maxTmyFilter && maxTmyFilter.trim() !== '') {
+      const minTmyThreshold = parseFloat(maxTmyFilter);
+      if (!isNaN(minTmyThreshold)) {
+        filtered = filtered.filter((product: any) => {
+          const costPrice = typeof product.costPrice === 'string' ? parseFloat(product.costPrice) : (product.costPrice || 0);
+          const regularPrice = typeof product.price === 'string' ? parseFloat(product.price) : (product.price || 0);
+          const salePrice = product.salePrice ? (typeof product.salePrice === 'string' ? parseFloat(product.salePrice) : product.salePrice) : null;
+          
+          // Calculate TMY profit margin based on effective selling price vs cost
+          const effectivePrice = salePrice || regularPrice;
+          const tmyMarkup = costPrice > 0 && effectivePrice > 0 ? ((effectivePrice - costPrice) / costPrice * 100) : 0;
+          
+          return tmyMarkup >= minTmyThreshold;
+        });
+      }
+    }
+
+    return filtered;
+  }, [products, categoriesWithParents, maxTmyFilter]);
 
   // Handle parent category change
   const handleParentCategoryChange = (value: string) => {
