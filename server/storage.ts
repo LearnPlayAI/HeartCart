@@ -9241,12 +9241,26 @@ export class DatabaseStorage implements IStorage {
           calculatedPromotionalPrice = Math.round(salePrice * (1 - discountPercentage / 100));
         }
 
+        // Calculate the additional discount percentage for the "EXTRA X% OFF" badge
+        let additionalDiscountPercentage = 0;
+        if (calculatedPromotionalPrice && item.products.salePrice) {
+          const salePrice = parseFloat(item.products.salePrice);
+          const promotionalPrice = parseFloat(calculatedPromotionalPrice);
+          
+          if (promotionalPrice < salePrice) {
+            // Calculate the additional discount percentage based on Sale Price vs Promotional Price
+            additionalDiscountPercentage = Math.round(((salePrice - promotionalPrice) / salePrice) * 100);
+          }
+        }
+
         result.push({
           id: item.productPromotions.id,
           productId: item.productPromotions.productId,
           promotionId: item.productPromotions.promotionId,
           discountOverride: item.productPromotions.discountOverride,
           promotionalPrice: calculatedPromotionalPrice,
+          // Override the promotion discount with the calculated additional discount percentage
+          additionalDiscountPercentage: additionalDiscountPercentage,
           product: {
             ...item.products,
             category: item.categories ? {

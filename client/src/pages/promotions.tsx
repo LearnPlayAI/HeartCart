@@ -91,9 +91,11 @@ function PromotionCard({ promotion }: { promotion: Promotion }) {
                 ...promotionProduct.product,
                 promotionInfo: {
                   promotionName: promotion.promotionName,
-                  promotionDiscount: promotion.discountValue.toString(),
+                  promotionDiscount: promotionProduct.additionalDiscountPercentage ? 
+                    promotionProduct.additionalDiscountPercentage.toString() : 
+                    promotion.discountValue.toString(),
                   promotionEndDate: promotion.endDate,
-                  promotionalPrice: promotionProduct.discountOverride || null
+                  promotionalPrice: promotionProduct.promotionalPrice || promotionProduct.discountOverride || null
                 }
               };
               
