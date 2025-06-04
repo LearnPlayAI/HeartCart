@@ -573,14 +573,14 @@ export const DraftDashboard: React.FC = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>SKU</TableHead>
-                    <TableHead>Product</TableHead>
-                    <TableHead>Parent Cat</TableHead>
-                    <TableHead>Child Cat</TableHead>
-                    <TableHead className="text-right">Prices</TableHead>
-                    <TableHead className="text-right">Percentages</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Last Updated</TableHead>
+                    <SortableHeader field="sku">SKU</SortableHeader>
+                    <SortableHeader field="name">Product</SortableHeader>
+                    <SortableHeader field="categoryId">Parent Cat</SortableHeader>
+                    <SortableHeader field="categoryId">Child Cat</SortableHeader>
+                    <SortableHeader field="regularPrice" className="text-right">Prices</SortableHeader>
+                    <SortableHeader field="regularPrice" className="text-right">Percentages</SortableHeader>
+                    <SortableHeader field="draftStatus">Status</SortableHeader>
+                    <SortableHeader field="lastModified">Last Updated</SortableHeader>
                     <TableHead className="w-[100px] text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
