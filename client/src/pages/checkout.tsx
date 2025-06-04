@@ -225,7 +225,8 @@ export default function CheckoutPage() {
     availableCredit,
     transactions || []
   );
-  const orderTotal = subtotal + shippingCost;
+  const safeShippingCost = shippingCost || 0;
+  const orderTotal = subtotal + safeShippingCost;
   const autoCreditAmount = Math.min(availableCredit, orderTotal);
   const finalTotal = Math.max(0, orderTotal - autoCreditAmount);
 
@@ -354,7 +355,7 @@ export default function CheckoutPage() {
           postalCode: data.postalCode
         },
         shippingMethod: data.shippingMethod,
-        shippingCost,
+        shippingCost: safeShippingCost,
         paymentMethod: data.paymentMethod,
         specialInstructions: data.specialInstructions,
         orderItems,
@@ -905,7 +906,7 @@ export default function CheckoutPage() {
                         <div className="text-xs text-green-600">{reasonForWaiver}</div>
                       </div>
                     ) : (
-                      <span>{shippingCost === 0 ? "Free" : `R${shippingCost.toFixed(2)}`}</span>
+                      <span>{safeShippingCost === 0 ? "Free" : `R${safeShippingCost.toFixed(2)}`}</span>
                     )}
                   </div>
                 </div>
