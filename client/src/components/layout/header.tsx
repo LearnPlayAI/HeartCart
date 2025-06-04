@@ -14,6 +14,7 @@ import Logo from '@/components/ui/logo';
 import { useCart } from '@/hooks/use-cart';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
+import { useCredits } from '@/hooks/use-credits';
 import { CategorySidebarDrawer } from '@/components/ui/category-sidebar-drawer';
 import ProductSearch from '@/components/ui/product-search';
 import { StandardApiResponse } from "@/types/api";
@@ -29,6 +30,7 @@ const Header = () => {
   const { cartItems, openCart, cartSummary } = useCart();
   const { user, logoutMutation } = useAuth();
   const { toast } = useToast();
+  const { formattedBalance, balanceLoading } = useCredits();
   
   const handleLogout = () => {
     // Use the centralized logout mutation which already handles navigation
@@ -125,6 +127,13 @@ const Header = () => {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+                
+                {/* Credit Balance Display */}
+                <div className="flex items-center bg-gradient-to-r from-green-500 to-green-600 text-white px-3 py-1.5 rounded-full shadow-md">
+                  <span className="text-sm font-semibold">
+                    {balanceLoading ? 'Loading...' : `Credit: ${formattedBalance}`}
+                  </span>
+                </div>
                 
                 <Button 
                   variant="ghost" 

@@ -3,12 +3,12 @@ import { z } from "zod";
 import asyncHandler from "express-async-handler";
 import { storage } from "./storage";
 import { insertCreditTransactionSchema, insertOrderItemSupplierStatusSchema } from "@shared/schema";
-import { requireAuth } from "./auth";
+import { isAuthenticated } from "./auth-middleware";
 
 const router = Router();
 
 // Get user's credit balance
-router.get("/balance", requireAuth, asyncHandler(async (req, res) => {
+router.get("/balance", isAuthenticated, asyncHandler(async (req, res) => {
   const userId = req.user!.id;
   
   try {

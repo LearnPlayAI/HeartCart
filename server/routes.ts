@@ -6967,6 +6967,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Register analytics routes
   app.use('/api/analytics', analyticsRoutes);
+  
+  // Register credit system routes
+  app.use('/api/credits', creditRoutes);
 
   const httpServer = createServer(app);
   return httpServer;
