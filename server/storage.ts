@@ -58,6 +58,16 @@ import {
   productPromotions,
   type ProductPromotion,
   type InsertProductPromotion,
+  // Favourites and Analytics system imports
+  userFavourites,
+  type UserFavourite,
+  type InsertUserFavourite,
+  productInteractions,
+  type ProductInteraction,
+  type InsertProductInteraction,
+  abandonedCarts,
+  type AbandonedCart,
+  type InsertAbandonedCart,
 } from "@shared/schema";
 import { db } from "./db";
 import {
@@ -446,6 +456,30 @@ export interface IStorage {
   getAllSystemSettings(): Promise<SystemSetting[]>;
   updateSystemSetting(key: string, value: string): Promise<SystemSetting | undefined>;
   createSystemSetting(setting: InsertSystemSetting): Promise<SystemSetting>;
+
+  // Favourites operations
+  addToFavourites(userId: number, productId: number): Promise<UserFavourite>;
+  removeFromFavourites(userId: number, productId: number): Promise<boolean>;
+  getUserFavourites(userId: number): Promise<UserFavourite[]>;
+  getUserFavouritesWithProducts(userId: number): Promise<any[]>;
+  isProductFavourited(userId: number, productId: number): Promise<boolean>;
+  getFavouriteCount(productId: number): Promise<number>;
+  getMostFavouritedProducts(limit?: number): Promise<any[]>;
+
+  // Product Interactions operations
+  logProductInteraction(interaction: InsertProductInteraction): Promise<ProductInteraction>;
+  getProductInteractions(productId: number, interactionType?: string, limit?: number): Promise<ProductInteraction[]>;
+  getUserInteractions(userId: number, interactionType?: string, limit?: number): Promise<ProductInteraction[]>;
+  getProductViewCount(productId: number, dateRange?: { from: string; to: string }): Promise<number>;
+  getPopularProducts(limit?: number, dateRange?: { from: string; to: string }): Promise<any[]>;
+  getInteractionAnalytics(dateRange?: { from: string; to: string }): Promise<any>;
+
+  // Abandoned Cart operations
+  createAbandonedCart(cart: InsertAbandonedCart): Promise<AbandonedCart>;
+  getAbandonedCarts(userId?: number, emailSent?: boolean): Promise<AbandonedCart[]>;
+  updateAbandonedCart(id: number, updates: Partial<InsertAbandonedCart>): Promise<AbandonedCart | undefined>;
+  markCartRecovered(id: number): Promise<boolean>;
+  getAbandonedCartAnalytics(dateRange?: { from: string; to: string }): Promise<any>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -10065,6 +10099,446 @@ export class DatabaseStorage implements IStorage {
       return createdSetting;
     } catch (error) {
       logger.error('Error creating system setting', { error, setting });
+      throw error;
+    }
+  }
+
+  // =============================================================================
+  // FAVOURITES OPERATIONS
+  // =============================================================================
+
+  async addToFavourites(userId: number, productId: number): Promise<UserFavourite> {
+    try {
+      const [favourite] = await db
+        .insert(userFavourites)
+        .values({
+          userId,
+          productId,
+          createdAt: new Date().toISOString()
+        })
+        .returning();
+
+      logger.info('Product added to favourites', { userId, productId });
+      return favourite;
+    } catch (error) {
+      logger.error('Error adding to favourites', { error, userId, productId });
+      throw error;
+    }
+  }
+
+  async removeFromFavourites(userId: number, productId: number): Promise<boolean> {
+    try {
+      const result = await db
+        .delete(userFavourites)
+        .where(and(
+          eq(userFavourites.userId, userId),
+          eq(userFavourites.productId, productId)
+        ));
+
+      logger.info('Product removed from favourites', { userId, productId });
+      return true;
+    } catch (error) {
+      logger.error('Error removing from favourites', { error, userId, productId });
+      return false;
+    }
+  }
+
+  async getUserFavourites(userId: number): Promise<UserFavourite[]> {
+    try {
+      return await db
+        .select()
+        .from(userFavourites)
+        .where(eq(userFavourites.userId, userId))
+        .orderBy(desc(userFavourites.createdAt));
+    } catch (error) {
+      logger.error('Error getting user favourites', { error, userId });
+      throw error;
+    }
+  }
+
+  async getUserFavouritesWithProducts(userId: number): Promise<any[]> {
+    try {
+      const favourites = await db
+        .select({
+          id: userFavourites.id,
+          createdAt: userFavourites.createdAt,
+          product: {
+            id: products.id,
+            name: products.name,
+            slug: products.slug,
+            price: products.price,
+            salePrice: products.salePrice,
+            imageUrl: products.imageUrl,
+            isActive: products.isActive,
+            isFeatured: products.isFeatured,
+            rating: products.rating,
+            reviewCount: products.reviewCount,
+          }
+        })
+        .from(userFavourites)
+        .leftJoin(products, eq(userFavourites.productId, products.id))
+        .where(and(
+          eq(userFavourites.userId, userId),
+          eq(products.isActive, true)
+        ))
+        .orderBy(desc(userFavourites.createdAt));
+
+      return favourites;
+    } catch (error) {
+      logger.error('Error getting user favourites with products', { error, userId });
+      throw error;
+    }
+  }
+
+  async isProductFavourited(userId: number, productId: number): Promise<boolean> {
+    try {
+      const result = await db
+        .select({ id: userFavourites.id })
+        .from(userFavourites)
+        .where(and(
+          eq(userFavourites.userId, userId),
+          eq(userFavourites.productId, productId)
+        ))
+        .limit(1);
+
+      return result.length > 0;
+    } catch (error) {
+      logger.error('Error checking if product is favourited', { error, userId, productId });
+      return false;
+    }
+  }
+
+  async getFavouriteCount(productId: number): Promise<number> {
+    try {
+      const result = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(userFavourites)
+        .where(eq(userFavourites.productId, productId));
+
+      return result[0]?.count || 0;
+    } catch (error) {
+      logger.error('Error getting favourite count', { error, productId });
+      return 0;
+    }
+  }
+
+  async getMostFavouritedProducts(limit: number = 10): Promise<any[]> {
+    try {
+      const favouritedProducts = await db
+        .select({
+          product: {
+            id: products.id,
+            name: products.name,
+            slug: products.slug,
+            price: products.price,
+            salePrice: products.salePrice,
+            imageUrl: products.imageUrl,
+            rating: products.rating,
+            reviewCount: products.reviewCount,
+          },
+          favouriteCount: sql<number>`count(${userFavourites.id})`
+        })
+        .from(products)
+        .leftJoin(userFavourites, eq(products.id, userFavourites.productId))
+        .where(eq(products.isActive, true))
+        .groupBy(products.id)
+        .orderBy(desc(sql`count(${userFavourites.id})`))
+        .limit(limit);
+
+      return favouritedProducts;
+    } catch (error) {
+      logger.error('Error getting most favourited products', { error, limit });
+      throw error;
+    }
+  }
+
+  // =============================================================================
+  // PRODUCT INTERACTIONS OPERATIONS
+  // =============================================================================
+
+  async logProductInteraction(interaction: InsertProductInteraction): Promise<ProductInteraction> {
+    try {
+      const [logged] = await db
+        .insert(productInteractions)
+        .values({
+          ...interaction,
+          createdAt: new Date().toISOString()
+        })
+        .returning();
+
+      return logged;
+    } catch (error) {
+      logger.error('Error logging product interaction', { error, interaction });
+      throw error;
+    }
+  }
+
+  async getProductInteractions(productId: number, interactionType?: string, limit: number = 100): Promise<ProductInteraction[]> {
+    try {
+      let query = db
+        .select()
+        .from(productInteractions)
+        .where(eq(productInteractions.productId, productId));
+
+      if (interactionType) {
+        query = query.where(and(
+          eq(productInteractions.productId, productId),
+          eq(productInteractions.interactionType, interactionType)
+        ));
+      }
+
+      return await query
+        .orderBy(desc(productInteractions.createdAt))
+        .limit(limit);
+    } catch (error) {
+      logger.error('Error getting product interactions', { error, productId, interactionType });
+      throw error;
+    }
+  }
+
+  async getUserInteractions(userId: number, interactionType?: string, limit: number = 100): Promise<ProductInteraction[]> {
+    try {
+      let query = db
+        .select()
+        .from(productInteractions)
+        .where(eq(productInteractions.userId, userId));
+
+      if (interactionType) {
+        query = query.where(and(
+          eq(productInteractions.userId, userId),
+          eq(productInteractions.interactionType, interactionType)
+        ));
+      }
+
+      return await query
+        .orderBy(desc(productInteractions.createdAt))
+        .limit(limit);
+    } catch (error) {
+      logger.error('Error getting user interactions', { error, userId, interactionType });
+      throw error;
+    }
+  }
+
+  async getProductViewCount(productId: number, dateRange?: { from: string; to: string }): Promise<number> {
+    try {
+      let query = db
+        .select({ count: sql<number>`count(*)` })
+        .from(productInteractions)
+        .where(and(
+          eq(productInteractions.productId, productId),
+          eq(productInteractions.interactionType, 'view')
+        ));
+
+      if (dateRange) {
+        query = query.where(and(
+          eq(productInteractions.productId, productId),
+          eq(productInteractions.interactionType, 'view'),
+          gte(productInteractions.createdAt, dateRange.from),
+          lte(productInteractions.createdAt, dateRange.to)
+        ));
+      }
+
+      const result = await query;
+      return result[0]?.count || 0;
+    } catch (error) {
+      logger.error('Error getting product view count', { error, productId, dateRange });
+      return 0;
+    }
+  }
+
+  async getPopularProducts(limit: number = 10, dateRange?: { from: string; to: string }): Promise<any[]> {
+    try {
+      let query = db
+        .select({
+          product: {
+            id: products.id,
+            name: products.name,
+            slug: products.slug,
+            price: products.price,
+            salePrice: products.salePrice,
+            imageUrl: products.imageUrl,
+            rating: products.rating,
+            reviewCount: products.reviewCount,
+          },
+          viewCount: sql<number>`count(${productInteractions.id})`
+        })
+        .from(products)
+        .leftJoin(productInteractions, and(
+          eq(products.id, productInteractions.productId),
+          eq(productInteractions.interactionType, 'view')
+        ))
+        .where(eq(products.isActive, true));
+
+      if (dateRange) {
+        query = query.where(and(
+          eq(products.isActive, true),
+          gte(productInteractions.createdAt, dateRange.from),
+          lte(productInteractions.createdAt, dateRange.to)
+        ));
+      }
+
+      return await query
+        .groupBy(products.id)
+        .orderBy(desc(sql`count(${productInteractions.id})`))
+        .limit(limit);
+    } catch (error) {
+      logger.error('Error getting popular products', { error, limit, dateRange });
+      throw error;
+    }
+  }
+
+  async getInteractionAnalytics(dateRange?: { from: string; to: string }): Promise<any> {
+    try {
+      let baseQuery = db
+        .select({
+          interactionType: productInteractions.interactionType,
+          count: sql<number>`count(*)`
+        })
+        .from(productInteractions);
+
+      if (dateRange) {
+        baseQuery = baseQuery.where(and(
+          gte(productInteractions.createdAt, dateRange.from),
+          lte(productInteractions.createdAt, dateRange.to)
+        ));
+      }
+
+      const analytics = await baseQuery
+        .groupBy(productInteractions.interactionType)
+        .orderBy(desc(sql`count(*)`));
+
+      return {
+        interactionsByType: analytics,
+        dateRange: dateRange || null
+      };
+    } catch (error) {
+      logger.error('Error getting interaction analytics', { error, dateRange });
+      throw error;
+    }
+  }
+
+  // =============================================================================
+  // ABANDONED CART OPERATIONS
+  // =============================================================================
+
+  async createAbandonedCart(cart: InsertAbandonedCart): Promise<AbandonedCart> {
+    try {
+      const [created] = await db
+        .insert(abandonedCarts)
+        .values({
+          ...cart,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        })
+        .returning();
+
+      logger.info('Abandoned cart created', { sessionId: cart.sessionId, userId: cart.userId });
+      return created;
+    } catch (error) {
+      logger.error('Error creating abandoned cart', { error, cart });
+      throw error;
+    }
+  }
+
+  async getAbandonedCarts(userId?: number, emailSent?: boolean): Promise<AbandonedCart[]> {
+    try {
+      let conditions = [];
+
+      if (userId !== undefined) {
+        conditions.push(eq(abandonedCarts.userId, userId));
+      }
+
+      if (emailSent !== undefined) {
+        conditions.push(eq(abandonedCarts.emailSent, emailSent));
+      }
+
+      const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+      let query = db
+        .select()
+        .from(abandonedCarts)
+        .orderBy(desc(abandonedCarts.createdAt));
+
+      if (whereClause) {
+        query = query.where(whereClause);
+      }
+
+      return await query;
+    } catch (error) {
+      logger.error('Error getting abandoned carts', { error, userId, emailSent });
+      throw error;
+    }
+  }
+
+  async updateAbandonedCart(id: number, updates: Partial<InsertAbandonedCart>): Promise<AbandonedCart | undefined> {
+    try {
+      const [updated] = await db
+        .update(abandonedCarts)
+        .set({
+          ...updates,
+          updatedAt: new Date().toISOString()
+        })
+        .where(eq(abandonedCarts.id, id))
+        .returning();
+
+      logger.info('Abandoned cart updated', { id, updates });
+      return updated;
+    } catch (error) {
+      logger.error('Error updating abandoned cart', { error, id, updates });
+      return undefined;
+    }
+  }
+
+  async markCartRecovered(id: number): Promise<boolean> {
+    try {
+      await db
+        .update(abandonedCarts)
+        .set({
+          recoveredAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        })
+        .where(eq(abandonedCarts.id, id));
+
+      logger.info('Cart marked as recovered', { id });
+      return true;
+    } catch (error) {
+      logger.error('Error marking cart as recovered', { error, id });
+      return false;
+    }
+  }
+
+  async getAbandonedCartAnalytics(dateRange?: { from: string; to: string }): Promise<any> {
+    try {
+      let baseQuery = db
+        .select({
+          totalCarts: sql<number>`count(*)`,
+          emailsSent: sql<number>`count(*) filter (where ${abandonedCarts.emailSent} = true)`,
+          cartsRecovered: sql<number>`count(*) filter (where ${abandonedCarts.recoveredAt} is not null)`,
+          discountsApplied: sql<number>`count(*) filter (where ${abandonedCarts.discountApplied} = true)`
+        })
+        .from(abandonedCarts);
+
+      if (dateRange) {
+        baseQuery = baseQuery.where(and(
+          gte(abandonedCarts.createdAt, dateRange.from),
+          lte(abandonedCarts.createdAt, dateRange.to)
+        ));
+      }
+
+      const analytics = await baseQuery;
+
+      return {
+        ...analytics[0],
+        recoveryRate: analytics[0].totalCarts > 0 
+          ? (analytics[0].cartsRecovered / analytics[0].totalCarts * 100).toFixed(2)
+          : 0,
+        emailResponseRate: analytics[0].emailsSent > 0
+          ? (analytics[0].cartsRecovered / analytics[0].emailsSent * 100).toFixed(2)
+          : 0,
+        dateRange: dateRange || null
+      };
+    } catch (error) {
+      logger.error('Error getting abandoned cart analytics', { error, dateRange });
       throw error;
     }
   }
