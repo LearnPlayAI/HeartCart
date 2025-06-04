@@ -69,9 +69,37 @@ const SupplierOrders = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: supplierOrdersResponse, isLoading } = useQuery({
+  const { data: supplierOrdersResponse, isLoading, error } = useQuery({
     queryKey: ['/api/admin/supplier-orders', statusFilter, validationFilter, searchTerm],
-    queryFn: () => apiRequest(`/api/admin/supplier-orders?status=${statusFilter}&validation=${validationFilter}&search=${encodeURIComponent(searchTerm)}`),
+    queryFn: async () => {
+      console.log('Query function executing...');
+      const url = `/api/admin/supplier-orders?status=${statusFilter}&validation=${validationFilter}&search=${encodeURIComponent(searchTerm)}`;
+      console.log('Fetching URL:', url);
+      
+      const response = await fetch(url, {
+        credentials: 'include',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
+      
+      console.log('Response status:', response.status);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('Raw API response:', data);
+      console.log('Data success flag:', data.success);
+      console.log('Data array:', data.data);
+      console.log('Data array length:', data.data?.length);
+      return data;
+    },
+    staleTime: 0, // Force fresh data
+    gcTime: 0, // Disable caching (v5 syntax)
   });
 
   const validateUrlMutation = useMutation({
@@ -140,6 +168,8 @@ const SupplierOrders = () => {
   console.log('Supplier orders response:', supplierOrdersResponse);
   console.log('Supplier orders array:', supplierOrders);
   console.log('Array length:', supplierOrders?.length);
+  console.log('Is loading:', isLoading);
+  console.log('Has error:', error);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -292,7 +322,14 @@ const SupplierOrders = () => {
 
       {/* Supplier Orders List */}
       <div className="space-y-4">
-        {supplierOrders.length === 0 ? (
+        {isLoading ? (
+          <Card>
+            <CardContent className="py-8 text-center">
+              <RefreshCw className="h-8 w-8 text-gray-400 mx-auto mb-4 animate-spin" />
+              <p className="text-gray-500">Loading supplier orders...</p>
+            </CardContent>
+          </Card>
+        ) : supplierOrders.length === 0 ? (
           <Card>
             <CardContent className="py-8 text-center">
               <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
