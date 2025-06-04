@@ -12,6 +12,13 @@ import { ensureValidImageUrl } from '@/utils/file-manager';
 import { useCountdown } from '@/hooks/use-countdown';
 import { FavouriteHeart } from '@/components/FavouriteHeart';
 import { useAuth } from '@/hooks/use-auth';
+import { 
+  calculateProductPricing, 
+  getCartPrice, 
+  isPromotionActive, 
+  getPromotionTimeRemaining,
+  type PromotionInfo 
+} from '@/utils/pricing';
 
 // Flash Deal Timer Component 
 const FlashDealTimer = ({ endDate }: { endDate: Date }) => {
@@ -77,12 +84,7 @@ type ProductCardProps = {
   isFlashDeal?: boolean;
   soldPercentage?: number;
   showAddToCart?: boolean;
-  promotionInfo?: {
-    promotionName: string;
-    promotionDiscount: number;
-    promotionDiscountType: string;
-    promotionEndDate: string;
-  };
+  promotionInfo?: PromotionInfo;
 };
 
 const ProductCard: React.FC<ProductCardProps> = ({
@@ -98,24 +100,19 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const [quickViewOpen, setQuickViewOpen] = useState(false);
   const [imageError, setImageError] = useState(false);
   
-  const discount = product.salePrice
-    ? calculateDiscount(product.price, product.salePrice)
-    : 0;
+  // Calculate unified pricing using centralized logic
+  const pricing = calculateProductPricing(
+    Number(product.price) || 0,
+    product.salePrice ? Number(product.salePrice) : null,
+    promotionInfo
+  );
 
-  // Calculate time remaining for promotion countdown
-  const getTimeRemaining = (endDate: string) => {
-    const now = new Date().getTime();
-    const end = new Date(endDate).getTime();
-    const timeLeft = end - now;
-    
-    if (timeLeft <= 0) return null;
-    
-    const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
-    
-    return { days, hours, minutes };
-  };
+  // Get the correct cart price
+  const cartPrice = getCartPrice(
+    Number(product.price) || 0,
+    product.salePrice ? Number(product.salePrice) : null,
+    promotionInfo
+  );
   
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -138,13 +135,11 @@ const ProductCard: React.FC<ProductCardProps> = ({
         }
       }
       
-      // If no required attributes, add directly to cart
-      const basePrice = product.salePrice || product.price;
-      
+      // If no required attributes, add directly to cart using calculated cart price
       addItem({
         productId: product.id,
         quantity: 1,
-        itemPrice: basePrice,
+        unitPrice: cartPrice,
         attributeSelections: {}
       });
       
@@ -215,7 +210,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
               <>
                 {/* Time remaining indicator - top left of image */}
                 {(() => {
-                  const timeLeft = getTimeRemaining(promotionInfo.promotionEndDate);
+                  const timeLeft = getPromotionTimeRemaining(promotionInfo.promotionEndDate);
                   return timeLeft && (
                     <div className="absolute top-2 left-2 bg-orange-500 text-white px-2 py-1 text-xs rounded shadow-lg z-10 flex items-center">
                       <Clock className="w-3 h-3 mr-1" />
@@ -259,60 +254,24 @@ const ProductCard: React.FC<ProductCardProps> = ({
           
           <div className="flex items-start justify-between mt-1">
             <div className="flex flex-col">
-              {/* Show promotional price if available, otherwise show sale price or regular price */}
+              {/* Display calculated price */}
               <span className="text-[#FF69B4] font-bold text-lg">
-                {promotionInfo ? (() => {
-                  // Calculate promotional price from regular price with combined discounts
-                  const regularPrice = Number(product.price) || 0;
-                  const originalSalePrice = Number((product as any).originalSalePrice) || 0;
-                  const promotionDiscount = Number(promotionInfo.promotionDiscount) || 0;
-                  
-                  // Calculate correct existing sale discount percentage
-                  let saleDiscountPercent = 0;
-                  if (originalSalePrice > 0) {
-                    saleDiscountPercent = ((regularPrice - originalSalePrice) / regularPrice) * 100;
-                  }
-                  
-                  // Total discount = existing sale discount + promotional discount (both as percentages)
-                  const totalDiscountPercent = saleDiscountPercent + promotionDiscount;
-                  
-                  // Apply total discount to regular price
-                  const promotionalPrice = regularPrice * (1 - totalDiscountPercent / 100);
-                  
-                  return formatCurrency(promotionalPrice);
-                })() : formatCurrency(product.salePrice || product.price)}
+                {formatCurrency(pricing.displayPrice)}
               </span>
               
-              {/* Show original price crossed out when there's a promotion or sale */}
-              {(promotionInfo || product.salePrice) && (
+              {/* Show original price crossed out when there's a discount */}
+              {pricing.hasDiscount && (
                 <span className="text-gray-500 text-xs line-through">
-                  {formatCurrency(product.price)}
+                  {formatCurrency(pricing.originalPrice)}
                 </span>
               )}
             </div>
             
-            {/* Combined Discount Percentage Badge - always show when promotion is active */}
-            {promotionInfo ? (
+            {/* Discount Percentage Badge */}
+            {pricing.hasDiscount && (
               <div className="ml-2">
                 <Badge className="bg-[#FF69B4] hover:bg-[#FF1493] text-white text-xs px-2 py-1 rounded-md font-medium">
-                  {(() => {
-                    const regularPrice = Number(product.price) || 0;
-                    const originalSalePrice = Number((product as any).originalSalePrice) || 0;
-                    const promotionDiscount = Number(promotionInfo.promotionDiscount) || 0;
-                    
-                    // Calculate sale discount percentage using original sale price (before promotional discount)
-                    const saleDiscountPercent = originalSalePrice > 0 ? Math.round(((regularPrice - originalSalePrice) / regularPrice) * 100) : 0;
-                    
-                    // Total discount is sale discount + promotion discount
-                    const totalDiscountPercent = saleDiscountPercent + promotionDiscount;
-                    return `${Math.round(totalDiscountPercent)}% OFF`;
-                  })()}
-                </Badge>
-              </div>
-            ) : product.salePrice && product.price && Number(product.salePrice) < Number(product.price) && (
-              <div className="ml-2">
-                <Badge className="bg-[#FF69B4] hover:bg-[#FF1493] text-white text-xs px-2 py-1 rounded-md font-medium">
-                  {Math.round(((Number(product.price) - Number(product.salePrice)) / Number(product.price)) * 100)}% OFF
+                  {pricing.discountPercentage}% OFF
                 </Badge>
               </div>
             )}
