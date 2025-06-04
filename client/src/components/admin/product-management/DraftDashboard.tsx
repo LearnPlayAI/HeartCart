@@ -74,6 +74,7 @@ export const DraftDashboard: React.FC = () => {
   const [selectedParentCategory, setSelectedParentCategory] = useState<string>('');
   const [selectedChildCategory, setSelectedChildCategory] = useState<string>('');
   const [maxTmyFilter, setMaxTmyFilter] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -111,11 +112,23 @@ export const DraftDashboard: React.FC = () => {
 
   // Fetch product drafts with search functionality and pagination
   const { data: draftsData, isLoading: isDraftsLoading, error: draftsError } = useQuery({
-    queryKey: ['/api/product-drafts', debouncedSearchQuery, currentPage],
+    queryKey: ['/api/product-drafts', debouncedSearchQuery, currentPage, selectedParentCategory, selectedChildCategory, maxTmyFilter, statusFilter],
     queryFn: async () => {
       const searchParams = new URLSearchParams();
       if (debouncedSearchQuery) {
         searchParams.append('search', debouncedSearchQuery);
+      }
+      if (selectedParentCategory && selectedParentCategory !== '') {
+        searchParams.append('parentCategoryId', selectedParentCategory);
+      }
+      if (selectedChildCategory && selectedChildCategory !== '' && selectedChildCategory !== 'all') {
+        searchParams.append('childCategoryId', selectedChildCategory);
+      }
+      if (maxTmyFilter && maxTmyFilter.trim() !== '') {
+        searchParams.append('minTmyPercent', maxTmyFilter);
+      }
+      if (statusFilter && statusFilter !== 'all') {
+        searchParams.append('statusFilter', statusFilter);
       }
       searchParams.append('limit', itemsPerPage.toString());
       searchParams.append('offset', ((currentPage - 1) * itemsPerPage).toString());
