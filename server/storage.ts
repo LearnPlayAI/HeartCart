@@ -1395,8 +1395,15 @@ export class DatabaseStorage implements IStorage {
         }
 
         dataQuery = db
-          .select()
-          .from(products);
+          .select({
+            ...products,
+            publishedAt: productDrafts.publishedAt
+          })
+          .from(products)
+          .leftJoin(productDrafts, and(
+            eq(productDrafts.originalProductId, products.id),
+            eq(productDrafts.draftStatus, 'published')
+          ));
         
         if (whereCondition) {
           dataQuery = dataQuery.where(whereCondition);
