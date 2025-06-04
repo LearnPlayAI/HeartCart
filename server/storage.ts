@@ -11225,6 +11225,17 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async getSupplierOrdersByOrderId(orderId: number): Promise<any[]> {
+    try {
+      // Get supplier orders for a specific order ID
+      const results = await this.getOrderItemsForSupplierManagement({ orderId });
+      return results;
+    } catch (error) {
+      logger.error('Error getting supplier orders by order ID', { error, orderId });
+      throw error;
+    }
+  }
+
   async getOrderItemsForSupplierManagement(filters?: { 
     status?: string; 
     orderId?: number;

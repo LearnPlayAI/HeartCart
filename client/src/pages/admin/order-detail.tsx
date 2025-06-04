@@ -48,6 +48,22 @@ import {
 } from 'lucide-react';
 
 // Types
+interface SupplierOrder {
+  id: number;
+  orderId: number;
+  productId: number;
+  productName: string;
+  status: 'pending' | 'ordered' | 'unavailable' | 'received';
+  quantity: number;
+  unitCost: number;
+  totalCost: number;
+  supplierOrderNumber?: string;
+  orderDate?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
 interface OrderItem {
   id: number;
   orderId: number;
@@ -61,6 +77,7 @@ interface OrderItem {
   selectedAttributes: Record<string, any>;
   attributeDisplayText?: string;
   createdAt: string;
+  supplierStatus?: 'pending' | 'ordered' | 'unavailable' | 'received';
 }
 
 interface Order {
@@ -294,7 +311,26 @@ export default function AdminOrderDetail() {
     enabled: !!orderId
   });
 
+  const { data: supplierOrdersResponse } = useQuery({
+    queryKey: ['/api/admin/supplier-orders/order', orderId],
+    queryFn: async () => {
+      const response = await fetch(`/api/admin/supplier-orders/order/${orderId}`, {
+        credentials: 'include'
+      });
+      if (!response.ok) throw new Error('Failed to fetch supplier orders');
+      return response.json();
+    },
+    enabled: !!orderId
+  });
+
   const order = response?.data;
+  const supplierOrders = supplierOrdersResponse?.data || [];
+
+  // Helper function to get supplier status for a product
+  const getSupplierStatus = (productId: number) => {
+    const supplierOrder = supplierOrders.find((so: SupplierOrder) => so.productId === productId);
+    return supplierOrder?.status || 'pending';
+  };
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ orderId, status }: { orderId: number; status: string }) => {
