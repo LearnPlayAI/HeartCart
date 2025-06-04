@@ -148,7 +148,30 @@ export async function publishProductDraftComplete(draftId: number): Promise<Publ
         debugReviewCountValue: (draft as any).reviewCount
       });
 
-      // 2. Map ALL fields with complete validation and type conversion
+      // 2. Get existing product data if this is an update to preserve fields not in draft
+      let existingProduct = null;
+      if (draft.originalProductId) {
+        const [existing] = await tx
+          .select()
+          .from(products)
+          .where(eq(products.id, draft.originalProductId));
+        existingProduct = existing;
+      }
+
+      // Debug cost preservation logic
+      const draftCostPrice = safeNumber((draft as any).cost_price);
+      const existingCostPrice = existingProduct?.costPrice || 0;
+      
+      logger.info('🔍 COST PRESERVATION DEBUG (Complete Service)', {
+        draftId,
+        draftCostPrice,
+        draftCostPriceRaw: (draft as any).cost_price,
+        existingCostPrice,
+        willPreserveCost: draftCostPrice === 0 && existingCostPrice > 0,
+        isUpdate: !!draft.originalProductId
+      });
+
+      // 3. Map ALL fields with complete validation and type conversion
       const productData = {
         // Basic Information Fields
         name: safeString(draft.name) || 'Untitled Product',
@@ -161,9 +184,9 @@ export async function publishProductDraftComplete(draftId: number): Promise<Publ
         supplier: safeString(draft.supplierId), // Convert integer to text as per schema
         catalogId: draft.catalogId,
         
-        // Pricing Fields - Complete Mapping with correct field names
+        // Pricing Fields - Complete Mapping with COST PRESERVATION
         price: safeNumber(draft.regularPrice, 0), // Use camelCase field names
-        costPrice: safeNumber((draft as any).cost_price, 0), // Use snake_case from drafts table
+        costPrice: (draftCostPrice > 0) ? draftCostPrice : existingCostPrice, // Preserve existing cost if draft doesn't have it
         salePrice: draft.salePrice ? safeNumber(draft.salePrice) : null,
         compareAtPrice: null, // Field doesn't exist in drafts table
         taxRatePercentage: null, // Field doesn't exist in drafts table

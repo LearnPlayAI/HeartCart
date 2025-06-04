@@ -8243,11 +8243,23 @@ export class DatabaseStorage implements IStorage {
           .limit(1);
 
         if (existingProduct) {
-          // Create update data that preserves existing values when draft values are null/undefined
+          // Debug the draft cost price value
+          console.log('🔍 COST PRESERVATION DEBUG:', {
+            draftId: id,
+            draftCostPrice: draft.costPrice,
+            draftCostPriceType: typeof draft.costPrice,
+            existingCostPrice: existingProduct.costPrice,
+            existingCostPriceType: typeof existingProduct.costPrice,
+            parsedDraftCost: draft.costPrice ? parseFloat(String(draft.costPrice)) : 'NO_DRAFT_COST'
+          });
+
+          // Create update data that preserves existing values when draft values are null/undefined/0
           const updateData: Partial<InsertProduct> = {
             ...productData,
-            // Preserve cost price if draft doesn't have it
-            costPrice: draft.costPrice ? parseFloat(String(draft.costPrice)) : existingProduct.costPrice,
+            // Preserve cost price if draft doesn't have it or it's 0/null/undefined
+            costPrice: (draft.costPrice && parseFloat(String(draft.costPrice)) > 0) 
+              ? parseFloat(String(draft.costPrice)) 
+              : existingProduct.costPrice,
             // Preserve supplier ID if draft doesn't have it
             supplierId: draft.supplierId !== undefined ? draft.supplierId : existingProduct.supplierId,
             // Preserve catalog ID if draft doesn't have it
@@ -8258,6 +8270,11 @@ export class DatabaseStorage implements IStorage {
             createdAt: existingProduct.createdAt, // Don't overwrite creation date
             updatedAt: new Date().toISOString(), // Update the modification date
           };
+
+          console.log('🔍 FINAL UPDATE DATA COST:', {
+            finalCostPrice: updateData.costPrice,
+            willPreserve: updateData.costPrice === existingProduct.costPrice
+          });
 
           const [updatedProduct] = await db
             .update(products)
