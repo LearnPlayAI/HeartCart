@@ -10928,8 +10928,10 @@ export class DatabaseStorage implements IStorage {
         productName: row.orderItem.productName || row.product.name,
         supplierUrl: row.product.supplier || '', // Map supplier field to supplierUrl
         quantity: row.orderItem.quantity,
-        unitCost: row.orderItem.unitPrice,
-        totalCost: row.orderItem.totalPrice,
+        unitCost: row.product.costPrice || row.orderItem.unitPrice, // Use product costPrice instead of order unitPrice
+        totalCost: row.product.costPrice ? 
+          (parseFloat(row.product.costPrice.toString()) * row.orderItem.quantity).toFixed(2) : 
+          row.orderItem.totalPrice, // Calculate total using costPrice
         status: row.supplierStatus?.supplierStatus || 'pending',
         supplierOrderNumber: row.supplierStatus?.supplierOrderDate || '',
         orderDate: row.supplierStatus?.supplierOrderDate || '',
@@ -10951,6 +10953,7 @@ export class DatabaseStorage implements IStorage {
           name: row.product.name,
           imageUrl: row.product.imageUrl,
           price: row.product.price,
+          costPrice: row.product.costPrice, // Include costPrice in product data
           sku: row.product.sku,
           supplierAvailable: true,
         }
