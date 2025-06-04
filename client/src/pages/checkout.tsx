@@ -214,7 +214,7 @@ export default function CheckoutPage() {
   const selectedPaymentMethod = form.watch("paymentMethod");
   
   // Calculate automatic credit application
-  const availableCredit = creditBalance ? parseFloat(creditBalance.availableCredits || '0') : 0;
+  const availableCredit = creditBalance?.availableCredits ? parseFloat(creditBalance.availableCredits) : 0;
   
   // Calculate shipping cost with exemption logic
   const baseShippingCost = shippingOptions.find(option => 
