@@ -48,6 +48,7 @@ import { adminRoutes } from "./admin-routes";
 import { registerAuthTestRoutes } from "./auth-test-routes";
 import { registerDatabaseTestRoutes } from "./database-test-routes";
 import { registerApiTestRoutes } from "./api-test-routes";
+import favouritesRoutes from "./favourites-routes";
 import { registerStorageTestRoutes } from "./storage-test-routes";
 import { registerFileManagerTestRoutes } from "./file-manager-test-routes";
 import { validateRequest, idSchema } from './validation-middleware';
@@ -179,6 +180,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register File Manager testing routes
   registerFileManagerTestRoutes(app);
+  
+  // Register favourites and analytics routes
+  app.use('/api', favouritesRoutes);
   
   // Mount file routes for serving files from Object Storage
   app.use('/api/files', fileRoutes);

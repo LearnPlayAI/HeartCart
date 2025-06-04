@@ -1,6 +1,6 @@
 import express from "express";
 import { storage } from "./storage";
-import { requireAuth } from "./auth-middleware";
+import { isAuthenticated } from "./auth-middleware";
 import { logger } from "./logger";
 
 const router = express.Router();
@@ -10,7 +10,7 @@ const router = express.Router();
 // =============================================================================
 
 // Add product to favourites
-router.post("/favourites", requireAuth, async (req, res) => {
+router.post("/favourites", isAuthenticated, async (req, res) => {
   try {
     const { productId } = req.body;
     const userId = req.user!.id;
@@ -47,7 +47,7 @@ router.post("/favourites", requireAuth, async (req, res) => {
 });
 
 // Remove product from favourites
-router.delete("/favourites/:productId", requireAuth, async (req, res) => {
+router.delete("/favourites/:productId", isAuthenticated, async (req, res) => {
   try {
     const productId = parseInt(req.params.productId);
     const userId = req.user!.id;
@@ -75,7 +75,7 @@ router.delete("/favourites/:productId", requireAuth, async (req, res) => {
 });
 
 // Get user's favourites
-router.get("/favourites", requireAuth, async (req, res) => {
+router.get("/favourites", isAuthenticated, async (req, res) => {
   try {
     const userId = req.user!.id;
     const withProducts = req.query.withProducts === 'true';
@@ -104,7 +104,7 @@ router.get("/favourites", requireAuth, async (req, res) => {
 });
 
 // Check if product is favourited
-router.get("/favourites/check/:productId", requireAuth, async (req, res) => {
+router.get("/favourites/check/:productId", isAuthenticated, async (req, res) => {
   try {
     const productId = parseInt(req.params.productId);
     const userId = req.user!.id;
