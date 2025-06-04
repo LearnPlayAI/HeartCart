@@ -187,7 +187,7 @@ router.get("/favourites/popular", async (req, res) => {
 // =============================================================================
 
 // Log a product interaction
-router.post("/interactions", requireAuth, async (req, res) => {
+router.post("/interactions", isAuthenticated, async (req, res) => {
   try {
     const { productId, interactionType, metadata } = req.body;
     const userId = req.user!.id;
@@ -255,7 +255,7 @@ router.get("/interactions/product/:productId", async (req, res) => {
 });
 
 // Get user interactions
-router.get("/interactions/user", requireAuth, async (req, res) => {
+router.get("/interactions/user", isAuthenticated, async (req, res) => {
   try {
     const userId = req.user!.id;
     const interactionType = req.query.type as string;
