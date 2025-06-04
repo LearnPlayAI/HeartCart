@@ -76,6 +76,11 @@ const ProductDetailBySlug = () => {
     queryKey: [`/api/products/slug/${slug}`],
     enabled: !!slug,
   });
+
+  // Fetch active promotions
+  const { data: promotionsData } = useQuery({
+    queryKey: ['/api/promotions/active-with-products'],
+  });
   
   return (
     <ProductDetailContent 
@@ -118,6 +123,11 @@ const ProductDetailById = () => {
   } = useQuery<Product>({
     queryKey: [`/api/products/${id}`],
     enabled: !!id,
+  });
+
+  // Fetch active promotions
+  const { data: promotionsData } = useQuery({
+    queryKey: ['/api/promotions/active-with-products'],
   });
   
   return (

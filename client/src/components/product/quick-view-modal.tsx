@@ -14,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { StandardApiResponse } from '@/types/api';
 import { Product } from '@shared/schema';
 import { ensureValidImageUrl } from '@/utils/file-manager';
+import { calculateProductPricing } from '@/utils/pricing';
 import { 
   Attribute, 
   AttributeOption, 

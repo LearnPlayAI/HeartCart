@@ -239,7 +239,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 
                 {/* Promotion discount badge - bottom right */}
                 <div className="absolute bottom-2 right-2 bg-red-500 text-white px-2 py-1 text-xs font-bold rounded-full shadow-lg z-10">
-                  EXTRA {promotionInfo.promotionDiscount}% OFF!
+                  EXTRA {Math.round(parseFloat(promotionInfo.promotionDiscount))}% OFF!
                 </div>
               </>
             )}
