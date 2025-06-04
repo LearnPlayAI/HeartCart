@@ -1306,7 +1306,14 @@ export class DatabaseStorage implements IStorage {
     offset = 0,
     categoryId?: number,
     search?: string,
-    options?: { includeInactive?: boolean; includeCategoryInactive?: boolean; minTmyPercent?: number; statusFilter?: string },
+    options?: { 
+      includeInactive?: boolean; 
+      includeCategoryInactive?: boolean; 
+      minTmyPercent?: number; 
+      statusFilter?: string;
+      sortField?: string;
+      sortOrder?: 'asc' | 'desc';
+    },
   ): Promise<{ products: Product[]; total: number }> {
     try {
       console.log('getAllProducts called with:', { limit, offset, categoryId, search, options });
@@ -1441,8 +1448,34 @@ export class DatabaseStorage implements IStorage {
           dataQuery = dataQuery.where(whereCondition);
         }
         
+        // Apply sorting based on sortField and sortOrder
+        const sortField = options?.sortField || 'displayOrder';
+        const sortOrder = options?.sortOrder || 'asc';
+        
+        // Map frontend field names to database columns
+        const sortFieldMap: Record<string, any> = {
+          'name': products.name,
+          'sku': products.sku,
+          'price': products.price,
+          'salePrice': products.salePrice,
+          'costPrice': products.costPrice,
+          'stock': products.stock,
+          'createdAt': products.createdAt,
+          'displayOrder': products.displayOrder,
+          'brand': products.brand,
+          'isActive': products.isActive,
+          'tmyPercentage': sql`CASE WHEN COALESCE(${products.costPrice}, 0) > 0 THEN ((COALESCE(${products.salePrice}, ${products.price}, 0) - COALESCE(${products.costPrice}, 0)) / COALESCE(${products.costPrice}, 1) * 100) ELSE 0 END`
+        };
+
+        const sortColumn = sortFieldMap[sortField] || products.displayOrder;
+        
+        if (sortOrder === 'asc') {
+          dataQuery = dataQuery.orderBy(asc(sortColumn), products.id);
+        } else {
+          dataQuery = dataQuery.orderBy(desc(sortColumn), products.id);
+        }
+        
         dataQuery = dataQuery
-          .orderBy(products.displayOrder, products.id)
           .limit(limit)
           .offset(offset);
       }
