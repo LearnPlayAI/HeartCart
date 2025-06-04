@@ -9,6 +9,7 @@ import { useCart } from '@/hooks/use-cart';
 import { useCredits } from '@/hooks/use-credits';
 import { formatCurrency } from '@/lib/utils';
 import { Link } from 'wouter';
+import { calculateShippingCost } from '@/utils/pricing';
 
 const CartDrawer = () => {
   const { 

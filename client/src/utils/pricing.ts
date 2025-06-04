@@ -160,3 +160,37 @@ export function calculateAutoCreditApplication(
   // Automatically apply the maximum credits up to the order total
   return Math.min(availableCredits, orderTotal);
 }
+
+/**
+ * Calculate shipping cost with exemption logic for unshipped order credits
+ */
+export function calculateShippingCost(
+  baseShippingCost: number,
+  creditTransactions: any[],
+  availableCredits: number
+): { 
+  shippingCost: number;
+  isShippingWaived: boolean;
+  reasonForWaiver?: string;
+} {
+  // Check if any available credits came from unshipped orders
+  const unshippedOrderCredits = creditTransactions.filter(transaction => 
+    transaction.type === 'credit' && 
+    transaction.supplierOrderId && 
+    transaction.amount > 0
+  );
+
+  // If user has credits from unshipped orders and available credits > 0, waive shipping
+  if (unshippedOrderCredits.length > 0 && availableCredits > 0) {
+    return {
+      shippingCost: 0,
+      isShippingWaived: true,
+      reasonForWaiver: 'Free shipping due to credits from unshipped orders'
+    };
+  }
+
+  return {
+    shippingCost: baseShippingCost,
+    isShippingWaived: false
+  };
+}
