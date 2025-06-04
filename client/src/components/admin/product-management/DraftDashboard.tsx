@@ -23,7 +23,7 @@ import {
   Plus, Search, MoreVertical, Edit, Trash2, Copy, ExternalLink, 
   Check, X, Clock, Loader2, Filter, SortAsc, SortDesc, 
   FileQuestion, ShoppingCart, FileCheck, Eye, AlertCircle, Package, GitMerge,
-  ChevronLeft, ChevronRight, TrendingUp, TrendingDown, ChevronUp, ChevronDown
+  ChevronLeft, ChevronRight, TrendingUp, TrendingDown, ChevronUp, ChevronDown, ArrowUpDown
 } from 'lucide-react';
 
 // Constants
@@ -106,10 +106,12 @@ export const DraftDashboard: React.FC = () => {
     >
       <div className="flex items-center gap-1">
         {children}
-        {sortField === field && (
+        {sortField === field ? (
           sortOrder === 'asc' ? 
-            <ChevronUp className="h-4 w-4" /> : 
-            <ChevronDown className="h-4 w-4" />
+            <ChevronUp className="h-4 w-4 text-primary" /> : 
+            <ChevronDown className="h-4 w-4 text-primary" />
+        ) : (
+          <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
         )}
       </div>
     </TableHead>
