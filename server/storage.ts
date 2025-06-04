@@ -551,7 +551,7 @@ export class DatabaseStorage implements IStorage {
   ): Promise<Product[]> {
     if (!productList.length) return productList;
 
-    // For each product, find its images
+    // For each product, find its images and published date
     const enrichedProducts = await Promise.all(
       productList.map(async (product) => {
         // Get all images for this product
@@ -561,9 +561,24 @@ export class DatabaseStorage implements IStorage {
           .where(eq(productImages.productId, product.id))
           .orderBy(asc(productImages.sortOrder));
 
+        // Get published date from product_drafts table
+        const publishedDraft = await db
+          .select({
+            publishedAt: productDrafts.publishedAt
+          })
+          .from(productDrafts)
+          .where(and(
+            eq(productDrafts.originalProductId, product.id),
+            eq(productDrafts.draftStatus, 'published')
+          ))
+          .limit(1);
+
         if (allImages.length === 0) {
-          // No images at all, return product as is
-          return product;
+          // No images, but include published date if available
+          return {
+            ...product,
+            publishedAt: publishedDraft[0]?.publishedAt || null
+          };
         }
 
         // Find the main image
@@ -574,12 +589,13 @@ export class DatabaseStorage implements IStorage {
           .filter((img) => !img.isMain)
           .map((img) => img.url);
 
-        // Return enriched product
+        // Return enriched product with image and published date
         return {
           ...product,
           imageUrl: mainImage ? mainImage.url : allImages[0].url,
           additionalImages:
             additionalImageUrls.length > 0 ? additionalImageUrls : null,
+          publishedAt: publishedDraft[0]?.publishedAt || null
         };
       }),
     );
@@ -1395,15 +1411,8 @@ export class DatabaseStorage implements IStorage {
         }
 
         dataQuery = db
-          .select({
-            ...products,
-            publishedAt: productDrafts.publishedAt
-          })
-          .from(products)
-          .leftJoin(productDrafts, and(
-            eq(productDrafts.originalProductId, products.id),
-            eq(productDrafts.draftStatus, 'published')
-          ));
+          .select()
+          .from(products);
         
         if (whereCondition) {
           dataQuery = dataQuery.where(whereCondition);
