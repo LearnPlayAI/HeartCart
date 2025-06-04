@@ -57,7 +57,7 @@ export const products = pgTable("products", {
   catalogId: integer("catalog_id").references(() => catalogs.id),
   price: doublePrecision("price").notNull(),
   minimumPrice: doublePrecision("minimum_price"), // New field for setting price floors
-  costPrice: doublePrecision("cost_price").notNull(),
+
   salePrice: doublePrecision("sale_price"),
   discount: integer("discount"),
   discountLabel: text("discount_label"), // New field for displaying discount type/occasion
@@ -93,6 +93,9 @@ export const products = pgTable("products", {
   // Additional pricing fields
   compareAtPrice: doublePrecision("compare_at_price"),
   taxRatePercentage: doublePrecision("tax_rate_percentage"),
+  // Credit system fields
+  costPrice: decimal("costPrice", { precision: 10, scale: 2 }),
+  supplierAvailable: boolean("supplierAvailable").default(true).notNull(),
   createdAt: text("created_at").default(String(new Date().toISOString())).notNull(),
 }, (table) => {
   return {
@@ -143,6 +146,10 @@ export const orders = pgTable("orders", {
   // Order totals
   subtotalAmount: doublePrecision("subtotalAmount").notNull(),
   totalAmount: doublePrecision("totalAmount").notNull(),
+  
+  // Credit system fields
+  creditUsed: decimal("creditUsed", { precision: 10, scale: 2 }).notNull().default('0'),
+  remainingBalance: decimal("remainingBalance", { precision: 10, scale: 2 }),
   
   // Order notes and tracking
   customerNotes: text("customerNotes"), // Customer special instructions
@@ -1106,6 +1113,46 @@ export const productPromotionsRelations = relations(productPromotions, ({ one })
   })
 }));
 
+
+
+// Customer Credits table - tracks credit balance per user
+export const customerCredits = pgTable("customerCredits", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull().references(() => users.id),
+  totalCredits: decimal("totalCredits", { precision: 10, scale: 2 }).notNull().default('0'),
+  availableCredits: decimal("availableCredits", { precision: 10, scale: 2 }).notNull().default('0'),
+  createdAt: text("createdAt").default(String(new Date().toISOString())).notNull(),
+  updatedAt: text("updatedAt").default(String(new Date().toISOString())).notNull(),
+}, (table) => ({
+  userIdUnique: unique().on(table.userId),
+}));
+
+// Credit Transactions table - tracks all credit movements
+export const creditTransactions = pgTable("creditTransactions", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull().references(() => users.id),
+  orderId: integer("orderId").references(() => orders.id),
+  transactionType: text("transactionType").notNull(), // 'earned', 'used', 'refund'
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  description: text("description"),
+  createdAt: text("createdAt").default(String(new Date().toISOString())).notNull(),
+});
+
+// Order Item Supplier Status table - tracks supplier ordering status per item
+export const orderItemSupplierStatus = pgTable("orderItemSupplierStatus", {
+  id: serial("id").primaryKey(),
+  orderItemId: integer("orderItemId").notNull().references(() => orderItems.id),
+  orderId: integer("orderId").notNull().references(() => orders.id),
+  productId: integer("productId").notNull().references(() => products.id),
+  supplierOrderPlaced: boolean("supplierOrderPlaced").notNull().default(false),
+  supplierOrderDate: text("supplierOrderDate"),
+  supplierStatus: text("supplierStatus").notNull().default('pending'), // 'pending', 'ordered', 'backordered', 'unavailable', 'received'
+  adminNotes: text("adminNotes"),
+  customerNotified: boolean("customerNotified").notNull().default(false),
+  createdAt: text("createdAt").default(String(new Date().toISOString())).notNull(),
+  updatedAt: text("updatedAt").default(String(new Date().toISOString())).notNull(),
+});
+
 // System Settings table - for app-wide configuration
 export const systemSettings = pgTable("systemSettings", {
   id: serial("id").primaryKey(),
@@ -1117,6 +1164,34 @@ export const systemSettings = pgTable("systemSettings", {
   updatedAt: text("updatedAt").default(String(new Date().toISOString())).notNull(),
 });
 
+// Credit system insert schemas
+export const insertCustomerCreditSchema = createInsertSchema(customerCredits).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCreditTransactionSchema = createInsertSchema(creditTransactions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertOrderItemSupplierStatusSchema = createInsertSchema(orderItemSupplierStatus).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Credit system types
+export type CustomerCredit = typeof customerCredits.$inferSelect;
+export type InsertCustomerCredit = z.infer<typeof insertCustomerCreditSchema>;
+
+export type CreditTransaction = typeof creditTransactions.$inferSelect;
+export type InsertCreditTransaction = z.infer<typeof insertCreditTransactionSchema>;
+
+export type OrderItemSupplierStatus = typeof orderItemSupplierStatus.$inferSelect;
+export type InsertOrderItemSupplierStatus = z.infer<typeof insertOrderItemSupplierStatusSchema>;
+
 // System Settings types and schemas
 export type SystemSetting = typeof systemSettings.$inferSelect;
 export type InsertSystemSetting = typeof systemSettings.$inferInsert;
@@ -1126,3 +1201,42 @@ export const insertSystemSettingSchema = createInsertSchema(systemSettings);
 // Export ProductDraft type
 export type ProductDraft = typeof productDrafts.$inferSelect;
 export type InsertProductDraft = z.infer<typeof insertProductDraftSchema>;
+
+// Credit system relations
+export const customerCreditsRelations = relations(customerCredits, ({ one, many }) => ({
+  user: one(users, {
+    fields: [customerCredits.userId],
+    references: [users.id]
+  }),
+  transactions: many(creditTransactions)
+}));
+
+export const creditTransactionsRelations = relations(creditTransactions, ({ one }) => ({
+  user: one(users, {
+    fields: [creditTransactions.userId],
+    references: [users.id]
+  }),
+  order: one(orders, {
+    fields: [creditTransactions.orderId],
+    references: [orders.id]
+  }),
+  customerCredit: one(customerCredits, {
+    fields: [creditTransactions.userId],
+    references: [customerCredits.userId]
+  })
+}));
+
+export const orderItemSupplierStatusRelations = relations(orderItemSupplierStatus, ({ one }) => ({
+  orderItem: one(orderItems, {
+    fields: [orderItemSupplierStatus.orderItemId],
+    references: [orderItems.id]
+  }),
+  order: one(orders, {
+    fields: [orderItemSupplierStatus.orderId],
+    references: [orders.id]
+  }),
+  product: one(products, {
+    fields: [orderItemSupplierStatus.productId],
+    references: [products.id]
+  })
+}));
