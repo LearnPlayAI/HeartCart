@@ -41,7 +41,8 @@ export default function MyFavourites() {
   const itemsPerPage = 12;
 
   const { data: favouritesData, isLoading, error } = useQuery({
-    queryKey: ['/api/favourites'],
+    queryKey: ['/api/favourites', { withProducts: true }],
+    queryFn: () => apiRequest('GET', '/api/favourites?withProducts=true'),
   });
 
   const favourites = favouritesData?.success ? favouritesData.data : [];
@@ -49,7 +50,10 @@ export default function MyFavourites() {
   // Filter and sort favourites
   const filteredAndSortedFavourites = useMemo(() => {
     let filtered = favourites.filter((fav: FavouriteWithProduct) => {
-      const matchesSearch = fav.product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      // Add null checks for product data
+      if (!fav.product) return false;
+      
+      const matchesSearch = fav.product.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            (fav.product.description || "").toLowerCase().includes(searchTerm.toLowerCase());
       const matchesCategory = categoryFilter === "all" || fav.product.categoryName === categoryFilter;
       return matchesSearch && matchesCategory;
