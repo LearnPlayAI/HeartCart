@@ -17,6 +17,7 @@ export interface PromotionInfo {
   promotionDiscount: number;
   promotionDiscountType: string;
   promotionEndDate: string;
+  promotionalPrice?: number | null;
 }
 
 /**
@@ -38,21 +39,28 @@ export function calculateProductPricing(
     totalDiscountPercentage = ((basePrice - salePrice) / basePrice) * 100;
   }
 
-  // Apply promotional discount on top of existing pricing
+  // Apply promotional pricing
   if (promotionInfo) {
-    const promotionDiscount = Number(promotionInfo.promotionDiscount) || 0;
-    
-    if (promotionInfo.promotionDiscountType === 'percentage') {
-      // Apply percentage discount to the current price (base or sale)
-      const discountAmount = finalPrice * (promotionDiscount / 100);
-      finalPrice = finalPrice - discountAmount;
+    // Priority 1: Use direct promotional price if available
+    if (promotionInfo.promotionalPrice && promotionInfo.promotionalPrice > 0) {
+      finalPrice = promotionInfo.promotionalPrice;
+      totalDiscountPercentage = ((basePrice - finalPrice) / basePrice) * 100;
+    } else {
+      // Priority 2: Apply promotional discount calculation
+      const promotionDiscount = Number(promotionInfo.promotionDiscount) || 0;
       
-      // Calculate total discount from original base price
-      totalDiscountPercentage = ((basePrice - finalPrice) / basePrice) * 100;
-    } else if (promotionInfo.promotionDiscountType === 'fixed') {
-      // Apply fixed amount discount
-      finalPrice = Math.max(0, finalPrice - promotionDiscount);
-      totalDiscountPercentage = ((basePrice - finalPrice) / basePrice) * 100;
+      if (promotionInfo.promotionDiscountType === 'percentage') {
+        // Apply percentage discount to the current price (base or sale)
+        const discountAmount = finalPrice * (promotionDiscount / 100);
+        finalPrice = finalPrice - discountAmount;
+        
+        // Calculate total discount from original base price
+        totalDiscountPercentage = ((basePrice - finalPrice) / basePrice) * 100;
+      } else if (promotionInfo.promotionDiscountType === 'fixed') {
+        // Apply fixed amount discount
+        finalPrice = Math.max(0, finalPrice - promotionDiscount);
+        totalDiscountPercentage = ((basePrice - finalPrice) / basePrice) * 100;
+      }
     }
   }
 

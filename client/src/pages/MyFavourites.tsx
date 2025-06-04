@@ -77,13 +77,15 @@ export default function MyFavourites() {
               promotionName: promo.promotionName,
               promotionDiscount: pp.discountOverride || promo.discountValue,
               promotionDiscountType: promo.discountType,
-              promotionEndDate: promo.endDate
+              promotionEndDate: promo.endDate,
+              promotionalPrice: pp.promotionalPrice ? Number(pp.promotionalPrice) : null
             });
             map.set(pp.productId, {
               promotionName: promo.promotionName,
               promotionDiscount: pp.discountOverride || promo.discountValue,
               promotionDiscountType: promo.discountType,
-              promotionEndDate: promo.endDate
+              promotionEndDate: promo.endDate,
+              promotionalPrice: pp.promotionalPrice ? Number(pp.promotionalPrice) : null
             });
           });
         }
