@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { calculateProductPricing, getPromotionalBadgeText } from "@/utils/pricing";
+import { useCredits } from "@/hooks/use-credits";
 import { 
   CreditCard, 
   Truck, 
@@ -94,6 +95,8 @@ export default function CheckoutPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [applyCreditAmount, setApplyCreditAmount] = useState(0);
+  const { creditBalance, formattedBalance, balanceLoading } = useCredits();
 
   // Fetch current user details
   const { data: user } = useQuery({
@@ -214,7 +217,8 @@ export default function CheckoutPage() {
   const shippingCost = shippingOptions.find(option => 
     option.id === selectedShippingMethod)?.price || 0;
   
-  const total = subtotal + shippingCost;
+  const maxCreditAmount = Math.min(creditBalance || 0, subtotal + shippingCost);
+  const finalTotal = Math.max(0, subtotal + shippingCost - applyCreditAmount);
 
   // Create order mutation with proper response handling
   const createOrderMutation = useMutation({
@@ -346,7 +350,8 @@ export default function CheckoutPage() {
         specialInstructions: data.specialInstructions,
         orderItems,
         subtotal,
-        total
+        total: finalTotal,
+        creditUsed: applyCreditAmount
       };
 
       console.log("Submitting order data:", orderData);
@@ -602,6 +607,50 @@ export default function CheckoutPage() {
               </CardContent>
             </Card>
 
+            {/* Credit Application */}
+            {creditBalance > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <CreditCard className="h-5 w-5 text-green-600" />
+                    Apply Store Credit
+                  </CardTitle>
+                  <CardDescription>
+                    Available balance: {formattedBalance}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="creditAmount">Credit Amount to Apply</Label>
+                      <Input
+                        id="creditAmount"
+                        type="number"
+                        min="0"
+                        max={maxCreditAmount}
+                        step="0.01"
+                        value={applyCreditAmount}
+                        onChange={(e) => setApplyCreditAmount(Math.min(parseFloat(e.target.value) || 0, maxCreditAmount))}
+                        placeholder="0.00"
+                      />
+                      <p className="text-sm text-gray-600 mt-1">
+                        Maximum: R{maxCreditAmount.toFixed(2)}
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setApplyCreditAmount(maxCreditAmount)}
+                      disabled={maxCreditAmount === 0}
+                    >
+                      Apply Maximum Credit
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Payment Method */}
             <Card>
               <CardHeader>
@@ -676,7 +725,7 @@ export default function CheckoutPage() {
               className="w-full"
               disabled={isProcessing || createOrderMutation.isPending}
             >
-              {isProcessing ? "Processing Order..." : `Place Order - R${total.toFixed(2)}`}
+              {isProcessing ? "Processing Order..." : `Place Order - R${finalTotal.toFixed(2)}`}
             </Button>
           </form>
         </div>
