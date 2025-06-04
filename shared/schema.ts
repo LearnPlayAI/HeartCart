@@ -1132,6 +1132,7 @@ export const creditTransactions = pgTable("creditTransactions", {
   id: serial("id").primaryKey(),
   userId: integer("userId").notNull().references(() => users.id),
   orderId: integer("orderId").references(() => orders.id),
+  supplierOrderId: integer("supplierOrderId").references(() => orderItems.id), // Track which order item the credit was generated for
   transactionType: text("transactionType").notNull(), // 'earned', 'used', 'refund'
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
   description: text("description"),

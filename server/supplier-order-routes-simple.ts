@@ -144,6 +144,7 @@ router.patch('/:id/status', isAuthenticated, isAdmin, asyncHandler(async (req, r
             amount: creditAmount,
             description: `Credit for unavailable item: ${orderItem.productName}`,
             orderId: orderItem.orderId,
+            supplierOrderId: orderId, // Link to the specific order item
           });
           
           // Update user credit balance
@@ -193,6 +194,70 @@ router.get('/:id', isAuthenticated, isAdmin, asyncHandler(async (req, res) => {
   } catch (error) {
     console.error('Error fetching supplier order:', error);
     return sendError(res, 'Failed to fetch supplier order', 500);
+  }
+}));
+
+// POST /api/admin/supplier-orders/:id/generate-credit - Generate credit for unavailable item
+router.post('/:id/generate-credit', isAuthenticated, isAdmin, asyncHandler(async (req, res) => {
+  const orderId = parseInt(req.params.id);
+  
+  if (isNaN(orderId)) {
+    return sendError(res, 'Invalid order ID', 400);
+  }
+  
+  try {
+    // Check if credit already exists for this supplier order
+    const existingCredit = await storage.getCreditTransactionBySupplierOrder(orderId);
+    if (existingCredit) {
+      return sendError(res, 'Credit has already been generated for this item', 400);
+    }
+    
+    const orderItem = await storage.getOrderItemById(orderId);
+    if (!orderItem?.order) {
+      return sendError(res, 'Order item not found', 404);
+    }
+    
+    const creditAmount = orderItem.totalPrice.toString();
+    
+    // Create credit transaction
+    await storage.createCreditTransaction({
+      userId: orderItem.order.userId,
+      transactionType: 'earned',
+      amount: creditAmount,
+      description: `Credit for unavailable item: ${orderItem.productName}`,
+      orderId: orderItem.orderId,
+      supplierOrderId: orderId, // Link to the specific order item
+    });
+    
+    // Update customer credit balance
+    const currentBalance = await storage.getUserCreditBalance(orderItem.order.userId);
+    const newTotalBalance = parseFloat(currentBalance.totalCreditAmount || '0') + parseFloat(creditAmount);
+    const newAvailableBalance = parseFloat(currentBalance.availableCreditAmount || '0') + parseFloat(creditAmount);
+    
+    await storage.createOrUpdateCustomerCredit(orderItem.order.userId, {
+      totalCreditAmount: newTotalBalance.toString(),
+      availableCreditAmount: newAvailableBalance.toString(),
+    });
+    
+    // Create notification
+    await storage.createNotification({
+      userId: orderItem.order.userId,
+      type: 'credit_issued',
+      title: 'Credit Issued',
+      message: `You have received R${creditAmount} credit for unavailable item: ${orderItem.productName}`,
+      isRead: false,
+    });
+    
+    console.log(`Credit of R${creditAmount} generated for user ${orderItem.order.userId} for unavailable item ${orderItem.productName}`);
+    
+    return sendSuccess(res, { 
+      message: 'Credit generated successfully',
+      amount: creditAmount,
+      userId: orderItem.order.userId 
+    });
+  } catch (error) {
+    console.error('Error generating credit:', error);
+    return sendError(res, 'Failed to generate credit', 500);
   }
 }));
 
