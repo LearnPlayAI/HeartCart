@@ -48,6 +48,7 @@ import { adminRoutes } from "./admin-routes";
 import { registerAuthTestRoutes } from "./auth-test-routes";
 import { registerDatabaseTestRoutes } from "./database-test-routes";
 import { registerApiTestRoutes } from "./api-test-routes";
+import analyticsRoutes from "./analytics-routes";
 import favouritesRoutes from "./favourites-routes";
 import { registerStorageTestRoutes } from "./storage-test-routes";
 import { registerFileManagerTestRoutes } from "./file-manager-test-routes";
@@ -6959,6 +6960,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   }));
+
+  // Register analytics routes
+  app.use('/api/analytics', analyticsRoutes);
 
   const httpServer = createServer(app);
   return httpServer;
