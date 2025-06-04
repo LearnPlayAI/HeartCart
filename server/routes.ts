@@ -6590,36 +6590,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }));
 
   // ------------------------------------------------
-  // Product Drafts API Routes
+  // Product Drafts API Routes - moved to product-draft-routes.ts
   // ------------------------------------------------
-  
-  // Get all product drafts for the current user
-  app.get("/api/product-drafts", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
-    const user = req.user as any;
-    const catalogId = req.query.catalogId ? parseInt(req.query.catalogId as string) : undefined;
-    const searchQuery = req.query.search as string;
-    const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
-    const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
-    
-    try {
-      const result = await storage.getUserProductDrafts(user.id, searchQuery, limit, offset, user.role);
-      
-      res.json({
-        success: true,
-        data: result.drafts,
-        meta: {
-          count: result.drafts.length,
-          total: result.total,
-          limit,
-          offset,
-          totalPages: Math.ceil(result.total / limit),
-          currentPage: Math.floor(offset / limit) + 1
-        }
-      });
-    } catch (error) {
-      handleApiError(error, res);
-    }
-  }));
   
   // Get a specific product draft by ID
   app.get("/api/product-drafts/:draftId", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {

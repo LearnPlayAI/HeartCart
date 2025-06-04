@@ -272,6 +272,7 @@ export default function registerProductDraftRoutes(router: Router) {
         statusFilter
       } = req.query;
 
+      const userRole = req.user?.role;
       const drafts = await storage.getUserProductDrafts(userId, {
         limit,
         offset,
@@ -280,7 +281,7 @@ export default function registerProductDraftRoutes(router: Router) {
         childCategoryId,
         minTmyPercent,
         statusFilter
-      });
+      }, userRole);
       sendSuccess(res, drafts);
     })
   );
