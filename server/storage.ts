@@ -10848,23 +10848,282 @@ export class DatabaseStorage implements IStorage {
         .leftJoin(orders, eq(orderItems.orderId, orders.id))
         .where(eq(orderItems.id, orderItemId));
 
-      if (!orderItem) {
-        return undefined;
-      }
-
-      return {
-        ...orderItem,
-        order: orderItem.order.id ? orderItem.order : undefined,
-      };
+      return orderItem || undefined;
     } catch (error) {
       logger.error('Error getting order item by ID', { error, orderItemId });
       throw error;
     }
   }
 
+  // Supplier Order Management Methods for Credit System
+  async createSupplierOrder(supplierOrderData: InsertSupplierOrder): Promise<SupplierOrder> {
+    try {
+      const [created] = await db
+        .insert(supplierOrders)
+        .values({
+          ...supplierOrderData,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        })
+        .returning();
+
+      logger.info('Supplier order created', { supplierOrderId: created.id });
+      return created;
+    } catch (error) {
+      logger.error('Error creating supplier order', { error, supplierOrderData });
+      throw error;
+    }
+  }
+
+  async getSupplierOrderById(supplierOrderId: number): Promise<SupplierOrder | undefined> {
+    try {
+      const [supplierOrder] = await db
+        .select()
+        .from(supplierOrders)
+        .where(eq(supplierOrders.id, supplierOrderId));
+
+      return supplierOrder || undefined;
+    } catch (error) {
+      logger.error('Error getting supplier order by ID', { error, supplierOrderId });
+      throw error;
+    }
+  }
+
+  async getSupplierOrders(filters?: { 
+    supplierId?: number; 
+    status?: string; 
+    dateFrom?: string; 
+    dateTo?: string; 
+  }): Promise<SupplierOrder[]> {
+    try {
+      let query = db.select().from(supplierOrders);
+      
+      const conditions = [];
+      if (filters?.supplierId) {
+        conditions.push(eq(supplierOrders.supplierId, filters.supplierId));
+      }
+      if (filters?.status) {
+        conditions.push(eq(supplierOrders.status, filters.status));
+      }
+      if (filters?.dateFrom) {
+        conditions.push(gte(supplierOrders.createdAt, filters.dateFrom));
+      }
+      if (filters?.dateTo) {
+        conditions.push(lte(supplierOrders.createdAt, filters.dateTo));
+      }
+
+      if (conditions.length > 0) {
+        query = query.where(and(...conditions));
+      }
+
+      return await query.orderBy(desc(supplierOrders.createdAt));
+    } catch (error) {
+      logger.error('Error getting supplier orders', { error, filters });
+      throw error;
+    }
+  }
+
+  async updateSupplierOrder(supplierOrderId: number, updates: Partial<InsertSupplierOrder>): Promise<SupplierOrder | undefined> {
+    try {
+      const [updated] = await db
+        .update(supplierOrders)
+        .set({
+          ...updates,
+          updatedAt: new Date().toISOString()
+        })
+        .where(eq(supplierOrders.id, supplierOrderId))
+        .returning();
+
+      logger.info('Supplier order updated', { supplierOrderId, updates });
+      return updated;
+    } catch (error) {
+      logger.error('Error updating supplier order', { error, supplierOrderId, updates });
+      throw error;
+    }
+  }
+
+  async updateUserCreditBalance(userId: number, newBalance: number): Promise<boolean> {
+    try {
+      await db
+        .update(users)
+        .set({ creditBalance: newBalance })
+        .where(eq(users.id, userId));
+
+      logger.info('User credit balance updated', { userId, newBalance });
+      return true;
+    } catch (error) {
+      logger.error('Error updating user credit balance', { error, userId, newBalance });
+      throw error;
+    }
+  }
+
+  async createCreditTransaction(transactionData: InsertCreditTransaction): Promise<CreditTransaction> {
+    try {
+      const [created] = await db
+        .insert(creditTransactions)
+        .values({
+          ...transactionData,
+          createdAt: new Date().toISOString()
+        })
+        .returning();
+
+      logger.info('Credit transaction created', { transactionId: created.id });
+      return created;
+    } catch (error) {
+      logger.error('Error creating credit transaction', { error, transactionData });
+      throw error;
+    }
+  }
+
+  async getCreditTransactionBySupplierOrder(supplierOrderId: number): Promise<CreditTransaction | undefined> {
+    try {
+      const [transaction] = await db
+        .select()
+        .from(creditTransactions)
+        .where(eq(creditTransactions.supplierOrderId, supplierOrderId));
+
+      return transaction || undefined;
+    } catch (error) {
+      logger.error('Error getting credit transaction by supplier order', { error, supplierOrderId });
+      throw error;
+    }
+  }
+
+  // Order Item Supplier Status Management for Credit System
   async updateOrderItemSupplierStatus(orderItemId: number, statusData: Partial<InsertOrderItemSupplierStatus>): Promise<OrderItemSupplierStatus> {
     try {
       // First check if a record exists
+      const [existing] = await db
+        .select()
+        .from(orderItemSupplierStatus)
+        .where(eq(orderItemSupplierStatus.orderItemId, orderItemId));
+
+      if (existing) {
+        // Update existing record
+        const [updated] = await db
+          .update(orderItemSupplierStatus)
+          .set({
+            ...statusData,
+            updatedAt: new Date().toISOString()
+          })
+          .where(eq(orderItemSupplierStatus.orderItemId, orderItemId))
+          .returning();
+
+        logger.info('Order item supplier status updated', { orderItemId, statusData });
+        return updated;
+      } else {
+        // Create new record
+        const [created] = await db
+          .insert(orderItemSupplierStatus)
+          .values({
+            orderItemId,
+            ...statusData,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          })
+          .returning();
+
+        logger.info('Order item supplier status created', { orderItemId, statusData });
+        return created;
+      }
+    } catch (error) {
+      logger.error('Error updating order item supplier status', { error, orderItemId, statusData });
+      throw error;
+    }
+  }
+
+  async getOrderItemSupplierStatus(orderItemId: number): Promise<OrderItemSupplierStatus | undefined> {
+    try {
+      const [status] = await db
+        .select()
+        .from(orderItemSupplierStatus)
+        .where(eq(orderItemSupplierStatus.orderItemId, orderItemId));
+
+      return status || undefined;
+    } catch (error) {
+      logger.error('Error getting order item supplier status', { error, orderItemId });
+      throw error;
+    }
+  }
+
+  // Notification Management for Credit System
+  async createNotification(notificationData: InsertNotification): Promise<Notification> {
+    try {
+      const [created] = await db
+        .insert(notifications)
+        .values({
+          ...notificationData,
+          createdAt: new Date().toISOString()
+        })
+        .returning();
+
+      logger.info('Notification created', { notificationId: created.id, userId: created.userId });
+      return created;
+    } catch (error) {
+      logger.error('Error creating notification', { error, notificationData });
+      throw error;
+    }
+  }
+
+  async getUserNotifications(userId: number, unreadOnly: boolean = false): Promise<Notification[]> {
+    try {
+      let query = db
+        .select()
+        .from(notifications)
+        .where(eq(notifications.userId, userId));
+
+      if (unreadOnly) {
+        query = query.where(and(
+          eq(notifications.userId, userId),
+          eq(notifications.isRead, false)
+        ));
+      }
+
+      return await query.orderBy(desc(notifications.createdAt));
+    } catch (error) {
+      logger.error('Error getting user notifications', { error, userId, unreadOnly });
+      throw error;
+    }
+  }
+
+  async markNotificationRead(notificationId: number): Promise<boolean> {
+    try {
+      await db
+        .update(notifications)
+        .set({ 
+          isRead: true,
+          readAt: new Date().toISOString()
+        })
+        .where(eq(notifications.id, notificationId));
+
+      logger.info('Notification marked as read', { notificationId });
+      return true;
+    } catch (error) {
+      logger.error('Error marking notification as read', { error, notificationId });
+      return false;
+    }
+  }
+
+  async markAllNotificationsRead(userId: number): Promise<boolean> {
+    try {
+      await db
+        .update(notifications)
+        .set({ 
+          isRead: true,
+          readAt: new Date().toISOString()
+        })
+        .where(and(
+          eq(notifications.userId, userId),
+          eq(notifications.isRead, false)
+        ));
+
+      logger.info('All notifications marked as read', { userId });
+      return true;
+    } catch (error) {
+      logger.error('Error marking all notifications as read', { error, userId });
+      return false;
+    }
+  }
       const [existingStatus] = await db
         .select()
         .from(orderItemSupplierStatus)

@@ -51,6 +51,7 @@ import { registerApiTestRoutes } from "./api-test-routes";
 import analyticsRoutes from "./analytics-routes";
 import favouritesRoutes from "./favourites-routes";
 import creditRoutes from "./credit-routes";
+import supplierOrderRoutes from "./supplier-order-routes";
 import { registerStorageTestRoutes } from "./storage-test-routes";
 import { registerFileManagerTestRoutes } from "./file-manager-test-routes";
 import { validateRequest, idSchema } from './validation-middleware';
@@ -6970,6 +6971,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register credit system routes
   app.use('/api/credits', creditRoutes);
+  
+  // Register supplier order management routes
+  app.use('/api/admin/supplier-orders', supplierOrderRoutes);
 
   const httpServer = createServer(app);
   return httpServer;
