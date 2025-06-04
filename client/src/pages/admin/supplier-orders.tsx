@@ -48,6 +48,7 @@ interface SupplierOrder {
   urlLastChecked?: string;
   createdAt: string;
   updatedAt?: string;
+  customerUnitPrice: number;
   customerOrder: {
     id: number;
     orderNumber: string;
@@ -61,6 +62,7 @@ interface SupplierOrder {
     price?: number;
     sku?: string;
     supplierAvailable: boolean;
+    actualSupplierUrl?: string;
   };
 }
 
@@ -485,7 +487,7 @@ const SupplierOrders = () => {
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Customer Price:</span>
-                          <span>{formatCurrency(order.product.price || order.unitCost * 1.5)}</span>
+                          <span>{formatCurrency(order.customerUnitPrice)}</span>
                         </div>
                         <div className="flex justify-between font-medium">
                           <span>Total Cost (TMY):</span>
