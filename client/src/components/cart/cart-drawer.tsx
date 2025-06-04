@@ -99,41 +99,47 @@ const CartDrawer = () => {
                       )}
                     </div>
                     
-                    {/* Display selected attributes */}
+                    {/* Display selected attributes with quantity breakdown */}
                     {item.attributeSelections && Object.keys(item.attributeSelections).length > 0 && (
                       <div className="mt-1 text-xs text-gray-600">
-                        {Object.entries(item.attributeSelections).map(([attributeName, value]) => (
-                          <div key={attributeName} className="flex items-center gap-1 flex-wrap">
-                            <span className="font-medium">{attributeName}:</span>
-                            {Array.isArray(value) ? (
+                        {Object.entries(item.attributeSelections).map(([attributeName, value]) => {
+                          // Calculate quantity distribution for each attribute option
+                          const getQuantityBreakdown = (attrValue: string | string[]) => {
+                            if (Array.isArray(attrValue)) {
+                              // Count occurrences of each value
+                              const counts: Record<string, number> = {};
+                              attrValue.forEach(val => {
+                                counts[val] = (counts[val] || 0) + 1;
+                              });
+                              return counts;
+                            } else {
+                              // Single value gets the full item quantity
+                              return { [attrValue]: item.quantity };
+                            }
+                          };
+
+                          const quantityBreakdown = getQuantityBreakdown(value);
+
+                          return (
+                            <div key={attributeName} className="flex items-center gap-1 flex-wrap">
+                              <span className="font-medium">{attributeName}:</span>
                               <div className="flex gap-1 flex-wrap">
-                                {value.map((val, index) => (
-                                  <span key={index} className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#ff69b4] text-[#ffffff]">
-                                    {val}
+                                {Object.entries(quantityBreakdown).map(([optionValue, count]) => (
+                                  <span key={optionValue} className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#ff69b4] text-[#ffffff]">
+                                    {optionValue} x{count}
                                     <button
-                                      onClick={() => removeAttributeOption(item.id, attributeName, val)}
+                                      onClick={() => removeAttributeOption(item.id, attributeName, optionValue)}
                                       className="ml-1 hover:bg-white/20 rounded-full p-0.5 transition-colors"
-                                      title={`Remove ${val}`}
+                                      title={`Remove ${optionValue}`}
                                     >
                                       <X className="h-3 w-3" />
                                     </button>
                                   </span>
                                 ))}
                               </div>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 bg-[#ff69b4] text-[#ffffff] px-2 py-0.5 rounded">
-                                {value}
-                                <button
-                                  onClick={() => removeAttributeOption(item.id, attributeName, value)}
-                                  className="ml-1 hover:bg-white/20 rounded-full p-0.5 transition-colors"
-                                  title={`Remove ${value}`}
-                                >
-                                  <X className="h-3 w-3" />
-                                </button>
-                              </span>
-                            )}
-                          </div>
-                        ))}
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                     

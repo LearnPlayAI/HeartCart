@@ -232,7 +232,47 @@ export default function OrderConfirmationPage() {
                           {item.productSku && (
                             <p className="text-sm text-gray-600">SKU: {item.productSku}</p>
                           )}
-                          {item.attributeDisplayText && (
+                          {/* Display selected attributes with quantity breakdown */}
+                          {item.selectedAttributes && Object.keys(item.selectedAttributes).length > 0 && (
+                            <div className="text-xs text-gray-600 mt-1">
+                              {Object.entries(item.selectedAttributes).map(([attributeName, value]) => {
+                                // Calculate quantity distribution for each attribute option
+                                const getQuantityBreakdown = (attrValue: string | string[]) => {
+                                  if (Array.isArray(attrValue)) {
+                                    // Count occurrences of each value
+                                    const counts: Record<string, number> = {};
+                                    attrValue.forEach(val => {
+                                      counts[val] = (counts[val] || 0) + 1;
+                                    });
+                                    return counts;
+                                  } else {
+                                    // Single value gets the full item quantity
+                                    return { [attrValue]: item.quantity };
+                                  }
+                                };
+
+                                const quantityBreakdown = getQuantityBreakdown(value);
+
+                                return (
+                                  <div key={attributeName} className="flex items-center gap-1 flex-wrap mb-1">
+                                    <span className="font-medium">{attributeName}:</span>
+                                    <div className="flex gap-1 flex-wrap">
+                                      {Object.entries(quantityBreakdown).map(([optionValue, count]) => (
+                                        <span 
+                                          key={optionValue} 
+                                          className="inline-flex items-center px-2 py-0.5 rounded bg-[#ff69b4] text-[#ffffff] text-xs"
+                                        >
+                                          {optionValue} x{count}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                          {/* Fallback to display text if no structured attributes */}
+                          {(!item.selectedAttributes || Object.keys(item.selectedAttributes).length === 0) && item.attributeDisplayText && (
                             <p className="text-sm text-gray-600">{item.attributeDisplayText}</p>
                           )}
                           <div className="flex items-center justify-between mt-2">

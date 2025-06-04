@@ -677,14 +677,43 @@ export default function CheckoutPage() {
                       </div>
                       <div className="text-xs text-gray-600 mb-1">Qty: {item.quantity}</div>
                       
-                      {/* Show product attributes if they exist */}
+                      {/* Show product attributes with quantity breakdown */}
                       {item.attributeSelections && Object.keys(item.attributeSelections).length > 0 && (
-                        <div className="text-xs text-gray-500">
-                          {Object.entries(item.attributeSelections).map(([key, value]) => (
-                            <Badge key={key} variant="outline" className="mr-1 text-xs py-0 px-1 h-4">
-                              {key}: {String(value)}
-                            </Badge>
-                          ))}
+                        <div className="text-xs text-gray-500 mt-1">
+                          {Object.entries(item.attributeSelections).map(([attributeName, value]) => {
+                            // Calculate quantity distribution for each attribute option
+                            const getQuantityBreakdown = (attrValue: string | string[]) => {
+                              if (Array.isArray(attrValue)) {
+                                // Count occurrences of each value
+                                const counts: Record<string, number> = {};
+                                attrValue.forEach(val => {
+                                  counts[val] = (counts[val] || 0) + 1;
+                                });
+                                return counts;
+                              } else {
+                                // Single value gets the full item quantity
+                                return { [attrValue]: item.quantity };
+                              }
+                            };
+
+                            const quantityBreakdown = getQuantityBreakdown(value);
+
+                            return (
+                              <div key={attributeName} className="flex items-center gap-1 flex-wrap mb-1">
+                                <span className="font-medium">{attributeName}:</span>
+                                <div className="flex gap-1 flex-wrap">
+                                  {Object.entries(quantityBreakdown).map(([optionValue, count]) => (
+                                    <Badge 
+                                      key={optionValue} 
+                                      className="bg-[#ff69b4] text-[#ffffff] text-xs py-0 px-2 h-5"
+                                    >
+                                      {optionValue} x{count}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
                       )}
                     </div>

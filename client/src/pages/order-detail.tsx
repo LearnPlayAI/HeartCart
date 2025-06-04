@@ -364,16 +364,43 @@ const OrderDetail: React.FC = () => {
                             <p className="text-sm text-gray-500 mb-2">SKU: {item.productSku}</p>
                           )}
                           
-                          {/* Attributes */}
+                          {/* Attributes with quantity breakdown */}
                           {item.selectedAttributes && Object.keys(item.selectedAttributes).length > 0 && (
                             <div className="mb-2">
-                              <div className="flex flex-wrap gap-2">
-                                {Object.entries(item.selectedAttributes).map(([key, value]) => (
-                                  <Badge key={key} variant="secondary" className="text-xs">
-                                    {key}: {value}
-                                  </Badge>
-                                ))}
-                              </div>
+                              {Object.entries(item.selectedAttributes).map(([attributeName, value]) => {
+                                // Calculate quantity distribution for each attribute option
+                                const getQuantityBreakdown = (attrValue: string | string[]) => {
+                                  if (Array.isArray(attrValue)) {
+                                    // Count occurrences of each value
+                                    const counts: Record<string, number> = {};
+                                    attrValue.forEach(val => {
+                                      counts[val] = (counts[val] || 0) + 1;
+                                    });
+                                    return counts;
+                                  } else {
+                                    // Single value gets the full item quantity
+                                    return { [attrValue]: item.quantity };
+                                  }
+                                };
+
+                                const quantityBreakdown = getQuantityBreakdown(value);
+
+                                return (
+                                  <div key={attributeName} className="flex items-center gap-2 flex-wrap mb-2">
+                                    <span className="font-medium text-sm">{attributeName}:</span>
+                                    <div className="flex gap-2 flex-wrap">
+                                      {Object.entries(quantityBreakdown).map(([optionValue, count]) => (
+                                        <Badge 
+                                          key={optionValue} 
+                                          className="bg-[#ff69b4] text-[#ffffff] text-xs"
+                                        >
+                                          {optionValue} x{count}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  </div>
+                                );
+                              })}
                             </div>
                           )}
 
