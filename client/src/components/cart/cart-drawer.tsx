@@ -121,11 +121,11 @@ const CartDrawer = () => {
                                 ))}
                               </div>
                             ) : (
-                              <span className="inline-flex items-center gap-1 bg-gray-100 px-2 py-0.5 rounded text-gray-700">
+                              <span className="inline-flex items-center gap-1 bg-[#ff69b4] text-[#ffffff] px-2 py-0.5 rounded">
                                 {value}
                                 <button
                                   onClick={() => removeAttributeOption(item.id, attributeName, value)}
-                                  className="ml-1 hover:bg-gray-300 rounded-full p-0.5 transition-colors"
+                                  className="ml-1 hover:bg-white/20 rounded-full p-0.5 transition-colors"
                                   title={`Remove ${value}`}
                                 >
                                   <X className="h-3 w-3" />
