@@ -53,6 +53,7 @@ import favouritesRoutes from "./favourites-routes";
 import { registerStorageTestRoutes } from "./storage-test-routes";
 import { registerFileManagerTestRoutes } from "./file-manager-test-routes";
 import { validateRequest, idSchema } from './validation-middleware';
+import { trackProductInteraction, trackCartActivity } from './interaction-middleware';
 import { 
   productsQuerySchema,
   productSlugParamSchema,
@@ -932,6 +933,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Generic route for product by ID must come after more specific routes
   app.get(
     "/api/products/:id", 
+    trackProductInteraction('view'),
     validateRequest({ params: idParamSchema }),
     asyncHandler(async (req: Request, res: Response) => {
       const id = Number(req.params.id);
