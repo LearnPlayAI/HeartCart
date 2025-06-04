@@ -11094,41 +11094,7 @@ export class DatabaseStorage implements IStorage {
     try {
       // Start transaction to ensure data consistency
       return await db.transaction(async (tx) => {
-        // Get or create customer credit record
-        let [customerCredit] = await tx
-          .select()
-          .from(customerCredits)
-          .where(eq(customerCredits.userId, userId));
-
-        if (!customerCredit) {
-          // Create new credit record
-          [customerCredit] = await tx
-            .insert(customerCredits)
-            .values({
-              userId,
-              totalCreditAmount: amount.toString(),
-              availableCreditAmount: amount.toString(),
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            })
-            .returning();
-        } else {
-          // Update existing credit record
-          const newTotalCredits = parseFloat(customerCredit.totalCreditAmount) + amount;
-          const newAvailableCredits = parseFloat(customerCredit.availableCreditAmount) + amount;
-
-          [customerCredit] = await tx
-            .update(customerCredits)
-            .set({
-              totalCreditAmount: newTotalCredits.toString(),
-              availableCreditAmount: newAvailableCredits.toString(),
-              updatedAt: new Date().toISOString(),
-            })
-            .where(eq(customerCredits.userId, userId))
-            .returning();
-        }
-
-        // Create transaction record
+        // Create transaction record first
         const [transaction] = await tx
           .insert(creditTransactions)
           .values({
@@ -11140,6 +11106,66 @@ export class DatabaseStorage implements IStorage {
             createdAt: new Date().toISOString(),
           })
           .returning();
+
+        // Calculate new balance from all transactions
+        const transactions = await tx
+          .select()
+          .from(creditTransactions)
+          .where(eq(creditTransactions.userId, userId));
+
+        let totalEarned = 0;
+        let totalUsed = 0;
+
+        for (const trans of transactions) {
+          const transAmount = parseFloat(trans.amount);
+          if (trans.transactionType === 'earned') {
+            totalEarned += transAmount;
+          } else if (trans.transactionType === 'used') {
+            totalUsed += transAmount;
+          }
+        }
+
+        const totalCreditAmount = totalEarned;
+        const availableCreditAmount = totalEarned - totalUsed;
+
+        // Update or create customer credit record with calculated balance
+        let [customerCredit] = await tx
+          .select()
+          .from(customerCredits)
+          .where(eq(customerCredits.userId, userId));
+
+        if (!customerCredit) {
+          // Create new credit record
+          await tx
+            .insert(customerCredits)
+            .values({
+              userId,
+              totalCreditAmount: totalCreditAmount.toString(),
+              availableCreditAmount: availableCreditAmount.toString(),
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            });
+        } else {
+          // Update existing credit record with calculated values
+          await tx
+            .update(customerCredits)
+            .set({
+              totalCreditAmount: totalCreditAmount.toString(),
+              availableCreditAmount: availableCreditAmount.toString(),
+              updatedAt: new Date().toISOString(),
+            })
+            .where(eq(customerCredits.userId, userId));
+        }
+
+        logger.info('Credit earned and balance updated', {
+          userId,
+          amount,
+          description,
+          orderId,
+          newTotalEarned: totalEarned,
+          newAvailableBalance: availableCreditAmount,
+          transactionId: transaction.id
+        });
 
         return transaction;
       });
