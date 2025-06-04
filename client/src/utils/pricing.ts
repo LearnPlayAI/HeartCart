@@ -184,16 +184,16 @@ export function calculateShippingCost(
   // Check if any available credits came from unshipped orders
   // Credits from unshipped orders have supplierOrderId (indicating order cancellation/refund)
   const unshippedOrderCredits = creditTransactions.filter(transaction => 
-    transaction.type === 'credit' && 
+    transaction.transactionType === 'earned' && 
     transaction.supplierOrderId && 
-    transaction.amount > 0
+    parseFloat(transaction.amount) > 0
   );
 
   // Check if any orders have been shipped (would indicate credits are from shipped orders)
   const shippedOrderCredits = creditTransactions.filter(transaction =>
-    transaction.type === 'credit' && 
+    transaction.transactionType === 'earned' && 
     !transaction.supplierOrderId && // No supplier order ID means it's from a shipped order refund
-    transaction.amount > 0
+    parseFloat(transaction.amount) > 0
   );
 
   // Free shipping only if:
