@@ -11152,32 +11152,31 @@ export class DatabaseStorage implements IStorage {
   async useUserCredits(userId: number, amount: number, description: string, orderId: number): Promise<CreditTransaction> {
     try {
       return await db.transaction(async (tx) => {
-        // Get customer credit record
-        const [customerCredit] = await tx
+        // Get current balance by calculating from transactions
+        const transactions = await tx
           .select()
-          .from(customerCredits)
-          .where(eq(customerCredits.userId, userId));
+          .from(creditTransactions)
+          .where(eq(creditTransactions.userId, userId));
 
-        if (!customerCredit) {
-          throw new Error('No credit balance found for user');
+        let totalEarned = 0;
+        let totalUsed = 0;
+
+        for (const transaction of transactions) {
+          const transactionAmount = parseFloat(transaction.amount);
+          if (transaction.transactionType === 'earned') {
+            totalEarned += transactionAmount;
+          } else if (transaction.transactionType === 'used') {
+            totalUsed += transactionAmount;
+          }
         }
 
-        const availableCredits = parseFloat(customerCredit.availableCreditAmount);
+        const availableCredits = totalEarned - totalUsed;
+
         if (availableCredits < amount) {
-          throw new Error('Insufficient credit balance');
+          throw new Error(`Insufficient credit balance. Available: R${availableCredits.toFixed(2)}, Requested: R${amount.toFixed(2)}`);
         }
 
-        // Update credit balance
-        const newAvailableCredits = availableCredits - amount;
-        await tx
-          .update(customerCredits)
-          .set({
-            availableCreditAmount: newAvailableCredits.toString(),
-            updatedAt: new Date().toISOString(),
-          })
-          .where(eq(customerCredits.userId, userId));
-
-        // Create transaction record
+        // Create transaction record for the credit usage
         const [transaction] = await tx
           .insert(creditTransactions)
           .values({
@@ -11189,6 +11188,30 @@ export class DatabaseStorage implements IStorage {
             createdAt: new Date().toISOString(),
           })
           .returning();
+
+        // Update the customer credits table with new calculated balance
+        const newUsedAmount = totalUsed + amount;
+        const newAvailableCredits = totalEarned - newUsedAmount;
+
+        await tx
+          .update(customerCredits)
+          .set({
+            totalCreditAmount: totalEarned.toString(),
+            availableCreditAmount: newAvailableCredits.toString(),
+            updatedAt: new Date().toISOString(),
+          })
+          .where(eq(customerCredits.userId, userId));
+
+        logger.info('Credit usage processed successfully', {
+          userId,
+          amount,
+          description,
+          orderId,
+          previousAvailable: availableCredits,
+          newAvailable: newAvailableCredits,
+          totalEarned,
+          totalUsed: newUsedAmount
+        });
 
         return transaction;
       });
