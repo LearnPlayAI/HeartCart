@@ -232,46 +232,33 @@ router.post("/", isAuthenticated, asyncHandler(async (req: Request, res: Respons
     // Create the order
     const newOrder = await storage.createOrder(order, orderItems);
     
-    // ONLY NOW deduct credits after successful order creation
+    // ONLY NOW deduct credits after successful order creation using transaction-based system
     if (orderData.creditUsed && orderData.creditUsed > 0) {
-      // Get fresh credit balance
-      const creditBalance = await storage.getUserCreditBalance(userId);
-      const availableCredit = parseFloat(creditBalance.availableCredits || '0');
-      
-      // Double-check credit availability (safety check)
-      if (orderData.creditUsed <= availableCredit) {
-        // Create credit transaction for usage
-        await storage.createCreditTransaction({
-          userId: userId,
-          transactionType: 'used',
-          amount: orderData.creditUsed.toString(),
-          description: `Credit applied to order #${newOrder.orderNumber}`,
-          orderId: newOrder.id,
-        });
-        
-        // Update customer credit balance
-        const newAvailableBalance = availableCredit - orderData.creditUsed;
-        const currentTotalCredits = parseFloat(creditBalance.totalCreditAmount || '0');
-        
-        await storage.createOrUpdateCustomerCredit(userId, {
-          totalCreditAmount: currentTotalCredits.toString(),
-          availableCreditAmount: newAvailableBalance.toString(),
-        });
+      try {
+        // Use the proper transaction-based credit deduction
+        await storage.useUserCredits(
+          userId,
+          orderData.creditUsed,
+          `Credit applied to order #${newOrder.orderNumber}`,
+          newOrder.id
+        );
         
         logger.info("Credit successfully deducted after order creation", {
           userId: userId,
           orderId: newOrder.id,
           orderNumber: newOrder.orderNumber,
-          creditUsed: orderData.creditUsed,
-          newAvailableBalance: newAvailableBalance
+          creditUsed: orderData.creditUsed
         });
-      } else {
-        logger.error("Credit balance changed during order creation", {
+      } catch (creditError) {
+        logger.error("Credit deduction failed after order creation", {
+          error: creditError,
           userId: userId,
           orderId: newOrder.id,
-          requestedCredit: orderData.creditUsed,
-          actualAvailable: availableCredit
+          requestedCredit: orderData.creditUsed
         });
+        
+        // Note: Order was already created successfully, credit deduction failure is logged but doesn't fail the order
+        // This ensures order completion even if there's a credit system issue
       }
     }
 
